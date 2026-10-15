@@ -54,7 +54,9 @@
 - **Break-glass**: mandatory reason, audited, flagged for review.
 - **Regional admins and admins manage configuration, not cases.** They see no participant data.
   Escalations to the regional admin (e.g. TL 407 not submitted 14 days after TG start) show
-  project and counts only *(provisional, Q57)*.
+  only: project, responsible PL, number of overdue items per type (e.g. "3 × TL 407 not
+  submitted"), and days overdue for the oldest item. **No participant names.** For details the
+  regional admin contacts the PL (Q57).
 - **Customer**: no login in the MVP (Q47). See the next section.
 
 ## Customer reporting *(assumed, Q5, Q13, Q47)*

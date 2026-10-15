@@ -133,7 +133,8 @@ stateDiagram-v2
   profiling before the transfer, not submitting the form.
   - Not submitted by the TG start date → warning on the PL dashboard.
   - Still not submitted 14 days after TG start → escalation to the PL and the regional admin
-    (the regional admin sees project and count only, no participant data — see Q57).
+    (the regional admin sees project, responsible PL, overdue count per type and days overdue
+    for the oldest item; no participant names — Q57).
   - With the profiling exception, submission follows once profiling is caught up within the
     1-month deadline.
   - Also checked against the placement Agentur's `leadTimeDays`.

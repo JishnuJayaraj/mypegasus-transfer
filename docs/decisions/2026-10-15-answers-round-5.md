@@ -52,5 +52,10 @@
 - The Bash deny patterns from round 4 (`cat * .env*` etc.) were so broad that they blocked
   unrelated commands in this session (e.g. a command that read `.gitignore` and mentioned
   `.env` later). The narrowed list uses exact file names, plus `grep * <file>`.
-- Escalating to the regional admin conflicts with "regional admins see no case data".
-  Provisionally the escalation shows project and count only (Q57).
+- Escalating to the regional admin conflicted with "regional admins see no case data". Settled
+  by Q57 below.
+
+## Q57 — Content of escalations to the regional admin
+- The escalation shows: project, responsible PL, number of overdue items per type (e.g.
+  "3 × TL 407 not submitted"), and days overdue for the oldest item.
+- **No participant names.** If the regional admin needs details, they contact the PL.
