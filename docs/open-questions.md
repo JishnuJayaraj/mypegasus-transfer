@@ -2,44 +2,63 @@
 
 Add questions here instead of guessing. Remove them (and update the relevant doc) once answered.
 
+**Status values**
+- `answered`: confirmed by the owner.
+- `assumed`: a working answer given on 2026-10-15 that the owner has **not yet confirmed**. We
+  build on it, but it must not be written into rules (CLAUDE.md, data-protection.md) as fact
+  until confirmed.
+- `verify`: the answer contains a factual point that should be checked (see the note).
+- `open`: no answer yet.
+
+Full answers from 2026-10-15 are in [`decisions/2026-10-15-answers.md`](decisions/2026-10-15-answers.md).
+
 | # | Question | Owner | Status | Answer / doc updated |
 |---|---|---|---|---|
-| 1 | What exactly is the "ASU form" in each region — Arbeitsuchendmeldung or something else? Which version/channel? | PLs | open | |
-| 2 | Which profiling forms are required per Agentur, and in which format (BA form, own form, upload)? | PLs | open | |
-| 3 | Retention periods for non-signers and for TG participants | DPO | open | |
-| 4 | Legal basis per processing purpose (consent vs. contract vs. legal obligation) | DPO | open | |
-| 5 | Small-group suppression threshold for customer reporting | DPO | open | |
-| 6 | Hosting provider in Germany/EU (ADR-0005) | Tech lead | answered | Local first, then company Hetzner cluster — ADR-0005 |
-| 12 | Hetzner cluster: Kubernetes or plain VMs/Compose? Managed Postgres, backups, TLS, monitoring available? | Cluster team | open | |
-| 7 | Staff identity provider (Microsoft Entra ID? other?) | IT | open | |
-| 8 | Payroll system and export format (DATEV?) | Back office | open | |
-| 9 | Which languages are needed in the participant portal? | PLs | open | |
-| 10 | Are BA forms allowed to be signed electronically anywhere, or always paper? | PLs / legal | open | |
-| 11 | Does every participant have an email address or mobile number? (magic-link login) | PLs | open | |
-| 13 | The customer signs the DSV and usually pays per-head costs (Remanenzkosten, top-up). Which person-level data may the customer legitimately receive (DSV status, signers, TG start/exit dates for billing)? Rule 6 in CLAUDE.md currently forbids all of it. | DPO / PLs | open | |
-| 14 | Controller vs. processor per phase: is the TG a processor for the customer in the TA phase and controller in the TG phase (as employer)? Who "owns" non-signer data? Drives AVV, legal basis and deletion. | DPO | open | |
-| 15 | Which Agentur is responsible for a participant — the project's location, the TG/beE's location, or the participant's place of residence (Arbeitsuchendmeldung)? Can one project involve several Agenturen (and therefore several templates)? | PLs | open | |
-| 16 | Which BA steps happen per *project* rather than per person (consultation of the parties by the Agentur, Anzeige of the Arbeitsausfall, Transfer-KuG approval, choice of profiling provider)? Should the app track them? | PLs | open | |
-| 17 | Is the order data collection → profiling → Agentur submission → DSV offer fixed? Is the DSV ever offered before or in parallel with profiling? Can profiling be completed after TG start in exceptional cases? | PLs | open | |
-| 18 | Do participants of one project have individual TG start/end dates (staggered notice periods, different contract lengths), or is there one TG start per project? | PLs | open | |
-| 19 | How do participants drop out before the TG (found a job directly, withdraws, leaves the customer, withdraws from a signed DSV before start)? Do direct placements in the TA phase count in placement statistics? | PLs | open | |
-| 20 | TA-only projects: what is the end state for a participant, and which §110 measures besides profiling must be tracked? | PLs | open | |
-| 21 | DSV execution: in which order do participant, customer and TG sign? Does "signed" in the app mean the participant signed or the contract is fully executed? Where is the paper original archived, and for how long? | Back office / legal | open | |
-| 22 | Which periodic or end-of-measure reports must the TG submit to the Agentur during/after the TG phase, in which format? | PLs | open | |
-| 23 | Who approves qualification measures and from which budget (customer/social plan, BA co-funding, ESF Plus or Land programmes)? If ESF is used: what reporting and retention obligations come with it? | PLs / back office | open | |
-| 24 | Do BA audits, ESF, tax or social-insurance rules require keeping profiling/TG records longer than the planned deletion of non-signers? (Conflict between deletion and retention duties.) | DPO | open | |
-| 25 | Is a DPIA (DSFA, Art. 35 DSGVO) required before the first pilot, who owns it, and who maintains the record of processing activities? | DPO | open | |
-| 26 | Where will a pilot with real data run? ADR-0005 currently allows "locally (Docker Compose)" for pilots — are company laptops acceptable for social data? | Tech lead / DPO | open | |
-| 27 | May magic links be sent to work email addresses (employer-controlled mailboxes)? Is a second factor (e.g. birth date, SMS code) required for participant login to social data? | DPO | open | |
-| 28 | Exactly which fields are special category (health, Schwerbehinderung, …) and which roles may see them (is the PL allowed, or only the assigned Berater)? | DPO / PLs | open | |
-| 29 | Which identifiers are processed and when: customer Personalnummer, BA-Kundennummer, Sozialversicherungsnummer, Steuer-ID, IBAN? Which are needed in the MVP? | Back office / DPO | open | |
-| 30 | What is the matching key for re-imports (Personalnummer?) and may the same person be linked across projects of *different* customers? | DPO / PLs | open | |
-| 31 | Self-registration via public link/QR: who may register, what is collected before matching, and how long are unmatched registrations kept? | PLs / DPO | open | |
-| 32 | Is the Hetzner cluster operated by the TG's own legal entity or by a group company (AVV needed)? Is S3-compatible object storage available for uploads? Are only German locations used? | Cluster team | open | |
-| 33 | Does the TG phase need sub-statuses that affect KuG/payroll (long-term sickness, parental leave, trial work, suspended employment)? | PLs / back office | open | |
-| 34 | Which exit reasons/categories do BA, customer and works council reporting require? | PLs | open | |
-| 35 | What is a "region" for regional admins — an Agentur, a TG branch office, a Bundesland? | PLs / admin | open | |
-| 36 | When a PL upgrades a running project to a new template version, what happens to participants who are already past a step and to documents already generated? | PLs | open | |
-| 37 | Are BA forms official fillable PDFs we fill in, or our own layouts? Are we allowed to reproduce them, and how do we learn about new versions? | PLs | open | |
-| 38 | AI providers: are non-EU/US-hosted providers acceptable with contractual cover (data-protection.md rule 5) or never (ADR-0005)? | DPO | open | |
-| 39 | MVP portal languages: CLAUDE.md says `de` only (`en` later), PRD says German + English in MVP. Which is it? (Related to #9.) | Product owner | open | |
+| 1 | What exactly is the "ASU form"? Which version/channel? | PLs | verify | Arbeitsuchendmeldung §38 SGB III, nationwide. The TG route uses form **Kug 200b (09/2021)**, see `domain/ba-forms.md`. Verify the deadline wording (see answers doc). |
+| 2 | Which profiling forms are required per Agentur, and in which format? | PLs | answered | **TL 407 (08/2025)**, nationwide AcroForm. Agenturen differ only in channel, originals, lead time. `domain/ba-forms.md` |
+| 3 | Retention periods for non-signers and for TG participants | DPO | assumed / verify | Table in answers doc. Conflicts with #40 and should be checked against current AO/HGB/EStG/SGB IV periods. |
+| 4 | Legal basis per processing purpose | DPO | assumed | Table in answers doc |
+| 5 | Small-group suppression threshold for customer reporting | DPO | assumed | n < 5, with secondary suppression |
+| 6 | Hosting provider in Germany/EU (ADR-0005) | Tech lead | answered | Local first, then the company Hetzner cluster. Real data only on the cluster. |
+| 7 | Staff identity provider | IT | assumed | Entra ID via OIDC, MFA via Conditional Access, roles managed in the app |
+| 8 | Payroll system and export format | Back office | assumed | DATEV LODAS. MVP: versioned CSV export |
+| 9 | Which languages are needed in the participant portal? | PLs | assumed | MVP de + en. v1.1: tr, ar (RTL), pl, ru, uk, ro |
+| 10 | Can BA forms be signed electronically anywhere, or always paper? | PLs / legal | answered | Always paper. Both forms say "bitte händisch ausfüllen". |
+| 11 | Does every participant have an email address or mobile number? | PLs | assumed | About 90 % mobile, 70 % private email. Mobile is primary, work email is never used for login. |
+| 12 | Hetzner cluster setup | Cluster team | assumed | k3s, German locations, CloudNativePG, Object Storage, cert-manager, Prometheus/Grafana/Loki, SOPS |
+| 13 | Person-level data for the customer | DPO / PLs | assumed | Whitelist: name, Personalnummer, DSV signed + date, beE entry/exit date |
+| 14 | Controller vs. processor per phase (TA: processor for the customer? TG: controller?). Who owns non-signer data? | DPO | open | Not answered yet. This decides the AVV and who may order the deletion of non-signer data. |
+| 15 | Which Agentur is responsible? | PLs | assumed / verify | Two: KuG-Agentur per project, placement Agentur per participant (residence). Verify which location decides the KuG-Agentur. |
+| 16 | Project-level BA steps | PLs | assumed | Consultation of the Betriebsparteien + Anzeige über Arbeitsausfall, as a project checklist |
+| 17 | Process order; profiling after TG start? | PLs | answered | Profiling is a legal prerequisite. Exception flag + reason + deadline of entry + 1 month. |
+| 18 | Individual TG dates? | PLs | assumed | Project default + per-participant override (start **and** end — TL 407 needs both) |
+| 19 | Dropouts before the TG | PLs | assumed | `withdrawn` + reason from every pre-TG state. `placed_direct` counts as placement. |
+| 20 | TA-only projects | PLs | assumed | Project type `ta_only`, end state `ta_completed`, §110 measures as activities |
+| 21 | DSV execution and originals | Back office / legal | assumed | Complete only when all three parties have signed. Originals tracked per document. |
+| 22 | Periodic reports to the Agentur | PLs | verify | Half-yearly report (30.06 / 31.12) is a working assumption |
+| 23 | Qualification approval and funding; ESF | PLs / back office | assumed | PL proposes, customer budget owner approves. No ESF in MVP; `fundingSource` flag. |
+| 24 | Do BA audits/ESF/tax/social-insurance rules require keeping data longer than the non-signer deletion? | DPO | open | Partly covered by #3, but not for non-signers who received §110 measures (see #40) |
+| 25 | DPIA before the pilot? | DPO | answered | Yes. Required before any real data. |
+| 26 | Pilot location | Tech lead / DPO | answered | Nürnberg, one project, on the Hetzner cluster, after the pre-pilot gate |
+| 27 | Participant login factors | DPO | assumed | Magic link / SMS code + birth date as a knowledge check before special-category data |
+| 28 | Which fields are special category, and which roles may see them? **Is the PL allowed?** | DPO / PLs | open | Fields: answered by #29. Roles: Profiler only for assigned participants. The PL and regional admin are still not covered. |
+| 29 | Identifiers and data classes | Back office / DPO | assumed | Classification table in the answers doc. Missing: Bürgergeld, nationality, Einreisedatum (see #43) |
+| 30 | Person across projects | DPO / PLs | answered | No linking in the MVP. Duplicates within a project only. |
+| 31 | Public self-registration | PLs / DPO | assumed | Project QR code, 14 days, rate limit + captcha, manual matching, delete after 30 days |
+| 32 | Is the Hetzner cluster run by the TG's own legal entity or a group company (AVV)? | Cluster team | open | Object storage and German locations are answered by #12. The legal entity/AVV is not. |
+| 33 | TG sub-statuses | PLs / back office | assumed | Dated periods: active, sick_paid, sick_krankengeld, parental_leave, qualification, temp_employment_elsewhere |
+| 34 | Which exit reasons do BA, customer and works council reporting need? | PLs | open | Not answered yet (#19 covers only pre-TG withdrawals) |
+| 35 | What is a "region"? | PLs / admin | assumed | An organisational unit (Niederlassung), not an Agentur district |
+| 36 | Template upgrades for running projects | PLs | assumed | Pinned. Explicit migration by the PL recomputes completeness. Documents keep their version. |
+| 37 | BA form templates | PLs | answered | AcroForm fill (pdf-lib) for BA forms. Gotenberg HTML→PDF for our own documents. |
+| 38 | AI providers | DPO | assumed | No AI in the MVP. Later EU-hosted with AVV only. Never US providers for personal data. |
+| 39 | MVP UI languages | Product owner | answered | Staff UI de (via i18n), portal de + en |
+| 40 | Health data is "deleted at exit" (#3), but TL 407 and Kug 200b contain health and Schwerbehinderung answers, and profiling is kept 3 years. Do we redact the stored forms, or keep them under the profiling retention? Same question for non-signers who received §110 measures billed to the BA: may they be deleted after 90 days? | DPO | open | |
+| 41 | TL 407 has fixed rows (4 profiling sessions, 5 education, 7 jobs, 4 languages). What do PLs do today when there are more: an attachment page, "siehe Anlage", or only the most recent entries? | PLs | open | |
+| 42 | Where do official blank form templates live: in the repo (versioned with code) or uploaded by an admin as data (versioned per ADR-0004)? Who notices when the BA publishes a new version? | Tech lead / PLs | open | |
+| 43 | TL 407 asks for Bürgergeld (incl. spouse/partner), Einreisedatum and Aufenthaltsstatus (incl. Duldung). Are these "highly confidential" and field-encrypted? May they be collected in self-service, or only in the profiling interview? | DPO | open | |
+| 44 | The Jobbörse publication choice (TL 407 q. 50) and the BA contact-data consent (both forms) are BA consents, separate from our own consents. Should the app record them as consent records too, or just as form answers? | DPO | open | |
+| 45 | Kug 200b is only for §111 (TG). Is it always collected through the TG in TG projects, or only when the Agentur doesn't do the batch registration at the info event? Does the "batch list" channel mean submitting stacks of Kug 200b, a Teilnehmerliste, or both? | PLs | open | |
+| 46 | Withdrawal after `dsv_signed` but before TG start: the DSV has already ended the old employment. Does a withdrawal need a cancellation agreement signed by all three parties, and does the app have to track that document? | Legal / PLs | open | |
+| 47 | Is the customer a *user* in the MVP (#34 lists "Customer, read-only") or only the recipient of an export (#13, PRD says portal = v1.1)? | Product owner | open | |
+| 48 | The test copies of both forms contain a name and birth date ("Lukas Brenner", "Fußball Bund"). Please confirm they are synthetic. | Product owner | open | |
