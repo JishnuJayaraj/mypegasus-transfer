@@ -5,6 +5,7 @@ import { pino } from "pino";
 import { expect } from "vitest";
 import type { z } from "zod";
 import { createApp } from "./app";
+import type { Deps } from "./context";
 import type { Env } from "./env";
 
 export const testEnv: Env = {
@@ -20,11 +21,11 @@ export const testEnv: Env = {
 export const origin = testEnv.appOrigins[0]!;
 
 /** An app on `transfer_test` whose log lines are captured as strings. */
-export function testApp(options: { env?: Partial<Env>; db?: Database } = {}) {
+export function testApp(options: { env?: Partial<Env>; db?: Database; spa?: Deps["spa"] } = {}) {
   const logs: string[] = [];
   const logger = pino({ level: "info" }, { write: (line: string) => logs.push(line) });
   const db = options.db ?? createDb(testDatabaseUrls().app);
-  const app = createApp({ db, env: { ...testEnv, ...options.env }, logger });
+  const app = createApp({ db, env: { ...testEnv, ...options.env }, logger, spa: options.spa });
   return { app, db, logs };
 }
 

@@ -4,7 +4,15 @@ Web application for running Transferagentur / Transfergesellschaft projects: par
 import, self-service data collection, profiling and Agentur forms, DSV tracking, and the TG
 phase (coaching, qualification, applications, exit).
 
-**Status:** documentation and planning. No code yet.
+**Status:** Slice 0 (walking skeleton) is complete: monorepo, `Project` list and create end to
+end (Postgres, Hono API, staff SPA), a thin participant portal shell (de/en), and one Node 24
+image that serves the API and both SPAs. Next: Slice 1 ([roadmap](docs/roadmap.md)).
+
+```
+pnpm install && pnpm db:setup && pnpm db:seed && pnpm dev   # web :5173, portal :5174/portal/
+```
+
+See the commands in [`CLAUDE.md`](CLAUDE.md#commands). Synthetic data only.
 
 | Read | For |
 |---|---|

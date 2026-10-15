@@ -9,6 +9,7 @@ import { devRoutes } from "./routes/dev";
 import { healthRoutes } from "./routes/health";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
+import { mountSpas } from "./static";
 
 export const openApiConfig = {
   openapi: "3.1.0",
@@ -17,13 +18,31 @@ export const openApiConfig = {
 
 const JSON_CONTENT_TYPE = /^application\/json\s*(;|$)/i;
 
+/**
+ * CSP for the SPAs and the API. Carbon needs no relaxation: Vite extracts all CSS into files,
+ * and React's `style` props go through the CSSOM, which `style-src` doesn't restrict. Checked
+ * in the e2e tests, which fail on any CSP violation.
+ */
+const contentSecurityPolicy = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'"],
+  styleSrc: ["'self'"],
+  imgSrc: ["'self'"],
+  fontSrc: ["'self'"],
+  connectSrc: ["'self'"],
+  objectSrc: ["'none'"],
+  baseUri: ["'self'"],
+  formAction: ["'self'"],
+  frameAncestors: ["'none'"],
+};
+
 /** The whole API with injected dependencies, so tests can use `app.request()`. */
 export function createApp(deps: Deps) {
   const { env, logger } = deps;
   const app = createRouter();
 
   app.use(requestLogger(logger));
-  app.use(secureHeaders());
+  app.use(secureHeaders({ contentSecurityPolicy }));
   app.use("/api/*", csrf({ origin: env.appOrigins }));
   app.use("/api/*", async (c, next) => {
     if (["POST", "PUT", "PATCH"].includes(c.req.method)) {
@@ -42,6 +61,7 @@ export function createApp(deps: Deps) {
   app.route("/api/v1", api);
 
   if (env.nodeEnv !== "production") app.doc31("/api/v1/openapi.json", openApiConfig);
+  if (deps.spa) mountSpas(app, deps.spa);
 
   app.notFound((c) => problem(c, "not-found"));
   app.onError((error, c) => {

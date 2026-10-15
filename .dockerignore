@@ -1,0 +1,20 @@
+# Only what `pnpm install` and `pnpm build` need goes into the build context.
+**/node_modules
+**/dist
+**/.tsbuild
+**/*.tsbuildinfo
+**/coverage
+**/playwright-report
+**/test-results
+.git
+.github
+.claude
+docs
+fixtures
+real-data
+.env
+.env.*
+!.env.example
+*.log
+Dockerfile
+.dockerignore

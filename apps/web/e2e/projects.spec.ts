@@ -1,17 +1,6 @@
-import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { seedStaffUserIds } from "@transfer/db";
-
-/** AC-23: no serious or critical accessibility violations. */
-async function expectAccessible(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).analyze();
-  const blocking = violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  expect(
-    blocking.map(
-      (v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).join(", ")})`,
-    ),
-  ).toEqual([]);
-}
+import { expect, expectAccessible, test } from "./helpers";
 
 async function chooseDevUser(page: Page, label: string) {
   await page.getByRole("button", { name: "Entwicklungsbenutzer wechseln" }).click();

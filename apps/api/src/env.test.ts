@@ -24,6 +24,15 @@ describe("parseEnv", () => {
     expect(env.sessionSecret.length).toBeGreaterThanOrEqual(32);
   });
 
+  it("treats empty variables as unset, as in the .env copied from .env.example", () => {
+    const env = parseEnv({ ...dev, SESSION_SECRET: "", PORT: "", LOG_LEVEL: "" });
+    expect(env.sessionSecret.length).toBeGreaterThanOrEqual(32);
+    expect(env).toMatchObject({ port: 3001, logLevel: "info" });
+    expect(() => parseEnv({ ...dev, NODE_ENV: "test", SESSION_SECRET: "" })).toThrow(
+      /SESSION_SECRET is required/,
+    );
+  });
+
   it("prefers PORT over API_PORT", () => {
     expect(parseEnv({ ...dev, API_PORT: "4000" }).port).toBe(4000);
     expect(parseEnv({ ...dev, API_PORT: "4000", PORT: "8080" }).port).toBe(8080);

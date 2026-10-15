@@ -6,6 +6,12 @@
 PostgreSQL database.
 Modules are separated by package boundaries, not by network calls.
 
+**One image** (Slice 0, D4): a Node 24 container runs the API bundle, which serves `/api/v1`,
+the built staff SPA at `/` and the built portal at `/portal/` (SPA fallback to each
+`index.html`; hashed assets `immutable`, `index.html` `no-cache`; unknown `/api/*` paths stay a
+404 problem). Migrations are a separate command in the same image (`node dist/migrate.js`).
+Separate hostnames for web and portal are revisited in Slice 3/9.
+
 ```
     ┌──── apps/web (React SPA) ─────┐    ┌──── apps/portal (React SPA) ────┐
     │ staff: PL, Berater/Profiler,  │    │ participants: mobile-first,     │
@@ -35,7 +41,7 @@ Modules are separated by package boundaries, not by network calls.
 | Database | PostgreSQL 16, Drizzle; core fields as columns, config-driven fields as jsonb | 0002 |
 | Stack | TS 6 (`tsc -b`), Vite 8, Vitest, Oxlint/Oxfmt, React, TanStack, Carbon, Hono, Node 24 | 0003 |
 | Regional variation | Fixed lifecycle core + versioned regional templates | 0004 |
-| Hosting | Local (synthetic data); pilot + production on company Hetzner cluster (k3s, containers) | 0005 |
+| Hosting | Local (synthetic data); pilot + production on company Hetzner cluster (k3s, containers); one Node 24 image serves the API and both SPAs | 0005 |
 | External services | Ports & adapters with mocks; real impls added later | 0006 |
 | Auth | Staff: Entra ID via OIDC + MFA (dev stub first); participants: SMS/email link + birth-date check | 0007 |
 | Retention | Per data item, two-stage deletion with evidence set | 0008 |
@@ -47,7 +53,9 @@ Modules are separated by package boundaries, not by network calls.
 
 - `packages/domain` has **no I/O**: no DB, no HTTP. Pure functions + types: lifecycle (main
   status + profiling and DSV tracks), guards, completeness, and the field-level access matrix.
-- `apps/portal` must not import staff-only modules (lint rule).
+- `apps/portal` must not import staff-only modules: Oxlint `no-restricted-imports` forbids
+  `@transfer/web`, paths into `apps/web` and the `@transfer/staff-*` namespace (the naming
+  convention for staff-only packages); a fixture test proves the rule fires.
 - API modules may depend on `domain`, `config`, `db`, `adapters` — never on each other's
   internals (talk through exported service functions).
 - UI talks only to the API. No business rules in the UI beyond display validation (shared Zod).

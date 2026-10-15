@@ -12,6 +12,15 @@ const schema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
 });
 
+/** Loads the repo's `.env` when present (not in the image); variables already set win. */
+export function loadDotEnv(): void {
+  try {
+    process.loadEnvFile(new URL("../../../.env", import.meta.url));
+  } catch {
+    // no .env file: the environment must provide everything
+  }
+}
+
 export interface Env {
   nodeEnv: "development" | "test" | "production";
   authMode: "dev" | "oidc";
@@ -27,7 +36,9 @@ export interface Env {
  * a value may be a secret (CLAUDE.md rule 9).
  */
 export function parseEnv(source: Record<string, string | undefined> = process.env): Env {
-  const result = schema.safeParse(source);
+  // `.env` copied from `.env.example` has empty optional variables (`SESSION_SECRET=`).
+  const set = Object.fromEntries(Object.entries(source).filter(([, value]) => value !== ""));
+  const result = schema.safeParse(set);
   if (!result.success) {
     const names = result.error.issues.map((issue) => `${String(issue.path[0])} (${issue.code})`);
     throw new Error(`Invalid environment variables: ${names.join(", ")} (see .env.example)`);

@@ -9,6 +9,8 @@ export {
   Loading,
   RadioButton,
   RadioButtonGroup,
+  Select,
+  SelectItem,
   SideNavLink,
   Stack,
   TextInput,
@@ -16,7 +18,7 @@ export {
 export { Add, UserAvatar } from "@carbon/icons-react";
 export { formatDate, formatTimestamp, parseDisplayDate } from "./dates";
 export { DateField } from "./fields";
-export { createI18n } from "./i18n";
-export { AppShell, PageHeader } from "./shell";
+export { createI18n, syncDocumentLanguage } from "./i18n";
+export { AppShell, PageHeader, PortalShell } from "./shell";
 export { SimpleTable, type TableColumn } from "./table";
 export { ToastProvider, useToast } from "./toast";
