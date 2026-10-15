@@ -4,11 +4,14 @@ import type { StaffUser } from "@transfer/domain";
 import type { Logger } from "pino";
 import type { Env } from "./env";
 import { validationProblem } from "./problem";
+import type { SpaRoots } from "./static";
 
 export interface Deps {
   db: Database;
   env: Env;
   logger: Logger;
+  /** The built SPAs to serve (production image, `pnpm start`); Vite serves them in dev. */
+  spa?: SpaRoots | undefined;
 }
 
 export interface AppEnv {
