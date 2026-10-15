@@ -1,0 +1,58 @@
+{
+  "app": {
+    "name": "Transferplattform",
+    "skipToContent": "Zum Inhalt springen",
+    "navigation": "Navigation",
+    "closeNotification": "Meldung schließen",
+    "notFound": "Diese Seite gibt es nicht.",
+    "error": "Es ist ein Fehler aufgetreten. Bitte laden Sie die Seite neu."
+  },
+  "session": {
+    "chooseUser": "Bitte Entwicklungsbenutzer wählen",
+    "switcher": "Entwicklungsbenutzer wechseln",
+    "roles": {
+      "admin": "Admin",
+      "regional_admin": "Regionaladmin",
+      "project_lead": "Projektleitung",
+      "consultant": "Beratung",
+      "back_office": "Backoffice"
+    }
+  },
+  "projects": {
+    "title": "Projekte",
+    "create": "Projekt anlegen",
+    "loadMore": "Mehr laden",
+    "empty": "Es gibt noch keine Projekte.",
+    "created": "Projekt angelegt",
+    "columns": {
+      "name": "Name",
+      "customerName": "Kunde",
+      "type": "Typ",
+      "signingDeadline": "Unterschriftsfrist",
+      "createdAt": "Angelegt am"
+    },
+    "types": {
+      "ta_only": "Transferagentur",
+      "ta_tg": "Transferagentur und Transfergesellschaft"
+    }
+  },
+  "projectForm": {
+    "name": "Projektname",
+    "customerName": "Kunde",
+    "type": "Projekttyp",
+    "signingDeadline": "Unterschriftsfrist",
+    "defaultTgStart": "TG-Beginn",
+    "defaultTgEnd": "TG-Ende",
+    "submit": "Projekt anlegen",
+    "cancel": "Abbrechen",
+    "failed": "Das Projekt konnte nicht angelegt werden."
+  },
+  "errors": {
+    "required": "Pflichtfeld",
+    "tooLong": "Höchstens 200 Zeichen",
+    "invalidDate": "Ungültiges Datum, bitte im Format TT.MM.JJJJ",
+    "tgEndBeforeStart": "Das TG-Ende darf nicht vor dem TG-Beginn liegen",
+    "notAllowedForTaOnly": "Bei reinen Transferagentur-Projekten nicht zulässig",
+    "invalid": "Ungültige Eingabe"
+  }
+}

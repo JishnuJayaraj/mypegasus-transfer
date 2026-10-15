@@ -1,0 +1,23 @@
+{
+  "name": "@transfer/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.scss": "./src/styles.scss"
+  },
+  "dependencies": {
+    "@carbon/icons-react": "11.90.0",
+    "@carbon/react": "1.118.0",
+    "@transfer/domain": "workspace:*",
+    "i18next": "26.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "17.0.18"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0"
+  }
+}

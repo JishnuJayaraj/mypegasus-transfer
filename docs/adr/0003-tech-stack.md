@@ -84,3 +84,19 @@ Also observed: pnpm 10 blocks dependency build scripts by default (esbuild, the 
 IBM Plex packages, `@parcel/watcher`). Nothing in the spike needed them; keep them blocked and
 allow one only with a reason (`pnpm.onlyBuiltDependencies`).
 
+### Notes from PR 0c (web shell)
+
+- **jsdom 29.1.1 instead of 30.1.3.** jsdom 30 requires Node `^22.22.2 || ^24.15.0`; cloud
+  sessions run 22.22.0, and `engine-strict` rejects the install. 29.1.1 (`^22.13.0 || >=24`) is
+  used until cloud sessions move on; then it's a deliberate upgrade.
+- **Carbon Sass under Vite** (adds to S3): besides the per-component modules, `packages/ui`
+  must load `@carbon/react/scss/layout` and `@carbon/react/scss/layer`, which emit the root
+  tokens (component heights and padding, layer colours). Without them, buttons and inputs
+  render without size. Carbon's font URLs use webpack's `~@ibm/plex`, which Vite doesn't
+  resolve; `apps/web/vite.config.ts` aliases it to its own `@ibm/plex` dependency. Only IBM
+  Plex Sans is loaded (`$fonts` map). CSS baseline with 10 components: 287 kB (29 kB gzip).
+- **Date fields** use Carbon's `simple` DatePicker (a `TT.MM.JJJJ` text field without the
+  calendar). The text is parsed strictly in `packages/ui`, so impossible dates are errors
+  rather than whatever the calendar widget's parser makes of them. A calendar can be added
+  later if it keeps that behaviour.
+
