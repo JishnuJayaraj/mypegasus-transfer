@@ -40,3 +40,5 @@ export function createApiClient(options: { baseUrl?: string; fetch?: typeof fetc
   client.use(throwProblems);
   return client;
 }
+
+export type ApiClient = ReturnType<typeof createApiClient>;

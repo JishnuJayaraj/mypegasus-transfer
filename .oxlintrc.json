@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "import", "vitest"],
+  "plugins": ["typescript", "unicorn", "oxc", "import", "vitest", "react", "jsx-a11y"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
@@ -20,19 +20,46 @@
       {
         "assertFunctionNames": ["expect", "expectProblem"]
       }
-    ]
+    ],
+    "import/no-unassigned-import": [
+      "warn",
+      {
+        "allow": ["**/*.scss", "i18next", "@testing-library/jest-dom/vitest"]
+      }
+    ],
+    "react/jsx-no-literals": "error",
+    "react/react-in-jsx-scope": "off"
   },
   "ignorePatterns": [
     "**/dist/**",
     "**/coverage/**",
     "**/.tsbuild/**",
-    "packages/api-client/src/schema.d.ts"
+    "packages/api-client/src/schema.d.ts",
+    "apps/web/src/routeTree.gen.ts",
+    "**/playwright-report/**",
+    "**/test-results/**"
   ],
   "overrides": [
     {
       "files": ["scripts/**"],
       "rules": {
         "no-console": "off"
+      }
+    },
+    {
+      "files": ["apps/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@carbon/*"],
+                "message": "Apps use Carbon only through @transfer/ui."
+              }
+            ]
+          }
+        ]
       }
     }
   ]

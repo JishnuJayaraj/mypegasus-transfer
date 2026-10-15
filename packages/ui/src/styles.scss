@@ -1,0 +1,99 @@
+// Carbon styles, imported per component (spike S3). Only IBM Plex Sans is loaded.
+@use "@carbon/react/scss/config" with (
+  $use-flexbox-grid: false
+);
+@use "@carbon/react/scss/fonts" with (
+  $fonts: (
+    IBM-Plex-Mono: false,
+    IBM-Plex-Serif: false,
+  )
+);
+@use "@carbon/react/scss/reset";
+@use "@carbon/react/scss/themes";
+@use "@carbon/react/scss/theme" with (
+  $theme: themes.$g10
+);
+// Root tokens the components rely on: layer colours and the layout sizes (heights, padding).
+@use "@carbon/react/scss/layer";
+@use "@carbon/react/scss/layout";
+@use "@carbon/react/scss/spacing" as *;
+@use "@carbon/react/scss/type";
+@use "@carbon/react/scss/components/ui-shell";
+@use "@carbon/react/scss/components/button";
+@use "@carbon/react/scss/components/data-table";
+@use "@carbon/react/scss/components/date-picker";
+@use "@carbon/react/scss/components/form";
+@use "@carbon/react/scss/components/text-input";
+@use "@carbon/react/scss/components/radio-button";
+@use "@carbon/react/scss/components/notification";
+@use "@carbon/react/scss/components/loading";
+@use "@carbon/react/scss/components/stack";
+
+:root {
+  @include theme.theme();
+}
+
+body {
+  background: theme.$background;
+  color: theme.$text-primary;
+}
+
+// Layout uses CSS logical properties only, so RTL works (CLAUDE.md conventions).
+.tp-content {
+  padding-block: $spacing-07;
+  padding-inline: $spacing-07;
+
+  @media (min-width: 66rem) {
+    margin-inline-start: 16rem;
+  }
+}
+
+.tp-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: $spacing-06;
+
+  h1 {
+    @include type.type-style("heading-04");
+  }
+}
+
+.tp-header-info {
+  display: flex;
+  align-items: center;
+  padding-inline: $spacing-05;
+  color: theme.$text-primary;
+}
+
+.tp-empty-state {
+  padding: $spacing-07 $spacing-05;
+}
+
+.tp-load-more {
+  margin-block-start: $spacing-05;
+}
+
+.tp-form {
+  max-inline-size: 40rem;
+}
+
+.tp-toasts {
+  position: fixed;
+  inset-block-start: 3.5rem;
+  inset-inline-end: $spacing-05;
+  z-index: 9000;
+}
+
+.tp-user-list {
+  padding-block: $spacing-03;
+
+  .cds--btn {
+    inline-size: 100%;
+    max-inline-size: none;
+  }
+
+  .cds--btn[aria-current="true"] {
+    font-weight: 600;
+  }
+}
