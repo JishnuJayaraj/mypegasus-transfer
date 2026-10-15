@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Teilnehmerportal",
+    "skipToContent": "Zum Inhalt springen",
+    "notFound": "Diese Seite gibt es nicht."
+  },
+  "language": {
+    "label": "Sprache"
+  },
+  "home": {
+    "title": "Willkommen",
+    "intro": "Hier können Sie bald Ihre Angaben für das Transferprojekt machen und Ihre Unterlagen einsehen."
+  },
+  "status": {
+    "checking": "Verbindung wird geprüft …",
+    "ok": "Verbindung zum Server besteht (Version {{version}}).",
+    "unavailable": "Der Server ist gerade nicht erreichbar. Bitte versuchen Sie es später noch einmal."
+  }
+}

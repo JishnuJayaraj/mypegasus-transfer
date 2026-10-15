@@ -1,0 +1,19 @@
+{
+  "app": {
+    "name": "Participant portal",
+    "skipToContent": "Skip to content",
+    "notFound": "This page does not exist."
+  },
+  "language": {
+    "label": "Language"
+  },
+  "home": {
+    "title": "Welcome",
+    "intro": "Soon you will be able to enter your details for the transfer project and see your documents here."
+  },
+  "status": {
+    "checking": "Checking the connection …",
+    "ok": "Connected to the server (version {{version}}).",
+    "unavailable": "The server cannot be reached right now. Please try again later."
+  }
+}

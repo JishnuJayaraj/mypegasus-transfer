@@ -18,3 +18,19 @@ export function createI18n(resources: Resource, lng: string, supportedLngs = [ln
   });
   return instance;
 }
+
+/**
+ * Keeps `<html lang>` and `<html dir>` in step with the language, so screen readers pick the
+ * right voice and RTL languages lay out right to left (CSS logical properties do the rest).
+ */
+export function syncDocumentLanguage(
+  instance: i18n,
+  doc: { documentElement: { lang: string; dir: string } } = document,
+): void {
+  const apply = (lng: string) => {
+    doc.documentElement.lang = lng;
+    doc.documentElement.dir = instance.dir(lng);
+  };
+  apply(instance.resolvedLanguage ?? instance.language);
+  instance.on("languageChanged", apply);
+}

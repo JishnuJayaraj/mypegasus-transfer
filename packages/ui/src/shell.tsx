@@ -46,6 +46,31 @@ export function AppShell(props: AppShellProps) {
   );
 }
 
+interface PortalShellProps {
+  productName: string;
+  skipToContentLabel: string;
+  /** Where the product name links to (the portal's start page). */
+  homeHref: string;
+  children: ReactNode;
+}
+
+/** Participant portal shell (mobile-first): a header and the content, no side navigation. */
+export function PortalShell(props: PortalShellProps) {
+  return (
+    <>
+      <Header aria-label={props.productName}>
+        <SkipToContent>{props.skipToContentLabel}</SkipToContent>
+        <HeaderName href={props.homeHref} prefix="">
+          {props.productName}
+        </HeaderName>
+      </Header>
+      <Content id="main-content" className="tp-portal-content">
+        {props.children}
+      </Content>
+    </>
+  );
+}
+
 export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
   return (
     <div className="tp-page-header">

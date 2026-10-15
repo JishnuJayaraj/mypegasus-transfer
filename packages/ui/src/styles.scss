@@ -25,6 +25,7 @@
 @use "@carbon/react/scss/components/form";
 @use "@carbon/react/scss/components/text-input";
 @use "@carbon/react/scss/components/radio-button";
+@use "@carbon/react/scss/components/select";
 @use "@carbon/react/scss/components/notification";
 @use "@carbon/react/scss/components/loading";
 @use "@carbon/react/scss/components/stack";
@@ -45,6 +46,17 @@ body {
 
   @media (min-width: 66rem) {
     margin-inline-start: 16rem;
+  }
+}
+
+// Participant portal: mobile-first, one column.
+.tp-portal-content {
+  padding-block: $spacing-07;
+  padding-inline: $spacing-05;
+  max-inline-size: 48rem;
+
+  @media (min-width: 42rem) {
+    padding-inline: $spacing-07;
   }
 }
 

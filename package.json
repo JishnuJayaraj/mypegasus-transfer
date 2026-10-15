@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -b",
-    "lint": "oxlint --deny-warnings && oxfmt --check && node scripts/check-tsconfig.mjs",
+    "lint": "oxlint --deny-warnings --ignore-pattern 'apps/portal/lint-fixtures/**' && oxfmt --check && node scripts/check-tsconfig.mjs",
     "format": "oxfmt",
     "test": "vitest run",
     "db:setup": "pnpm --filter @transfer/db run setup",
@@ -15,6 +15,7 @@
     "db:reset": "pnpm --filter @transfer/db run reset",
     "dev": "pnpm db:migrate && pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
+    "start": "pnpm --filter @transfer/api start",
     "api:generate": "pnpm --filter @transfer/api-client run generate",
     "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm api:generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts",
     "test:e2e": "pnpm --filter @transfer/web test:e2e"
