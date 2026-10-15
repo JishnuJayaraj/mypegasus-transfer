@@ -29,6 +29,18 @@ if [ -f package.json ]; then
     rm -f "$log"
     exit 1
   fi
+
+  # Dev roles and databases, then migrations. The dev URLs come from .env (copied from
+  # .env.example on first start; it holds no secrets, only local dev passwords).
+  [ -f .env ] || cp .env.example .env
+  for step in db:setup db:migrate; do
+    if ! pnpm --silent "$step" >"$log" 2>&1; then
+      tail -n 30 "$log" >&2
+      echo "session-start: 'pnpm $step' failed (output above). Is PostgreSQL running?" >&2
+      rm -f "$log"
+      exit 1
+    fi
+  done
   rm -f "$log"
 fi
 
