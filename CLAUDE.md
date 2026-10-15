@@ -102,23 +102,28 @@ confirmed before the pilot.
   production on the company Hetzner cluster (k3s, CloudNativePG) as container images
   (ADR-0005). Keep application code provider-neutral.
 
-## Repo layout (target)
+## Repo layout
 
 ```
 apps/
   web/            React SPA for staff
-  portal/         React SPA for participants (mobile-first, own login flow) — ADR-0001
-  api/            Hono API
+  portal/         React SPA for participants (mobile-first, own login flow) — ADR-0001.
+                  Must not import staff code (lint rule: no @transfer/web, apps/web or
+                  @transfer/staff-*; staff-only packages are named @transfer/staff-*)
+  api/            Hono API; in production also serves both built SPAs (/ and /portal/)
 packages/
   domain/         entities, lifecycle state machine, Zod schemas, completeness rules (no I/O)
-  config/         regional/project configuration model + resolver
-  db/             Drizzle schema, migrations, seed (synthetic only)
-  adapters/       interfaces + mock implementations (pdf, mail, sms, storage, virus scan,
-                  export, clock) — see ADR-0006
-  forms/          official BA form templates (blank PDF, field map, manifest) — ADR-0009
-  ui/             thin wrappers around Carbon components, layout, tokens
+  db/             Drizzle schema, migrations, seed (synthetic only), data catalog
+  api-client/     generated OpenAPI document + types and the typed client both SPAs use
+  ui/             thin wrappers around Carbon components, layout, tokens, i18n helpers
+  config/         (Slice 1) regional/project configuration model + resolver
+  adapters/       (Slice 1) interfaces + mock implementations (pdf, mail, sms, storage, virus
+                  scan, export, clock) — see ADR-0006
+  forms/          (Slice 4b) official BA form templates (blank PDF, field map, manifest) — ADR-0009
 fixtures/         synthetic test files only (e.g. filled test forms)
 docs/             product + domain + architecture docs (source of truth)
+scripts/          session start, tsconfig guard, image smoke test
+Dockerfile        the production image (Node 24): API bundle + both SPAs
 ```
 
 ## Conventions
@@ -144,21 +149,34 @@ docs/             product + domain + architecture docs (source of truth)
   (ADR-0011).
 - Conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
-## Commands (fill in once the skeleton exists)
+## Commands
 
 ```
-pnpm install
-pnpm dev          # web + api
-pnpm test         # vitest
-pnpm test:e2e     # playwright
-pnpm lint
-pnpm typecheck
+pnpm install          # CI and session start: --frozen-lockfile
+pnpm dev              # db:migrate, then api :3001, web :5173, portal :5174/portal/
+pnpm build            # both SPAs + the API bundle (apps/api/dist: server.js, migrate.js)
+pnpm start            # the built API serving both SPAs on :3001 (production-like)
+pnpm test             # vitest: unit, component, integration (needs Postgres)
+pnpm test:e2e         # playwright against the built app (pnpm build first) on transfer_e2e
+pnpm lint             # oxlint (incl. the portal boundary rule) + oxfmt --check + tsconfig guard
+pnpm format           # oxfmt write
+pnpm typecheck        # tsc -b
+pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test, api drift
+pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
+pnpm db:generate      # drizzle-kit: SQL migration from the schema
 pnpm db:migrate
-pnpm db:seed      # synthetic data only
+pnpm db:seed          # synthetic data only
+pnpm db:reset         # dev only: empty schema, migrate, seed
+pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
+docker build -t transfer .          # the production image (CI builds and smoke-tests it)
+scripts/image-smoke.sh transfer     # migration + /api/v1/health/ready, / and /portal/
 ```
 
 In cloud sessions PostgreSQL is pre-installed but not running: start it with
-`service postgresql start`.
+`service postgresql start`. The session start hook (`scripts/session-start.sh`) does that,
+installs, and runs `db:setup` and `db:migrate`; then `pnpm db:seed && pnpm dev`. Docker is
+installed but its daemon isn't running, and image builds need the proxy CA (see
+`/root/.ccr/README.md`); CI is the reference for the image.
 
 ## Definition of done (every PR)
 

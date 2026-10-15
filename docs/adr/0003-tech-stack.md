@@ -100,3 +100,31 @@ allow one only with a reason (`pnpm.onlyBuiltDependencies`).
   rather than whatever the calendar widget's parser makes of them. A calendar can be added
   later if it keeps that behaviour.
 
+
+### Notes from PR 0d (portal, static serving, image)
+
+- **CSP needs no relaxation for Carbon.** The API sends `default-src 'self'` with `script-src`,
+  `style-src`, `img-src`, `font-src` and `connect-src` all `'self'`, `object-src 'none'` and
+  `frame-ancestors 'none'`. Vite extracts all CSS into files, the built `index.html` has no
+  inline script, and React's `style` props go through the CSSOM, which `style-src` doesn't
+  restrict. The Playwright suite fails on any CSP violation in the console (checked by
+  temporarily setting `font-src 'none'`, which failed every test).
+- **Playwright runs against the API bundle serving both SPAs** (the `pnpm start` and image
+  setup), not `vite preview`, so static serving and the CSP are covered end to end.
+- **API bundle:** `apps/api/vite.config.ts` builds two entries (`server`, `migrate`), inlines
+  `@transfer/*` (devDependencies of `@transfer/api`) and keeps npm dependencies external, so
+  everything the bundle imports at runtime (including `drizzle-orm` and `pg` for
+  `@transfer/db`) must be a dependency of `@transfer/api`. Shared chunks sit next to the
+  entries, because modules resolve `.env` and the SPA directories relative to
+  `import.meta.url`. The migrations are copied to `dist/migrations`.
+- **Image:** `pnpm deploy` needs `--legacy` (pnpm 10 otherwise requires
+  `inject-workspace-packages`; the API has no workspace packages in production). `package.json`
+  must be copied before `pnpm fetch`, or corepack picks a default pnpm instead of the
+  `packageManager` version. In Slice 0 the image can only start with `NODE_ENV=development`
+  and `AUTH_MODE=dev` (production refuses the dev stub, OIDC comes in Slice 3); the CI smoke
+  test runs it that way.
+- **Boundary rule:** `--no-ignore` doesn't override `ignorePatterns` in `.oxlintrc.json`, so the
+  boundary fixtures are excluded with `--ignore-pattern` in `pnpm lint` instead.
+- **Empty variables are unset.** `.env` copied from `.env.example` has `SESSION_SECRET=`; the
+  API treated the empty string as a too-short secret and `pnpm dev` failed in a fresh session.
+  `parseEnv` now ignores empty values.
