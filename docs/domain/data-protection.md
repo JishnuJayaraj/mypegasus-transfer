@@ -18,7 +18,7 @@
     purpose), not an AVV.
   - The customer cannot order deletion. Deletion follows our retention rules only. There is no
     "customer deletion request" feature.
-  - We need an **AVV with every processor**: the cluster operator chain (Q32, blocking for the
+  - We need an **AVV with every processor**: the cluster operator chain (owned by the product owner, Q32; blocking for the
     pilot), SMS/mail providers, Gotenberg/storage if run by a third party.
 
 ## Classification *(assumed, Q29, Q43)*

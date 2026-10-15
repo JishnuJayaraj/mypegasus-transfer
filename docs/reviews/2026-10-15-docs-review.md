@@ -6,13 +6,13 @@
 > cluster), C10 (classification), C14 (languages), C15 (adapter list), C18 (dates), C19, C20,
 > and items 1–4 of section 1.
 >
-> **Still open from this review, not yet approved:**
-> - separate `apps/portal` (ADR-0001)
-> - status writes enforced in the DB and RLS (ADR-0002)
-> - JSON Schema for field schemas, the completeness format and the base-defaults file (ADR-0004)
-> - API contract and job-queue ADRs (0010/0011 here)
-> - moving the authorisation model into Slice 1 and splitting Slice 4 (roadmap)
-> - tightening `.claude/settings.json` (C16)
+> **Accepted in the PR #1 review (round 4) and applied:** separate `apps/portal` (ADR-0001),
+> status writes enforced in the DB (ADR-0002), JSON Schema + minimal completeness rules
+> (ADR-0004), the access model in Slice 1 (roadmap, ADR-0007), and the tightened
+> `.claude/settings.json` (C16).
+>
+> **Still not decided:** RLS per project, the base-defaults file, the API contract and job-queue
+> ADRs, and splitting Slice 4.
 >
 > Note that ADR numbers 0008/0009 were used for retention and the form registry. The other new
 > ADRs proposed in section 4 will get new numbers if approved.

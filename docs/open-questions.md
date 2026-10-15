@@ -15,7 +15,7 @@ dated file in [`decisions/`](decisions/), update the status here, and update the
 deadlines may be `assumed` or `verify` (rows marked 🔒).
 
 Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-10-15-answers-round-2.md) ·
-[round 3](decisions/2026-10-15-answers-round-3.md) (all 2026-10-15)
+[round 3](decisions/2026-10-15-answers-round-3.md) · [round 4 / PR #1 review](decisions/2026-10-15-answers-round-4.md) (all 2026-10-15)
 
 | # | Topic | Owner | Status | Answer (short) | Confirmed by / date |
 |---|---|---|---|---|---|
@@ -35,11 +35,11 @@ Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-
 | 14 | Controller vs. processor 🔒 | DPO | assumed | TG is an independent controller. Data-sharing clause, no AVV, no customer deletion orders. | |
 | 15 | Which Agentur | PLs | verify | KuG-Agentur per project, placement Agentur per participant | |
 | 16 | Project-level BA steps | PLs | assumed | Project checklist (consultation, Anzeige; + final settlement date, see #52) | |
-| 17 | Profiling before TG | PLs | confirmed | Legal prerequisite; exception + 1-month deadline | §111(4) SGB III, 2026-10-15 |
+| 17 | Profiling before TG | PLs | confirmed | Legal prerequisite; exception + 1-month deadline. DSV runs in a parallel track (round 4). ASU is a hard guard without exception. | §111(4) SGB III, 2026-10-15 |
 | 18 | Individual TG dates | PLs | assumed | Project default + per-participant start/end | |
 | 19 | Pre-TG dropouts | PLs | assumed | Terminal state `withdrawn` + reason (round 3, #50); reasons from #34 | |
 | 20 | TA-only projects | PLs | assumed | `ta_only`, end state `ta_completed` | |
-| 21 | DSV execution, originals | Back office / legal | assumed | All three signatures; originals tracked per document | |
+| 21 | DSV execution, originals | Product owner | confirmed | `dsv_signed` = participant signed; `customerSignedOn` + `tgSignedOn` on the document; TG entry needs `dsvFullyExecuted`; originals tracked per document | Product owner, 2026-10-15 |
 | 22 | Periodic Agentur reports | PLs | verify | Half-yearly (30.06/31.12) | |
 | 23 | Qualification approval/funding | PLs / back office | assumed | PL proposes, customer budget owner approves | |
 | 24 | Audit duties vs. deletion 🔒 | DPO | verify | Two-stage deletion; evidence set until final settlement year + 4 years (configurable) | |
@@ -50,7 +50,7 @@ Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-
 | 29 | Data classification 🔒 | DPO | assumed | Round 1 + additions in round 2 (#43) | |
 | 30 | Person across projects | DPO / PLs | confirmed | No linking in the MVP | Product owner, 2026-10-15 |
 | 31 | Self-registration 🔒 | PLs / DPO | assumed | QR 14 days, captcha, delete unmatched after 30 days | |
-| 32 | Cluster operator / AVV chain 🔒 | Cluster team | open | Blocking item on the pre-pilot checklist: `<CLUSTER_OPERATOR_ENTITY>` | |
+| 32 | Cluster operator / AVV chain | Product owner | confirmed | The product owner operates the cluster and owns the AVV chain. "AVV chain signed" stays a blocking pre-pilot gate item (ADR-0005). | Product owner, 2026-10-15 |
 | 33 | TG sub-statuses | PLs / back office | assumed | Dated periods | |
 | 34 | Exit reasons | PLs | assumed | One enum with phase attribute + placement details (round 2) | |
 | 35 | Region | PLs / admin | assumed | Niederlassung | |
@@ -71,4 +71,7 @@ Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-
 | 50 | `dsv_declined` etc.: states or reasons? | Product owner | confirmed | Non-terminal states + terminal `withdrawn` with reason; system job after the grace period | Product owner, 2026-10-15 |
 | 51 | Sickness periods 🔒 | DPO | assumed | Payroll records: type + dates only, no diagnoses/AU scans, payroll retention | |
 | 52 | Final settlement dates 🔒 | Back office | assumed | `kugFinalSettlementDate`, `measure110SettlementDate` on the project; evidence set expires at year end of the later date + 4 years | |
-| 53 | `profiling_declined` is provisionally non-terminal like `dsv_declined` and auto-withdrawn after the grace period. Which withdrawal reason: a new `declined_profiling`, or `declined_dsv`? | Product owner | open | | |
+| 53 | Withdrawal reason for `profiling_declined` | Product owner | confirmed | `declined_profiling` (no Transfer-KuG at all). Non-terminal during the grace period; conflict with `dsv_signed` is flagged to the PL, never auto-resolved. | Product owner, 2026-10-15 |
+| 54 | Is the TL 407 submission to the Agentur part of the TG entry guard, or only a "what's missing" item checked against `leadTimeDays`? | Product owner / PLs | open | |
+| 55 | ASU guard = Kug 200b submitted. If a participant registered as job-seeking themselves (online / in person), does that count (with proof upload), or is Kug 200b always required in `ta_tg` projects? | PLs | open | |
+| 56 | When several withdrawal reasons apply at grace-period end, is the order `declined_profiling` → `declined_dsv` → `no_response` right? | Product owner | open | |

@@ -66,17 +66,17 @@ Participation
   - participant steps: base defaults → template of the participant's **placement Agentur** →
     project overrides
   - project steps: base defaults → template of the project's **KuG-Agentur** → project overrides
-- **Base defaults** are a versioned file in `packages/config` that describes the nationwide
+- **Base defaults** *(proposed)* are a versioned file in `packages/config` that describes the nationwide
   process (fields required by TL 407 and Kug 200b, standard documents). Templates only add or
   change things relative to it.
 - **Template versions are pinned** per project *(provisional, Q36)*. When a participant with a
   new placement Agentur joins, the current version of that Agentur's template is snapshotted
   into the project. A PL can **migrate** a project to a newer version explicitly. This
   recomputes completeness. Generated documents always keep the version they were made with.
-- **Field schemas are JSON Schema** *(proposed, ADR-0004 amendment)* stored as data and compiled to validators at runtime. Zod
+- **Field schemas are JSON Schema** (ADR-0004) stored as data and compiled to validators at runtime. Zod
   source code cannot be configuration. Core fields are real columns. Custom fields are `jsonb`,
   validated by the resolved schema.
-- **Completeness rules** use a minimal declarative format *(proposed, ADR-0004 amendment)*: `required`, `requiredIf` (field
+- **Completeness rules** use a minimal declarative format (ADR-0004): `required`, `requiredIf` (field
   equals / exists), `documentPresent` (+ accepted). No scripting.
 - In the MVP, templates are seed files. A new region therefore needs a deploy until an admin UI
   exists.

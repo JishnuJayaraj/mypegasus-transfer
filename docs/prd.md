@@ -59,7 +59,7 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - All messages logged per participant.
 
 ### F5 Participant self-service
-- Login via SMS link/code (primary) or private email; never imported work email. Birth date
+- Separate participant app (`apps/portal`). Login via SMS link/code (primary) or private email; never imported work email. Birth date
   check before special-category data. Printable one-time code for info events. Mobile-first
   step-by-step wizard, save & resume, progress bar. Consent screen first; consents are
   versioned records.
@@ -85,9 +85,13 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - "What's missing" list: per participant, missing fields/documents/signatures, overdue
   appointments, rejected uploads.
 - Filters, search, bulk actions (send reminder, assign Berater, export list).
-- Deadline warnings (signing deadline, TG start).
+- Deadline warnings (signing deadline, TG start, ASU due date, profiling-exception deadline).
+- Lists: DSVs signed by the participant but not fully executed; Kug 200b submitted without
+  Agentur confirmation after 14 days; conflicts (DSV signed but profiling declined); TG entry
+  guards failing.
 
 ### F8 DSV tracking
+- DSV is often handed out at the info event, in parallel with profiling (separate DSV track).
 - Generate DSV PDF per participant; statuses offered / signed / declined / expired;
   upload scan of signed paper; track customer and TG counter-signatures and the original
   (location, received, sent to customer).

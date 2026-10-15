@@ -1,26 +1,26 @@
 # Process & participant lifecycle
 
-> Status: updated 2026-10-15 from the decisions log (`docs/decisions/`). Items marked
-> *(provisional, Qnn)* rest on answers that are still `assumed` or `verify` in
-> `open-questions.md`.
+> Status: updated 2026-10-15 from the decisions log (`docs/decisions/`), including the
+> two-track model from the PR #1 review (round 4). Items marked *(provisional, Qnn)* rest on
+> answers that are still `assumed` or `verify` in `open-questions.md`.
 
 ## Big picture
 
 ```
 Customer (employer) ──► Transferprojekt (type: ta_only | ta_tg)
                           │
-       ┌──────────────────┴───────────────────┐
-  Phase 1: TA / pre-phase                Phase 2: TG / beE (max. 12 months per person)
-  inform → self-service data → ASU →     employment in the beE, Transfer-KuG,
-  profiling (TL 407) → DSV               coaching, qualification, applications, exit
+       ┌──────────────────┴───────────────────────────┐
+  Phase 1: TA / pre-phase                         Phase 2: TG / beE (max. 12 months per person)
+  contact → inform → in parallel:                 employment in the beE, Transfer-KuG,
+     profiling track (TL 407)                     coaching, qualification, applications, exit
+     DSV track (paper DSV, 3 signatures)
+     Arbeitsuchendmeldung (Kug 200b)
 ```
 
 - One **Person** has one **Participation** per project. In the MVP the same person is **not
   linked across projects** (Q30). Duplicate detection runs within a project only.
-- The participation carries the lifecycle status. Modules (ASU, profiling, DSV, TG) attach to
-  the participation as records with their own data.
-- A project is **`ta_only`** (§110 measures only, no beE) or **`ta_tg`** (TA phase + beE).
-  *(provisional, Q20)*
+- A project is **`ta_only`** (§110 measures only, no beE, no DSV track) or **`ta_tg`** (TA phase
+  + beE). *(provisional, Q20)*
 
 ## Two Agenturen *(provisional, Q15)*
 
@@ -43,10 +43,11 @@ steps from the KuG-Agentur's template (see regional-variation.md).
   where `endDate` is the end of the old employment and `knowledgeDate` is when the person
   learned of it. To subtract months, clamp to the last day of the target month
   (31.05. → 28./29.02., 31.12. → 30.09.). The later date applies.
+- **Grace period end** = the project's signing deadline + 90 days *(provisional, Q3)*.
 
 ## Project checklist (project-level BA steps) *(provisional, Q16, Q52)*
 
-Not part of the participant state machine. Each item has a date, a document and a done-by:
+Not part of the participant lifecycle. Each item has a date, a document and a done-by:
 
 - Consultation of the Betriebsparteien by the Agentur (before the Transfersozialplan)
 - Anzeige über Arbeitsausfall to the KuG-Agentur
@@ -56,7 +57,27 @@ Not part of the participant state machine. Each item has a date, a document and 
 The settlement dates drive the evidence-set retention (data-protection.md). The admin dashboard
 warns when a project ended more than 12 months ago without them.
 
-## Lifecycle state machine (Participation)
+## Lifecycle model: main status + two tracks + ASU record
+
+In practice the DSV is handed out at the info event with a signing deadline, **in parallel
+with profiling** (round 4). So a participation has:
+
+| Part | Field | Values |
+|---|---|---|
+| **Main status** | `status` | `self_registered`, `imported`, `contacted`, `unreachable`, `informed`, `active_in_tg`; terminal: `withdrawn`, `rejected`, `ta_completed`, `exited` |
+| **Profiling track** | `profilingStatus` | `not_started`, `profiling_accepted`, `profiling_in_progress`, `profiling_done`, `profiling_declined` |
+| **DSV track** | `dsvStatus` | `not_offered`, `dsv_offered`, `dsv_signed`, `dsv_declined`, `dsv_expired` (only in `ta_tg` projects) |
+| **ASU record** | `asu` | not a state machine: `submittedOn`, `channel`, optional `confirmedOn` |
+
+- The tracks start when the main status reaches `informed`. Before that they stay at
+  `not_started` / `not_offered`.
+- Each track has its own transition function in `packages/domain`
+  (`canTransition(track, from, to, context)`), and every change of any track goes through the
+  same audited status function (see Rules).
+- The UI may show **one derived overall status** (e.g. "DSV unterschrieben, Profiling offen"),
+  computed from the main status and both tracks. It is never stored.
+
+### Main status
 
 ```mermaid
 stateDiagram-v2
@@ -70,35 +91,12 @@ stateDiagram-v2
   contacted --> unreachable
   unreachable --> contacted
 
-  informed --> profiling_declined
-  informed --> profiling_accepted
-  profiling_declined --> informed : changes mind (late joiner)
-  profiling_accepted --> data_collection
-  data_collection --> profiling_in_progress : self-service complete (per config)
-  profiling_in_progress --> profiled : TL 407 complete + signed by participant and profiler
-  profiled --> submitted_to_agentur
-
-  submitted_to_agentur --> dsv_offered
-  submitted_to_agentur --> ta_completed : ta_only project
-  informed --> dsv_offered : profilingException (Q17)
-  profiling_accepted --> dsv_offered : profilingException
-  data_collection --> dsv_offered : profilingException
-  profiling_in_progress --> dsv_offered : profilingException
-
-  dsv_offered --> dsv_signed : participant's signed paper received + scan stored
-  dsv_offered --> dsv_declined
-  dsv_offered --> dsv_expired : signing deadline passed (system)
-  dsv_declined --> dsv_offered : re-offer (late joiner)
-  dsv_expired --> dsv_offered : re-offer (late joiner)
-
-  dsv_signed --> active_in_tg : TG start date reached + guards (system)
+  informed --> active_in_tg : TG start date reached + TG entry guard (system)
+  informed --> ta_completed : ta_only project, profiling done + measures completed (PL)
   active_in_tg --> exited : exit reason
 
-  dsv_declined --> withdrawn : grace period over (system) → declined_dsv
-  dsv_expired --> withdrawn : grace period over (system) → no_response
   unreachable --> withdrawn : grace period over (system) → no_response
-  profiling_declined --> withdrawn : grace period over (system) → reason Q53
-  dsv_signed --> withdrawn : cancellation signed by all 3 parties (Q46)
+  informed --> withdrawn : grace period over, derived from tracks (system) / manual
 
   withdrawn --> [*]
   rejected --> [*]
@@ -106,72 +104,121 @@ stateDiagram-v2
   exited --> [*]
 ```
 
-Not drawn, to keep the diagram readable: **manual withdrawal** (`→ withdrawn`, reason chosen by
-the PL) is allowed from every pre-TG state: `imported`, `contacted`, `unreachable`,
-`informed`, `profiling_declined`, `profiling_accepted`, `data_collection`,
-`profiling_in_progress`, `profiled`, `submitted_to_agentur`, `dsv_offered`, `dsv_declined`,
-`dsv_expired`, and `dsv_signed` (only with the cancellation document). `self_registered` uses
-`rejected` instead.
+**Manual withdrawal** (`→ withdrawn`, reason chosen by the PL) is allowed from `imported`,
+`contacted`, `unreachable` and `informed`. If `dsvStatus = dsv_signed`, it additionally needs
+the cancellation document (see DSV track). `self_registered` uses `rejected` instead.
 
-### States
+### Profiling track
 
-| State | Terminal | Notes |
-|---|---|---|
-| `self_registered` | no | Registered via project QR (valid 14 days). PL matches manually. |
-| `imported` … `submitted_to_agentur` | no | Phase 1 flow |
-| `profiling_declined` | no | Can come back until the grace period ends *(provisional, Q53)* |
-| `unreachable`, `dsv_declined`, `dsv_expired` | no | Can come back (late joiners) until the grace period ends (Q50) |
-| `dsv_offered`, `dsv_signed` | no | |
-| `active_in_tg` | no | Has dated sub-status periods (below) |
-| `withdrawn` | **yes** | Pre-TG exit with a reason. Retention counts from here. |
-| `rejected` | **yes** | Self-registration not in scope or unmatched. Deleted after 30 days. |
-| `ta_completed` | **yes** | End of a `ta_only` participation |
-| `exited` | **yes** | TG exit with a reason |
+```mermaid
+stateDiagram-v2
+  [*] --> not_started
+  not_started --> profiling_accepted : participant agrees to take part
+  not_started --> profiling_declined
+  profiling_accepted --> profiling_in_progress : first profiling session
+  profiling_accepted --> profiling_declined
+  profiling_in_progress --> profiling_done : TL 407 complete + signed by participant and profiler
+  profiling_in_progress --> profiling_declined
+  profiling_declined --> profiling_accepted : changes mind before grace period ends
+```
 
-`profiling_accepted` means the person agreed to take part in profiling. It is **not** GDPR
-consent: the legal basis for profiling is the legal obligation under §110/§111 SGB III (Q4).
+- `profiling_accepted` means the person agreed to take part. It is **not** GDPR consent: the
+  legal basis is §110/§111 SGB III (Q4). The participant can still refuse, but then loses
+  Transfer-KuG eligibility. The signature on TL 407 page 2 is a declaration on the form, not
+  our consent record.
+- Self-service data collection runs alongside: its completeness (per resolved config) is shown
+  in "what's missing" and pre-fills TL 407. It is not a state.
+- The TL 407 **submission to the Agentur** is tracked on the document (date, channel) and
+  checked against the placement Agentur's `leadTimeDays`. Whether it is also part of the TG
+  entry guard is open (Q54).
+
+### DSV track (only `ta_tg`)
+
+```mermaid
+stateDiagram-v2
+  [*] --> not_offered
+  not_offered --> dsv_offered : DSV generated and handed out (e.g. at the info event)
+  dsv_offered --> dsv_signed : participant's signed paper received + scan stored
+  dsv_offered --> dsv_declined
+  dsv_offered --> dsv_expired : signing deadline passed (system)
+  dsv_declined --> dsv_offered : re-offer (late joiner, before grace period ends)
+  dsv_expired --> dsv_offered : re-offer (late joiner, before grace period ends)
+```
+
+- `dsv_signed` = the **participant** has signed. The DSV document also tracks
+  `customerSignedOn` and `tgSignedOn`. **`dsvFullyExecuted`** is derived: all three dates are
+  set (Q21).
+- PLs get a list of DSVs **signed by the participant but not yet fully executed**, because this
+  is where things typically get stuck.
+- Original tracking per document: `originalLocation`, `receivedOn`, `sentToCustomerOn`.
+- **Withdrawal after `dsv_signed`** *(verify, Q46)*: before TG start, main status → `withdrawn`
+  only with an uploaded cancellation document signed by all three parties. The PL confirms, and
+  a customer notification flag is set. After TG start it is a normal TG exit.
+
+### Arbeitsuchendmeldung (ASU)
+
+- **Registered** = Kug 200b **submitted to the Agentur**, with a recorded `submittedOn` and
+  `channel`. An Agentur confirmation (`confirmedOn`) is optional. If there is no confirmation
+  14 days after submission, the PL sees a warning to follow up.
+- How other channels (participant registered online/in person themselves) count is open (Q55).
+- `asuDueDate` (see Dates) drives reminders.
+
+### TG entry guard (`informed → active_in_tg`)
+
+A system job checks this on the participant's TG start date:
+
+| Condition | Override |
+|---|---|
+| `dsvFullyExecuted` (participant, customer and TG signatures) | **none** — no employment without the written contract (§623 BGB) |
+| ASU registered (Kug 200b submitted), required before transfer into the beE by §111(4) Nr. 4 SGB III | **none** — the profiling exception does not extend to the ASU |
+| `profilingStatus = profiling_done` **or** `profilingException = true` (with reason) | the exception itself is the override |
+
+If the guard fails, the participation stays `informed` and appears in the PL's "what's missing"
+list. Guards marked "none" can't be overridden by anyone.
+
+**Profiling exception** *(Q17)*: if profiling wasn't possible before entry into the beE, the
+PL sets `profilingException = true` with a reason. Profiling must then reach `profiling_done`
+within **1 month of TG entry**, with reminders to the profiler and the PL.
+
+### System withdrawal at the end of the grace period *(Q50, Q53)*
+
+At grace-period end, a nightly job with the `system` actor moves participations to `withdrawn`
+when they can no longer reach the TG:
+
+| Situation | Withdrawal reason |
+|---|---|
+| `profilingStatus = profiling_declined` (and DSV not signed) | `declined_profiling` (no Transfer-KuG at all, reported separately) |
+| `dsvStatus = dsv_declined` | `declined_dsv` |
+| `dsvStatus = dsv_expired` | `no_response` |
+| main status `unreachable` | `no_response` |
+
+- If several apply, the first matching row wins *(proposed order: `declined_profiling` before
+  `declined_dsv` before `no_response`)*.
+- **Conflict:** `dsvStatus = dsv_signed` **and** `profilingStatus = profiling_declined`. The
+  person can't enter the beE, but the DSV is signed. The system **does not resolve this
+  automatically**. It flags the conflict to the PL for manual clarification.
+- Participations in `informed` whose DSV was never offered (`not_offered`) at grace-period end
+  are flagged to the PL, not withdrawn automatically.
+- `declined_profiling`, `declined_dsv` and `no_response` exist only as reasons, never as states.
 
 ### Rules
 
-- Transitions are allowed **only along the arrows** (plus the manual withdrawal listed above).
-  Implement this as a pure function in `packages/domain` (`canTransition(from, to, context)`),
-  fully unit-tested.
-- **Guards** depend on data and configuration (below). A PL can **override a guard** with a
-  mandatory reason (audited, flagged for review). An override never creates an arrow that
-  doesn't exist.
-- Every transition writes an **audit event**: actor (`user`, `participant` or `system`),
-  `onBehalfOf` (assisted mode), timestamp, from, to, reason. **System transitions** run in an
-  idempotent nightly job with the `system` actor.
+- Transitions are allowed **only along the arrows** (plus manual withdrawal). Implement them as
+  pure functions in `packages/domain`, fully unit-tested, including the combination rules of
+  the TG entry guard and the system withdrawal.
+- **Every change of the main status or a track** is written in **one transaction** with its
+  audit event, through a single status function. The app's DB role cannot `UPDATE` status
+  columns directly (ADR-0002).
+- Audit events record: actor (`user`, `participant` or `system`), `onBehalfOf` (assisted mode),
+  timestamp, which field (`status`, `profilingStatus`, `dsvStatus`), from, to, reason.
+- **Guards** depend on data and configuration. A PL can **override** a guard with a mandatory
+  reason (audited, flagged for review), **except the guards marked "none"** above. An override
+  never creates an arrow that doesn't exist.
 - **Late joiners** come back along the explicit return arrows (`unreachable → contacted`,
-  `profiling_declined → informed`, `dsv_declined/dsv_expired → dsv_offered`) until the grace
-  period ends. Terminal states are final.
-- **Grace period:** 90 days after the project's signing deadline *(provisional, Q3)*. Then the
-  system moves `dsv_declined`, `dsv_expired`, `unreachable` and `profiling_declined` to
-  `withdrawn` with a derived reason.
-
-### Guards
-
-| Transition | Guard |
-|---|---|
-| `self_registered → imported` | PL matched the registration to an imported record |
-| `data_collection → profiling_in_progress` | all required fields/documents of the resolved configuration present |
-| `profiling_in_progress → profiled` | TL 407 generated, required fields valid (dates `TT.MM.JJJJ`), signed scan uploaded (participant + profiler) |
-| `profiled → submitted_to_agentur` | submission recorded (channel, date) per the placement Agentur's config |
-| `* → dsv_offered` (exception path) | `profilingException = true` + reason (Q17) |
-| `dsv_offered → dsv_signed` | scan of the participant-signed DSV uploaded + who received it |
-| `dsv_signed → active_in_tg` | TG start date reached; DSV **fully executed** (participant, customer, TG signatures recorded) (Q21); ASU registered (Kug 200b or other channel), required by §111(4) Nr. 4 SGB III; profiling `profiled`/`submitted_to_agentur` **or** `profilingException` |
-| `dsv_signed → withdrawn` | cancellation document signed by all three parties uploaded; PL confirms; customer notification flag set *(verify, Q46)* |
-| `active_in_tg → exited` | exit reason (+ placement details for placements) |
-
-When a system transition's guard fails (e.g. TG start reached but the DSV is not fully
-executed), the participation stays where it is and appears in the PL's "what's missing" list.
-
-### Profiling exception *(Q17)*
-
-If profiling wasn't possible before entry into the beE, the participation can enter the TG with
-`profilingException = true` and a reason. The profiling record must then be completed within
-**1 month of TG entry**, with reminders to the profiler and the PL. The profiling record keeps
-its own status, independent of the lifecycle state.
+  `profiling_declined → profiling_accepted`, `dsv_declined/dsv_expired → dsv_offered`) until
+  the grace period ends. Terminal states are final.
+- **System transitions** (`dsv_expired`, `active_in_tg`, grace-period withdrawals) run in an
+  idempotent nightly job with the `system` actor, using the `Clock` adapter.
 
 ### Exit and withdrawal reasons *(provisional, Q34)*
 
@@ -179,10 +226,9 @@ One enum with a `phase` attribute:
 
 | Phase | Reasons |
 |---|---|
-| `pre_tg` (→ `withdrawn`) | `declined_dsv`, `no_response`, `placed_direct`, `self_employed`, `retirement`, `other_measure`, `deceased`, `other` |
+| `pre_tg` (→ `withdrawn`) | `declined_profiling`, `declined_dsv`, `no_response`, `placed_direct`, `self_employed`, `retirement`, `other_measure`, `deceased`, `other` |
 | `tg` (→ `exited`) | `placed_permanent`, `placed_fixed_term`, `self_employed`, `retirement`, `apprenticeship_or_study`, `max_duration_reached`, `own_termination_without_job`, `terminated_by_tg`, `long_term_illness_reduced_earning_capacity`, `deceased`, `other` |
 
-- `declined_dsv` and `no_response` exist only as reasons, never as states.
 - Placements also record: `contractType` (full/part time), `fixedTermMonths`, `tempAgency`,
   `backToFormerGroup` (reported separately), `startDate`, optional new employer.
 - **Integration rate** = placements (`placed_direct`, `placed_permanent`, `placed_fixed_term`,
@@ -203,16 +249,16 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 
 | Step | Who | Output |
 |---|---|---|
-| Project setup | PL | project type, KuG-Agentur, dates (signing deadline, default TG start/end), modules, regional templates |
+| Project setup | PL | project type, KuG-Agentur, dates (signing deadline, default TG start/end), regional templates |
 | Import | PL | participations in `imported`; import report with row errors/duplicates |
 | Registration QR | PL → participants | `self_registered` participations, matched manually by the PL |
-| Info events & appointments | PL/Berater, participants self-book | attendance → `informed` |
+| Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |
-| Arbeitsuchendmeldung | participant / TG | ASU record: channel, `registeredOn`, placement Agentur, Kug 200b scan if via TG; batch submission per Agentur |
-| Profiling | profiler + participant | profiling record, TL 407 (incl. "Anlage" for overflow), signatures |
-| Submission to Agentur | assigned PL | submission status and channel per participant |
-| DSV | PL / back office | generated DSV, paper signatures of all three parties, scan, original location |
+| Arbeitsuchendmeldung | participant / TG | Kug 200b signed, collected and submitted in batches per placement Agentur; ASU record |
+| Profiling | profiler + participant | profiling track, TL 407 (incl. "Anlage" for overflow), signatures |
+| Submission to Agentur | assigned PL | TL 407 submission status and channel per participant |
+| DSV | PL / back office | DSV track, signatures of all three parties, scan, original location |
 
 ## Phase 2 detail (TG module)
 

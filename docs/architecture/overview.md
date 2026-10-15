@@ -2,14 +2,16 @@
 
 ## Shape
 
-**Modular monolith** (ADR-0001): one deployable API, one SPA, one PostgreSQL database.
+**Modular monolith** (ADR-0001): one deployable API, two SPAs (staff, participant portal), one
+PostgreSQL database.
 Modules are separated by package boundaries, not by network calls.
 
 ```
-            ┌──────────────── apps/web (React SPA) ────────────────┐
-            │  staff UI (PL, Berater, back office, admin)           │
-            │  participant portal (mobile-first, role-gated routes) │
-            └───────────────────────┬──────────────────────────────┘
+    ┌──── apps/web (React SPA) ─────┐    ┌──── apps/portal (React SPA) ────┐
+    │ staff: PL, Berater/Profiler,  │    │ participants: mobile-first,     │
+    │ back office, admins           │    │ SMS/email login, RTL-ready      │
+    └───────────────┬───────────────┘    └────────────────┬────────────────┘
+                    └──────────────────┬──────────────────┘
                                     │ JSON over HTTPS (typed client from shared Zod schemas)
             ┌───────────────────────▼──────────────────────────────┐
             │ apps/api (Hono)                                      │
@@ -41,7 +43,9 @@ Modules are separated by package boundaries, not by network calls.
 
 ## Module boundaries
 
-- `packages/domain` has **no I/O**: no DB, no HTTP. Pure functions + types. Easy to test.
+- `packages/domain` has **no I/O**: no DB, no HTTP. Pure functions + types: lifecycle (main
+  status + profiling and DSV tracks), guards, completeness, and the field-level access matrix.
+- `apps/portal` must not import staff-only modules (lint rule).
 - API modules may depend on `domain`, `config`, `db`, `adapters` — never on each other's
   internals (talk through exported service functions).
 - UI talks only to the API. No business rules in the UI beyond display validation (shared Zod).

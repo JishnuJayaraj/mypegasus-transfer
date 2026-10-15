@@ -37,9 +37,12 @@ Decided (from the decisions log; details in `docs/domain/regional-variation.md`)
 - In the MVP, templates are seed files, so a new region needs a deploy until the admin UI
   exists.
 
-Proposed (from the 2026-10-15 review, not yet approved):
-- Field schemas are stored as **JSON Schema** and compiled to validators at runtime. Zod source
-  can't be data.
-- Completeness rules use a minimal declarative format (`required`, `requiredIf`,
-  `documentPresent`), without scripting.
-- The nationwide base process is a versioned **base-defaults** file in `packages/config`.
+Accepted in the PR #1 review:
+- Regional config is validated by **JSON Schema stored as data**, compiled to validators at
+  runtime (Zod source can't be data). Since the BA forms are nationwide, regional templates are
+  small: channels, deadlines, `originalRequired`, a few extra fields.
+- Completeness rules are a **minimal declarative set**: `required`, `requiredIf` (equals /
+  exists), `documentPresent` (+ accepted). **No scripting.**
+
+Still proposed (not yet decided):
+- The nationwide base process as a versioned **base-defaults** file in `packages/config`.

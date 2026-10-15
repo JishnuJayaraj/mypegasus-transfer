@@ -33,7 +33,12 @@ Decided (from the decisions log):
 - Locally Postgres 16, in production CloudNativePG on the cluster (ADR-0005). Keep the major
   versions aligned.
 
-Proposed (from the 2026-10-15 review, not yet approved):
-- Status and audit are written in the same transaction through one repository/DB function, and
-  the app role has no direct `UPDATE` on status columns. Append-only is enforced by grants.
+Accepted in the PR #1 review:
+- **Status writes are enforced in the database.** Every change of the main status or a track
+  (`status`, `profilingStatus`, `dsvStatus`) and its audit entry are written in **one
+  transaction through a single function**. `UPDATE` on status columns is revoked from the app
+  role. The audit table is **append-only by grants** (no `UPDATE`/`DELETE` for the app role;
+  pseudonymisation runs under a separate role used only by the retention job).
+
+Still proposed (not yet decided):
 - Optional row-level security per project as defence in depth.

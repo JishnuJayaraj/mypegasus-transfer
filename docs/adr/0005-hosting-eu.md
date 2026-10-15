@@ -1,6 +1,6 @@
 # ADR-0005: Hosting — local first, then company Hetzner cluster
 
-- Status: Accepted (cluster details provisional, Q12; operator/AVV open, Q32)
+- Status: Accepted (cluster details provisional, Q12)
 - Date: 2026-10-15 (amended the same day from the decisions log)
 
 ## Context
@@ -31,8 +31,8 @@ operates a Hetzner cluster in German data centres.
 
 ## Pre-pilot gate (all must be true before any real data)
 - [ ] DPIA (DSFA) completed (Q25)
-- [ ] **AVV chain signed** for `<CLUSTER_OPERATOR_ENTITY>` (TG ↔ group IT company ↔ Hetzner,
-      or TG ↔ Hetzner) — **blocking**, Q32
+- [ ] **AVV chain signed** for the cluster (TG ↔ operator ↔ Hetzner, or TG ↔ Hetzner) —
+      **blocking**. The product owner operates the cluster and owns the AVV chain (Q32).
 - [ ] Data-sharing clause in the customer contract (Q14)
 - [ ] No `assumed`/`verify` items left in data protection, retention or legal deadlines
       (`open-questions.md`, rows marked 🔒)
@@ -44,4 +44,4 @@ operates a Hetzner cluster in German data centres.
 ## Consequences
 + Data stays in German infrastructure under company control.
 - We own backups, upgrades and monitoring of Postgres (no managed Postgres at Hetzner).
-- The pilot depends on the cluster team answering Q32.
+- The pilot depends on the AVV chain being signed (owned by the product owner, Q32).

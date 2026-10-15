@@ -44,8 +44,11 @@ confirmed before the pilot.
    BGB for the DSV).** The app generates, tracks the scan and the paper original. Never build an
    e-signature flow for them. Official forms are versioned in the form registry (ADR-0009).
 5. **Every status change is audited** (actor `user`/`participant`/`system`, `onBehalfOf`, when,
-   from, to, why). Use the audit helper; do not write status fields directly. Guard overrides,
-   break-glass access, document openings and confirmed warnings are audited too.
+   which field, from, to, why). A participation has a main status plus a profiling track and a
+   DSV track; all go through the single status function, which writes the change and the audit
+   entry in one transaction. The DB role cannot update status columns directly (ADR-0002).
+   Guard overrides, break-glass access, document openings and confirmed warnings are audited
+   too. Some guards (DSV fully executed, ASU registered) have no override.
 6. **Personal data never flows back to the customer (old employer)** at person level, **except a
    fixed whitelist** *(provisional, Q13/Q14)*: name, Personalnummer, DSV signed (yes/no + date),
    beE entry date, beE exit date. Everything else is aggregated with n < 5 suppressed. Enforce
@@ -55,8 +58,8 @@ confirmed before the pilot.
    No AI in the MVP. Later only EU-hosted providers with an AVV *(provisional, Q38)*.
 8. **We are an independent controller** *(provisional, Q14)*. The customer contract has a
    data-sharing clause, not an AVV, and the customer cannot order deletions. Every processor
-   (cluster operator, SMS/mail providers) needs an AVV. The AVV chain for the cluster blocks
-   the pilot (Q32).
+   (cluster operator, SMS/mail providers) needs an AVV. The product owner operates the cluster
+   and owns its AVV chain; a signed AVV chain is a pre-pilot gate item (Q32).
 9. **Sensitive data stays out of lists and logs.** Special-category and highly confidential
    fields are encrypted, never in list payloads, and served by separate logged endpoints. No
    personal data in logs, errors or job payloads. See the access matrix in
@@ -101,7 +104,8 @@ confirmed before the pilot.
 
 ```
 apps/
-  web/            React SPA (staff + participant portal, role-based)
+  web/            React SPA for staff
+  portal/         React SPA for participants (mobile-first, own login flow) — ADR-0001
   api/            Hono API
 packages/
   domain/         entities, lifecycle state machine, Zod schemas, completeness rules (no I/O)
@@ -125,8 +129,8 @@ docs/             product + domain + architecture docs (source of truth)
 - Dates: legal/calendar dates (deadlines, TG start/end, exit) as `date`; event times as UTC
   `timestamptz`, displayed in Europe/Berlin. Form dates are `TT.MM.JJJJ`; impossible dates are
   errors, implausible ones are warnings staff confirm.
-- UI text through i18n only. Staff UI `de`; participant portal `de` + `en` in the MVP, RTL-ready
-  (CSS logical properties).
+- UI text through i18n only. Staff UI (`apps/web`) `de`; participant portal (`apps/portal`) `de` +
+  `en` in the MVP, RTL-ready (CSS logical properties).
 - Never commit secrets. Config via environment variables; document new ones in `.env.example`.
 - Conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
