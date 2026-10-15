@@ -1,0 +1,33 @@
+# Glossary (German ↔ English)
+
+Use these terms consistently in code, UI and docs. The **Code term** column is what appears in
+identifiers. If you find a term that is not here, add it.
+
+| German | English | Code term | Meaning |
+|---|---|---|---|
+| Transfergesellschaft (TG) | Transfer company | `tg` | Company (often called *beE – betriebsorganisatorisch eigenständige Einheit*) that employs affected workers for up to 12 months to move them into new jobs. Funded via Transfer-KuG. |
+| Transferagentur (TA) | Transfer agency / pre-phase | `ta` | Services before employment ends: information, consultation, profiling, transfer measures under §110 SGB III. Also used for TA-only projects without a TG. |
+| Transferprojekt | Transfer project | `project` | One engagement with one employer (customer) for one restructuring. Has its own dates, budget, rules. |
+| Auftraggeber / abgebender Arbeitgeber | Customer / old employer | `customer` | The employer who is reducing staff and pays for the transfer. |
+| Betriebsrat (BR) | Works council | `worksCouncil` | Employee representatives; negotiate the social plan; receive aggregated reporting. |
+| Sozialplan / Transfersozialplan | Social plan | `socialPlan` | Agreement defining the transfer solution, budgets, terms. |
+| Projektleiter (PL) | Project lead | `projectLead` | TG staff member responsible for a project. |
+| Berater / Coach | Consultant / coach | `consultant` | TG staff doing consultation, profiling, coaching. |
+| Teilnehmer (TN) | Participant | `participant` | An affected employee in a project. |
+| Agentur für Arbeit (AA) | Local employment agency | `agentur` | Local office of the BA. Requirements vary slightly per Agentur → see regional-variation.md |
+| Bundesagentur für Arbeit (BA) | Federal Employment Agency | `ba` | Funds Transfer-KuG and transfer measures. |
+| Transferkurzarbeitergeld (Transfer-KuG) | Transfer short-time allowance | `transferKug` | Benefit (§111 SGB III) paid while participants are in the TG, max. 12 months. |
+| Transfermaßnahmen | Transfer measures | `transferMeasure` | Funded measures under §110 SGB III (TA phase). |
+| Profiling (Maßnahme zur Feststellung der Eingliederungsaussichten) | Profiling | `profiling` | Assessment of qualifications and job prospects. Prerequisite for Transfer-KuG. |
+| Arbeitsuchendmeldung (ASU) | Job-seeker registration | `arbeitsuchendmeldung` | Registration of the person as job-seeking with the Agentur. *(Verify exact meaning of "ASU form" per region — see open-questions.md.)* |
+| Dreiseitiger Vertrag (DSV) | Tripartite contract | `dsv` | Contract between participant, old employer and TG: ends the old employment and starts employment in the TG. **Wet-ink signature required.** |
+| Qualifizierungsplan | Qualification plan | `qualificationPlan` | Planned trainings/courses for a TG participant. |
+| Bildungsträger | Training provider | `trainingProvider` | Provider of courses; often must be AZAV-certified for funding. |
+| AZAV | Accreditation regulation | `azav` | Certification of providers/measures for BA funding. |
+| Probearbeit | Trial work | `trialWork` | Trial employment with a potential new employer during TG. |
+| Vermittlung / Austritt | Placement / exit | `exit` | Participant leaves the TG (new job, self-employment, end of term, other). |
+| Vermittlungsquote | Placement rate | `placementRate` | Share of participants placed into employment. |
+| Abrechnungsliste / KuG-Abrechnung | KuG billing list | `kugBilling` | Monthly billing to the Agentur for Transfer-KuG. |
+| Fehlzeiten | Absences | `absence` | Sickness, holidays etc. — relevant for KuG and payroll. |
+| Sozialdaten | Social data | — | Personal data processed in a social-law context; specially protected (§35 SGB I, §§67 ff. SGB X). |
+| Einwilligung | Consent | `consent` | Participant's consent for specific processing purposes. |
