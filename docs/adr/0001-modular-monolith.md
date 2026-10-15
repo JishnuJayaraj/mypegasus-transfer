@@ -17,3 +17,11 @@ switched on per project.
 - Module boundaries must be enforced by convention/lint rules, not by the network.
 - If a separate public participant frontend is needed later, it can be another app in the
   monorepo using the same API.
+
+## Amendment 2026-10-15 (accepted in the PR #1 review)
+- **Two SPAs on one API:** `apps/web` (staff) and `apps/portal` (participants), sharing
+  `packages/*`. Reasons: the portal is mobile-first, has a different login flow, will need RTL
+  languages, and staff code shouldn't be shipped to participants (smaller attack surface).
+- Module boundaries are enforced by lint rules on import paths (e.g. `apps/portal` may not
+  import staff-only modules).
+

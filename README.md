@@ -16,3 +16,5 @@ phase (coaching, qualification, applications, exit).
 | [`docs/roadmap.md`](docs/roadmap.md) | Build order (vertical slices) |
 | [`docs/guide/working-with-claude-cloud.md`](docs/guide/working-with-claude-cloud.md) | How we build this with Claude in the cloud |
 | [`docs/open-questions.md`](docs/open-questions.md) | Things we must not guess |
+| [`docs/decisions/`](docs/decisions/) | Answers to open questions (dated) |
+| [`docs/reviews/`](docs/reviews/) | Critical reviews of the docs and ADR change proposals |

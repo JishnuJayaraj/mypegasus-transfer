@@ -19,7 +19,7 @@ identifiers. If you find a term that is not here, add it.
 | Transferkurzarbeitergeld (Transfer-KuG) | Transfer short-time allowance | `transferKug` | Benefit (§111 SGB III) paid while participants are in the TG, max. 12 months. |
 | Transfermaßnahmen | Transfer measures | `transferMeasure` | Funded measures under §110 SGB III (TA phase). |
 | Profiling (Maßnahme zur Feststellung der Eingliederungsaussichten) | Profiling | `profiling` | Assessment of qualifications and job prospects. Prerequisite for Transfer-KuG. |
-| Arbeitsuchendmeldung (ASU) | Job-seeker registration | `arbeitsuchendmeldung` | Registration of the person as job-seeking with the Agentur. *(Verify exact meaning of "ASU form" per region — see open-questions.md.)* |
+| Arbeitsuchendmeldung (ASU) | Job-seeker registration | `arbeitsuchendmeldung` | Registration of the person as job-seeking with the Agentur. Obligation under §38 SGB III, nationwide. Via the TG it uses form **Kug 200b** — see ba-forms.md. |
 | Dreiseitiger Vertrag (DSV) | Tripartite contract | `dsv` | Contract between participant, old employer and TG: ends the old employment and starts employment in the TG. **Wet-ink signature required.** |
 | Qualifizierungsplan | Qualification plan | `qualificationPlan` | Planned trainings/courses for a TG participant. |
 | Bildungsträger | Training provider | `trainingProvider` | Provider of courses; often must be AZAV-certified for funding. |
@@ -31,3 +31,17 @@ identifiers. If you find a term that is not here, add it.
 | Fehlzeiten | Absences | `absence` | Sickness, holidays etc. — relevant for KuG and payroll. |
 | Sozialdaten | Social data | — | Personal data processed in a social-law context; specially protected (§35 SGB I, §§67 ff. SGB X). |
 | Einwilligung | Consent | `consent` | Participant's consent for specific processing purposes. |
+| Profilingbogen TL 407 | Profiling form | `tl407` | Nationwide BA form "Arbeitspaket / Profilingbogen" (§110/§111 SGB III), AcroForm, signed by participant and profiler. See ba-forms.md. |
+| Kug 200b | Written job-seeker registration via TG | `kug200b` | Nationwide BA form for the Arbeitsuchendmeldung through the TG, incl. consent to TG access to the applicant profile. See ba-forms.md. |
+| Profiler | Profiler | `profiler` | Staff member who carries out profiling and signs TL 407 (usually a Berater). |
+| Anzeige über Arbeitsausfall | Notification of work loss | `arbeitsausfallAnzeige` | Project-level notification to the KuG-Agentur, prerequisite for Transfer-KuG. |
+| Remanenzkosten | Residual costs | `remanenzkosten` | Costs of the TG not covered by Transfer-KuG (e.g. social insurance, holiday pay), paid by the customer per head. |
+| Ausscheiden vor Eintritt in die beE | Withdrawal (pre-TG) | `withdrawn` | Terminal state for people who leave before the TG, with a reason (`declined_dsv`, `no_response`, `placed_direct`, …). |
+| Nachweisbestand | Evidence set | `evidenceSet` | Minimal records kept for funding audits after full deletion (ADR-0008). |
+| KuG-Agentur | KuG Agentur | `kugAgentur` | Agentur responsible for the project's Anzeige and Transfer-KuG. |
+| Vermittlungs-Agentur | Placement Agentur | `placementAgentur` | Agentur responsible for a participant (by residence): ASU, TL 407, placement. |
+| Schlussabrechnung | Final settlement | `kugFinalSettlementDate`, `measure110SettlementDate` | Agentur's final check of Transfer-KuG / the §110 grant; starts the evidence-set clock. |
+| Grad der Behinderung (GdB) | Degree of disability | `gdb` | Special-category data; back office may see it for payroll. |
+| eAU | Electronic sick note | — | Employer retrieves sick notes electronically; we store only "AU confirmed" + dates. |
+| Niederlassung | Branch / region | `region` | Organisational unit grouping projects and staff; scope of regional admins. |
+| Integrationsquote | Integration rate | `integrationRate` | Placements ÷ all exits (which reasons count is configurable). |
