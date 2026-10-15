@@ -1,5 +1,10 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
   "printWidth": 100,
-  "ignorePatterns": ["**/*.md", "pnpm-lock.yaml"]
+  "ignorePatterns": [
+    "**/*.md",
+    "pnpm-lock.yaml",
+    "packages/api-client/openapi.json",
+    "packages/api-client/src/schema.d.ts"
+  ]
 }

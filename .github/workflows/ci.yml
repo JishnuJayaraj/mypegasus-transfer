@@ -30,6 +30,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      # The committed OpenAPI document and client types must match the API (ADR-0010).
+      - name: API client drift
+        run: |
+          pnpm api:generate
+          git diff --exit-code -- packages/api-client
 
   lint:
     runs-on: ubuntu-24.04

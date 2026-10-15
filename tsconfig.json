@@ -3,6 +3,8 @@
   "references": [
     { "path": "./tsconfig.config.json" },
     { "path": "./packages/domain" },
-    { "path": "./packages/db" }
+    { "path": "./packages/db" },
+    { "path": "./apps/api" },
+    { "path": "./packages/api-client" }
   ]
 }

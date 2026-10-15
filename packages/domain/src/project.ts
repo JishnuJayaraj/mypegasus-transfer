@@ -62,3 +62,20 @@ export const CreateProjectInput = z
   .meta({ id: "CreateProjectInput" });
 
 export type CreateProjectInput = z.infer<typeof CreateProjectInput>;
+
+/** A project as the API returns it. Dates are `null` when not set. */
+export const Project = z
+  .object({
+    id: z.uuid(),
+    name: z.string(),
+    customerName: z.string(),
+    type: ProjectType,
+    signingDeadline: isoDate.nullable(),
+    defaultTgStart: isoDate.nullable(),
+    defaultTgEnd: isoDate.nullable(),
+    createdAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
+    createdBy: z.uuid().meta({ description: "Staff user id" }),
+  })
+  .meta({ id: "Project" });
+
+export type Project = z.infer<typeof Project>;

@@ -25,3 +25,13 @@ Zod in `packages/domain`.
 + One source of truth for request/response types, documentation and clients.
 + Exports and integrations get a documented contract.
 - Routes must be written in the `@hono/zod-openapi` style from Slice 0 on.
+
+## Risk noted 2026-10-15: `openapi-typescript` maintenance
+
+`openapi-typescript`'s maintenance looks uncertain: no release since February 2026, and TS 6
+support has stalled, according to a maintainer-status discussion on GitHub. Version 7.13.0
+declares `typescript: ^5.x` as a peer; the root `package.json` allows TS 6 for exactly that edge
+(`openapi-typescript>typescript`, spike S4 in ADR-0003). The risk is contained: only
+`packages/api-client` depends on the generator, and the apps only use `openapi-fetch` and the
+committed types. If it doesn't support TS 6 by the end of the MVP, evaluate a replacement
+generator then. No action now.
