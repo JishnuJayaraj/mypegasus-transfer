@@ -130,3 +130,30 @@ jobs:
             apps/web/playwright-report
             apps/web/test-results
           retention-days: 7
+
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://transfer_app:transfer_app_dev@localhost:5432/transfer
+      DATABASE_MIGRATION_URL: postgres://transfer_owner:transfer_owner_dev@localhost:5432/transfer
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The dev roles and databases from the same SQL as `pnpm db:setup` (no Node needed here).
+      - run: psql --quiet --no-psqlrc "$DATABASE_ADMIN_URL" -f packages/db/sql/setup.sql
+      # Built and smoke-tested, never pushed in Slice 0 (registry push: Slice 9).
+      - run: docker build -t transfer:ci .
+      # Non-root, migration, then /api/v1/health/ready, / and /portal/ (AC-22).
+      - run: scripts/image-smoke.sh transfer:ci
