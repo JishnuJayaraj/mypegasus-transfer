@@ -87,7 +87,9 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - Filters, search, bulk actions (send reminder, assign Berater, export list).
 - Deadline warnings (signing deadline, TG start, ASU due date, profiling-exception deadline).
 - Lists: DSVs signed by the participant but not fully executed; Kug 200b submitted without
-  Agentur confirmation after 14 days; conflicts (DSV signed but profiling declined); TG entry
+  Agentur confirmation after 14 days; TL 407 not submitted by TG start (escalated to PL and
+  regional admin 14 days after TG start); self-registered ASU without Kug 200b profile-access
+  consent; conflicts (DSV signed but profiling declined); TG entry
   guards failing.
 
 ### F8 DSV tracking

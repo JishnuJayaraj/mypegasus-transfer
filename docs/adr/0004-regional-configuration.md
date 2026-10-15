@@ -44,5 +44,7 @@ Accepted in the PR #1 review:
 - Completeness rules are a **minimal declarative set**: `required`, `requiredIf` (equals /
   exists), `documentPresent` (+ accepted). **No scripting.**
 
-Still proposed (not yet decided):
-- The nationwide base process as a versioned **base-defaults** file in `packages/config`.
+- **Base defaults** (accepted, round 5): `packages/domain/config/base-defaults.json`,
+  validated by the same JSON Schema as regional templates. It holds the nationwide process:
+  default channels, deadlines (ASU formula, signing-deadline offset, reminder intervals) and
+  default completeness rules. Regional templates override only what differs.

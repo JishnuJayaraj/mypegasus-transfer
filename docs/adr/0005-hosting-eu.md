@@ -36,6 +36,8 @@ operates a Hetzner cluster in German data centres.
 - [ ] Data-sharing clause in the customer contract (Q14)
 - [ ] No `assumed`/`verify` items left in data protection, retention or legal deadlines
       (`open-questions.md`, rows marked 🔒)
+- [ ] **Row-level security per project enabled** on all tables with participant data (they
+      carry `project_id` from the start, ADR-0002)
 - [ ] Backup and restore tested; backup retention ≤ 30 days
 - [ ] TLS, monitoring and alerting in place; logs checked for personal data
 - [ ] Security review / penetration test of auth, permissions and uploads

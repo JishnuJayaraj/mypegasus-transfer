@@ -12,7 +12,7 @@ Modules are separated by package boundaries, not by network calls.
     │ back office, admins           │    │ SMS/email login, RTL-ready      │
     └───────────────┬───────────────┘    └────────────────┬────────────────┘
                     └──────────────────┬──────────────────┘
-                                    │ JSON over HTTPS (typed client from shared Zod schemas)
+                                    │ JSON over HTTPS, /api/v1 (OpenAPI, typed clients — ADR-0010)
             ┌───────────────────────▼──────────────────────────────┐
             │ apps/api (Hono)                                      │
             │  modules: projects · participants · import · forms   │
@@ -40,6 +40,8 @@ Modules are separated by package boundaries, not by network calls.
 | Auth | Staff: Entra ID via OIDC + MFA (dev stub first); participants: SMS/email link + birth-date check | 0007 |
 | Retention | Per data item, two-stage deletion with evidence set | 0008 |
 | Official forms | Versioned BA form registry, AcroForm filling | 0009 |
+| API contract | OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1` | 0010 |
+| Background jobs | pg-boss, idempotent, `system` actor, injected `Clock`, ID-only payloads | 0011 |
 
 ## Module boundaries
 
@@ -54,9 +56,8 @@ Modules are separated by package boundaries, not by network calls.
 
 Reminders, deadline checks, system lifecycle transitions (`dsv_expired`, `withdrawn` after the
 grace period, `active_in_tg`), two-stage retention/deletion, PDF batch generation. All jobs are
-idempotent, run with the `system` actor, and take time from the `Clock` adapter. MVP:
-Postgres-backed job queue (e.g. pg-boss or similar — decide in Slice 5) to avoid extra
-infrastructure.
+idempotent, run with the `system` actor, take time from the `Clock` adapter, and carry only IDs
+in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## Performance approach (frontend)
 

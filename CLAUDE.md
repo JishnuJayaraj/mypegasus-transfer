@@ -132,6 +132,14 @@ docs/             product + domain + architecture docs (source of truth)
 - UI text through i18n only. Staff UI (`apps/web`) `de`; participant portal (`apps/portal`) `de` +
   `en` in the MVP, RTL-ready (CSS logical properties).
 - Never commit secrets. Config via environment variables; document new ones in `.env.example`.
+  The deny rules for `.env`, `.env.local` etc. in `.claude/settings.json` are a **guardrail,
+  not a security boundary** (they match command text and are easy to get around). Real secrets
+  live in the cluster's secret store, never in the repo or a local file an agent can read.
+- Every table holding participant data has a `project_id` column (RLS is added before the
+  pilot, ADR-0002/0005).
+- API: OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1`
+  (ADR-0010). Jobs: pg-boss, idempotent, `system` actor, injected `Clock`, ID-only payloads
+  (ADR-0011).
 - Conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 
 ## Commands (fill in once the skeleton exists)

@@ -128,9 +128,15 @@ stateDiagram-v2
   our consent record.
 - Self-service data collection runs alongside: its completeness (per resolved config) is shown
   in "what's missing" and pre-fills TL 407. It is not a state.
-- The TL 407 **submission to the Agentur** is tracked on the document (date, channel) and
-  checked against the placement Agentur's `leadTimeDays`. Whether it is also part of the TG
-  entry guard is open (Q54).
+- The TL 407 **submission to the Agentur** is tracked on the document (date, channel). It is a
+  **"what's missing" item, not a TG entry guard** (Q54): §111(4) Nr. 4 requires taking part in
+  profiling before the transfer, not submitting the form.
+  - Not submitted by the TG start date → warning on the PL dashboard.
+  - Still not submitted 14 days after TG start → escalation to the PL and the regional admin
+    (the regional admin sees project and count only, no participant data — see Q57).
+  - With the profiling exception, submission follows once profiling is caught up within the
+    1-month deadline.
+  - Also checked against the placement Agentur's `leadTimeDays`.
 
 ### DSV track (only `ta_tg`)
 
@@ -157,10 +163,20 @@ stateDiagram-v2
 
 ### Arbeitsuchendmeldung (ASU)
 
-- **Registered** = Kug 200b **submitted to the Agentur**, with a recorded `submittedOn` and
-  `channel`. An Agentur confirmation (`confirmedOn`) is optional. If there is no confirmation
-  14 days after submission, the PL sees a warning to follow up.
-- How other channels (participant registered online/in person themselves) count is open (Q55).
+Legally the registration counts, not the form: §38 SGB III allows registration online, in
+person or by phone. Kug 200b is the usual channel in transfer projects, not the only valid one
+(Q55).
+
+- The ASU record stores `channel` (`kug_200b`, `online_self`, `in_person`), `registeredOn`, and
+  **proof**: the submitted Kug 200b, a BA confirmation, or the BA-Kundennummer noted by the PL.
+- **Registered** = a registration with proof, **regardless of channel**. This is what the TG
+  entry guard checks.
+- For `kug_200b`: `registeredOn` is the submission date to the Agentur, with the submission
+  channel. Agentur confirmation (`confirmedOn`) is optional. No confirmation 14 days after
+  submission → warning for the PL to follow up.
+- If someone registered themselves, **still offer Kug 200b**, because it carries the consent
+  that gives the TG access to the BA profile. This is a "what's missing" item, not a guard.
+  Without it, the profile-access consent record simply stays empty.
 - `asuDueDate` (see Dates) drives reminders.
 
 ### TG entry guard (`informed → active_in_tg`)
@@ -170,8 +186,10 @@ A system job checks this on the participant's TG start date:
 | Condition | Override |
 |---|---|
 | `dsvFullyExecuted` (participant, customer and TG signatures) | **none** — no employment without the written contract (§623 BGB) |
-| ASU registered (Kug 200b submitted), required before transfer into the beE by §111(4) Nr. 4 SGB III | **none** — the profiling exception does not extend to the ASU |
-| `profilingStatus = profiling_done` **or** `profilingException = true` (with reason) | the exception itself is the override |
+| ASU registered **with proof**, any channel (Q55), required before transfer into the beE by §111(4) Nr. 4 SGB III | **none** — the profiling exception does not extend to the ASU |
+| `profilingStatus = profiling_done` (TL 407 signed by participant and profiler) **or** `profilingException = true` (with reason) | the exception itself is the override |
+
+TL 407 **submission** to the Agentur is not part of the guard (Q54).
 
 If the guard fails, the participation stays `informed` and appears in the PL's "what's missing"
 list. Guards marked "none" can't be overridden by anyone.
@@ -185,15 +203,17 @@ within **1 month of TG entry**, with reminders to the profiler and the PL.
 At grace-period end, a nightly job with the `system` actor moves participations to `withdrawn`
 when they can no longer reach the TG:
 
-| Situation | Withdrawal reason |
-|---|---|
-| `profilingStatus = profiling_declined` (and DSV not signed) | `declined_profiling` (no Transfer-KuG at all, reported separately) |
-| `dsvStatus = dsv_declined` | `declined_dsv` |
-| `dsvStatus = dsv_expired` | `no_response` |
-| main status `unreachable` | `no_response` |
+| Precedence | Situation | Withdrawal reason |
+|---|---|---|
+| 1 | `dsvStatus = dsv_declined` | `declined_dsv` — the decision against the TG itself |
+| 2 | `profilingStatus = profiling_declined` (and DSV not signed) | `declined_profiling` (no Transfer-KuG at all, reported separately) |
+| 3 | `dsvStatus = dsv_expired`, or main status `unreachable` | `no_response` |
 
-- If several apply, the first matching row wins *(proposed order: `declined_profiling` before
-  `declined_dsv` before `no_response`)*.
+- Explicit decisions rank above silence (Q56). The highest-ranking reason is stored as the
+  **primary reason**. All other applicable reasons are stored as a **secondary list**, so
+  nothing is lost in the audit log.
+- A reason chosen **manually by the PL** (e.g. `placed_direct`, `retirement`) always overrides
+  the derived one.
 - **Conflict:** `dsvStatus = dsv_signed` **and** `profilingStatus = profiling_declined`. The
   person can't enter the beE, but the DSV is signed. The system **does not resolve this
   automatically**. It flags the conflict to the PL for manual clarification.
@@ -255,7 +275,7 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 | Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |
-| Arbeitsuchendmeldung | participant / TG | Kug 200b signed, collected and submitted in batches per placement Agentur; ASU record |
+| Arbeitsuchendmeldung | participant / TG | ASU record with channel and proof; Kug 200b signed, collected and submitted in batches per placement Agentur (also offered to self-registered people for the profile-access consent) |
 | Profiling | profiler + participant | profiling track, TL 407 (incl. "Anlage" for overflow), signatures |
 | Submission to Agentur | assigned PL | TL 407 submission status and channel per participant |
 | DSV | PL / back office | DSV track, signatures of all three parties, scan, original location |

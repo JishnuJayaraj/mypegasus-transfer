@@ -24,7 +24,7 @@ Do **not** build a generic workflow engine. Only the edges are configurable.
 
 | Setting | Example | Source |
 |---|---|---|
-| ASU default channel | `online_self`, `batch_list`, `in_person` | Q1 |
+| ASU default channel | `kug_200b`, `online_self`, `in_person` | Q1, Q55 |
 | Kug 200b batch submission channel | paper originals by courier/post, scan by email, upload | Q45 |
 | TL 407 submission channel | email, upload, paper original | Q2 |
 | `originalRequired` | does the Agentur need the paper original? | Q2 |
@@ -66,7 +66,8 @@ Participation
   - participant steps: base defaults → template of the participant's **placement Agentur** →
     project overrides
   - project steps: base defaults → template of the project's **KuG-Agentur** → project overrides
-- **Base defaults** *(proposed)* are a versioned file in `packages/config` that describes the nationwide
+- **Base defaults** are `packages/domain/config/base-defaults.json` (ADR-0004), validated by the
+  same JSON Schema as regional templates. It describes the nationwide
   process (fields required by TL 407 and Kug 200b, standard documents). Templates only add or
   change things relative to it.
 - **Template versions are pinned** per project *(provisional, Q36)*. When a participant with a

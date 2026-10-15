@@ -6,7 +6,7 @@ click through in a demo. Write a plan in `docs/plans/<slice>.md` before implemen
 ## Slice 0 — Walking skeleton
 Monorepo (pnpm), Vite+/Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell
 (header, side nav), TanStack Router with 2 routes, one entity (`Project`) list + create, end to
-end, with tests. CI (GitHub Actions): typecheck, lint, test. Stub auth (dev user switcher).
+end, with tests. API routes via `@hono/zod-openapi` under `/api/v1` (ADR-0010). CI (GitHub Actions): typecheck, lint, test. Stub auth (dev user switcher).
 **Done when:** `pnpm dev` shows the project list from the DB; CI is green.
 
 ## Slice 1 — Domain core
@@ -16,6 +16,8 @@ completeness engine, **field-level access matrix** (role × project × assignmen
 from data-protection.md). `packages/config`: regional template model (JSON Schema) + resolver
 + 2 sample templates. 100 % unit-test coverage on transitions, guards, access rules and
 resolution.
+Base defaults file (`packages/domain/config/base-defaults.json`). pg-boss set up with the
+`Clock` adapter for the system transitions (ADR-0011).
 **Done when:** tests document every allowed/forbidden transition and every access rule.
 
 ## Slice 2 — Projects & import (F1, F2)
@@ -27,9 +29,16 @@ Connect login and identity to the Slice 1 access model: staff OIDC (dev stub fir
 `apps/web`, participant SMS/email link (mock adapters) in `apps/portal`, sessions, audit of
 logins.
 
-## Slice 4 — Self-service wizard (F5) + registration link (F3)
-Config-driven wizard in `apps/portal`, consent, uploads (storage adapter, mock), assisted mode
-(from `apps/web`), QR registration and matching.
+## Slice 4a — Self-service wizard + consent (F5)
+Config-driven wizard in `apps/portal`, consent records, assisted mode (from `apps/web`).
+
+## Slice 4b — Uploads and documents (F5)
+Uploads (storage + virus-scan adapters, mock), file-type allowlist, signed URLs, document
+records with retention class.
+
+## Slice 4c — QR registration and matching (F3)
+Project QR (14 days, rate limit, captcha), `self_registered`, manual matching by the PL,
+30-day deletion of unmatched registrations.
 
 ## Slice 5 — PL dashboard (F7) + reminders (F4 basics)
 Funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines.

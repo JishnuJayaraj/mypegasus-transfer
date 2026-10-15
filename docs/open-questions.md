@@ -15,11 +15,11 @@ dated file in [`decisions/`](decisions/), update the status here, and update the
 deadlines may be `assumed` or `verify` (rows marked 🔒).
 
 Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-10-15-answers-round-2.md) ·
-[round 3](decisions/2026-10-15-answers-round-3.md) · [round 4 / PR #1 review](decisions/2026-10-15-answers-round-4.md) (all 2026-10-15)
+[round 3](decisions/2026-10-15-answers-round-3.md) · [round 4](decisions/2026-10-15-answers-round-4.md) · [round 5](decisions/2026-10-15-answers-round-5.md) (all 2026-10-15)
 
 | # | Topic | Owner | Status | Answer (short) | Confirmed by / date |
 |---|---|---|---|---|---|
-| 1 | Arbeitsuchendmeldung / ASU 🔒 | PLs | verify | Form **Kug 200b** (TG route). `asuDueDate = max(end − 3 months, knowledge + 3 days)`, month end clamped (round 3). A PL must confirm before reminders go live. | |
+| 1 | Arbeitsuchendmeldung / ASU 🔒 | PLs | verify | Registration counts, not the form: channels `kug_200b`, `online_self`, `in_person` with proof (round 5). `asuDueDate = max(end − 3 months, knowledge + 3 days)`, month end clamped. A PL must confirm the deadline before reminders go live. | |
 | 2 | Profiling form | PLs | confirmed | TL 407 (08/2025), nationwide | Official form, 2026-10-15 |
 | 3 | Retention periods 🔒 | DPO / tax advisor | verify | Per data item (round 3), two-stage with evidence set (ADR-0008); tax/payroll periods configurable | |
 | 4 | Legal basis per purpose 🔒 | DPO | assumed | Round 1 table | |
@@ -72,6 +72,7 @@ Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-
 | 51 | Sickness periods 🔒 | DPO | assumed | Payroll records: type + dates only, no diagnoses/AU scans, payroll retention | |
 | 52 | Final settlement dates 🔒 | Back office | assumed | `kugFinalSettlementDate`, `measure110SettlementDate` on the project; evidence set expires at year end of the later date + 4 years | |
 | 53 | Withdrawal reason for `profiling_declined` | Product owner | confirmed | `declined_profiling` (no Transfer-KuG at all). Non-terminal during the grace period; conflict with `dsv_signed` is flagged to the PL, never auto-resolved. | Product owner, 2026-10-15 |
-| 54 | Is the TL 407 submission to the Agentur part of the TG entry guard, or only a "what's missing" item checked against `leadTimeDays`? | Product owner / PLs | open | |
-| 55 | ASU guard = Kug 200b submitted. If a participant registered as job-seeking themselves (online / in person), does that count (with proof upload), or is Kug 200b always required in `ta_tg` projects? | PLs | open | |
-| 56 | When several withdrawal reasons apply at grace-period end, is the order `declined_profiling` → `declined_dsv` → `no_response` right? | Product owner | open | |
+| 54 | TL 407 submission part of the TG entry guard? | Product owner | confirmed | No. "What's missing" item: warning at TG start, escalation to PL + regional admin 14 days after TG start. | Product owner, 2026-10-15 |
+| 55 | Does the participant's own ASU registration count? | Product owner | confirmed | Yes, any channel with proof (Kug 200b, BA confirmation, or BA-Kundennummer noted by the PL). Kug 200b still offered for the profile-access consent. | Product owner, 2026-10-15 |
+| 56 | Order of withdrawal reasons | Product owner | confirmed | `declined_dsv` → `declined_profiling` → `no_response`; primary + secondary reasons stored; manual PL reason overrides | Product owner, 2026-10-15 |
+| 57 | Escalations to the regional admin (e.g. TL 407 not submitted 14 days after TG start) vs. "regional admins see no case data": is project + count enough, or may the escalation name the participant? 🔒 | Product owner / DPO | open | Provisional: project + count only | |

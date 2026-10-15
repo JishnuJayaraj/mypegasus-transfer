@@ -11,8 +11,9 @@
 > (ADR-0004), the access model in Slice 1 (roadmap, ADR-0007), and the tightened
 > `.claude/settings.json` (C16).
 >
-> **Still not decided:** RLS per project, the base-defaults file, the API contract and job-queue
-> ADRs, and splitting Slice 4.
+> **Round 5:** RLS required at the pre-pilot gate with `project_id` on every participant table
+> from the start (ADR-0002/0005), base defaults (ADR-0004), API contract (ADR-0010), pg-boss
+> (ADR-0011), Slice 4 split. All review proposals are now decided.
 >
 > Note that ADR numbers 0008/0009 were used for retention and the form registry. The other new
 > ADRs proposed in section 4 will get new numbers if approved.

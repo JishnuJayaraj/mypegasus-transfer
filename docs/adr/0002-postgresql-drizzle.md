@@ -40,5 +40,6 @@ Accepted in the PR #1 review:
   role. The audit table is **append-only by grants** (no `UPDATE`/`DELETE` for the app role;
   pseudonymisation runs under a separate role used only by the retention job).
 
-Still proposed (not yet decided):
-- Optional row-level security per project as defence in depth.
+- **Every table holding participant data has a `project_id` column from the start**, so
+  row-level security per project can be added without migrating data. RLS itself is **not
+  needed for the demo but required at the pre-pilot gate** (ADR-0005).
