@@ -5,8 +5,11 @@ them with the PDF adapter, print them, and they are signed by hand. Store `formC
 `formVersion` with every generated document. Field names below are the real AcroForm field
 names, checked against the copies we received on 2026-10-15.
 
-> Do not commit filled copies. Blank templates may go into the repo once we have decided where
-> form templates live (see open question #42).
+> Blank templates live in `packages/forms/templates/ba/<form_code>/<version>/` (ADR-0009). Filled
+> copies never go into the repo, except the synthetic test copies in `fixtures/forms/`.
+>
+> Access: the signed PDFs are visible to the assigned profiler and PL only (opening is logged).
+> Back office has no access. Section C fields are profiler only (data-protection.md).
 
 ## Kug 200b — Arbeitsuchendmeldung via the Transfergesellschaft
 
@@ -63,14 +66,26 @@ names, checked against the copies we received on 2026-10-15.
 | Work history (last 3 years) | 7 |
 | Additional languages (besides German) | 4 |
 
-If a participant has more entries, we need a rule (attachment page, or "see attachment").
-Open question #41.
+Rule *(provisional, Q41)*: profiling sessions chronological; education with the highest school
+qualification first, then vocational/university, most recent first; jobs filtered to the last
+3 years, most recent first. Rows that don't fit go onto a generated "Anlage zum
+Profilingbogen" (name, birth date, continued tables). The last row on the form reads "weitere
+siehe Anlage".
 
 ### Validation before rendering
 
-- All dates `TT.MM.JJJJ`, and real calendar dates. The test copy we received contains
+- All dates `TT.MM.JJJJ`, and real calendar dates. Impossible dates are hard errors.
+- Plausibility checks are warnings staff can confirm (audited): age 15–67 at TG start, entry
+  date not before birth date, von ≤ bis. The test copy we received contains
   `03.14.1998` (month 14). The BA rejects exactly this kind of error, so validate in the domain
   layer, not only in the UI.
 - Required (`*`) fields must be complete before the form can be generated, except the
   Agentur-only fields.
 - Times `hh:mm`, with from < to.
+
+### Declarations to the BA on the forms
+
+The Jobbörse choice (field 50: `full`, `anonymous_callme`, `anonymous_no_contact`, `none`) and
+the BA contact/research consent (notes on the contact fields) are stored on the profiling record
+with date and form version. They are not our consents (Q44). The Kug 200b acknowledgement of TG
+access to the BA profile **is** stored as our own consent record.

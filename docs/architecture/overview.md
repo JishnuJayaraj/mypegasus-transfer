@@ -19,7 +19,8 @@ Modules are separated by package boundaries, not by network calls.
             └───────┬───────────────┬──────────────────┬───────────┘
                     │               │                  │
           packages/domain   packages/config    packages/adapters (interfaces)
-          (pure logic)      (template resolver)   pdf · mail · sms · storage · ai · export
+          (pure logic)      (template resolver)   pdf · mail · sms · storage · virus · export · clock
+                            packages/forms (BA form registry)
                     │                                  │
               packages/db (Drizzle) ──► PostgreSQL     └─► mock impl (MVP) / real impl later
 ```
@@ -32,9 +33,11 @@ Modules are separated by package boundaries, not by network calls.
 | Database | PostgreSQL 16, Drizzle; core fields as columns, config-driven fields as jsonb | 0002 |
 | Stack | TS 7, Vite+/Vite 8, React, TanStack, Carbon, Hono | 0003 |
 | Regional variation | Fixed lifecycle core + versioned regional templates | 0004 |
-| Hosting | Local first; production on company Hetzner cluster (containers) | 0005 |
+| Hosting | Local (synthetic data); pilot + production on company Hetzner cluster (k3s, containers) | 0005 |
 | External services | Ports & adapters with mocks; real impls added later | 0006 |
-| Auth | Staff: OIDC via adapter (dev stub first); participants: magic link | 0007 |
+| Auth | Staff: Entra ID via OIDC + MFA (dev stub first); participants: SMS/email link + birth-date check | 0007 |
+| Retention | Per data item, two-stage deletion with evidence set | 0008 |
+| Official forms | Versioned BA form registry, AcroForm filling | 0009 |
 
 ## Module boundaries
 
@@ -45,8 +48,11 @@ Modules are separated by package boundaries, not by network calls.
 
 ## Background jobs
 
-Reminders, deadline checks, retention/deletion, PDF batch generation. MVP: Postgres-backed job
-queue (e.g. pg-boss or similar — decide in Slice 5) to avoid extra infrastructure.
+Reminders, deadline checks, system lifecycle transitions (`dsv_expired`, `withdrawn` after the
+grace period, `active_in_tg`), two-stage retention/deletion, PDF batch generation. All jobs are
+idempotent, run with the `system` actor, and take time from the `Clock` adapter. MVP:
+Postgres-backed job queue (e.g. pg-boss or similar — decide in Slice 5) to avoid extra
+infrastructure.
 
 ## Performance approach (frontend)
 

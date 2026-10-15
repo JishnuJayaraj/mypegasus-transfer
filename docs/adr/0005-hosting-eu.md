@@ -1,25 +1,47 @@
 # ADR-0005: Hosting — local first, then company Hetzner cluster
 
-- Status: Accepted
-- Date: 2026-10-15
+- Status: Accepted (cluster details provisional, Q12; operator/AVV open, Q32)
+- Date: 2026-10-15 (amended the same day from the decisions log)
 
 ## Context
-The app processes social data (Sozialdaten). Data residency and subprocessors must be
-acceptable to customers, works councils and the DPO. The company already operates a Hetzner
-cluster (German data centres).
+The app processes social data (Sozialdaten), including health data. Data residency and
+subprocessors must be acceptable to customers, works councils and the DPO. The company already
+operates a Hetzner cluster in German data centres.
 
 ## Decision
-- **Development & pilots:** run locally (Docker Compose: app + PostgreSQL). Real participant
-  data, if any during a pilot, only on company machines/infrastructure — never in cloud coding
-  sessions, never in the GitHub repo.
-- **Production/staging:** the company **Hetzner** cluster (German data centres), with an AVV in
-  place. PostgreSQL either managed by the cluster team or as a container with backups.
-- The app is delivered as **container images** and stays provider-neutral (no Hetzner-specific
-  APIs in application code). Deployment manifests (Compose or Kubernetes, depending on the
-  cluster) live in `deploy/` and are decided in Slice 9.
+- **Development and demos:** run locally (Docker Compose: app, PostgreSQL 16, MinIO, Gotenberg)
+  with **synthetic data only**.
+- **Pilot and production:** the company **Hetzner** cluster, **German locations only**
+  (Nürnberg, Falkenstein). **Real data only on the cluster, never on laptops**, never in cloud
+  coding sessions, never in the repo. The first pilot is one project in Nürnberg (Q26), after
+  the pre-pilot gate below.
+- Cluster setup *(provisional, Q12)*:
+  - k3s on Hetzner Cloud
+  - PostgreSQL via the CloudNativePG operator, with encrypted backups to Hetzner Object Storage
+    (S3-compatible), kept for **≤ 30 days** (so that deletions take effect, ADR-0008)
+  - TLS via cert-manager + Let's Encrypt
+  - Prometheus/Grafana for metrics, Loki for logs
+  - Kubernetes Secrets, SOPS-encrypted in git
+- The app is delivered as **container images** (Node 24 LTS), with Helm or Kustomize manifests
+  in `deploy/`, health and readiness endpoints, `/metrics`, and structured JSON logs **without
+  personal data**. No Hetzner-specific APIs in application code.
 - No VoidZero/Void, Vercel or other US edge hosting for anything that holds participant data.
+- No AI providers in the MVP. Later, only EU-hosted providers with an AVV, never US providers
+  for personal data *(assumed, Q38)*.
+
+## Pre-pilot gate (all must be true before any real data)
+- [ ] DPIA (DSFA) completed (Q25)
+- [ ] **AVV chain signed** for `<CLUSTER_OPERATOR_ENTITY>` (TG ↔ group IT company ↔ Hetzner,
+      or TG ↔ Hetzner) — **blocking**, Q32
+- [ ] Data-sharing clause in the customer contract (Q14)
+- [ ] No `assumed`/`verify` items left in data protection, retention or legal deadlines
+      (`open-questions.md`, rows marked 🔒)
+- [ ] Backup and restore tested; backup retention ≤ 30 days
+- [ ] TLS, monitoring and alerting in place; logs checked for personal data
+- [ ] Security review / penetration test of auth, permissions and uploads
+- [ ] Retention values confirmed by DPO and tax advisor
 
 ## Consequences
-+ Data stays in company-controlled German infrastructure.
-- We own backups, TLS, monitoring and updates (check what the cluster team already provides).
-- AI providers (v2) must meet the same residency rules.
++ Data stays in German infrastructure under company control.
+- We own backups, upgrades and monitoring of Postgres (no managed Postgres at Hetzner).
+- The pilot depends on the cluster team answering Q32.

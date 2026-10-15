@@ -1,5 +1,22 @@
 # Docs review — 2026-10-15
 
+> **Status after the round 1–3 answers (same day):** the product owner's answers resolve most
+> findings, and they have been carried into the domain docs, ADRs 0002–0009 and `CLAUDE.md`:
+> C1 (customer whitelist), C2/C3 (lifecycle rework), C7 (region), C8 (AI), C9 (pilot on the
+> cluster), C10 (classification), C14 (languages), C15 (adapter list), C18 (dates), C19, C20,
+> and items 1–4 of section 1.
+>
+> **Still open from this review, not yet approved:**
+> - separate `apps/portal` (ADR-0001)
+> - status writes enforced in the DB and RLS (ADR-0002)
+> - JSON Schema for field schemas, the completeness format and the base-defaults file (ADR-0004)
+> - API contract and job-queue ADRs (0010/0011 here)
+> - moving the authorisation model into Slice 1 and splitting Slice 4 (roadmap)
+> - tightening `.claude/settings.json` (C16)
+>
+> Note that ADR numbers 0008/0009 were used for retention and the form registry. The other new
+> ADRs proposed in section 4 will get new numbers if approved.
+
 Critical review of `CLAUDE.md` and everything under `docs/` before Slice 0, written from a
 senior-engineer point of view. No code was written. Questions raised here are in
 `docs/open-questions.md` as #13–#39. Nothing in the existing docs or ADRs has been changed yet:

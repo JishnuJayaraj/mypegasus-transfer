@@ -31,20 +31,29 @@ registration and matching.
 Funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines.
 
 ## Slice 6 — Profiling & forms (F6)
-Profiling screen, PDF generation adapter (first real impl), template versioning, scan upload,
-Agentur submission status.
+Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
+`packages/forms` registry with TL 407 + Kug 200b (ADR-0009), PDF adapter (pdf-lib +
+Gotenberg), overflow attachment, scan upload, Agentur submission status.
 
 ## Slice 7 — DSV (F8)
-DSV generation, status tracking, scan upload, transition to TG, non-signer retention job.
+DSV generation, three-party signature and original tracking, grace period and system
+withdrawal, transition to TG (guards), two-stage retention job (ADR-0008).
 
 ## Slice 8 — TG module basic (F9)
 Participant file, coaching notes, goals/tasks, qualification plan, applications, exit.
 
 ## Slice 9 — Reporting (F10) + hardening
-Project report, exports, accessibility pass, performance pass, security review, backup/restore.
+Project report, monthly customer report, exports, accessibility pass, performance pass,
+security review, backup/restore, deployment manifests (`deploy/`).
+
+## Pre-pilot gate
+Before any real data (pilot: one project in Nürnberg on the Hetzner cluster): all items of the
+checklist in ADR-0005 — DPIA, AVV chain (Q32), no `assumed` items in data protection, retention
+or legal deadlines, tested backup/restore, security review.
 
 ## Later
-v1.1: customer/works-council portal, more languages, appointments self-booking polish.
+v1.1: more portal languages (tr, ar, pl, ru, uk, ro), appointments self-booking polish.
+v2: customer/works-council portal with login.
 v1.x: AI document extraction, CV generation, note summaries (behind AI adapter, EU-hosted model).
 v2: job matching, qualification suggestions, profiling drafts (AI Act review first),
 payroll/DATEV integration, KuG billing support.

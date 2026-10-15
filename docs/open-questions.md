@@ -14,14 +14,14 @@ dated file in [`decisions/`](decisions/), update the status here, and update the
 **Gate:** before the pilot, nothing in the categories data protection, retention or legal
 deadlines may be `assumed` or `verify` (rows marked 🔒).
 
-Answers: [2026-10-15 round 1](decisions/2026-10-15-answers.md) ·
-[2026-10-15 round 2](decisions/2026-10-15-answers-round-2.md)
+Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-10-15-answers-round-2.md) ·
+[round 3](decisions/2026-10-15-answers-round-3.md) (all 2026-10-15)
 
 | # | Topic | Owner | Status | Answer (short) | Confirmed by / date |
 |---|---|---|---|---|---|
-| 1 | Arbeitsuchendmeldung / ASU 🔒 | PLs | verify | Form **Kug 200b** (TG route). Deadline: 3 months before end, or 3 days after learning about it if later (round 2). A PL must confirm before reminders go live. | |
+| 1 | Arbeitsuchendmeldung / ASU 🔒 | PLs | verify | Form **Kug 200b** (TG route). `asuDueDate = max(end − 3 months, knowledge + 3 days)`, month end clamped (round 3). A PL must confirm before reminders go live. | |
 | 2 | Profiling form | PLs | confirmed | TL 407 (08/2025), nationwide | Official form, 2026-10-15 |
-| 3 | Retention periods 🔒 | DPO / tax advisor | verify | Revised in round 2 (structured fields vs. signed documents, evidence set, tax/payroll periods configurable) | |
+| 3 | Retention periods 🔒 | DPO / tax advisor | verify | Per data item (round 3), two-stage with evidence set (ADR-0008); tax/payroll periods configurable | |
 | 4 | Legal basis per purpose 🔒 | DPO | assumed | Round 1 table | |
 | 5 | Suppression threshold 🔒 | DPO | assumed | n < 5 + secondary suppression | |
 | 6 | Hosting | Tech lead | confirmed | Local, then company Hetzner cluster. Real data only on the cluster. | Product owner, 2026-10-15 |
@@ -37,7 +37,7 @@ Answers: [2026-10-15 round 1](decisions/2026-10-15-answers.md) ·
 | 16 | Project-level BA steps | PLs | assumed | Project checklist (consultation, Anzeige; + final settlement date, see #52) | |
 | 17 | Profiling before TG | PLs | confirmed | Legal prerequisite; exception + 1-month deadline | §111(4) SGB III, 2026-10-15 |
 | 18 | Individual TG dates | PLs | assumed | Project default + per-participant start/end | |
-| 19 | Pre-TG dropouts | PLs | assumed | Replaced by the exit-reason enum of #34 | |
+| 19 | Pre-TG dropouts | PLs | assumed | Terminal state `withdrawn` + reason (round 3, #50); reasons from #34 | |
 | 20 | TA-only projects | PLs | assumed | `ta_only`, end state `ta_completed` | |
 | 21 | DSV execution, originals | Back office / legal | assumed | All three signatures; originals tracked per document | |
 | 22 | Periodic Agentur reports | PLs | verify | Half-yearly (30.06/31.12) | |
@@ -46,7 +46,7 @@ Answers: [2026-10-15 round 1](decisions/2026-10-15-answers.md) ·
 | 25 | DPIA | DPO | confirmed | Required before any real data | Product owner, 2026-10-15 |
 | 26 | Pilot location | Tech lead / DPO | confirmed | Nürnberg, one project, cluster, after pre-pilot gate | Product owner, 2026-10-15 |
 | 27 | Participant login factors 🔒 | DPO | assumed | Link/SMS code + birth date check | |
-| 28 | Access to special-category data 🔒 | DPO / PLs | assumed | Matrix in round 2 (assigned profiler only; PL via assisted mode or break-glass; back office Schwb/GdB only) | |
+| 28 | Access to special-category data 🔒 | DPO / PLs | assumed | Access matrix in data-protection.md (rounds 2 + 3) | |
 | 29 | Data classification 🔒 | DPO | assumed | Round 1 + additions in round 2 (#43) | |
 | 30 | Person across projects | DPO / PLs | confirmed | No linking in the MVP | Product owner, 2026-10-15 |
 | 31 | Self-registration 🔒 | PLs / DPO | assumed | QR 14 days, captcha, delete unmatched after 30 days | |
@@ -58,16 +58,17 @@ Answers: [2026-10-15 round 1](decisions/2026-10-15-answers.md) ·
 | 37 | Form rendering | PLs | confirmed | pdf-lib (AcroForm), Gotenberg (HTML) | Product owner, 2026-10-15 |
 | 38 | AI providers 🔒 | DPO | assumed | None in the MVP; later EU only | |
 | 39 | MVP UI languages | Product owner | confirmed | Staff de, portal de + en | Product owner, 2026-10-15 |
-| 40 | Health data vs. signed forms 🔒 | DPO | assumed | Structured fields deleted 3 months after exit; signed forms kept in the evidence set | |
+| 40 | Health data vs. signed forms 🔒 | DPO | assumed | Structured fields deleted 3 months after exit; signed forms in the evidence set; back office has no access to signed forms (round 3) | |
 | 41 | TL 407 row overflow | PLs | assumed | Generated "Anlage zum Profilingbogen". A PL must confirm that Agenturen accept it. | |
-| 42 | Where blank form templates live; who watches for new BA versions | Tech lead / PLs | open | | |
+| 42 | Blank form templates, new BA versions | Product owner | confirmed | `packages/forms/templates/ba/…` + monthly check by a back-office form owner (ADR-0009) | Product owner, 2026-10-15 |
 | 43 | Classification of Bürgergeld, nationality, residence status, profiler ratings 🔒 | DPO | assumed | All highly confidential (round 2) | |
-| 44 | BA consents (Jobbörse, BA contact data, Kug 200b profile access) as consent records? 🔒 | DPO | assumed | Kug 200b profile access = own consent record. Jobbörse choice and BA contact consent still open. | |
+| 44 | BA consents (Jobbörse, BA contact data, Kug 200b profile access) as consent records? 🔒 | DPO | assumed | Jobbörse choice + BA contact consent stored on the profiling record (declarations to the BA). Kug 200b profile access and portal contact are our own consent records (round 3). | |
 | 45 | Kug 200b batch channel | PLs | assumed | TG collects signed forms at the event and submits them in a batch; channel per Agentur | |
-| 46 | Withdrawal after `dsv_signed` | Legal / PLs | open | | |
-| 47 | Customer as MVP user or export only | Product owner | open | | |
-| 48 | Test PDFs synthetic? | Product owner | open | Not confirmed yet: round 2 contained a placeholder text, not a confirmation | |
-| 49 | Who may see signed TL 407 PDFs? The PDF contains section C (profiler ratings, "profiler only") but is shared with back office; the PRD lets the PL submit forms to the Agentur. 🔒 | DPO / PLs | open | | |
-| 50 | Should `dsv_declined`, `dsv_expired`, `profiling_declined` stay as lifecycle states, or become `withdrawn` + reason (`declined_dsv`, `no_response`)? | Product owner | open | | |
-| 51 | Sickness periods (TG sub-status `sick_*`) are health data: are they kept as payroll records, or deleted with the structured health fields? 🔒 | DPO | open | | |
-| 52 | Where does the "final settlement" date of the Agentur come from (needed for the evidence-set retention)? Per project, entered by back office? | Back office | open | | |
+| 46 | Withdrawal after `dsv_signed` | Legal / PLs | verify | Only with a cancellation signed by all three parties; PL confirms; customer flag. Depends on our DSV template. | |
+| 47 | Customer as MVP user or export only | Product owner | confirmed | Export only; monthly PL report; customer login in v2 | Product owner, 2026-10-15 |
+| 48 | Test PDFs synthetic? | Product owner | confirmed | Synthetic; committed under `fixtures/forms/` | Product owner, 2026-10-15 |
+| 49 | Who may open signed TL 407 / Kug 200b 🔒 | DPO / PLs | assumed | Profiler + assigned PL (opening logged; normal UI metadata only); back office no; section C fields profiler only; after exit break-glass | |
+| 50 | `dsv_declined` etc.: states or reasons? | Product owner | confirmed | Non-terminal states + terminal `withdrawn` with reason; system job after the grace period | Product owner, 2026-10-15 |
+| 51 | Sickness periods 🔒 | DPO | assumed | Payroll records: type + dates only, no diagnoses/AU scans, payroll retention | |
+| 52 | Final settlement dates 🔒 | Back office | assumed | `kugFinalSettlementDate`, `measure110SettlementDate` on the project; evidence set expires at year end of the later date + 4 years | |
+| 53 | `profiling_declined` is provisionally non-terminal like `dsv_declined` and auto-withdrawn after the grace period. Which withdrawal reason: a new `declined_profiling`, or `declined_dsv`? | Product owner | open | | |

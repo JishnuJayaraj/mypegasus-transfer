@@ -1,6 +1,7 @@
 # Answers to open questions — 2026-10-15, round 2
 
 These answers follow up on [round 1](2026-10-15-answers.md). Where they differ, round 2 wins.
+[Round 3](2026-10-15-answers-round-3.md) corrects some of them: back office has no access to signed forms (Q49), the explanation of the §38 formula, and retention per item.
 The status of each question is in `open-questions.md`. Review notes are marked **Note**.
 
 ## Q14 — Controller or processor (assumed)
