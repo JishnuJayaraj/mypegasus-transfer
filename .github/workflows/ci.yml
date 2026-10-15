@@ -56,6 +56,21 @@ jobs:
       matrix:
         # 22: what cloud sessions ship; drop it when they move to 24 (D10).
         node: [22, 24]
+    services:
+      postgres:
+        # Same major version as dev and the cluster (ADR-0005); the tag is pinned by digest.
+        image: postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Dev roles with non-secret dev passwords (.env.example); tests switch to transfer_test.
+      DATABASE_URL: postgres://transfer_app:transfer_app_dev@localhost:5432/transfer
+      DATABASE_MIGRATION_URL: postgres://transfer_owner:transfer_owner_dev@localhost:5432/transfer
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -66,4 +81,5 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:setup
       - run: pnpm test
