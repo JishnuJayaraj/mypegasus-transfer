@@ -4,8 +4,11 @@
 - Date: 2026-10-15
 - Roadmap: [Slice 0](../roadmap.md#slice-0--walking-skeleton)
 - Relevant ADRs: 0001 (two SPAs), 0002 (Postgres, `project_id`, DB-enforced writes), 0003 (stack,
-  Node 24, Vite+/TS 7 review), 0005 (container image, health endpoints, logs without personal
-  data), 0007 (stub auth), 0010 (API contract)
+  Node 24; TS 7 and Vite+ deferred), 0005 (container image, health endpoints, logs without personal
+  data, Postgres major version), 0007 (stub auth), 0010 (API contract)
+- Revised 2026-10-15 before PR 0a: simpler toolchain (D12–D16). TypeScript 6 instead of 7, plain
+  Vite 8 + Vitest + Oxlint + Oxfmt instead of Vite+, `tsx watch` for the API, stable Drizzle,
+  Postgres 16 everywhere, and a proposed default for Q59.
 
 ## 1. Goal
 
@@ -38,65 +41,100 @@ The product owner answered these while this plan was being written. They will be
 | D6 | `Project` fields | **Minimal + type:** `name`, `customerName` (free text for now), `type` (`ta_only` / `ta_tg`), optional `signingDeadline`, `defaultTgStart`, `defaultTgEnd`, plus `createdAt` and `createdBy`. **No project status**, so no status/audit machinery in Slice 0. |
 | D7 | DB roles | **Split now:** `transfer_owner` runs migrations and owns the tables. `transfer_app` (runtime) only gets explicit per-table grants, written in migrations. |
 | D8 | E2E | **Playwright locally and as a CI job.** The required checks become typecheck, lint, test, e2e (plus the image build, D4). |
-| D9 | Retention (rule 10) | **Table-level data catalog + open questions.** Every table gets a `retentionClass` and a data class, and a test fails if one is missing. The new classes `project_master` and `staff_account` have period `unset`. New open questions **Q58/Q59** (🔒) go to the DPO. |
+| D9 | Retention (rule 10) | **Table-level data catalog + open questions.** Every table gets a `retentionClass` and a data class, and a test fails if one is missing. The new classes `project_master` and `staff_account` have period `unset`. New open questions **Q58/Q59** (🔒) go to the DPO; Q59 has a proposed default (D16). |
 | D10 | Node 22 | **Test matrix 22 + 24.** Typecheck, lint, e2e and the image use Node 24. Unit and integration tests run on 22 and 24. `engines.node: "^22.18.0 \|\| ^24.11.0"`. Drop the 22 leg when cloud sessions move to 24. |
-| D11 | Spike timebox | **One working session (~1 day).** If the exit criteria (section 3) aren't met by then, apply the documented fallback **for the failing tool only** and record it in an ADR-0003 amendment. |
+| D11 | Spike timebox | **One working session (~1 day)** for the remaining spike items (section 3). If one fails, apply its documented fallback and record it in the ADR-0003 amendment. |
+
+The product owner revised the toolchain before PR 0a: **build speed doesn't matter yet;
+avoiding toolchain risk does.** These replace the earlier Vite+/TS 7 spike.
+
+| # | Topic | Decision |
+|---|---|---|
+| D12 | TypeScript | **Plain `typescript@6.0.3`**, pinned, with no npm aliases and no pnpm overrides. `pnpm typecheck` = `tsc -b`. No compiler option that TS 6 deprecates (section 3), so moving to TS 7 later is one small PR. ADR-0003 amendment: *"TS 7 deferred until after MVP; revisit when TS 7.1 and its API have settled."* |
+| D13 | Build/test/lint | **Plain Vite 8 + Vitest + Oxlint + Oxfmt**, each pinned exactly. This is what the earlier plan had as the fallback, now used from the start. Dev servers run with `pnpm -r --parallel`. ADR-0003 amendment: *"Vite+ deferred, revisit after MVP."* |
+| D14 | API dev runner | **`tsx watch`**, not Node's native type stripping. No `erasableSyntaxOnly` requirement. |
+| D15 | Database versions | **The stable Drizzle line** (`drizzle-orm@0.45.4`, `drizzle-kit@0.31.11`; not the 1.0 beta/rc). **PostgreSQL 16** in Compose, CI and the cloud session. ADR-0005 gets a note that the cluster (CloudNativePG) must run the same major version. |
+| D16 | Q59 proposed default | `project.created_by` is a foreign key to `staff_user`, so staff accounts are **deactivated and pseudonymised, not deleted**. Q59 is recorded with this proposed default and status `assumed`, for the DPO to confirm. |
+
+### Pinned versions (checked against npm on 2026-10-15)
+
+All dependencies are pinned exactly (`.npmrc`: `save-exact=true`). The main ones:
+
+| Area | Packages |
+|---|---|
+| Language | `typescript@6.0.3` |
+| Build and test | `vite@8.3.4`, `@vitejs/plugin-react@6.1.2`, `vitest@5.0.5`, `@vitest/coverage-v8@5.0.5`, `jsdom@30.1.3`, `sass-embedded@1.105.1` |
+| Lint and format | `oxlint@1.88.0`, `oxfmt@0.73.0` |
+| API | `hono@4.13.13`, `@hono/zod-openapi@1.6.3`, `@hono/node-server@2.1.5`, `zod@4.6.7`, `tsx@4.23.15` (dev) |
+| Database | `drizzle-orm@0.45.4`, `drizzle-kit@0.31.11`, `pg` (node-postgres), PostgreSQL 16 |
+| Frontend | `react@19.3.1`, `@tanstack/react-router@1.170.44`, `@tanstack/router-plugin@1.168.46`, `@tanstack/react-query@5.104.3`, `@carbon/react@1.118.0`, `i18next@26.4.6`, `react-i18next@17.0.18` |
+| Client generation | `openapi-typescript@7.13.0`, `openapi-fetch@0.17.0` |
+| E2E | `@playwright/test@1.64.1`, `@axe-core/playwright` |
+
+Versions may move up to the latest patch when PR 0a is opened. After that, they change only in
+deliberate dependency PRs.
 
 ### Facts checked on 2026-10-15 that change the docs
 
-- **TypeScript package names have flipped.** On npm, `typescript@7.0.2` *is* the native
-  compiler (bin `tsc`). `@typescript/native` doesn't exist. TS 6 is published as
-  `@typescript/typescript6@6.0.2` (bin `tsc6`). So we don't alias TS 7 in; we **alias TS 6 in
-  for the tools that need the compiler API**. CLAUDE.md and ADR-0003 get corrected in PR 0a.
-- **Vite+ is no longer beta:** `vite-plus@1.2.0` (bin `vp`), engines `^22.18.0 || ^24.11.0 ||
-  >=26`. Cloud sessions run Node 22.22.0, which is supported.
+- **TypeScript package names have changed.** On npm, `typescript@7.x` is now the native
+  compiler, and the latest TS 6 is `typescript@6.0.3`. Since we stay on TS 6 (D12), we pin
+  `typescript@6.0.3` directly. CLAUDE.md's description of a `typescript` → TS 6 /
+  `@typescript/native` → TS 7 alias goes away in PR 0a.
+- **Vite+ is out of beta** (`vite-plus@1.2.0`), but it stays deferred (D13).
 - **The current `DATABASE_URL` doesn't work in cloud sessions.** `pg_hba` requires
   `scram-sha-256` over TCP, and `postgres` has no password (review finding 3.4). Slice 0 creates
   dev roles with passwords (section 5.3).
+- **`openapi-typescript@7.13.0` declares `typescript: ^5.x` as a peer dependency.** With TS 6,
+  pnpm will warn. This is checked in the spike (S4).
 - Cloud session: Node 22.22.0, pnpm 10.28.0 (corepack), PostgreSQL 16.15 running, Docker
   available.
 
-## 3. Vite+ / TS 7 spike (first part of PR 0a)
+## 3. Toolchain setup and spike (first part of PR 0a)
 
-**Timebox:** one working session. The root `package.json` scripts (section 6) are the stable
-contract. A fallback changes what is behind them, never their names.
+The toolchain is fixed by D12–D14. Nothing in it is on trial. The spike only checks the few
+integrations the plan relies on but hasn't seen working yet. **Timebox:** one working session
+(D11). The root `package.json` scripts (section 6) are the stable contract: a fallback changes
+what's behind them, never their names.
 
-### Vite+ (`vite-plus@1.2.0`) — passes if all of these hold
+### Toolchain (no spike)
 
-| # | Criterion |
-|---|---|
-| V1 | Installs as a pinned devDependency with `pnpm install --frozen-lockfile` through the cloud-session proxy and on `ubuntu-latest`, on Node 22.22 and 24, with no account, login or hosted service. Telemetry can be switched off. The licence is MIT. |
-| V2 | `apps/web` dev server with HMR and a production build work with React 19, the TanStack Router Vite plugin (file-based routes, code splitting) and Carbon's Sass styles. |
-| V3 | `vp test` runs Vitest with several projects: node (domain, db, api integration) and jsdom (React component tests), plus coverage (v8). |
-| V4 | `vp lint` runs Oxlint with the React rules and `no-restricted-imports` per app (the portal boundary). `vp fmt --check` runs Oxfmt. |
-| V5 | *(not blocking)* `vp run` can run the three dev servers in parallel. Otherwise `pnpm -r --parallel` does it. |
+- **Vite 8** builds both SPAs (with `@vitejs/plugin-react` and `@tanstack/router-plugin`) and
+  bundles the API for the image (`vite build --ssr`, section 5.7).
+- **Vitest** runs the test projects: node for domain, db and API integration; jsdom for React
+  components. Coverage uses v8.
+- **Oxlint** lints (React rules and `no-restricted-imports` for the portal boundary). **Oxfmt**
+  formats, and `pnpm lint` runs it in check mode.
+- **`pnpm -r --parallel`** runs the dev servers. **`tsx watch`** runs the API in dev.
+- **TypeScript 6** type-checks with `tsc -b` over project references. It is the only
+  `typescript` in the tree, with no aliases or overrides.
 
-**Fallback, per failing criterion:** plain pinned `vite@8.3.4`, `vitest@5.0.5`, `oxlint@1.88.0`
-and `oxfmt`, plus `pnpm -r --parallel` for V5. We never use VoidZero's hosting (ADR-0005).
+### TypeScript configuration rules (D12)
 
-### TypeScript 7 (`typescript@7.0.2`) — passes if all of these hold
+The goal is that moving to TS 7 later is one small PR.
 
-| # | Criterion |
-|---|---|
-| T1 | `tsc -b` (project references) type-checks every package and app on Node 22 and 24. The code includes React JSX, Zod 4 inference, Drizzle, `@hono/zod-openapi` and TanStack Router's generated route tree. |
-| T2 | No false results: `tsc6 -b` (TS 6.0.2) on the same code gives the same diagnostics. We run this comparison once in the spike, not in CI. |
-| T3 | Every tool that imports the compiler API (at least `openapi-typescript`, plus anything `pnpm why typescript` finds, e.g. dts bundling) resolves `typescript` to `npm:@typescript/typescript6@6.0.2` through pnpm `overrides`/`packageExtensions`, and works. The root `typescript` stays 7.0.2. |
+- `tsc -b` must report **no deprecation diagnostics**, and `ignoreDeprecations` is **never**
+  set. A CI step fails if it appears in any `tsconfig*.json`.
+- **Don't use options TS 6 deprecates.** Examples: `baseUrl`, `moduleResolution`
+  `node`/`node10`/`classic`, `target: es5`, `outFile`, AMD/UMD/System modules,
+  `downlevelIteration`, and turning off `esModuleInterop`/`allowSyntheticDefaultImports`.
+  Workspace imports go through package `exports`, not `paths`/`baseUrl`.
+- **Set behaviour-relevant options explicitly** instead of relying on defaults, which TS 6/7
+  change. That covers `strict`, `target` (`ES2023`), `module` (`ESNext`), `moduleResolution`
+  (`bundler`), `types`, `verbatimModuleSyntax`, `isolatedModules` and `skipLibCheck`.
+- Also on: `noUncheckedIndexedAccess`, `noImplicitOverride`, `composite` (for project
+  references).
 
-**Fallback:** `pnpm typecheck` runs `tsc6 -b` (TS 6). Other tools are unaffected.
+### Spike items (all must pass, or their fallback is applied)
 
-### Other things to verify in the spike (not exit criteria)
+| # | Check | Fallback |
+|---|---|---|
+| S1 | `@hono/zod-openapi@1.6.3` reads OpenAPI metadata from Zod 4 schemas defined in `packages/domain` with Zod's own `.meta()`, **without** `packages/domain` importing Hono. | `apps/api` wraps the domain schemas with `.openapi()`. The domain stays Hono-free. |
+| S2 | Pinned `@playwright/test@1.64.1` runs against the pre-installed Chromium in cloud sessions (`PLAYWRIGHT_BROWSERS_PATH`). | Playwright config uses `executablePath` from `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. CI always installs its own Chromium. |
+| S3 | Carbon's Sass (`@carbon/react` styles, per-component imports, `sass-embedded`) builds under Vite 8 in dev (HMR) and in a production build, with no blocking Sass errors. | Import Carbon's precompiled CSS from `@carbon/styles`. The bigger bundle is accepted for now and recorded as a baseline. |
+| S4 | `openapi-typescript@7.13.0` (peer `typescript: ^5.x`) generates correct types with TS 6.0.3 installed. The peer warning may only be silenced with `pnpm.peerDependencyRules.allowedVersions`, which doesn't change resolution. | `pnpm api:generate` runs the generator in its own isolated install (`pnpm dlx openapi-typescript@7.13.0`, which brings its own TS 5). The output is a committed `.d.ts`, so the project keeps one TypeScript and no aliases. |
 
-- `@hono/zod-openapi@1.6.3` reads OpenAPI metadata from Zod 4 schemas defined in
-  `packages/domain` **without** `packages/domain` importing Hono (it should use Zod's own
-  `.meta()`). Fallback: `apps/api` wraps the domain schemas with `.openapi()`.
-- Node's built-in type stripping (unflagged since 22.18) runs `apps/api` in dev with
-  `node --watch src/server.ts` (needs `erasableSyntaxOnly`, `.ts` import extensions). Fallback:
-  `tsx watch`.
-- Pinned `@playwright/test` works with the pre-installed Chromium in cloud sessions (otherwise
-  use `executablePath` from `PLAYWRIGHT_CHROMIUM_EXECUTABLE`). CI installs its own Chromium.
-
-**Output:** an amendment to ADR-0003 with the result per criterion and any fallback taken, and
-the corrected TypeScript wording in CLAUDE.md.
+**Output:** the ADR-0003 amendment, which records D12–D14 with the two deferral sentences and
+the result of S1–S4 (including any fallback taken).
 
 ## 4. PR series
 
@@ -106,8 +144,8 @@ Generated files (lockfile, Drizzle migration snapshots, `openapi.json`, `schema.
 
 | PR | Branch content | Ends with |
 |---|---|---|
-| **0a** `chore: toolchain, monorepo skeleton, CI` | Spike (section 3). pnpm workspace, root scripts, `.npmrc` (`save-exact=true`, `engine-strict=true`), base `tsconfig`, Vite+/Oxlint/Oxfmt config. `packages/domain` with the first Zod schemas (`isoDate`, `ProjectType`, `CreateProjectInput`) and their unit tests, written test-first. CI workflow: `typecheck`, `lint`, `test` (Node 22 + 24). `session-start.sh`: `--frozen-lockfile` only, no silent fallback. Docs: decisions round 6, ADR-0003 amendment, CLAUDE.md stack fix. | CI green with real domain tests |
-| **0b** `feat: database and API skeleton` | `packages/db` (roles, schema, migrations, grants, seed, data catalog). `apps/api` (Hono, OpenAPI, problem details, logging, dev session, health, projects). `packages/api-client` (generated, drift check). Integration tests against Postgres; the CI `test` job gets a Postgres 16 service. `.env.example`, Q58/Q59 in `open-questions.md`, ADR-0007 note on the stub. | `curl` against `/api/v1/projects` works; CI green |
+| **0a** `chore: toolchain, monorepo skeleton, CI` | Spike (section 3). pnpm workspace, root scripts, `.npmrc` (`save-exact=true`, `engine-strict=true`), base `tsconfig` following the TS 6 rules (section 3), Vite 8/Vitest/Oxlint/Oxfmt config. `packages/domain` with the first Zod schemas (`isoDate`, `ProjectType`, `CreateProjectInput`) and their unit tests, written test-first. CI workflow: `typecheck`, `lint`, `test` (Node 22 + 24). `session-start.sh`: `--frozen-lockfile` only, no silent fallback. Docs: decisions round 6, ADR-0003 amendment, CLAUDE.md stack fix, architecture overview stack row. | CI green with real domain tests |
+| **0b** `feat: database and API skeleton` | `packages/db` (roles, schema, migrations, grants, seed, data catalog). `apps/api` (Hono, OpenAPI, problem details, logging, dev session, health, projects). `packages/api-client` (generated, drift check). Integration tests against Postgres; the CI `test` job gets a Postgres 16 service. `.env.example`, Q58/Q59 in `open-questions.md`, ADR-0007 note on the stub, ADR-0005 note on the Postgres major version. | `curl` against `/api/v1/projects` works; CI green |
 | **0c** `feat(web): Carbon shell, project list and create` | `packages/ui` (Carbon wrappers, date formatting, i18n helper). `apps/web` (shell, dev user switcher, 2 routes). Component tests. Playwright happy path with an axe check, plus the CI `e2e` job. | **`pnpm dev` shows the project list from the DB** |
 | **0d** `feat(portal): portal shell, boundary rule, production image` | `apps/portal`. Boundary lint rule and its test. Static SPA serving in the API. `Dockerfile` (Node 24). CI `image` job with a smoke test. Docs: CLAUDE.md commands + layout, architecture overview, README status, `.claude/settings.json` allowlist. | All acceptance criteria met; slice done |
 
@@ -136,8 +174,9 @@ Dockerfile
 ```
 
 Package names are `@transfer/<dir>`. Workspace packages export TypeScript source
-(`"exports": "./src/index.ts"`). Vite bundles it for the SPAs, and `apps/api` is bundled for the
-image. `packages/api-client` is a new package that the CLAUDE.md layout doesn't list yet; it's
+(`"exports": "./src/index.ts"`). Vite bundles it for the SPAs. In dev, `tsx` runs the API from
+source. For the image, Vite's SSR build bundles the API and inlines the workspace packages
+(section 5.7). `packages/api-client` is a new package that the CLAUDE.md layout doesn't list yet; it's
 added there in 0d.
 
 Not created in Slice 0: `packages/config`, `packages/adapters`, `packages/forms` (section 8).
@@ -176,7 +215,9 @@ Not created in Slice 0: `packages/config`, `packages/adapters`, `packages/forms`
 **Roles and databases.** One idempotent setup SQL file serves the cloud session, CI and
 Compose. It is run by `pnpm db:setup`, which uses `DATABASE_ADMIN_URL` if set and otherwise
 `su postgres -c psql` (cloud session). Compose mounts the same SQL into
-`/docker-entrypoint-initdb.d`. It creates:
+`/docker-entrypoint-initdb.d`. **PostgreSQL 16 everywhere (D15):** the cloud session's
+pre-installed 16, a `postgres:16` image (pinned by digest) in Compose and as the CI service, and
+the same major version on the cluster (ADR-0005 note). It creates:
 
 - `transfer_owner` (LOGIN): owns the databases and tables, runs migrations and seeds.
 - `transfer_app` (LOGIN): runtime only. It has `CONNECT` and `USAGE` on `public`, plus only the
@@ -213,10 +254,16 @@ secret store (Slice 9).
   | Table | `retentionClass` | `dataClass` | Period |
   |---|---|---|---|
   | `project` | `project_master` | `internal` | `unset` → **Q58** |
-  | `staff_user` | `staff_account` | `confidential` | `unset` → **Q59** |
+  | `staff_user` | `staff_account` | `confidential` | `unset` → **Q59** (proposed: deactivate + pseudonymise) |
 
   `unset` means "no deletion job may touch this yet". The retention job (Slice 7) must refuse
   to run for classes that are still `unset`.
+- **Staff accounts are never hard-deleted (Q59, assumed).** `project.created_by` (and, from
+  Slice 1, audit entries) reference `staff_user`. The proposed default is therefore to
+  deactivate the account and later pseudonymise its personal fields (name, email), keeping the
+  row as a stable reference. Slice 0 has no deactivation flow, and no `UPDATE`/`DELETE` grant on
+  `staff_user`. The deactivation and pseudonymisation columns and flow come with real accounts
+  in Slice 3.
 - **Seed** (`pnpm db:seed`): idempotent, using fixed UUIDs. It creates five staff users (one
   per role, with obviously fictional names) and three projects with fictional customers (e.g.
   "Beispiel Maschinenbau GmbH"). It refuses to run when `NODE_ENV=production`.
@@ -338,6 +385,10 @@ a 404 problem, never `index.html`.
 
 - Multi-stage build on `node:24-bookworm-slim`, pinned by digest. pnpm comes from corepack. It
   runs `pnpm install --frozen-lockfile` and `pnpm build`.
+- The API is bundled with Vite 8's SSR build (`vite build --ssr`). Workspace packages are
+  inlined (they are devDependencies of `@transfer/api`). npm dependencies stay external and are
+  installed into the final stage with `pnpm deploy --prod --filter @transfer/api`. There is no
+  `tsx` and no TypeScript at runtime.
 - The final stage holds the API bundle (`dist/server.js`, `dist/migrate.js`), the migrations and
   both SPA builds. It runs as the non-root `node` user, `PORT=8080`, with
   `CMD ["node", "dist/server.js"]`.
@@ -354,7 +405,7 @@ comes through `actions/setup-node`. `.node-version` = `24`.
 | Job | Node | Steps | From PR |
 |---|---|---|---|
 | `typecheck` | 24 | `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm api:generate` + `git diff --exit-code` (client drift; from 0b) | 0a |
-| `lint` | 24 | `pnpm lint` (Oxlint + Oxfmt check + boundary rule) | 0a |
+| `lint` | 24 | `pnpm lint` (Oxlint + Oxfmt check + boundary rule + fails if `ignoreDeprecations` appears in any `tsconfig*.json`) | 0a |
 | `test` | **22, 24** (matrix) | Postgres 16 service (from 0b), `pnpm db:setup`, `pnpm test` | 0a |
 | `e2e` | 24 | Postgres service, `pnpm build`, `playwright install --with-deps chromium`, `pnpm test:e2e`; the report is uploaded on failure (synthetic data only) | 0c |
 | `image` | — | `docker build`; smoke test: run the migration then the server against a Postgres service; `curl` `/api/v1/health/ready`, `/` and `/portal/` | 0d |
@@ -385,13 +436,13 @@ decides.
 | Command | What it does | PR |
 |---|---|---|
 | `pnpm install` | install (CI and session start use `--frozen-lockfile`) | 0a |
-| `pnpm dev` | runs `db:migrate`, then api (`:3001`, watch), web (`:5173`) and portal (`:5174/portal/`) in parallel; Vite proxies `/api` to the API | 0b–0d |
-| `pnpm build` | builds the SPAs and the API bundle | 0b |
+| `pnpm dev` | runs `db:migrate`, then `pnpm -r --parallel dev`: api (`tsx watch`, `:3001`), web (Vite, `:5173`) and portal (Vite, `:5174/portal/`); Vite proxies `/api` to the API | 0b–0d |
+| `pnpm build` | Vite builds of both SPAs and the API (SSR bundle) | 0b |
 | `pnpm start` | runs the built API, which also serves both SPAs (production-like, on `:3001`) | 0d |
-| `pnpm typecheck` | `tsc -b` with TS 7 (fallback `tsc6 -b`) | 0a |
-| `pnpm lint` | Oxlint (incl. the boundary rule) + Oxfmt check | 0a |
+| `pnpm typecheck` | `tsc -b` (TypeScript 6.0.3) | 0a |
+| `pnpm lint` | `oxlint` (incl. the boundary rule) + `oxfmt --check` + the `ignoreDeprecations` guard | 0a |
 | `pnpm format` | Oxfmt write | 0a |
-| `pnpm test` | all Vitest projects: unit, component, integration (needs Postgres from 0b on) | 0a |
+| `pnpm test` | `vitest run`, all projects: unit, component, integration (needs Postgres from 0b on) | 0a |
 | `pnpm test:e2e` | Playwright against the built app and `transfer_e2e` (reset and seeded first) | 0c |
 | `pnpm verify` | what CI runs, minus e2e and image: typecheck, lint, test, api drift | 0b |
 | `pnpm db:setup` | dev/CI only: creates the roles and the `transfer`, `transfer_test` and `transfer_e2e` databases (idempotent) | 0b |
@@ -485,9 +536,15 @@ E = Playwright, CI = workflow).
       (CI)
 - [ ] **AC-23** Playwright with axe finds no `serious` or `critical` accessibility violations
       on `/projects`, `/projects/new` and the portal page. (E)
-- [ ] **AC-24** The spike result is recorded in the ADR-0003 amendment for each criterion
-      (V1–V5, T1–T3), and the CLAUDE.md "Tech stack", "Repo layout" and "Commands" sections
-      are updated. (review)
+- [ ] **AC-24** The ADR-0003 amendment records D12–D14 (with the two deferral sentences) and the
+      S1–S4 results, including any fallback taken. The CLAUDE.md "Tech stack", "Repo layout"
+      and "Commands" sections are updated. (review)
+- [ ] **AC-25** `typescript@6.0.3` is the only TypeScript in the lockfile (`pnpm why
+      typescript`), with no npm aliases or pnpm overrides. `tsc -b` reports no deprecation
+      diagnostics, and no `tsconfig*.json` sets `ignoreDeprecations`. (CI)
+- [ ] **AC-26** Every dependency is pinned to an exact version. Drizzle is on the stable line
+      (`drizzle-orm@0.45.x`, `drizzle-kit@0.31.x`), with no beta or rc. Postgres is major 16 in
+      Compose, CI and the cloud session. (review, CI)
 
 ### Definition of done (CLAUDE.md) applied to this slice
 - Status changes through the audit helper: **not applicable**, Slice 0 has no status columns.
@@ -518,18 +575,34 @@ E = Playwright, CI = workflow).
 | Renovate/Dependabot, release automation, preview deployments | Later. No US edge hosting ever (ADR-0005). |
 | Virtualised tables and performance work | Slice 9 (route-level code splitting and preloading are in from Slice 0) |
 | Carbon v12 upgrade | Later, contained in `packages/ui` |
+| TypeScript 7 | Deferred until after MVP; revisit when TS 7.1 and its API have settled (D12) |
+| Vite+ | Deferred, revisit after MVP (D13) |
+| Drizzle 1.0 | When it is stable; a deliberate upgrade PR (D15) |
 
 ## 9. Doc changes made by the implementing PRs
 
 Not in this plan PR. Each lands with the PR named here.
 
-- **0a:** `docs/decisions/2026-10-15-answers-round-6.md` (D1–D11). ADR-0003 amendment: spike
-  results, the TypeScript package naming, the i18n choice (i18next), Vite+ 1.x stable.
-  CLAUDE.md "Tech stack" line about the TS alias.
+- **0a:**
+  - `docs/decisions/2026-10-15-answers-round-6.md` (D1–D16).
+  - ADR-0003 amendment: *"TS 7 deferred until after MVP; revisit when TS 7.1 and its API have
+    settled."* and *"Vite+ deferred, revisit after MVP."* Also the plain Vite 8 + Vitest +
+    Oxlint + Oxfmt toolchain, `tsx watch` for the API, the TS 6 configuration rules, the S1–S4
+    results, and the i18n choice (i18next).
+  - CLAUDE.md "Tech stack": TypeScript 6 (`tsc -b`, no aliases), plain Vite 8, Vitest, Oxlint,
+    Oxfmt; the TS 6/7 alias paragraph is removed.
+  - `docs/architecture/overview.md` key-decisions table: the "Stack" row.
 - **0b:**
-  - `open-questions.md`: **Q58** (retention of project master data, 🔒) and **Q59** (retention
-    of staff accounts and their audit references, 🔒), owner DPO, status `open`.
+  - `open-questions.md`, owner DPO, both 🔒:
+    - **Q58** (retention of project master data), status `open`.
+    - **Q59** (retention of staff accounts and their references in projects and audit entries),
+      status `assumed`. Proposed default: staff accounts are deactivated and later
+      pseudonymised, never deleted, because `project.created_by` (and later audit entries)
+      reference `staff_user`.
   - ADR-0007: the Slice 0 stub is a signed dev cookie; the server-side store comes in Slice 3.
+  - ADR-0005: the cluster's PostgreSQL (CloudNativePG) must run the same major version as
+    development and CI, currently **16**; a major upgrade is a deliberate change everywhere at
+    once.
   - `.env.example`.
 - **0d:**
   - CLAUDE.md "Commands" (section 6) and "Repo layout" (`packages/api-client`).
@@ -541,13 +614,14 @@ Not in this plan PR. Each lands with the PR named here.
 
 | Risk | Mitigation |
 |---|---|
-| Vite+ or TS 7 problems use up the slice | Timebox plus a per-tool fallback (section 3). Script names don't change. |
-| `@hono/zod-openapi` and Zod 4 metadata from a pure domain package | Checked in the spike; fallback is wrapping in `apps/api`. |
-| Carbon CSS bundle size and Sass under Vite 8 | Import styles per component. The 0c PR records the bundle size as a baseline. |
+| `openapi-typescript` declares `typescript: ^5.x` as a peer | Spike S4; fallback is an isolated `pnpm dlx` install for generation only. |
+| A later move to TS 7 turns out bigger than one PR | TS 6 configuration rules (section 3) and the `ignoreDeprecations` guard in CI. |
+| `@hono/zod-openapi` and Zod 4 metadata from a pure domain package | Spike S1; fallback is wrapping in `apps/api`. |
+| Carbon CSS bundle size and Sass under Vite 8 | Spike S3. Import styles per component. The 0c PR records the bundle size as a baseline. |
 | CSP vs. Carbon inline styles | Checked in 0d. Any relaxation is documented in the PR. |
 | Integration tests share one database | Serial run with truncation before each test. Revisit when the suite gets slow. |
 | Grants reference fixed role names | The same names on the cluster (CloudNativePG managed roles, Slice 9). |
-| Pinned Playwright vs. the pre-installed Chromium in cloud sessions | `executablePath` override from the environment. CI installs its own browser. |
+| Pinned Playwright vs. the pre-installed Chromium in cloud sessions | Spike S2; `executablePath` override from the environment. CI installs its own browser. |
 
 ## 11. Approval
 
