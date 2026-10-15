@@ -12,7 +12,11 @@
     "db:generate": "pnpm --filter @transfer/db run generate",
     "db:migrate": "pnpm --filter @transfer/db run migrate",
     "db:seed": "pnpm --filter @transfer/db run seed",
-    "db:reset": "pnpm --filter @transfer/db run reset"
+    "db:reset": "pnpm --filter @transfer/db run reset",
+    "dev": "pnpm db:migrate && pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "api:generate": "pnpm --filter @transfer/api-client run generate",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm api:generate && git diff --exit-code -- packages/api-client"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
@@ -26,5 +30,12 @@
   "engines": {
     "node": "^22.18.0 || ^24.11.0"
   },
-  "packageManager": "pnpm@10.28.0"
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "openapi-typescript>typescript": "6"
+      }
+    }
+  }
 }

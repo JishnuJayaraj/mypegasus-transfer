@@ -14,9 +14,20 @@
       {
         "ignoreRestSiblings": true
       }
+    ],
+    "vitest/expect-expect": [
+      "error",
+      {
+        "assertFunctionNames": ["expect", "expectProblem"]
+      }
     ]
   },
-  "ignorePatterns": ["**/dist/**", "**/coverage/**", "**/.tsbuild/**"],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/coverage/**",
+    "**/.tsbuild/**",
+    "packages/api-client/src/schema.d.ts"
+  ],
   "overrides": [
     {
       "files": ["scripts/**"],
