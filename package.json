@@ -1,0 +1,25 @@
+{
+  "name": "transfer-platform",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "oxlint --deny-warnings && oxfmt --check && node scripts/check-tsconfig.mjs",
+    "format": "oxfmt",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@vitest/coverage-v8": "5.0.5",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": "^22.18.0 || ^24.11.0"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

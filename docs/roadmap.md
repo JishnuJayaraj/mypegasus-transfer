@@ -4,7 +4,7 @@ Each slice is one branch and one PR (or a short series). Each ends with somethin
 click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing.
 
 ## Slice 0 — Walking skeleton
-Monorepo (pnpm), Vite+/Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell
+Monorepo (pnpm), Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell
 (header, side nav), TanStack Router with 2 routes, one entity (`Project`) list + create, end to
 end, with tests. API routes via `@hono/zod-openapi` under `/api/v1` (ADR-0010). CI (GitHub Actions): typecheck, lint, test. Stub auth (dev user switcher).
 **Done when:** `pnpm dev` shows the project list from the DB; CI is green.

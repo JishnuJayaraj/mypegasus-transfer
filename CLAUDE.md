@@ -86,9 +86,11 @@ confirmed before the pilot.
 ## Tech stack (see ADR-0003)
 
 - Monorepo, **pnpm** workspaces. Do not use bun (proxy issues in cloud sessions).
-- **TypeScript 7** (`tsc` native) for type-checking; tools that need the TS API use TypeScript 6
-  via npm alias (`typescript` → `@typescript/typescript6`, `@typescript/native` → TS 7).
-- **Vite+ / Vite 8**, Vitest, Oxlint/Oxfmt (via Vite+).
+- **TypeScript 6** (`typescript@6.0.3`, the only TypeScript in the tree, no aliases or
+  overrides); `pnpm typecheck` = `tsc -b`. Never set `ignoreDeprecations` or use options TS 6
+  deprecates (ADR-0003 has the rules). TS 7 and Vite+ are deferred until after the MVP.
+- **Vite 8**, **Vitest**, **Oxlint**, **Oxfmt** (plain, each pinned exactly; `.npmrc` has
+  `save-exact=true`). The API runs with `tsx watch` in dev.
 - Frontend: **React**, **TanStack Router** (type-safe routes, preloading), **TanStack Query**,
   **IBM Carbon** (`@carbon/react`) wrapped in our own `packages/ui` layer.
 - Backend: **Node 24 LTS** in production (code must also run on Node 22, which cloud sessions

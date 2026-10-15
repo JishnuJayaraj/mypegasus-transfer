@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": ".tsbuild/config",
+    "types": ["node"]
+  },
+  "include": ["vitest.config.ts", "packages/*/vitest.config.ts", "apps/*/vitest.config.ts"]
+}

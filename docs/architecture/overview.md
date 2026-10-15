@@ -33,7 +33,7 @@ Modules are separated by package boundaries, not by network calls.
 |---|---|---|
 | Structure | Modular monolith, monorepo | 0001 |
 | Database | PostgreSQL 16, Drizzle; core fields as columns, config-driven fields as jsonb | 0002 |
-| Stack | TS 7, Vite+/Vite 8, React, TanStack, Carbon, Hono | 0003 |
+| Stack | TS 6 (`tsc -b`), Vite 8, Vitest, Oxlint/Oxfmt, React, TanStack, Carbon, Hono, Node 24 | 0003 |
 | Regional variation | Fixed lifecycle core + versioned regional templates | 0004 |
 | Hosting | Local (synthetic data); pilot + production on company Hetzner cluster (k3s, containers) | 0005 |
 | External services | Ports & adapters with mocks; real impls added later | 0006 |

@@ -1,6 +1,6 @@
 # Slice 0 — Walking skeleton: plan
 
-- Status: **Proposed, awaiting approval**
+- Status: **Approved**; PR 0a implemented (spike results in the ADR-0003 amendment)
 - Date: 2026-10-15
 - Roadmap: [Slice 0](../roadmap.md#slice-0--walking-skeleton)
 - Relevant ADRs: 0001 (two SPAs), 0002 (Postgres, `project_id`, DB-enforced writes), 0003 (stack,
