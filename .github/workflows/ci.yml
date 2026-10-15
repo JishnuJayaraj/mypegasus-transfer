@@ -34,7 +34,7 @@ jobs:
       - name: API client drift
         run: |
           pnpm api:generate
-          git diff --exit-code -- packages/api-client
+          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts
 
   lint:
     runs-on: ubuntu-24.04
@@ -88,3 +88,45 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:setup
       - run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Playwright switches these to transfer_e2e (reset and seeded before the run).
+      DATABASE_URL: postgres://transfer_app:transfer_app_dev@localhost:5432/transfer
+      DATABASE_MIGRATION_URL: postgres://transfer_owner:transfer_owner_dev@localhost:5432/transfer
+      DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:setup
+      - run: pnpm build
+      # CI always installs the browser matching the pinned Playwright (spike S2).
+      - run: pnpm --filter @transfer/web exec playwright install --with-deps chromium
+      - run: pnpm test:e2e
+      # Synthetic data only, so the report and traces may be uploaded.
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
