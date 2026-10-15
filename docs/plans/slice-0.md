@@ -85,7 +85,8 @@ deliberate dependency PRs.
   `scram-sha-256` over TCP, and `postgres` has no password (review finding 3.4). Slice 0 creates
   dev roles with passwords (section 5.3).
 - **`openapi-typescript@7.13.0` declares `typescript: ^5.x` as a peer dependency.** With TS 6,
-  pnpm will warn. This is checked in the spike (S4).
+  pnpm will warn. This is checked in the spike (S4), and the maintenance risk goes into ADR-0010
+  (section 9).
 - Cloud session: Node 22.22.0, pnpm 10.28.0 (corepack), PostgreSQL 16.15 running, Docker
   available.
 
@@ -131,7 +132,7 @@ The goal is that moving to TS 7 later is one small PR.
 | S1 | `@hono/zod-openapi@1.6.3` reads OpenAPI metadata from Zod 4 schemas defined in `packages/domain` with Zod's own `.meta()`, **without** `packages/domain` importing Hono. | `apps/api` wraps the domain schemas with `.openapi()`. The domain stays Hono-free. |
 | S2 | Pinned `@playwright/test@1.64.1` runs against the pre-installed Chromium in cloud sessions (`PLAYWRIGHT_BROWSERS_PATH`). | Playwright config uses `executablePath` from `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. CI always installs its own Chromium. |
 | S3 | Carbon's Sass (`@carbon/react` styles, per-component imports, `sass-embedded`) builds under Vite 8 in dev (HMR) and in a production build, with no blocking Sass errors. | Import Carbon's precompiled CSS from `@carbon/styles`. The bigger bundle is accepted for now and recorded as a baseline. |
-| S4 | `openapi-typescript@7.13.0` (peer `typescript: ^5.x`) generates correct types with TS 6.0.3 installed. The peer warning may only be silenced with `pnpm.peerDependencyRules.allowedVersions`, which doesn't change resolution. | `pnpm api:generate` runs the generator in its own isolated install (`pnpm dlx openapi-typescript@7.13.0`, which brings its own TS 5). The output is a committed `.d.ts`, so the project keeps one TypeScript and no aliases. |
+| S4 | `openapi-typescript@7.13.0` (peer `typescript: ^5.x`) generates correct types with TS 6.0.3 installed. The peer warning is silenced **only for this edge**: `pnpm.peerDependencyRules.allowedVersions` = `{ "openapi-typescript>typescript": "6" }`. There is no global TypeScript allowance, and resolution doesn't change. | An **isolated workspace package `tools/codegen`** with `openapi-typescript@7.13.0` and `typescript@5.9.3` pinned as its own devDependencies, both in the lockfile. `pnpm api:generate` runs it. The apps and packages still compile with TS 6; TS 5 exists only inside that package. The output stays the committed `.d.ts`. No `pnpm dlx`: it bypasses the lockfile and needs the network at run time. |
 
 **Output:** the ADR-0003 amendment, which records D12–D14 with the two deferral sentences and
 the result of S1–S4 (including any fallback taken).
@@ -169,6 +170,7 @@ packages/
   ui/           thin Carbon wrappers (AppShell, PageHeader, DataTable, form fields), date
                 formatting (TT.MM.JJJJ, Europe/Berlin), i18n init helper
 .github/workflows/ci.yml
+tools/codegen/       only if the S4 fallback is taken: openapi-typescript + TS 5.9, nothing else
 docker-compose.yml   Postgres 16 only (MinIO and Gotenberg come with their slices)
 Dockerfile
 ```
@@ -540,7 +542,9 @@ E = Playwright, CI = workflow).
       S1–S4 results, including any fallback taken. The CLAUDE.md "Tech stack", "Repo layout"
       and "Commands" sections are updated. (review)
 - [ ] **AC-25** `typescript@6.0.3` is the only TypeScript in the lockfile (`pnpm why
-      typescript`), with no npm aliases or pnpm overrides. `tsc -b` reports no deprecation
+      typescript`), except `typescript@5.9.3` inside `tools/codegen` if the S4 fallback was
+      taken. There are no npm aliases or pnpm overrides, and the only peer-dependency rule is
+      `openapi-typescript>typescript`. `tsc -b` reports no deprecation
       diagnostics, and no `tsconfig*.json` sets `ignoreDeprecations`. (CI)
 - [ ] **AC-26** Every dependency is pinned to an exact version. Drizzle is on the stable line
       (`drizzle-orm@0.45.x`, `drizzle-kit@0.31.x`), with no beta or rc. Postgres is major 16 in
@@ -600,6 +604,11 @@ Not in this plan PR. Each lands with the PR named here.
       pseudonymised, never deleted, because `project.created_by` (and later audit entries)
       reference `staff_user`.
   - ADR-0007: the Slice 0 stub is a signed dev cookie; the server-side store comes in Slice 3.
+  - ADR-0010, a new risk: `openapi-typescript`'s maintenance looks uncertain (no release since
+    February 2026, and TS 6 support stalled, according to a maintainer-status discussion on
+    GitHub). It is contained: only `packages/api-client` depends on the generator, and the apps
+    only use `openapi-fetch` and the committed types. If it doesn't support TS 6 by the end of
+    the MVP, evaluate a replacement generator then. No action now.
   - ADR-0005: the cluster's PostgreSQL (CloudNativePG) must run the same major version as
     development and CI, currently **16**; a major upgrade is a deliberate change everywhere at
     once.
@@ -614,7 +623,7 @@ Not in this plan PR. Each lands with the PR named here.
 
 | Risk | Mitigation |
 |---|---|
-| `openapi-typescript` declares `typescript: ^5.x` as a peer | Spike S4; fallback is an isolated `pnpm dlx` install for generation only. |
+| `openapi-typescript` declares `typescript: ^5.x` as a peer, and its maintenance looks uncertain (no release since February 2026, TS 6 support stalled) | Spike S4: a peer warning silenced for that one edge; the fallback is the isolated `tools/codegen` package with TS 5.9. The risk is contained: only `packages/api-client` depends on the generator, and the apps only use `openapi-fetch` and the committed types. Recorded in ADR-0010; if there's still no TS 6 support at the end of the MVP, evaluate a replacement generator then. |
 | A later move to TS 7 turns out bigger than one PR | TS 6 configuration rules (section 3) and the `ignoreDeprecations` guard in CI. |
 | `@hono/zod-openapi` and Zod 4 metadata from a pure domain package | Spike S1; fallback is wrapping in `apps/api`. |
 | Carbon CSS bundle size and Sass under Vite 8 | Spike S3. Import styles per component. The 0c PR records the bundle size as a baseline. |
