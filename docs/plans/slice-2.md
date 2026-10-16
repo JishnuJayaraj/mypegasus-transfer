@@ -142,7 +142,7 @@ Nothing failed. One cosmetic item: the web component tests print jsdom's "Not im
 Window's scrollTo()" 17 times (TanStack Router's scroll restoration under jsdom); harmless, but
 it buries real output. A one-line stub in `apps/web/src/test-setup.ts` fixes it (PR 2a).
 
-### 2.2 Dependencies (checked against npm on 2026-10-16; **approval needed**)
+### 2.2 Dependencies (checked against npm on 2026-10-16; approved in round 22)
 
 | Package | Pin | Released | Notes |
 |---|---|---|---|
@@ -218,6 +218,39 @@ hand-written production lines (SQL included, tests excluded).
 **Gates** (round 22): PRs 2f and 2g wait for Q103; PR 2h waits for Q102. 2b and 2c-1 can run in
 parallel after 2a; 2d-1 and 2e-1 in parallel after 2c-2. Between 2a
 and 2b the web app has no way to enter contractual dates; nothing depends on them in that gap.
+
+### Built in PR 2a, with the readings taken (for confirmation)
+
+Built: `ProjectStatus`, `CreateProjectInput` without dates, `UpdateProjectInput`,
+`checkProjectUpdate` and `mayCreateProject` (`packages/domain/src/project.ts`, now under the 100 %
+threshold); the operation `editProject` (PL); the audit types `project_created` and
+`project_changed` with `setupEventTypes` / `reservedEventTypes`; migrations `0010_project_setup`
+(generated: `project_status`, `project_role`, the project columns, `project_membership`, the
+two event types), `0011_project_setup_functions` (hand-written: the W1 copy, `project_lock_key`,
+`lock_project_setup`, the shared lock in `lock_participation` and `create_participation`,
+`create_project`, `update_project`, `record_audit_event` refusing the new types, the grants) and
+`0012_drop_project_dates` (generated); the seed's memberships; `apps/api/src/access.ts`
+(`staffSubjectOf`, project visibility); the project routes scoped by membership with `PATCH`; the
+`domain-error` problem type; the web form and list without dates (with the status); the jsdom
+`scrollTo` stub.
+
+1. **Event types join with their PRs:** only `project_created` and `project_changed` now; the
+   others (activation, waves, pins, …) come with the functions that write them.
+2. **`project_agentur_key` exists but is set only in PR 2c-2**, together with the pin;
+   `update_project` takes name, customer and type only.
+3. **`create_project` re-checks the flat role in SQL** (defence in depth for Q106), and both
+   functions refuse assisted mode and non-staff actors.
+4. **A change to the current values is refused** (`project_unchanged`, 422, no write), like
+   `wave_unchanged` in Slice 1.
+5. **A project the user can't see is 404**, not 403, so its existence isn't revealed; a visible
+   project the user may not edit (a consultant, an admin) is 403.
+6. **The W1 copy** runs only for `ta_tg` projects with at least one Slice 0 date and no wave at
+   all; a project with waves already has its dates there (migration 0003 or the seed).
+7. **Seed memberships:** the seeded PL, consultant and back office hold their role in all three
+   seeded projects; org roles have none.
+8. **`conflict` (409)** joins the problem types with the first route that returns it.
+9. **No behaviour change for lifecycle work yet:** every project is `draft`, and the draft gate
+   comes with activation (PR 2e-1).
 
 ## 4. Design overview
 

@@ -79,3 +79,23 @@ Decided in the Slice 1 plan (D2, sections 5.4 and 5.10) and built in PR 1g-1:
 - **Entry waves** (`project_entry_wave`, Q79) carry the contractual dates; the Slice 0 project
   dates were copied into one wave `W1` per `ta_tg` project. A participation's wave is of its own
   project (composite FK).
+
+## Amendment 2026-10-16: project setup, memberships and the project lock (Slice 2, PR 2a)
+
+Decided in the Slice 2 plan (D2–D4, round 22) and built in PR 2a:
+- **Project setup writes go through `SECURITY DEFINER` functions** too, with their audit event
+  in the same transaction: `create_project` (the project, the creator's PL membership,
+  `project_created`) and `update_project` (`project_changed` with the changed keys, never the free
+  text). `transfer_app` has no `INSERT` on `project` any more; `record_audit_event` refuses the
+  setup event types like the lifecycle ones.
+- **The project lock lives in the functions** (round 22): a transaction-scoped advisory lock per
+  project (`project_lock_key`), exclusive in every setup mutation (`lock_project_setup`), shared
+  in `lock_participation` before its row lock and in `create_participation`. Every participation
+  function locks through `lock_participation`, so none interleaves with a setup mutation of its
+  project, whatever a service remembers. Lock order everywhere: project → template version →
+  participation row.
+- **`project_membership`** holds zero or more project roles per staff user and project (D6 of
+  Slice 1); the API builds the access subject from it. Managing members is Slice 3.
+- **The Slice 0 project date columns are gone**; their values live in the entry waves (W1 copied
+  first for projects created after the Slice 1 migration). Projects have a `status`
+  (`draft`/`active`) and a `project_agentur_key`.

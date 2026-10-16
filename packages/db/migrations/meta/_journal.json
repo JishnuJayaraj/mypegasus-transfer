@@ -71,6 +71,27 @@
       "when": 1792172521773,
       "tag": "0009_job_run_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792191181066,
+      "tag": "0010_project_setup",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792191210593,
+      "tag": "0011_project_setup_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792191260033,
+      "tag": "0012_drop_project_dates",
+      "breakpoints": true
     }
   ]
 }

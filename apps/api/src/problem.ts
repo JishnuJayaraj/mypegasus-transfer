@@ -2,13 +2,15 @@ import type { Context } from "hono";
 import { ProblemDetails as ProblemDetailsSchema, type ProblemDetails } from "@transfer/domain";
 import type { ZodError } from "zod";
 
-/** Stable problem types (ADR-0010, plan section 5.4). */
+/** Stable problem types (ADR-0010, Slice 1 plan 5.4, Slice 2 plan 5.12). */
 export const problemTypes = {
   "validation-error": [400, "Validation failed"],
   unauthenticated: [401, "Not authenticated"],
   forbidden: [403, "Forbidden"],
   "not-found": [404, "Not found"],
   "unsupported-media-type": [415, "Unsupported media type"],
+  /** A domain rule refused the request; `errors[].code` names it, never a value. */
+  "domain-error": [422, "Refused by a domain rule"],
   "internal-error": [500, "Internal server error"],
   "service-unavailable": [503, "Service unavailable"],
 } as const satisfies Record<string, [number, string]>;
@@ -58,4 +60,11 @@ export function problemResponses<T extends ProblemType>(...types: T[]) {
       { description: problemTypes[type][1], content: problemContent },
     ]),
   ) as { [K in T as ProblemStatus<K>]: { description: string; content: typeof problemContent } };
+}
+
+/** A domain refusal (422) with its stable codes (Slice 2 plan, R21). */
+export function domainProblem(c: Context, codes: readonly string[]) {
+  return problem(c, "domain-error", {
+    errors: codes.map((code) => ({ pointer: "", code, detail: "Refused by a domain rule" })),
+  });
 }

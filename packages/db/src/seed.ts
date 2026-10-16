@@ -1,5 +1,5 @@
 import type { Database } from "./client";
-import { project, projectEntryWave, staffUser } from "./schema";
+import { project, projectEntryWave, projectMembership, staffUser } from "./schema";
 
 // Synthetic data only (CLAUDE.md rule 1): obviously fictional names, emails at example.org.
 // Fixed UUIDs make the seed idempotent.
@@ -44,9 +44,6 @@ const projects: NewProject[] = (
       name: "Restrukturierung Werk Nord",
       customerName: "Beispiel Maschinenbau GmbH",
       type: "ta_tg",
-      signingDeadline: "2091-02-15",
-      defaultTgStart: "2091-03-01",
-      defaultTgEnd: "2092-02-29",
     },
     {
       id: seedProjectIds.lagerSued,
@@ -62,6 +59,20 @@ const projects: NewProject[] = (
     },
   ] satisfies Omit<NewProject, "createdBy">[]
 ).map((p) => ({ ...p, createdBy: seedStaffUserIds.projectLead }));
+
+/**
+ * Memberships (D4): the seeded PL, consultant and back office hold their role in every seeded
+ * project. Org roles (admin, regional admin, regional operations manager) need none.
+ */
+export const seedMemberships = Object.values(seedProjectIds).flatMap((projectId) =>
+  (
+    [
+      [seedStaffUserIds.projectLead, "project_lead"],
+      [seedStaffUserIds.consultant, "consultant"],
+      [seedStaffUserIds.backOffice, "back_office"],
+    ] as const
+  ).map(([staffUserId, role]) => ({ projectId, staffUserId, role })),
+) satisfies (typeof projectMembership.$inferInsert)[];
 
 /**
  * Werk Nord's two entry waves (Q79, plan 5.10): W1 matches the project's Slice 0 dates, W2 is a
@@ -91,7 +102,7 @@ export const seedWaves = [
 ] as const satisfies (typeof projectEntryWave.$inferInsert)[];
 
 /**
- * Inserts the synthetic staff users, projects and waves; existing staff users and projects are
+ * Inserts the synthetic staff users, projects, memberships and waves; existing rows are
  * left alone. A wave with the same code (e.g. the W1 the Slice 1 migration made from the Slice 0
  * dates) gets the seed's dates, so the participation seed finds a usable cutoff.
  */
@@ -99,6 +110,7 @@ export async function seed(db: Database): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.insert(staffUser).values(staffUsers).onConflictDoNothing();
     await tx.insert(project).values(projects).onConflictDoNothing();
+    await tx.insert(projectMembership).values(seedMemberships).onConflictDoNothing();
     for (const wave of seedWaves) {
       const { id: _id, projectId: _projectId, code: _code, ...dates } = wave;
       await tx

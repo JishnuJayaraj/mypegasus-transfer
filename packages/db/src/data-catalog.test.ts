@@ -47,6 +47,7 @@ describe("data catalog", () => {
     expect(dataCatalog).toEqual({
       project: entry("project_master", "internal"),
       staff_user: entry("staff_account", "confidential"),
+      project_membership: entry("project_master", "internal"),
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),
       profiling_exception_request: entry("participation_record", "confidential", true),

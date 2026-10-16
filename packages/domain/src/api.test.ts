@@ -6,20 +6,27 @@ const project = {
   name: "Restrukturierung Werk Nord",
   customerName: "Beispiel Maschinenbau GmbH",
   type: "ta_tg",
-  signingDeadline: null,
-  defaultTgStart: "2027-03-01",
-  defaultTgEnd: null,
+  status: "draft",
+  projectAgenturKey: null,
+  activatedAt: null,
   createdAt: "2026-10-15T20:05:23.123456Z",
   createdBy: "00000000-0000-4000-8000-000000000003",
 };
 
 describe("Project", () => {
-  it("accepts a project with nullable dates and a microsecond UTC timestamp", () => {
+  it("accepts a draft project and an active one with microsecond UTC timestamps", () => {
     expect(Project.parse(project)).toEqual(project);
+    const active = {
+      ...project,
+      status: "active",
+      projectAgenturKey: "beispielstadt-nord",
+      activatedAt: "2026-10-16T08:00:00.000001Z",
+    };
+    expect(Project.parse(active)).toEqual(active);
   });
 
-  it("rejects an impossible date and a timestamp with an offset", () => {
-    expect(Project.safeParse({ ...project, defaultTgEnd: "2027-02-29" }).success).toBe(false);
+  it("rejects an unknown status and a timestamp with an offset", () => {
+    expect(Project.safeParse({ ...project, status: "closed" }).success).toBe(false);
     expect(Project.safeParse({ ...project, createdAt: "2026-10-15T22:05:23+02:00" }).success).toBe(
       false,
     );

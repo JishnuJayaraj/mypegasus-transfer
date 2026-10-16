@@ -44,6 +44,8 @@ export const OperationKind = z.enum([
   "requestClarification",
   "requestEvidenceCorrection",
   "approveEvidenceCorrection",
+  // Slice 2: project setup (plan 5.4)
+  "editProject",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -94,6 +96,7 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   requestClarification: ["regional_operations_manager"],
   requestEvidenceCorrection: ["project_lead", "back_office"],
   approveEvidenceCorrection: ["regional_operations_manager"],
+  editProject: ["project_lead"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

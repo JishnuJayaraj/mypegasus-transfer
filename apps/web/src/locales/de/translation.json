@@ -29,31 +29,30 @@
       "name": "Name",
       "customerName": "Kunde",
       "type": "Typ",
-      "signingDeadline": "Unterschriftsfrist",
+      "status": "Status",
       "createdAt": "Angelegt am"
     },
     "types": {
       "ta_only": "Transferagentur",
       "ta_tg": "Transferagentur und Transfergesellschaft"
+    },
+    "statuses": {
+      "draft": "Entwurf",
+      "active": "Aktiv"
     }
   },
   "projectForm": {
     "name": "Projektname",
     "customerName": "Kunde",
     "type": "Projekttyp",
-    "signingDeadline": "Unterschriftsfrist",
-    "defaultTgStart": "TG-Beginn",
-    "defaultTgEnd": "TG-Ende",
     "submit": "Projekt anlegen",
     "cancel": "Abbrechen",
-    "failed": "Das Projekt konnte nicht angelegt werden."
+    "failed": "Das Projekt konnte nicht angelegt werden.",
+    "datesOnWaves": "Unterschriftsfrist, TG-Beginn und TG-Ende werden nach dem Anlegen je Eintrittswelle erfasst."
   },
   "errors": {
     "required": "Pflichtfeld",
     "tooLong": "Höchstens 200 Zeichen",
-    "invalidDate": "Ungültiges Datum, bitte im Format TT.MM.JJJJ",
-    "tgEndBeforeStart": "Das TG-Ende darf nicht vor dem TG-Beginn liegen",
-    "notAllowedForTaOnly": "Bei reinen Transferagentur-Projekten nicht zulässig",
     "invalid": "Ungültige Eingabe"
   }
 }

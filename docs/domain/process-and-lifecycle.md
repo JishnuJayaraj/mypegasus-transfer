@@ -43,7 +43,10 @@ template a project of either type can't be activated (Q76, Q90).
 - Legal and calendar dates (signing deadline, TG start/end, exit date, ASU due date, settlement
   dates) are stored as `date`, not timestamps. Timestamps (`timestamptz`) are for events
   (audit, uploads).
-- **TG start and end are per participation**, defaulting from the project (Q18). TL 407 needs
+- **The project carries no contractual dates** (Slice 2): they live on its entry waves. A
+  project is `draft` (setup, import, creation; no post-creation lifecycle transition) until it is
+  activated once its blockers are gone, then `active` (Q98).
+- **TG start and end are per participation**, defaulting from the participation's entry wave (Q18, Q79). TL 407 needs
   both ("voraussichtliche Verweildauer in der beE von/bis").
 - **ASU due date** *(verify, Q1)*: `asuDueDate = max(endDate − 3 months, knowledgeDate + 3 days)`,
   where `endDate` is the end of the old employment and `knowledgeDate` is when the person

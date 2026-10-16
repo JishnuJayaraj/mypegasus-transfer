@@ -8,27 +8,47 @@ import { project, projectEntryWave } from "./schema";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
 import { testDatabaseUrls } from "./testing";
 
-// AC-20: migrating a Slice 0 database gives each ta_tg project one wave W1 with its dates.
+// AC-20 (Slice 1): migrating a Slice 0 database gives each ta_tg project one wave W1 with its
+// dates. AC-3 (Slice 2): projects created after that migration get theirs before the project date
+// columns are dropped.
 const url = testDatabaseUrls().owner;
 const slice0Folder = mkdtempSync(join(tmpdir(), "transfer-slice0-"));
+const slice1Folder = mkdtempSync(join(tmpdir(), "transfer-slice1-"));
 
-/** The migrations up to the end of Slice 0 (0000_init, 0001_grants). */
-function writeSlice0Migrations() {
+/** The first `count` migrations: Slice 0 ends after 0001_grants, Slice 1 after 0009_job_run_grants. */
+function writeMigrations(folder: string, count: number) {
   const journal = JSON.parse(readFileSync(join(migrationsFolder, "meta/_journal.json"), "utf8"));
-  journal.entries = journal.entries.slice(0, 2);
-  mkdirSync(join(slice0Folder, "meta"));
-  writeFileSync(join(slice0Folder, "meta/_journal.json"), JSON.stringify(journal));
+  journal.entries = journal.entries.slice(0, count);
+  mkdirSync(join(folder, "meta"));
+  writeFileSync(join(folder, "meta/_journal.json"), JSON.stringify(journal));
   for (const { tag } of journal.entries) {
-    cpSync(join(migrationsFolder, `${tag}.sql`), join(slice0Folder, `${tag}.sql`));
+    cpSync(join(migrationsFolder, `${tag}.sql`), join(folder, `${tag}.sql`));
   }
 }
 
 const db = createDb(url);
-beforeAll(() => writeSlice0Migrations());
+beforeAll(() => {
+  writeMigrations(slice0Folder, 2);
+  writeMigrations(slice1Folder, 10);
+});
 afterAll(async () => {
   rmSync(slice0Folder, { recursive: true, force: true });
+  rmSync(slice1Folder, { recursive: true, force: true });
+  // Leave a fully migrated database for the next test file.
+  await db.$client.query("drop owned by transfer_owner");
+  await runMigrations(url);
   await db.$client.end();
 });
+
+const waveColumns = {
+  projectId: projectEntryWave.projectId,
+  code: projectEntryWave.code,
+  name: projectEntryWave.name,
+  signingDeadline: projectEntryWave.signingDeadline,
+  defaultTgStart: projectEntryWave.defaultTgStart,
+  defaultTgEnd: projectEntryWave.defaultTgEnd,
+  latestEntryDate: projectEntryWave.latestEntryDate,
+};
 
 describe("the Slice 0 → Slice 1 migration (AC-20)", () => {
   it("creates one wave W1 per ta_tg project from the project's dates", async () => {
@@ -54,15 +74,7 @@ describe("the Slice 0 → Slice 1 migration (AC-20)", () => {
     await runMigrations(url);
 
     const waves = await db
-      .select({
-        projectId: projectEntryWave.projectId,
-        code: projectEntryWave.code,
-        name: projectEntryWave.name,
-        signingDeadline: projectEntryWave.signingDeadline,
-        defaultTgStart: projectEntryWave.defaultTgStart,
-        defaultTgEnd: projectEntryWave.defaultTgEnd,
-        latestEntryDate: projectEntryWave.latestEntryDate,
-      })
+      .select(waveColumns)
       .from(projectEntryWave)
       .orderBy(projectEntryWave.projectId);
     const wave = { code: "W1", name: "W1", latestEntryDate: null };
@@ -82,7 +94,44 @@ describe("the Slice 0 → Slice 1 migration (AC-20)", () => {
         defaultTgEnd: null,
       },
     ]);
-    // The project columns stay until Slice 2 drops them.
     expect(await db.select({ id: project.id }).from(project)).toHaveLength(3);
+  });
+});
+
+describe("the Slice 1 → Slice 2 migration (AC-3)", () => {
+  it("copies the dates of projects created after 0003 into W1, then drops the project date columns", async () => {
+    await db.$client.query("drop owned by transfer_owner");
+    await runMigrations(url, slice1Folder);
+    await db.$client.query(
+      "insert into staff_user (id, display_name, email, role) values ($1, 'Petra Projektleitung', 'project-lead@example.org', 'project_lead')",
+      [seedStaffUserIds.projectLead],
+    );
+    // Created with the Slice 0 form during Slice 1: dates on the project only, no wave.
+    await db.$client.query(
+      `insert into project (id, name, customer_name, type, signing_deadline, default_tg_start, default_tg_end, created_by) values
+        ($1, 'Restrukturierung Werk Nord', 'Beispiel Maschinenbau GmbH', 'ta_tg', '2027-02-15', '2027-03-01', '2028-02-29', $3),
+        ($2, 'Standortschließung Lager Süd', 'Musterfirma Logistik AG', 'ta_tg', null, null, null, $3)`,
+      [seedProjectIds.werkNord, seedProjectIds.lagerSued, seedStaffUserIds.projectLead],
+    );
+    await runMigrations(url);
+
+    expect(await db.select(waveColumns).from(projectEntryWave)).toEqual([
+      {
+        projectId: seedProjectIds.werkNord,
+        code: "W1",
+        name: "W1",
+        signingDeadline: "2027-02-15",
+        defaultTgStart: "2027-03-01",
+        defaultTgEnd: "2028-02-29",
+        latestEntryDate: null,
+      },
+    ]);
+    const { rows } = await db.$client.query(
+      `select column_name from information_schema.columns where table_name = 'project'
+       and column_name in ('signing_deadline', 'default_tg_start', 'default_tg_end')`,
+    );
+    expect(rows).toEqual([]);
+    const statuses = await db.select({ status: project.status }).from(project);
+    expect(statuses).toEqual([{ status: "draft" }, { status: "draft" }]);
   });
 });

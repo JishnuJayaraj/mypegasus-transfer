@@ -2,7 +2,7 @@ import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "./migrate";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
-import { call, createWave, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
+import { auditContext, call, createWave, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
 // AC-13: the runtime role only has the grants that migrations give it explicitly.
 const urls = testDatabaseUrls();
@@ -23,10 +23,21 @@ afterAll(() => Promise.all([app.end(), owner.end()]));
 beforeEach(() => resetTestDatabase({ seed: true }));
 
 describe("transfer_app", () => {
-  it("may select and insert projects", async () => {
-    const { rows } = await insertProject(app);
-    const selected = await app.query("select name from project where id = $1", [rows[0].id]);
-    expect(selected.rows).toEqual([{ name: "Grant-Test" }]);
+  it("may select projects and memberships, and creates projects only through create_project (AC-1)", async () => {
+    await expect(insertProject(app)).rejects.toMatchObject(permissionDenied);
+    const id = await call(app, "create_project", {
+      name: "Grant-Test",
+      customerName: "Beispiel GmbH",
+      type: "ta_only",
+      context: auditContext({ actorType: "user", staffUserId }),
+    });
+    const selected = await app.query("select name, status from project where id = $1", [id]);
+    expect(selected.rows).toEqual([{ name: "Grant-Test", status: "draft" }]);
+    const members = await app.query(
+      "select staff_user_id, role from project_membership where project_id = $1",
+      [id],
+    );
+    expect(members.rows).toEqual([{ staff_user_id: staffUserId, role: "project_lead" }]);
   });
 
   it("may select staff users", async () => {
@@ -35,7 +46,12 @@ describe("transfer_app", () => {
   });
 
   it.each([
+    [
+      "insert into project",
+      `insert into project (name, customer_name, type, created_by) values ('x', 'x', 'ta_only', '${staffUserId}')`,
+    ],
     ["update project", "update project set name = 'x'"],
+    ["update project status", "update project set status = 'active'"],
     ["delete from project", "delete from project"],
     ["truncate project", "truncate project"],
     [
@@ -43,6 +59,13 @@ describe("transfer_app", () => {
       "insert into staff_user (display_name, email, role) values ('x', 'x@example.org', 'admin')",
     ],
     ["update staff_user", "update staff_user set display_name = 'x'"],
+    [
+      "insert into project_membership",
+      `insert into project_membership (project_id, staff_user_id, role) values ('${seedProjectIds.verwaltung}', '${seedStaffUserIds.admin}', 'project_lead')`,
+    ],
+    ["update project_membership", "update project_membership set role = 'project_lead'"],
+    ["delete from project_membership", "delete from project_membership"],
+    ["truncate project_membership", "truncate project_membership"],
     ["delete from staff_user", "delete from staff_user"],
     ["create table", "create table intruder (id int)"],
     ["create schema", "create schema intruder"],
@@ -66,6 +89,10 @@ const statusFunctions = [
   "revoke_profiling_exception",
   "correct_end_reason",
   "record_audit_event",
+  // Slice 2 (PR 2a): the project lock and the project setup functions
+  "lock_project_setup",
+  "create_project",
+  "update_project",
 ];
 const helpers = [
   "assert_context",
@@ -73,6 +100,8 @@ const helpers = [
   "end_reason_fits",
   "lock_current_request",
   "profiling_exception_request_progresses",
+  "project_lock_key",
+  "project_text_valid",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -145,7 +174,7 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
   });
 
-  it("may execute the nine functions, and locks through lock_participation", async () => {
+  it("may execute the status and setup functions, and locks through lock_participation", async () => {
     await app.query("begin");
     const { rows } = await app.query("select status, status_version from lock_participation($1)", [
       participationId,

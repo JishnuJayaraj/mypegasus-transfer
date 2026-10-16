@@ -269,7 +269,7 @@ until the DPO confirms them, so no deletion job may touch them):
 
 | Class | Tables | Rule |
 |---|---|---|
-| `project_master` | `project`, `project_entry_wave` | Q58 (open) |
+| `project_master` | `project`, `project_membership` (staff ids and project roles, Slice 2), `project_entry_wave` | Q58 (open) |
 | `staff_account` | `staff_user` | deactivate and pseudonymise, never delete (Q59, assumed) |
 | `participation_record` | `participation`, `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or client responses, round 17; evidence records get their own class in Slice 4b) | per the table above: non-signers 90 days after `withdrawnOn` (Q77, assumed), otherwise with the personnel file and the evidence set |
 | `audit_log` | `audit_event` | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |

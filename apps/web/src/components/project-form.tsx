@@ -1,13 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
-import { CreateProjectInput, projectRuleCodes, type ProjectType } from "@transfer/domain";
+import { CreateProjectInput, type ProjectType } from "@transfer/domain";
 import {
   Button,
   ButtonSet,
-  DateField,
   Form,
   InlineNotification,
-  parseDisplayDate,
   RadioButton,
   RadioButtonGroup,
   Stack,
@@ -18,18 +16,11 @@ import { useTranslation } from "react-i18next";
 import { useApi } from "../api";
 
 type Project = components["schemas"]["Project"];
-type Field = "name" | "customerName" | "type" | DateFieldName;
-type DateFieldName = (typeof DATE_FIELDS)[number];
-type ErrorKey =
-  | "required"
-  | "tooLong"
-  | "invalidDate"
-  | "tgEndBeforeStart"
-  | "notAllowedForTaOnly"
-  | "invalid";
+type Field = "name" | "customerName" | "type";
+type ErrorKey = "required" | "tooLong" | "invalid";
 
-const DATE_FIELDS = ["signingDeadline", "defaultTgStart", "defaultTgEnd"] as const;
-const FIELDS: readonly Field[] = ["name", "customerName", "type", ...DATE_FIELDS];
+// The contractual dates live on the project's entry waves (Q79), not in this form.
+const FIELDS: readonly Field[] = ["name", "customerName", "type"];
 
 /** Maps a validation issue code (Zod's, or a domain rule's `params.code`) to a message key. */
 function errorKey(code: string): ErrorKey {
@@ -39,12 +30,6 @@ function errorKey(code: string): ErrorKey {
       return "required";
     case "too_big":
       return "tooLong";
-    case "invalid_date":
-      return "invalidDate";
-    case projectRuleCodes.tgEndBeforeStart:
-      return "tgEndBeforeStart";
-    case projectRuleCodes.notAllowedForTaOnly:
-      return "notAllowedForTaOnly";
     default:
       return "invalid";
   }
@@ -65,11 +50,6 @@ export function ProjectForm({ onCreated, onCancel }: ProjectFormProps) {
   const [name, setName] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [type, setType] = useState<ProjectType>("ta_tg");
-  const [dates, setDates] = useState<Record<DateFieldName, string>>({
-    signingDeadline: "",
-    defaultTgStart: "",
-    defaultTgEnd: "",
-  });
   const [errors, setErrors] = useState<Partial<Record<Field, ErrorKey>>>({});
 
   const create = useMutation({
@@ -93,16 +73,7 @@ export function ProjectForm({ onCreated, onCancel }: ProjectFormProps) {
   function submit(event: FormEvent) {
     event.preventDefault();
     const fieldErrors: Partial<Record<Field, ErrorKey>> = {};
-    const isoDates: Partial<Record<DateFieldName, string>> = {};
-    // A ta_only project has no signing deadline and no TG dates; their fields are hidden.
-    if (type === "ta_tg") {
-      for (const field of DATE_FIELDS) {
-        const parsed = parseDisplayDate(dates[field]);
-        if (!parsed.ok) fieldErrors[field] = "invalidDate";
-        else if (parsed.value) isoDates[field] = parsed.value;
-      }
-    }
-    const result = CreateProjectInput.safeParse({ name, customerName, type, ...isoDates });
+    const result = CreateProjectInput.safeParse({ name, customerName, type });
     for (const issue of result.error?.issues ?? []) {
       const field = issue.path[0];
       const code = (issue as { params?: { code?: string } }).params?.code ?? issue.code;
@@ -158,17 +129,7 @@ export function ProjectForm({ onCreated, onCancel }: ProjectFormProps) {
             labelText={t("projects.types.ta_only")}
           />
         </RadioButtonGroup>
-        {type === "ta_tg" &&
-          DATE_FIELDS.map((field) => (
-            <DateField
-              key={field}
-              id={`project-${field}`}
-              labelText={t(`projectForm.${field}`)}
-              defaultValue={dates[field]}
-              onChange={(text) => setDates((current) => ({ ...current, [field]: text }))}
-              invalidText={invalidText(field)}
-            />
-          ))}
+        <p>{t("projectForm.datesOnWaves")}</p>
         <ButtonSet>
           <Button kind="secondary" onClick={onCancel}>
             {t("projectForm.cancel")}

@@ -65,9 +65,9 @@ export const project = {
   name: "Restrukturierung Werk Nord",
   customerName: "Beispiel Maschinenbau GmbH",
   type: "ta_tg",
-  signingDeadline: "2027-02-15",
-  defaultTgStart: "2027-03-01",
-  defaultTgEnd: "2028-02-29",
+  status: "draft",
+  projectAgenturKey: null,
+  activatedAt: null,
   createdAt: "2026-10-15T08:30:00.123456Z",
   createdBy: staffUsers[1]!.id,
 };

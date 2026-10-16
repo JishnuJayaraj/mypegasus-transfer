@@ -34,6 +34,12 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: false,
   },
+  // Who holds which project role (D6); staff ids only, no participant data.
+  project_membership: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
   project_entry_wave: {
     retentionClass: "project_master",
     dataClass: "internal",

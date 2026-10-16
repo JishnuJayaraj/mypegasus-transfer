@@ -3,6 +3,7 @@ import { DocumentType } from "../documents/catalog";
 import { AccessCategory, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
+import { ProjectType } from "../project";
 import {
   DsvStatus,
   EndReason,
@@ -41,6 +42,9 @@ export const AuditEventType = z.enum([
   "config_override_changed",
   "review_recorded",
   "clarification_requested",
+  // Slice 2, written only by their own setup functions (`setupEventTypes`)
+  "project_created",
+  "project_changed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -48,6 +52,18 @@ export type AuditEventType = z.infer<typeof AuditEventType>;
 export const lifecycleEventTypes: ReadonlySet<AuditEventType> = new Set(
   AuditEventType.options.slice(0, AuditEventType.options.indexOf("end_reason_corrected") + 1),
 );
+
+/** Project setup events, written only by their functions (Slice 2 plan 5.3, D2). */
+export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
+  "project_created",
+  "project_changed",
+]);
+
+/** `record_audit_event` refuses these: each is written only by its own function. */
+export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
+  ...lifecycleEventTypes,
+  ...setupEventTypes,
+]);
 
 /** The participation column a `status_changed` event changes. */
 export const StatusField = z.enum(["status", "profiling_status", "dsv_status"]);
@@ -100,6 +116,7 @@ const common = {
 /** No FK to the participation: retention deletes it and pseudonymises the trail (plan 5.4). */
 const ofParticipation = { ...common, participationId: z.uuid() };
 const ofProjectOrParticipation = { ...common, participationId: z.uuid().nullable() };
+const ofProject = { ...common, participationId: z.null() };
 
 const event = <T extends AuditEventType, S extends z.ZodRawShape>(type: T, shape: S) =>
   z.strictObject({ type: z.literal(type), ...shape });
@@ -239,5 +256,14 @@ export const AuditEvent = z.discriminatedUnion("type", [
   /** Reviews and clarification requests are new events pointing at the reviewed one (5.4). */
   event("review_recorded", { ...ofProjectOrParticipation, reasonCode: code, details: reviewOf }),
   event("clarification_requested", { ...ofProjectOrParticipation, details: reviewOf }),
+  /** Free text (name, customer) never enters the trail: the type, and the changed keys. */
+  event("project_created", { ...ofProject, details: z.strictObject({ type: ProjectType }) }),
+  event("project_changed", {
+    ...ofProject,
+    details: z.strictObject({
+      fields: z.array(z.enum(["name", "customerName", "type"])).min(1),
+      type: ProjectType.optional(),
+    }),
+  }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;
