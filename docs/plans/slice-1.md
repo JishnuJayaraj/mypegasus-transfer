@@ -1,11 +1,12 @@
 # Slice 1 — Domain core: plan
 
-- Status: **Approved with changes** (round 7, 2026-10-16). This revision incorporates the
-  answers to D1–D10 and Q60–Q76; follow-ups Q77–Q83 are open (section 0).
+- Status: **Approved** (rounds 7 and 8, 2026-10-16). One follow-up (Q84) is open and built
+  fail-safe; it doesn't block implementation.
 - Date: 2026-10-15, revised 2026-10-16
 - Roadmap: [Slice 1](../roadmap.md#slice-1--domain-core)
 - Builds on: [Slice 0](slice-0.md) (merged, PRs 0a–0d)
-- Decisions: [round 7](../decisions/2026-10-16-answers-round-7.md)
+- Decisions: [round 7](../decisions/2026-10-16-answers-round-7.md),
+  [round 8](../decisions/2026-10-16-answers-round-8.md)
 - Relevant ADRs: 0002 (status writes enforced in the DB, append-only audit, `project_id`), 0004
   (fixed lifecycle core, regional templates, base defaults, completeness rules), 0006 (adapters,
   `Clock`), 0007 (access model in Slice 1), 0008 (retention per item), 0011 (pg-boss, `system`
@@ -14,60 +15,61 @@
   [data-protection.md](../domain/data-protection.md) (access matrix, write permissions),
   [regional-variation.md](../domain/regional-variation.md), [glossary.md](../domain/glossary.md)
 
-## 0. Decisions and open follow-ups
+## 0. Decisions and open items
 
-### Decisions (round 7)
+### Decisions
 
 | # | Topic | Decision |
 |---|---|---|
 | D1 | PR shape | **8 PRs, 1a–1h** (section 4), tests first, each green on its own. |
 | D2 | Status writes | Only narrowly scoped **`SECURITY DEFINER` functions** write statuses and audit events. `transfer_app` has no direct participation or audit writes. Fixed `search_path`, `EXECUTE` revoked from `PUBLIC`, no dynamic SQL, grants tested. |
-| D3 | Tables | Only minimal participation, lifecycle, audit (and pg-boss) tables. Personal data and memberships come later. |
-| D4 | Missing evidence | Missing DSV, ASU and profiling evidence **fails closed** in Slice 1. A temporary implementation state, **not** a rule letting the app decide whether employment legally exists. |
+| D3 | Tables | Only minimal participation, lifecycle, audit and job tables, plus `project_entry_wave` (Q79). Personal data and memberships come later. |
+| D4 | Missing evidence | Missing DSV, ASU, profiling and exception evidence **fails closed** in Slice 1. A temporary implementation state, **not** a rule letting the app decide whether employment legally exists. |
 | D5 | JSON Schema engine | Restricted **`z.fromJSONSchema`** profile, subject to spike S1; fallback **`ajv@8.20.0` server-only**. |
-| D6 | Roles | **Changed:** project-specific roles, **zero or more per person and project**; permissions are the **union**; profiler access still needs the participant assignment. |
+| D6 | Roles | Project-specific roles, **zero or more per person and project**; permissions are the **union**; profiler access still needs the participant assignment. Plus the org role **`regional_operations_manager`** (Q80). |
 | D7 | Jobs | pg-boss **in the API process**; a separate worker is a Slice 9 scaling decision. |
 | D8 | Sample templates | Fictional Agenturen only; never invented rules for a real Agentur. |
 | D9 | Adapters | Only **`Clock`** now. |
-| D10 | Docs gaps | **Fail safe:** unknown access is denied, unknown automatic transitions don't run, operational exceptions are flagged. Answers replace these defaults as they come in. |
+| D10 | Docs gaps | **Fail safe:** unknown access is denied, unknown automatic transitions don't run, operational exceptions are flagged. |
 
 Dependencies: `pg-boss@12.38.0` and its peer **`@opentelemetry/api@1.9.1` added explicitly**;
 `ajv@8.20.0` only on the S1 fallback; exact versions, pg-boss upgraded only in deliberate PRs.
 
-### What the answers changed in this plan
+### What rounds 7 and 8 settled (summary)
 
-- **The fixed "signing deadline + 90 days" grace period is gone.** Deadlines are contractual:
-  project `signingDeadline` for the first offer, a participation **`offerDeadline`** for
-  re-offers, and a project **`latestEntryDate`**. System withdrawals run at the **final
-  admission cutoff** (the day after `latestEntryDate`), only when that date is recorded, and
-  now also cover `imported` (`never_contacted`) and `contacted` (`not_informed`) (Q69, Q70).
-- **No guard is overridable** any more (Q71); the profiling exception is the only built-in
-  alternative. The `with_reason` override class is not built.
-- **No automatic late TG entry** (Q68): entry only on the TG start date; afterwards the PL sets a
-  new start date or performs an audited **reconciliation**. Guard facts are evaluated **as of
-  the TG start date**.
-- **Employment and Transfer-KuG eligibility are separate** (Q74, verify): a derived
-  `transferKugEligibility` and compliance flags for the profiling exception.
-- **Several project roles per person**, union of permissions (D6/Q61); **strict assignment** for
-  consultants (Q62); **write rules** are now in scope of the access matrix (Q65, assumed).
-- **Free-text reasons need encryption** (Q66), so Slice 1 stores **reason codes only**.
-- **Config:** rule classification (`statutory` / `ba_form` / `operational_default`) with
-  locking (Q75); **blocking** resolution when an Agentur template is missing (Q76).
-- The catch-up window and its `job_run` table are dropped (strict reading of Q68).
+- **Deadlines are contractual and live on entry waves** (Q69, Q77, Q79): each `ta_tg` project
+  has one or more waves (signing deadline, default TG start/end, `latestEntryDate`); a
+  participation joins exactly one wave before its DSV is offered; re-offers need an explicit
+  `offerDeadline`. The **final admission cutoff** (the Berlin day after the wave's
+  `latestEntryDate`) replaces the 90-day grace period. Cutoff withdrawals add `never_contacted`
+  and `not_informed`, with a 14-day warning and a 3-day final reminder (Q70, Q78).
+- **TG entry after the planned date** has three cases (Q68, round 8): automatic **catch-up** of
+  a missed run when every prerequisite was recorded and valid by the start date; audited
+  **reconciliation** by the PL when evidence recorded later proves it; otherwise a **new start
+  date**. Guard facts carry a validity date and a recording date.
+- **No guard is overridable** (Q71). A **profiling exception** needs evidence, one of four
+  reason codes (Q81) and **approval by a different user** (`regional_operations_manager`)
+  before it satisfies the TG entry guard.
+- **Employment and Transfer-KuG eligibility are separate**, with three outcomes per period:
+  `eligible`, `excluded`, `ba_review_required` (Q74, Q82, *verify*).
+- `ta_completed` checks a generic **`taMeasuresComplete`** fact, not `profiling_done` (Q83).
+- **Reason codes only** until encrypted storage exists; the health-related end reason is
+  refused by the status function until then; free text is never logged (Q66).
+- **Config:** rule bases (`statutory` / `ba_form` / `operational_default`) with locking (Q75);
+  no default for Agentur submission settings; temporary settings **scoped to one Agentur**,
+  with source, confirmer and date (Q76, round 8).
+- **Access:** union of project roles, strict assignment, write rules, break-glass scope,
+  evidence-set phase, the regional operations manager (Q61–Q65, Q80).
 
-### Follow-up questions (in `open-questions.md`) and what Slice 1 builds meanwhile
+### Open
 
 | Q | Gap | Built in Slice 1 until answered |
 |---|---|---|
-| Q77 🔒 | What replaces the grace period: do all system withdrawals run the day after `latestEntryDate`; do return arrows close then; are they open without a `latestEntryDate`; from when does non-signer deletion count? | The proposed reading (section 5.3): cutoff = `latestEntryDate + 1`; return arrows close after `latestEntryDate`, stay open (manual) without one. The retention period stays `unset`. |
-| Q78 | Warning lead time before cutoff withdrawals | **No automatic cutoff withdrawal**; the would-be withdrawals are flagged `cutoff_withdrawal_pending`. |
-| Q79 | Entry waves | One wave per project (dates on the project). |
-| Q80 🔒 | Who reviews break-glass and profiling exceptions; review after the fact? | Events are flagged for review in the audit; no reviewer role yet. |
-| Q81 | Profiling-exception reason codes | Only the code `other`; no free text. |
-| Q82 🔒 | Transfer-KuG exclusion details | Excluded from entry until profiling is completed; after a refusal, excluded from entry with no end. |
-| Q83 | Does `ta_completed` still need `profiling_done`? | Yes (current diagram) + PL confirmation. |
+| Q84 | Which cutoff applies to participations not yet assigned to a wave (Q70 withdrawals)? | At the project's final entry date they are flagged `no_entry_wave_at_project_cutoff`; nothing moves. |
 
-Still `assumed` and built as answered: Q61–Q67 (DPO to confirm). Still `verify`: Q74.
+Still `assumed` (DPO to confirm before the pilot, not blocking): Q61–Q67, Q77 (retention part),
+Q80. Still `verify`: Q74, Q82. None of these changes the design; an answer changes data and
+tests.
 
 ## 1. Goal
 
@@ -75,18 +77,20 @@ Freeze the domain core so that every later slice builds on tested rules instead 
 
 ```
 packages/domain   lifecycle (main status + profiling track + DSV track, canTransition, guards,
-                  system planner), Transfer-KuG eligibility, audit event model, completeness
-                  engine, field catalog, access matrix               — pure, no I/O, 100 % covered
+                  entry waves, profiling exceptions, system planner), Transfer-KuG eligibility,
+                  audit event model, completeness engine, field catalog, access matrix
+                                                                      — pure, no I/O, 100 % covered
 packages/config   regional template model (JSON Schema), resolver, base defaults, 2 samples
 packages/adapters Clock
-packages/db       participation, audit_event, lifecycle_edge, the status functions, grants
+packages/db       project_entry_wave, participation, audit_event, lifecycle_edge, job_run,
+                  the status functions, grants
 apps/api          status service (the only TypeScript caller of the status functions),
                   pg-boss with the nightly lifecycle job
 ```
 
 **Done when** (roadmap): tests document every allowed and forbidden transition and every access
-rule. Detailed acceptance criteria are in section 7. There is no new UI; the "demo" is the two
-generated tables (transitions and access matrix, section 5.10) and a nightly run on seed data
+rule. Acceptance criteria are in section 7. There is no new UI; the "demo" is the two generated
+tables (transitions and access matrix, section 5.10) and a nightly run on seed data
 (`pnpm jobs:lifecycle --today …`).
 
 ## 2. Facts checked
@@ -102,7 +106,7 @@ Run in a cloud session (Node 22.22.0, pnpm 10.28.0, PostgreSQL 16 pre-installed)
 | `pnpm dev` | **OK.** API `:3001` (`/api/v1/health` 200), web `:5173` (200, `/api` proxied), portal `:5174/portal/` (200). Without a session `/api/v1/projects` is a 401 problem; with the dev PL session it returns the three seeded projects from Postgres. |
 | `pnpm verify` | **OK** in ~26 s: typecheck, lint, 19 test files / 186 tests, no API client drift. |
 
-### Dependencies (checked against npm on 2026-10-15, approved in round 7)
+### Dependencies (checked against npm on 2026-10-15, approved)
 
 | Package | Pin | Released | Notes |
 |---|---|---|---|
@@ -111,7 +115,7 @@ Run in a cloud session (Node 22.22.0, pnpm 10.28.0, PostgreSQL 16 pre-installed)
 | `ajv` | `8.20.0` *(S1 fallback only)* | 2026-04-24 | MIT. |
 
 No other new dependency (exhaustive tests instead of `fast-check`; coverage uses the existing
-`@vitest/coverage-v8@5.0.5`).
+`@vitest/coverage-v8@5.0.5`). Re-check the latest patch versions when PR 1a is opened.
 
 ### Other facts
 
@@ -120,9 +124,8 @@ No other new dependency (exhaustive tests instead of `fast-check`; coverage uses
   violation, which fails the Playwright suite. The SPAs set `z.config({ jitless: true })`
   before using config-driven schemas (Slice 4a); S1 checks it.
 - **`SELECT … FOR UPDATE` needs `UPDATE` privilege** on some column, which `transfer_app` won't
-  have on `participation` (D2). Row locking therefore goes through a function too (5.4).
-- `ta_only` projects have no signing deadline and no `latestEntryDate`, so no system withdrawal
-  applies to them; they end through the PL (Q73).
+  have on `participation` (D2). Row locking goes through a function too (5.4).
+- `ta_only` projects have no entry waves and no cutoff; they end through the PL (Q73).
 
 ## 3. Spike (first part of PR 1a)
 
@@ -137,18 +140,18 @@ No other new dependency (exhaustive tests instead of `fast-check`; coverage uses
 
 Tests first in every PR. Generated files (Drizzle snapshots, `openapi.json`, `schema.d.ts`, the
 generated JSON Schema and docs tables) don't count towards ~400 lines; a PR well over ~500
-hand-written lines is split.
+hand-written lines is split (1b is the likeliest candidate: edges/guards vs. operations).
 
 | PR | Content | Depends on | Ends with |
 |---|---|---|---|
-| **1a** `feat: domain vocabulary, dates and the Clock adapter` | Spikes S1/S2. `packages/adapters` with `Clock` (5.8). Domain enums: statuses, `Track`, `Step` (+ scope), `EndReason` (+ phase, + data class per value), `ActorType`, `AuditEventType`, `OrgRole`, `ProjectRole`, `AccessCategory`, `ProfilingExceptionReason`. Date helpers (`addDays`, `addMonths` with month-end clamp, `asuDueDate`, *verify Q1*). Field catalog (5.6). Docs: ADR notes for S1/S2, CLAUDE.md layout. | — | vocabulary + Clock tested |
-| **1b** `feat(domain): lifecycle transitions and guards` | Edge table, track activity, `canTransition`, guards with dated facts, offer deadlines, reconciliation, profiling exception set/revoke, end-reason correction, derived overall status, generated transitions table, 100 % coverage thresholds. | 1a | every (track, from, to) documented |
-| **1c** `feat(domain): system planner and Transfer-KuG eligibility` | `planSystemTransitions` (`dsv_expired`, TG entry on the start date, cutoff withdrawals), lifecycle and compliance flags, `transferKugEligibility`. | 1b | every cutoff combination documented |
-| **1d** `feat(domain): field-level access matrix` | `decideAccess` (multi-role union × assignment × category × mode × phase × action incl. `write`), transition permissions (Q60), list-payload rule, break-glass scope, generated access table. | 1a | every access rule documented |
-| **1e** `feat(domain): completeness engine` | Rule types with classification, presence semantics, `evaluateCompleteness`, rule validation against the field catalog. | 1a | truth tables pass |
-| **1f** `feat(config): template model, resolver and base defaults` | `packages/config`: Zod model → committed JSON Schema (+ drift), field-schema profile, nationwide vs. regional settings, locked and relaxable rules, two-level resolver with provenance and blockers, `base-defaults.json`, two sample templates, pinned-version loading. | 1e | resolution 100 % covered |
-| **1g** `feat(db): participation, audit and the status functions` | Tables, enums, `project.latest_entry_date`, the seven functions, grants, `lifecycle_edge` drift test, data catalog entries, seed, `apps/api` status service with the fail-closed facts provider. | 1b, 1c, 1d | grant and atomicity tests pass |
-| **1h** `feat(api): pg-boss and the nightly lifecycle job` | pg-boss setup (schema install, grants, in-process start), schedule, sweep + per-project job, `pnpm jobs:lifecycle`, idempotency tests with a manual clock, image smoke. Docs: CLAUDE.md commands, `.env.example`, overview, ADR-0011 note, settings allowlist. | 1c, 1g | **slice done** |
+| **1a** `feat: domain vocabulary, dates and the Clock adapter` | Spikes S1/S2. `packages/adapters` with `Clock` (5.8). Domain enums (5.2). Date helpers (`addDays`, `addMonths` with month-end clamp, `asuDueDate`, *verify Q1*). Field catalog (5.6). Docs: ADR notes for S1/S2, CLAUDE.md layout. | — | vocabulary + Clock tested |
+| **1b** `feat(domain): lifecycle transitions, guards and operations` | Entry waves and effective dates, edge table, track activity, `canTransition` with dated facts (valid/recorded), offer deadlines, the three TG entry kinds, profiling exception request/decide/revoke, wave assignment, end-reason correction, derived overall status, generated transitions table, 100 % coverage thresholds. | 1a | every (track, from, to) and operation documented |
+| **1c** `feat(domain): system planner and Transfer-KuG eligibility` | `planSystemTransitions` (`dsv_expired`, scheduled entry + catch-up window, wave cutoff withdrawals, warnings), lifecycle and compliance flags, `transferKugEligibility` with three outcomes. | 1b | every cutoff and eligibility combination documented |
+| **1d** `feat(domain): field-level access matrix` | `decideAccess` (multi-role union × assignment × category × mode × phase × action incl. `write`), the regional operations manager, transition and approval permissions (Q60, Q80), list-payload rule, break-glass scope, generated access table. | 1a | every access rule documented |
+| **1e** `feat(domain): completeness engine` | Rule types with basis, presence semantics, `evaluateCompleteness`, rule validation against the field catalog. | 1a | truth tables pass |
+| **1f** `feat(config): template model, resolver and base defaults` | `packages/config`: Zod model → committed JSON Schema (+ drift), field-schema profile, nationwide vs. regional settings, Agentur-scoped temporary settings, locked and relaxable rules, two-level resolver with provenance and blockers, `base-defaults.json`, two sample templates, pinned-version loading. | 1e | resolution 100 % covered |
+| **1g** `feat(db): waves, participation, audit and the status functions` | `project_entry_wave` (+ migration of the Slice 0 project dates), `participation`, `audit_event`, `lifecycle_edge`, the nine functions, grants, drift test, data catalog, seed, `apps/api` status service with the fail-closed facts provider. | 1b, 1c, 1d | grant and atomicity tests pass |
+| **1h** `feat(api): pg-boss and the nightly lifecycle job` | pg-boss setup (schema install, grants, in-process start), `job_run`, schedule, sweep + per-project job with the catch-up window, `pnpm jobs:lifecycle`, idempotency tests with a manual clock, image smoke. Docs: CLAUDE.md commands, `.env.example`, overview, ADR-0011 note, settings allowlist. | 1c, 1g | **slice done** |
 
 1b/1d/1e can run in parallel after 1a.
 
@@ -160,12 +163,13 @@ hand-written lines is split.
 packages/
   domain/
     config/base-defaults.json        nationwide defaults (ADR-0004), validated by packages/config
-    src/lifecycle/                   enums, edges, canTransition, guards, planner, derived status
+    src/lifecycle/                   enums, waves, edges, canTransition, guards, operations,
+                                     planner, derived status
     src/eligibility/                 transferKugEligibility
     src/audit/                       audit event schemas (Zod, discriminated by type)
     src/completeness/                rules and engine
     src/fields/                      field catalog
-    src/access/                      decideAccess, transition permissions
+    src/access/                      decideAccess, transition and approval permissions
     src/dates.ts                     date arithmetic on ISO dates (no Date.now)
   config/                            NEW @transfer/config (depends on @transfer/domain)
     schema/regional-template.schema.json   generated from the Zod model, committed
@@ -173,7 +177,7 @@ packages/
     templates/beispielstadt-sued/1.json    sample (D8)
     src/model.ts · field-schema.ts · resolve.ts · load.ts
   adapters/                          NEW @transfer/adapters: src/clock/ (D9)
-  db/                                + participation, audit_event, lifecycle_edge, functions, grants
+  db/                                + waves, participation, audit, edges, job_run, functions, grants
 apps/api/src/
   participations/status-service.ts   the only TypeScript caller of the status functions
   participations/guard-facts.ts      facts provider (fail closed in Slice 1, D4)
@@ -192,32 +196,54 @@ docs/domain/generated/               lifecycle-transitions.md, access-matrix.md 
 | `DsvStatus` | `not_offered`, `dsv_offered`, `dsv_signed`, `dsv_declined`, `dsv_expired` |
 | `Track` | `main`, `profiling`, `dsv` (columns `status`, `profiling_status`, `dsv_status`) |
 | `Step` | `asu_registration`, `data_collection`, `profiling`, `agentur_submission`, `dsv` (participant scope); `project_checklist` (project scope) |
-| `EndReason` (one enum, `phase`, Q34) | `pre_tg`: `declined_profiling`, `declined_dsv`, `no_response`, **`never_contacted`**, **`not_informed`**, `placed_direct`, `self_employed`, `retirement`, `other_measure`, `deceased`, `other`; `tg`: `placed_permanent`, `placed_fixed_term`, `self_employed`, `retirement`, `apprenticeship_or_study`, `max_duration_reached`, `own_termination_without_job`, `terminated_by_tg`, `long_term_illness_reduced_earning_capacity` (**special category**, Q66), `deceased`, `other`. The planner derives only `declined_dsv`, `declined_profiling`, `no_response`, `never_contacted`, `not_informed`. |
+| `EndReason` (one enum, `phase`, Q34) | `pre_tg`: `declined_profiling`, `declined_dsv`, `no_response`, `never_contacted`, `not_informed`, `placed_direct`, `self_employed`, `retirement`, `other_measure`, `deceased`, `other`; `tg`: `placed_permanent`, `placed_fixed_term`, `self_employed`, `retirement`, `apprenticeship_or_study`, `max_duration_reached`, `own_termination_without_job`, `terminated_by_tg`, `long_term_illness_reduced_earning_capacity` (**special category**, not storable until encryption), `deceased`, `other`. The planner derives only `declined_dsv`, `declined_profiling`, `no_response`, `never_contacted`, `not_informed`. |
+| `TgEntryKind` | `scheduled_entry`, `scheduled_entry_catchup` (system), `reconciliation` (PL) |
+| `ProfilingExceptionReason` (Q81) | `participant_prevented_documented`, `agentur_scheduling_unavailable`, `force_majeure`, `ba_confirmed_other` |
+| `ProfilingExceptionStatus` | `none`, `requested`, `approved`, `rejected`, `revoked` |
+| `KugOutcome` (Q82) | `eligible`, `excluded`, `ba_review_required` |
 | `ActorType` | `user`, `participant`, `system` |
-| `OrgRole` / `ProjectRole` | `admin`, `regional_admin` / `project_lead`, `consultant`, `back_office` — a person holds a **set** of project roles per project (D6) |
-| `ProfilingExceptionReason` | `other` until Q81 is answered |
+| `OrgRole` / `ProjectRole` | `admin`, `regional_admin`, **`regional_operations_manager`** / `project_lead`, `consultant`, `back_office` — sets, not single values (D6) |
 
 ### 5.3 Lifecycle (`packages/domain/src/lifecycle`)
 
-#### Dates the lifecycle uses
+#### Entry waves and effective dates
 
-| Date | Level | Meaning |
+| Date | Where | Meaning |
 |---|---|---|
-| `signingDeadline` | project | deadline of the **first** DSV offer (Sozialplan/DSV) |
-| `offerDeadline` | participation | deadline of a **re-offer**; required for a re-offer; ≤ `latestEntryDate` and ≤ `tgStart` (Q69) |
-| `latestEntryDate` | project (`ta_tg` only) | last possible beE entry; **cutoff** = the day after *(provisional, Q77)* |
-| `tgStart`, `tgEnd` | participation | planned TG period (default from the project, Slice 2) |
-| `tgEntryDate`, `exitDate` | participation | effective employment dates, set by the status function |
-| `profilingDoneOn` | participation | effective date of `→ profiling_done` |
+| `signingDeadline` | wave | deadline of the **first** DSV offer |
+| `defaultTgStart`, `defaultTgEnd` | wave | planned TG period for the wave's participants |
+| `latestEntryDate` | wave | last possible beE entry, inclusive; **cutoff** = the next Berlin day (Q77) |
+| `tgStart`, `tgEnd` | participation, optional | individual contractual override of the wave defaults (set with audit in Slice 2) |
+| `offerDeadline` | participation | deadline of a **re-offer**; required for a re-offer; ≤ wave `latestEntryDate` and ≤ effective `tgStart` (Q69) |
+| `tgEntryDate`, `exitDate`, `withdrawnOn`, `profilingDoneOn` | participation | effective dates, set by the status function |
 
-All deadlines are **inclusive**: expiry happens the following day (Q69). The *effective* offer
-deadline is `offerDeadline ?? project.signingDeadline`; if both are missing, no offer can be
-recorded (Q69: the system never invents a deadline).
+- Effective `tgStart = participation.tgStart ?? wave.defaultTgStart` (same for `tgEnd`);
+  effective offer deadline `= offerDeadline ?? wave.signingDeadline`. If neither exists, no offer
+  can be recorded (the system never invents a deadline).
+- A participation belongs to **exactly one wave before its DSV is offered** (Q79). In Slice 1 the
+  wave can be (re)assigned only while the DSV is `not_offered` (D10; later reassignment is not
+  covered by the answers).
+- The project's final entry date (latest wave `latestEntryDate`) is derived, for reporting and
+  for Q84.
+- All deadlines are **inclusive**; expiry happens the next Berlin day.
+
+#### Dated guard facts
+
+`GuardFacts` carry, per fact, the date it became **valid** (e.g. DSV fully executed on, ASU
+registered on, TL 407 signed on, exception approved on) and the Berlin date it was **recorded**
+in the system. This is what separates the three TG-entry cases (Q68, round 8):
+
+| Kind | Actor | When | Facts must be |
+|---|---|---|---|
+| `scheduled_entry` | system | `today = tgStart` | valid and recorded on or before `tgStart` |
+| `scheduled_entry_catchup` | system | `tgStart` inside the catch-up window, `tgStart < today` | valid and recorded on or before `tgStart` |
+| `reconciliation` | PL | `today > tgStart` | valid on or before `tgStart` (recorded any time); reviewed after the fact (Q80) |
+| — (case 3) | — | a fact valid only after `tgStart` | no entry; the PL records a new start date (Slice 2) |
 
 #### Edges
 
-Encoded as data (`edges: Edge[]`, each `{ track, from, to, actors, kind }`): the arrows of
-process-and-lifecycle.md plus manual withdrawal and reconciliation. Everything else is `no_edge`.
+Encoded as data (`edges: Edge[]`, each `{ track, from, to, actors, kinds }`): the arrows of
+process-and-lifecycle.md plus manual withdrawal. Everything else is `no_edge`.
 
 | Track | From → to | Actors | Guards / notes |
 |---|---|---|---|
@@ -226,8 +252,7 @@ process-and-lifecycle.md plus manual withdrawal and reconciliation. Everything e
 | main | `self_registered` → `imported` / `rejected` | user (+ system for `rejected`) | Slice 4c |
 | main | `imported` → `contacted`; `contacted` → `informed` / `unreachable` | user | |
 | main | `unreachable` → `contacted` | user | `before_cutoff` |
-| main | `informed` → `active_in_tg` | **system** (kind `scheduled_entry`) | TG entry guards; `today = tgStart` |
-| main | `informed` → `active_in_tg` | user (kind `reconciliation`, Q68) | TG entry guards **as of `tgStart`**; `today > tgStart`; flagged for review |
+| main | `informed` → `active_in_tg` | system (`scheduled_entry`, `scheduled_entry_catchup`), user (`reconciliation`) | TG entry guards |
 | main | `informed` → `ta_completed` | user | `ta_completion` |
 | main | `active_in_tg` → `exited` | user | `tg` reason + exit date |
 | main | `imported` / `contacted` / `unreachable` / `informed` → `withdrawn` | user | manual, `pre_tg` reason; `withdrawal_after_dsv_signed` |
@@ -237,22 +262,19 @@ process-and-lifecycle.md plus manual withdrawal and reconciliation. Everything e
 | profiling | `profiling_in_progress` → `profiling_done` | user | `tl407_signed` |
 | profiling | `profiling_in_progress` → `profiling_declined` | user | |
 | profiling | `profiling_declined` → `profiling_accepted` | user | `before_cutoff` |
-| dsv | `not_offered` → `dsv_offered` | user | `dsv_generated`, `offer_deadline_valid` |
+| dsv | `not_offered` → `dsv_offered` | user | `entry_wave_assigned`, `dsv_generated`, `offer_deadline_valid` |
 | dsv | `dsv_offered` → `dsv_signed` | user | `dsv_scan_received` |
 | dsv | `dsv_offered` → `dsv_declined` | user | |
 | dsv | `dsv_offered` → `dsv_expired` | **system** | today > effective offer deadline |
-| dsv | `dsv_declined` / `dsv_expired` → `dsv_offered` | user | `before_cutoff`, `offer_deadline_valid` (explicit `offerDeadline` required) |
+| dsv | `dsv_declined` / `dsv_expired` → `dsv_offered` | user | `before_cutoff`, `offer_deadline_valid` (explicit `offerDeadline`) |
 
-Besides status edges, three audited **operations** that don't change a status: set and revoke
-the profiling exception, and correct an end reason (below). "user" means staff; *which* roles
-may take which edge is `mayPerformTransition` (5.6), not `canTransition`.
+"user" means staff; *which* roles may take which edge is `mayPerformTransition` (5.6).
 
 #### Track activity
 
 - Tracks move only while the main status is `informed`; the DSV track exists only in `ta_tg`.
-- **After TG entry with the profiling exception** (Q74, verify): forward profiling moves
-  (`not_started → profiling_accepted → profiling_in_progress → profiling_done`) **and** a
-  refusal (`→ profiling_declined` from any open state) can be recorded while `active_in_tg`.
+- **After TG entry with an approved exception** (Q74): forward profiling moves and a refusal
+  (`→ profiling_declined` from any open state) can be recorded while `active_in_tg`.
 - After a terminal main status, nothing moves.
 
 #### `canTransition(track, from, to, context)`
@@ -261,16 +283,17 @@ may take which edge is `mayPerformTransition` (5.6), not `canTransition`.
 type TransitionContext = {
   projectType: ProjectType;
   current: { status: MainStatus; profilingStatus: ProfilingStatus; dsvStatus: DsvStatus };
-  actor: { type: "user" } | { type: "participant" } | { type: "system" };
-  kind?: "scheduled_entry" | "reconciliation";   // only for informed → active_in_tg
-  today: IsoDate;                                  // from the Clock, Europe/Berlin
-  project: { signingDeadline: IsoDate | null; latestEntryDate: IsoDate | null };
+  actor: { type: "user"; staffUserId: string } | { type: "participant" } | { type: "system" };
+  entryKind?: TgEntryKind;             // only for informed → active_in_tg
+  today: IsoDate;                      // from the Clock, Europe/Berlin
+  catchUpFrom?: IsoDate;               // first day of the catch-up window (system runs)
+  wave: EntryWave | null;              // the participation's wave
   participation: { tgStart: IsoDate | null; offerDeadline: IsoDate | null;
-                   profilingException: boolean };
-  facts: GuardFacts;            // dated facts; absent facts are false (D4)
-  newOfferDeadline?: IsoDate;   // for → dsv_offered
-  endReason?: EndReason;        // for → withdrawn / → exited
-  confirmed?: boolean;          // explicit PL confirmation where a rule needs one
+                   profilingException: ProfilingExceptionState };
+  facts: GuardFacts;                   // dated facts; absent facts are false (D4)
+  newOfferDeadline?: IsoDate;          // for → dsv_offered
+  endReason?: EndReason;               // for → withdrawn / → exited
+  confirmed?: boolean;                 // explicit PL confirmation where a rule needs one
 };
 
 type TransitionCheck =
@@ -280,54 +303,59 @@ type TransitionCheck =
       failedGuards: GuardId[] };
 ```
 
-Evaluation order: edge exists → track active → actor type and kind allowed → end reason
-present, of the right phase, and storable (`long_term_illness_reduced_earning_capacity` is
-refused until encrypted storage exists, Slice 8) → guards. **No override parameter exists**
-(Q71).
+Evaluation order: edge exists → track active → actor type and entry kind allowed → end reason
+present, of the right phase and storable (`long_term_illness_reduced_earning_capacity` refused
+until encrypted storage, Slice 8) → guards. **There is no override parameter** (Q71).
 
 #### Guards (none overridable, Q71)
 
-`GuardFacts` carry dates (e.g. `dsvFullyExecutedOn`, `asuRegisteredWithProofOn`,
-`tl407SignedOn`), so a guard can be evaluated **as of** a day. A test asserts this list exactly.
+A test asserts this list exactly.
 
 | Guard | Transition | Passes when | Source |
 |---|---|---|---|
-| `dsv_fully_executed` | TG entry | all three signature dates set, the last ≤ `tgStart` | docs (§623 BGB) |
-| `asu_registered_with_proof` | TG entry | ASU with proof, any channel, registered ≤ `tgStart` | docs (§111(4) Nr. 4) |
-| `profiling_done_or_exception` | TG entry | `profilingDoneOn ≤ tgStart`, or the exception is set (never with `profiling_declined`) | docs (Q17, Q74) |
-| `tg_start_date` | TG entry | `scheduled_entry`: `today = tgStart`; `reconciliation`: `today > tgStart` | Q68 |
-| `ta_completion` | `→ ta_completed` | `ta_only`, `profiling_done` (Q83), PL confirms; activity evidence once activities exist (Slice 8) | Q73 |
-| `withdrawal_after_dsv_signed` | `→ withdrawn` with `dsv_signed` | three-party cancellation present **and** PL confirms | docs (*verify* Q46), Q71 |
-| `before_cutoff` | the four return arrows | no `latestEntryDate`, or `today ≤ latestEntryDate` | Q69, *Q77* |
-| `offer_deadline_valid` | `→ dsv_offered` | effective deadline exists, `≥ today`, `≤ latestEntryDate` and `≤ tgStart` when set; re-offers need an explicit `offerDeadline` | Q69 |
+| `dsv_fully_executed` | TG entry | all three signature dates set, the last valid on/before `tgStart` (+ recorded by then for system kinds) | §623 BGB |
+| `asu_registered_with_proof` | TG entry | ASU with proof, any channel, valid on/before `tgStart` (+ recorded) | §111(4) Nr. 4 |
+| `profiling_done_or_approved_exception` | TG entry | `profilingDoneOn ≤ tgStart`, or an exception **approved** on/before `tgStart` (+ recorded) | Q17, Q74, Q80 |
+| `tg_start_date` | TG entry | per entry kind (table above) | Q68 |
+| `ta_completion` | `→ ta_completed` | `ta_only`, fact `taMeasuresComplete` (assigned required §110 activities completed or closed, evidence present; includes profiling only where the plan or configuration requires it), PL confirms | Q73, Q83 |
+| `withdrawal_after_dsv_signed` | `→ withdrawn` with `dsv_signed` | three-party cancellation present **and** PL confirms | *verify* Q46, Q71 |
+| `before_cutoff` | the four return arrows | no wave or no `latestEntryDate`, or `today ≤ wave.latestEntryDate` | Q77 |
+| `entry_wave_assigned` | `not_offered → dsv_offered` | the participation has a wave | Q79 |
+| `offer_deadline_valid` | `→ dsv_offered` | effective deadline exists, `≥ today`, `≤ latestEntryDate` and `≤ tgStart`; re-offers need an explicit `offerDeadline` | Q69 |
 | `tl407_signed` | `→ profiling_done` | signed TL 407 (participant and profiler) present | docs |
 | `dsv_generated` | `not_offered → dsv_offered` | a DSV document was generated | docs |
 | `dsv_scan_received` | `→ dsv_signed` | scan stored and receiver recorded | PRD F8 |
 
-The facts behind the document guards are absent in Slice 1 (D4); the domain tests cover both
-outcomes with explicit facts. A late admission after the cutoff is never a guard decision: the
-PL records a new approved deadline/start date first (Slice 2).
+The facts behind the document guards and `taMeasuresComplete` are absent in Slice 1 (D4); the
+domain tests cover every outcome with explicit facts.
 
 #### Operations without a status change
 
-| Operation | Who (Q60) | Rule |
+| Operation | Who | Rule |
 |---|---|---|
-| **Set profiling exception** | PL | main `informed`, profiling not `profiling_done` or `profiling_declined`, reason code (Q81); flagged for the four-eyes review (Q63/Q80) |
-| **Revoke profiling exception** | PL | only before TG entry; after entry the exception is closed by `profiling_done` |
-| **Correct end reason** (Q72) | PL | on `withdrawn`/`exited`; new primary reason of the same phase; a system-derived previous reason moves to the secondary list; the terminal status is not reopened |
+| **Assign entry wave** | PL | `ta_tg`, wave of the same project, DSV still `not_offered` |
+| **Request profiling exception** | PL | main `informed`; profiling neither `profiling_done` nor `profiling_declined`; a Q81 reason code; evidence or BA reference present (fact); `ba_confirmed_other` also needs who at the BA confirmed it and when (fact). Fails closed in Slice 1 (no evidence storage until 4b). |
+| **Approve / reject profiling exception** | `regional_operations_manager` of the project's region | status `requested`; **the decider differs from the requester** (checked in the domain and in the DB function); approval before entry, otherwise it counts only from its date (case 3) |
+| **Revoke profiling exception** | PL | `requested` or `approved`, only before TG entry; after entry it is closed by `profiling_done` |
+| **Correct end reason** (Q72) | PL | on `withdrawn`/`exited`; same phase; a system-derived previous reason moves to the secondary list; the terminal status is not reopened |
 
 #### System planner (`planSystemTransitions`, PR 1c)
 
-A pure function: `(participation, project, facts, today, config) → { changes[], flags[] }`. It
-applies its rules in order on the updated snapshot; a second run on the same day plans nothing.
+A pure function: `(participation, wave, project, facts, window, config) → { changes[], flags[] }`
+where `window = { from, to = today }` and `from` is **the date of the last completed run** (that
+day is evaluated once more, so evidence recorded later on the start day itself still counts
+the next night; first run: `from = today`). Rules apply in order on the updated snapshot; a
+second run on the same day plans nothing.
 
 1. **`dsv_expired`:** `dsv_offered` and `today >` effective offer deadline. Effective date =
    deadline + 1.
-2. **TG entry:** `informed`, `today = tgStart`, all TG guards pass as of `tgStart` →
-   `active_in_tg`, effective date and `tgEntryDate` = `tgStart`. Still `informed` with
-   `today > tgStart` → flag **`tg_start_missed`**: the PL records a new start date or reconciles
-   (Q68). There is **no automatic late entry**, not even after a missed nightly run.
-3. **Cutoff withdrawals** (`ta_tg`, `latestEntryDate` set, `today > latestEntryDate`):
+2. **TG entry:** `informed`, effective `tgStart` within the window, all TG guards pass with
+   facts valid **and recorded** by `tgStart` → `active_in_tg`, effective date and `tgEntryDate` =
+   `tgStart`, entry kind `scheduled_entry` (`tgStart = today`) or `scheduled_entry_catchup`
+   (`tgStart < today`). Still `informed` with `tgStart < today` after this step → flag
+   **`tg_start_missed`** (the PL reconciles or records a new start date).
+3. **Cutoff withdrawals** (`ta_tg`, wave with `latestEntryDate`, `today > latestEntryDate`),
+   effective date and `withdrawnOn` = `latestEntryDate + 1`:
 
    | Precedence | Situation | Reason |
    |---|---|---|
@@ -338,41 +366,47 @@ applies its rules in order on the updated snapshot; a second run on the same day
    | — | main `contacted` | `not_informed` |
 
    - Primary reason by precedence; all other applicable reasons go to the secondary list.
-   - **Until Q78 sets the warning lead time, these don't run**: each would-be withdrawal is the
-     flag **`cutoff_withdrawal_pending`** with its derived reason (D10). Once Q78 is answered,
-     `cutoff_approaching` is flagged that many days before, and the withdrawals run.
    - Flags instead of withdrawal: `dsv_signed` + `profiling_declined` →
      `conflict_dsv_signed_profiling_declined`; `informed` + `not_offered` → `dsv_never_offered`.
-4. **No `latestEntryDate`** on a `ta_tg` project with participations before TG entry → project
-   flag **`latest_entry_date_missing`**; nothing moves (Q70).
-5. **Compliance flags** after entry (Q74): `profiling_exception_deadline_missed` (exception,
-   not done, `today > addMonths(tgEntryDate, 1)`), `profiling_declined_after_entry`. Both are
-   immediate escalations, never a status change.
+4. **Warnings** (Q78) for every participation that the cutoff would withdraw or flag:
+   `cutoff_warning` from 14 calendar days before the cutoff, `cutoff_final_reminder` from 3 days
+   before. Both persist while the condition holds; a wave activated late is warned at once.
+   Informational only.
+5. **Missing dates:** a `ta_tg` project without any wave with a `latestEntryDate` → project flag
+   `latest_entry_date_missing`; participations without a wave after the project's final entry
+   date → `no_entry_wave_at_project_cutoff` (Q84). Nothing moves or is deleted.
+6. **Compliance flags** after entry (Q74, Q82): `profiling_exception_deadline_missed`
+   (approved exception, not done, `today > addMonths(tgEntryDate, 1)`),
+   `profiling_declined_after_entry`. Immediate escalations, never a status change.
 
-Flags are **derived, not stored** (`lifecycleFlags(snapshot, project, today)`); the PL dashboard
-(Slice 5) calls it.
+Flags are **derived, not stored** (`lifecycleFlags(snapshot, wave, project, today)`); the PL
+dashboard (Slice 5) calls it.
 
 #### Transfer-KuG eligibility (`packages/domain/src/eligibility`, PR 1c; *verify* Q74/Q82)
 
-`transferKugEligibility(participation) → { employment, eligibleFrom, excluded[] }`, derived,
-never stored:
+`transferKugEligibility(participation, determinations = []) → { employment, periods[] }`,
+derived, never stored. `employment = { from: tgEntryDate, to: exitDate | null }`, independent of
+the periods. Each period is `{ from, to | null, outcome: KugOutcome }`:
 
-| Situation | `eligibleFrom` | Excluded period |
-|---|---|---|
-| not entered | — | — |
-| `profilingDoneOn ≤ tgEntryDate` | `tgEntryDate` | none |
-| exception, profiling completed after entry | `profilingDoneOn + 1` | `tgEntryDate` … `profilingDoneOn` |
-| exception, profiling not yet completed | — | `tgEntryDate` … open (`profiling_pending`) |
-| profiling declined after entry | — | `tgEntryDate` … open (`profiling_declined`, Q82) |
+| Situation | Periods |
+|---|---|
+| not entered | none |
+| profiling done on/before entry | `eligible` from `tgEntryDate` |
+| approved exception, profiling completed within 1 month (`profilingDoneOn ≤ addMonths(tgEntryDate, 1)`) | `excluded` `tgEntryDate` … `profilingDoneOn`; `eligible` from the day after |
+| approved exception, not yet completed, deadline running | `excluded` from `tgEntryDate`, open |
+| profiling refused before completion | `excluded` from **`tgEntryDate`** (not the refusal date), open |
+| one-month deadline missed (completed later or not at all) | `ba_review_required` from `tgEntryDate`, open; later completion doesn't clear it |
 
-`employment` is `{ from: tgEntryDate, to: exitDate | null }`, independent of eligibility. The
-app derives and reports; KuG billing stays outside the MVP.
+Only a recorded BA/legal determination (`determinations`: period, outcome, reference) may clear
+or alter a period after a deadline miss; the type is defined now, its table comes with the KuG
+export (Slice 8). Periods other than `eligible` are blocked from any Transfer-KuG export. The
+application reports facts and decisions; it doesn't issue a benefit determination.
 
 #### Derived overall status
 
 `deriveOverallStatus(main, profiling, dsv)` returns one i18n key per *consistent* combination;
 `isConsistentState` rejects impossible ones (e.g. `imported` with `profiling_in_progress`,
-`ta_only` with a DSV status other than `not_offered`).
+`ta_only` with a DSV status other than `not_offered`, `dsv_offered` without a wave).
 
 ### 5.4 Audit events and the status functions
 
@@ -392,23 +426,25 @@ app derives and reports; KuG billing stays outside the MVP.
 | `on_behalf_of_participation_id` | `uuid null` | assisted mode; only with `actor_type = user` |
 | `field` | `status` / `profiling_status` / `dsv_status` / null | |
 | `from_value`, `to_value` | `text null` | |
-| `reason_code` | `text null` | end reason, exception reason, `reconciliation`, … |
-| `effective_date` | `date null` | the business date (TG entry, deadline + 1, …) |
+| `reason_code` | `text null` | end reason, exception reason, … |
+| `effective_date` | `date null` | business date (TG entry, deadline + 1, …) |
 | `occurred_at` | `timestamptz not null default now()` | DB time, not settable by the app |
 | `request_id`, `job_id` | `text null` | correlation |
-| `details` | `jsonb not null default '{}'` | IDs and codes only, shape per type in Zod (secondary reasons, previous reason, …) |
-| `flagged_for_review` | `boolean not null default false` | reconciliations, profiling exceptions, later break-glass |
+| `details` | `jsonb not null default '{}'` | IDs and codes only, shape per type in Zod: `entryKind` (`scheduled_entry`, `scheduled_entry_catchup`, `reconciliation`), secondary reasons, previous reason, wave id, … |
+| `flagged_for_review` | `boolean not null default false` | reconciliations now; break-glass from Slice 3 |
 
-- **No free-text column in Slice 1.** Override/break-glass text is highly confidential and the
-  exception text special category (Q66): both need field-level encryption, which comes with the
-  first writer (break-glass, Slice 3). Slice 1 writes codes only.
+- **No free-text column in Slice 1** (Q66, round 8): override, break-glass and exception free
+  text waits for encrypted storage. Free text is never logged.
 - `CHECK`s keep the actor consistent (user ⇒ staff id; participant ⇒ participation id; system ⇒
   `system_job`; `on_behalf_of` ⇒ user).
-- **Reviews are new events** (`review_recorded` → reviewed `id`), never updates.
+- **Reviews and clarification requests are new events** (`review_recorded`,
+  `clarification_requested` → the reviewed `id`), never updates.
 - Event types (enum created now): `participation_created`, `status_changed`,
-  `profiling_exception_set`, `profiling_exception_revoked`, `end_reason_corrected` (Slice 1);
-  `sensitive_read`, `break_glass_access`, `document_opened`, `warning_confirmed`,
-  `export_created`, `config_override_changed`, `review_recorded` (Slices 3–9).
+  `entry_wave_assigned`, `profiling_exception_requested`, `profiling_exception_approved`,
+  `profiling_exception_rejected`, `profiling_exception_revoked`, `end_reason_corrected`
+  (Slice 1); `sensitive_read`, `break_glass_access`, `document_opened`, `warning_confirmed`,
+  `export_created`, `config_override_changed`, `review_recorded`, `clarification_requested`
+  (Slices 3–9).
 - Audit entries without a project (logins, template publication) get their own table in
   Slice 3.
 
@@ -419,32 +455,37 @@ per field), `REVOKE EXECUTE … FROM PUBLIC`, `GRANT EXECUTE … TO transfer_app
 
 | Function | Does |
 |---|---|
-| `create_participation(project_id, actor…)` | inserts with `imported`, `not_started`, `not_offered`; writes `participation_created` |
+| `create_participation(project_id, entry_wave_id?, actor…)` | inserts with `imported`, `not_started`, `not_offered`; writes `participation_created` |
 | `lock_participation(id)` | `SELECT … FOR UPDATE`; the lock lasts until the caller's transaction ends |
-| `change_participation_status(id, field, expected_from, to, actor…, kind, end_reason, secondary_reasons, offer_deadline, effective_date, request_id, job_id, details)` | checks `expected_from` (`stale_status`), the edge in `lifecycle_edge` (`invalid_transition`), `ta_only` ⇒ DSV unchanged, refuses the special-category end reason; sets the column and its dependants (`end_reason*`, `tg_entry_date`, `exit_date`, `profiling_done_on`, `offer_deadline`); bumps `status_version`; inserts **one** `status_changed` |
-| `set_profiling_exception(id, reason_code, set_on, actor…)` | sets it, writes `profiling_exception_set` (flagged) |
-| `revoke_profiling_exception(id, actor…)` | only while `informed`; writes `profiling_exception_revoked` |
-| `correct_end_reason(id, new_reason, actor…)` | only on `withdrawn`/`exited`, same phase; moves a system-derived previous reason to the secondary list; writes `end_reason_corrected` with the previous reason in `details` |
-| `record_audit_event(type, …)` | every other event type; **refuses** the five lifecycle types above |
+| `change_participation_status(id, field, expected_from, to, actor…, entry_kind, end_reason, secondary_reasons, offer_deadline, effective_date, request_id, job_id, details)` | checks `expected_from` (`stale_status`), the edge in `lifecycle_edge` (`invalid_transition`), `ta_only` ⇒ DSV unchanged, a wave before `dsv_offered`, refuses the special-category end reason; sets the column and its dependants (`end_reason*`, `tg_entry_date`, `exit_date`, `withdrawn_on`, `profiling_done_on`, `offer_deadline`); bumps `status_version`; inserts **one** `status_changed` |
+| `assign_entry_wave(id, wave_id, actor…)` | same project, DSV `not_offered`; writes `entry_wave_assigned` |
+| `request_profiling_exception(id, reason_code, actor…)` | writes `profiling_exception_requested` |
+| `decide_profiling_exception(id, approve, actor…)` | only `requested`; **refuses when the decider is the requester**; writes `…_approved` or `…_rejected` |
+| `revoke_profiling_exception(id, actor…)` | only before entry; writes `profiling_exception_revoked` |
+| `correct_end_reason(id, new_reason, actor…)` | only on `withdrawn`/`exited`, same phase; moves a system-derived previous reason to the secondary list; writes `end_reason_corrected` |
+| `record_audit_event(type, …)` | every other event type; **refuses** the lifecycle and exception types above |
 
 Errors use SQLSTATE `P0001` with a stable message code (`stale_status` → 409,
-`invalid_transition` → 422 later).
+`invalid_transition` → 422, `same_person_approval` → 422 later).
 
 #### Status service (`apps/api/src/participations/status-service.ts`)
 
 The only TypeScript caller of the functions. One transaction: `lock_participation` → load the
-project and dated guard facts (`GuardFactsProvider`; fail closed in Slice 1) → `canTransition`
-(failure: domain error, **nothing written**) → the function → commit. Later slices that write
-facts (DSV, ASU) take the same lock. The nightly job uses the same service as `system`.
+wave, project and dated guard facts (`GuardFactsProvider`; fail closed in Slice 1) →
+`canTransition` / the operation's domain check (failure: domain error, **nothing written**) →
+the function → commit. Later slices that write facts (DSV, ASU) take the same lock. The nightly
+job uses the same service as `system`.
 
 #### Grants (custom migration, Slice 0 pattern)
 
 | Object | `transfer_app` |
 |---|---|
 | `participation` | `SELECT` only |
+| `project_entry_wave` | `SELECT` (creation and edits with project setup, Slice 2) |
 | `audit_event` | nothing in Slice 1 (`SELECT` with the first feature that reads it) |
 | `lifecycle_edge` | nothing (read by the functions as owner) |
-| the seven functions | `EXECUTE` |
+| `job_run` | `SELECT`, `INSERT` (one row per job and day, never updated) |
+| the nine functions | `EXECUTE` |
 | `pgboss` schema | `USAGE` + DML on its tables and sequences (spike S2) |
 
 The pseudonymisation role comes with the retention job (Slice 7, ADR-0002).
@@ -474,23 +515,24 @@ type MissingItem = { step: Step; ruleId: string; kind: "field" | "document"; key
 - Rule validation: fields exist in the catalog or as declared custom fields, document types
   exist, ids are unique. A rule without `basis` counts as **locked** (Q75).
 - Document types in Slice 1: `dsv_signed_scan`, `tl407_signed_scan`, `kug200b_signed_scan`,
-  `asu_proof`, `dsv_cancellation`.
+  `asu_proof`, `dsv_cancellation`, `profiling_exception_evidence`.
 
 ### 5.6 Field catalog and the access matrix
 
 #### Field catalog (`packages/domain/src/fields`)
 
 One entry per participant field the docs name: `{ key, dataClass, accessCategory, listable,
-customerVisible, selfService, storage }`. Classes follow data-protection.md including the
-round 7 additions (Q66): Familienstand, gender, Personalnummer, end of the old employment,
-knowledge date, work email, language skills, driving licence are confidential.
+customerVisible, selfService, storage }`. Classes follow data-protection.md including Q66:
+Familienstand, gender, Personalnummer, end of the old employment, knowledge date, work email,
+language skills, driving licence are confidential.
 
 - `listable` is `false` for every special-category and highly confidential field.
 - `customerVisible` is `true` for exactly the whitelist *(provisional, Q13)*.
-- `selfService` marks what the participant may write (Q65); the list is reviewed in PR 1d.
+- `selfService` marks what the participant may write (Q65); reviewed in PR 1d.
 - **End reasons are classified per value:** `long_term_illness_reduced_earning_capacity` is
-  special category and never in ordinary lists; `deceased` and all others are confidential.
-  List payloads show such a participation as ended without that reason.
+  special category and never in ordinary lists; `deceased` and the rest are confidential.
+- **Exception reason codes** are confidential; `participant_prevented_documented` deliberately
+  reveals no illness (Q81).
 
 #### Access categories
 
@@ -505,17 +547,19 @@ knowledge date, work email, language skills, driving licence are confidential.
 | `profiling_assessment` | Section C, Gesamteinschätzung, weiteres Vorgehen | highly confidential |
 | `signed_tl407`, `signed_kug200b` | Signed TL 407 / Kug 200b PDF | most sensitive content |
 | `absence` | Sub-status periods | payroll records |
+| `audit_metadata` | event type, actor, dates, reason codes — no participant details (Q80) | internal |
 | `aggregated` | counts, workload | aggregated |
 
 #### `decideAccess(subject, resource, action, mode)`
 
 ```ts
 type Subject =
-  | { kind: "staff"; staffUserId: string; orgRoles: ReadonlySet<OrgRole>;
+  | { kind: "staff"; staffUserId: string;
+      orgRoles: ReadonlyMap<OrgRole, { regionIds: ReadonlySet<string> | "all" }>;
       projectRoles: Record<ProjectId, ReadonlySet<ProjectRole>>;   // D6: zero or more
       assignedParticipationIds: ReadonlySet<string> }              // as profiler/consultant
   | { kind: "participant"; participationId: string; knowledgeCheckPassed: boolean };
-type Resource = { projectId: string; participationId: string | null;
+type Resource = { projectId: string; regionId: string | null; participationId: string | null;
                   category: AccessCategory; phase: "active" | "evidence_set" };
 type Action = "read" | "list" | "open_document" | "write";
 type Mode = { kind: "normal" } | { kind: "assisted"; onBehalfOf: string }
@@ -528,20 +572,22 @@ type Decision =
       grant?: { participationId: string; category: AccessCategory; action: Action } } // break-glass scope
   | { effect: "deny"; because: "not_member" | "not_assigned" | "never" | "needs_break_glass"
       | "needs_assisted_mode" | "needs_knowledge_check" | "not_in_list_payloads"
-      | "immutable" | "undecided" };   // undecided = docs gap (D10), with its question
+      | "immutable" | "out_of_region" | "undecided" };   // undecided = docs gap (D10)
 ```
 
-**Role union (D6/Q61):** the decision is computed per role the subject holds in the project, and
-the most permissive *allow* wins; sensitive categories reached through the consultant role still
-require the assignment. A PL who is also a profiler therefore sees section C only for
-participants assigned to them.
+**Role union (D6/Q61):** computed per role the subject holds in the project; the most
+permissive *allow* wins; sensitive categories reached through the consultant role still require
+the assignment. A PL who is also a profiler sees section C only for participants assigned to
+them.
 
-**Reading** (*assumed*, Q28/Q49/Q51/Q62):
+**Reading** (*assumed*, Q28/Q49/Q51/Q62/Q80):
 
 - **Admin, regional admin:** every participant-level category `never`; `aggregated` only.
-- **Consultant/profiler:** person-level data **only for assigned participations** (Q62); for
-  unassigned ones only `aggregated` workload counts. Assigned: everything including section C
-  and health; signed forms with `open_document` audited; absence "abwesend" + dates.
+- **Regional operations manager** (own region only): `audit_metadata` and `aggregated`; every
+  participant-level category `never` (no case files, section C, health or signed documents).
+- **Consultant/profiler:** person-level data **only for assigned participations**; for others
+  only `aggregated` workload counts. Assigned: everything including section C and health;
+  signed forms with `open_document` audited; absence "abwesend" + dates.
 - **PL:** confidential and internal yes; health/disability only in assisted mode or
   break-glass; identifiers, residence/social, section C **no**; signed forms: `read` metadata
   only, `open_document` audited; absence "abwesend" + dates.
@@ -551,20 +597,18 @@ participants assigned to them.
   section C and signed forms denied (Q67).
 - Every allowed read of special-category/highly confidential data → `sensitive_read`; every
   `open_document` → `document_opened`.
-- **Lists:** `list` is denied for every special-category and highly confidential category,
-  whoever asks.
+- **Lists:** `list` is denied for every special-category and highly confidential category.
 - **Break-glass** (Q63): only where the docs allow it (PL on health/disability; consultant, PL
-  and back office on the evidence set), needs a reason code (free text comes with encryption,
-  Slice 3), returns a **grant scoped to one participant, one category and one action**, audit
-  `break_glass_access`, flagged. On the evidence set it never grants more than the role has in
-  the active phase. The phase starts after the first deletion stage (Q64), so nothing sets
-  `evidence_set` before Slice 7.
+  and back office on the evidence set), needs a reason code, returns a **grant scoped to one
+  participant, one category and one action**, audit `break_glass_access`, flagged for the
+  after-the-fact review. On the evidence set it never grants more than the role has in the
+  active phase; the phase starts after the first deletion stage (Q64).
 
 **Writing** (*assumed*, Q65):
 
-| Category | Participant (own) | Consultant (assigned) | PL | Back office | Admins |
+| Category | Participant (own) | Consultant (assigned) | PL | Back office | Org roles |
 |---|---|---|---|---|---|
-| `case_internal` | never | via status functions (Q60 edges) | via status functions, operational dates | via status functions (DSV edges) | never |
+| `case_internal` | never | via status functions (Q60 edges) | via status functions and operations | via status functions (DSV edges) | never |
 | `confidential` | `selfService` fields | case data: yes | assisted mode; otherwise `undecided` | `undecided` | never |
 | `health` | `selfService`, after knowledge check | yes | assisted mode only | never | never |
 | `disability` | `selfService`, after knowledge check | yes | assisted mode only | yes (payroll facts) | never |
@@ -577,10 +621,14 @@ participants assigned to them.
 Assisted writes carry actor + `onBehalfOf`; every sensitive write is audited. The `undecided`
 cells go back to the DPO/PL review of Q65 with the generated table.
 
-**Transition permissions** (`mayPerformTransition(subject, edge, participation)`, Q60): PL all
-manual edges and operations of their project; assigned consultant/profiler `contacted`,
-`unreachable`, `informed`, the profiling track and `→ exited`; back office `→ dsv_offered`,
-`→ dsv_signed`, `→ dsv_declined`; participants none; expiry and scheduled entry system only.
+**Permissions for transitions and operations** (Q60, Q80):
+- `mayPerformTransition(subject, edge, participation)`: PL all manual edges of their project;
+  assigned consultant/profiler `contacted`, `unreachable`, `informed`, the profiling track and
+  `→ exited`; back office `→ dsv_offered`, `→ dsv_signed`, `→ dsv_declined`; participants none;
+  expiry, scheduled entry and catch-up system only; reconciliation PL only.
+- `mayPerformOperation`: PL assigns waves, requests and revokes exceptions, corrects end
+  reasons; the regional operations manager of the project's region decides exceptions (never
+  their own request) and reviews reconciliations and break-glass.
 
 ### 5.7 `packages/config`
 
@@ -607,23 +655,41 @@ Authored in Zod (`src/model.ts`), exported by `pnpm generate` to
               "x-label": { "de": "…" } } },
   "rules":  { "data_collection": [ { "id": "nord-1", "kind": "required",
               "basis": "operational_default", "field": "custom.beispiel_zusatznachweis_nr" } ] },
-  "relax":  [],                          // project_override only, see merge rules
   "helpTexts": { "de": { "asu_registration.intro": "…" } }
 }
 ```
 
-- **Nationwide settings** live only in base defaults: ASU formula parameters (3 months / 3 days,
-  *verify* Q1), profiling-exception deadline (1 month, Q17), Kug 200b confirmation follow-up
-  (14 days), TL 407 escalation (14 days after TG start, Q54), and the cutoff warning lead time
-  once Q78 is answered. A template or override that sets one is invalid.
-- **Regional settings:** the channels, `originalRequired`, `leadTimeDays`,
-  `rejectsOutdatedFormVersions`. **Base defaults hold none of the Agentur submission settings**
-  (Q76): they come only from a template or a recorded project override.
-- Signing and entry deadlines and the contractual `deadlineRule` are **project data**, not
-  configuration (Q69); they arrive with project setup in Slice 2.
+A **project override** has no project-wide `settings`. Instead:
+
+```jsonc
+{
+  "kind": "project_override",
+  "agenturSettings": {                   // temporary settings, scoped to ONE Agentur (round 8)
+    "beispielstadt-ost": {
+      "settings": { "agentur_submission": { "submissionChannel": "email", "originalRequired": true,
+                                             "leadTimeDays": 14, "rejectsOutdatedFormVersions": false } },
+      "source": "phone_call_agentur", "confirmedBy": "<staff user id>", "confirmedOn": "2027-01-12"
+    }
+  },
+  "rules": { … },                        // additions
+  "relax": [ { "ruleId": "…", "reasonCode": "…", "approvedBy": "…", "approvedOn": "…" } ]
+}
+```
+
+- **Base defaults** contain the nationwide rules, the **allowed channel values** (as enums in
+  the schema) and the official form requirements, and the nationwide settings: ASU formula
+  parameters (3 months / 3 days, *verify* Q1), profiling-exception deadline (1 month, Q17),
+  Kug 200b confirmation follow-up (14 days), TL 407 escalation (14 days after TG start, Q54),
+  cutoff warning (14 days) and final reminder (3 days) (Q78). A template or override that sets
+  a nationwide setting is invalid.
+- **No default** for an Agentur's submission channel, batch channel, `originalRequired`,
+  `leadTimeDays` or `rejectsOutdatedFormVersions` (round 8). They come only from that Agentur's
+  template or from an Agentur-scoped temporary setting, which must carry source, confirmer and
+  confirmation date (and is audited when stored, Slice 2).
 - Channel enums: ASU `kug_200b` / `online_self` / `in_person`; Kug 200b batch `paper_courier` /
   `paper_post` / `scan_email` / `upload`; TL 407 `email` / `upload` / `paper_original`.
-- Reminder rules are left to Slice 5.
+- Signing and entry deadlines and the contractual `deadlineRule` are **entry-wave / project
+  data**, not configuration (Q69, Q79). Reminder rules are left to Slice 5.
 
 #### Field-schema profile (custom fields, D5)
 
@@ -636,13 +702,12 @@ Keys start with `custom.`. Validators are cached per (template id, version).
 
 #### Merge rules (base defaults → template → project override)
 
-- **Settings:** per key, the later layer replaces the earlier (only regional keys in templates
-  and overrides).
+- **Settings:** a template replaces base values for regional keys; an override's
+  `agenturSettings[agenturKey]` applies **only** when resolving for that Agentur.
 - **Rules** (Q75): merged by `id`. Templates **only add**. A project override may add rules and
-  **relax** a rule only if its basis is `operational_default`, via
-  `relax: [{ ruleId, reasonCode, approvedBy, approvedOn }]`; relaxing a `statutory`, `ba_form`
-  or unclassified rule is invalid. (Approval and audit of overrides are stored with project
-  setup in Slice 2; the resolver checks the shape and the basis.)
+  relax a rule only if its basis is `operational_default`; relaxing a `statutory`, `ba_form` or
+  unclassified rule is invalid. (Storing approvals and the audit trail of overrides is Slice 2;
+  the resolver checks shape and basis.)
 - **Fields:** templates and overrides add custom fields; redefining an existing key is invalid.
 - **Help texts:** per language and key, the later layer wins.
 
@@ -655,19 +720,21 @@ resolveForProject({ base, templatesByAgentur, override, kugAgenturKey })
       blockers: Blocker[]; warnings: Warning[] }
 ```
 
-- **Two levels** *(provisional, Q15)*: participant steps use the placement Agentur's template,
-  project steps the KuG-Agentur's.
-- **Provenance** for every setting and rule (`base`, `template:<id>@<version>`, `override`).
+- **Two levels** *(provisional, Q15)*: participant steps use the placement Agentur, project
+  steps the KuG-Agentur.
+- **Provenance** for every setting and rule (`base`, `template:<id>@<version>`,
+  `override:agentur:<key>` with source, confirmer and date).
 - **Blockers** (Q76): no KuG-Agentur template → `project_activation_blocked`; an Agentur
-  submission setting (channel, original requirement, lead time, Kug 200b batch channel) that no
-  layer supplies → `agentur_submission_blocked` for that step, while contact, data collection
-  and profiling resolve normally. Both also produce a warning for the PL dashboard.
+  submission setting that neither the template nor an Agentur-scoped temporary setting supplies
+  → `agentur_submission_blocked` for that step, while contact, data collection and profiling
+  resolve normally. Both also give a warning for the PL dashboard.
 - **Pinned versions** *(provisional, Q36)*: the resolver takes snapshotted template objects;
   `load.ts` reads `templates/<agenturKey>/<version>.json`. Snapshots per project are Slice 2.
+- A domain helper `projectActivationBlockers(project, waves, resolution)` also returns
+  `no_entry_wave_with_latest_entry_date` for `ta_tg` projects (Q77); activation itself is
+  Slice 2.
 
 #### Base defaults (`packages/domain/config/base-defaults.json`)
-
-Only what the docs state, each rule with its basis:
 
 | Rule | Basis |
 |---|---|
@@ -676,7 +743,7 @@ Only what the docs state, each rule with its basis:
 | Kug 200b required fields (RV-Nummer, declarations 16 and 17) | `ba_form` |
 | import-required fields (Personalnummer, Nachname, Vorname, Geburtsdatum, Austrittsdatum, Anschrift; PRD F2, provisional) | `operational_default` |
 
-TL 407's required fields come with the form registry in Slice 6 (`ba_form`, read from the blank
+TL 407's required fields come with the form registry in Slice 6 (`ba_form`, from the blank
 form's `*` markers). The basis of each base rule is reviewed in PR 1f.
 
 ### 5.8 `packages/adapters`: `Clock`
@@ -702,13 +769,16 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 - **Schedule:** `lifecycle.sweep`, cron `JOBS_LIFECYCLE_CRON` (default `15 2 * * *`),
   `tz: Europe/Berlin`. It enqueues one `lifecycle.evaluate-project` job per project with
   `singletonKey = <projectId>:<today>`.
-- **Per-project job:** runs `planSystemTransitions` per participation with `clock.today()` and
-  applies each change through the status service as `system` (`system_job`, `job_id`).
-  Idempotent: the planner plans nothing for moved participations, and compare-and-set rejects
-  a concurrent duplicate. A night without a run delays `dsv_expired` and cutoff withdrawals
-  (effective dates stay correct) and turns a TG entry into `tg_start_missed` for the PL (Q68).
-- **Payloads carry IDs only** (Zod payload schema per job; a test checks they contain only
-  `uuid`/ISO-date fields). Logs: job name, job id, project id, counts.
+- **Catch-up window:** the sweep reads the last completed run from `job_run` and passes
+  `window = { from: lastRunDate ?? today, to: today }` to every project job; when all project
+  jobs of the sweep have finished, it inserts today's `job_run` row. A failed sweep writes no
+  row, so the next night's window covers the missed days.
+- **Per-project job:** runs `planSystemTransitions` per participation and applies each change
+  through the status service as `system` (`system_job`, `job_id`, `details.entryKind`).
+  Idempotent: the planner plans nothing for moved participations, and compare-and-set rejects a
+  concurrent duplicate.
+- **Payloads carry IDs and dates only** (Zod payload schema per job; a test checks it). Logs:
+  job name, job id, project id, counts. Never free text.
 - Retries with backoff (`retryLimit: 3`); failures visible in `pgboss` and the log.
 - **`pnpm jobs:lifecycle [--today YYYY-MM-DD]`** runs the sweep once (dev, CI, demos; `--today`
   uses a `ManualClock`, refused with `NODE_ENV=production`).
@@ -719,25 +789,31 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 
 | Table | Columns (main) | `retentionClass` | `dataClass` | Participant data |
 |---|---|---|---|---|
-| `project` (changed) | + `latest_entry_date date null` (`CHECK`: null for `ta_only`, which has no beE entry) | `project_master` | `internal` | no |
-| `participation` | `id`, `project_id` (FK, not null), `status`, `profiling_status`, `dsv_status`, `offer_deadline`, `tg_start`, `tg_end`, `tg_entry_date`, `exit_date`, `profiling_done_on` (all `date`), `end_reason`, `end_reason_secondary end_reason[]`, `profiling_exception`, `profiling_exception_reason_code`, `profiling_exception_set_on`, `status_version`, `created_at` | **`participation_record`** (new): the event-driven rules of ADR-0008, *verify* Q3/Q24/Q77; `unset` in code until Slice 7 | `confidential` | yes |
-| `audit_event` | section 5.4 | **`audit_log`** (new): 3 years, pseudonymised on deletion of the subject; evidence-set entries follow the evidence set; *verify* Q3; `unset` until Slice 7 | `confidential` | yes |
-| `lifecycle_edge` | `track`, `from_value`, `to_value`, `kind` (pk), `actors` | **`reference_data`** (new): no personal data, never touched by the retention job | `internal` | no |
+| `project_entry_wave` (new) | `id`, `project_id` (FK, not null), `code`, `name`, `signing_deadline`, `default_tg_start`, `default_tg_end`, `latest_entry_date` (all `date`, nullable while draft); unique `(project_id, code)`; `CHECK default_tg_start ≤ default_tg_end`; only for `ta_tg` projects (checked in the functions and the domain) | `project_master` | `internal` | no |
+| `participation` (new) | `id`, `project_id` (FK, not null), `entry_wave_id` (FK, null), `status`, `profiling_status`, `dsv_status`, `offer_deadline`, `tg_start`, `tg_end` (overrides, null = wave default), `tg_entry_date`, `exit_date`, `withdrawn_on`, `profiling_done_on` (all `date`), `end_reason`, `end_reason_secondary end_reason[]`, `profiling_exception_status`, `profiling_exception_reason_code`, `profiling_exception_requested_by`, `profiling_exception_requested_on`, `profiling_exception_decided_by`, `profiling_exception_decided_on`, `status_version`, `created_at` | **`participation_record`** (new): ADR-0008 rules; non-signer clock from `withdrawn_on` (90 days *assumed*, Q77); `unset` in code until the DPO confirms (Slice 7) | `confidential` | yes |
+| `audit_event` (new) | section 5.4 | **`audit_log`** (new): 3 years, pseudonymised on deletion of the subject; evidence-set entries follow it; *verify* Q3; `unset` until Slice 7 | `confidential` | yes |
+| `lifecycle_edge` (new) | `track`, `from_value`, `to_value`, `kind` (pk), `actors` | **`reference_data`** (new): no personal data, never touched by the retention job | `internal` | no |
+| `job_run` (new) | `job_name`, `run_date` (pk), `completed_at` | `reference_data` | `internal` | no |
 
-`CHECK`s on `participation`: `tg_start ≤ tg_end`; `offer_deadline ≤ tg_start` when both set;
-`end_reason` set exactly for `withdrawn`/`exited`; `tg_entry_date` set for `active_in_tg`/
-`exited`; `exit_date` set for `exited`; `profiling_done_on` set exactly for `profiling_done`.
-
-**Seed (synthetic only):** "Restrukturierung Werk Nord" gets a `latest_entry_date`; about 15
-participations cover every main status, each track status and every flag case; three in the
-`ta_only` project. No names. Created and moved **through the functions** as `system` /
-`seed`, so every seeded state has its audit trail. Idempotent by fixed UUIDs.
-
-**Generated tables** (`pnpm generate`, drift-checked in `pnpm verify`):
-`docs/domain/generated/lifecycle-transitions.md` (every edge and operation with actors, roles
-and guards) and `docs/domain/generated/access-matrix.md` (role × category × mode × phase ×
-action → decision, with every `undecided` cell and its question). These are what the DPO and
-the PLs review.
+- `CHECK`s on `participation`: `tg_start ≤ tg_end`; `offer_deadline ≤ tg_start` when both set;
+  `dsv_status <> 'not_offered'` ⇒ `entry_wave_id` set; `end_reason` set exactly for
+  `withdrawn`/`exited`; `withdrawn_on` exactly for `withdrawn`; `tg_entry_date` for
+  `active_in_tg`/`exited`; `exit_date` for `exited`; `profiling_done_on` exactly for
+  `profiling_done`; the exception decider differs from the requester.
+- **Migration of Slice 0 data:** one wave `W1` per existing `ta_tg` project from its
+  `signing_deadline`, `default_tg_start`, `default_tg_end` (`latest_entry_date` null, so it is
+  flagged). The domain reads wave dates only; Slice 2 moves the project form to waves and drops
+  the old project columns.
+- **Seed (synthetic only):** "Restrukturierung Werk Nord" gets two waves with
+  `latest_entry_date`; about 15 participations cover every main status, each track status, the
+  exception states and every flag case; three in the `ta_only` project. No names. Created and
+  moved **through the functions** as `system` / `seed` (exception approvals by a seeded regional
+  operations manager), so every seeded state has its audit trail. Idempotent by fixed UUIDs.
+  The seed adds one synthetic staff user with the new org role.
+- **Generated tables** (`pnpm generate`, drift-checked in `pnpm verify`):
+  `docs/domain/generated/lifecycle-transitions.md` (every edge and operation with actors, roles,
+  entry kinds and guards) and `docs/domain/generated/access-matrix.md` (role × category × mode ×
+  phase × action → decision, with every `undecided` cell and its question).
 
 ## 6. Commands (new or changed)
 
@@ -760,161 +836,176 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
 ### Lifecycle and eligibility (PRs 1b, 1c)
 - [ ] **AC-1** Every `(track, from, to)` pair (10² + 5² + 5²) has a listed expected result; the
       allowed set equals the edge table in 5.3; all others are `no_edge`. (U `lifecycle/edges.test.ts`)
-- [ ] **AC-2** Tracks move only in `informed`; the DSV track never moves in `ta_only`; with the
-      exception, profiling moves forward and can be declined in `active_in_tg`; nothing moves
-      after a terminal status. (U `lifecycle/track-activity.test.ts`)
-- [ ] **AC-3** System-only edges reject `user`; user-only edges reject `system`;
-      `scheduled_entry` and `reconciliation` are distinguished. (U)
-- [ ] **AC-4** TG entry: every combination of {DSV fully executed, ASU with proof, profiling
-      done, exception} × fact dated before / on / after `tgStart` — entry only when all hold
-      **as of `tgStart`**; scheduled entry only on `tgStart`; reconciliation only after it and
-      flagged; evidence dated after `tgStart` never allows a reconciliation.
-      (U `lifecycle/tg-entry-guard.test.ts`)
-- [ ] **AC-5** The guard list equals 5.3; no API accepts an override; the exception can't be set
-      with `profiling_declined` and can be revoked only before entry. (U `lifecycle/guards.test.ts`)
-- [ ] **AC-6** Manual withdrawal: from `imported`/`contacted`/`unreachable`/`informed` with a
-      `pre_tg` reason only; with `dsv_signed` it needs the cancellation **and** PL confirmation;
-      `exited` needs a `tg` reason; the special-category end reason is `reason_not_storable`. (U)
-- [ ] **AC-7** Offer deadlines: first offer falls back to the project deadline; re-offers need an
-      explicit `offerDeadline` ≤ `latestEntryDate` and ≤ `tgStart`; no offer without any
-      deadline; expiry the day after. (U `lifecycle/offer-deadline.test.ts`)
-- [ ] **AC-8** Cutoff planner: every combination of main ∈ {`imported`, `contacted`,
-      `unreachable`, `informed`} × 5 profiling × 5 DSV × project type gives the primary
-      reason by precedence, the secondary list, or the right flag; nothing on `latestEntryDate`
-      itself; nothing without `latestEntryDate` (project flag instead); nothing in `ta_only`;
-      while Q78 is open, `cutoff_withdrawal_pending` instead of a withdrawal.
-      (U `lifecycle/planner-cutoff.test.ts`)
-- [ ] **AC-9** `tg_start_missed` after a missed `tgStart`, never an automatic late entry; a second
-      run on the same day plans nothing. (U `lifecycle/planner.test.ts`)
-- [ ] **AC-10** End-reason correction keeps the terminal status, enforces the phase, and moves a
+- [ ] **AC-2** Tracks move only in `informed`; the DSV track never moves in `ta_only`; with an
+      approved exception, profiling moves forward and can be declined in `active_in_tg`; nothing
+      moves after a terminal status. (U `lifecycle/track-activity.test.ts`)
+- [ ] **AC-3** Actors and entry kinds: scheduled entry and catch-up only `system`, reconciliation
+      only `user`; system-only edges reject `user`; user-only edges reject `system`. (U)
+- [ ] **AC-4** TG entry, the three cases: every combination of {DSV fully executed, ASU with
+      proof, profiling done / approved exception} × fact valid before / on / after `tgStart` ×
+      recorded before / on / after `tgStart` × entry kind. Automatic kinds need valid **and**
+      recorded by `tgStart`; reconciliation needs valid by `tgStart`; a fact valid only after
+      `tgStart` never allows entry. (U `lifecycle/tg-entry.test.ts`)
+- [ ] **AC-5** The guard list equals 5.3; there is no override path. (U `lifecycle/guards.test.ts`)
+- [ ] **AC-6** Profiling exception: request needs a Q81 code and the evidence fact (and the BA
+      confirmation for `ba_confirmed_other`); never after `profiling_declined`; only an
+      **approved** exception counts for entry, and only from its approval date; the decider must
+      differ from the requester; revocation only before entry. (U `lifecycle/profiling-exception.test.ts`)
+- [ ] **AC-7** Waves and offers: no offer without a wave; the wave can't change after the first
+      offer; the first offer uses the wave deadline; re-offers need an explicit `offerDeadline` ≤
+      `latestEntryDate` and ≤ effective `tgStart`; no offer without any deadline; expiry the day
+      after. (U `lifecycle/offer-deadline.test.ts`)
+- [ ] **AC-8** Manual withdrawal: `pre_tg` reasons only; with `dsv_signed` it needs the
+      cancellation **and** PL confirmation; `exited` needs a `tg` reason; the special-category
+      end reason is `reason_not_storable`; `ta_completed` needs `taMeasuresComplete` and PL
+      confirmation, not `profiling_done`. (U)
+- [ ] **AC-9** Cutoff planner: every combination of main ∈ {`imported`, `contacted`,
+      `unreachable`, `informed`} × 5 profiling × 5 DSV × project type × wave/no wave gives the
+      primary reason, the secondary list or the right flag; nothing on `latestEntryDate` itself;
+      `withdrawnOn = latestEntryDate + 1`; warnings from 14 and 3 days before; no wave or no
+      `latestEntryDate` → flags only. (U `lifecycle/planner-cutoff.test.ts`)
+- [ ] **AC-10** Catch-up: with a window covering N missed days, entries happen with
+      `scheduled_entry_catchup` and effective date `tgStart` exactly when facts were valid and
+      recorded by `tgStart`; evidence recorded on the start day after that night's run is caught
+      up the next night; otherwise `tg_start_missed`; a second run plans nothing.
+      (U `lifecycle/planner-catchup.test.ts`)
+- [ ] **AC-11** End-reason correction keeps the terminal status, enforces the phase, and moves a
       system-derived reason to the secondary list. (U)
-- [ ] **AC-11** `transferKugEligibility` for every row of the table in 5.3, including month-end
-      cases of the one-month deadline; compliance flags for a missed deadline and a refusal
-      after entry. (U `eligibility/transfer-kug.test.ts`, *verify* Q74)
-- [ ] **AC-12** Every consistent `(main, profiling, dsv, projectType)` has a derived-status key;
-      `isConsistentState` rejects the rest. (U)
-- [ ] **AC-13** `asuDueDate` and `addMonths`: the docs' examples and leap years. (U, *verify* Q1)
+- [ ] **AC-12** `transferKugEligibility` for every row of the table in 5.3, including the deadline
+      day itself, month-end cases, a refusal before completion (anchored at entry), a deadline
+      miss followed by completion (still `ba_review_required`) and a recorded determination that
+      alters a period. (U `eligibility/transfer-kug.test.ts`, *verify* Q74/Q82)
+- [ ] **AC-13** Every consistent state has a derived-status key; `isConsistentState` rejects the
+      rest. (U)
+- [ ] **AC-14** `asuDueDate` and `addMonths`: the docs' examples and leap years. (U, *verify* Q1)
 
 ### Audit and the status functions (PR 1g)
-- [ ] **AC-14** As `transfer_app`: `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` on `participation`,
-      `audit_event`, `lifecycle_edge` fail with `42501`; `SELECT … FOR UPDATE` on
-      `participation` fails; `EXECUTE` on the seven functions works; `PUBLIC` can't execute
-      them. (I `db/grants.int.test.ts`)
-- [ ] **AC-15** `change_participation_status` writes the column(s) and **exactly one** audit row;
+- [ ] **AC-15** As `transfer_app`: `INSERT`/`UPDATE`/`DELETE`/`TRUNCATE` on `participation`,
+      `project_entry_wave`, `audit_event`, `lifecycle_edge` fail with `42501`; `SELECT … FOR
+      UPDATE` on `participation` fails; `EXECUTE` on the nine functions works; `PUBLIC` can't
+      execute them. (I `db/grants.int.test.ts`)
+- [ ] **AC-16** `change_participation_status` writes the column(s) and **exactly one** audit row;
       a rolled-back transaction leaves neither; stale `expected_from` → `stale_status`; an edge
-      not in `lifecycle_edge` → `invalid_transition`; `record_audit_event` refuses the five
-      lifecycle event types. (I `db/status-function.int.test.ts`)
-- [ ] **AC-16** `lifecycle_edge` equals the domain edge list. (I, drift)
-- [ ] **AC-17** Audit `CHECK`s reject inconsistent actors; the table has no free-text column. (I)
-- [ ] **AC-18** Status service: a failed guard writes nothing; two concurrent changes serialize
+      not in `lifecycle_edge` → `invalid_transition`; `record_audit_event` refuses the lifecycle
+      and exception event types; `decide_profiling_exception` refuses the requester as decider.
+      (I `db/status-function.int.test.ts`)
+- [ ] **AC-17** `lifecycle_edge` equals the domain edge list. (I, drift)
+- [ ] **AC-18** Audit `CHECK`s reject inconsistent actors; the table has no free-text column;
+      catch-up entries carry `details.entryKind = scheduled_entry_catchup`. (I)
+- [ ] **AC-19** Status service: a failed guard writes nothing; two concurrent changes serialize
       (one wins, the other gets `stale_status`). (I `api/participations/status-service.int.test.ts`)
+- [ ] **AC-20** The migration turns each Slice 0 `ta_tg` project into one wave with its dates. (I)
 
 ### Completeness (PR 1e)
-- [ ] **AC-19** Truth tables for `required`, `requiredIf` (`equals`, `exists`), `documentPresent`
+- [ ] **AC-21** Truth tables for `required`, `requiredIf` (`equals`, `exists`), `documentPresent`
       (± `accepted`), including `""`, `[]`, `null`, `false`, `0`; output has keys, never
       values. (U `completeness/engine.test.ts`)
-- [ ] **AC-20** Rules with unknown fields or documents, duplicate ids or unknown keys are
+- [ ] **AC-22** Rules with unknown fields or documents, duplicate ids or unknown keys are
       rejected; a rule without `basis` is locked. (U)
 
 ### Access (PR 1d)
-- [ ] **AC-21** Every cell of data-protection.md's read matrix and write table is an explicit
-      expectation and passes; the full enumeration (role sets × membership × assignment ×
-      category × mode × phase × action) yields exactly one decision per case; every case the
-      docs don't cover is `undecided` with its question. (U `access/matrix.test.ts`)
-- [ ] **AC-22** Role union: PL + profiler sees section C only for assigned participants;
+- [ ] **AC-23** Every cell of data-protection.md's read matrix and write table is an explicit
+      expectation and passes; the full enumeration yields exactly one decision per case; every
+      case the docs don't cover is `undecided` with its question. (U `access/matrix.test.ts`)
+- [ ] **AC-24** Role union: PL + profiler sees section C only for assigned participants;
       consultants get nothing person-level for unassigned participants, only aggregates. (U)
-- [ ] **AC-23** `list` never allowed for special-category or highly confidential categories;
+- [ ] **AC-25** Regional operations manager: `audit_metadata` and `aggregated` in their region
+      only, every participant-level category `never`, decides exceptions of their region but
+      never their own request. (U)
+- [ ] **AC-26** `list` never allowed for special-category or highly confidential categories;
       signed documents are `immutable` for writes. (U)
-- [ ] **AC-24** Break-glass only where the docs allow it, returns a grant for exactly one
-      participant, category and action, audited and flagged; admins never; participant
-      special-category reads need the birth-date check. (U)
-- [ ] **AC-25** Transition permissions match Q60 for every edge and operation. (U)
-- [ ] **AC-26** Field catalog: every field has a class and category; no special/highly
+- [ ] **AC-27** Break-glass only where the docs allow it, a grant for exactly one participant,
+      category and action, audited and flagged; admins never; participant special-category reads
+      need the birth-date check. (U)
+- [ ] **AC-28** Transition and operation permissions match Q60/Q80 for every edge and
+      operation. (U)
+- [ ] **AC-29** Field catalog: every field has a class and category; no special/highly
       confidential field is listable; `customerVisible` is exactly the whitelist; the
       health-related end reason is never in list payloads. (U `fields/catalog.test.ts`)
-- [ ] **AC-27** The generated transitions and access tables match the code. (U, drift)
+- [ ] **AC-30** The generated transitions and access tables match the code. (U, drift)
 
 ### Config (PR 1f)
-- [ ] **AC-28** `base-defaults.json` and both samples validate against the committed JSON
-      Schema, which matches the Zod model; base defaults contain no Agentur submission
-      setting. (U)
-- [ ] **AC-29** Resolution order, provenance, two-level resolution, templates only adding rules,
-      relaxing only `operational_default` rules in project overrides, nationwide settings
-      rejected in templates/overrides. (U `config/resolve.test.ts`, 100 %)
-- [ ] **AC-30** Blockers: no KuG-Agentur template → `project_activation_blocked`; no
-      placement-Agentur template → `agentur_submission_blocked` while data collection and
-      profiling resolve. (U)
-- [ ] **AC-31** Field-schema profile: allowed keywords compile like hand-written Zod; anything
-      else, special/highly confidential custom fields and unknown retention classes are
-      rejected; `format: date` rejects `2027-02-31`. (U)
-- [ ] **AC-32** A version 2 template file doesn't change resolution for a project pinned to
+- [ ] **AC-31** `base-defaults.json` and both samples validate against the committed JSON Schema,
+      which matches the Zod model; base defaults contain no Agentur submission setting. (U)
+- [ ] **AC-32** Resolution order, provenance, two-level resolution, templates only adding rules,
+      relaxing only `operational_default` rules in overrides, nationwide settings rejected in
+      templates/overrides, project-wide regional settings in an override rejected.
+      (U `config/resolve.test.ts`, 100 %)
+- [ ] **AC-33** Agentur-scoped temporary settings apply only to their Agentur and need source,
+      confirmer and date; blockers `project_activation_blocked` and `agentur_submission_blocked`
+      as in 5.7. (U)
+- [ ] **AC-34** Field-schema profile: allowed keywords compile like hand-written Zod; anything
+      else, special/highly confidential custom fields and unknown retention classes are rejected;
+      `format: date` rejects `2027-02-31`. (U)
+- [ ] **AC-35** A version 2 template file doesn't change resolution for a project pinned to
       version 1. (U)
 
 ### Clock and jobs (PRs 1a, 1h)
-- [ ] **AC-33** `today()` is the Berlin date around midnight UTC and across both DST switches; no
+- [ ] **AC-36** `today()` is the Berlin date around midnight UTC and across both DST switches; no
       `Date.now()`/`new Date()` in domain, config and jobs (source scan). (U)
-- [ ] **AC-34** pg-boss starts as `transfer_app` on the schema installed by `db:migrate`; the
+- [ ] **AC-37** pg-boss starts as `transfer_app` on the schema installed by `db:migrate`; the
       nightly schedule is registered with `Europe/Berlin`. (I)
-- [ ] **AC-35** With a `ManualClock` and fake facts, the job produces `dsv_expired`, scheduled TG
-      entries and (with a test lead time) cutoff withdrawals as `system`; running it twice adds
-      no status change and no audit row. (I `api/jobs/lifecycle.int.test.ts`)
-- [ ] **AC-36** With the Slice 1 facts provider, nobody enters the TG (fail closed). (I)
-- [ ] **AC-37** Job payloads contain only IDs and dates; job logs contain no participation data. (U, I)
-- [ ] **AC-38** The image smoke test passes with the pg-boss schema installed by
+- [ ] **AC-38** With a `ManualClock` and fake facts, the job produces `dsv_expired`, scheduled
+      entries, catch-up entries after skipped days (no `job_run` row), and cutoff withdrawals as
+      `system`; running it twice adds no status change and no audit row. (I `api/jobs/lifecycle.int.test.ts`)
+- [ ] **AC-39** With the Slice 1 facts provider, nobody enters the TG (fail closed). (I)
+- [ ] **AC-40** Job payloads contain only IDs and dates; job logs contain no participation data
+      and no free text. (U, I)
+- [ ] **AC-41** The image smoke test passes with the pg-boss schema installed by
       `node dist/migrate.js`. (CI)
 
 ### Platform and data protection
-- [ ] **AC-39** Data catalog has `participation`, `audit_event`, `lifecycle_edge`; participant
-      tables have `project_id` FKs. (U)
-- [ ] **AC-40** Seeded participations exist only through the functions, each with its audit
+- [ ] **AC-42** Data catalog has `project_entry_wave`, `participation`, `audit_event`,
+      `lifecycle_edge`, `job_run`; participant tables have `project_id` FKs. (U)
+- [ ] **AC-43** Seeded participations exist only through the functions, each with its audit
       trail; synthetic only. (I, R)
-- [ ] **AC-41** `pg-boss@12.38.0` and `@opentelemetry/api@1.9.1` pinned exactly, one copy each in
-      the lockfile, no peer warnings; tests pass on Node 22 and 24. (CI)
-- [ ] **AC-42** `pnpm test:coverage` enforces the 100 % thresholds in CI. (CI)
+- [ ] **AC-44** `pg-boss@12.38.0` and `@opentelemetry/api@1.9.1` pinned exactly, one copy each,
+      no peer warnings; tests pass on Node 22 and 24. (CI)
+- [ ] **AC-45** `pnpm test:coverage` enforces the 100 % thresholds in CI. (CI)
 
 ### Definition of done (CLAUDE.md) applied to this slice
 - Status changes through the audit helper: **the core of this slice** (functions + grants).
-- No hard-coded regional rules: regional settings only in templates; deadlines are project data.
+- No hard-coded regional rules: regional settings only in templates or Agentur-scoped
+  overrides; deadlines are wave data.
 - No vendor calls outside adapters: pg-boss is infrastructure on our own Postgres (ADR-0011).
 - New personal data: `participation` and `audit_event` have a class, access rules (5.6) and a
-  retention class.
+  retention class; the other new tables hold no personal data.
 
 ## 8. Deliberately left out
 
 | Not in Slice 1 | Why / where it lands |
 |---|---|
 | Person data, import, duplicate handling | Slice 2 |
-| Editing project dates (`latestEntryDate`, deadlines, `deadlineRule`), template snapshots, project overrides with approval | Slice 2 (project setup); Slice 1 adds the column and the resolver rules |
-| Entry waves | after Q79 |
-| Project membership and assignment tables, region on projects, a reviewer role | Slices 2/3; Q80 |
-| API routes for status changes, participations or access | Slices 2, 3, 5 |
+| Creating and editing waves, individual date overrides, template snapshots, overrides with approval, project activation, dropping the old project date columns | Slice 2 (project setup); Slice 1 adds the tables, the domain rules and the resolver checks |
+| Project membership and assignment tables, region on projects | Slices 2/3; the access function takes them as input |
+| API routes for status changes, operations, participations or access; the review and clarification UI | Slices 2, 3, 5 |
 | Wiring `decideAccess` into requests, sessions, logins and their audit | Slice 3 |
-| Free-text reasons (break-glass, profiling exception) and their encryption | Slice 3 (first writer); codes only until then |
+| Free text (break-glass, exception evidence, BA confirmer) and its encryption | Slice 3 (first writer) / 4b (evidence documents); codes only until then |
 | Storing the special-category end reason | Slice 8 (TG exits), with encrypted storage |
 | Field-level encryption of participant fields, sensitive endpoints, `sensitive_read` writes | with the first such field (Slices 4a/6) |
 | DSV documents, signature dates, ASU records, signed TL 407, cancellation, §110 activities | Slices 6/7/8; guards fail closed (D4) |
+| BA/legal determinations table, Transfer-KuG export blocking | Slice 8 (the domain types exist now) |
 | Customer-notification flag after withdrawal from `dsv_signed` | Slice 7 |
 | `self_registered` creation and the 30-day rejection job | Slice 4c |
-| Reminders, "what's missing" UI, dashboards, escalations | Slice 5 (they call `evaluateCompleteness`, `lifecycleFlags`, the eligibility function) |
-| KuG billing, payroll export of excluded periods | outside the MVP / Slice 8 export |
+| Sending reminders, "what's missing" UI, dashboards, escalations | Slice 5 (they call `evaluateCompleteness`, `lifecycleFlags`, `transferKugEligibility`) |
 | TL 407 required-field list | Slice 6 (ADR-0009) |
-| Retention job, pseudonymisation role, retention periods | Slice 7 |
+| Retention job, pseudonymisation role, retention periods in executable config | Slice 7, after the DPO confirms (Q3, Q77) |
 | Row-level security | pre-pilot gate (ADR-0005) |
 | Other adapter interfaces, separate worker, admin UI for templates | their slices (D9), Slice 9 (D7), later (ADR-0004) |
 
 ## 9. Doc changes
 
-**In this PR (round 7):** `docs/decisions/2026-10-16-answers-round-7.md`; `open-questions.md`
-(Q60–Q76 statuses, Q3 note, new Q77–Q83); process-and-lifecycle.md (deadlines, cutoff
-withdrawals with `never_contacted`/`not_informed`, no late entry and reconciliation, profiling
-exception rules, employment vs. Transfer-KuG eligibility, no overridable documentary guards,
-transition permissions, multiple roles); data-protection.md (classification additions, roles,
-assignment, break-glass scope and review, evidence-set phase, participant documents, write
-permissions, retention note); regional-variation.md (deadlines are project data, rule bases,
-missing templates); glossary (signing/offer deadline, `latestEntryDate`, entry wave,
-Transfer-KuG eligibility, profiling exception, break-glass); CLAUDE.md rule 5 (no override of
-documentary guards); ADR-0008 note (grace period reopened); PRD F8, roadmap, architecture
-overview and ADR-0011 (cutoff instead of grace period).
+**In this PR (rounds 7 and 8):** `docs/decisions/2026-10-16-answers-round-7.md` and
+`-round-8.md`; `open-questions.md` (Q60–Q83 answered with their statuses, Q3 note, new Q84);
+process-and-lifecycle.md (entry waves and contractual deadlines, cutoff withdrawals and
+warnings, the three TG-entry cases, profiling exceptions with approval, three Transfer-KuG
+outcomes, `taMeasuresComplete`, no overridable documentary guards, transition permissions,
+roles); data-protection.md (classification additions, roles, assignment, break-glass and
+four-eyes, regional operations manager, evidence-set phase, participant documents, write
+permissions, deletion clock from `withdrawnOn`); regional-variation.md (deadlines are wave data,
+rule bases, missing templates, Agentur-scoped temporary settings); glossary; CLAUDE.md rule 5;
+ADR-0008 note; PRD F8, roadmap, architecture overview and ADR-0011 (cutoff instead of grace
+period).
 
 **In the implementing PRs:**
 - **1a:** S1 note in ADR-0004, S2 note in ADR-0011; CLAUDE.md "Repo layout" (`config`,
@@ -922,31 +1013,36 @@ overview and ADR-0011 (cutoff instead of grace period).
 - **1b/1c:** process-and-lifecycle.md links the generated transitions table.
 - **1d:** data-protection.md: access categories and a link to the generated access matrix.
 - **1f:** regional-variation.md: the concrete template model replaces the sketch; ADR-0004
-  amendment (Zod-authored model exported as JSON Schema, the profile, rule bases, blockers).
+  amendment (Zod-authored model exported as JSON Schema, the profile, rule bases, blockers,
+  Agentur-scoped overrides).
 - **1g:** ADR-0002 amendment (`SECURITY DEFINER` functions, `lifecycle_edge`, no FK from
-  `audit_event` to `participation`, no free text before encryption, grants); retention classes
-  `participation_record`, `audit_log`, `reference_data` in data-protection.md / ADR-0008.
+  `audit_event` to `participation`, no free text before encryption, grants, entry waves);
+  retention classes `participation_record`, `audit_log`, `reference_data` in
+  data-protection.md / ADR-0008.
 - **1h:** ADR-0011 amendment (schema install, runtime role, in-process workers, time zone,
-  `singletonKey`, no catch-up entry); architecture overview (jobs); CLAUDE.md "Commands";
-  `.env.example`; `.claude/settings.json` allowlist; README status.
+  `singletonKey`, catch-up window and `job_run`); architecture overview (jobs); CLAUDE.md
+  "Commands"; `.env.example`; `.claude/settings.json` allowlist; README status.
 
 ## 10. Risks
 
 | Risk | Mitigation |
 |---|---|
-| The cutoff semantics (Q77) or the Transfer-KuG rules (Q74/Q82, *verify*) change after implementation | Both are isolated pure functions (`planSystemTransitions` step 3, `transferKugEligibility`) with table-driven tests; an answer changes a table, not the design. Until Q78, no automatic withdrawal runs at all. |
-| Reading the app as deciding employment or eligibility | D4 wording in the code and docs: the app records effective dates and derives a report; it doesn't create the employment relationship or a KuG claim. |
+| The Transfer-KuG rules (Q74/Q82, *verify*) change after implementation | Isolated pure function with table-driven tests; an answer changes a table, not the design. |
+| Reading the app as deciding employment or eligibility | D4 wording in code and docs: the app records effective dates and reports outcomes; it doesn't create the employment relationship or decide a benefit. |
+| Catch-up enters someone on evidence entered late | Automatic kinds require **recorded** by `tgStart`; later evidence goes through the audited, reviewed reconciliation (AC-4, AC-10). |
+| A failed sweep looks like success | `job_run` is written only after every project job finished; the next window covers the gap. |
 | `z.fromJSONSchema` is experimental upstream | Restricted profile validated first; spike S1 with the Ajv fallback; contained in `field-schema.ts`. |
 | Zod's JIT probe raising CSP violations in the SPAs | `z.config({ jitless: true })` (S1; enforced by the e2e CSP check from Slice 4a). |
 | pg-boss needs more than DML at runtime, or a release breaks us | Spike S2 with the `transfer_jobs` fallback; exact pins, deliberate upgrades. |
-| Logic duplicated between TypeScript and SQL drifts | SQL checks only the edge list (kept equal by a test) and invariants; guards live only in TypeScript. |
+| Logic duplicated between TypeScript and SQL drifts | SQL checks only the edge list (kept equal by a test), invariants and the four-eyes rule; guards live only in TypeScript. |
 | `SECURITY DEFINER` functions as an attack surface | Fixed `search_path`, no dynamic SQL, `EXECUTE` revoked from `PUBLIC`, inputs checked, grant tests. |
-| A missed nightly run blocks a TG entry | Deliberate (Q68): `tg_start_missed` is flagged the next morning and the PL reconciles with dated evidence. Monitoring of failed runs comes with Slice 9. |
+| Two sources of project dates during the transition (Slice 0 columns vs. waves) | The domain reads waves only; the migration copies the dates; Slice 2 drops the old columns. |
 | 100 % coverage tempts tests that only touch lines | Table-driven expectations from the docs; generated tables reviewed by people. |
-| Free-text reasons leaking sensitive details | None stored in Slice 1; later only encrypted, never in logs, lists or job payloads (Q66). |
-| Deadlines off by one day | Inclusive deadlines (Q69) tested at the boundary in AC-7, AC-8, AC-9. |
+| Free text leaking sensitive details | None stored in Slice 1; later only encrypted, never in logs, lists or job payloads (Q66). |
+| Deadlines off by one day | Inclusive deadlines tested at the boundary (AC-7, AC-9, AC-10, AC-12). |
 
 ## 11. Approval
 
-Approved with changes in round 7. Implementation starts with PR 1a on a new branch after this
-PR is merged. Answers to Q77–Q83 can come at any time; each one changes data and tests only.
+Approved in rounds 7 and 8. Implementation starts with PR 1a on a new branch after this PR is
+merged. Q84 and the DPO/legal confirmations can come at any time; each changes data and tests
+only.

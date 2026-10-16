@@ -17,7 +17,8 @@ duty.
   signing deadline is built into the lifecycle), `rejected`, beE exit, end of year of exit,
   project settlement dates. *Note 2026-10-16 (round 7): the fixed 90-day grace period is
   reopened; withdrawal happens at the final admission cutoff after `latestEntryDate` (Q69, Q70,
-  Q77). Retention still starts from `withdrawn`; the non-signer period itself is Q3/Q77.*
+  Q77). Round 8: the non-signer deletion clock starts at `withdrawnOn` (manual or automatic);
+  the proposed 90 calendar days stay `unset` in executable configuration until the DPO confirms.*
 - **Two-stage deletion:**
   1. full deletion of everything not needed as evidence
   2. deletion of the **evidence set** (identity, measure, participation dates/times, signed

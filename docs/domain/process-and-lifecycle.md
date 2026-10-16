@@ -3,7 +3,8 @@
 > Status: updated 2026-10-15 from the decisions log (`docs/decisions/`), including the
 > two-track model from the PR #1 review (round 4), and 2026-10-16 from round 7 (deadlines from
 > the contract, final admission cutoff, no overrides of documentary guards, employment vs.
-> Transfer-KuG eligibility). Items marked *(provisional, Qnn)* rest on
+> Transfer-KuG eligibility), and from round 8 (entry waves, catch-up of missed runs, approval of
+> profiling exceptions, three Transfer-KuG outcomes, `taMeasuresComplete`). Items marked *(provisional, Qnn)* rest on
 > answers that are still `assumed` or `verify` in `open-questions.md`.
 
 ## Big picture
@@ -45,16 +46,21 @@ steps from the KuG-Agentur's template (see regional-variation.md).
   where `endDate` is the end of the old employment and `knowledgeDate` is when the person
   learned of it. To subtract months, clamp to the last day of the target month
   (31.05. → 28./29.02., 31.12. → 30.09.). The later date applies.
-- **Signing and entry deadlines come from the Sozialplan / DSV / project entry wave** (Q69),
-  never from an Agentur template and never invented by the system:
-  - `signingDeadline` (project): the deadline of the first DSV offer. A **re-offer** needs an
-    explicit participation-level **`offerDeadline`**, no later than `latestEntryDate` and the
-    planned TG start. If the project records no deadline rule, the PL enters the deadline.
-  - **`latestEntryDate`** (project; per entry wave is open, Q79): the last possible entry into
-    the beE. The day after it is the **final admission cutoff** *(provisional, Q77)*.
+- **Signing and entry deadlines come from the Sozialplan / DSV / entry wave** (Q69), never from
+  an Agentur template and never invented by the system.
+- **Entry waves** (Q79): every `ta_tg` project has **one or more entry waves**, each with a
+  name/code, `signingDeadline`, default TG start and end, and **`latestEntryDate`**. Each
+  participation belongs to **exactly one wave before its DSV is offered**; individual
+  contractual dates may override the wave defaults, with audit. An active `ta_tg` project needs
+  at least one wave with a `latestEntryDate`, otherwise it stays draft (Q77). The project's final
+  entry date (the latest wave cutoff) is derived, for project-level reporting only.
+  - `signingDeadline` (wave): the deadline of the first DSV offer. A **re-offer** needs an
+    explicit participation-level **`offerDeadline`**, no later than the wave's `latestEntryDate`
+    and the planned TG start. If no contractual rule is recorded, the PL enters the deadline.
+  - **`latestEntryDate`** (wave): the last possible entry into the beE, inclusive. The **final
+    admission cutoff** starts the following Berlin calendar day (Q77). It **replaces the former
+    "signing deadline + 90 days" grace period**.
   - Deadlines are **inclusive**: expiry happens the following day.
-- ~~Grace period end = the project's signing deadline + 90 days~~ — **reopened** (round 7): the
-  fixed 90 days are not a general legal rule. What replaces it is Q77.
 
 ## Project checklist (project-level BA steps) *(provisional, Q16, Q52)*
 
@@ -102,8 +108,8 @@ stateDiagram-v2
   contacted --> unreachable
   unreachable --> contacted
 
-  informed --> active_in_tg : on the TG start date + TG entry guard (system), or audited reconciliation (PL, Q68)
-  informed --> ta_completed : ta_only project, activities closed + evidence + PL confirmation (Q73)
+  informed --> active_in_tg : on the TG start date, or catch-up of a missed run (system) / audited reconciliation (PL, Q68)
+  informed --> ta_completed : ta_only project, taMeasuresComplete + evidence + PL confirmation (Q73, Q83)
   active_in_tg --> exited : exit reason
 
   imported --> withdrawn : cutoff passed (system) → never_contacted / manual
@@ -176,9 +182,11 @@ stateDiagram-v2
 - PLs get a list of DSVs **signed by the participant but not yet fully executed**, because this
   is where things typically get stuck.
 - Original tracking per document: `originalLocation`, `receivedOn`, `sentToCustomerOn`.
-- **Offer deadline** (Q69): the first offer uses the project's `signingDeadline`; a re-offer
-  needs its own `offerDeadline` (≤ `latestEntryDate`, ≤ planned TG start). If neither exists,
-  the offer can't be recorded until the PL enters one. `dsv_expired` happens the day after.
+- **Wave and offer deadline** (Q69, Q79): the DSV can only be offered once the participation
+  is assigned to an entry wave. The first offer uses the wave's `signingDeadline`; a re-offer
+  needs its own `offerDeadline` (≤ the wave's `latestEntryDate`, ≤ planned TG start). If neither
+  exists, the offer can't be recorded until the PL enters one. `dsv_expired` happens the day
+  after.
 - **Withdrawal after `dsv_signed`** *(verify, Q46)*: before TG start, main status → `withdrawn`
   only with an uploaded cancellation document signed by all three parties. The PL confirms, and
   a customer notification flag is set. After TG start it is a normal TG exit.
@@ -210,7 +218,7 @@ been met **on that date** (the facts carry dates):
 |---|---|
 | `dsvFullyExecuted` (participant, customer and TG signatures) | **none** — no employment without the written contract (§623 BGB) |
 | ASU registered **with proof**, any channel (Q55), required before transfer into the beE by §111(4) Nr. 4 SGB III | **none** — the profiling exception does not extend to the ASU |
-| `profilingStatus = profiling_done` (TL 407 signed by participant and profiler) **or** `profilingException = true` (with reason) | the exception itself is the override |
+| `profilingStatus = profiling_done` (TL 407 signed by participant and profiler) **or** an **approved** profiling exception (Q80) | the approved exception itself is the alternative |
 
 TL 407 **submission** to the Agentur is not part of the guard (Q54).
 
@@ -218,20 +226,35 @@ If the guard fails, the participation stays `informed` and appears in the PL's "
 list. Guards marked "none" can't be overridden by anyone, and since round 7 (Q71) **no
 documentary or contractual guard is overridable at all**.
 
-**No automatic late entry** (Q68). If the participation is still `informed` after its TG start
-date, the PL either records a new, contractually valid start date, or performs an **audited
-reconciliation** when documents prove that every condition was already met on the original
-date and only the system record was late. Entry is never backdated because missing evidence was
-created later. The application records the effective employment date; it doesn't create the
-employment relationship.
+**Entry after the planned date** (Q68, round 8) — three cases, never backdating on evidence
+created later:
+1. **The scheduled job didn't run**, but every prerequisite was already **recorded and valid by
+   the TG start date**: the next run **catches up automatically** with the `system` actor and
+   the original TG start as effective date (audit detail `scheduled_entry_catchup`). This is
+   reliability recovery, not late entry.
+2. **Evidence was recorded later** but proves that every requirement already existed on the TG
+   start date: the PL performs an **audited reconciliation** (reviewed after the fact by
+   regional operations management, Q80).
+3. **A prerequisite actually arose after the planned start:** the PL records a new,
+   contractually valid start date.
 
-**Profiling exception** *(Q17, Q60, Q74)*: if profiling wasn't possible before entry into the
-beE, the **PL** sets `profilingException = true` for a documented, justified case, with a
-structured reason code (Q81; free text is special category, Q66). It can't be set after
-`profiling_declined`. It may be revoked before TG entry; after entry it is closed by completing
-profiling, never silently revoked. Profiling must reach `profiling_done` within **1 month of TG
-entry**; a miss is an immediate compliance escalation. Every exception is flagged for the
-four-eyes review (Q63, Q80).
+The application records the effective employment date; it doesn't create the employment
+relationship.
+
+**Profiling exception** *(Q17, Q60, Q74, Q80, Q81)*: if profiling wasn't possible before entry
+into the beE, the **PL** requests an exception for a documented, justified case, with one of the
+reason codes `participant_prevented_documented`, `agentur_scheduling_unavailable`,
+`force_majeure`, `ba_confirmed_other` (the last with who at the BA confirmed it, and when). Every
+code needs supporting evidence or a BA reference, stored separately (encrypted once available);
+free text is special category (Q66). It can't be requested after `profiling_declined`.
+- **Second-person approval before it counts:** a `regional_operations_manager`, who must be a
+  different user from the requesting PL, approves it. Only an approved exception satisfies the
+  TG entry guard. It is a planned compliance exception, not break-glass.
+- It may be revoked before TG entry; after entry it is closed by completing profiling, never
+  silently revoked.
+- Profiling must reach `profiling_done` within **1 month of TG entry**; a refusal or a miss is
+  an immediate compliance escalation and changes the Transfer-KuG outcome (below), but doesn't
+  end the employment.
 
 ### Employment vs. Transfer-KuG eligibility *(verify, Q74, Q82)*
 
@@ -240,19 +263,35 @@ The domain keeps two things apart:
    exit date), and
 2. **eligibility for Transfer-KuG** for a given period.
 
-Normally both start on the TG entry date. Under the profiling exception, Transfer-KuG
-eligibility starts **no earlier than the day after profiling is completed** (BA Fachliche
-Weisungen), and the period from entry until then is **excluded from Transfer-KuG claims** until
-cleared. After a refusal, the participant stays employed until a normal exit, but the
-eligibility question goes to the PL as a compliance escalation (details Q82). The app derives
-and reports eligibility; KuG billing itself is outside the MVP.
+Each period has one of three outcomes: **`eligible`**, **`excluded`**, **`ba_review_required`**
+(Q82):
+
+| Situation | Outcome |
+|---|---|
+| profiling done before entry | `eligible` from the TG entry date |
+| approved exception, profiling completed within 1 month | `excluded` from entry through the completion date; `eligible` from the day after (BA Fachliche Weisungen) |
+| approved exception, profiling not yet completed, deadline running | `excluded` from entry, open |
+| profiling refused before completion | `excluded` from the **TG entry date** (not the refusal date), open |
+| one-month deadline missed | `ba_review_required` from entry; later completion doesn't clear it |
+
+Only a recorded BA/legal determination may clear or alter an excluded period after a deadline
+miss. Employment is never ended automatically by a refusal or a deadline miss. Affected periods
+are blocked from any Transfer-KuG export. The application reports facts and decisions; it
+doesn't issue a legal benefit determination. KuG billing itself is outside the MVP.
 
 ### System withdrawal at the final admission cutoff *(Q50, Q53, Q70; timing provisional, Q77)*
 
-At the cutoff (the day after `latestEntryDate`), after an advance warning to the PL (Q78), a
-nightly job with the `system` actor moves participations to `withdrawn` when they can no longer
-reach the TG. It runs **only when the project has an explicit `latestEntryDate`**; without one,
-the cases are flagged and nothing moves automatically (Q70).
+At the cutoff (the Berlin day after the wave's `latestEntryDate`), a nightly job with the
+`system` actor moves participations to `withdrawn` when they can no longer reach the TG,
+evaluated against **the participation's entry wave**. Without a `latestEntryDate`, the cases are
+flagged and nothing moves or is deleted automatically (Q70, Q77). Participations not yet
+assigned to a wave: Q84 (until answered, flagged and not withdrawn).
+
+- **Warning** (Q78): from 14 calendar days before the cutoff, persistent until resolved, plus a
+  final reminder 3 days before; a wave activated fewer than 14 days before is warned
+  immediately. The warning is informational: at the cutoff the withdrawal runs.
+- The withdrawal date `withdrawnOn` starts the non-signer deletion clock (Q77; period
+  `assumed`).
 
 | Precedence | Situation | Withdrawal reason |
 |---|---|---|
@@ -360,7 +399,8 @@ qualification) are activity records with date, duration and attendance (Q20).
 
 ## Roles (summary — access rules in data-protection.md)
 
-Admin, Regional admin (region = Niederlassung), PL, Berater/Profiler, Back office,
+Admin, Regional admin (region = Niederlassung), Regional operations manager (region-scoped
+reviewer and approver without case access, Q80), PL, Berater/Profiler, Back office,
 Participant. The customer is **not a user in the MVP**: it receives a monthly export from the
 PL (Q47). Access is role × project, plus assignment for profilers. A person can hold **several
 project roles** in one project and different roles in different projects; permissions are the

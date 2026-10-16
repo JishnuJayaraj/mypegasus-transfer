@@ -35,6 +35,8 @@ Do **not** build a generic workflow engine. Only the edges are configurable.
 
 Per **project** (not per Agentur): signing deadline, `latestEntryDate`, default TG start/end, the
 contractual deadline rule (`deadlineRule`, from the Sozialplan/DSV, Q69), project overrides.
+Signing deadline, default TG dates and `latestEntryDate` live on the project's **entry waves**
+(Q79).
 Deadlines are contractual, never regional BA rules.
 
 ## Configuration model
@@ -89,9 +91,13 @@ Participation
   silently continue. A missing **KuG-Agentur** template blocks project activation. A missing
   **placement-Agentur** template allows contact, data collection and profiling, but **blocks
   Agentur submission** until channel, original requirement and lead time are confirmed and
-  recorded (as a project override); the PL gets a blocking task and a warning. Base defaults
-  therefore hold **no Agentur submission settings**, and a real Agentur's rules are never
-  guessed.
+  recorded; the PL gets a blocking task and a warning. A real Agentur's rules are never guessed.
+- **Base defaults** contain the nationwide rules, the **allowed channel values** and the
+  official form requirements, but **no default** for an Agentur's submission channel, batch
+  channel, `originalRequired`, `leadTimeDays` or `rejectsOutdatedFormVersions` (round 8).
+- **Temporary Agentur settings** (no template yet) are recorded in the project override **scoped
+  to that Agentur**, with source, confirmer and confirmation date, and audited. They are never a
+  project-wide value that silently applies to every placement Agentur.
 - In the MVP, templates are seed files. A new region therefore needs a deploy until an admin UI
   exists.
 

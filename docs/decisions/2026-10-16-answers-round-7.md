@@ -218,6 +218,9 @@ reminder alone is therefore not enough. *(verify, with Q74)*
 
 ## Noted while applying (for review)
 
+> Notes 2 and 3 were corrected and notes 4 and 5 confirmed in
+> [round 8](2026-10-16-answers-round-8.md).
+
 These readings were needed to carry the answers into the plan and docs. Correct any that are
 wrong:
 

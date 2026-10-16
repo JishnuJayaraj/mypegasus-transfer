@@ -4,7 +4,8 @@
 > protection officer before go-live.
 >
 > Status: updated 2026-10-15 from the decisions log, and 2026-10-16 from round 7 (roles per
-> project, break-glass scope, evidence-set phase, write permissions, classification additions). Most answers here are still **`assumed`**
+> project, break-glass scope, evidence-set phase, write permissions, classification additions)
+> and round 8 (regional operations manager, approval of profiling exceptions, deletion clock). Most answers here are still **`assumed`**
 > (rows marked 🔒 in `open-questions.md`). Build on them, but **nothing in this file may be
 > `assumed` or `verify` at the pre-pilot gate.** Items marked *(Qnn)* point to the question.
 
@@ -71,10 +72,18 @@
   no project-wide directory of names.
 - **Break-glass** *(assumed, Q63)*: mandatory reason, audited, flagged for review. One grant
   covers **one participant, one resource/category and one action**, never a reusable session;
-  every action is logged on its own. Regional operations management (role: Q80) reviews it by
-  the next business day from audit metadata, without automatic access to participant details.
-  The DPO gets periodic reports and immediate escalation of suspicious access, but is not the
-  operational approver. Profiling exceptions get the same four-eyes review.
+  every action is logged on its own. The **regional operations manager** (Q80) reviews it by
+  the next business day from audit metadata, without access to participant details. The DPO
+  gets periodic reports and immediate escalation of suspicious access, but is not the
+  operational approver.
+- **Four-eyes** *(assumed, Q63, Q80)*: actor and reviewer are always different staff users.
+  Break-glass and reconciliations of a TG entry are **reviewed after the fact** (next business
+  day). A profiling exception needs **approval before** it can satisfy the TG entry guard.
+- **Regional operations manager** *(assumed, Q80)*: an org role scoped to a region, with **no
+  ordinary participant access**. It approves profiling exceptions, reviews reconciliations and
+  break-glass, sees audit metadata, structured reason codes and the necessary dates, and can ask
+  the PL for clarification. It never sees case files, section C, health fields or signed
+  documents through this role.
 - **Evidence-set phase** *(assumed, Q64)*: starts **after the first retention/deletion stage**,
   not at the terminal status. During close-out and the ordinary personnel-file retention,
   normal authorised access applies; once only the evidence set is left, break-glass only.
@@ -144,7 +153,7 @@ so a long payroll rule never keeps a whole profile.
 | Data | Retention (from) |
 |---|---|
 | Unmatched / rejected self-registrations | 30 days |
-| Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion 90 days after the signing deadline (the grace period ends with `withdrawn`). **Reopened (round 7):** the fixed 90-day grace period is gone; withdrawal now happens at the final admission cutoff, and the start of this period is Q77/Q3 |
+| Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion **90 calendar days after `withdrawnOn`** (manual or automatic withdrawal), if there was no fully executed DSV, funded §110 participation, legal hold or other retention duty. *Assumed (Q77): `unset` in executable configuration until the DPO confirms.* |
 | Non-signers with BA-funded §110 measures | full deletion after 90 days, **except the evidence set** |
 | Structured health fields | 3 months after beE exit, or with non-signer deletion |
 | Schwerbehinderung status for payroll | with payroll records, as long as payroll needs it |
