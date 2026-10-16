@@ -102,10 +102,12 @@ export const sampleDocument = (
 export const sampleAudit = (
   stream: AuditStream,
   actorStaffUserId: string | null,
+  phase: AccessPhase = "active",
 ): AuditResource => ({
   kind: "audit",
   ...scope,
   participationId: sample.participationId,
+  phase,
   stream,
   actorStaffUserId,
 });

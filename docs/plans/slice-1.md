@@ -169,8 +169,9 @@ phase, action incl. `write`; four resource kinds, round 11; the regional operati
 reads, the list-payload rule, break-glass scope), the document-type catalog (Q87 B), the
 generated access table and the 100 % threshold on `access/**` and `documents/**`;
 **1d-2** `mayPerformTransition` and the operation permissions (Q60, Q80, round 10 §6), with the
-roles in the generated transitions table and the `append_evidence_correction` permission
-(round 11). 1g depends on 1d-2.
+roles in the generated transitions table, the `append_evidence_correction` permission and the
+round 12 corrections to `decideAccess` (evidence-set intersection, audit phase). 1g depends on
+1d-2.
 
 ## 5. Design
 
@@ -708,10 +709,15 @@ assignment: a PL who is also a profiler sees section C only for participants ass
   set), needs a reason code, returns a **grant scoped to one participant, one category or
   document type and one action**, audit `break_glass_access`, flagged for review. Never `list`,
   never a write, never beyond the role's active-phase scope.
-- **Evidence set** (Q64, Q87 C): reads only through break-glass, with the active-phase view;
+- **Evidence set** (Q64, Q87 C, round 12): the intersection of the role's active-phase
+  entitlement (in any mode) and break-glass, with the active view; no entitlement → `never`;
   lists `never`; writes `never` (signed documents `immutable`). Exceptional corrections:
-  `append_evidence_correction` (PR 1d-2 permission, operation with evidence storage).
-- **Audit metadata** (Q87 A): filtered projections per stream (below); read-only.
+  `append_evidence_correction` (PR 1d-2 permission, operation with evidence storage). After
+  stage-one deletion only the minimum derived evidence facts stay, not raw health-related
+  exception evidence (round 12; Slice 7).
+- **Audit metadata** (Q87 A): filtered projections per stream (below); read-only. In the
+  evidence-set phase the operational streams need break-glass; the review queue stays open
+  (round 12).
 
 **Writing fields** (*assumed*, Q65; field key always given):
 
@@ -731,37 +737,11 @@ new version). Assisted writes carry actor + `onBehalfOf`. The `undecided` cells 
 DPO/PL review of Q65 with the generated table.
 
 The 14 readings taken in PR 1d-1 were answered in
-[round 11](../decisions/2026-10-16-answers-round-11.md) (Q87 *assumed*) and are reflected
-above. Readings taken while applying round 11 (fail safe, D10; correct them if wrong):
-- **Field resources always carry the field key**, reads included; the category comes from the
-  field catalog.
-- **Document classes and categories:** TL 407 special category (the health line of section C);
-  Kug 200b, DSV and cancellation highly confidential, in the new category
-  `employment_contract` for the DSV documents; ASU proof `identifiers`; profiling-exception
-  evidence always `health` until evidence storage (Slice 4b) can tell medically related
-  evidence apart.
-- **Document retention classes:** `evidence_set` (TL 407, Kug 200b), `personnel_file` (DSV,
-  cancellation), `participation_record` (the rest); periods `unset` until Slice 7.
-- **Roles a document type doesn't name get `never`** (e.g. back office on ASU proof and
-  exception evidence, participants on ASU proof). Back office on qualification certificates:
-  `never` until Slice 8 brings the funding/settlement purpose.
-- **PL on exception evidence:** its metadata too only in assisted mode or through break-glass
-  ("only assisted/break-glass" read literally).
-- **Document writes:** roles that may open the type get `immutable` (signed) or
-  `via_domain_operation`; metadata-only roles `never`.
-- **Evidence set:** a read the active phase allows only through a mode (`needs_assisted_mode`,
-  `needs_break_glass`, e.g. the PL's ASU proof file) becomes `never`; org roles get `never`.
-- **Audit streams** (Slice 3 maps each event type to one): `case`, `profiling`, `dsv`,
-  `payroll`, `security`, `review`. PL `case`, `profiling`, `dsv`; assigned consultant `case`,
-  `profiling`, plus own actions in `case`/`profiling`/`dsv`/`payroll`; back office `dsv`,
-  `payroll`; regional operations manager `review` in its region. Back office doesn't see `case`
-  (TG entry/exit events), and the PL doesn't see `review` (clarification requests reach the PL
-  as a task, Slice 5). The reason-code filter applies when Slice 3 builds the projections. A
-  consultant's own actions still need the assignment. Audit `write` is `never`, not
-  `not_applicable`; projections don't depend on mode or phase.
-- **Knowledge check** only where the participant would otherwise be allowed: something they can
-  never see is `never`, not `needs_knowledge_check`.
-- **Reports and exports** become their own resource kind with the reporting slice.
+[round 11](../decisions/2026-10-16-answers-round-11.md) (Q87 *assumed*), the ten taken while
+applying it in [round 12](../decisions/2026-10-16-answers-round-12.md); both are reflected
+above. Round 12 corrected two: evidence-set access is the intersection of the active
+entitlement and break-glass (the PL's ASU proof file or exception evidence →
+`needs_break_glass`, not `never`), and the operational audit projections depend on the phase.
 
 **Permissions for transitions and operations** (Q60, Q80, PR 1d-2):
 - `mayPerformTransition(subject, edge, participation)`: PL all manual edges of their project;
@@ -771,10 +751,38 @@ above. Readings taken while applying round 11 (fail safe, D10; correct them if w
 - `mayPerformOperation`: PL assigns waves, requests and revokes exceptions, corrects end
   reasons; the regional operations manager of the project's region decides exceptions (never
   their own request) and reviews reconciliations and break-glass.
-- `append_evidence_correction` (round 11, Q87 C): requested by the PL or back office according
-  to the document type, with a BA/legal reference and reason code, approved by the regional
+- `append_evidence_correction` (round 11 Q87 C, round 12 Q88): requested by the PL or back
+  office from an explicit **correction-authority table** (not from who may open a document; it
+  grants no read access), for a document or a field target, approved by the regional
   operations manager (never their own request); the operation itself comes with evidence
-  storage.
+  storage (Slice 7: append-only, original kept and linked, reason code and documented source,
+  encrypted values, no values in audit events, never changes guards, eligibility, contractual
+  dates or payments on its own).
+
+Built in PR 1d-2 as `mayPerformTransition(actor, edge, target)` and
+`mayPerformOperation(actor, operation, target)` (`packages/domain/src/access/permissions.ts`,
+authority table in `access/corrections.ts`): `actor` is a `Subject` or `{ kind: "system" }`; the
+result is `{ ok: true }` or a denial (`actor_not_allowed`, `not_member`, `not_assigned`,
+`out_of_region`, `role_not_allowed`, `four_eyes`, `anonymous_registration_only`,
+`entry_required`), allowed when
+any role of the actor allows it (D6). The generated transitions table shows who for every edge,
+operation and correction target. Operations: the six lifecycle operations of 5.3,
+`reviewReconciliation`, `reviewBreakGlass`, `requestClarification` (Q80),
+`requestEvidenceCorrection` (with an `EvidenceCorrectionTarget`) and `approveEvidenceCorrection`;
+the last five get their failure codes with their slices (3, 5, 7). The self-registration
+creation edge has the kind `anonymous_self_registration` and is refused for every actor
+(Slice 4c's anonymous QR flow brings its own check).
+
+The eight readings taken in PR 1d-2 were answered in
+[round 12](../decisions/2026-10-16-answers-round-12.md) (the evidence-correction requester was
+corrected), the three taken while applying it in
+[round 13](../decisions/2026-10-16-answers-round-13.md); both are reflected above and in
+data-protection.md. Round 13 narrowed the field-correction authority to fields retained in the
+evidence set (PL: identity without the address, `profilingSessions`, operational dates; back
+office: `pensionInsuranceNumber`, `baCustomerNumber`; either: DSV/TG dates). A correction of a
+collection field names its entry (`entryId`; otherwise `entry_required`). In the evidence set
+the role gets the best view of any active-phase mode, only through break-glass, within its
+assignment, project and region; a consultant's own audit events need break-glass there too.
 
 ### 5.7 `packages/config`
 

@@ -7,45 +7,46 @@ this file differs from the code. The rules behind it are in
 ## Edges
 
 One row per actor and kind. Every other `(track, from, to)` is `no_edge`. No guard is
-overridable (Q71). "user" means staff; which roles may take an edge is the access matrix.
+overridable (Q71). "user" means staff; "Who" is `mayPerformTransition` (Q60, plan 5.6): a
+consultant/profiler only for assigned participations, the PL and back office in their projects.
 
-| Track | From | To | Actor | Kind | Guards | Project types |
-|---|---|---|---|---|---|---|
-| main | *(create)* | `imported` | user | manual | — | all |
-| main | *(create)* | `self_registered` | participant | manual | — | all |
-| main | `self_registered` | `imported` | user | manual | — | all |
-| main | `self_registered` | `rejected` | user | manual | — | all |
-| main | `self_registered` | `rejected` | system | system | — | all |
-| main | `imported` | `contacted` | user | manual | — | all |
-| main | `contacted` | `informed` | user | manual | — | all |
-| main | `contacted` | `unreachable` | user | manual | — | all |
-| main | `unreachable` | `contacted` | user | manual | `before_cutoff` | all |
-| main | `informed` | `active_in_tg` | system | scheduled_entry | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
-| main | `informed` | `active_in_tg` | system | scheduled_entry_catchup | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
-| main | `informed` | `active_in_tg` | user | reconciliation | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
-| main | `informed` | `ta_completed` | user | manual | `ta_completion` | ta_only |
-| main | `active_in_tg` | `exited` | user | manual | — | all |
-| main | `imported` | `withdrawn` | user | manual | `withdrawal_after_dsv_signed` | all |
-| main | `imported` | `withdrawn` | system | system | `withdrawal_after_dsv_signed` | all |
-| main | `contacted` | `withdrawn` | user | manual | `withdrawal_after_dsv_signed` | all |
-| main | `contacted` | `withdrawn` | system | system | `withdrawal_after_dsv_signed` | all |
-| main | `unreachable` | `withdrawn` | user | manual | `withdrawal_after_dsv_signed` | all |
-| main | `unreachable` | `withdrawn` | system | system | `withdrawal_after_dsv_signed` | all |
-| main | `informed` | `withdrawn` | user | manual | `withdrawal_after_dsv_signed` | all |
-| main | `informed` | `withdrawn` | system | system | `withdrawal_after_dsv_signed` | all |
-| profiling | `not_started` | `profiling_accepted` | user | manual | — | all |
-| profiling | `not_started` | `profiling_declined` | user | manual | — | all |
-| profiling | `profiling_accepted` | `profiling_in_progress` | user | manual | — | all |
-| profiling | `profiling_accepted` | `profiling_declined` | user | manual | — | all |
-| profiling | `profiling_in_progress` | `profiling_done` | user | manual | `tl407_signed` | all |
-| profiling | `profiling_in_progress` | `profiling_declined` | user | manual | — | all |
-| profiling | `profiling_declined` | `profiling_accepted` | user | manual | `before_cutoff` | all |
-| dsv | `not_offered` | `dsv_offered` | user | manual | `entry_wave_assigned`, `dsv_generated`, `offer_deadline_valid` | all |
-| dsv | `dsv_offered` | `dsv_signed` | user | manual | `dsv_scan_received` | all |
-| dsv | `dsv_offered` | `dsv_declined` | user | manual | — | all |
-| dsv | `dsv_offered` | `dsv_expired` | system | system | — | all |
-| dsv | `dsv_declined` | `dsv_offered` | user | manual | `before_cutoff`, `offer_deadline_valid` | all |
-| dsv | `dsv_expired` | `dsv_offered` | user | manual | `before_cutoff`, `offer_deadline_valid` | all |
+| Track | From | To | Actor | Kind | Who | Guards | Project types |
+|---|---|---|---|---|---|---|---|
+| main | *(create)* | `imported` | user | manual | PL | — | all |
+| main | *(create)* | `self_registered` | participant | anonymous_self_registration | nobody | — | all |
+| main | `self_registered` | `imported` | user | manual | PL | — | all |
+| main | `self_registered` | `rejected` | user | manual | PL | — | all |
+| main | `self_registered` | `rejected` | system | system | system | — | all |
+| main | `imported` | `contacted` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| main | `contacted` | `informed` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| main | `contacted` | `unreachable` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| main | `unreachable` | `contacted` | user | manual | Consultant/profiler (assigned), PL | `before_cutoff` | all |
+| main | `informed` | `active_in_tg` | system | scheduled_entry | system | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
+| main | `informed` | `active_in_tg` | system | scheduled_entry_catchup | system | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
+| main | `informed` | `active_in_tg` | user | reconciliation | PL | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
+| main | `informed` | `ta_completed` | user | manual | PL | `ta_completion` | ta_only |
+| main | `active_in_tg` | `exited` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| main | `imported` | `withdrawn` | user | manual | PL | `withdrawal_after_dsv_signed` | all |
+| main | `imported` | `withdrawn` | system | system | system | `withdrawal_after_dsv_signed` | all |
+| main | `contacted` | `withdrawn` | user | manual | PL | `withdrawal_after_dsv_signed` | all |
+| main | `contacted` | `withdrawn` | system | system | system | `withdrawal_after_dsv_signed` | all |
+| main | `unreachable` | `withdrawn` | user | manual | PL | `withdrawal_after_dsv_signed` | all |
+| main | `unreachable` | `withdrawn` | system | system | system | `withdrawal_after_dsv_signed` | all |
+| main | `informed` | `withdrawn` | user | manual | PL | `withdrawal_after_dsv_signed` | all |
+| main | `informed` | `withdrawn` | system | system | system | `withdrawal_after_dsv_signed` | all |
+| profiling | `not_started` | `profiling_accepted` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| profiling | `not_started` | `profiling_declined` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| profiling | `profiling_accepted` | `profiling_in_progress` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| profiling | `profiling_accepted` | `profiling_declined` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| profiling | `profiling_in_progress` | `profiling_done` | user | manual | Consultant/profiler (assigned), PL | `tl407_signed` | all |
+| profiling | `profiling_in_progress` | `profiling_declined` | user | manual | Consultant/profiler (assigned), PL | — | all |
+| profiling | `profiling_declined` | `profiling_accepted` | user | manual | Consultant/profiler (assigned), PL | `before_cutoff` | all |
+| dsv | `not_offered` | `dsv_offered` | user | manual | PL, Back office | `entry_wave_assigned`, `dsv_generated`, `offer_deadline_valid` | all |
+| dsv | `dsv_offered` | `dsv_signed` | user | manual | PL, Back office | `dsv_scan_received` | all |
+| dsv | `dsv_offered` | `dsv_declined` | user | manual | PL, Back office | — | all |
+| dsv | `dsv_offered` | `dsv_expired` | system | system | system | — | all |
+| dsv | `dsv_declined` | `dsv_offered` | user | manual | PL, Back office | `before_cutoff`, `offer_deadline_valid` | all |
+| dsv | `dsv_expired` | `dsv_offered` | user | manual | PL, Back office | `before_cutoff`, `offer_deadline_valid` | all |
 
 ## Guards
 
@@ -66,13 +67,53 @@ overridable (Q71). "user" means staff; which roles may take an edge is the acces
 
 ## Operations without a status change
 
-The failure codes in the order they are checked.
+"Who" is `mayPerformOperation` (Q60, Q80, round 10 §6, rounds 11–12); the regional operations
+manager only in its own region, and never on their own request or action (four eyes:
+`decideProfilingException`, `reviewReconciliation`, `reviewBreakGlass`,
+`approveEvidenceCorrection`). The failure codes of the lifecycle operations are listed in the
+order they are checked; the review, clarification and evidence-correction operations come with
+their slices (3, 5, 7).
 
-| Operation | Failure codes |
-|---|---|
-| `assignEntryWave` | `actor_not_allowed`, `not_ta_tg`, `status_not_open`, `dsv_already_offered`, `wave_of_other_project` |
-| `requestProfilingException` | `actor_not_allowed`, `not_ta_tg`, `not_informed`, `profiling_closed`, `no_future_start`, `exception_open`, `reason_invalid`, `evidence_missing`, `evidence_unchanged`, `ba_confirmation_missing` |
-| `decideProfilingException` | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed`, `no_future_start` |
-| `revokeProfilingException` | `actor_not_allowed`, `not_revocable`, `no_longer_applicable`, `not_informed` |
-| `supersedeStaleException` | `not_pending`, `still_applicable` |
-| `correctEndReason` | `actor_not_allowed`, `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged` |
+| Operation | Who | Failure codes |
+|---|---|---|
+| `assignEntryWave` | PL | `actor_not_allowed`, `not_ta_tg`, `status_not_open`, `dsv_already_offered`, `wave_of_other_project` |
+| `requestProfilingException` | PL | `actor_not_allowed`, `not_ta_tg`, `not_informed`, `profiling_closed`, `no_future_start`, `exception_open`, `reason_invalid`, `evidence_missing`, `evidence_unchanged`, `ba_confirmation_missing` |
+| `decideProfilingException` | Regional operations manager | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed`, `no_future_start` |
+| `revokeProfilingException` | PL | `actor_not_allowed`, `not_revocable`, `no_longer_applicable`, `not_informed` |
+| `supersedeStaleException` | system | `not_pending`, `still_applicable` |
+| `correctEndReason` | PL | `actor_not_allowed`, `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged` |
+| `reviewReconciliation` | Regional operations manager | — |
+| `reviewBreakGlass` | Regional operations manager | — |
+| `requestClarification` | Regional operations manager | — |
+| `requestEvidenceCorrection` | PL, Back office | — |
+| `approveEvidenceCorrection` | Regional operations manager | — |
+
+`requestEvidenceCorrection` (`append_evidence_correction`) by target, from the
+correction-authority table (round 12, Q88), not from who may open a document; requesting grants
+no read access. Every other field can't be corrected this way: statuses change only through the
+status functions, and the rest isn't evidence-set data.
+
+| Target | Key | Who |
+|---|---|---|
+| document | `tl407_signed_scan` | PL |
+| document | `kug200b_signed_scan` | PL |
+| document | `dsv_signed_scan` | PL, Back office |
+| document | `dsv_cancellation` | PL, Back office |
+| document | `asu_proof` | PL |
+| document | `profiling_exception_evidence` | PL |
+| document | `participant_upload` | PL |
+| document | `qualification_certificate` | PL |
+| field | `tgStart` | PL, Back office |
+| field | `tgEnd` | PL, Back office |
+| field | `dsvSignedOn` | PL, Back office |
+| field | `tgEntryDate` | PL, Back office |
+| field | `exitDate` | PL, Back office |
+| field | `withdrawnOn` | PL |
+| field | `profilingDoneOn` | PL |
+| field | `firstName` | PL |
+| field | `lastName` | PL |
+| field | `personnelNumber` | PL |
+| field | `birthDate` | PL |
+| field | `profilingSessions` | PL |
+| field | `pensionInsuranceNumber` | Back office |
+| field | `baCustomerNumber` | Back office |

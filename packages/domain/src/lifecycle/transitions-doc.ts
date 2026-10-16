@@ -1,9 +1,12 @@
+import { OperationKind } from "../access/permissions";
+import { evidenceCorrectionWho, operationWho, transitionWho } from "../access/who";
 import { edges, type Edge } from "./edges";
 import { guardIds } from "./guards";
 import { operationFailures } from "./operations";
 
 const code = (value: string) => `\`${value}\``;
 const list = (values: readonly string[]) => (values.length ? values.map(code).join(", ") : "—");
+const who = (names: readonly string[]) => (names.length ? names.join(", ") : "nobody");
 const from = (e: Edge) => (e.from ? code(e.from) : "*(create)*");
 const arrow = (e: Edge) => `${e.track} ${from(e)} → ${code(e.to)}`;
 const table = (head: string, rows: string[]) => {
@@ -20,6 +23,7 @@ export function renderTransitionsDoc(): string {
       code(e.to),
       e.actor,
       e.kind,
+      who(transitionWho(e)),
       list(e.guards),
       e.projectTypes?.join(", ") ?? "all",
     ].join(" | "),
@@ -28,9 +32,19 @@ export function renderTransitionsDoc(): string {
     const using = edges.filter((e) => e.guards.includes(guard)).map(arrow);
     return `${code(guard)} | ${[...new Set(using)].join("; ")}`;
   });
-  const operationRows = Object.entries(operationFailures).map(
-    ([operation, failures]) => `${code(operation)} | ${list(failures)}`,
-  );
+  const failures: Partial<Record<string, readonly string[]>> = operationFailures;
+  const corrections = evidenceCorrectionWho();
+  const byType = [...new Set(corrections.flatMap(([, names]) => names))];
+  const operationRows = OperationKind.options.map((kind) => {
+    const names = kind === "requestEvidenceCorrection" ? byType : operationWho(kind);
+    return `${code(kind)} | ${who(names)} | ${list(failures[kind] ?? [])}`;
+  });
+  const correctionRows = corrections
+    .filter(([, names]) => names.length)
+    .map(([target, names]) => {
+      const [kind, key] = target.split(" ") as [string, string];
+      return `${kind} | ${code(key)} | ${who(names)}`;
+    });
 
   return `# Lifecycle transitions (generated)
 
@@ -41,9 +55,10 @@ this file differs from the code. The rules behind it are in
 ## Edges
 
 One row per actor and kind. Every other \`(track, from, to)\` is \`no_edge\`. No guard is
-overridable (Q71). "user" means staff; which roles may take an edge is the access matrix.
+overridable (Q71). "user" means staff; "Who" is \`mayPerformTransition\` (Q60, plan 5.6): a
+consultant/profiler only for assigned participations, the PL and back office in their projects.
 
-${table("Track | From | To | Actor | Kind | Guards | Project types", edgeRows)}
+${table("Track | From | To | Actor | Kind | Who | Guards | Project types", edgeRows)}
 
 ## Guards
 
@@ -51,8 +66,20 @@ ${table("Guard | Edges", guardRows)}
 
 ## Operations without a status change
 
-The failure codes in the order they are checked.
+"Who" is \`mayPerformOperation\` (Q60, Q80, round 10 §6, rounds 11–12); the regional operations
+manager only in its own region, and never on their own request or action (four eyes:
+\`decideProfilingException\`, \`reviewReconciliation\`, \`reviewBreakGlass\`,
+\`approveEvidenceCorrection\`). The failure codes of the lifecycle operations are listed in the
+order they are checked; the review, clarification and evidence-correction operations come with
+their slices (3, 5, 7).
 
-${table("Operation | Failure codes", operationRows)}
+${table("Operation | Who | Failure codes", operationRows)}
+
+\`requestEvidenceCorrection\` (\`append_evidence_correction\`) by target, from the
+correction-authority table (round 12, Q88), not from who may open a document; requesting grants
+no read access. Every other field can't be corrected this way: statuses change only through the
+status functions, and the rest isn't evidence-set data.
+
+${table("Target | Key | Who", correctionRows)}
 `;
 }

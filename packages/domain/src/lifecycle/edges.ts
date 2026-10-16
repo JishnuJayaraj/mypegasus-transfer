@@ -9,8 +9,11 @@ import type {
 } from "./enums";
 import type { GuardId } from "./guards";
 
-/** How a transition happens: the TG entry kinds, or a manual or system step. */
-export type EdgeKind = TgEntryKind | "manual" | "system";
+/**
+ * How a transition happens: the TG entry kinds, a manual or system step, or the anonymous,
+ * project-QR-controlled self-registration of Slice 4c (never through the transition service).
+ */
+export type EdgeKind = TgEntryKind | "manual" | "system" | "anonymous_self_registration";
 
 /**
  * One allowed transition for one actor type (plan 5.3). `from: null` is creation. Everything
@@ -52,7 +55,7 @@ const reOffer: GuardId[] = ["before_cutoff", "offer_deadline_valid"];
 export const edges: readonly Edge[] = [
   ...rows("main", [
     [null, "imported", "user", "manual"],
-    [null, "self_registered", "participant", "manual"],
+    [null, "self_registered", "participant", "anonymous_self_registration"],
     ["self_registered", "imported", "user", "manual"],
     ["self_registered", "rejected", "user", "manual"],
     ["self_registered", "rejected", "system", "system"],

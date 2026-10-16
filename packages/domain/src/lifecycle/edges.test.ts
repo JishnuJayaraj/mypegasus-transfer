@@ -7,7 +7,7 @@ import { canTransition, type AnyStatus } from "./transition";
 // Plan 5.3, "Edges": track from to actor kind [guards] (project type). Restated by hand.
 const expected = `
 main - imported user manual
-main - self_registered participant manual
+main - self_registered participant anonymous_self_registration
 main self_registered imported user manual
 main self_registered rejected user manual
 main self_registered rejected system system
