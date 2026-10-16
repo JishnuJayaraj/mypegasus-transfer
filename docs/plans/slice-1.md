@@ -362,6 +362,20 @@ Readings taken in PR 1b-1 (fail safe, D10; correct them if wrong):
 | **Revoke profiling exception** | PL | `requested` or `approved`, only before TG entry; after entry it is closed by `profiling_done` |
 | **Correct end reason** (Q72) | PL | on `withdrawn`/`exited`; same phase; a system-derived previous reason moves to the secondary list; the terminal status is not reopened |
 
+Readings taken in PR 1b-2 (fail safe, D10; correct them if wrong):
+- A wave is assigned only while `imported`, `contacted`, `unreachable` or `informed`: not to an
+  unmatched self-registration, nor after a terminal status.
+- The profiling exception is a `ta_tg` operation: it only serves the TG entry guard.
+- A new request may follow a rejected or revoked one; it needs its own approval.
+- Approval and rejection need the main status `informed` and profiling still open; a request
+  that went stale (profiling done or declined meanwhile) is revoked by the PL.
+- An approval is the fact `profilingExceptionApproved`, valid from the decision's Berlin date and
+  recorded at its instant (`approvedExceptionFact`).
+- An end-reason correction to the same reason is refused (`reason_unchanged`). A previous reason
+  the PL chose stays in the audit history only; just a system-derived one joins the secondary list.
+- Role checks (PL, `regional_operations_manager` of the region) are the access matrix (PR 1d);
+  the operations check the actor type and the four-eyes rule.
+
 #### System planner (`planSystemTransitions`, PR 1c)
 
 A pure function: `(participation, wave, project, facts, window, config) → { changes[], flags[] }`

@@ -14,6 +14,26 @@ export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
 export { guardIds, type DatedFact, type GuardFacts, type GuardId } from "./lifecycle/guards";
 export {
+  approvedExceptionFact,
+  assignEntryWave,
+  correctEndReason,
+  decideProfilingException,
+  noProfilingException,
+  operationFailures,
+  requestProfilingException,
+  revokeProfilingException,
+  type EndReasonRecord,
+  type ExceptionRequest,
+  type OperationContext,
+  type OperationResult,
+  type ProfilingException,
+} from "./lifecycle/operations";
+export {
+  deriveOverallStatus,
+  isConsistentState,
+  type LifecycleState,
+} from "./lifecycle/overall-status";
+export {
   canTransition,
   type AnyStatus,
   type TransitionCheck,

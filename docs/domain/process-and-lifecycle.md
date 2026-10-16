@@ -91,7 +91,9 @@ with profiling** (round 4). So a participation has:
   `not_started` / `not_offered`.
 - Each track has its own transition function in `packages/domain`
   (`canTransition(track, from, to, context)`), and every change of any track goes through the
-  same audited status function (see Rules).
+  same audited status function (see Rules). Every edge with its actors and guards, and the
+  operations without a status change, are listed in the generated
+  [lifecycle transitions table](generated/lifecycle-transitions.md).
 - The UI may show **one derived overall status** (e.g. "DSV unterschrieben, Profiling offen"),
   computed from the main status and both tracks. It is never stored.
 

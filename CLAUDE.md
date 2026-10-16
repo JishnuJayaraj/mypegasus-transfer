@@ -165,13 +165,14 @@ pnpm test:e2e         # playwright against the built app (pnpm build first) on t
 pnpm lint             # oxlint (incl. the portal boundary rule) + oxfmt --check + tsconfig guard
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
-pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, api drift
+pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, generated drift
 pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
 pnpm db:generate      # drizzle-kit: SQL migration from the schema
 pnpm db:migrate
 pnpm db:seed          # synthetic data only
 pnpm db:reset         # dev only: empty schema, migrate, seed
 pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
+pnpm generate         # all generators: api:generate and docs/domain/generated (committed)
 docker build -t transfer .          # the production image (CI builds and smoke-tests it)
 scripts/image-smoke.sh transfer     # migration + /api/v1/health/ready, / and /portal/
 ```
