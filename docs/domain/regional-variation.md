@@ -1,7 +1,7 @@
 # Regional variation (Agentur-specific requirements)
 
 > Status: updated 2026-10-15 from the decisions log; the configuration model on 2026-10-16
-> (Slice 1, PR 1f-1). Items marked *(provisional, Qnn)* rest on
+> (Slice 1, PRs 1f-1 and 1f-2). Items marked *(provisional, Qnn)* rest on
 > answers that are not yet confirmed.
 
 BA requirements are mostly the same everywhere. Each Agentur für Arbeit has small differences,
@@ -89,8 +89,26 @@ Participation
   columns, never `jsonb`), `x-retentionClass` (a participant retention class) and `x-label`.
   Keys start with `custom.`. Everything else is rejected before compiling.
 - `parseLayer` validates one layer: its shape, the profile, and its rules against the field
-  catalog plus the custom fields it declares or inherits. Merging the layers, provenance and
-  blockers are the resolver's (Slice 1, PR 1f-2).
+  catalog plus the custom fields it declares or inherits.
+- **The resolver** (`packages/config/src/resolve.ts`) merges the layers:
+  `resolveForParticipation` (participant steps from the placement Agentur, project steps from
+  the KuG-Agentur) and `resolveForProject` (project steps only). Both return the resolved
+  config, the **provenance** of every setting, field, rule, relaxation and help text (`base`,
+  `template:<id>@<version>`, `override`, `override:agentur:<key>` with source, confirmer and
+  date), the **blockers** and a **warning** for each blocker. Settings merge per key (later
+  layer wins), rules by id (never redefined), help texts per language and key. Resolved rules
+  keep their `basis` and `projectTypes`. An invalid layer is an error.
+- **Blockers** (Q76): `project_activation_blocked` without a KuG-Agentur template (for every
+  project type until Q90 is answered; a temporary setting doesn't lift it);
+  `agentur_submission_blocked` per step when a submission setting is missing: `agentur_submission`
+  needs `submissionChannel`, `originalRequired`, `leadTimeDays` and
+  `rejectsOutdatedFormVersions` (Q92), `asu_registration` the Kug 200b `batchSubmissionChannel`
+  in `ta_tg` projects (Q91). The ASU `defaultChannel` never blocks (round 14). Project
+  activation additionally needs, for `ta_tg`, an entry wave with a `latestEntryDate` (Q77,
+  `projectActivationBlockers` in the domain).
+- **Samples** (D8): `packages/config/templates/beispielstadt-nord/1.json` and `2.json`,
+  `beispielstadt-sued/1.json`: fictional Agenturen with `sample: true`, never a real Agentur's
+  rules. `@transfer/config/load` reads a pinned version and checks its path.
 - Reminder rules are left to Slice 5; deadlines are entry-wave data (above).
 
 - The **Step enum** in `packages/domain` is the single vocabulary for steps, used by both the

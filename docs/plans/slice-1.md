@@ -205,6 +205,7 @@ packages/
     schema/regional-template.schema.json   generated from the Zod model, committed
     templates/beispielstadt-nord/1.json    sample (D8)
     templates/beispielstadt-sued/1.json    sample (D8)
+    templates/beispielstadt-nord/2.json    sample version 2 (AC-35)
     src/model.ts · field-schema.ts · validate.ts · json-schema.ts · resolve.ts · load.ts
   adapters/                          NEW @transfer/adapters: src/clock/ (D9)
   db/                                + waves, participation, audit, edges, job_run, functions, grants
@@ -931,6 +932,67 @@ resolveForProject({ base, templatesByAgentur, override, kugAgenturKey })
 - A domain helper `projectActivationBlockers(project, waves, resolution)` also returns
   `no_entry_wave_with_latest_entry_date` for `ta_tg` projects (Q77); activation itself is
   Slice 2.
+
+Built in PR 1f-2 (`packages/config`, 100 % covered): `resolve.ts` with `resolveForProject` and
+`resolveForParticipation` (inputs as above **plus the required `projectType`**, see reading 2),
+returning `{ config, provenance, blockers, warnings }`; invalid layers throw a `ConfigError`
+(layer + issues: codes, paths, keys, never values; new codes `wrong_layer_kind`,
+`template_key_mismatch`, `rule_redefined`, `relaxation_locked`). `load.ts` (Node only, exported
+as `@transfer/config/load`): `loadTemplate(agenturKey, version)` and `loadBaseDefaults()`.
+`templateFieldValidators(template)` in `field-schema.ts` caches the compiled custom-field
+validators per (template id, version). `projectActivationBlockers` in
+`packages/domain/src/lifecycle/activation.ts`. Samples (D8, fictional, `sample: true`):
+`templates/beispielstadt-nord/1.json`, `2.json` (lead time 14 instead of 10, batch channel
+`upload`, one more `operational_default` rule; proves AC-35) and
+`templates/beispielstadt-sued/1.json`.
+
+Readings taken in PR 1f-2 (fail safe, D10; correct them if wrong):
+1. **Two levels in one participation resolution.** `resolveForParticipation` takes the
+   participant steps from base → placement template → override and `project_checklist` from
+   base → KuG template → override. A participation's settings, custom fields and help texts are
+   the participant level's. `resolveForProject` returns only the project steps and no regional
+   settings: every regional setting belongs to a participant step (`asu_registration`,
+   `agentur_submission`).
+2. **Project type:** the resolver takes the `projectType` because blockers depend on it (Q91),
+   but it never filters rules: they keep `basis` and `projectTypes` (round 14).
+3. **Rule ids are unique across every step of every layer** of a chain, as within one layer;
+   only the level's steps enter the config.
+4. **Relaxations** apply to the rules of the layers below, not to the override's own additions;
+   naming a rule twice is invalid. A relaxation of a rule the chain doesn't contain (another
+   Agentur's template rule) relaxes nothing there. A relaxed rule leaves `config.rules` and is
+   listed in `config.relaxed` with its step, reason code and approval (provenance `relax.<id>`).
+5. **An override applies to every Agentur of the project,** so it is validated against each
+   chain: a rule using a custom field that only one Agentur's template declares makes the
+   resolution fail (`unknown_field`) wherever that template isn't resolved, instead of being
+   skipped or never satisfiable. Slice 2 should check stored overrides against every
+   snapshotted template.
+6. **Invalid configuration is an error, not a blocker:** templates and overrides are validated
+   when stored (Slice 2); a layer that fails at resolution throws.
+7. **Settings merge per key**, the later layer wins: template, then the Agentur-scoped
+   temporary setting, which therefore also wins over its Agentur's template (Q93).
+8. **The KuG-Agentur blocker** is lifted only by a template, never by a temporary setting (Q76
+   names no temporary path), and applies to every project type (Q90) and to a project without
+   a KuG-Agentur key.
+9. **Submission blockers per step:** `agentur_submission` needs all four settings (Q92);
+   `asu_registration` needs the Kug 200b `batchSubmissionChannel`, only in `ta_tg` projects
+   (Q91). An unset ASU `defaultChannel` never blocks (round 14). A participation without a
+   placement Agentur key gets both blockers with `agenturKey: null`; no temporary setting can
+   apply to it.
+10. **Warnings:** one per blocker, same shape, for the PL dashboard; the blocking PL task itself
+    comes with project setup (Slice 2) and the dashboard (Slice 5).
+11. **`projectActivationBlockers`:** a `ta_tg` project needs at least **one** wave with a
+    `latestEntryDate` (unlike `projectFinalEntryDate`, which needs all); an Agentur submission
+    blocker doesn't block activation.
+12. **Provenance keys** are `nationwide.<path>`, `settings.<step>.<key>`, `fields.<key>`,
+    `rules.<step>.<id>`, `relax.<id>`, `helpTexts.<lang>.<key>`; what the override adds itself
+    (rules, fields, help texts, relaxations) is `override`, its temporary settings
+    `override:agentur:<key>` with source, confirmer and date.
+13. **Loading:** the reference (Agentur key format, positive integer version) is checked before
+    a path is built; the file's kind, `agenturKey` (= `id`) and `version` must match its path. The
+    templates directory is resolved relative to the package source; putting it into the
+    production image comes with the first runtime caller (Slice 2). The validator cache relies
+    on a version's content never changing; override fields aren't cached (overrides have no
+    version until Slice 2 snapshots them).
 
 #### Base defaults (`packages/domain/config/base-defaults.json`)
 

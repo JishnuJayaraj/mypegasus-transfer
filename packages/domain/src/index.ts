@@ -54,6 +54,7 @@ export {
   type TransitionContext,
   type TransitionFailure,
 } from "./lifecycle/transition";
+export { projectActivationBlockers, type ProjectActivationBlocker } from "./lifecycle/activation";
 export {
   effectiveOfferDeadline,
   effectiveTgEnd,

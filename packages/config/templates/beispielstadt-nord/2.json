@@ -1,0 +1,61 @@
+{
+  "$schema": "../../schema/regional-template.schema.json",
+  "schemaVersion": 1,
+  "kind": "regional_template",
+  "id": "beispielstadt-nord",
+  "version": 2,
+  "agenturKey": "beispielstadt-nord",
+  "sample": true,
+  "label": {
+    "de": "Agentur für Arbeit Beispielstadt Nord (Beispiel)",
+    "en": "Employment agency Beispielstadt Nord (sample)"
+  },
+  "settings": {
+    "asu_registration": {
+      "defaultChannel": "kug_200b",
+      "batchSubmissionChannel": "upload"
+    },
+    "agentur_submission": {
+      "submissionChannel": "upload",
+      "originalRequired": false,
+      "leadTimeDays": 14,
+      "rejectsOutdatedFormVersions": true
+    }
+  },
+  "fields": {
+    "custom.beispiel_zusatznachweis_nr": {
+      "type": "string",
+      "maxLength": 40,
+      "x-dataClass": "confidential",
+      "x-retentionClass": "participation_record",
+      "x-label": {
+        "de": "Zusatznachweis-Nr. (Beispiel)",
+        "en": "Additional certificate no. (sample)"
+      }
+    }
+  },
+  "rules": {
+    "data_collection": [
+      {
+        "id": "beispielstadt-nord-zusatznachweis",
+        "kind": "required",
+        "field": "custom.beispiel_zusatznachweis_nr",
+        "basis": "operational_default"
+      },
+      {
+        "id": "beispielstadt-nord-mobile",
+        "kind": "required",
+        "field": "mobile",
+        "basis": "operational_default"
+      }
+    ]
+  },
+  "helpTexts": {
+    "de": {
+      "agentur_submission.intro": "Beispiel: Diese fiktive Agentur nimmt Unterlagen per Upload an."
+    },
+    "en": {
+      "agentur_submission.intro": "Sample: this fictional agency accepts documents by upload."
+    }
+  }
+}

@@ -96,4 +96,33 @@ Two details for PR 1f (`field-schema.ts`):
   (spike S1): only `confidential` or `internal` data, a participant retention class and a label;
   everything else is rejected before compiling.
 - The resolver, its provenance and blockers, pinned-version loading and the sample templates
-  follow in PR 1f-2 and amend this ADR then.
+  follow in PR 1f-2 (amendment below).
+
+## Amendment 2026-10-16: the resolver (Slice 1, PR 1f-2)
+
+- **Two levels** *(provisional, Q15)*: `resolveForParticipation` resolves participant steps
+  against the placement Agentur's template and project steps against the KuG-Agentur's;
+  `resolveForProject` resolves only the project steps. Each level is base defaults → that
+  Agentur's pinned template → project override, every layer validated by `parseLayer` with the
+  custom fields of the layers below.
+- **Merge rules:** settings per key, the later layer wins; an override's Agentur-scoped
+  temporary settings apply only when resolving for that Agentur. Rules are merged by id and
+  never redefined; templates only add; an override adds rules and relaxes only
+  `operational_default` rules (Q75). Custom fields are never redefined. Help texts: the later
+  layer wins per language and key. Resolved rules keep `basis` and `projectTypes` (Q89).
+  An invalid layer is an error, not a blocker.
+- **Provenance** for every setting, field, rule, relaxation and help text: `base`,
+  `template:<id>@<version>`, `override`, or `override:agentur:<key>` with source, confirmer and
+  date.
+- **Blockers and warnings** (Q76): no KuG-Agentur template → `project_activation_blocked` (every
+  project type until Q90 is answered); an Agentur submission setting supplied neither by the
+  template nor by an Agentur-scoped temporary setting → `agentur_submission_blocked` for that
+  step (`agentur_submission`: all four settings, Q92; `asu_registration`: the Kug 200b batch
+  channel in `ta_tg` projects, Q91), while every other step resolves. Each blocker also gives a
+  warning. `projectActivationBlockers` in the domain adds `no_entry_wave_with_latest_entry_date`
+  for `ta_tg` projects (Q77).
+- **Pinned versions** *(provisional, Q36)*: the resolver takes the project's template objects;
+  `@transfer/config/load` (Node only) reads `templates/<agenturKey>/<version>.json` and checks
+  that the file is the template its path names. Compiled custom-field validators are cached per
+  (template id, version). Two fictional samples (D8): `beispielstadt-nord` (versions 1 and 2)
+  and `beispielstadt-sued`.

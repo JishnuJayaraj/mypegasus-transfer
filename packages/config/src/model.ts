@@ -40,6 +40,7 @@ export const NationwideSettings = z.strictObject({
   cutoffWarningDays: positive, // Q78
   cutoffFinalReminderDays: positive,
 });
+export type NationwideSettings = z.infer<typeof NationwideSettings>;
 
 export const AgenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 
@@ -50,6 +51,7 @@ export const TemporaryAgenturSetting = z.strictObject({
   confirmedBy: z.uuid(),
   confirmedOn: isoDate,
 });
+export type TemporaryAgenturSetting = z.infer<typeof TemporaryAgenturSetting>;
 
 const code = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
 
@@ -60,6 +62,7 @@ export const RuleRelaxation = z.strictObject({
   approvedBy: z.uuid(),
   approvedOn: isoDate,
 });
+export type RuleRelaxation = z.infer<typeof RuleRelaxation>;
 
 const helpTextKey = z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
 const helpTexts = z.record(helpTextKey, z.string().min(1).max(2000));
@@ -78,6 +81,7 @@ export const BaseDefaults = z.strictObject({
   version: positive,
   nationwide: NationwideSettings,
 });
+export type BaseDefaults = z.infer<typeof BaseDefaults>;
 
 export const RegionalTemplate = z.strictObject({
   ...common,
@@ -91,6 +95,7 @@ export const RegionalTemplate = z.strictObject({
   settings: RegionalSettings.optional(),
   fields,
 });
+export type RegionalTemplate = z.infer<typeof RegionalTemplate>;
 
 export const ProjectOverride = z.strictObject({
   ...common,
@@ -99,6 +104,7 @@ export const ProjectOverride = z.strictObject({
   fields,
   relax: z.array(RuleRelaxation).optional(),
 });
+export type ProjectOverride = z.infer<typeof ProjectOverride>;
 
 /** Base defaults, regional templates and project overrides are layers of one schema. */
 export const ConfigLayer = z

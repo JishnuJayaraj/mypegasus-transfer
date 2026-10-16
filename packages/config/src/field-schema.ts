@@ -87,3 +87,28 @@ function isPortablePattern(pattern: string): boolean {
 export function compileFieldSchema(schema: FieldSchema): z.ZodType {
   return z.fromJSONSchema(schema);
 }
+
+const validatorCache = new Map<string, ReadonlyMap<string, z.ZodType>>();
+
+/**
+ * The compiled custom-field validators of a pinned template, cached per (template id,
+ * version): a version's content never changes (Q36).
+ */
+export function templateFieldValidators(template: {
+  id: string;
+  version: number;
+  fields?: Record<string, FieldSchema>;
+}): ReadonlyMap<string, z.ZodType> {
+  const key = `${template.id}@${template.version}`;
+  let validators = validatorCache.get(key);
+  if (!validators) {
+    validators = new Map(
+      Object.entries(template.fields ?? {}).map(([field, schema]) => [
+        field,
+        compileFieldSchema(schema),
+      ]),
+    );
+    validatorCache.set(key, validators);
+  }
+  return validators;
+}

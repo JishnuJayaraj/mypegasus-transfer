@@ -1,0 +1,40 @@
+{
+  "$schema": "../../schema/regional-template.schema.json",
+  "schemaVersion": 1,
+  "kind": "regional_template",
+  "id": "beispielstadt-sued",
+  "version": 1,
+  "agenturKey": "beispielstadt-sued",
+  "sample": true,
+  "label": {
+    "de": "Agentur für Arbeit Beispielstadt Süd (Beispiel)",
+    "en": "Employment agency Beispielstadt Süd (sample)"
+  },
+  "settings": {
+    "asu_registration": {
+      "defaultChannel": "online_self",
+      "batchSubmissionChannel": "paper_post"
+    },
+    "agentur_submission": {
+      "submissionChannel": "paper_original",
+      "originalRequired": true,
+      "leadTimeDays": 7,
+      "rejectsOutdatedFormVersions": false
+    }
+  },
+  "rules": {
+    "data_collection": [
+      {
+        "id": "beispielstadt-sued-private-email",
+        "kind": "required",
+        "field": "privateEmail",
+        "basis": "operational_default"
+      }
+    ]
+  },
+  "helpTexts": {
+    "de": {
+      "agentur_submission.intro": "Beispiel: Diese fiktive Agentur verlangt das Papieroriginal."
+    }
+  }
+}
