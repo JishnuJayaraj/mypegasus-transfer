@@ -174,9 +174,11 @@ stateDiagram-v2
 - **Profiling exception requests** (`ta_tg` only; Q80, Q81, round 10): the PL requests one while
   `informed`, profiling still open and a future TG start applies, with a reason code and
   evidence. A different user (regional operations manager) approves or rejects it under the
-  same conditions; only an approval counts, from its date. Each request is its own record: a
-  rejected, revoked or superseded request is never reopened; a new request needs changed
-  evidence and its own approval. A pending request is **superseded** automatically when
+  same conditions; only an approval counts, from its date. Each request is its own record
+  (round 16): a rejected, revoked or superseded request is never reopened or overwritten; its
+  reason and evidence (one immutable evidence record, by id and canonical fingerprint) never
+  change. A new request needs changed evidence (a different fingerprint, not just another
+  record) and its own approval. A pending request is **superseded** automatically when
   profiling finishes, the participation closes or the project becomes `ta_only`; the PL
   **revokes** one that still applies. A passed start leaves it pending for a new start date,
   but it can never authorise entry for the missed date. All closures are audited.

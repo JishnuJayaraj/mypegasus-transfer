@@ -12,6 +12,12 @@ export const seedStaffUserIds = {
   backOffice: "00000000-0000-4000-8000-000000000005",
 } as const;
 
+export const seedProjectIds = {
+  werkNord: "00000000-0000-4000-9000-000000000001",
+  lagerSued: "00000000-0000-4000-9000-000000000002",
+  verwaltung: "00000000-0000-4000-9000-000000000003",
+} as const;
+
 type NewStaffUser = typeof staffUser.$inferInsert;
 type NewProject = typeof project.$inferInsert;
 
@@ -28,7 +34,7 @@ const staffUsers: NewStaffUser[] = (
 const projects: NewProject[] = (
   [
     {
-      id: "00000000-0000-4000-9000-000000000001",
+      id: seedProjectIds.werkNord,
       name: "Restrukturierung Werk Nord",
       customerName: "Beispiel Maschinenbau GmbH",
       type: "ta_tg",
@@ -37,13 +43,13 @@ const projects: NewProject[] = (
       defaultTgEnd: "2028-02-29",
     },
     {
-      id: "00000000-0000-4000-9000-000000000002",
+      id: seedProjectIds.lagerSued,
       name: "Standortschließung Lager Süd",
       customerName: "Musterfirma Logistik AG",
       type: "ta_tg",
     },
     {
-      id: "00000000-0000-4000-9000-000000000003",
+      id: seedProjectIds.verwaltung,
       name: "Transferagentur Verwaltung",
       customerName: "Fiktiv Versicherungen KG",
       type: "ta_only",

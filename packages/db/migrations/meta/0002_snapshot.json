@@ -1,0 +1,1161 @@
+{
+  "id": "f654a0ba-0a31-4f27-bf65-b2f9ed37aa06",
+  "prevId": "816b58eb-3b3d-4c00-8624-44060d2b28a0",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.audit_event": {
+      "name": "audit_event",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "seq": {
+          "name": "seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "audit_event_seq_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "participation_id": {
+          "name": "participation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "audit_event_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_type": {
+          "name": "actor_type",
+          "type": "actor_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actor_staff_user_id": {
+          "name": "actor_staff_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actor_participation_id": {
+          "name": "actor_participation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "system_job": {
+          "name": "system_job",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "on_behalf_of_participation_id": {
+          "name": "on_behalf_of_participation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "field": {
+          "name": "field",
+          "type": "status_field",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "from_value": {
+          "name": "from_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_value": {
+          "name": "to_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "effective_date": {
+          "name": "effective_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "flagged_for_review": {
+          "name": "flagged_for_review",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "audit_event_participation_seq_idx": {
+          "name": "audit_event_participation_seq_idx",
+          "columns": [
+            {
+              "expression": "participation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_event_project_seq_idx": {
+          "name": "audit_event_project_seq_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_event_project_id_project_id_fk": {
+          "name": "audit_event_project_id_project_id_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "project",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "audit_event_actor_staff_user_id_staff_user_id_fk": {
+          "name": "audit_event_actor_staff_user_id_staff_user_id_fk",
+          "tableFrom": "audit_event",
+          "tableTo": "staff_user",
+          "columnsFrom": ["actor_staff_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_event_actor_consistent": {
+          "name": "audit_event_actor_consistent",
+          "value": "case \"audit_event\".\"actor_type\"\n        when 'user' then \"audit_event\".\"actor_staff_user_id\" is not null and \"audit_event\".\"actor_participation_id\" is null and \"audit_event\".\"system_job\" is null\n        when 'participant' then \"audit_event\".\"actor_participation_id\" is not null and \"audit_event\".\"actor_staff_user_id\" is null and \"audit_event\".\"system_job\" is null and \"audit_event\".\"on_behalf_of_participation_id\" is null\n        else \"audit_event\".\"system_job\" is not null and \"audit_event\".\"actor_staff_user_id\" is null and \"audit_event\".\"actor_participation_id\" is null and \"audit_event\".\"on_behalf_of_participation_id\" is null\n      end"
+        },
+        "audit_event_lifecycle_has_participation": {
+          "name": "audit_event_lifecycle_has_participation",
+          "value": "\"audit_event\".\"participation_id\" is not null or \"audit_event\".\"event_type\" not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')"
+        },
+        "audit_event_change_values": {
+          "name": "audit_event_change_values",
+          "value": "case\n        when \"audit_event\".\"event_type\" = 'status_changed' then \"audit_event\".\"field\" is not null and \"audit_event\".\"from_value\" is not null and \"audit_event\".\"to_value\" is not null\n        when \"audit_event\".\"event_type\" = 'participation_created' then \"audit_event\".\"field\" = 'status' and \"audit_event\".\"from_value\" is null and \"audit_event\".\"to_value\" = 'imported'\n        when \"audit_event\".\"event_type\" = 'end_reason_corrected' then \"audit_event\".\"field\" is null and \"audit_event\".\"from_value\" = any(enum_range(null::end_reason)::text[]) and \"audit_event\".\"to_value\" = any(enum_range(null::end_reason)::text[])\n        else \"audit_event\".\"field\" is null and \"audit_event\".\"from_value\" is null and \"audit_event\".\"to_value\" is null\n      end"
+        },
+        "audit_event_values_of_field": {
+          "name": "audit_event_values_of_field",
+          "value": "\"audit_event\".\"field\" is null or case \"audit_event\".\"field\"\n        when 'status' then \"audit_event\".\"to_value\" = any(enum_range(null::main_status)::text[]) and (\"audit_event\".\"from_value\" is null or \"audit_event\".\"from_value\" = any(enum_range(null::main_status)::text[]))\n        when 'profiling_status' then \"audit_event\".\"to_value\" = any(enum_range(null::profiling_status)::text[]) and \"audit_event\".\"from_value\" = any(enum_range(null::profiling_status)::text[])\n        else \"audit_event\".\"to_value\" = any(enum_range(null::dsv_status)::text[]) and \"audit_event\".\"from_value\" = any(enum_range(null::dsv_status)::text[])\n      end"
+        },
+        "audit_event_reason_code_is_code": {
+          "name": "audit_event_reason_code_is_code",
+          "value": "\"audit_event\".\"reason_code\" ~ '^[a-z][a-z0-9_]{0,62}$' and \"audit_event\".\"reason_code\" <> 'long_term_illness_reduced_earning_capacity'"
+        },
+        "audit_event_system_job_is_name": {
+          "name": "audit_event_system_job_is_name",
+          "value": "\"audit_event\".\"system_job\" ~ '^[a-z][a-z0-9_.-]{0,62}$'"
+        },
+        "audit_event_request_id_is_id": {
+          "name": "audit_event_request_id_is_id",
+          "value": "\"audit_event\".\"request_id\" ~ '^[A-Za-z0-9_.:-]{1,64}$'"
+        },
+        "audit_event_job_id_is_id": {
+          "name": "audit_event_job_id_is_id",
+          "value": "\"audit_event\".\"job_id\" ~ '^[A-Za-z0-9_.:-]{1,64}$'"
+        },
+        "audit_event_details_ids_and_codes": {
+          "name": "audit_event_details_ids_and_codes",
+          "value": "jsonb_typeof(\"audit_event\".\"details\") = 'object' and not jsonb_path_exists(\"audit_event\".\"details\", 'strict $.** ? (@.type() == \"string\" && !(@ like_regex \"^[A-Za-z0-9_.:+-]{1,100}$\"))') and not jsonb_path_exists(\"audit_event\".\"details\", 'strict $.** ? (@.type() == \"object\").keyvalue() ? (!(@.key like_regex \"^[a-z][A-Za-z0-9]{0,62}$\"))')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.lifecycle_edge": {
+      "name": "lifecycle_edge",
+      "schema": "",
+      "columns": {
+        "track": {
+          "name": "track",
+          "type": "lifecycle_track",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from_value": {
+          "name": "from_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "to_value": {
+          "name": "to_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "edge_kind",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "actors": {
+          "name": "actors",
+          "type": "actor_type[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_types": {
+          "name": "project_types",
+          "type": "project_type[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "lifecycle_edge_unique": {
+          "name": "lifecycle_edge_unique",
+          "nullsNotDistinct": true,
+          "columns": ["track", "from_value", "to_value", "kind"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "lifecycle_edge_values_of_track": {
+          "name": "lifecycle_edge_values_of_track",
+          "value": "(\"lifecycle_edge\".\"track\" = 'main' and \"lifecycle_edge\".\"to_value\" = any(enum_range(null::main_status)::text[]) and (\"lifecycle_edge\".\"from_value\" is null or \"lifecycle_edge\".\"from_value\" = any(enum_range(null::main_status)::text[]))) or (\"lifecycle_edge\".\"track\" = 'profiling' and \"lifecycle_edge\".\"to_value\" = any(enum_range(null::profiling_status)::text[]) and (\"lifecycle_edge\".\"from_value\" is null or \"lifecycle_edge\".\"from_value\" = any(enum_range(null::profiling_status)::text[]))) or (\"lifecycle_edge\".\"track\" = 'dsv' and \"lifecycle_edge\".\"to_value\" = any(enum_range(null::dsv_status)::text[]) and (\"lifecycle_edge\".\"from_value\" is null or \"lifecycle_edge\".\"from_value\" = any(enum_range(null::dsv_status)::text[])))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.participation": {
+      "name": "participation",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entry_wave_id": {
+          "name": "entry_wave_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "main_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "profiling_status": {
+          "name": "profiling_status",
+          "type": "profiling_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dsv_status": {
+          "name": "dsv_status",
+          "type": "dsv_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "offer_deadline": {
+          "name": "offer_deadline",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tg_start": {
+          "name": "tg_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tg_end": {
+          "name": "tg_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tg_entry_date": {
+          "name": "tg_entry_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exit_date": {
+          "name": "exit_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "withdrawn_on": {
+          "name": "withdrawn_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "profiling_done_on": {
+          "name": "profiling_done_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_reason": {
+          "name": "end_reason",
+          "type": "end_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_reason_source": {
+          "name": "end_reason_source",
+          "type": "actor_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_reason_secondary": {
+          "name": "end_reason_secondary",
+          "type": "end_reason[]",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "profiling_exception_request_id": {
+          "name": "profiling_exception_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_version": {
+          "name": "status_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "participation_project_id_idx": {
+          "name": "participation_project_id_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "participation_project_id_project_id_fk": {
+          "name": "participation_project_id_project_id_fk",
+          "tableFrom": "participation",
+          "tableTo": "project",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "participation_entry_wave_same_project_fk": {
+          "name": "participation_entry_wave_same_project_fk",
+          "tableFrom": "participation",
+          "tableTo": "project_entry_wave",
+          "columnsFrom": ["entry_wave_id", "project_id"],
+          "columnsTo": ["id", "project_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "participation_current_exception_request_fk": {
+          "name": "participation_current_exception_request_fk",
+          "tableFrom": "participation",
+          "tableTo": "profiling_exception_request",
+          "columnsFrom": ["profiling_exception_request_id", "id"],
+          "columnsTo": ["id", "participation_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "participation_id_project_unique": {
+          "name": "participation_id_project_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "project_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "participation_tg_dates_ordered": {
+          "name": "participation_tg_dates_ordered",
+          "value": "\"participation\".\"tg_start\" <= \"participation\".\"tg_end\""
+        },
+        "participation_offer_deadline_before_tg_start": {
+          "name": "participation_offer_deadline_before_tg_start",
+          "value": "\"participation\".\"offer_deadline\" <= \"participation\".\"tg_start\""
+        },
+        "participation_offer_needs_wave": {
+          "name": "participation_offer_needs_wave",
+          "value": "\"participation\".\"dsv_status\" = 'not_offered' or \"participation\".\"entry_wave_id\" is not null"
+        },
+        "participation_end_reason_when_ended": {
+          "name": "participation_end_reason_when_ended",
+          "value": "(\"participation\".\"status\" in ('withdrawn', 'exited')) = (\"end_reason\" is not null)"
+        },
+        "participation_end_reason_source_with_reason": {
+          "name": "participation_end_reason_source_with_reason",
+          "value": "(end_reason is not null) = (\"end_reason_source\" is not null)"
+        },
+        "participation_secondary_reasons_with_reason": {
+          "name": "participation_secondary_reasons_with_reason",
+          "value": "\"participation\".\"end_reason\" is not null or cardinality(\"participation\".\"end_reason_secondary\") = 0"
+        },
+        "participation_end_reason_storable": {
+          "name": "participation_end_reason_storable",
+          "value": "\"participation\".\"end_reason\" is distinct from 'long_term_illness_reduced_earning_capacity' and not ('long_term_illness_reduced_earning_capacity' = any(\"participation\".\"end_reason_secondary\"))"
+        },
+        "participation_withdrawn_on_when_withdrawn": {
+          "name": "participation_withdrawn_on_when_withdrawn",
+          "value": "(\"participation\".\"status\" in ('withdrawn')) = (\"withdrawn_on\" is not null)"
+        },
+        "participation_tg_entry_date_in_tg": {
+          "name": "participation_tg_entry_date_in_tg",
+          "value": "(\"participation\".\"status\" in ('active_in_tg', 'exited')) = (\"tg_entry_date\" is not null)"
+        },
+        "participation_exit_date_when_exited": {
+          "name": "participation_exit_date_when_exited",
+          "value": "(\"participation\".\"status\" in ('exited')) = (\"exit_date\" is not null)"
+        },
+        "participation_profiling_done_on_when_done": {
+          "name": "participation_profiling_done_on_when_done",
+          "value": "(\"participation\".\"profiling_status\" = 'profiling_done') = (\"profiling_done_on\" is not null)"
+        },
+        "participation_tracks_start_at_informed": {
+          "name": "participation_tracks_start_at_informed",
+          "value": "not (\"participation\".\"status\" in ('self_registered', 'rejected', 'imported', 'contacted', 'unreachable')) or (\"participation\".\"profiling_status\" = 'not_started' and \"participation\".\"dsv_status\" = 'not_offered')"
+        },
+        "participation_tg_needs_signed_dsv": {
+          "name": "participation_tg_needs_signed_dsv",
+          "value": "not (\"participation\".\"status\" in ('active_in_tg', 'exited')) or \"participation\".\"dsv_status\" = 'dsv_signed'"
+        },
+        "participation_unmatched_has_no_wave": {
+          "name": "participation_unmatched_has_no_wave",
+          "value": "not (\"participation\".\"status\" in ('self_registered', 'rejected')) or \"participation\".\"entry_wave_id\" is null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.profiling_exception_request": {
+      "name": "profiling_exception_request",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "participation_id": {
+          "name": "participation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason_code": {
+          "name": "reason_code",
+          "type": "profiling_exception_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "profiling_exception_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_by": {
+          "name": "requested_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_on": {
+          "name": "requested_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "evidence_record_id": {
+          "name": "evidence_record_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence_fingerprint": {
+          "name": "evidence_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decided_by": {
+          "name": "decided_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_on": {
+          "name": "decided_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_reason": {
+          "name": "superseded_reason",
+          "type": "profiling_exception_superseded_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "profiling_exception_request_one_open_idx": {
+          "name": "profiling_exception_request_one_open_idx",
+          "columns": [
+            {
+              "expression": "participation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"profiling_exception_request\".\"status\" in ('requested', 'approved')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "profiling_exception_request_project_id_project_id_fk": {
+          "name": "profiling_exception_request_project_id_project_id_fk",
+          "tableFrom": "profiling_exception_request",
+          "tableTo": "project",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "profiling_exception_request_requested_by_staff_user_id_fk": {
+          "name": "profiling_exception_request_requested_by_staff_user_id_fk",
+          "tableFrom": "profiling_exception_request",
+          "tableTo": "staff_user",
+          "columnsFrom": ["requested_by"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "profiling_exception_request_decided_by_staff_user_id_fk": {
+          "name": "profiling_exception_request_decided_by_staff_user_id_fk",
+          "tableFrom": "profiling_exception_request",
+          "tableTo": "staff_user",
+          "columnsFrom": ["decided_by"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "profiling_exception_request_participation_fk": {
+          "name": "profiling_exception_request_participation_fk",
+          "tableFrom": "profiling_exception_request",
+          "tableTo": "participation",
+          "columnsFrom": ["participation_id", "project_id"],
+          "columnsTo": ["id", "project_id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "profiling_exception_request_id_participation_unique": {
+          "name": "profiling_exception_request_id_participation_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "participation_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "profiling_exception_request_status_not_none": {
+          "name": "profiling_exception_request_status_not_none",
+          "value": "\"profiling_exception_request\".\"status\" <> 'none'"
+        },
+        "profiling_exception_request_fingerprint": {
+          "name": "profiling_exception_request_fingerprint",
+          "value": "\"profiling_exception_request\".\"evidence_fingerprint\" ~ '^sha256:v1:[0-9a-f]{64}$'"
+        },
+        "profiling_exception_request_decision": {
+          "name": "profiling_exception_request_decision",
+          "value": "(\"profiling_exception_request\".\"decided_by\" is null) = (\"profiling_exception_request\".\"decided_on\" is null) and (\"profiling_exception_request\".\"decided_by\" is null) = (\"profiling_exception_request\".\"decided_at\" is null) and (not (\"profiling_exception_request\".\"status\" in ('approved', 'rejected')) or \"profiling_exception_request\".\"decided_by\" is not null) and (not (\"profiling_exception_request\".\"status\" in ('requested', 'superseded')) or \"profiling_exception_request\".\"decided_by\" is null)"
+        },
+        "profiling_exception_request_superseded_reason": {
+          "name": "profiling_exception_request_superseded_reason",
+          "value": "(\"profiling_exception_request\".\"status\" in ('superseded')) = (\"superseded_reason\" is not null)"
+        },
+        "profiling_exception_request_four_eyes": {
+          "name": "profiling_exception_request_four_eyes",
+          "value": "\"profiling_exception_request\".\"decided_by\" <> \"profiling_exception_request\".\"requested_by\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.project": {
+      "name": "project",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_name": {
+          "name": "customer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "project_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "signing_deadline": {
+          "name": "signing_deadline",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_tg_start": {
+          "name": "default_tg_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_tg_end": {
+          "name": "default_tg_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "project_created_at_id_idx": {
+          "name": "project_created_at_id_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "project_created_by_staff_user_id_fk": {
+          "name": "project_created_by_staff_user_id_fk",
+          "tableFrom": "project",
+          "tableTo": "staff_user",
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "project_tg_dates_ordered": {
+          "name": "project_tg_dates_ordered",
+          "value": "\"project\".\"default_tg_start\" <= \"project\".\"default_tg_end\""
+        },
+        "project_ta_only_has_no_tg_dates": {
+          "name": "project_ta_only_has_no_tg_dates",
+          "value": "\"project\".\"type\" <> 'ta_only' or (\"project\".\"signing_deadline\" is null and \"project\".\"default_tg_start\" is null and \"project\".\"default_tg_end\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.project_entry_wave": {
+      "name": "project_entry_wave",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "signing_deadline": {
+          "name": "signing_deadline",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_tg_start": {
+          "name": "default_tg_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "default_tg_end": {
+          "name": "default_tg_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latest_entry_date": {
+          "name": "latest_entry_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "project_entry_wave_project_id_project_id_fk": {
+          "name": "project_entry_wave_project_id_project_id_fk",
+          "tableFrom": "project_entry_wave",
+          "tableTo": "project",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "project_entry_wave_project_code_unique": {
+          "name": "project_entry_wave_project_code_unique",
+          "nullsNotDistinct": false,
+          "columns": ["project_id", "code"]
+        },
+        "project_entry_wave_id_project_unique": {
+          "name": "project_entry_wave_id_project_unique",
+          "nullsNotDistinct": false,
+          "columns": ["id", "project_id"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "project_entry_wave_tg_dates_ordered": {
+          "name": "project_entry_wave_tg_dates_ordered",
+          "value": "\"project_entry_wave\".\"default_tg_start\" <= \"project_entry_wave\".\"default_tg_end\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.staff_user": {
+      "name": "staff_user",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "staff_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "staff_user_email_unique": {
+          "name": "staff_user_email_unique",
+          "nullsNotDistinct": false,
+          "columns": ["email"]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.actor_type": {
+      "name": "actor_type",
+      "schema": "public",
+      "values": ["user", "participant", "system"]
+    },
+    "public.audit_event_type": {
+      "name": "audit_event_type",
+      "schema": "public",
+      "values": [
+        "participation_created",
+        "status_changed",
+        "entry_wave_assigned",
+        "profiling_exception_requested",
+        "profiling_exception_approved",
+        "profiling_exception_rejected",
+        "profiling_exception_revoked",
+        "profiling_exception_superseded",
+        "end_reason_corrected",
+        "sensitive_read",
+        "sensitive_write",
+        "break_glass_access",
+        "document_opened",
+        "warning_confirmed",
+        "export_created",
+        "config_override_changed",
+        "review_recorded",
+        "clarification_requested"
+      ]
+    },
+    "public.dsv_status": {
+      "name": "dsv_status",
+      "schema": "public",
+      "values": ["not_offered", "dsv_offered", "dsv_signed", "dsv_declined", "dsv_expired"]
+    },
+    "public.edge_kind": {
+      "name": "edge_kind",
+      "schema": "public",
+      "values": [
+        "scheduled_entry",
+        "scheduled_entry_catchup",
+        "reconciliation",
+        "manual",
+        "system",
+        "anonymous_self_registration"
+      ]
+    },
+    "public.end_reason": {
+      "name": "end_reason",
+      "schema": "public",
+      "values": [
+        "declined_profiling",
+        "declined_dsv",
+        "no_response",
+        "never_contacted",
+        "not_informed",
+        "placed_direct",
+        "self_employed",
+        "retirement",
+        "other_measure",
+        "deceased",
+        "other",
+        "placed_permanent",
+        "placed_fixed_term",
+        "apprenticeship_or_study",
+        "max_duration_reached",
+        "own_termination_without_job",
+        "terminated_by_tg",
+        "long_term_illness_reduced_earning_capacity"
+      ]
+    },
+    "public.lifecycle_track": {
+      "name": "lifecycle_track",
+      "schema": "public",
+      "values": ["main", "profiling", "dsv"]
+    },
+    "public.main_status": {
+      "name": "main_status",
+      "schema": "public",
+      "values": [
+        "self_registered",
+        "imported",
+        "contacted",
+        "unreachable",
+        "informed",
+        "active_in_tg",
+        "withdrawn",
+        "rejected",
+        "ta_completed",
+        "exited"
+      ]
+    },
+    "public.profiling_exception_reason": {
+      "name": "profiling_exception_reason",
+      "schema": "public",
+      "values": [
+        "participant_prevented_documented",
+        "agentur_scheduling_unavailable",
+        "force_majeure",
+        "ba_confirmed_other"
+      ]
+    },
+    "public.profiling_exception_status": {
+      "name": "profiling_exception_status",
+      "schema": "public",
+      "values": ["none", "requested", "approved", "rejected", "revoked", "superseded"]
+    },
+    "public.profiling_exception_superseded_reason": {
+      "name": "profiling_exception_superseded_reason",
+      "schema": "public",
+      "values": ["participation_closed", "project_ta_only", "profiling_closed"]
+    },
+    "public.profiling_status": {
+      "name": "profiling_status",
+      "schema": "public",
+      "values": [
+        "not_started",
+        "profiling_accepted",
+        "profiling_in_progress",
+        "profiling_done",
+        "profiling_declined"
+      ]
+    },
+    "public.project_type": {
+      "name": "project_type",
+      "schema": "public",
+      "values": ["ta_only", "ta_tg"]
+    },
+    "public.staff_role": {
+      "name": "staff_role",
+      "schema": "public",
+      "values": ["admin", "regional_admin", "project_lead", "consultant", "back_office"]
+    },
+    "public.status_field": {
+      "name": "status_field",
+      "schema": "public",
+      "values": ["status", "profiling_status", "dsv_status"]
+    },
+    "public.tg_entry_kind": {
+      "name": "tg_entry_kind",
+      "schema": "public",
+      "values": ["scheduled_entry", "scheduled_entry_catchup", "reconciliation"]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -185,6 +185,17 @@ only to their Agentur), the blockers, `projectActivationBlockers`, pinned-versio
 (`load.ts`), the validator cache per (template id, version), the two sample templates (D8) and
 the resolver parts of the docs (AC-31 for the samples, AC-32, AC-33, AC-35).
 
+**1g is split** the same way (the nine functions alone are several hundred lines of SQL):
+**1g-1** `project_entry_wave` with the migration of the Slice 0 project dates (AC-20),
+`participation`, `audit_event`, `lifecycle_edge` with their `CHECK`s, the audit event model in
+`packages/domain/src/audit` (100 % threshold), the nine functions, the grants (AC-15, AC-16,
+AC-18), the drift tests (AC-17) and the data-catalog entries with their retention classes
+(AC-42: the catalog test fails for a table without an entry, so they come with the tables), the
+ADR-0002 amendment and the retention classes in the docs; **1g-2** the status service with the
+fail-closed facts provider, the permission checks and superseding in the same transaction
+(AC-19), the seed through the functions (AC-43) with the synthetic regional operations manager.
+`job_run` stays with 1h.
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -542,7 +553,8 @@ Readings taken in PR 1c-2 (fail safe, D10; *verify* with Q74/Q82, open in Q86):
   `clarification_requested` → the reviewed `id`), never updates.
 - Event types (enum created now): `participation_created`, `status_changed`,
   `entry_wave_assigned`, `profiling_exception_requested`, `profiling_exception_approved`,
-  `profiling_exception_rejected`, `profiling_exception_revoked`, `end_reason_corrected`
+  `profiling_exception_rejected`, `profiling_exception_revoked`,
+  `profiling_exception_superseded` (round 10, added in PR 1g-1), `end_reason_corrected`
   (Slice 1); `sensitive_read`, `sensitive_write` (key, actor, subject, time; never values,
   round 11), `break_glass_access`, `document_opened`, `warning_confirmed`,
   `export_created`, `config_override_changed`, `review_recorded`, `clarification_requested`
@@ -561,9 +573,9 @@ per field), `REVOKE EXECUTE … FROM PUBLIC`, `GRANT EXECUTE … TO transfer_app
 | `lock_participation(id)` | `SELECT … FOR UPDATE`; the lock lasts until the caller's transaction ends |
 | `change_participation_status(id, field, expected_from, to, actor…, entry_kind, end_reason, secondary_reasons, offer_deadline, effective_date, request_id, job_id, details)` | checks `expected_from` (`stale_status`), the edge in `lifecycle_edge` (`invalid_transition`), `ta_only` ⇒ DSV unchanged, a wave before `dsv_offered`, refuses the special-category end reason; sets the column and its dependants (`end_reason*`, `tg_entry_date`, `exit_date`, `withdrawn_on`, `profiling_done_on`, `offer_deadline`); bumps `status_version`; inserts **one** `status_changed` |
 | `assign_entry_wave(id, wave_id, actor…)` | same project, DSV `not_offered`; writes `entry_wave_assigned` |
-| `request_profiling_exception(id, reason_code, actor…)` | writes `profiling_exception_requested` |
-| `decide_profiling_exception(id, approve, actor…)` | only `requested`; **refuses when the decider is the requester**; writes `…_approved` or `…_rejected` |
-| `revoke_profiling_exception(id, actor…)` | only before entry; writes `profiling_exception_revoked` |
+| `request_profiling_exception(id, reason_code, requested_on, evidence_record_id, evidence_fingerprint, actor…)` | inserts a new `profiling_exception_request` row and makes it the participation's current one; `evidence_missing`, `evidence_unchanged` (same fingerprint as the latest request, Q94); writes `profiling_exception_requested` (round 16) |
+| `decide_profiling_exception(request_id, approve, decided_on, actor…)` | only the current, `requested` request; **refuses when the decider is the requester**; writes `…_approved` or `…_rejected` |
+| `revoke_profiling_exception(request_id, actor…)` | only the current request, only before entry; writes `profiling_exception_revoked` |
 | `correct_end_reason(id, new_reason, actor…)` | only on `withdrawn`/`exited`, same phase; moves a system-derived previous reason to the secondary list; writes `end_reason_corrected` |
 | `record_audit_event(type, …)` | every other event type; **refuses** the lifecycle and exception types above |
 
@@ -582,7 +594,7 @@ job uses the same service as `system`.
 
 | Object | `transfer_app` |
 |---|---|
-| `participation` | `SELECT` only |
+| `participation`, `profiling_exception_request` | `SELECT` only |
 | `project_entry_wave` | `SELECT` (creation and edits with project setup, Slice 2) |
 | `audit_event` | nothing in Slice 1 (`SELECT` with the first feature that reads it) |
 | `lifecycle_edge` | nothing (read by the functions as owner) |
@@ -591,6 +603,84 @@ job uses the same service as `system`.
 | `pgboss` schema | `USAGE` + DML on its tables and sequences (spike S2) |
 
 The pseudonymisation role comes with the retention job (Slice 7, ADR-0002).
+
+#### Readings taken in PR 1g (1g-1)
+
+Built in PR 1g-1: migrations `0002_lifecycle_tables` (generated), `0003_lifecycle_data` (the W1
+waves and the edge rows) and `0004_status_functions` (hand-written: the functions, a trigger and
+the grants); `packages/domain/src/audit` (`AuditEvent`, `AuditEventType`, `AuditActor`,
+`StatusField`, `EvidenceFingerprint`, `lifecycleEventTypes`; 100 % covered); the data-catalog
+entries.
+
+The eighteen readings of the first draft were answered in
+[round 16](../decisions/2026-10-16-answers-round-16.md) (Q94 and Q95 confirmed); the answers are
+applied:
+- **Confirmed:** the split with the data catalog in 1g-1 (1); the W1 migration, projects created
+  before Slice 2's wave UI staying without a wave (2); `profiling_exception_superseded` as a second
+  event, `system` with job `lifecycle.supersede-stale-exception` and the change's correlation ids
+  (3); `end_reason_source`, `lifecycle_edge.project_types`, the composite wave FK (4, partly); the
+  extra `CHECK`s (6); the `lifecycle_edge` key and `actors` array (7); structural checks in SQL,
+  dated guards in TypeScript (8); creation by a user and the seed's actors, **Q95** (9); typed
+  parameters instead of caller JSON (10); the hardening (11); the composite actor, failing closed
+  (12); business dates from the Clock, instants from the database (13); no free text in audit
+  storage, the table checks as defence in depth behind the typed `AuditEvent` schema, and no
+  sensitive value (numeric or boolean included) in `details` (14); the audit model (15); the
+  retention classes (16); the error codes (18).
+- **Corrected:** profiling-exception requests are first-class rows in
+  `profiling_exception_request`, the participation keeps only its current request's id (4, 5;
+  **Q94**); every exception event carries `profilingExceptionRequestId` (3, 15); the current wave
+  again is refused with `wave_unchanged`, without a write (17).
+
+The nine readings taken while applying round 16 were answered in
+[round 17](../decisions/2026-10-16-answers-round-17.md) and are applied:
+
+1. **The fingerprint** is `sha256:v1:` plus 64 lowercase hex digits (`EvidenceFingerprint`): the
+   version names the canonicalisation, so a later `v2` never looks like changed evidence
+   (corrected in round 17). Slice 4b computes it over the domain-separated payload
+   `profiling-exception-evidence:v1`, the participation id and the canonical evidence (sorted,
+   de-duplicated content digests of accepted immutable document versions, or normalised BA facts
+   with stable key order); so re-uploads and reordering change nothing and fingerprints can't
+   correlate evidence across participants. It is **confidential evidence metadata**: only on
+   `profiling_exception_request`, never in audit details (the `profiling_exception_requested`
+   event keeps the request id and the opaque `evidenceRecordId`), logs or client responses. The
+   table checks its format (a malformed one is `23514`); `request_profiling_exception` refuses a
+   missing id or fingerprint (`evidence_missing`) and the latest request's fingerprint
+   (`evidence_unchanged`). The domain's `EvidenceFact` is `{ recordId, fingerprint }`;
+   `requestProfilingException` compares fingerprints, never record ids.
+2. **Deciding and revoking name the request** and act only on the participation's current
+   request (`request_not_found`, `request_not_current`), after locking the participation
+   (confirmed).
+3. **One open request per participation** (`requested` or `approved`), a partial unique index
+   (confirmed).
+4. **The trigger enforces the exact transition matrix** (corrected in round 17):
+   `requested → approved/rejected` only from no decision to a complete one,
+   `requested → revoked/superseded` only without a decision, `approved → revoked` only with the
+   decision unchanged; everything else, a no-op included, is `request_immutable`. Identity,
+   reason, requester, request date and instant, evidence id and fingerprint never change; the
+   table's `CHECK`s keep the superseded reason to `superseded` and the decider apart from the
+   requester. A direct-owner test covers every row, including fabricated decision fields on
+   `revoked` and `superseded`.
+5. **The request reuses `profiling_exception_status`** and refuses `none`, which only means "no
+   current request" (confirmed).
+6. **Composite FKs** on both sides (confirmed).
+7. **`status_version`** is bumped for every request, decision and revocation; a supersession
+   shares the change's bump (confirmed).
+8. **`transfer_app` may select `profiling_exception_request`**, no writes (confirmed with scope):
+   the status service reads the current request, requester, fingerprint and approval fact; the
+   API applies project/role access, never exposes request rows or fingerprints through generic
+   endpoints, and pre-pilot RLS remains required.
+9. **The new error codes** are confirmed (below).
+
+Error codes (SQLSTATE `P0001`, the code is the whole message): `actor_not_allowed`,
+`invalid_actor`, `invalid_argument`, `project_not_found`, `participation_not_found`,
+`stale_status`, `invalid_transition`, `track_inactive`, `reason_required`, `reason_wrong_phase`,
+`reason_not_storable`, `effective_date_required`, `wave_required`, `offer_deadline_required`,
+`not_ta_tg`, `wave_of_other_project`, `wave_unchanged`, `status_not_open`,
+`dsv_already_offered`, `not_informed`, `profiling_closed`, `exception_open`,
+`evidence_missing`, `evidence_unchanged`, `request_not_found`, `request_not_current`,
+`not_requested`, `same_person_approval`, `not_revocable`, `no_longer_applicable`,
+`no_end_reason`, `reason_unchanged`, `event_type_reserved`, `request_immutable` (trigger). Table
+`CHECK`s give `23514`.
 
 ### 5.5 Completeness engine (`packages/domain/src/completeness`)
 
@@ -1111,7 +1201,8 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 | Table | Columns (main) | `retentionClass` | `dataClass` | Participant data |
 |---|---|---|---|---|
 | `project_entry_wave` (new) | `id`, `project_id` (FK, not null), `code`, `name`, `signing_deadline`, `default_tg_start`, `default_tg_end`, `latest_entry_date` (all `date`, nullable while draft); unique `(project_id, code)`; `CHECK default_tg_start ≤ default_tg_end`; only for `ta_tg` projects (checked in the functions and the domain) | `project_master` | `internal` | no |
-| `participation` (new) | `id`, `project_id` (FK, not null), `entry_wave_id` (FK, null), `status`, `profiling_status`, `dsv_status`, `offer_deadline`, `tg_start`, `tg_end` (overrides, null = wave default), `tg_entry_date`, `exit_date`, `withdrawn_on`, `profiling_done_on` (all `date`), `end_reason`, `end_reason_secondary end_reason[]`, `profiling_exception_status`, `profiling_exception_reason_code`, `profiling_exception_requested_by`, `profiling_exception_requested_on`, `profiling_exception_decided_by`, `profiling_exception_decided_on`, `status_version`, `created_at` | **`participation_record`** (new): ADR-0008 rules; non-signer clock from `withdrawn_on` (90 days *assumed*, Q77); `unset` in code until the DPO confirms (Slice 7) | `confidential` | yes |
+| `participation` (new) | `id`, `project_id` (FK, not null), `entry_wave_id` (FK, null), `status`, `profiling_status`, `dsv_status`, `offer_deadline`, `tg_start`, `tg_end` (overrides, null = wave default), `tg_entry_date`, `exit_date`, `withdrawn_on`, `profiling_done_on` (all `date`), `end_reason`, `end_reason_source`, `end_reason_secondary end_reason[]`, `profiling_exception_request_id` (the current request, round 16), `status_version`, `created_at` | **`participation_record`** (new): ADR-0008 rules; non-signer clock from `withdrawn_on` (90 days *assumed*, Q77); `unset` in code until the DPO confirms (Slice 7) | `confidential` | yes |
+| `profiling_exception_request` (new, round 16) | `id`, `project_id`, `participation_id`, `reason_code`, `status`, `requested_by`, `requested_on`, `requested_at`, `evidence_record_id`, `evidence_fingerprint`, `decided_by`, `decided_on`, `decided_at`, `superseded_reason`; one row per request, reason and evidence identity immutable, status and decision progress on the row | `participation_record` | `confidential` | yes |
 | `audit_event` (new) | section 5.4 | **`audit_log`** (new): 3 years, pseudonymised on deletion of the subject; evidence-set entries follow it; *verify* Q3; `unset` until Slice 7 | `confidential` | yes |
 | `lifecycle_edge` (new) | `track`, `from_value`, `to_value`, `kind` (pk), `actors` | **`reference_data`** (new): no personal data, never touched by the retention job | `internal` | no |
 | `job_run` (new) | `job_name`, `run_date` (pk), `scheduled_at`, `completed_at` | `reference_data` | `internal` | no |
@@ -1120,7 +1211,8 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
   `dsv_status <> 'not_offered'` ⇒ `entry_wave_id` set; `end_reason` set exactly for
   `withdrawn`/`exited`; `withdrawn_on` exactly for `withdrawn`; `tg_entry_date` for
   `active_in_tg`/`exited`; `exit_date` for `exited`; `profiling_done_on` exactly for
-  `profiling_done`; the exception decider differs from the requester.
+  `profiling_done`. On `profiling_exception_request`: the decider differs from the requester,
+  at most one open request per participation, the fingerprint's format, the decision fields.
 - **Migration of Slice 0 data:** one wave `W1` per existing `ta_tg` project from its
   `signing_deadline`, `default_tg_start`, `default_tg_end` (`latest_entry_date` null, so it is
   flagged). The domain reads wave dates only; Slice 2 moves the project form to waves and drops
@@ -1308,6 +1400,7 @@ exceptions), AC-28, AC-30 (roles in the transitions table). AC-29 was met in 1a.
 | API routes for status changes, operations, participations or access; the review and clarification UI | Slices 2, 3, 5 |
 | Wiring `decideAccess` into requests, sessions, logins and their audit | Slice 3 |
 | Free text (break-glass, exception evidence, BA confirmer) and its encryption | Slice 3 (first writer) / 4b (evidence documents); codes only until then |
+| Evidence records and their canonical fingerprint (round 16, Q94); validating a request's evidence | Slice 4b; until then the status service refuses every exception request with `evidence_missing` |
 | Storing the special-category end reason | Slice 8 (TG exits), with encrypted storage; it then applies the `health` access category to that value (round 11) |
 | Field-level encryption of participant fields, sensitive endpoints, `sensitive_read` writes | with the first such field (Slices 4a/6) |
 | DSV documents, signature dates, ASU records, signed TL 407, cancellation, §110 activities | Slices 6/7/8; guards fail closed (D4) |

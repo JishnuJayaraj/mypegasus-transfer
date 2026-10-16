@@ -30,6 +30,11 @@ duty.
 - Audit entries of deleted subjects are **pseudonymised**. Audit entries belonging to an
   evidence set follow the evidence set.
 - **Backups are kept for at most 30 days.**
+- *Note 2026-10-16 (Slice 1, PR 1g-1):* the lifecycle tables brought three classes, listed in
+  data-protection.md: **`participation_record`** (`participation`, `profiling_exception_request`), **`audit_log`**
+  (`audit_event`) and **`reference_data`** (`lifecycle_edge`, never touched by the retention
+  job); entry waves are `project_master`. Periods stay `unset` until the DPO confirms them
+  (Q3, Q77); the data-catalog test refuses a table without a known class.
 - The values are in `docs/domain/data-protection.md` and must be confirmed by the DPO and tax
   advisor before the pilot.
 

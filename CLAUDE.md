@@ -114,8 +114,10 @@ apps/
   api/            Hono API; in production also serves both built SPAs (/ and /portal/)
 packages/
   domain/         entities, lifecycle vocabulary and state machine, date helpers, field
-                  catalog, Zod schemas, completeness rules (no I/O, no system time)
-  db/             Drizzle schema, migrations, seed (synthetic only), data catalog
+                  catalog, Zod schemas (incl. the audit event model), completeness rules (no
+                  I/O, no system time)
+  db/             Drizzle schema, migrations (incl. the SECURITY DEFINER status functions and
+                  grants, hand-written), seed (synthetic only), data catalog
   api-client/     generated OpenAPI document + types and the typed client both SPAs use
   ui/             thin wrappers around Carbon components, layout, tokens, i18n helpers
   config/         regional configuration: the Zod-authored layer model (base defaults, Agentur
