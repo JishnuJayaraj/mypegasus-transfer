@@ -1,6 +1,16 @@
+import type { DocumentType } from "../documents/catalog";
 import type { OrgRole, ProjectRole } from "../enums";
-import { fieldCatalog, type AccessCategory } from "../fields/catalog";
-import type { AccessMode, AccessPhase, Resource, Subject } from "./decide";
+import { AccessCategory, fieldCatalog } from "../fields/catalog";
+import type {
+  AccessMode,
+  AccessPhase,
+  AggregateResource,
+  AuditResource,
+  AuditStream,
+  DocumentResource,
+  FieldResource,
+  Subject,
+} from "./decide";
 
 /** Synthetic ids for the generated matrix and the tests. */
 export const sample = {
@@ -61,8 +71,43 @@ export const accessModes = {
   break_glass: { kind: "break_glass", reasonCode: "sample_reason" },
 } as const satisfies Record<AccessMode["kind"], AccessMode>;
 
-/** The sample participation's data of one category, named by a self-service field if any. */
-export function sampleResource(category: AccessCategory, phase: AccessPhase): Resource {
-  const field = fieldCatalog.find((f) => f.accessCategory === category && f.selfService)?.key;
-  return { ...sample, category, phase, ...(field && { field }) };
+const scope = { projectId: sample.projectId, regionId: sample.regionId };
+const person = (phase: AccessPhase) => ({
+  ...scope,
+  participationId: sample.participationId,
+  phase,
+});
+
+/** The categories that hold fields, in catalog order. */
+export const fieldCategories = AccessCategory.options.filter((c) =>
+  fieldCatalog.some((f) => f.accessCategory === c),
+);
+
+/** One field of the category, a self-service one where there is one (participant writes). */
+export function sampleField(category: AccessCategory, phase: AccessPhase): FieldResource {
+  const inCategory = fieldCatalog.filter((f) => f.accessCategory === category);
+  const field = (inCategory.find((f) => f.selfService) ?? inCategory[0])!.key;
+  return { kind: "field", ...person(phase), field };
 }
+
+export const sampleDocument = (
+  documentType: DocumentType,
+  phase: AccessPhase,
+): DocumentResource => ({
+  kind: "document",
+  ...person(phase),
+  documentType,
+});
+
+export const sampleAudit = (
+  stream: AuditStream,
+  actorStaffUserId: string | null,
+): AuditResource => ({
+  kind: "audit",
+  ...scope,
+  participationId: sample.participationId,
+  stream,
+  actorStaffUserId,
+});
+
+export const sampleAggregate = (): AggregateResource => ({ kind: "aggregate", ...scope });

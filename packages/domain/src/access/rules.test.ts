@@ -1,25 +1,33 @@
 import { describe, expect, it } from "vitest";
+import { DocumentType, documentTypeEntry } from "../documents/catalog";
 import type { OrgRole, ProjectRole } from "../enums";
-import { AccessCategory } from "../fields/catalog";
-import { decideAccess, type AccessAction, type AccessMode, type Subject } from "./decide";
-import { accessModes, accessProfiles, sample, sampleResource } from "./profiles";
+import { fieldEntry, type AccessCategory } from "../fields/catalog";
+import {
+  AuditStream,
+  decideAccess,
+  type AccessAction,
+  type AccessMode,
+  type AccessPhase,
+  type Resource,
+  type Subject,
+} from "./decide";
+import {
+  accessModes,
+  accessProfiles,
+  fieldCategories,
+  sample,
+  sampleAggregate,
+  sampleAudit,
+  sampleDocument,
+  sampleField,
+} from "./profiles";
 import { cell } from "./testing/cell";
 
 const actions: AccessAction[] = ["read", "list", "open_document", "write"];
-const sensitive = [
-  "health",
-  "disability",
-  "identifiers",
-  "residence_social",
-  "profiling_assessment",
-  "signed_tl407",
-  "signed_kug200b",
-] as const;
-const personLevel = AccessCategory.options.filter(
-  (c) => c !== "audit_metadata" && c !== "aggregated",
-);
-const profile = (key: string) => accessProfiles.find((p) => p.key === key)!.subject;
+const modes = Object.values(accessModes);
+const phases: AccessPhase[] = ["active", "evidence_set"];
 const breakGlass = accessModes.break_glass;
+const profile = (key: string) => accessProfiles.find((p) => p.key === key)!.subject;
 
 function staff(
   projectRoles: ProjectRole[],
@@ -41,243 +49,316 @@ function staff(
 
 const decide = (
   subject: Subject,
-  category: AccessCategory,
+  resource: Resource,
   action: AccessAction,
   mode: AccessMode = accessModes.normal,
-  resource: Partial<ReturnType<typeof sampleResource>> = {},
-) =>
-  cell(decideAccess(subject, { ...sampleResource(category, "active"), ...resource }, action, mode));
-
-const evidence = (
-  key: string,
-  category: AccessCategory,
-  action: AccessAction,
-  mode: AccessMode = breakGlass,
-) => cell(decideAccess(profile(key), sampleResource(category, "evidence_set"), action, mode));
+) => cell(decideAccess(subject, resource, action, mode));
+const field = (category: AccessCategory, phase: AccessPhase = "active") =>
+  sampleField(category, phase);
+const doc = (type: DocumentType, phase: AccessPhase = "active") => sampleDocument(type, phase);
+/** Every person-level resource (one field per category, every document type) in a phase. */
+const personResources = (phase: AccessPhase) => [
+  ...fieldCategories.map((c) => field(c, phase)),
+  ...DocumentType.options.map((t) => doc(t, phase)),
+];
+const categoryOf = (r: ReturnType<typeof personResources>[number]) =>
+  r.kind === "field"
+    ? fieldEntry(r.field).accessCategory
+    : documentTypeEntry(r.documentType).accessCategory;
+const identifiers = (key: string) => ({ ...field("identifiers"), field: key });
 const rom = (regions: string[] | "all") =>
   staff([], { org: [["regional_operations_manager", regions]] });
-const participantWrite = (field?: string) => {
-  const resource = { ...sampleResource("identifiers", "active"), field };
-  return cell(decideAccess(profile("participant"), resource, "write", accessModes.normal));
-};
+const evidence = (
+  key: string,
+  resource: Resource,
+  action: AccessAction,
+  mode: AccessMode = breakGlass,
+) => decide(profile(key), resource, action, mode);
 
-describe("list payloads (AC-26)", () => {
-  it("never lists special-category, highly confidential or absence data (Q85)", () => {
+describe("resource kinds (round 11)", () => {
+  it("returns not_applicable for actions a resource kind doesn't have, for everyone", () => {
+    const invalid: [Resource, AccessAction][] = [
+      [field("confidential"), "open_document"],
+      [sampleAudit("case", null), "open_document"],
+      [sampleAggregate(), "open_document"],
+      [sampleAggregate(), "write"],
+    ];
     for (const { subject } of accessProfiles) {
-      for (const category of [...sensitive, "absence" as const]) {
-        for (const mode of Object.values(accessModes)) {
-          for (const phase of ["active", "evidence_set"] as const) {
-            const resource = sampleResource(category, phase);
-            expect(decideAccess(subject, resource, "list", mode)).toMatchObject({
-              effect: "deny",
-            });
-          }
+      for (const mode of modes) {
+        for (const [resource, action] of invalid) {
+          expect(decide(subject, resource, action, mode)).toBe("deny not_applicable");
         }
       }
     }
-    expect(decide(profile("project_lead"), "health", "list")).toBe("deny not_in_list_payloads");
   });
 
-  it("lists other categories as they are read", () => {
-    expect(decide(profile("project_lead"), "confidential", "list")).toBe("allow full");
-    expect(decide(profile("consultant_unassigned"), "aggregated", "list")).toBe("allow full");
-    expect(decide(profile("regional_operations_manager"), "audit_metadata", "list")).toBe(
-      "allow full",
-    );
+  it("never writes audit metadata (append-only)", () => {
+    for (const { key, subject } of accessProfiles) {
+      const expected = key === "consultant_unassigned" ? "deny not_assigned" : "deny never";
+      expect(decide(subject, sampleAudit("case", "staff-a"), "write")).toBe(expected);
+    }
   });
 });
 
-describe("documents", () => {
-  it("opens signed forms only for the assigned profiler and the PL, audited", () => {
-    for (const category of ["signed_tl407", "signed_kug200b"] as const) {
-      const open = (key: string) => decide(profile(key), category, "open_document");
-      expect(open("consultant")).toBe("allow full document_opened");
-      expect(open("project_lead")).toBe("allow full document_opened");
-      expect(open("back_office")).toBe("deny never");
-      expect(open("participant")).toBe("deny never");
-      expect(open("consultant_unassigned")).toBe("deny not_assigned");
+describe("list payloads (AC-26)", () => {
+  it("never lists special-category, highly confidential or absence data (Q85)", () => {
+    const unlisted = [...personResources("active"), ...personResources("evidence_set")].filter(
+      (r) => !["case_internal", "confidential"].includes(categoryOf(r)),
+    );
+    expect(unlisted.length).toBeGreaterThan(0);
+    for (const { subject } of accessProfiles) {
+      for (const resource of unlisted) {
+        for (const mode of modes) {
+          expect(decideAccess(subject, resource, "list", mode)).toMatchObject({ effect: "deny" });
+        }
+      }
     }
+    const pl = profile("project_lead");
+    expect(decide(pl, field("health"), "list")).toBe("deny not_in_list_payloads");
+    expect(decide(pl, doc("tl407_signed_scan"), "list")).toBe("deny not_in_list_payloads");
   });
 
-  it("leaves documents of other categories undecided (Q87), behind the read rule", () => {
-    expect(decide(profile("back_office"), "identifiers", "open_document")).toBe(
-      "deny undecided Q87",
-    );
-    expect(decide(profile("project_lead"), "identifiers", "open_document")).toBe("deny never");
+  it("lists other data as it is read", () => {
+    const pl = profile("project_lead");
+    expect(decide(pl, field("confidential"), "list")).toBe("allow full");
+    expect(decide(pl, doc("participant_upload"), "list")).toBe("allow metadata_only");
+    expect(decide(profile("consultant_unassigned"), sampleAggregate(), "list")).toBe("allow full");
+    expect(decide(rom([sample.regionId]), sampleAudit("review", null), "list")).toBe("allow full");
   });
 });
 
 describe("assisted mode", () => {
   const assisted = accessModes.assisted;
+  const other = { kind: "assisted", onBehalfOf: "participation-b" } as const;
+  const pl = profile("project_lead");
 
   it("lets the PL read and write health and disability for that participant only", () => {
-    const pl = profile("project_lead");
     for (const category of ["health", "disability"] as const) {
-      expect(decide(pl, category, "read", assisted)).toBe("allow full sensitive_read");
-      expect(decide(pl, category, "write", assisted)).toBe("allow full sensitive_write");
-      const other = { onBehalfOf: "participation-b", kind: "assisted" } as const;
-      expect(decide(pl, category, "read", other)).toBe("deny needs_assisted_mode");
+      expect(decide(pl, field(category), "read", assisted)).toBe("allow full sensitive_read");
+      expect(decide(pl, field(category), "write", assisted)).toBe("allow full sensitive_write");
+      expect(decide(pl, field(category), "read", other)).toBe("deny needs_assisted_mode");
     }
-    expect(decide(pl, "confidential", "write", assisted)).toBe("allow full");
+    expect(decide(pl, field("confidential"), "write", assisted)).toBe("allow full");
+    const evidenceDoc = doc("profiling_exception_evidence");
+    expect(decide(pl, evidenceDoc, "open_document", assisted)).toBe("allow full document_opened");
+    expect(decide(pl, evidenceDoc, "read", assisted)).toBe("allow metadata_only");
   });
 
   it("widens nothing else", () => {
-    expect(decide(profile("back_office"), "health", "read", assisted)).toBe("deny never");
-    expect(decide(profile("project_lead"), "identifiers", "write", assisted)).toBe("deny never");
-    expect(decide(profile("project_lead"), "health", "open_document", assisted)).toBe(
-      "deny undecided Q87",
-    );
+    expect(decide(profile("back_office"), field("health"), "read", assisted)).toBe("deny never");
+    expect(decide(pl, field("identifiers"), "write", assisted)).toBe("deny never");
+    expect(decide(pl, doc("asu_proof"), "open_document", assisted)).toBe("deny needs_break_glass");
   });
 });
 
 describe("break-glass (AC-27, Q63)", () => {
-  it("gives the PL health and disability as one audited, flagged grant", () => {
-    const decision = decideAccess(
-      profile("project_lead"),
-      sampleResource("health", "active"),
-      "read",
-      breakGlass,
-    );
-    expect(decision).toEqual({
+  const pl = profile("project_lead");
+
+  it("gives the PL health and disability reads as one audited, flagged grant", () => {
+    expect(decideAccess(pl, field("health"), "read", breakGlass)).toEqual({
       effect: "allow",
       view: "full",
       audit: "break_glass_access",
       flagForReview: true,
       grant: { participationId: sample.participationId, category: "health", action: "read" },
     });
-    expect(decide(profile("project_lead"), "disability", "read", breakGlass)).toBe(
+    expect(decide(pl, field("disability"), "read", breakGlass)).toBe(
       "allow full break_glass_access review grant",
     );
   });
 
-  it("grants nothing elsewhere in the active phase", () => {
-    expect(decide(profile("project_lead"), "health", "write", breakGlass)).toBe(
-      "deny needs_assisted_mode",
+  it("opens the documents the catalog allows through break-glass", () => {
+    expect(decideAccess(pl, doc("asu_proof"), "open_document", breakGlass)).toMatchObject({
+      view: "full",
+      audit: "break_glass_access",
+      grant: { category: "identifiers", documentType: "asu_proof", action: "open_document" },
+    });
+    expect(decide(pl, doc("profiling_exception_evidence"), "read", breakGlass)).toBe(
+      "allow metadata_only break_glass_access review grant",
     );
-    expect(decide(profile("project_lead"), "profiling_assessment", "read", breakGlass)).toBe(
-      "deny never",
-    );
-    expect(decide(profile("back_office"), "health", "read", breakGlass)).toBe("deny never");
-    expect(decide(profile("consultant"), "health", "read", breakGlass)).toBe(
+    expect(decide(pl, doc("asu_proof"), "read", breakGlass)).toBe("allow metadata_only");
+  });
+
+  it("never grants writes, lists or more than the documented scope", () => {
+    expect(decide(pl, field("health"), "write", breakGlass)).toBe("deny needs_assisted_mode");
+    expect(decide(pl, field("health"), "list", breakGlass)).toBe("deny not_in_list_payloads");
+    expect(decide(pl, field("profiling_assessment"), "read", breakGlass)).toBe("deny never");
+    expect(decide(pl, doc("asu_proof"), "write", breakGlass)).toBe("deny via_domain_operation");
+    expect(decide(profile("back_office"), field("health"), "read", breakGlass)).toBe("deny never");
+    expect(decide(profile("admin"), field("health"), "read", breakGlass)).toBe("deny never");
+    expect(decide(profile("consultant"), field("health"), "read", breakGlass)).toBe(
       "allow full sensitive_read",
     );
-    expect(decide(profile("admin"), "health", "read", breakGlass)).toBe("deny never");
   });
 
   it("needs a reason code and one participant", () => {
-    const pl = profile("project_lead");
     const blank = { kind: "break_glass", reasonCode: " " } as const;
-    expect(decide(pl, "health", "read", blank)).toBe("deny needs_assisted_mode");
-    expect(decide(pl, "health", "read", breakGlass, { participationId: null })).toBe(
-      "deny needs_assisted_mode",
-    );
+    expect(decide(pl, field("health"), "read", blank)).toBe("deny needs_assisted_mode");
+    const projectWide = { ...field("health"), participationId: null };
+    expect(decide(pl, projectWide, "read", breakGlass)).toBe("deny needs_assisted_mode");
   });
 
-  it("is never available to participants", () => {
-    expect(decide(profile("participant"), "health", "read", breakGlass)).toBe("deny never");
-    expect(decide(profile("participant"), "confidential", "read", accessModes.assisted)).toBe(
+  it("is never available to participants, who have no modes", () => {
+    const participant = profile("participant");
+    expect(decide(participant, field("health"), "read", breakGlass)).toBe("deny never");
+    expect(decide(participant, field("confidential"), "read", accessModes.assisted)).toBe(
       "deny never",
     );
   });
 });
 
-describe("evidence-set phase (Q64)", () => {
-  it("needs break-glass for what the role has in the active phase, and grants no more", () => {
-    expect(evidence("consultant", "confidential", "read", accessModes.normal)).toBe(
+describe("evidence-set phase (Q64, round 11)", () => {
+  it("needs break-glass for what the role has in the active phase, with its view", () => {
+    const granted = "allow full break_glass_access review grant";
+    const confidential = field("confidential", "evidence_set");
+    expect(evidence("consultant", confidential, "read", accessModes.normal)).toBe(
       "deny needs_break_glass",
     );
-    expect(evidence("consultant", "profiling_assessment", "read")).toBe(
-      "allow full break_glass_access review grant",
+    expect(evidence("consultant", field("profiling_assessment", "evidence_set"), "read")).toBe(
+      granted,
     );
-    expect(evidence("project_lead", "signed_tl407", "open_document")).toBe(
-      "allow full break_glass_access review grant",
-    );
-    expect(evidence("project_lead", "signed_tl407", "read")).toBe(
+    const tl407 = doc("tl407_signed_scan", "evidence_set");
+    expect(evidence("project_lead", tl407, "open_document")).toBe(granted);
+    expect(evidence("project_lead", tl407, "read")).toBe(
       "allow metadata_only break_glass_access review grant",
     );
-    expect(evidence("back_office", "confidential", "read")).toBe(
-      "allow full break_glass_access review grant",
+    expect(evidence("back_office", doc("dsv_signed_scan", "evidence_set"), "open_document")).toBe(
+      granted,
     );
-    expect(evidence("back_office", "signed_tl407", "open_document")).toBe("deny never");
-    expect(evidence("project_lead", "health", "read")).toBe("deny never");
-    expect(evidence("consultant_unassigned", "confidential", "read")).toBe("deny not_assigned");
-    expect(evidence("admin", "confidential", "read")).toBe("deny never");
+    expect(evidence("back_office", tl407, "open_document")).toBe("deny never");
+    expect(evidence("project_lead", field("health", "evidence_set"), "read")).toBe("deny never");
+    expect(evidence("project_lead", doc("asu_proof", "evidence_set"), "open_document")).toBe(
+      "deny never",
+    );
+    expect(evidence("consultant_unassigned", confidential, "read")).toBe("deny not_assigned");
   });
 
-  it("never lists, leaves writes undecided (Q87) and keeps participants out", () => {
-    expect(evidence("project_lead", "confidential", "list")).toBe("deny never");
-    expect(evidence("consultant", "confidential", "write")).toBe("deny undecided Q87");
-    expect(evidence("project_lead", "case_internal", "write")).toBe("deny via_status_functions");
-    expect(evidence("participant", "confidential", "read", accessModes.normal)).toBe("deny never");
-  });
-
-  it("doesn't change audit metadata or aggregates", () => {
-    expect(evidence("regional_operations_manager", "audit_metadata", "read")).toBe("allow full");
-    expect(evidence("admin", "aggregated", "read", accessModes.normal)).toBe("allow full");
+  it("never lists and never writes; signed documents stay immutable", () => {
+    for (const key of ["consultant", "project_lead", "back_office", "admin"]) {
+      for (const resource of personResources("evidence_set")) {
+        const signed =
+          resource.kind === "document" && documentTypeEntry(resource.documentType).signed;
+        for (const mode of modes) {
+          expect(evidence(key, resource, "write", mode)).toMatch(
+            signed ? /^deny (immutable|never)$/ : /^deny never$/,
+          );
+          expect(evidence(key, resource, "list", mode)).toMatch(
+            /^deny (never|not_in_list_payloads)$/,
+          );
+        }
+      }
+    }
+    const tl407 = doc("tl407_signed_scan", "evidence_set");
+    expect(evidence("consultant", tl407, "write")).toBe("deny immutable");
+    expect(evidence("back_office", tl407, "write")).toBe("deny never");
+    for (const phase of phases) {
+      expect(
+        evidence("participant", field("confidential", phase), "read", accessModes.normal),
+      ).toBe(phase === "active" ? "allow full" : "deny never");
+    }
   });
 });
 
 describe("role union and assignment (AC-24, D6, Q61, Q62)", () => {
   it("shows section C to a PL who is also profiler only for assigned participants", () => {
     const both = staff(["project_lead", "consultant"], { assigned: [sample.participationId] });
-    expect(decide(both, "profiling_assessment", "read")).toBe("allow full sensitive_read");
-    expect(
-      decide(both, "profiling_assessment", "read", accessModes.normal, {
-        participationId: "participation-b",
-      }),
-    ).toBe("deny not_assigned");
-    expect(
-      decide(both, "confidential", "read", accessModes.normal, { participationId: null }),
-    ).toBe("allow full");
+    expect(decide(both, field("profiling_assessment"), "read")).toBe("allow full sensitive_read");
+    const other = { ...field("profiling_assessment"), participationId: "participation-b" };
+    expect(decide(both, other, "read")).toBe("deny not_assigned");
+    const projectWide = { ...field("confidential"), participationId: null };
+    expect(decide(both, projectWide, "read")).toBe("allow full");
   });
 
-  it("gives an unassigned consultant nothing person-level, only aggregates", () => {
+  it("gives an unassigned consultant aggregates only", () => {
     const consultant = profile("consultant_unassigned");
-    for (const category of personLevel) {
+    const audits = AuditStream.options.map((s) => sampleAudit(s, "staff-a"));
+    for (const resource of [...personResources("active"), ...audits]) {
       for (const action of actions) {
-        for (const mode of Object.values(accessModes)) {
-          expect(decide(consultant, category, action, mode)).toBe("deny not_assigned");
+        if (action === "open_document" && resource.kind !== "document") continue;
+        for (const mode of modes) {
+          expect(decide(consultant, resource, action, mode)).toBe("deny not_assigned");
         }
       }
     }
-    expect(decide(consultant, "aggregated", "read")).toBe("allow full");
+    expect(decide(consultant, sampleAggregate(), "read")).toBe("allow full");
   });
 
-  it("takes the most permissive allow, else the most telling denial", () => {
+  it("takes the most permissive allow, normal before break-glass, else the most actionable denial", () => {
     const plAndBackOffice = staff(["project_lead", "back_office"]);
-    expect(decide(plAndBackOffice, "absence", "read")).toBe("allow type_and_dates");
-    expect(decide(plAndBackOffice, "health", "read")).toBe("deny needs_assisted_mode");
-    expect(decide(plAndBackOffice, "identifiers", "write")).toBe("allow full sensitive_write");
-    expect(decide(staff(["consultant", "back_office"]), "residence_social", "write")).toBe(
+    expect(decide(plAndBackOffice, field("absence"), "read")).toBe("allow type_and_dates");
+    expect(decide(plAndBackOffice, field("health"), "read")).toBe("deny needs_assisted_mode");
+    expect(decide(plAndBackOffice, field("identifiers"), "write")).toBe(
+      "allow full sensitive_write",
+    );
+    const plAndProfiler = staff(["project_lead", "consultant"], {
+      assigned: [sample.participationId],
+    });
+    expect(decide(plAndProfiler, field("health"), "read", breakGlass)).toBe(
+      "allow full sensitive_read",
+    );
+    expect(decide(staff(["consultant", "back_office"]), field("residence_social"), "write")).toBe(
       "deny undecided Q65",
     );
   });
 
-  it("denies staff without a role in the project or region", () => {
-    const outsider = staff([]);
-    expect(decide(outsider, "confidential", "read")).toBe("deny not_member");
-    expect(decide(outsider, "aggregated", "read")).toBe("deny not_member");
-    const otherProject = { projectId: "project-b" };
-    expect(
-      decide(profile("project_lead"), "confidential", "read", accessModes.normal, otherProject),
-    ).toBe("deny not_member");
+  it("denies staff without a role in the project", () => {
+    expect(decide(staff([]), field("confidential"), "read")).toBe("deny not_member");
+    expect(decide(staff([]), sampleAggregate(), "read")).toBe("deny not_member");
+    const otherProject = { ...field("confidential"), projectId: "project-b" };
+    expect(decide(profile("project_lead"), otherProject, "read")).toBe("deny not_member");
+  });
+});
+
+describe("audit projections (Q87 A)", () => {
+  it("adds an assigned consultant's own actions, without security or review events", () => {
+    for (const stream of AuditStream.options) {
+      const own = ["security", "review"].includes(stream) ? "deny never" : "allow full";
+      const decision = decide(profile("consultant"), sampleAudit(stream, "staff-a"), "read");
+      expect([stream, decision]).toEqual([stream, own]);
+    }
+  });
+
+  it("doesn't depend on mode", () => {
+    for (const { subject } of accessProfiles) {
+      for (const stream of AuditStream.options) {
+        const resource = sampleAudit(stream, null);
+        const normal = decide(subject, resource, "read");
+        for (const mode of modes) expect(decide(subject, resource, "read", mode)).toBe(normal);
+      }
+    }
   });
 });
 
 describe("org roles (AC-25, Q57, Q80)", () => {
-  it("shows the regional operations manager audit metadata and aggregates of their region", () => {
-    expect(decide(rom([sample.regionId]), "audit_metadata", "read")).toBe("allow full");
-    expect(decide(rom([sample.regionId]), "aggregated", "read")).toBe("allow full");
-    expect(decide(rom(["region-b"]), "audit_metadata", "read")).toBe("deny out_of_region");
-    expect(
-      decide(rom([sample.regionId]), "audit_metadata", "read", accessModes.normal, {
-        regionId: null,
-      }),
-    ).toBe("deny out_of_region");
-    for (const category of personLevel) {
-      for (const action of actions) {
-        for (const mode of Object.values(accessModes)) {
-          expect(decide(rom("all"), category, action, mode)).toMatch(/^deny (never|not_in_list)/);
+  it("shows the regional operations manager its review events and aggregates, in its region", () => {
+    const own = rom([sample.regionId]);
+    expect(decide(own, sampleAudit("review", null), "read")).toBe("allow full");
+    expect(decide(own, sampleAggregate(), "read")).toBe("allow full");
+    expect(decide(rom(["region-b"]), sampleAudit("review", null), "read")).toBe(
+      "deny out_of_region",
+    );
+    expect(decide(own, { ...sampleAggregate(), regionId: null }, "read")).toBe(
+      "deny out_of_region",
+    );
+  });
+
+  it("gives it no participant data beyond 'evidence present' for exception evidence", () => {
+    for (const phase of phases) {
+      for (const resource of personResources(phase)) {
+        for (const action of actions) {
+          if (action === "open_document" && resource.kind !== "document") continue;
+          for (const mode of modes) {
+            const evidencePresent =
+              resource.kind === "document" &&
+              resource.documentType === "profiling_exception_evidence" &&
+              action === "read" &&
+              phase === "active";
+            expect(decide(rom("all"), resource, action, mode)).toMatch(
+              evidencePresent
+                ? /^allow metadata_only$/
+                : /^deny (never|not_in_list_payloads|needs_break_glass)$/,
+            );
+          }
         }
       }
     }
@@ -285,33 +366,30 @@ describe("org roles (AC-25, Q57, Q80)", () => {
 
   it("gives admins aggregates only, everywhere", () => {
     const admin = staff([], { org: [["admin", "all"]] });
-    expect(decide(admin, "aggregated", "read", accessModes.normal, { regionId: null })).toBe(
-      "allow full",
-    );
-    expect(decide(admin, "audit_metadata", "read")).toBe("deny never");
+    expect(decide(admin, { ...sampleAggregate(), regionId: null }, "read")).toBe("allow full");
+    expect(decide(admin, sampleAudit("case", null), "read")).toBe("deny never");
   });
 });
 
 describe("participants (Q65, Q67)", () => {
   const participant = profile("participant");
 
-  it("reach only their own participation, in normal mode", () => {
-    const other = { participationId: "participation-b" };
-    expect(decide(participant, "confidential", "read", accessModes.normal, other)).toBe(
-      "deny never",
-    );
+  it("reach only their own participation", () => {
+    const other = { ...field("confidential"), participationId: "participation-b" };
+    expect(decide(participant, other, "read")).toBe("deny never");
   });
 
   it("write only self-service fields", () => {
-    expect(participantWrite("pensionInsuranceNumber")).toBe("allow full sensitive_write");
-    expect(participantWrite("iban")).toBe("deny never");
-    expect(participantWrite(undefined)).toBe("deny never");
+    expect(decide(participant, identifiers("pensionInsuranceNumber"), "write")).toBe(
+      "allow full sensitive_write",
+    );
+    expect(decide(participant, identifiers("iban"), "write")).toBe("deny never");
   });
 
-  it("rejects a field of another category", () => {
-    const resource = { ...sampleResource("confidential", "active"), field: "iban" };
-    expect(() => decideAccess(participant, resource, "read", accessModes.normal)).toThrow(
-      "Field iban is not in category confidential",
-    );
+  it("need the birth-date check only where they would otherwise be allowed", () => {
+    const unchecked = profile("participant_unchecked");
+    expect(decide(unchecked, field("health"), "read")).toBe("deny needs_knowledge_check");
+    expect(decide(unchecked, field("health"), "list")).toBe("deny not_in_list_payloads");
+    expect(decide(unchecked, doc("profiling_exception_evidence"), "read")).toBe("deny never");
   });
 });

@@ -76,16 +76,29 @@ export {
   type FieldEntry,
 } from "./fields/catalog";
 export {
+  AuditStream,
   decideAccess,
   type AccessAction,
   type AccessMode,
   type AccessPhase,
   type AccessQuestion,
   type AccessView,
+  type AggregateResource,
+  type AuditResource,
   type Decision,
   type DenyReason,
+  type DocumentResource,
+  type FieldResource,
   type RegionScope,
   type Resource,
   type Subject,
 } from "./access/decide";
+export {
+  DocumentType,
+  documentTypeCatalog,
+  documentTypeEntry,
+  type AccessRole,
+  type DocumentRight,
+  type DocumentTypeEntry,
+} from "./documents/catalog";
 export { PageQuery, ProblemDetails, StaffUser, page } from "./api";

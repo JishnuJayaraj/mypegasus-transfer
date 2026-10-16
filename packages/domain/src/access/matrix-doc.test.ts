@@ -1,35 +1,44 @@
 import { expect, it } from "vitest";
-import { AccessCategory } from "../fields/catalog";
+import { DocumentType } from "../documents/catalog";
+import { AuditStream } from "./decide";
 import { renderAccessMatrixDoc } from "./matrix-doc";
-import { accessProfiles } from "./profiles";
+import { accessProfiles, fieldCategories } from "./profiles";
 
-it("renders every subject, category and undecided cell (docs/domain/generated/access-matrix.md)", () => {
+const rows = (text: string) =>
+  text.split("\n").filter((l) => l.startsWith("| ") && !/^\| (Subject|Question|---) /.test(l));
+
+it("renders every subject, key and undecided cell (docs/domain/generated/access-matrix.md)", () => {
   const doc = renderAccessMatrixDoc();
-  const section = (heading: string) => doc.split(`## ${heading}\n`)[1]!.split("\n## ")[0]!;
-  const rows = (heading: string) =>
-    section(heading)
-      .split("\n")
-      .filter((l) => l.startsWith("| ") && !/^\| (Subject|Question|---) /.test(l));
+  const part = (heading: string, from = doc) => from.split(`${heading}\n`)[1]!.split("\n## ")[0]!;
+  const firstTable = (text: string) => rows(text.split("\n### ")[0]!);
+  const profiles = accessProfiles.length;
 
   expect(doc).toMatch(/^# Access matrix \(generated\)\n/);
-  const full = accessProfiles.length * AccessCategory.options.length;
-  expect(rows("Active phase, normal mode")).toHaveLength(full);
-  expect(rows("Evidence-set phase, normal mode")).toHaveLength(full);
-  expect(section("Evidence-set phase, assisted mode")).toContain(
+  const fields = part("## Fields");
+  const documents = part("## Documents");
+  expect(firstTable(part("### Active phase, normal mode", fields))).toHaveLength(
+    profiles * fieldCategories.length,
+  );
+  expect(firstTable(part("### Evidence-set phase, normal mode", documents))).toHaveLength(
+    profiles * DocumentType.options.length,
+  );
+  expect(part("### Evidence-set phase, assisted mode", fields)).toContain(
     "No cell differs from normal mode.",
   );
+  expect(rows(part("## Audit metadata"))).toHaveLength(profiles * AuditStream.options.length);
+  expect(rows(part("## Aggregates"))).toHaveLength(profiles);
   expect(doc).toContain(
-    "| PL | `health` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode | no: needs_assisted_mode |",
+    "| PL | `health` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode |",
   );
   expect(doc).toContain(
     "| PL | `health` | `read` | no: needs_assisted_mode | yes · break_glass_access · grant · review |",
   );
   expect(doc).toContain(
-    "| Consultant/profiler (assigned) | `signed_tl407` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |",
+    "| Consultant/profiler (assigned) | `tl407_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |",
   );
   expect(doc).toContain(
-    "| Q65 | PL | `confidential` | `write` | active normal, active break_glass, evidence_set normal, evidence_set assisted, evidence_set break_glass |",
+    "| Q65 | PL | `confidential` | `write` | active normal, active break_glass |",
   );
-  expect(rows("Undecided cells").every((r) => /^\| Q(65|87) \|/.test(r))).toBe(true);
+  expect(rows(part("## Undecided cells")).every((r) => r.startsWith("| Q65 |"))).toBe(true);
   expect(doc.endsWith("\n")).toBe(true);
 });

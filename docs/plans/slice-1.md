@@ -165,10 +165,12 @@ correction), the derived overall status and the generated transitions table.
 `projectFlags`; **1c-2** `transferKugEligibility`.
 
 **1d is split** the same way: **1d-1** `decideAccess` (role union, assignment, category, mode,
-phase, action incl. `write`; the regional operations manager's reads, the list-payload rule,
-break-glass scope), the generated access table and the 100 % threshold on `access/**`;
+phase, action incl. `write`; four resource kinds, round 11; the regional operations manager's
+reads, the list-payload rule, break-glass scope), the document-type catalog (Q87 B), the
+generated access table and the 100 % threshold on `access/**` and `documents/**`;
 **1d-2** `mayPerformTransition` and the operation permissions (Q60, Q80, round 10 §6), with the
-roles in the generated transitions table. 1g depends on 1d-2.
+roles in the generated transitions table and the `append_evidence_correction` permission
+(round 11). 1g depends on 1d-2.
 
 ## 5. Design
 
@@ -527,7 +529,8 @@ Readings taken in PR 1c-2 (fail safe, D10; *verify* with Q74/Q82, open in Q86):
 - Event types (enum created now): `participation_created`, `status_changed`,
   `entry_wave_assigned`, `profiling_exception_requested`, `profiling_exception_approved`,
   `profiling_exception_rejected`, `profiling_exception_revoked`, `end_reason_corrected`
-  (Slice 1); `sensitive_read`, `break_glass_access`, `document_opened`, `warning_confirmed`,
+  (Slice 1); `sensitive_read`, `sensitive_write` (key, actor, subject, time; never values,
+  round 11), `break_glass_access`, `document_opened`, `warning_confirmed`,
   `export_created`, `config_override_changed`, `review_recorded`, `clarification_requested`
   (Slices 3–9).
 - Audit entries without a project (logins, template publication) get their own table in
@@ -619,21 +622,24 @@ language skills, driving licence are confidential.
 - **Exception reason codes** are confidential; `participant_prevented_documented` deliberately
   reveals no illness (Q81).
 
-#### Access categories
+#### Resources and access categories (round 11)
 
-| Category | Matrix row (data-protection.md) | Data class |
+Access is decided per **resource kind**: a participant **field** (category from the field
+catalog), a **document** (type from the document-type catalog), **audit metadata** (a filtered
+projection, Q87 A) or an **aggregate**.
+
+| Category | Fields / documents | Data class |
 |---|---|---|
 | `case_internal` | statuses, dates | internal |
-| `confidential` | Confidential data | confidential |
-| `health` | Health (structured), health-related end reason | special category |
+| `confidential` | confidential data; uploads, qualification certificates | confidential |
+| `health` | health (structured); profiling-exception evidence; the health-related end reason value (Slice 8) | special category |
 | `disability` | Schwerbehinderung/Gleichstellung, GdB | special category |
-| `identifiers` | RV-Nr., IBAN, Steuer-ID, BA-Kundennummer | highly confidential |
-| `residence_social` | Nationality, residence status, Bürgergeld | highly confidential |
-| `profiling_assessment` | Section C, Gesamteinschätzung, weiteres Vorgehen | highly confidential |
-| `signed_tl407`, `signed_kug200b` | Signed TL 407 / Kug 200b PDF | most sensitive content |
-| `absence` | Sub-status periods | payroll records |
-| `audit_metadata` | event type, actor, dates, reason codes — no participant details (Q80) | internal |
-| `aggregated` | counts, workload | aggregated |
+| `identifiers` | RV-Nr., IBAN, Steuer-ID, BA-Kundennummer; ASU proof | highly confidential |
+| `residence_social` | nationality, residence status, Bürgergeld | highly confidential |
+| `profiling_assessment` | section C, Gesamteinschätzung, weiteres Vorgehen | highly confidential |
+| `signed_tl407`, `signed_kug200b` | signed TL 407 / Kug 200b | most sensitive content |
+| `employment_contract` | signed DSV, DSV cancellation | highly confidential |
+| `absence` | sub-status periods | payroll records |
 
 #### `decideAccess(subject, resource, action, mode)`
 
@@ -644,8 +650,14 @@ type Subject =
       projectRoles: Record<ProjectId, ReadonlySet<ProjectRole>>;   // D6: zero or more
       assignedParticipationIds: ReadonlySet<string> }              // as profiler/consultant
   | { kind: "participant"; participationId: string; knowledgeCheckPassed: boolean };
-type Resource = { projectId: string; regionId: string | null; participationId: string | null;
-                  category: AccessCategory; phase: "active" | "evidence_set" };
+type Scope = { projectId: string; regionId: string | null };
+type Person = Scope & { participationId: string | null; phase: "active" | "evidence_set" };
+type Resource =
+  | Person & { kind: "field"; field: FieldKey }                // category from the catalog
+  | Person & { kind: "document"; documentType: DocumentType }  // only kind with open_document
+  | Scope & { kind: "audit"; participationId: string | null; stream: AuditStream;
+              actorStaffUserId: string | null }
+  | Scope & { kind: "aggregate" };
 type Action = "read" | "list" | "open_document" | "write";
 type Mode = { kind: "normal" } | { kind: "assisted"; onBehalfOf: string }
           | { kind: "break_glass"; reasonCode: string };
@@ -654,110 +666,102 @@ type Decision =
   | { effect: "allow"; view: "full" | "metadata_only" | "absence_only" | "type_and_dates";
       audit: null | "sensitive_read" | "sensitive_write" | "document_opened" | "break_glass_access";
       flagForReview: boolean;
-      grant?: { participationId: string; category: AccessCategory; action: Action } } // break-glass scope
+      grant?: { participationId: string; category: AccessCategory;  // break-glass scope
+                documentType?: DocumentType; action: Action } }
   | { effect: "deny"; because: "not_member" | "not_assigned" | "never" | "needs_break_glass"
       | "needs_assisted_mode" | "needs_knowledge_check" | "not_in_list_payloads"
-      | "immutable" | "via_status_functions" | "out_of_region" | "undecided";
-      question?: "Q65" | "Q87" };                        // undecided = docs gap (D10)
+      | "immutable" | "via_domain_operation" | "out_of_region" | "not_applicable" }
+  | { effect: "deny"; because: "undecided"; question: "Q65" };   // docs gap (D10)
 ```
 
-PR 1d-1 added `sensitive_write`, `via_status_functions`, the `question` of an `undecided` cell
-and an optional `field` on the resource (participant writes); see the readings below.
+`not_applicable`: `open_document` on a field, audit or aggregate resource, `write` on an
+aggregate. `sensitive_write` is audited with the field or document key, actor, subject and
+timestamp, never old or new values (PR 1g adds the event type).
 
 **Role union (D6/Q61):** computed per role the subject holds in the project; the most
-permissive *allow* wins; sensitive categories reached through the consultant role still require
-the assignment. A PL who is also a profiler sees section C only for participants assigned to
-them.
+permissive valid *allow* wins, a normal allow over an unnecessary break-glass one; otherwise
+the most actionable denial. Person-level access through the consultant role needs the
+assignment: a PL who is also a profiler sees section C only for participants assigned to them.
 
-**Reading** (*assumed*, Q28/Q49/Q51/Q62/Q80):
+**Reading** (*assumed*, Q28/Q49/Q51/Q62/Q80/Q87):
 
-- **Admin, regional admin:** every participant-level category `never`; `aggregated` only.
-- **Regional operations manager** (own region only): `audit_metadata` and `aggregated`; every
-  participant-level category `never` (no case files, section C, health or signed documents).
-- **Consultant/profiler:** person-level data **only for assigned participations**; for others
-  only `aggregated` workload counts. Assigned: everything including section C and health;
-  signed forms with `open_document` audited; absence "abwesend" + dates.
-- **PL:** confidential and internal yes; health/disability only in assisted mode or
-  break-glass; identifiers, residence/social, section C **no**; signed forms: `read` metadata
-  only, `open_document` audited; absence "abwesend" + dates.
+- **Admin, regional admin:** aggregates only.
+- **Regional operations manager** (own region only): the `review` audit projection,
+  aggregates and "evidence present" (metadata) of profiling-exception evidence; no case files,
+  section C, health fields or signed documents.
+- **Consultant/profiler:** person-level data **only for assigned participations**; otherwise
+  aggregates only. Assigned: every field category including section C and health; documents
+  per the catalog; absence "abwesend" + dates.
+- **PL:** confidential and internal fields; health/disability only in assisted mode or
+  break-glass; identifiers, residence/social, section C **no**; documents per the catalog;
+  absence "abwesend" + dates.
 - **Back office:** confidential, identifiers, residence/social, disability yes; health,
-  section C, signed forms **no**; absence type + dates.
-- **Participant (own):** all own categories, special category only after the birth-date check;
-  section C and signed forms denied (Q67).
-- Every allowed read of special-category/highly confidential data → `sensitive_read`; every
-  `open_document` → `document_opened`.
-- **Lists:** `list` is denied for every special-category and highly confidential category.
-- **Break-glass** (Q63): only where the docs allow it (PL on health/disability; consultant, PL
-  and back office on the evidence set), needs a reason code, returns a **grant scoped to one
-  participant, one category and one action**, audit `break_glass_access`, flagged for the
-  after-the-fact review. On the evidence set it never grants more than the role has in the
-  active phase; the phase starts after the first deletion stage (Q64).
+  section C **no**; DSV documents; absence type + dates.
+- **Participant (own):** own fields, special category only after the birth-date check; own
+  uploads and qualification certificates; no section C, no signed documents (Q67), no audit
+  log, no aggregates.
+- Allowed full reads of special-category/highly confidential fields → `sensitive_read`;
+  reading a document gives metadata, opening it → `document_opened`.
+- **Lists:** never for special-category or highly confidential data, nor absence (Q85).
+- **Break-glass** (Q63): only where the docs allow it (PL: health/disability fields, the ASU
+  proof file, profiling-exception evidence; consultant, PL and back office on the evidence
+  set), needs a reason code, returns a **grant scoped to one participant, one category or
+  document type and one action**, audit `break_glass_access`, flagged for review. Never `list`,
+  never a write, never beyond the role's active-phase scope.
+- **Evidence set** (Q64, Q87 C): reads only through break-glass, with the active-phase view;
+  lists `never`; writes `never` (signed documents `immutable`). Exceptional corrections:
+  `append_evidence_correction` (PR 1d-2 permission, operation with evidence storage).
+- **Audit metadata** (Q87 A): filtered projections per stream (below); read-only.
 
-**Writing** (*assumed*, Q65):
+**Writing fields** (*assumed*, Q65; field key always given):
 
 | Category | Participant (own) | Consultant (assigned) | PL | Back office | Org roles |
 |---|---|---|---|---|---|
-| `case_internal` | never | via status functions (Q60 edges) | via status functions and operations | via status functions (DSV edges) | never |
-| `confidential` | `selfService` fields | case data: yes | assisted mode; otherwise `undecided` | `undecided` | never |
+| `case_internal` | never | `via_domain_operation` | `via_domain_operation` | `via_domain_operation` | never |
+| `confidential` | `selfService` fields | yes | assisted mode; otherwise `undecided` | `undecided` | never |
 | `health` | `selfService`, after knowledge check | yes | assisted mode only | never | never |
 | `disability` | `selfService`, after knowledge check | yes | assisted mode only | yes (payroll facts) | never |
-| `identifiers` | `selfService` | `undecided` (TL 407 needs RV-Nr.) | never (ordinary editing) | yes | never |
+| `identifiers` | `selfService` | `undecided` (TL 407 needs RV-Nr.) | never | yes | never |
 | `residence_social` | `selfService` | `undecided` (TL 407 section B) | never | `undecided` | never |
 | `profiling_assessment` | never | yes | never | never | never |
-| `signed_*` | never | `immutable` (a correction is a new version, Slice 4b) | `immutable` | `immutable` | never |
 | `absence` | never | never | never | yes | never |
 
-Assisted writes carry actor + `onBehalfOf`; every sensitive write is audited. The `undecided`
-cells go back to the DPO/PL review of Q65 with the generated table.
+Documents are never written in place: `immutable` (signed) or `via_domain_operation` (upload,
+new version). Assisted writes carry actor + `onBehalfOf`. The `undecided` cells go back to the
+DPO/PL review of Q65 with the generated table.
 
-Readings taken in PR 1d-1 (fail safe, D10; correct them if wrong; gaps in Q87):
-- **Sensitive categories:** `health`, `disability`, `identifiers`, `residence_social`,
-  `profiling_assessment`, `signed_tl407`, `signed_kug200b`. They are never listed, and every
-  allowed full read is `sensitive_read`. `absence` isn't listed either until Q85 is answered.
-- **Signed forms:** `read` gives the metadata (`metadata_only`, not `sensitive_read`) to those
-  who may open the form, the assigned profiler and the PL; the PDF only through
-  `open_document` (`document_opened`). Back office and participants get neither.
-- **`case_internal`** (statuses, dates) is read by every project role ("internal: role ×
-  project access"), by the consultant only when assigned, and by participants for their own.
-- **Aggregates** are read by every staff role within its scope (project role, or org role in
-  its region). Participants never: an aggregate is no participation of theirs.
-- **Writes of `case_internal`** are denied as `via_status_functions`: statuses and the dates
-  they set change only through the status functions and operations, which
-  `mayPerformTransition` and the operation permissions decide (PR 1d-2). Audit metadata and
-  aggregates are never written directly (append-only, derived).
-- **Sensitive writes** carry `audit: "sensitive_write"` (Q65: sensitive writes are audited);
-  PR 1g adds the event type.
-- **Assisted mode** applies only to the participation in `onBehalfOf` and widens only what the
-  docs name (PL: health and disability read and write, confidential write); otherwise the
-  decision is the normal one. Without it, the PL's health/disability cells say
-  `needs_assisted_mode` (the regular route; reads also work with break-glass, writes don't).
-- **Break-glass** needs a non-blank reason code (no code list before Slice 3) and one
-  participation; otherwise, and wherever the docs give no break-glass, the normal decision
-  applies, so break-glass never widens access and an assigned profiler's own access stays
-  unflagged. It never grants `list`. Its audit entry `break_glass_access` replaces
-  `sensitive_read`/`document_opened`.
-- **Evidence-set phase** concerns person-level categories; audit metadata (own retention, Q3)
-  and aggregates are unaffected. Staff get what the role has in the active phase, normal mode
-  (a `needs_assisted_mode` becomes `never`), and only with break-glass, keeping the active
-  view; `list` is `never`, writes are `undecided` (Q87). Participants: `never` (break-glass
-  only, which they don't have).
-- **Participants** reach only their own participation and only in normal mode. The birth-date
-  check guards `health` and `disability` (special category) for every action, not the highly
-  confidential categories. Writes need a `selfService` field of the category. The catalog's
-  `selfService` flags were reviewed and stay: the participant writes the RV-Nummer (TL 407),
-  not IBAN, Steuer-ID or BA-Kundennummer (back office's payroll identifiers, Q65).
-- **Union** (D6): the most permissive allow (`full` > `type_and_dates` > `absence_only` >
-  `metadata_only`, unflagged first); without one, the most telling denial (`undecided` first,
-  then what a mode or check could lift, …, `never`, `not_member`).
-- **Org roles** need the resource's region in their scope; a resource without a region is out
-  of every region except `"all"` (admin). An unassigned consultant gets `not_assigned` for every
-  person-level category, action and mode; a project-wide resource (no participation) counts as
-  unassigned.
-- **`open_document`** on a category other than the signed forms is `undecided` (Q87) where the
-  read is allowed, else the read's denial.
-- **The health-related end reason** decides as its field, `endReason` (`confidential`); only
-  list payloads drop the value (`isListable`). The value can't be stored before Slice 8, which
-  gives it the `health` access rule of 5.6 along with its encrypted storage.
+The 14 readings taken in PR 1d-1 were answered in
+[round 11](../decisions/2026-10-16-answers-round-11.md) (Q87 *assumed*) and are reflected
+above. Readings taken while applying round 11 (fail safe, D10; correct them if wrong):
+- **Field resources always carry the field key**, reads included; the category comes from the
+  field catalog.
+- **Document classes and categories:** TL 407 special category (the health line of section C);
+  Kug 200b, DSV and cancellation highly confidential, in the new category
+  `employment_contract` for the DSV documents; ASU proof `identifiers`; profiling-exception
+  evidence always `health` until evidence storage (Slice 4b) can tell medically related
+  evidence apart.
+- **Document retention classes:** `evidence_set` (TL 407, Kug 200b), `personnel_file` (DSV,
+  cancellation), `participation_record` (the rest); periods `unset` until Slice 7.
+- **Roles a document type doesn't name get `never`** (e.g. back office on ASU proof and
+  exception evidence, participants on ASU proof). Back office on qualification certificates:
+  `never` until Slice 8 brings the funding/settlement purpose.
+- **PL on exception evidence:** its metadata too only in assisted mode or through break-glass
+  ("only assisted/break-glass" read literally).
+- **Document writes:** roles that may open the type get `immutable` (signed) or
+  `via_domain_operation`; metadata-only roles `never`.
+- **Evidence set:** a read the active phase allows only through a mode (`needs_assisted_mode`,
+  `needs_break_glass`, e.g. the PL's ASU proof file) becomes `never`; org roles get `never`.
+- **Audit streams** (Slice 3 maps each event type to one): `case`, `profiling`, `dsv`,
+  `payroll`, `security`, `review`. PL `case`, `profiling`, `dsv`; assigned consultant `case`,
+  `profiling`, plus own actions in `case`/`profiling`/`dsv`/`payroll`; back office `dsv`,
+  `payroll`; regional operations manager `review` in its region. Back office doesn't see `case`
+  (TG entry/exit events), and the PL doesn't see `review` (clarification requests reach the PL
+  as a task, Slice 5). The reason-code filter applies when Slice 3 builds the projections. A
+  consultant's own actions still need the assignment. Audit `write` is `never`, not
+  `not_applicable`; projections don't depend on mode or phase.
+- **Knowledge check** only where the participant would otherwise be allowed: something they can
+  never see is `never`, not `needs_knowledge_check`.
+- **Reports and exports** become their own resource kind with the reporting slice.
 
 **Permissions for transitions and operations** (Q60, Q80, PR 1d-2):
 - `mayPerformTransition(subject, edge, participation)`: PL all manual edges of their project;
@@ -767,6 +771,10 @@ Readings taken in PR 1d-1 (fail safe, D10; correct them if wrong; gaps in Q87):
 - `mayPerformOperation`: PL assigns waves, requests and revokes exceptions, corrects end
   reasons; the regional operations manager of the project's region decides exceptions (never
   their own request) and reviews reconciliations and break-glass.
+- `append_evidence_correction` (round 11, Q87 C): requested by the PL or back office according
+  to the document type, with a BA/legal reference and reason code, approved by the regional
+  operations manager (never their own request); the operation itself comes with evidence
+  storage.
 
 ### 5.7 `packages/config`
 
@@ -1127,11 +1135,12 @@ exceptions), AC-28, AC-30 (roles in the transitions table). AC-29 was met in 1a.
 | API routes for status changes, operations, participations or access; the review and clarification UI | Slices 2, 3, 5 |
 | Wiring `decideAccess` into requests, sessions, logins and their audit | Slice 3 |
 | Free text (break-glass, exception evidence, BA confirmer) and its encryption | Slice 3 (first writer) / 4b (evidence documents); codes only until then |
-| Storing the special-category end reason | Slice 8 (TG exits), with encrypted storage |
+| Storing the special-category end reason | Slice 8 (TG exits), with encrypted storage; it then applies the `health` access category to that value (round 11) |
 | Field-level encryption of participant fields, sensitive endpoints, `sensitive_read` writes | with the first such field (Slices 4a/6) |
 | DSV documents, signature dates, ASU records, signed TL 407, cancellation, §110 activities | Slices 6/7/8; guards fail closed (D4) |
 | BA/legal determinations table, Transfer-KuG export blocking | Slice 8 (the domain types exist now) |
 | `bee_unit` and the Transfer-KuG case (separate from entry waves; several waves may reference one beE), `ta_only` measure groups | Slice 8 / later (round 10); Slice 1 waves carry dates only |
+| Report/export as a resource kind of `decideAccess`; audit projections built from events; document storage and `append_evidence_correction` itself | reporting slice; Slice 3; Slices 4b/7 (round 11) |
 | Customer-notification flag after withdrawal from `dsv_signed` | Slice 7 |
 | `self_registered` creation and the 30-day rejection job | Slice 4c |
 | Sending reminders, "what's missing" UI, dashboards, escalations | Slice 5 (they call `evaluateCompleteness`, `lifecycleFlags`, `transferKugEligibility`) |

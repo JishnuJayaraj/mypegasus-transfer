@@ -1,7 +1,10 @@
 import { z } from "zod";
 import type { DataClass } from "../enums";
 
-/** Rows of the access matrix (plan 5.6, data-protection.md). `decideAccess` comes in PR 1d. */
+/**
+ * Categories of participant fields and documents (plan 5.6, data-protection.md). Audit
+ * metadata and aggregates are resource kinds of their own (`decideAccess`, round 11).
+ */
 export const AccessCategory = z.enum([
   "case_internal",
   "confidential",
@@ -12,9 +15,8 @@ export const AccessCategory = z.enum([
   "profiling_assessment",
   "signed_tl407",
   "signed_kug200b",
+  "employment_contract",
   "absence",
-  "audit_metadata",
-  "aggregated",
 ]);
 export type AccessCategory = z.infer<typeof AccessCategory>;
 
