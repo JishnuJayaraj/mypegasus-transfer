@@ -52,14 +52,18 @@ check() { # <path> <expected status> <expected body pattern>
 }
 
 check /api/v1/health/ready 200 '"status":"ok"'
-docker logs "$name" 2>&1 | grep -q '"msg":"jobs started"' || fail "pg-boss did not start"
-echo "ok  pg-boss started as transfer_app"
+# Captured first: with pipefail, `docker logs | grep -q` fails when grep exits on its first match
+# and docker logs dies of SIGPIPE (exit 141).
+logs="$(docker logs "$name" 2>&1)"
+grep -q '"msg":"jobs started"' <<<"$logs" || fail "pg-boss did not start"
+echo "ok  pg-boss started (jobs on)"
 check / 200 '<title>Transferplattform</title>'
 check /projects/new 200 '<title>Transferplattform</title>'
 check /portal/ 200 '<title>Teilnehmerportal</title>'
 check /api/v1/unknown 404 'urn:transfer:problem:not-found'
 
-asset="$(curl -fsS "$base/portal/" | grep -o '/portal/assets/[^"]*\.js' | head -n 1)"
+portal="$(curl -fsS "$base/portal/")" || fail "GET /portal/: no response"
+asset="$(grep -o '/portal/assets/[^"]*\.js' <<<"$portal" | sed -n 1p || true)"
 [ -n "$asset" ] || fail "no script in /portal/"
 curl -fsS -o /dev/null -D - "$base$asset" | grep -qi '^cache-control: .*immutable' ||
   fail "GET $asset: not cached as immutable"
