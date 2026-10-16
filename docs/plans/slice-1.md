@@ -156,6 +156,11 @@ hand-written lines is split (1b is the likeliest candidate: edges/guards vs. ope
 
 1b/1d/1e can run in parallel after 1a.
 
+**1b is split** by the rule above: **1b-1** edges, track activity, `canTransition`, guards,
+waves and effective dates, offer deadlines, the three TG entry kinds, `pnpm test:coverage`;
+**1b-2** the operations (wave assignment, profiling exception request/decide/revoke, end-reason
+correction), the derived overall status and the generated transitions table.
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -334,6 +339,18 @@ A test asserts this list exactly.
 
 The facts behind the document guards and `taMeasuresComplete` are absent in Slice 1 (D4); the
 domain tests cover every outcome with explicit facts.
+
+Readings taken in PR 1b-1 (fail safe, D10; correct them if wrong):
+- A fact counts only from its `validOn`: one dated after `today` doesn't satisfy a guard.
+- `offer_deadline_valid` fails when the wave has no `latestEntryDate` or there is no effective
+  `tgStart`: the bounds can't be checked.
+- A system kind without `scheduledAt` fails every dated TG entry guard (nothing to snapshot
+  against). Reconciliation on `tgStart` itself needs that day's run to have completed
+  (`scheduledRunCompleted`); otherwise from the next day.
+- The confirmation in `withdrawal_after_dsv_signed` and `ta_completion` is a staff action, so
+  a system withdrawal from `dsv_signed` never passes.
+- TG entry exists only in `ta_tg` and `ta_completed` only in `ta_only` (`no_edge` otherwise);
+  the DSV track in `ta_only` is `track_inactive`.
 
 #### Operations without a status change
 
