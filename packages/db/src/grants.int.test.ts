@@ -1,12 +1,13 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "./migrate";
-import { seedStaffUserIds } from "./seed";
-import { resetTestDatabase, testDatabaseUrls } from "./testing";
+import { seedProjectIds, seedStaffUserIds } from "./seed";
+import { call, createWave, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
 // AC-13: the runtime role only has the grants that migrations give it explicitly.
 const urls = testDatabaseUrls();
 const app = new Client({ connectionString: urls.app });
+const owner = new Client({ connectionString: urls.owner });
 const staffUserId = seedStaffUserIds.projectLead;
 
 const insertProject = (client: Client) =>
@@ -17,8 +18,8 @@ const insertProject = (client: Client) =>
 
 const permissionDenied = { code: "42501" };
 
-beforeAll(() => app.connect());
-afterAll(() => app.end());
+beforeAll(() => Promise.all([app.connect(), owner.connect()]));
+afterAll(() => Promise.all([app.end(), owner.end()]));
 beforeEach(() => resetTestDatabase({ seed: true }));
 
 describe("transfer_app", () => {
@@ -51,5 +52,136 @@ describe("transfer_app", () => {
 
   it("cannot run migrations; only transfer_owner can", async () => {
     await expect(runMigrations(urls.app)).rejects.toMatchObject({ cause: permissionDenied });
+  });
+});
+
+// AC-15 (plan 5.4, D2): statuses and audit events are written only by the status functions.
+const statusFunctions = [
+  "lock_participation",
+  "create_participation",
+  "change_participation_status",
+  "assign_entry_wave",
+  "request_profiling_exception",
+  "decide_profiling_exception",
+  "revoke_profiling_exception",
+  "correct_end_reason",
+  "record_audit_event",
+];
+const helpers = ["assert_context", "write_audit_event", "end_reason_fits"];
+
+/** Every direct write to a table; `column` is set to itself. */
+const writes = (table: string, column: string, insert: string) => [
+  [`insert into ${table}`, insert],
+  [`update ${table}`, `update ${table} set ${column} = ${column}`],
+  [`delete from ${table}`, `delete from ${table}`],
+  [`truncate ${table}`, `truncate ${table}`],
+];
+
+describe("transfer_app and the Slice 1 tables (AC-15)", () => {
+  let participationId: string;
+  let waveId: string;
+  beforeEach(async () => {
+    waveId = await createWave(owner);
+    participationId = await call(app, "create_participation", {
+      projectId: seedProjectIds.werkNord,
+      context: pl,
+    });
+  });
+
+  it("may select participations and waves, nothing from the audit trail or the edges", async () => {
+    expect((await app.query("select status from participation")).rows).toEqual([
+      { status: "imported" },
+    ]);
+    expect((await app.query("select code from project_entry_wave")).rows).toEqual([{ code: "W2" }]);
+    await expect(app.query("select * from audit_event")).rejects.toMatchObject(permissionDenied);
+    await expect(app.query("select * from lifecycle_edge")).rejects.toMatchObject(permissionDenied);
+  });
+
+  it.each([
+    ...writes(
+      "participation",
+      "id",
+      `insert into participation (project_id, status, profiling_status, dsv_status, profiling_exception_status) values ('${seedProjectIds.werkNord}', 'imported', 'not_started', 'not_offered', 'none')`,
+    ),
+    ["update participation status", "update participation set status = 'contacted'"],
+    ...writes(
+      "project_entry_wave",
+      "id",
+      `insert into project_entry_wave (project_id, code, name) values ('${seedProjectIds.werkNord}', 'W9', 'W9')`,
+    ),
+    ...writes(
+      "audit_event",
+      "id",
+      `insert into audit_event (project_id, event_type, actor_type, system_job) values ('${seedProjectIds.werkNord}', 'export_created', 'system', 'x')`,
+    ),
+    ...writes(
+      "lifecycle_edge",
+      "kind",
+      "insert into lifecycle_edge (track, from_value, to_value, kind, actors) values ('main', 'withdrawn', 'imported', 'manual', '{user}')",
+    ),
+    ["lock participations directly", "select id from participation for update"],
+    [
+      "lock participations with FOR NO KEY UPDATE",
+      "select id from participation for no key update",
+    ],
+    ["call an internal helper", `select end_reason_fits('withdrawn', 'other')`],
+  ])("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+
+  it("may execute the nine functions, and locks through lock_participation", async () => {
+    await app.query("begin");
+    const { rows } = await app.query("select status, status_version from lock_participation($1)", [
+      participationId,
+    ]);
+    expect(rows).toEqual([{ status: "imported", status_version: 0 }]);
+    await app.query("rollback");
+    await call(app, "assign_entry_wave", { id: participationId, waveId, context: pl });
+    const { rows: granted } = await owner.query(
+      `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and has_function_privilege('transfer_app', p.oid, 'execute')
+       order by p.proname`,
+    );
+    expect(granted.map((r) => r.proname)).toEqual(statusFunctions.toSorted());
+  });
+
+  it("gives PUBLIC no EXECUTE on any function in public", async () => {
+    const { rows } = await owner.query(
+      `select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace,
+         aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+       where n.nspname = 'public' and a.grantee = 0 and a.privilege_type = 'EXECUTE'`,
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it("makes every function SECURITY DEFINER where granted, with a fixed search_path and no dynamic SQL", async () => {
+    const { rows } = await owner.query(
+      `select p.proname, p.prosecdef, p.proconfig, r.rolname, p.prosrc
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace join pg_roles r on r.oid = p.proowner
+       where n.nspname = 'public' order by p.proname`,
+    );
+    expect(rows.map((r) => r.proname).toSorted()).toEqual(
+      [...statusFunctions, ...helpers].toSorted(),
+    );
+    for (const row of rows) {
+      expect(row.rolname).toBe("transfer_owner");
+      expect(row.prosecdef).toBe(statusFunctions.includes(row.proname));
+      expect(row.proconfig).toEqual(["search_path=pg_catalog, public, pg_temp"]);
+      expect(row.prosrc).not.toMatch(/\bexecute\b|\bformat\s*\(/i);
+    }
+  });
+
+  it("can't shadow a table with a temporary one", async () => {
+    await app.query("create temporary table participation (id uuid, status text)");
+    try {
+      await app.query("begin");
+      const { rows } = await app.query("select status from lock_participation($1)", [
+        participationId,
+      ]);
+      expect(rows).toEqual([{ status: "imported" }]);
+      await app.query("rollback");
+    } finally {
+      await app.query("drop table pg_temp.participation");
+    }
   });
 });

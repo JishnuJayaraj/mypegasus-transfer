@@ -1,3 +1,4 @@
+export * from "./lifecycle";
 import { createDb } from "../client";
 import { loadEnv, requireEnv } from "../env";
 import { runMigrations } from "../migrate";
@@ -44,7 +45,10 @@ export async function recreateTestDatabase(
 export async function resetTestDatabase(options: { seed?: boolean } = {}): Promise<void> {
   const db = createDb(testDatabaseUrls().owner);
   try {
-    await db.$client.query("truncate project, staff_user");
+    // lifecycle_edge is reference data from the migrations, never truncated.
+    await db.$client.query(
+      "truncate audit_event, participation, project_entry_wave, project, staff_user",
+    );
     if (options.seed) await seed(db);
   } finally {
     await db.$client.end();

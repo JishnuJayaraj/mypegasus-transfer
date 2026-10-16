@@ -185,6 +185,17 @@ only to their Agentur), the blockers, `projectActivationBlockers`, pinned-versio
 (`load.ts`), the validator cache per (template id, version), the two sample templates (D8) and
 the resolver parts of the docs (AC-31 for the samples, AC-32, AC-33, AC-35).
 
+**1g is split** the same way (the nine functions alone are several hundred lines of SQL):
+**1g-1** `project_entry_wave` with the migration of the Slice 0 project dates (AC-20),
+`participation`, `audit_event`, `lifecycle_edge` with their `CHECK`s, the audit event model in
+`packages/domain/src/audit` (100 % threshold), the nine functions, the grants (AC-15, AC-16,
+AC-18), the drift tests (AC-17) and the data-catalog entries with their retention classes
+(AC-42: the catalog test fails for a table without an entry, so they come with the tables), the
+ADR-0002 amendment and the retention classes in the docs; **1g-2** the status service with the
+fail-closed facts provider, the permission checks and superseding in the same transaction
+(AC-19), the seed through the functions (AC-43) with the synthetic regional operations manager.
+`job_run` stays with 1h.
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -542,7 +553,8 @@ Readings taken in PR 1c-2 (fail safe, D10; *verify* with Q74/Q82, open in Q86):
   `clarification_requested` → the reviewed `id`), never updates.
 - Event types (enum created now): `participation_created`, `status_changed`,
   `entry_wave_assigned`, `profiling_exception_requested`, `profiling_exception_approved`,
-  `profiling_exception_rejected`, `profiling_exception_revoked`, `end_reason_corrected`
+  `profiling_exception_rejected`, `profiling_exception_revoked`,
+  `profiling_exception_superseded` (round 10, added in PR 1g-1), `end_reason_corrected`
   (Slice 1); `sensitive_read`, `sensitive_write` (key, actor, subject, time; never values,
   round 11), `break_glass_access`, `document_opened`, `warning_confirmed`,
   `export_created`, `config_override_changed`, `review_recorded`, `clarification_requested`
@@ -591,6 +603,94 @@ job uses the same service as `system`.
 | `pgboss` schema | `USAGE` + DML on its tables and sequences (spike S2) |
 
 The pseudonymisation role comes with the retention job (Slice 7, ADR-0002).
+
+#### Readings taken in PR 1g (1g-1)
+
+Built in PR 1g-1: migrations `0002_lifecycle_tables` (generated), `0003_lifecycle_data` (the W1
+waves and the edge rows) and `0004_status_functions` (hand-written: the functions and grants);
+`packages/domain/src/audit` (`AuditEvent`, `AuditEventType`, `AuditActor`, `StatusField`,
+`lifecycleEventTypes`; 100 % covered); the data-catalog entries. Readings (fail safe, D10;
+correct them if wrong):
+
+1. **The split** puts the data-catalog entries into 1g-1, not 1g-2: the catalog test fails for
+   a table without an entry. 1g-2 keeps the status service and the seed.
+2. **The wave migration** creates `W1` (code and name `W1`) for **every** `ta_tg` project, also
+   one without dates (all dates null, flagged like any wave without `latestEntryDate`). A
+   `ta_tg` project created through the Slice 0 API after this migration gets no wave until
+   Slice 2 moves the project form to waves; the domain then flags it
+   (`latest_entry_date_missing`) and nothing moves.
+3. **Superseding a stale request** (round 10) happens inside `change_participation_status`,
+   in the transaction of the change that makes the request stale (`profiling_closed`,
+   `participation_closed`; `project_ta_only` can't occur yet, since a project's type can't
+   change). It is audited as a new event type **`profiling_exception_superseded`** ("all
+   closures are audited"), actor `system` with job `lifecycle.supersede-stale-exception`, the
+   triggering change's request/job id, reason code = the superseded reason and
+   `details.statusChangeId`. So such a change writes **one `status_changed` plus one
+   `profiling_exception_superseded`**; every other change writes exactly one row (AC-16).
+4. **Columns beyond 5.10's list:** `end_reason_source` (who set the primary reason; needed to
+   move a system-derived one to the secondary list, Q72), `profiling_exception_decided_at` (the
+   instant of the decision for the guard's `recordedAt`, round 9; `transfer_app` can't read the
+   audit trail), `profiling_exception_superseded_reason`, `lifecycle_edge.project_types` (TG
+   entry only in `ta_tg`, `ta_completed` only in `ta_only`), and a composite FK
+   `(entry_wave_id, project_id)` so a participation's wave is always of its own project.
+5. **The exception columns hold the latest request;** earlier requests stay as their audit
+   events, never overwritten there. The evidence reference isn't stored (no evidence storage,
+   D4): **Q94**.
+6. **More `CHECK`s than 5.10 lists**, all from rules already decided: `isConsistentState`'s
+   invariants (tracks start at `informed`, `active_in_tg`/`exited` need `dsv_signed`, an
+   unmatched self-registration has no wave), the exception record's consistency,
+   `tg_entry_date` exactly for `active_in_tg`/`exited` and `exit_date` exactly for `exited`
+   (5.10 says "for"), the end-reason source and the special-category reason refused in the
+   table too (Q66).
+7. **`lifecycle_edge`** has a unique key `(track, from_value, to_value, kind)` with
+   `NULLS NOT DISTINCT` instead of a primary key (creation edges have no `from_value`);
+   `actors` is an array, one actor per row today.
+8. **What the functions check besides the edge list** (the integrity the plan names, never a
+   dated guard): track activity (`track_inactive`), the end reason's phase
+   (`end_reason_fits`, drift-tested against the domain), a date for each dependent column
+   (`effective_date_required` for TG entry, exit, withdrawal, `profiling_done`), an offer only
+   with a wave and a deadline that exists (the wave's for the first offer, an explicit one for
+   a re-offer; `wave_required`, `offer_deadline_required`), and parameters that don't belong to
+   the transition (`invalid_argument`). Deadline bounds, dated facts and the future start stay
+   in TypeScript.
+9. **Creation follows the creation edge:** only a `user` creates (import/manual, Q60). The plan's
+   "seed as `system` / `seed`" can't take user edges: **Q95**.
+10. **`change_participation_status` takes `p_scheduled_at timestamptz`** instead of a free
+    `details` jsonb, and composes the details itself (`entryKind`, `scheduledAt`,
+    `secondaryReasons`, `offerDeadline`): no caller-supplied JSON can carry free text. Only
+    `record_audit_event` takes `details`, held by the table's `CHECK`.
+11. **Hardening:** `search_path = pg_catalog, public, pg_temp` (the plan's path plus `pg_temp`
+    last, so a caller's temporary table can't shadow ours) and schema-qualified names; default
+    privileges revoke `EXECUTE` from `PUBLIC` in `public`; three internal helpers
+    (`assert_context`, `write_audit_event`, `end_reason_fits`) are neither `SECURITY DEFINER`
+    nor granted.
+12. **The actor** is one composite argument `audit_context` (type, staff id, participant id,
+    job, on behalf of, request id, job id). Assisted mode and participant actors act only for
+    the target participation (`invalid_actor`); a participant actor may only call
+    `record_audit_event`; an actor or allow-list that is missing fails closed.
+13. **Dates and instants:** business dates (`requested_on`, `decided_on`, effective dates) come
+    from the caller's Clock (Berlin); instants (`occurred_at`, `decided_at`) are database time.
+14. **No free text in `audit_event`, enforced by the table:** every text column has a pattern
+    `CHECK` (codes, ids, job names; `from`/`to` from the matching enum) and `details` must be an
+    object whose keys are camelCase and whose strings are ids, codes, keys, dates or instants
+    (≤ 100 characters). The reason code is never the special-category end reason.
+15. **The audit model** gives the Slice 3–9 types without a shape in the plan
+    (`warning_confirmed`, `export_created`, `config_override_changed`) a code and no details
+    until their slices define them; `break_glass_access` mirrors `decideAccess`'s grant (action
+    `read` or `open_document`, one target). Person-level events (`sensitive_*`,
+    `break_glass_access`, `document_opened`) need their participation.
+16. **Retention:** `reference_data` has the period `never` (no personal data, never touched by
+    the retention job); `participation_record` and `audit_log` stay `unset`. The data-catalog
+    check also refuses an unknown retention class.
+17. **Reassigning the same wave** isn't refused (the domain allows it); it writes an event.
+18. **Error codes** (SQLSTATE `P0001`, the code is the whole message): `actor_not_allowed`,
+    `invalid_actor`, `invalid_argument`, `project_not_found`, `participation_not_found`,
+    `stale_status`, `invalid_transition`, `track_inactive`, `reason_required`,
+    `reason_wrong_phase`, `reason_not_storable`, `effective_date_required`, `wave_required`,
+    `offer_deadline_required`, `not_ta_tg`, `wave_of_other_project`, `status_not_open`,
+    `dsv_already_offered`, `not_informed`, `profiling_closed`, `exception_open`,
+    `not_requested`, `same_person_approval`, `not_revocable`, `no_longer_applicable`,
+    `no_end_reason`, `reason_unchanged`, `event_type_reserved`. Table `CHECK`s give `23514`.
 
 ### 5.5 Completeness engine (`packages/domain/src/completeness`)
 

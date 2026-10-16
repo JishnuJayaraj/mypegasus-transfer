@@ -17,6 +17,14 @@ export interface CatalogEntry {
 export const retentionPeriods = {
   project_master: "unset", // Q58
   staff_account: "unset", // Q59 (assumed: deactivate and pseudonymise, never delete)
+  // ADR-0008 per item; non-signers from `withdrawn_on` (90 days assumed, Q77), the rest with
+  // the personnel file and the evidence set (Slice 7).
+  participation_record: "unset",
+  // 3 years; pseudonymised when the subject's data is deleted; evidence-set entries follow the
+  // evidence set (verify, Q3).
+  audit_log: "unset",
+  // No personal data: the retention job never touches it.
+  reference_data: "never",
 } as const;
 
 export const dataCatalog: Record<string, CatalogEntry> = {
@@ -24,6 +32,26 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   staff_user: {
     retentionClass: "staff_account",
     dataClass: "confidential",
+    holdsParticipantData: false,
+  },
+  project_entry_wave: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  participation: {
+    retentionClass: "participation_record",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  audit_event: {
+    retentionClass: "audit_log",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  lifecycle_edge: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
     holdsParticipantData: false,
   },
 };
@@ -41,6 +69,8 @@ export function checkDataCatalog(
     const entry = catalog[config.name];
     if (!entry) {
       problems.push(`${config.name}: missing from the data catalog`);
+    } else if (!Object.hasOwn(retentionPeriods, entry.retentionClass)) {
+      problems.push(`${config.name}: unknown retention class ${entry.retentionClass}`);
     } else if (entry.holdsParticipantData && !isProjectScoped(config)) {
       problems.push(
         `${config.name}: holds participant data but has no project_id uuid not null FK to project`,

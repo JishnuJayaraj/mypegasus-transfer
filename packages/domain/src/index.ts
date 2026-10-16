@@ -134,4 +134,12 @@ export {
   type MissingItem,
   type StepCompleteness,
 } from "./completeness/engine";
+export {
+  AuditActor,
+  AuditEvent,
+  AuditEventType,
+  lifecycleEventTypes,
+  StatusField,
+  statusFieldOfTrack,
+} from "./audit/events";
 export { PageQuery, ProblemDetails, StaffUser, page } from "./api";
