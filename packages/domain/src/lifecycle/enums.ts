@@ -131,14 +131,24 @@ export const ProfilingExceptionReason = z.enum([
 ]);
 export type ProfilingExceptionReason = z.infer<typeof ProfilingExceptionReason>;
 
+/** `none` is a participation without a request; each request is its own record (round 10). */
 export const ProfilingExceptionStatus = z.enum([
   "none",
   "requested",
   "approved",
   "rejected",
   "revoked",
+  "superseded",
 ]);
 export type ProfilingExceptionStatus = z.infer<typeof ProfilingExceptionStatus>;
+
+/** Why a pending request was closed automatically (round 10). */
+export const ProfilingExceptionSupersededReason = z.enum([
+  "participation_closed",
+  "project_ta_only",
+  "profiling_closed",
+]);
+export type ProfilingExceptionSupersededReason = z.infer<typeof ProfilingExceptionSupersededReason>;
 
 /** Transfer-KuG eligibility per period (Q82, verify). */
 export const KugOutcome = z.enum(["eligible", "excluded", "ba_review_required"]);

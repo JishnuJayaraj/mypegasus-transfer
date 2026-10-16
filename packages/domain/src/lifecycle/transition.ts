@@ -97,7 +97,7 @@ export function canTransition(
   );
   if (!edge) return fail("actor_not_allowed");
 
-  const reasonProblem = checkEndReason(to, ctx.endReason);
+  const reasonProblem = endReasonProblem(to, ctx.endReason);
   if (reasonProblem) return fail(reasonProblem);
 
   const failedGuards = edge.guards.filter((guard) => !guardPasses(guard, edge, ctx));
@@ -122,7 +122,10 @@ function isTrackActive(track: Track, from: AnyStatus, to: AnyStatus, ctx: Transi
 }
 
 /** `→ withdrawn` needs a pre-TG reason, `→ exited` a TG reason; special category isn't storable yet. */
-function checkEndReason(to: AnyStatus, reason: EndReason | undefined): TransitionFailure | null {
+export function endReasonProblem(
+  to: AnyStatus,
+  reason: EndReason | undefined,
+): Extract<TransitionFailure, `reason_${string}`> | null {
   const phase = reasonPhase[to];
   if (!phase) return null;
   if (!reason) return "reason_required";

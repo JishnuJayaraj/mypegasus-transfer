@@ -8,6 +8,7 @@ import {
   MainStatus,
   ProfilingExceptionReason,
   ProfilingExceptionStatus,
+  ProfilingExceptionSupersededReason,
   ProfilingStatus,
   Step,
   TgEntryKind,
@@ -51,7 +52,12 @@ describe("vocabulary (plan 5.2)", () => {
     [
       "ProfilingExceptionStatus",
       ProfilingExceptionStatus,
-      words`none requested approved rejected revoked`,
+      words`none requested approved rejected revoked superseded`,
+    ],
+    [
+      "ProfilingExceptionSupersededReason",
+      ProfilingExceptionSupersededReason,
+      words`participation_closed project_ta_only profiling_closed`,
     ],
     ["KugOutcome", KugOutcome, words`eligible excluded ba_review_required`],
     ["ActorType", ActorType, words`user participant system`],
