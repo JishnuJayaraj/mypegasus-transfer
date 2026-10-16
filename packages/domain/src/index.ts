@@ -75,4 +75,17 @@ export {
   valueDataClass,
   type FieldEntry,
 } from "./fields/catalog";
+export {
+  decideAccess,
+  type AccessAction,
+  type AccessMode,
+  type AccessPhase,
+  type AccessQuestion,
+  type AccessView,
+  type Decision,
+  type DenyReason,
+  type RegionScope,
+  type Resource,
+  type Subject,
+} from "./access/decide";
 export { PageQuery, ProblemDetails, StaffUser, page } from "./api";

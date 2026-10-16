@@ -164,6 +164,12 @@ correction), the derived overall status and the generated transitions table.
 **1c is split** the same way: **1c-1** `planSystemTransitions`, `lifecycleFlags` and
 `projectFlags`; **1c-2** `transferKugEligibility`.
 
+**1d is split** the same way: **1d-1** `decideAccess` (role union, assignment, category, mode,
+phase, action incl. `write`; the regional operations manager's reads, the list-payload rule,
+break-glass scope), the generated access table and the 100 % threshold on `access/**`;
+**1d-2** `mayPerformTransition` and the operation permissions (Q60, Q80, round 10 §6), with the
+roles in the generated transitions table. 1g depends on 1d-2.
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -607,7 +613,7 @@ language skills, driving licence are confidential.
 
 - `listable` is `false` for every special-category and highly confidential field.
 - `customerVisible` is `true` for exactly the whitelist *(provisional, Q13)*.
-- `selfService` marks what the participant may write (Q65); reviewed in PR 1d.
+- `selfService` marks what the participant may write (Q65); reviewed in PR 1d-1 (unchanged).
 - **End reasons are classified per value:** `long_term_illness_reduced_earning_capacity` is
   special category and never in ordinary lists; `deceased` and the rest are confidential.
 - **Exception reason codes** are confidential; `participant_prevented_documented` deliberately
@@ -646,13 +652,17 @@ type Mode = { kind: "normal" } | { kind: "assisted"; onBehalfOf: string }
 
 type Decision =
   | { effect: "allow"; view: "full" | "metadata_only" | "absence_only" | "type_and_dates";
-      audit: null | "sensitive_read" | "document_opened" | "break_glass_access";
+      audit: null | "sensitive_read" | "sensitive_write" | "document_opened" | "break_glass_access";
       flagForReview: boolean;
       grant?: { participationId: string; category: AccessCategory; action: Action } } // break-glass scope
   | { effect: "deny"; because: "not_member" | "not_assigned" | "never" | "needs_break_glass"
       | "needs_assisted_mode" | "needs_knowledge_check" | "not_in_list_payloads"
-      | "immutable" | "out_of_region" | "undecided" };   // undecided = docs gap (D10)
+      | "immutable" | "via_status_functions" | "out_of_region" | "undecided";
+      question?: "Q65" | "Q87" };                        // undecided = docs gap (D10)
 ```
+
+PR 1d-1 added `sensitive_write`, `via_status_functions`, the `question` of an `undecided` cell
+and an optional `field` on the resource (participant writes); see the readings below.
 
 **Role union (D6/Q61):** computed per role the subject holds in the project; the most
 permissive *allow* wins; sensitive categories reached through the consultant role still require
@@ -700,7 +710,56 @@ them.
 Assisted writes carry actor + `onBehalfOf`; every sensitive write is audited. The `undecided`
 cells go back to the DPO/PL review of Q65 with the generated table.
 
-**Permissions for transitions and operations** (Q60, Q80):
+Readings taken in PR 1d-1 (fail safe, D10; correct them if wrong; gaps in Q87):
+- **Sensitive categories:** `health`, `disability`, `identifiers`, `residence_social`,
+  `profiling_assessment`, `signed_tl407`, `signed_kug200b`. They are never listed, and every
+  allowed full read is `sensitive_read`. `absence` isn't listed either until Q85 is answered.
+- **Signed forms:** `read` gives the metadata (`metadata_only`, not `sensitive_read`) to those
+  who may open the form, the assigned profiler and the PL; the PDF only through
+  `open_document` (`document_opened`). Back office and participants get neither.
+- **`case_internal`** (statuses, dates) is read by every project role ("internal: role ×
+  project access"), by the consultant only when assigned, and by participants for their own.
+- **Aggregates** are read by every staff role within its scope (project role, or org role in
+  its region). Participants never: an aggregate is no participation of theirs.
+- **Writes of `case_internal`** are denied as `via_status_functions`: statuses and the dates
+  they set change only through the status functions and operations, which
+  `mayPerformTransition` and the operation permissions decide (PR 1d-2). Audit metadata and
+  aggregates are never written directly (append-only, derived).
+- **Sensitive writes** carry `audit: "sensitive_write"` (Q65: sensitive writes are audited);
+  PR 1g adds the event type.
+- **Assisted mode** applies only to the participation in `onBehalfOf` and widens only what the
+  docs name (PL: health and disability read and write, confidential write); otherwise the
+  decision is the normal one. Without it, the PL's health/disability cells say
+  `needs_assisted_mode` (the regular route; reads also work with break-glass, writes don't).
+- **Break-glass** needs a non-blank reason code (no code list before Slice 3) and one
+  participation; otherwise, and wherever the docs give no break-glass, the normal decision
+  applies, so break-glass never widens access and an assigned profiler's own access stays
+  unflagged. It never grants `list`. Its audit entry `break_glass_access` replaces
+  `sensitive_read`/`document_opened`.
+- **Evidence-set phase** concerns person-level categories; audit metadata (own retention, Q3)
+  and aggregates are unaffected. Staff get what the role has in the active phase, normal mode
+  (a `needs_assisted_mode` becomes `never`), and only with break-glass, keeping the active
+  view; `list` is `never`, writes are `undecided` (Q87). Participants: `never` (break-glass
+  only, which they don't have).
+- **Participants** reach only their own participation and only in normal mode. The birth-date
+  check guards `health` and `disability` (special category) for every action, not the highly
+  confidential categories. Writes need a `selfService` field of the category. The catalog's
+  `selfService` flags were reviewed and stay: the participant writes the RV-Nummer (TL 407),
+  not IBAN, Steuer-ID or BA-Kundennummer (back office's payroll identifiers, Q65).
+- **Union** (D6): the most permissive allow (`full` > `type_and_dates` > `absence_only` >
+  `metadata_only`, unflagged first); without one, the most telling denial (`undecided` first,
+  then what a mode or check could lift, …, `never`, `not_member`).
+- **Org roles** need the resource's region in their scope; a resource without a region is out
+  of every region except `"all"` (admin). An unassigned consultant gets `not_assigned` for every
+  person-level category, action and mode; a project-wide resource (no participation) counts as
+  unassigned.
+- **`open_document`** on a category other than the signed forms is `undecided` (Q87) where the
+  read is allowed, else the read's denial.
+- **The health-related end reason** decides as its field, `endReason` (`confidential`); only
+  list payloads drop the value (`isListable`). The value can't be stored before Slice 8, which
+  gives it the `health` access rule of 5.6 along with its encrypted storage.
+
+**Permissions for transitions and operations** (Q60, Q80, PR 1d-2):
 - `mayPerformTransition(subject, edge, participation)`: PL all manual edges of their project;
   assigned consultant/profiler `contacted`, `unreachable`, `informed`, the profiling track and
   `→ exited`; back office `→ dsv_offered`, `→ dsv_signed`, `→ dsv_declined`; participants none;
@@ -987,6 +1046,9 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
       rejected; a rule without `basis` is locked. (U)
 
 ### Access (PR 1d)
+
+1d-1: AC-23, AC-24, AC-25 (reads), AC-26, AC-27, AC-30 (access table). 1d-2: AC-25 (deciding
+exceptions), AC-28, AC-30 (roles in the transitions table). AC-29 was met in 1a.
 - [ ] **AC-23** Every cell of data-protection.md's read matrix and write table is an explicit
       expectation and passes; the full enumeration yields exactly one decision per case; every
       case the docs don't cover is `undecided` with its question. (U `access/matrix.test.ts`)
@@ -1097,7 +1159,8 @@ period).
 - **1a:** S1 note in ADR-0004, S2 note in ADR-0011; CLAUDE.md "Repo layout" (`config`,
   `adapters` with `Clock` only).
 - **1b/1c:** process-and-lifecycle.md links the generated transitions table.
-- **1d:** data-protection.md: access categories and a link to the generated access matrix.
+- **1d:** data-protection.md: access categories and a link to the generated access matrix
+  (1d-1).
 - **1f:** regional-variation.md: the concrete template model replaces the sketch; ADR-0004
   amendment (Zod-authored model exported as JSON Schema, the profile, rule bases, blockers,
   Agentur-scoped overrides).

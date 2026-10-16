@@ -96,6 +96,28 @@
   regional admin contacts the PL (Q57).
 - **Customer**: no login in the MVP (Q47). See the next section.
 
+### Access categories and the generated matrix *(assumed)*
+
+The rules above are code in `packages/domain/src/access` (`decideAccess`), with tests for every
+cell. **[The generated access matrix](generated/access-matrix.md)** (`pnpm generate`, checked
+in CI) shows every subject × category × action × mode × phase, and every cell the docs don't
+cover yet as `undecided` (denied) with its question (Q65, Q87). Each field of the field catalog
+belongs to one category:
+
+| Category | Matrix row | Class |
+|---|---|---|
+| `case_internal` | statuses, dates | internal |
+| `confidential` | confidential data | confidential |
+| `health` | health (structured); the health-related end reason value (not storable before Slice 8) | special category |
+| `disability` | Schwerbehinderung/Gleichstellung, GdB | special category |
+| `identifiers` | RV-Nr., IBAN, Steuer-ID, BA-Kundennummer | highly confidential |
+| `residence_social` | nationality, residence status, Bürgergeld | highly confidential |
+| `profiling_assessment` | section C, Gesamteinschätzung, weiteres Vorgehen | highly confidential |
+| `signed_tl407`, `signed_kug200b` | signed TL 407 / Kug 200b PDF | most sensitive content |
+| `absence` | sub-status periods | payroll records; not in lists until Q85 |
+| `audit_metadata` | event type, actor, dates, reason codes, no participant details (Q80) | internal |
+| `aggregated` | counts, workload | aggregated |
+
 ### Write permissions *(assumed until DPO and PL review, Q65)*
 
 | Who | May write |
