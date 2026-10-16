@@ -606,6 +606,38 @@ type MissingItem = { step: Step; ruleId: string; kind: "field" | "document"; key
 - Document types in Slice 1: `dsv_signed_scan`, `tl407_signed_scan`, `kug200b_signed_scan`,
   `asu_proof`, `dsv_cancellation`, `profiling_exception_evidence`.
 
+Built in PR 1e (`packages/domain/src/completeness`, 100 % covered): `RuleBasis`, the closed Zod
+schema `CompletenessRule` (strict objects; 1f's template model reuses it), `isLocked`,
+`validateRules(input, { customFields })` → `{ ok: true, rules }` or every issue with its path
+(`invalid_rule`, `unknown_key`, `unknown_step`, `unknown_field`, `unknown_document_type`,
+`duplicate_id`; an unknown key inside `when` is an `invalid_rule` at `when`), `isPresent`,
+`DocumentState` and `evaluateCompleteness(rulesByStep, { fields, documents })`. Document types
+come from the document-type catalog (`documents/catalog.ts`), which holds the six above.
+
+Readings taken in PR 1e (fail safe, D10; correct them if wrong):
+- **Document facts** are, per document type, the review states of the participation's
+  documents: `uploaded`, `accepted`, `rejected` (the words above; Slice 4b's document review
+  owns them). One satisfying document is enough (a rejected scan, then an accepted re-upload).
+- **`documentPresent` without `accepted`:** an `uploaded` or `accepted` document satisfies it;
+  only `rejected` ones give `not_accepted` (a document staff rejected doesn't count as present);
+  none gives `missing`. `accepted: false` means the same as leaving it out.
+- **Presence:** only the four listed values are absent; every object, `{}` included, is present
+  (its structure is value validity, checked on write).
+- **`requiredIf`:** `equals` is strict, without trimming or coercion (`0` ≠ `"0"`, `false` ≠
+  absent), so an absent condition field never matches and the rule doesn't apply; `exists` uses
+  the presence rules.
+- **Rule ids are unique across all steps** of a rule set, not only within a step: a project
+  override relaxes a rule by `ruleId` alone (5.7). Uniqueness across layers is 1f's merge.
+- **Steps:** a rule set's keys are `Step` values; an unknown step is rejected. The result lists
+  every step; a step without rules is complete. The engine doesn't restrict which step holds
+  which rule: `project_checklist` is evaluated against the facts its caller passes (project
+  facts come with Slice 2).
+- **Custom fields** are known only when the caller declares them (from the resolved config's
+  `fields`, 1f); the `custom.` prefix and the schema profile are 1f's checks.
+- **One item per failed rule:** two rules on the same key give two items (a UI may group by
+  key). Evaluation takes validated rules and doesn't check them again; an inherited property
+  (`toString`) is never a fact.
+
 ### 5.6 Field catalog and the access matrix
 
 #### Field catalog (`packages/domain/src/fields`)

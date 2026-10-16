@@ -111,4 +111,22 @@ export {
   type DocumentRight,
   type DocumentTypeEntry,
 } from "./documents/catalog";
+export {
+  CompletenessRule,
+  isLocked,
+  RuleBasis,
+  validateRules,
+  type RuleIssue,
+  type RulesByStep,
+  type RuleValidation,
+} from "./completeness/rules";
+export {
+  DocumentState,
+  evaluateCompleteness,
+  isPresent,
+  type Completeness,
+  type CompletenessFacts,
+  type MissingItem,
+  type StepCompleteness,
+} from "./completeness/engine";
 export { PageQuery, ProblemDetails, StaffUser, page } from "./api";

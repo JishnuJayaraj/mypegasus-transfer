@@ -18,6 +18,7 @@ export default defineConfig({
           "packages/domain/src/eligibility/**",
           "packages/domain/src/access/**",
           "packages/domain/src/documents/**",
+          "packages/domain/src/completeness/**",
           "packages/domain/src/dates.ts",
         ].map((glob) => [glob, { lines: 100, functions: 100, branches: 100, statements: 100 }]),
       ),
