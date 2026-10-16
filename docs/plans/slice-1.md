@@ -151,7 +151,7 @@ hand-written lines is split (1b is the likeliest candidate: edges/guards vs. ope
 | **1d** `feat(domain): field-level access matrix` | `decideAccess` (multi-role union × assignment × category × mode × phase × action incl. `write`), the regional operations manager, transition and approval permissions (Q60, Q80), list-payload rule, break-glass scope, generated access table. | 1a | every access rule documented |
 | **1e** `feat(domain): completeness engine` | Rule types with basis, presence semantics, `evaluateCompleteness`, rule validation against the field catalog. | 1a | truth tables pass |
 | **1f** `feat(config): template model, resolver and base defaults` | `packages/config`: Zod model → committed JSON Schema (+ drift), field-schema profile, nationwide vs. regional settings, Agentur-scoped temporary settings, locked and relaxable rules, two-level resolver with provenance and blockers, `base-defaults.json`, two sample templates, pinned-version loading. | 1e | resolution 100 % covered |
-| **1g** `feat(db): waves, participation, audit and the status functions` | `project_entry_wave` (+ migration of the Slice 0 project dates), `participation`, `audit_event`, `lifecycle_edge`, the nine functions, grants, drift test, data catalog, seed, `apps/api` status service with the fail-closed facts provider. | 1b, 1c, 1d | grant and atomicity tests pass |
+| **1g** `feat(db): waves, participation, audit and the status functions` | `project_entry_wave` (+ migration of the Slice 0 project dates), `participation`, `audit_event`, `lifecycle_edge`, the nine functions, grants, drift test, data catalog, seed, `apps/api` status service with the fail-closed facts provider; the service enforces `mayPerformTransition` and the operation permissions, and supersedes stale exception requests in the same transaction (round 10). | 1b, 1c, 1d | grant and atomicity tests pass |
 | **1h** `feat(api): pg-boss and the nightly lifecycle job` | pg-boss setup (schema install, grants, in-process start), `job_run`, schedule, sweep + per-project job with the catch-up window, `pnpm jobs:lifecycle`, idempotency tests with a manual clock, image smoke. Docs: CLAUDE.md commands, `.env.example`, overview, ADR-0011 note, settings allowlist. | 1c, 1g | **slice done** |
 
 1b/1d/1e can run in parallel after 1a.
@@ -205,7 +205,8 @@ docs/domain/generated/               lifecycle-transitions.md, access-matrix.md 
 | `EndReason` (one enum, `phase`, Q34) | `pre_tg`: `declined_profiling`, `declined_dsv`, `no_response`, `never_contacted`, `not_informed`, `placed_direct`, `self_employed`, `retirement`, `other_measure`, `deceased`, `other`; `tg`: `placed_permanent`, `placed_fixed_term`, `self_employed`, `retirement`, `apprenticeship_or_study`, `max_duration_reached`, `own_termination_without_job`, `terminated_by_tg`, `long_term_illness_reduced_earning_capacity` (**special category**, not storable until encryption), `deceased`, `other`. The planner derives only `declined_dsv`, `declined_profiling`, `no_response`, `never_contacted`, `not_informed`. |
 | `TgEntryKind` | `scheduled_entry`, `scheduled_entry_catchup` (system), `reconciliation` (PL) |
 | `ProfilingExceptionReason` (Q81) | `participant_prevented_documented`, `agentur_scheduling_unavailable`, `force_majeure`, `ba_confirmed_other` |
-| `ProfilingExceptionStatus` | `none`, `requested`, `approved`, `rejected`, `revoked` |
+| `ProfilingExceptionStatus` | `none`, `requested`, `approved`, `rejected`, `revoked`, `superseded` (round 10) |
+| `ProfilingExceptionSupersededReason` (round 10) | `participation_closed`, `project_ta_only`, `profiling_closed` |
 | `KugOutcome` (Q82) | `eligible`, `excluded`, `ba_review_required` |
 | `ActorType` | `user`, `participant`, `system` |
 | `OrgRole` / `ProjectRole` | `admin`, `regional_admin`, **`regional_operations_manager`** / `project_lead`, `consultant`, `back_office` — sets, not single values (D6) |
@@ -357,24 +358,25 @@ Readings taken in PR 1b-1 (fail safe, D10; correct them if wrong):
 | Operation | Who | Rule |
 |---|---|---|
 | **Assign entry wave** | PL | `ta_tg`, wave of the same project, DSV still `not_offered` |
-| **Request profiling exception** | PL | main `informed`; profiling neither `profiling_done` nor `profiling_declined`; a Q81 reason code; evidence or BA reference present (fact); `ba_confirmed_other` also needs who at the BA confirmed it and when (fact). Fails closed in Slice 1 (no evidence storage until 4b). |
-| **Approve / reject profiling exception** | `regional_operations_manager` of the project's region | status `requested`; **the decider differs from the requester** (checked in the domain and in the DB function); approval before entry, otherwise it counts only from its date (case 3) |
-| **Revoke profiling exception** | PL | `requested` or `approved`, only before TG entry; after entry it is closed by `profiling_done` |
-| **Correct end reason** (Q72) | PL | on `withdrawn`/`exited`; same phase; a system-derived previous reason moves to the secondary list; the terminal status is not reopened |
+| **Request profiling exception** | PL | `ta_tg`; main `informed`; profiling neither `profiling_done` nor `profiling_declined`; an effective TG start after today; no request or approval open; a Q81 reason code; evidence or BA reference present (fact with a reference); `ba_confirmed_other` also needs who at the BA confirmed it and when (fact). After a rejected, revoked or superseded request: a **new record** with changed evidence (round 10). Fails closed in Slice 1 (no evidence storage until 4b). |
+| **Approve / reject profiling exception** | `regional_operations_manager` of the project's region | status `requested`; **the decider differs from the requester** (checked in the domain and in the DB function); main `informed`, profiling open, an effective TG start after today (round 10); an approval counts only from its date (case 3) |
+| **Revoke profiling exception** | PL | `requested` or `approved`, still applicable, only before TG entry; after entry it is closed by `profiling_done` |
+| **Supersede a stale request** | system (status functions) | a `requested` one, when profiling is done or declined, the participation closes or the project becomes `ta_only`; a passed start alone doesn't close it, and it can't authorise the missed date (round 10) |
+| **Correct end reason** (Q72) | PL | on `withdrawn`/`exited`; same phase; not the same reason; a system-derived previous reason moves to the secondary list, a previous PL reason only when the PL confirms it still applies (round 10); the terminal status is not reopened |
 
-Readings taken in PR 1b-2 (fail safe, D10; correct them if wrong):
-- A wave is assigned only while `imported`, `contacted`, `unreachable` or `informed`: not to an
-  unmatched self-registration, nor after a terminal status.
-- The profiling exception is a `ta_tg` operation: it only serves the TG entry guard.
-- A new request may follow a rejected or revoked one; it needs its own approval.
-- Approval and rejection need the main status `informed` and profiling still open; a request
-  that went stale (profiling done or declined meanwhile) is revoked by the PL.
-- An approval is the fact `profilingExceptionApproved`, valid from the decision's Berlin date and
-  recorded at its instant (`approvedExceptionFact`).
-- An end-reason correction to the same reason is refused (`reason_unchanged`). A previous reason
-  the PL chose stays in the audit history only; just a system-derived one joins the secondary list.
-- Role checks (PL, `regional_operations_manager` of the region) are the access matrix (PR 1d);
-  the operations check the actor type and the four-eyes rule.
+The readings taken in PR 1b-2 were answered in
+[round 10](../decisions/2026-10-16-answers-round-10.md) and are reflected in the table above.
+Two readings of its wording remain (fail safe, D10; correct them if wrong):
+- "An applicable future start date" means an effective TG start exists and lies after today; it
+  is checked on every request (the first included) and on approval and rejection.
+- Revoking a request that no longer applies is refused (`no_longer_applicable`): it is
+  superseded instead.
+
+Role checks (PL, `regional_operations_manager` of the region) are the access matrix (PR 1d);
+the operations check the actor type and the four-eyes rule. **By the end of the slice no
+externally callable operation bypasses `mayPerformTransition` or the matching operation
+permission:** the status service (PR 1g) enforces both the lifecycle and the role decision; the
+DB functions provide integrity (round 10).
 
 #### System planner (`planSystemTransitions`, PR 1c)
 
@@ -1037,6 +1039,7 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
 | Field-level encryption of participant fields, sensitive endpoints, `sensitive_read` writes | with the first such field (Slices 4a/6) |
 | DSV documents, signature dates, ASU records, signed TL 407, cancellation, §110 activities | Slices 6/7/8; guards fail closed (D4) |
 | BA/legal determinations table, Transfer-KuG export blocking | Slice 8 (the domain types exist now) |
+| `bee_unit` and the Transfer-KuG case (separate from entry waves; several waves may reference one beE), `ta_only` measure groups | Slice 8 / later (round 10); Slice 1 waves carry dates only |
 | Customer-notification flag after withdrawal from `dsv_signed` | Slice 7 |
 | `self_registered` creation and the 30-day rejection job | Slice 4c |
 | Sending reminders, "what's missing" UI, dashboards, escalations | Slice 5 (they call `evaluateCompleteness`, `lifecycleFlags`, `transferKugEligibility`) |

@@ -5,7 +5,8 @@
 > the contract, final admission cutoff, no overrides of documentary guards, employment vs.
 > Transfer-KuG eligibility), and from round 8 (entry waves, catch-up of missed runs, approval of
 > profiling exceptions, three Transfer-KuG outcomes, `taMeasuresComplete`) and round 9 (cutoff
-> for participations without a wave, snapshot rule for TG entry). Items marked *(provisional, Qnn)* rest on
+> for participations without a wave, snapshot rule for TG entry) and round 10 (waves vs. beE
+> units, profiling exception requests, end-reason corrections). Items marked *(provisional, Qnn)* rest on
 > answers that are still `assumed` or `verify` in `open-questions.md`.
 
 ## Big picture
@@ -55,6 +56,10 @@ steps from the KuG-Agentur's template (see regional-variation.md).
   contractual dates may override the wave defaults, with audit. An active `ta_tg` project needs
   at least one wave with a `latestEntryDate`, otherwise it stays draft (Q77). The project's final
   entry date (the latest wave cutoff) is derived, for project-level reporting only.
+  A wave is a **timing cohort**, not a beE and not a Transfer-KuG bucket (round 10): one beE may
+  hold several waves, or a later wave gets its own beE with its own term; a later `bee_unit` /
+  Transfer-KuG case is a separate entity that waves reference. `ta_only` projects have no waves
+  (their cohorts are measure groups).
   - `signingDeadline` (wave): the deadline of the first DSV offer. A **re-offer** needs an
     explicit participation-level **`offerDeadline`**, no later than the wave's `latestEntryDate`
     and the planned TG start. If no contractual rule is recorded, the PL enters the deadline.
@@ -165,6 +170,15 @@ stateDiagram-v2
   the system must not hide what happened. A refusal or a missed one-month deadline is an
   **immediate compliance escalation**; it doesn't end the employment automatically. See
   "Employment vs. Transfer-KuG eligibility".
+- **Profiling exception requests** (`ta_tg` only; Q80, Q81, round 10): the PL requests one while
+  `informed`, profiling still open and a future TG start applies, with a reason code and
+  evidence. A different user (regional operations manager) approves or rejects it under the
+  same conditions; only an approval counts, from its date. Each request is its own record: a
+  rejected, revoked or superseded request is never reopened; a new request needs changed
+  evidence and its own approval. A pending request is **superseded** automatically when
+  profiling finishes, the participation closes or the project becomes `ta_only`; the PL
+  **revokes** one that still applies. A passed start leaves it pending for a new start date,
+  but it can never authorise entry for the missed date. All closures are audited.
 
 ### DSV track (only `ta_tg`)
 
@@ -320,7 +334,9 @@ automatically.
 - A reason chosen **manually by the PL** (e.g. `placed_direct`, `retirement`) always overrides
   the derived one. After a system withdrawal, the PL corrects the primary reason through a
   dedicated, audited **correction** that doesn't reopen the terminal status; the system-derived
-  reason moves to the secondary list (Q72).
+  reason moves to the secondary list (Q72). An erroneous reason a PL chose earlier stays only in
+  the audit history, unless the PL confirms it also applies; correcting to the same reason is
+  refused (round 10).
 - **Conflict:** `dsvStatus = dsv_signed` **and** `profilingStatus = profiling_declined`. The
   person can't enter the beE, but the DSV is signed. The system **does not resolve this
   automatically**. It flags the conflict to the PL for manual clarification.

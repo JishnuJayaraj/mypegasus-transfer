@@ -1,12 +1,15 @@
 import type { IsoDate } from "../iso-date";
 import {
   ProfilingExceptionReason,
+  terminalMainStatuses,
   type EndReason,
   type MainStatus,
   type ProfilingExceptionStatus,
+  type ProfilingExceptionSupersededReason,
 } from "./enums";
 import { validBy, type DatedFact } from "./guards";
 import { endReasonProblem, type TransitionContext } from "./transition";
+import { effectiveTgStart } from "./waves";
 
 /**
  * Operations without a status change (plan 5.3). Each checks its domain rules and returns the
@@ -15,7 +18,7 @@ import { endReasonProblem, type TransitionContext } from "./transition";
  */
 export type OperationContext = Pick<
   TransitionContext,
-  "projectType" | "current" | "actor" | "today"
+  "projectType" | "current" | "actor" | "today" | "wave" | "participation"
 > & { now: Date };
 
 /** The failure codes of each operation, in check order. */
@@ -32,9 +35,11 @@ export const operationFailures = {
     "not_ta_tg",
     "not_informed",
     "profiling_closed",
+    "no_future_start",
     "exception_open",
     "reason_invalid",
     "evidence_missing",
+    "evidence_unchanged",
     "ba_confirmation_missing",
   ],
   decideProfilingException: [
@@ -43,8 +48,15 @@ export const operationFailures = {
     "four_eyes",
     "not_informed",
     "profiling_closed",
+    "no_future_start",
   ],
-  revokeProfilingException: ["actor_not_allowed", "not_revocable", "not_informed"],
+  revokeProfilingException: [
+    "actor_not_allowed",
+    "not_revocable",
+    "no_longer_applicable",
+    "not_informed",
+  ],
+  supersedeStaleException: ["not_pending", "still_applicable"],
   correctEndReason: [
     "actor_not_allowed",
     "no_end_reason",
@@ -76,67 +88,86 @@ export function assignEntryWave(
   return { ok: true, next: { waveId: target.wave.id } };
 }
 
-/** A participation's profiling exception (Q74, Q80, Q81). Only `approved` counts for entry. */
+/**
+ * One profiling exception request (Q74, Q80, Q81). Each request is its own record: a rejected,
+ * revoked or superseded one is never reopened or overwritten; a new request is a new record
+ * (round 10). Only `approved` counts for entry.
+ */
 export type ProfilingException = {
-  status: ProfilingExceptionStatus;
-  reason: ProfilingExceptionReason | null;
-  requestedBy: string | null;
+  status: Exclude<ProfilingExceptionStatus, "none">;
+  reason: ProfilingExceptionReason;
+  /** The evidence item or BA reference: an id, never free text. */
+  evidenceRef: string;
+  requestedBy: string;
   decidedBy: string | null;
   /** The decision's Berlin date and instant: an approval counts only from them (round 9). */
   decidedOn: IsoDate | null;
   decidedAt: Date | null;
+  supersededBecause: ProfilingExceptionSupersededReason | null;
 };
 
-export const noProfilingException: ProfilingException = {
-  status: "none",
-  reason: null,
-  requestedBy: null,
-  decidedBy: null,
-  decidedOn: null,
-  decidedAt: null,
-};
+/** Supporting evidence or a BA reference (Q81). No evidence storage until Slice 4b (D4). */
+export type EvidenceFact = DatedFact & { ref: string };
 
 export type ExceptionRequest = {
   reason: ProfilingExceptionReason;
-  /** Supporting evidence or a BA reference (Q81). No evidence storage until Slice 4b (D4). */
-  evidence?: DatedFact;
+  evidence?: EvidenceFact;
   /** Who at the BA confirmed it, and when; only for `ba_confirmed_other`. */
   baConfirmation?: DatedFact;
 };
 
 const closedProfiling = new Set(["profiling_done", "profiling_declined"]);
+const isOpen = (e: ProfilingException | null) =>
+  e?.status === "requested" || e?.status === "approved";
 
-/** The PL requests; while profiling is open and never after `profiling_declined` (Q74). */
+/** An exception only serves a future entry: it never authorises a missed start (round 10). */
+function hasFutureStart(ctx: OperationContext) {
+  const tgStart = effectiveTgStart(ctx.participation, ctx.wave);
+  return tgStart !== null && ctx.today < tgStart;
+}
+
+/**
+ * The PL requests while `informed`, profiling open (never after `profiling_declined`, Q74) and
+ * a future start applies. After a rejected or revoked request, a new one needs changed
+ * evidence; it gets its own approval.
+ */
 export function requestProfilingException(
   ctx: OperationContext,
-  exception: ProfilingException,
+  latest: ProfilingException | null,
   request: ExceptionRequest,
 ): OperationResult<ProfilingException, "requestProfilingException"> {
   if (ctx.actor.type !== "user") return fail("actor_not_allowed");
   if (ctx.projectType !== "ta_tg") return fail("not_ta_tg");
   if (ctx.current.status !== "informed") return fail("not_informed");
   if (closedProfiling.has(ctx.current.profilingStatus)) return fail("profiling_closed");
-  // A new request may follow a rejected or revoked one: it needs its own approval.
-  if (exception.status === "requested" || exception.status === "approved") {
-    return fail("exception_open");
-  }
+  if (!hasFutureStart(ctx)) return fail("no_future_start");
+  if (isOpen(latest)) return fail("exception_open");
   if (!ProfilingExceptionReason.safeParse(request.reason).success) return fail("reason_invalid");
-  if (!validBy(request.evidence, ctx.today)) return fail("evidence_missing");
+  const { evidence } = request;
+  if (!evidence || !validBy(evidence, ctx.today)) return fail("evidence_missing");
+  if (latest && latest.evidenceRef === evidence.ref) return fail("evidence_unchanged");
   if (request.reason === "ba_confirmed_other" && !validBy(request.baConfirmation, ctx.today)) {
     return fail("ba_confirmation_missing");
   }
   return {
     ok: true,
     next: {
-      ...noProfilingException,
       status: "requested",
       reason: request.reason,
+      evidenceRef: evidence.ref,
       requestedBy: ctx.actor.staffUserId,
+      decidedBy: null,
+      decidedOn: null,
+      decidedAt: null,
+      supersededBecause: null,
     },
   };
 }
 
-/** Four eyes: a different staff user decides, before entry and while profiling is open (Q80). */
+/**
+ * Four eyes: a different staff user approves or rejects a documented request, before entry,
+ * while profiling is open and a future start applies (Q80, round 10).
+ */
 export function decideProfilingException(
   ctx: OperationContext,
   exception: ProfilingException,
@@ -144,11 +175,10 @@ export function decideProfilingException(
 ): OperationResult<ProfilingException, "decideProfilingException"> {
   if (ctx.actor.type !== "user") return fail("actor_not_allowed");
   if (exception.status !== "requested") return fail("not_requested");
-  if (!exception.requestedBy || exception.requestedBy === ctx.actor.staffUserId) {
-    return fail("four_eyes");
-  }
+  if (exception.requestedBy === ctx.actor.staffUserId) return fail("four_eyes");
   if (ctx.current.status !== "informed") return fail("not_informed");
   if (closedProfiling.has(ctx.current.profilingStatus)) return fail("profiling_closed");
+  if (!hasFutureStart(ctx)) return fail("no_future_start");
   return {
     ok: true,
     next: {
@@ -161,22 +191,48 @@ export function decideProfilingException(
   };
 }
 
-/** Only before TG entry; after it the exception is closed by `profiling_done` (Q60). */
+/** Why a request no longer applies, or `null` while it still does (round 10). */
+function staleBecause(ctx: OperationContext): ProfilingExceptionSupersededReason | null {
+  if (terminalMainStatuses.has(ctx.current.status)) return "participation_closed";
+  if (ctx.projectType !== "ta_tg") return "project_ta_only";
+  if (closedProfiling.has(ctx.current.profilingStatus)) return "profiling_closed";
+  return null;
+}
+
+/**
+ * The PL deliberately withdraws a still-applicable request or approval, before TG entry (Q60).
+ * One that no longer applies is superseded instead.
+ */
 export function revokeProfilingException(
   ctx: OperationContext,
   exception: ProfilingException,
 ): OperationResult<ProfilingException, "revokeProfilingException"> {
   if (ctx.actor.type !== "user") return fail("actor_not_allowed");
-  if (exception.status !== "requested" && exception.status !== "approved") {
-    return fail("not_revocable");
-  }
+  if (!isOpen(exception)) return fail("not_revocable");
+  if (staleBecause(ctx)) return fail("no_longer_applicable");
   if (ctx.current.status !== "informed") return fail("not_informed");
   return { ok: true, next: { ...exception, status: "revoked" } };
 }
 
+/**
+ * Closes a pending request automatically when profiling finishes, the participation closes or
+ * the project becomes `ta_only` (round 10). The status functions (PR 1g) apply it in the
+ * transaction of the change that makes it stale; audited like every closure. A passed start alone doesn't close it: it stays pending for a
+ * new start date, and can't authorise the missed one.
+ */
+export function supersedeStaleException(
+  ctx: OperationContext,
+  exception: ProfilingException,
+): OperationResult<ProfilingException, "supersedeStaleException"> {
+  if (exception.status !== "requested") return fail("not_pending");
+  const because = staleBecause(ctx);
+  if (!because) return fail("still_applicable");
+  return { ok: true, next: { ...exception, status: "superseded", supersededBecause: because } };
+}
+
 /** The guard fact `profilingExceptionApproved`: valid from the approval's date and instant. */
-export function approvedExceptionFact(exception: ProfilingException): DatedFact | undefined {
-  if (exception.status !== "approved" || !exception.decidedOn || !exception.decidedAt) {
+export function approvedExceptionFact(exception: ProfilingException | null): DatedFact | undefined {
+  if (exception?.status !== "approved" || !exception.decidedOn || !exception.decidedAt) {
     return undefined;
   }
   return { validOn: exception.decidedOn, recordedAt: exception.decidedAt };
@@ -190,14 +246,16 @@ export type EndReasonRecord = {
 };
 
 /**
- * Q72: the PL corrects the primary reason without reopening the terminal status. A
- * system-derived previous reason moves to the secondary list; every previous one stays in the
- * audit history.
+ * Q72: the PL corrects the primary reason without reopening the terminal status. Every previous
+ * reason stays in the audit history. A system-derived one also moves to the secondary list as
+ * factual context; a previous staff reason only when the PL confirms it still applies
+ * (round 10).
  */
 export function correctEndReason(
   ctx: OperationContext,
   record: EndReasonRecord,
   endReason: EndReason,
+  options: { previousStillApplies?: boolean } = {},
 ): OperationResult<EndReasonRecord, "correctEndReason"> {
   if (ctx.actor.type !== "user") return fail("actor_not_allowed");
   const { status } = ctx.current;
@@ -205,7 +263,8 @@ export function correctEndReason(
   const problem = endReasonProblem(status, endReason);
   if (problem === "reason_wrong_phase" || problem === "reason_not_storable") return fail(problem);
   if (endReason === record.endReason) return fail("reason_unchanged");
-  const previous = record.source === "system" ? [record.endReason] : [];
+  const keep = record.source === "system" || options.previousStillApplies === true;
+  const previous = keep ? [record.endReason] : [];
   const secondaryReasons = [...new Set([...previous, ...record.secondaryReasons])].filter(
     (r) => r !== endReason,
   );

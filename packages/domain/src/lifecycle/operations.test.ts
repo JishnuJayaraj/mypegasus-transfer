@@ -81,11 +81,21 @@ describe("correcting the end reason (AC-11, Q72)", () => {
     });
   });
 
-  it("a previous staff reason stays in the history only (the audit log)", () => {
+  it("a previous staff reason stays in the audit history only, unless the PL confirms it", () => {
     const chosen: EndReasonRecord = { ...derived, endReason: "placed_direct", source: "user" };
     expect(correctEndReason(withdrawn, chosen, "retirement")).toEqual({
       ok: true,
       next: { endReason: "retirement", source: "user", secondaryReasons: ["declined_profiling"] },
+    });
+    expect(
+      correctEndReason(withdrawn, chosen, "retirement", { previousStillApplies: true }),
+    ).toEqual({
+      ok: true,
+      next: {
+        endReason: "retirement",
+        source: "user",
+        secondaryReasons: ["placed_direct", "declined_profiling"],
+      },
     });
   });
 
@@ -123,6 +133,7 @@ it("every operation lists its failure codes in check order (for the generated ta
     "requestProfilingException",
     "decideProfilingException",
     "revokeProfilingException",
+    "supersedeStaleException",
     "correctEndReason",
   ]);
 });

@@ -71,7 +71,8 @@ The failure codes in the order they are checked.
 | Operation | Failure codes |
 |---|---|
 | `assignEntryWave` | `actor_not_allowed`, `not_ta_tg`, `status_not_open`, `dsv_already_offered`, `wave_of_other_project` |
-| `requestProfilingException` | `actor_not_allowed`, `not_ta_tg`, `not_informed`, `profiling_closed`, `exception_open`, `reason_invalid`, `evidence_missing`, `ba_confirmation_missing` |
-| `decideProfilingException` | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed` |
-| `revokeProfilingException` | `actor_not_allowed`, `not_revocable`, `not_informed` |
+| `requestProfilingException` | `actor_not_allowed`, `not_ta_tg`, `not_informed`, `profiling_closed`, `no_future_start`, `exception_open`, `reason_invalid`, `evidence_missing`, `evidence_unchanged`, `ba_confirmation_missing` |
+| `decideProfilingException` | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed`, `no_future_start` |
+| `revokeProfilingException` | `actor_not_allowed`, `not_revocable`, `no_longer_applicable`, `not_informed` |
+| `supersedeStaleException` | `not_pending`, `still_applicable` |
 | `correctEndReason` | `actor_not_allowed`, `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged` |
