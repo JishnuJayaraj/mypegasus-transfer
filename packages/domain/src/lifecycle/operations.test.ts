@@ -48,6 +48,15 @@ describe("assigning the entry wave (AC-7, Q79)", () => {
     },
   );
 
+  it("refuses the current wave again as a no-op (round 16)", () => {
+    const same = { ...target, wave: { id: "wave-1", projectId: "project-1" } };
+    expect(assignEntryWave(op(), same)).toEqual(fail("wave_unchanged"));
+    expect(assignEntryWave(op({ wave: null }), same)).toEqual({
+      ok: true,
+      next: { waveId: "wave-1" },
+    });
+  });
+
   it("is refused for another project's wave, in ta_only and for the system", () => {
     const other = { ...target, wave: { id: "wave-9", projectId: "project-2" } };
     expect(assignEntryWave(op(), other)).toEqual(fail("wave_of_other_project"));

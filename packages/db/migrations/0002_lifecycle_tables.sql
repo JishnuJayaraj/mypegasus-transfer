@@ -84,16 +84,10 @@ CREATE TABLE "participation" (
 	"end_reason" "end_reason",
 	"end_reason_source" "actor_type",
 	"end_reason_secondary" "end_reason"[] DEFAULT '{}' NOT NULL,
-	"profiling_exception_status" "profiling_exception_status" NOT NULL,
-	"profiling_exception_reason_code" "profiling_exception_reason",
-	"profiling_exception_requested_by" uuid,
-	"profiling_exception_requested_on" date,
-	"profiling_exception_decided_by" uuid,
-	"profiling_exception_decided_on" date,
-	"profiling_exception_decided_at" timestamp with time zone,
-	"profiling_exception_superseded_reason" "profiling_exception_superseded_reason",
+	"profiling_exception_request_id" uuid,
 	"status_version" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "participation_id_project_unique" UNIQUE("id","project_id"),
 	CONSTRAINT "participation_tg_dates_ordered" CHECK ("participation"."tg_start" <= "participation"."tg_end"),
 	CONSTRAINT "participation_offer_deadline_before_tg_start" CHECK ("participation"."offer_deadline" <= "participation"."tg_start"),
 	CONSTRAINT "participation_offer_needs_wave" CHECK ("participation"."dsv_status" = 'not_offered' or "participation"."entry_wave_id" is not null),
@@ -107,13 +101,30 @@ CREATE TABLE "participation" (
 	CONSTRAINT "participation_profiling_done_on_when_done" CHECK (("participation"."profiling_status" = 'profiling_done') = ("profiling_done_on" is not null)),
 	CONSTRAINT "participation_tracks_start_at_informed" CHECK (not ("participation"."status" in ('self_registered', 'rejected', 'imported', 'contacted', 'unreachable')) or ("participation"."profiling_status" = 'not_started' and "participation"."dsv_status" = 'not_offered')),
 	CONSTRAINT "participation_tg_needs_signed_dsv" CHECK (not ("participation"."status" in ('active_in_tg', 'exited')) or "participation"."dsv_status" = 'dsv_signed'),
-	CONSTRAINT "participation_unmatched_has_no_wave" CHECK (not ("participation"."status" in ('self_registered', 'rejected')) or "participation"."entry_wave_id" is null),
-	CONSTRAINT "participation_exception_reason" CHECK (("participation"."profiling_exception_status" <> 'none') = ("profiling_exception_reason_code" is not null)),
-	CONSTRAINT "participation_exception_requested_by" CHECK (("participation"."profiling_exception_status" <> 'none') = ("profiling_exception_requested_by" is not null)),
-	CONSTRAINT "participation_exception_requested_on" CHECK (("participation"."profiling_exception_status" <> 'none') = ("profiling_exception_requested_on" is not null)),
-	CONSTRAINT "participation_exception_decision" CHECK (("participation"."profiling_exception_decided_by" is null) = ("participation"."profiling_exception_decided_on" is null) and ("participation"."profiling_exception_decided_by" is null) = ("participation"."profiling_exception_decided_at" is null) and (not ("participation"."profiling_exception_status" in ('approved', 'rejected')) or "participation"."profiling_exception_decided_by" is not null) and (not ("participation"."profiling_exception_status" in ('none', 'requested', 'superseded')) or "participation"."profiling_exception_decided_by" is null)),
-	CONSTRAINT "participation_exception_superseded_reason" CHECK (("participation"."profiling_exception_status" in ('superseded')) = ("profiling_exception_superseded_reason" is not null)),
-	CONSTRAINT "participation_exception_four_eyes" CHECK ("participation"."profiling_exception_decided_by" <> "participation"."profiling_exception_requested_by")
+	CONSTRAINT "participation_unmatched_has_no_wave" CHECK (not ("participation"."status" in ('self_registered', 'rejected')) or "participation"."entry_wave_id" is null)
+);
+--> statement-breakpoint
+CREATE TABLE "profiling_exception_request" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"project_id" uuid NOT NULL,
+	"participation_id" uuid NOT NULL,
+	"reason_code" "profiling_exception_reason" NOT NULL,
+	"status" "profiling_exception_status" NOT NULL,
+	"requested_by" uuid NOT NULL,
+	"requested_on" date NOT NULL,
+	"requested_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"evidence_record_id" uuid NOT NULL,
+	"evidence_fingerprint" text NOT NULL,
+	"decided_by" uuid,
+	"decided_on" date,
+	"decided_at" timestamp with time zone,
+	"superseded_reason" "profiling_exception_superseded_reason",
+	CONSTRAINT "profiling_exception_request_id_participation_unique" UNIQUE("id","participation_id"),
+	CONSTRAINT "profiling_exception_request_status_not_none" CHECK ("profiling_exception_request"."status" <> 'none'),
+	CONSTRAINT "profiling_exception_request_fingerprint" CHECK ("profiling_exception_request"."evidence_fingerprint" ~ '^sha256:[0-9a-f]{64}$'),
+	CONSTRAINT "profiling_exception_request_decision" CHECK (("profiling_exception_request"."decided_by" is null) = ("profiling_exception_request"."decided_on" is null) and ("profiling_exception_request"."decided_by" is null) = ("profiling_exception_request"."decided_at" is null) and (not ("profiling_exception_request"."status" in ('approved', 'rejected')) or "profiling_exception_request"."decided_by" is not null) and (not ("profiling_exception_request"."status" in ('requested', 'superseded')) or "profiling_exception_request"."decided_by" is null)),
+	CONSTRAINT "profiling_exception_request_superseded_reason" CHECK (("profiling_exception_request"."status" in ('superseded')) = ("superseded_reason" is not null)),
+	CONSTRAINT "profiling_exception_request_four_eyes" CHECK ("profiling_exception_request"."decided_by" <> "profiling_exception_request"."requested_by")
 );
 --> statement-breakpoint
 CREATE TABLE "project_entry_wave" (
@@ -134,10 +145,14 @@ CREATE TABLE "project_entry_wave" (
 ALTER TABLE "audit_event" ADD CONSTRAINT "audit_event_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit_event" ADD CONSTRAINT "audit_event_actor_staff_user_id_staff_user_id_fk" FOREIGN KEY ("actor_staff_user_id") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "participation" ADD CONSTRAINT "participation_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "participation" ADD CONSTRAINT "participation_profiling_exception_requested_by_staff_user_id_fk" FOREIGN KEY ("profiling_exception_requested_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "participation" ADD CONSTRAINT "participation_profiling_exception_decided_by_staff_user_id_fk" FOREIGN KEY ("profiling_exception_decided_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "participation" ADD CONSTRAINT "participation_entry_wave_same_project_fk" FOREIGN KEY ("entry_wave_id","project_id") REFERENCES "public"."project_entry_wave"("id","project_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "participation" ADD CONSTRAINT "participation_current_exception_request_fk" FOREIGN KEY ("profiling_exception_request_id","id") REFERENCES "public"."profiling_exception_request"("id","participation_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "profiling_exception_request" ADD CONSTRAINT "profiling_exception_request_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "profiling_exception_request" ADD CONSTRAINT "profiling_exception_request_requested_by_staff_user_id_fk" FOREIGN KEY ("requested_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "profiling_exception_request" ADD CONSTRAINT "profiling_exception_request_decided_by_staff_user_id_fk" FOREIGN KEY ("decided_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "profiling_exception_request" ADD CONSTRAINT "profiling_exception_request_participation_fk" FOREIGN KEY ("participation_id","project_id") REFERENCES "public"."participation"("id","project_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "project_entry_wave" ADD CONSTRAINT "project_entry_wave_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "audit_event_participation_seq_idx" ON "audit_event" USING btree ("participation_id","seq");--> statement-breakpoint
 CREATE INDEX "audit_event_project_seq_idx" ON "audit_event" USING btree ("project_id","seq");--> statement-breakpoint
-CREATE INDEX "participation_project_id_idx" ON "participation" USING btree ("project_id");
+CREATE INDEX "participation_project_id_idx" ON "participation" USING btree ("project_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "profiling_exception_request_one_open_idx" ON "profiling_exception_request" USING btree ("participation_id") WHERE "profiling_exception_request"."status" in ('requested', 'approved');

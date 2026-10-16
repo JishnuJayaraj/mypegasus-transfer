@@ -29,7 +29,9 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
+  type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core";
 
 // Every table here needs an entry in data-catalog.ts (CLAUDE.md rule 10); a test enforces it.
@@ -143,7 +145,6 @@ const participationIn = (column: string, list: string[]) =>
   sql.raw(`"participation"."${column}" in (${list.map((v) => `'${v}'`).join(", ")})`);
 
 const statusIn = (...list: string[]) => participationIn("status", list);
-const exceptionIn = (...list: string[]) => participationIn("profiling_exception_status", list);
 
 /** A CHECK that `column` is set exactly when `condition` holds. */
 const iff = (name: string, condition: SQL, column: { name: string }) =>
@@ -180,29 +181,12 @@ export const participation = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'`),
-    // The latest profiling exception request; earlier ones live in the audit trail (round 10).
-    profilingExceptionStatus: profilingExceptionStatus("profiling_exception_status").notNull(),
-    profilingExceptionReasonCode: profilingExceptionReason("profiling_exception_reason_code"),
-    profilingExceptionRequestedBy: uuid("profiling_exception_requested_by").references(
-      () => staffUser.id,
-    ),
-    profilingExceptionRequestedOn: dateColumn("profiling_exception_requested_on"),
-    profilingExceptionDecidedBy: uuid("profiling_exception_decided_by").references(
-      () => staffUser.id,
-    ),
-    profilingExceptionDecidedOn: dateColumn("profiling_exception_decided_on"),
-    /** The instant of the decision: an approval counts only once recorded (round 9). */
-    profilingExceptionDecidedAt: timestamp("profiling_exception_decided_at", {
-      withTimezone: true,
-      mode: "string",
-    }),
-    profilingExceptionSupersededReason: profilingExceptionSupersededReason(
-      "profiling_exception_superseded_reason",
-    ),
+    /** The current (latest) profiling-exception request; every request is its own row (Q94). */
+    profilingExceptionRequestId: uuid("profiling_exception_request_id"),
     statusVersion: integer("status_version").notNull().default(0),
     createdAt: createdAt(),
   },
-  (t) => [
+  (t): PgTableExtraConfigValue[] => [
     foreignKey({
       name: "participation_entry_wave_same_project_fk",
       columns: [t.entryWaveId, t.projectId],
@@ -252,37 +236,84 @@ export const participation = pgTable(
       "participation_unmatched_has_no_wave",
       sql`not (${statusIn("self_registered", "rejected")}) or ${t.entryWaveId} is null`,
     ),
-    // The exception record: a request has its reason, requester and date; a decision its
-    // decider, date and instant; a supersession its reason.
-    iff(
-      "participation_exception_reason",
-      sql.raw(`"participation"."profiling_exception_status" <> 'none'`),
-      t.profilingExceptionReasonCode,
-    ),
-    iff(
-      "participation_exception_requested_by",
-      sql.raw(`"participation"."profiling_exception_status" <> 'none'`),
-      t.profilingExceptionRequestedBy,
-    ),
-    iff(
-      "participation_exception_requested_on",
-      sql.raw(`"participation"."profiling_exception_status" <> 'none'`),
-      t.profilingExceptionRequestedOn,
-    ),
+    // Target of the request's composite FK: a request is of its participation's project.
+    unique("participation_id_project_unique").on(t.id, t.projectId),
+    // The current request is one of this participation's own.
+    foreignKey({
+      name: "participation_current_exception_request_fk",
+      columns: [t.profilingExceptionRequestId, t.id],
+      foreignColumns: [profilingExceptionRequest.id, profilingExceptionRequest.participationId],
+    }),
+  ],
+);
+
+const requestStatusIn = (...list: string[]) =>
+  sql.raw(`"profiling_exception_request"."status" in (${list.map((v) => `'${v}'`).join(", ")})`);
+
+/**
+ * One profiling-exception request (Q81, Q94, round 16): a first-class, authoritative record. Its
+ * reason and evidence identity never change; status and decision progress on the row (a trigger
+ * enforces both), and every progression is audited. A later attempt is a new row. Written only
+ * by the status functions; `transfer_app` may only select.
+ */
+export const profilingExceptionRequest = pgTable(
+  "profiling_exception_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    reasonCode: profilingExceptionReason("reason_code").notNull(),
+    status: profilingExceptionStatus("status").notNull(),
+    requestedBy: uuid("requested_by")
+      .notNull()
+      .references(() => staffUser.id),
+    /** The Berlin business date, from the caller's Clock. */
+    requestedOn: dateColumn("requested_on").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    /** The immutable evidence record (Slice 4b); no FK until it exists. */
+    evidenceRecordId: uuid("evidence_record_id").notNull(),
+    /** Its canonical fingerprint: changed evidence means a different fingerprint (Q94). */
+    evidenceFingerprint: text("evidence_fingerprint").notNull(),
+    decidedBy: uuid("decided_by").references(() => staffUser.id),
+    decidedOn: dateColumn("decided_on"),
+    /** The instant of the decision: an approval counts only once recorded (round 9). */
+    decidedAt: timestamp("decided_at", { withTimezone: true, mode: "string" }),
+    supersededReason: profilingExceptionSupersededReason("superseded_reason"),
+  },
+  (t): PgTableExtraConfigValue[] => [
+    foreignKey({
+      name: "profiling_exception_request_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    // Target of the participation's current-request FK.
+    unique("profiling_exception_request_id_participation_unique").on(t.id, t.participationId),
+    // At most one open (pending or approved) request per participation (round 10).
+    uniqueIndex("profiling_exception_request_one_open_idx")
+      .on(t.participationId)
+      .where(sql`${t.status} in ('requested', 'approved')`),
+    check("profiling_exception_request_status_not_none", sql`${t.status} <> 'none'`),
     check(
-      "participation_exception_decision",
-      sql`(${t.profilingExceptionDecidedBy} is null) = (${t.profilingExceptionDecidedOn} is null) and (${t.profilingExceptionDecidedBy} is null) = (${t.profilingExceptionDecidedAt} is null) and (not (${exceptionIn("approved", "rejected")}) or ${t.profilingExceptionDecidedBy} is not null) and (not (${exceptionIn("none", "requested", "superseded")}) or ${t.profilingExceptionDecidedBy} is null)`,
+      "profiling_exception_request_fingerprint",
+      sql`${t.evidenceFingerprint} ~ '^sha256:[0-9a-f]{64}$'`,
+    ),
+    // A decision has its decider, date and instant; only approvals and rejections are decided,
+    // and a revoked request keeps the decision it had (approved) or none (pending).
+    check(
+      "profiling_exception_request_decision",
+      sql`(${t.decidedBy} is null) = (${t.decidedOn} is null) and (${t.decidedBy} is null) = (${t.decidedAt} is null) and (not (${requestStatusIn("approved", "rejected")}) or ${t.decidedBy} is not null) and (not (${requestStatusIn("requested", "superseded")}) or ${t.decidedBy} is null)`,
     ),
     iff(
-      "participation_exception_superseded_reason",
-      exceptionIn("superseded"),
-      t.profilingExceptionSupersededReason,
+      "profiling_exception_request_superseded_reason",
+      requestStatusIn("superseded"),
+      t.supersededReason,
     ),
     // Four eyes (Q80): the decider is never the requester.
-    check(
-      "participation_exception_four_eyes",
-      sql`${t.profilingExceptionDecidedBy} <> ${t.profilingExceptionRequestedBy}`,
-    ),
+    check("profiling_exception_request_four_eyes", sql`${t.decidedBy} <> ${t.requestedBy}`),
   ],
 );
 
@@ -422,6 +453,7 @@ export const tables = [
   project,
   projectEntryWave,
   participation,
+  profilingExceptionRequest,
   lifecycleEdge,
   auditEvent,
 ];

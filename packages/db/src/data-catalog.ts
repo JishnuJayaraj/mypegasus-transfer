@@ -44,6 +44,12 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // Reason codes are confidential (Q66); evidence records get their own class (round 16).
+  profiling_exception_request: {
+    retentionClass: "participation_record",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
   audit_event: {
     retentionClass: "audit_log",
     dataClass: "confidential",

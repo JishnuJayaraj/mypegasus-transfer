@@ -67,7 +67,13 @@ const statusFunctions = [
   "correct_end_reason",
   "record_audit_event",
 ];
-const helpers = ["assert_context", "write_audit_event", "end_reason_fits"];
+const helpers = [
+  "assert_context",
+  "write_audit_event",
+  "end_reason_fits",
+  "lock_current_request",
+  "profiling_exception_request_progresses",
+];
 
 /** Every direct write to a table; `column` is set to itself. */
 const writes = (table: string, column: string, insert: string) => [
@@ -88,11 +94,12 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     });
   });
 
-  it("may select participations and waves, nothing from the audit trail or the edges", async () => {
+  it("may select participations, exception requests and waves, nothing from the audit trail or the edges", async () => {
     expect((await app.query("select status from participation")).rows).toEqual([
       { status: "imported" },
     ]);
     expect((await app.query("select code from project_entry_wave")).rows).toEqual([{ code: "W2" }]);
+    expect((await app.query("select id from profiling_exception_request")).rows).toEqual([]);
     await expect(app.query("select * from audit_event")).rejects.toMatchObject(permissionDenied);
     await expect(app.query("select * from lifecycle_edge")).rejects.toMatchObject(permissionDenied);
   });
@@ -101,9 +108,14 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     ...writes(
       "participation",
       "id",
-      `insert into participation (project_id, status, profiling_status, dsv_status, profiling_exception_status) values ('${seedProjectIds.werkNord}', 'imported', 'not_started', 'not_offered', 'none')`,
+      `insert into participation (project_id, status, profiling_status, dsv_status) values ('${seedProjectIds.werkNord}', 'imported', 'not_started', 'not_offered')`,
     ),
     ["update participation status", "update participation set status = 'contacted'"],
+    ...writes(
+      "profiling_exception_request",
+      "id",
+      `insert into profiling_exception_request (project_id, participation_id, reason_code, status, requested_by, requested_on, evidence_record_id, evidence_fingerprint) select project_id, id, 'force_majeure', 'requested', '${seedStaffUserIds.projectLead}', '2027-02-01', gen_random_uuid(), 'sha256:${"0".repeat(64)}' from participation`,
+    ),
     ...writes(
       "project_entry_wave",
       "id",

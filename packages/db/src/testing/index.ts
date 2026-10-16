@@ -47,7 +47,7 @@ export async function resetTestDatabase(options: { seed?: boolean } = {}): Promi
   try {
     // lifecycle_edge is reference data from the migrations, never truncated.
     await db.$client.query(
-      "truncate audit_event, participation, project_entry_wave, project, staff_user",
+      "truncate audit_event, profiling_exception_request, participation, project_entry_wave, project, staff_user",
     );
     if (options.seed) await seed(db);
   } finally {

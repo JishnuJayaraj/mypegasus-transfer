@@ -66,7 +66,7 @@ describe("create_participation", () => {
       status: "imported",
       profiling_status: "not_started",
       dsv_status: "not_offered",
-      profiling_exception_status: "none",
+      profiling_exception_request_id: null,
       entry_wave_id: waveId,
       status_version: 0,
     });
@@ -516,52 +516,114 @@ describe("change_participation_status (AC-16)", () => {
   });
 });
 
-const request = (id: string, context = pl) =>
+const fingerprint = (c: string) => `sha256:${c.repeat(64)}`;
+const evidenceRecord = "00000000-0000-4000-8000-0000000000e1";
+
+const request = (id: string, extra: { context?: string; fingerprint?: string } = {}) =>
   call(app, "request_profiling_exception", {
     id,
     reason: "agentur_scheduling_unavailable",
     requestedOn: "2027-02-01",
-    context,
+    evidenceRecordId: evidenceRecord,
+    evidenceFingerprint: extra.fingerprint ?? fingerprint("a"),
+    context: extra.context ?? pl,
   });
-const decide = (id: string, approve: boolean, context = reviewer) =>
-  call(app, "decide_profiling_exception", { id, approve, decidedOn: "2027-02-03", context });
+const decide = (requestId: string, approve: boolean, context = reviewer) =>
+  call(app, "decide_profiling_exception", { requestId, approve, decidedOn: "2027-02-03", context });
+const revoke = (requestId: string, context = pl) =>
+  call(app, "revoke_profiling_exception", { requestId, context });
 
-describe("profiling exceptions", () => {
-  it("records a request and a decision by a different user (four eyes)", async () => {
+async function requests(participationId: string) {
+  const { rows } = await owner.query(
+    `select id, status, reason_code, requested_by, requested_on, evidence_record_id,
+       evidence_fingerprint, decided_by, decided_on, decided_at, superseded_reason
+     from profiling_exception_request where participation_id = $1 order by requested_at, id`,
+    [participationId],
+  );
+  return rows;
+}
+
+describe("profiling exception requests (Q94, round 16)", () => {
+  it("records a request as its own row, current on the participation, and a decision by another user", async () => {
     const id = await informedParticipation(app);
-    await request(id);
+    const requestId = await request(id);
     expect(await row(id)).toMatchObject({
-      profiling_exception_status: "requested",
-      profiling_exception_reason_code: "agentur_scheduling_unavailable",
-      profiling_exception_requested_by: seedStaffUserIds.projectLead,
-      profiling_exception_requested_on: "2027-02-01",
+      profiling_exception_request_id: requestId,
+      status_version: 3,
     });
-    await expect(decide(id, true, pl)).rejects.toMatchObject(failsWith("same_person_approval"));
-    await decide(id, true);
-    expect(await row(id)).toMatchObject({
-      profiling_exception_status: "approved",
-      profiling_exception_decided_by: seedStaffUserIds.admin,
-      profiling_exception_decided_on: "2027-02-03",
-      profiling_exception_decided_at: expect.any(Date),
+    expect(await requests(id)).toEqual([
+      {
+        id: requestId,
+        status: "requested",
+        reason_code: "agentur_scheduling_unavailable",
+        requested_by: seedStaffUserIds.projectLead,
+        requested_on: "2027-02-01",
+        evidence_record_id: evidenceRecord,
+        evidence_fingerprint: fingerprint("a"),
+        decided_by: null,
+        decided_on: null,
+        decided_at: null,
+        superseded_reason: null,
+      },
+    ]);
+    await expect(decide(requestId, true, pl)).rejects.toMatchObject(
+      failsWith("same_person_approval"),
+    );
+    await decide(requestId, true);
+    expect((await requests(id))[0]).toMatchObject({
+      status: "approved",
+      decided_by: seedStaffUserIds.admin,
+      decided_on: "2027-02-03",
+      decided_at: expect.any(Date),
     });
+    expect((await row(id)).status_version).toBe(4);
     expect((await events(id)).slice(-2)).toMatchObject([
       {
         event_type: "profiling_exception_requested",
         reason_code: "agentur_scheduling_unavailable",
+        details: {
+          profilingExceptionRequestId: requestId,
+          evidenceRecordId: evidenceRecord,
+          evidenceFingerprint: fingerprint("a"),
+        },
       },
-      { event_type: "profiling_exception_approved", actor_staff_user_id: seedStaffUserIds.admin },
+      {
+        event_type: "profiling_exception_approved",
+        actor_staff_user_id: seedStaffUserIds.admin,
+        details: { profilingExceptionRequestId: requestId },
+      },
     ]);
   });
 
-  it("enforces four eyes in the table too", async () => {
+  it("keeps every request: a new attempt is a new row with changed evidence", async () => {
     const id = await informedParticipation(app);
-    await request(id);
-    await expect(
-      owner.query(
-        "update participation set profiling_exception_status = 'approved', profiling_exception_decided_by = profiling_exception_requested_by, profiling_exception_decided_on = '2027-02-03', profiling_exception_decided_at = now() where id = $1",
-        [id],
-      ),
-    ).rejects.toMatchObject({ code: "23514", constraint: "participation_exception_four_eyes" });
+    const first = await request(id);
+    await decide(first, false);
+    await expect(decide(first, true)).rejects.toMatchObject(failsWith("not_requested"));
+    await expect(revoke(first)).rejects.toMatchObject(failsWith("not_revocable"));
+    // The same fingerprint is unchanged evidence, even under another evidence record (Q94).
+    await expect(request(id)).rejects.toMatchObject(failsWith("evidence_unchanged"));
+    const second = await request(id, { fingerprint: fingerprint("b") });
+    await decide(second, true);
+    await revoke(second);
+    await expect(decide(first, true)).rejects.toMatchObject(failsWith("request_not_current"));
+    const third = await request(id, { fingerprint: fingerprint("c") });
+
+    expect((await requests(id)).map((r) => [r.id, r.status, r.evidence_fingerprint])).toEqual([
+      [first, "rejected", fingerprint("a")],
+      [second, "revoked", fingerprint("b")],
+      [third, "requested", fingerprint("c")],
+    ]);
+    expect((await row(id)).profiling_exception_request_id).toBe(third);
+    const trail = (await events(id)).filter((e) => e.event_type.startsWith("profiling_exception"));
+    expect(trail.map((e) => [e.event_type, e.details.profilingExceptionRequestId])).toEqual([
+      ["profiling_exception_requested", first],
+      ["profiling_exception_rejected", first],
+      ["profiling_exception_requested", second],
+      ["profiling_exception_approved", second],
+      ["profiling_exception_revoked", second],
+      ["profiling_exception_requested", third],
+    ]);
   });
 
   it.each([
@@ -589,48 +651,66 @@ describe("profiling exceptions", () => {
       });
     }
     if (situation === "open") await request(id);
-    await expect(request(id, situation === "system" ? nightly : pl)).rejects.toMatchObject(
+    const context = situation === "system" ? nightly : pl;
+    await expect(request(id, { context, fingerprint: fingerprint("f") })).rejects.toMatchObject(
       failsWith(code),
     );
   });
 
-  it("revokes before entry, and a rejected or revoked request is followed by a new one", async () => {
+  it("refuses a request without evidence or with a malformed fingerprint", async () => {
     const id = await informedParticipation(app);
-    await request(id);
-    await decide(id, false);
-    expect(await row(id)).toMatchObject({ profiling_exception_status: "rejected" });
-    await expect(decide(id, true)).rejects.toMatchObject(failsWith("not_requested"));
+    const args = {
+      id,
+      reason: "force_majeure",
+      requestedOn: "2027-02-01",
+      evidenceRecordId: evidenceRecord,
+      context: pl,
+    };
+    for (const missing of [
+      { evidenceFingerprint: null },
+      { evidenceRecordId: null, evidenceFingerprint: fingerprint("a") },
+    ]) {
+      await expect(
+        call(app, "request_profiling_exception", { ...args, ...missing }),
+      ).rejects.toMatchObject(failsWith("evidence_missing"));
+    }
     await expect(
-      call(app, "revoke_profiling_exception", { id, context: pl }),
-    ).rejects.toMatchObject(failsWith("not_revocable"));
-    await request(id);
-    expect(await row(id)).toMatchObject({
-      profiling_exception_status: "requested",
-      profiling_exception_decided_by: null,
+      call(app, "request_profiling_exception", { ...args, evidenceFingerprint: "md5:abc" }),
+    ).rejects.toMatchObject({
+      code: "23514",
+      constraint: "profiling_exception_request_fingerprint",
     });
-    await decide(id, true);
-    await call(app, "revoke_profiling_exception", { id, context: pl });
-    expect(await row(id)).toMatchObject({ profiling_exception_status: "revoked" });
-    expect((await events(id)).map((e) => e.event_type).slice(-5)).toEqual([
-      "profiling_exception_requested",
-      "profiling_exception_rejected",
-      "profiling_exception_requested",
-      "profiling_exception_approved",
-      "profiling_exception_revoked",
-    ]);
   });
 
-  it("supersedes a pending request in the same transaction when profiling closes (round 10)", async () => {
+  it("refuses an unknown request and a foreign participant", async () => {
+    await expect(decide(evidenceRecord, true)).rejects.toMatchObject(
+      failsWith("request_not_found"),
+    );
     const id = await informedParticipation(app);
-    await request(id);
+    const requestId = await request(id);
+    const participant = auditContext({ actorType: "participant", participationId: id });
+    await expect(decide(requestId, true, participant)).rejects.toMatchObject(
+      failsWith("actor_not_allowed"),
+    );
+  });
+
+  it("supersedes the pending request in the change's transaction when profiling closes (round 10)", async () => {
+    const id = await informedParticipation(app);
+    const requestId = await request(id);
+    const requestIdOfChange = "6f1c2b6e-1b7a-4c5e-9d1a-2f3b4c5d6e7f";
     const changeId = await changeStatus(app, id, {
       field: "profiling_status",
       from: "not_started",
       to: "profiling_declined",
+      context: auditContext({
+        actorType: "user",
+        staffUserId: seedStaffUserIds.consultant,
+        requestId: requestIdOfChange,
+      }),
     });
-    expect(await row(id)).toMatchObject({
-      profiling_exception_status: "superseded",
-      profiling_exception_superseded_reason: "profiling_closed",
+    expect((await requests(id))[0]).toMatchObject({
+      status: "superseded",
+      superseded_reason: "profiling_closed",
     });
     const trail = await events(id);
     expect(trail.filter((e) => e.event_type === "status_changed")).toHaveLength(3);
@@ -639,11 +719,10 @@ describe("profiling exceptions", () => {
       actor_type: "system",
       system_job: "lifecycle.supersede-stale-exception",
       reason_code: "profiling_closed",
-      details: { statusChangeId: changeId },
+      request_id: requestIdOfChange,
+      details: { profilingExceptionRequestId: requestId, statusChangeId: changeId },
     });
-    await expect(
-      call(app, "revoke_profiling_exception", { id, context: pl }),
-    ).rejects.toMatchObject(failsWith("not_revocable"));
+    await expect(revoke(requestId)).rejects.toMatchObject(failsWith("not_revocable"));
   });
 
   it("supersedes it when the participation closes, but leaves an approval alone", async () => {
@@ -656,28 +735,26 @@ describe("profiling exceptions", () => {
       endReason: "other",
       effectiveDate: "2027-02-10",
     });
-    expect(await row(pending)).toMatchObject({
-      profiling_exception_superseded_reason: "participation_closed",
+    expect((await requests(pending))[0]).toMatchObject({
+      superseded_reason: "participation_closed",
     });
 
     const approved = await informedParticipation(app);
-    await request(approved);
-    await decide(approved, true);
+    const approvedId = await request(approved);
+    await decide(approvedId, true);
     await changeStatus(app, approved, {
       field: "profiling_status",
       from: "not_started",
       to: "profiling_declined",
     });
-    expect(await row(approved)).toMatchObject({ profiling_exception_status: "approved" });
-    await expect(
-      call(app, "revoke_profiling_exception", { id: approved, context: pl }),
-    ).rejects.toMatchObject(failsWith("no_longer_applicable"));
+    expect((await requests(approved))[0]).toMatchObject({ status: "approved" });
+    await expect(revoke(approvedId)).rejects.toMatchObject(failsWith("no_longer_applicable"));
   });
 
   it("lets profiling move forward and be declined in the TG with an approved exception (Q74)", async () => {
     const id = await signedParticipation();
-    await request(id);
-    await decide(id, true);
+    const requestId = await request(id);
+    await decide(requestId, true);
     await changeStatus(app, id, {
       field: "status",
       from: "informed",
@@ -685,9 +762,7 @@ describe("profiling exceptions", () => {
       entryKind: "reconciliation",
       effectiveDate: "2027-03-01",
     });
-    await expect(
-      call(app, "revoke_profiling_exception", { id, context: pl }),
-    ).rejects.toMatchObject(failsWith("not_informed"));
+    await expect(revoke(requestId)).rejects.toMatchObject(failsWith("not_informed"));
     await changeStatus(app, id, {
       field: "profiling_status",
       from: "not_started",
@@ -708,6 +783,72 @@ describe("profiling exceptions", () => {
   });
 });
 
+/** Writes as the owner, bypassing the functions, and rolls back. */
+async function asOwner(sql: string, params: unknown[]) {
+  await owner.query("begin");
+  try {
+    await owner.query(sql, params);
+  } finally {
+    await owner.query("rollback");
+  }
+}
+
+describe("profiling_exception_request in the table itself (defence in depth)", () => {
+  it("never changes a request's reason or evidence identity, and never lets its status go back", async () => {
+    const id = await informedParticipation(app);
+    const requestId = await request(id);
+    await decide(requestId, true);
+    for (const change of [
+      "reason_code = 'force_majeure'",
+      "evidence_record_id = gen_random_uuid()",
+      `evidence_fingerprint = '${fingerprint("e")}'`,
+      "requested_on = '2027-01-01'",
+      "status = 'requested', decided_by = null, decided_on = null, decided_at = null",
+      "decided_on = '2027-02-04'",
+      "status = 'rejected'",
+    ]) {
+      await expect(
+        asOwner(`update profiling_exception_request set ${change} where id = $1`, [requestId]),
+      ).rejects.toMatchObject(failsWith("request_immutable"));
+    }
+  });
+
+  it("keeps four eyes and one open request per participation", async () => {
+    const id = await informedParticipation(app);
+    const requestId = await request(id);
+    await expect(
+      asOwner(
+        "update profiling_exception_request set status = 'approved', decided_by = requested_by, decided_on = '2027-02-03', decided_at = now() where id = $1",
+        [requestId],
+      ),
+    ).rejects.toMatchObject({ code: "23514", constraint: "profiling_exception_request_four_eyes" });
+    await expect(
+      asOwner(
+        `insert into profiling_exception_request (project_id, participation_id, reason_code, status, requested_by, requested_on, evidence_record_id, evidence_fingerprint)
+         select project_id, participation_id, reason_code, 'requested', requested_by, requested_on, evidence_record_id, $2 from profiling_exception_request where id = $1`,
+        [requestId, fingerprint("b")],
+      ),
+    ).rejects.toMatchObject({
+      code: "23505",
+      constraint: "profiling_exception_request_one_open_idx",
+    });
+  });
+
+  it("only points a participation at one of its own requests", async () => {
+    const [one, two] = [await informedParticipation(app), await informedParticipation(app)];
+    const requestOfTwo = await request(two);
+    await expect(
+      asOwner("update participation set profiling_exception_request_id = $2 where id = $1", [
+        one,
+        requestOfTwo,
+      ]),
+    ).rejects.toMatchObject({
+      code: "23503",
+      constraint: "participation_current_exception_request_fk",
+    });
+  });
+});
+
 describe("assign_entry_wave", () => {
   it("assigns and reassigns before the first offer, within the project", async () => {
     const [w2, w3] = [
@@ -722,6 +863,13 @@ describe("assign_entry_wave", () => {
       event_type: "entry_wave_assigned",
       details: { waveId: w3, previousWaveId: w2 },
     });
+    // The current wave again is a no-op: refused, no version bump, no event (round 16).
+    const trail = await events(id);
+    await expect(
+      call(app, "assign_entry_wave", { id, waveId: w3, context: pl }),
+    ).rejects.toMatchObject(failsWith("wave_unchanged"));
+    expect(await row(id)).toMatchObject({ entry_wave_id: w3, status_version: 4 });
+    expect(await events(id)).toEqual(trail);
     await changeStatus(app, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
     await expect(
       call(app, "assign_entry_wave", { id, waveId: w2, context: pl }),

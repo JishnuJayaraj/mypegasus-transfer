@@ -68,6 +68,12 @@ const systemJob = z.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/);
 /** A field key (`healthRestrictions`, `custom.…`) or document type. */
 const resourceKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_.]{0,99}$/);
 
+/**
+ * The canonical fingerprint of an evidence record (Q94): `sha256:` and 64 hex digits. Slice 4b
+ * computes it from the record's content digests or normalised BA facts.
+ */
+export const EvidenceFingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+
 /** Who acted (ADR-0002): `onBehalfOf` only for staff in assisted mode. */
 export const AuditActor = z.discriminatedUnion("type", [
   z.strictObject({
@@ -155,6 +161,8 @@ const endReasonCorrected = event("end_reason_corrected", {
 });
 
 const noDetails = z.strictObject({});
+/** Every profiling-exception event identifies its request record (Q94). */
+const ofRequest = { profilingExceptionRequestId: z.uuid() };
 const reviewOf = z.strictObject({ reviewedEventId: z.uuid() });
 
 /** One break-glass grant: one participant, one category, document type or stream (Q63). */
@@ -184,19 +192,24 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     details: z.strictObject({ waveId: z.uuid(), previousWaveId: z.uuid().nullable() }),
   }),
+  /** The request names its evidence record by id and fingerprint, never its contents (Q94). */
   event("profiling_exception_requested", {
     ...ofParticipation,
     reasonCode: ProfilingExceptionReason,
-    details: noDetails,
+    details: z.strictObject({
+      ...ofRequest,
+      evidenceRecordId: z.uuid(),
+      evidenceFingerprint: EvidenceFingerprint,
+    }),
   }),
-  event("profiling_exception_approved", { ...ofParticipation, details: noDetails }),
-  event("profiling_exception_rejected", { ...ofParticipation, details: noDetails }),
-  event("profiling_exception_revoked", { ...ofParticipation, details: noDetails }),
+  event("profiling_exception_approved", { ...ofParticipation, details: z.strictObject(ofRequest) }),
+  event("profiling_exception_rejected", { ...ofParticipation, details: z.strictObject(ofRequest) }),
+  event("profiling_exception_revoked", { ...ofParticipation, details: z.strictObject(ofRequest) }),
   event("profiling_exception_superseded", {
     ...ofParticipation,
     reasonCode: ProfilingExceptionSupersededReason,
-    /** The `status_changed` event that made the request stale. */
-    details: z.strictObject({ statusChangeId: z.uuid() }),
+    /** `statusChangeId`: the `status_changed` event that made the request stale. */
+    details: z.strictObject({ ...ofRequest, statusChangeId: z.uuid() }),
   }),
   endReasonCorrected,
   /** Key, actor, subject and time; never the value (round 11). */

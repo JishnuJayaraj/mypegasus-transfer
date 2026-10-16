@@ -17,7 +17,8 @@ import { canTransition } from "./transition";
 
 // Fixture: informed, ta_tg, today 2027-03-01, wave default TG start 2027-04-01.
 const fact: DatedFact = { validOn: "2027-02-20", recordedAt: new Date("2027-02-20T10:00:00Z") };
-const evidence: EvidenceFact = { ...fact, ref: "evidence-1" };
+const digest = (c: string) => `sha256:${c.repeat(64)}`;
+const evidence: EvidenceFact = { ...fact, recordId: "record-1", fingerprint: digest("a") };
 const now = new Date("2027-03-01T09:00:00Z");
 const pl = { type: "user", staffUserId: "pl-1" } as const;
 const manager = { type: "user", staffUserId: "rom-1" } as const;
@@ -25,7 +26,8 @@ const system = { type: "system" } as const;
 const requested: ProfilingException = {
   status: "requested",
   reason: "force_majeure",
-  evidenceRef: "evidence-1",
+  evidenceRecordId: "record-1",
+  evidenceFingerprint: digest("a"),
   requestedBy: "pl-1",
   decidedBy: null,
   decidedOn: null,
@@ -87,10 +89,13 @@ describe("requesting a profiling exception (AC-6, Q81)", () => {
     (status) => {
       const previous = { ...requested, status, decidedBy: "rom-1" };
       expect(request({}, {}, previous)).toEqual(fail("evidence_unchanged"));
-      const corrected = { ...evidence, ref: "evidence-2" };
+      // A new evidence record with the same canonical fingerprint is not changed evidence (Q94).
+      const sameFacts = { ...evidence, recordId: "record-2" };
+      expect(request({}, { evidence: sameFacts }, previous)).toEqual(fail("evidence_unchanged"));
+      const corrected = { ...evidence, recordId: "record-3", fingerprint: digest("b") };
       expect(request({}, { evidence: corrected }, previous)).toEqual({
         ok: true,
-        next: { ...requested, evidenceRef: "evidence-2" },
+        next: { ...requested, evidenceRecordId: "record-3", evidenceFingerprint: digest("b") },
       });
     },
   );

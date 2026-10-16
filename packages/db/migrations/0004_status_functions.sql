@@ -110,8 +110,8 @@ BEGIN
       RAISE EXCEPTION 'wave_of_other_project';
     END IF;
   END IF;
-  INSERT INTO public.participation (id, project_id, entry_wave_id, status, profiling_status, dsv_status, profiling_exception_status)
-  VALUES (v_id, p_project_id, p_entry_wave_id, 'imported', 'not_started', 'not_offered', 'none');
+  INSERT INTO public.participation (id, project_id, entry_wave_id, status, profiling_status, dsv_status)
+  VALUES (v_id, p_project_id, p_entry_wave_id, 'imported', 'not_started', 'not_offered');
   PERFORM public.write_audit_event(p_project_id, v_id, 'participation_created', p_context, 'status', NULL,
     'imported', NULL, NULL, jsonb_strip_nulls(jsonb_build_object('entryWaveId', p_entry_wave_id)), false);
   RETURN v_id;
@@ -135,6 +135,7 @@ DECLARE
   v_secondary public.end_reason[] := coalesce(p_secondary_reasons, '{}');
   v_signing_deadline date;
   v_event uuid;
+  v_request public.profiling_exception_request;
   v_stale public.profiling_exception_superseded_reason;
 BEGIN
   PERFORM public.assert_context(p_context, p_id, '{user,system}');
@@ -150,6 +151,7 @@ BEGIN
   END IF;
 
   SELECT type INTO v_type FROM public.project WHERE id = r.project_id;
+  SELECT * INTO v_request FROM public.profiling_exception_request WHERE id = r.profiling_exception_request_id;
   v_track := CASE p_field WHEN 'status' THEN 'main' WHEN 'profiling_status' THEN 'profiling' ELSE 'dsv' END;
   IF NOT EXISTS (
     SELECT FROM public.lifecycle_edge e
@@ -165,7 +167,7 @@ BEGIN
   -- with an approved exception, profiling moves forward or is declined (Q74).
   IF v_track = 'dsv' AND NOT (r.status = 'informed' AND v_type = 'ta_tg')
      OR v_track = 'profiling' AND NOT (r.status = 'informed'
-       OR r.status = 'active_in_tg' AND r.profiling_exception_status = 'approved' AND p_expected_from <> 'profiling_declined') THEN
+       OR r.status = 'active_in_tg' AND v_request.status IS NOT DISTINCT FROM 'approved' AND p_expected_from <> 'profiling_declined') THEN
     RAISE EXCEPTION 'track_inactive';
   END IF;
 
@@ -235,20 +237,22 @@ BEGIN
       'offerDeadline', p_offer_deadline)),
     p_entry_kind IS NOT DISTINCT FROM 'reconciliation');
 
-  -- Supersede a pending request that no longer applies (round 10; system-only, round 12).
-  IF r.profiling_exception_status = 'requested' THEN
+  -- Supersede a pending request that no longer applies (round 10; system-only, round 12), as
+  -- system with the same correlation ids (round 16).
+  IF v_request.status IS NOT DISTINCT FROM 'requested' THEN
     v_stale := CASE
       WHEN r.status IN ('withdrawn', 'rejected', 'ta_completed', 'exited') THEN 'participation_closed'
       WHEN r.profiling_status IN ('profiling_done', 'profiling_declined') THEN 'profiling_closed'
     END;
     IF v_stale IS NOT NULL THEN
-      UPDATE public.participation
-      SET profiling_exception_status = 'superseded', profiling_exception_superseded_reason = v_stale
-      WHERE id = p_id;
+      UPDATE public.profiling_exception_request
+      SET status = 'superseded', superseded_reason = v_stale
+      WHERE id = v_request.id;
       PERFORM public.write_audit_event(r.project_id, p_id, 'profiling_exception_superseded',
         ROW('system', NULL, NULL, 'lifecycle.supersede-stale-exception', NULL,
             (p_context).request_id, (p_context).job_id)::public.audit_context,
-        NULL, NULL, NULL, v_stale::text, NULL, jsonb_build_object('statusChangeId', v_event), false);
+        NULL, NULL, NULL, v_stale::text, NULL,
+        jsonb_build_object('profilingExceptionRequestId', v_request.id, 'statusChangeId', v_event), false);
     END IF;
   END IF;
   RETURN v_event;
@@ -275,25 +279,34 @@ BEGIN
   IF NOT EXISTS (SELECT FROM public.project_entry_wave WHERE id = p_wave_id AND project_id = r.project_id) THEN
     RAISE EXCEPTION 'wave_of_other_project';
   END IF;
+  -- Assigning the current wave again is a no-op, refused without a write (round 16).
+  IF r.entry_wave_id = p_wave_id THEN
+    RAISE EXCEPTION 'wave_unchanged';
+  END IF;
   UPDATE public.participation SET entry_wave_id = p_wave_id, status_version = status_version + 1 WHERE id = p_id;
   RETURN public.write_audit_event(r.project_id, p_id, 'entry_wave_assigned', p_context, NULL, NULL, NULL,
     NULL, NULL, jsonb_build_object('waveId', p_wave_id, 'previousWaveId', r.entry_wave_id), false);
 END $$;
 --> statement-breakpoint
 
--- A new request is a new record: the columns hold the latest one, the earlier ones stay in the
--- audit trail (round 10). Evidence comes with Slice 4b (D4).
+-- Each request is its own immutable row, authoritative for its history (Q94, round 16); the
+-- participation points at its current one. Changed evidence means a different fingerprint than
+-- the latest request's. The service refuses real requests until Slice 4b validates evidence.
 CREATE FUNCTION request_profiling_exception(
-  p_id uuid, p_reason profiling_exception_reason, p_requested_on date, p_context audit_context
+  p_id uuid, p_reason profiling_exception_reason, p_requested_on date, p_evidence_record_id uuid,
+  p_evidence_fingerprint text, p_context audit_context
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   r public.participation;
+  v_latest public.profiling_exception_request;
+  v_request_id uuid;
 BEGIN
   PERFORM public.assert_context(p_context, p_id, '{user}');
   IF p_reason IS NULL OR p_requested_on IS NULL THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
   r := public.lock_participation(p_id);
+  SELECT * INTO v_latest FROM public.profiling_exception_request WHERE id = r.profiling_exception_request_id;
   IF (SELECT type FROM public.project WHERE id = r.project_id) <> 'ta_tg' THEN
     RAISE EXCEPTION 'not_ta_tg';
   END IF;
@@ -303,42 +316,71 @@ BEGIN
   IF r.profiling_status IN ('profiling_done', 'profiling_declined') THEN
     RAISE EXCEPTION 'profiling_closed';
   END IF;
-  IF r.profiling_exception_status IN ('requested', 'approved') THEN
+  IF v_latest.status IN ('requested', 'approved') THEN
     RAISE EXCEPTION 'exception_open';
   END IF;
-  UPDATE public.participation SET
-    profiling_exception_status = 'requested',
-    profiling_exception_reason_code = p_reason,
-    profiling_exception_requested_by = (p_context).staff_user_id,
-    profiling_exception_requested_on = p_requested_on,
-    profiling_exception_decided_by = NULL,
-    profiling_exception_decided_on = NULL,
-    profiling_exception_decided_at = NULL,
-    profiling_exception_superseded_reason = NULL,
-    status_version = status_version + 1
+  IF p_evidence_record_id IS NULL OR p_evidence_fingerprint IS NULL THEN
+    RAISE EXCEPTION 'evidence_missing';
+  END IF;
+  IF p_evidence_fingerprint = v_latest.evidence_fingerprint THEN
+    RAISE EXCEPTION 'evidence_unchanged';
+  END IF;
+  INSERT INTO public.profiling_exception_request (
+    project_id, participation_id, reason_code, status, requested_by, requested_on,
+    evidence_record_id, evidence_fingerprint
+  ) VALUES (
+    r.project_id, p_id, p_reason, 'requested', (p_context).staff_user_id, p_requested_on,
+    p_evidence_record_id, p_evidence_fingerprint
+  ) RETURNING id INTO v_request_id;
+  UPDATE public.participation
+  SET profiling_exception_request_id = v_request_id, status_version = status_version + 1
   WHERE id = p_id;
-  RETURN public.write_audit_event(r.project_id, p_id, 'profiling_exception_requested', p_context, NULL,
-    NULL, NULL, p_reason::text, NULL, '{}', false);
+  PERFORM public.write_audit_event(r.project_id, p_id, 'profiling_exception_requested', p_context, NULL,
+    NULL, NULL, p_reason::text, NULL,
+    jsonb_build_object('profilingExceptionRequestId', v_request_id,
+      'evidenceRecordId', p_evidence_record_id, 'evidenceFingerprint', p_evidence_fingerprint), false);
+  RETURN v_request_id;
 END $$;
 --> statement-breakpoint
 
--- Four eyes (Q80): a different staff user approves or rejects; an approval counts from its date
--- and the instant it was recorded (round 9).
+-- Locks the participation of a request and returns the request, which must be the current one.
+CREATE FUNCTION lock_current_request(p_request_id uuid, p_context audit_context)
+RETURNS public.profiling_exception_request LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  v_participation_id uuid;
+  v_request public.profiling_exception_request;
+BEGIN
+  SELECT participation_id INTO v_participation_id FROM public.profiling_exception_request WHERE id = p_request_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'request_not_found';
+  END IF;
+  PERFORM public.assert_context(p_context, v_participation_id, '{user}');
+  IF (public.lock_participation(v_participation_id)).profiling_exception_request_id IS DISTINCT FROM p_request_id THEN
+    RAISE EXCEPTION 'request_not_current';
+  END IF;
+  SELECT * INTO v_request FROM public.profiling_exception_request WHERE id = p_request_id;
+  RETURN v_request;
+END $$;
+--> statement-breakpoint
+
+-- Four eyes (Q80): a different staff user approves or rejects the current pending request; an
+-- approval counts from its date and the instant it was recorded (round 9).
 CREATE FUNCTION decide_profiling_exception(
-  p_id uuid, p_approve boolean, p_decided_on date, p_context audit_context
+  p_request_id uuid, p_approve boolean, p_decided_on date, p_context audit_context
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
+  v_request public.profiling_exception_request;
   r public.participation;
 BEGIN
-  PERFORM public.assert_context(p_context, p_id, '{user}');
   IF p_approve IS NULL OR p_decided_on IS NULL THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
-  r := public.lock_participation(p_id);
-  IF r.profiling_exception_status <> 'requested' THEN
+  v_request := public.lock_current_request(p_request_id, p_context);
+  SELECT * INTO r FROM public.participation WHERE id = v_request.participation_id;
+  IF v_request.status <> 'requested' THEN
     RAISE EXCEPTION 'not_requested';
   END IF;
-  IF r.profiling_exception_requested_by = (p_context).staff_user_id THEN
+  IF v_request.requested_by = (p_context).staff_user_id THEN
     RAISE EXCEPTION 'same_person_approval';
   END IF;
   IF r.status <> 'informed' THEN
@@ -347,29 +389,31 @@ BEGIN
   IF r.profiling_status IN ('profiling_done', 'profiling_declined') THEN
     RAISE EXCEPTION 'profiling_closed';
   END IF;
-  UPDATE public.participation SET
-    profiling_exception_status = CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END::public.profiling_exception_status,
-    profiling_exception_decided_by = (p_context).staff_user_id,
-    profiling_exception_decided_on = p_decided_on,
-    profiling_exception_decided_at = now(),
-    status_version = status_version + 1
-  WHERE id = p_id;
-  RETURN public.write_audit_event(r.project_id, p_id,
+  UPDATE public.profiling_exception_request SET
+    status = CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END::public.profiling_exception_status,
+    decided_by = (p_context).staff_user_id,
+    decided_on = p_decided_on,
+    decided_at = now()
+  WHERE id = p_request_id;
+  UPDATE public.participation SET status_version = status_version + 1 WHERE id = r.id;
+  RETURN public.write_audit_event(r.project_id, r.id,
     CASE WHEN p_approve THEN 'profiling_exception_approved' ELSE 'profiling_exception_rejected' END::public.audit_event_type,
-    p_context, NULL, NULL, NULL, NULL, NULL, '{}', false);
+    p_context, NULL, NULL, NULL, NULL, NULL,
+    jsonb_build_object('profilingExceptionRequestId', p_request_id), false);
 END $$;
 --> statement-breakpoint
 
--- The PL withdraws a still-applicable request or approval before TG entry; one that no longer
--- applies is superseded instead (round 10).
-CREATE FUNCTION revoke_profiling_exception(p_id uuid, p_context audit_context)
+-- The PL withdraws the current, still-applicable request or approval before TG entry; one that
+-- no longer applies is superseded instead (round 10).
+CREATE FUNCTION revoke_profiling_exception(p_request_id uuid, p_context audit_context)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
+  v_request public.profiling_exception_request;
   r public.participation;
 BEGIN
-  PERFORM public.assert_context(p_context, p_id, '{user}');
-  r := public.lock_participation(p_id);
-  IF r.profiling_exception_status NOT IN ('requested', 'approved') THEN
+  v_request := public.lock_current_request(p_request_id, p_context);
+  SELECT * INTO r FROM public.participation WHERE id = v_request.participation_id;
+  IF v_request.status NOT IN ('requested', 'approved') THEN
     RAISE EXCEPTION 'not_revocable';
   END IF;
   IF r.status IN ('withdrawn', 'rejected', 'ta_completed', 'exited')
@@ -380,11 +424,36 @@ BEGIN
   IF r.status <> 'informed' THEN
     RAISE EXCEPTION 'not_informed';
   END IF;
-  UPDATE public.participation SET profiling_exception_status = 'revoked', status_version = status_version + 1
-  WHERE id = p_id;
-  RETURN public.write_audit_event(r.project_id, p_id, 'profiling_exception_revoked', p_context, NULL,
-    NULL, NULL, NULL, NULL, '{}', false);
+  UPDATE public.profiling_exception_request SET status = 'revoked' WHERE id = p_request_id;
+  UPDATE public.participation SET status_version = status_version + 1 WHERE id = r.id;
+  RETURN public.write_audit_event(r.project_id, r.id, 'profiling_exception_revoked', p_context, NULL,
+    NULL, NULL, NULL, NULL, jsonb_build_object('profilingExceptionRequestId', p_request_id), false);
 END $$;
+--> statement-breakpoint
+
+-- Defence in depth for "immutable request" (round 16), whoever writes: the reason, the evidence
+-- identity and the request itself never change; the status only progresses
+-- (requested → approved/rejected/revoked/superseded, approved → revoked) and a decision, once
+-- recorded, stays as it is.
+CREATE FUNCTION profiling_exception_request_progresses()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
+BEGIN
+  IF (NEW.id, NEW.project_id, NEW.participation_id, NEW.reason_code, NEW.requested_by,
+      NEW.requested_on, NEW.requested_at, NEW.evidence_record_id, NEW.evidence_fingerprint)
+     IS DISTINCT FROM
+     (OLD.id, OLD.project_id, OLD.participation_id, OLD.reason_code, OLD.requested_by,
+      OLD.requested_on, OLD.requested_at, OLD.evidence_record_id, OLD.evidence_fingerprint)
+     OR OLD.decided_by IS NOT NULL
+       AND (NEW.decided_by, NEW.decided_on, NEW.decided_at) IS DISTINCT FROM (OLD.decided_by, OLD.decided_on, OLD.decided_at)
+     OR NOT (OLD.status = 'requested' AND NEW.status IN ('approved', 'rejected', 'revoked', 'superseded')
+             OR OLD.status = 'approved' AND NEW.status = 'revoked') THEN
+    RAISE EXCEPTION 'request_immutable';
+  END IF;
+  RETURN NEW;
+END $$;
+--> statement-breakpoint
+CREATE TRIGGER profiling_exception_request_progresses BEFORE UPDATE ON profiling_exception_request
+FOR EACH ROW EXECUTE FUNCTION profiling_exception_request_progresses();
 --> statement-breakpoint
 
 -- Q72, round 10: the primary reason changes without reopening the terminal status. A
@@ -459,9 +528,11 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- Grants (plan 5.4). transfer_app reads participations and waves, writes nothing directly, has no
+-- Grants (plan 5.4). transfer_app reads participations, their exception requests and waves,
+-- writes nothing directly, has no
 -- privilege on audit_event or lifecycle_edge, and executes the nine functions.
-REVOKE ALL ON FUNCTION assert_context, write_audit_event, end_reason_fits, lock_participation,
+REVOKE ALL ON FUNCTION assert_context, write_audit_event, end_reason_fits, lock_current_request,
+  profiling_exception_request_progresses, lock_participation,
   create_participation, change_participation_status, assign_entry_wave, request_profiling_exception,
   decide_profiling_exception, revoke_profiling_exception, correct_end_reason, record_audit_event FROM PUBLIC;
 --> statement-breakpoint
@@ -469,4 +540,4 @@ GRANT EXECUTE ON FUNCTION lock_participation, create_participation, change_parti
   assign_entry_wave, request_profiling_exception, decide_profiling_exception, revoke_profiling_exception,
   correct_end_reason, record_audit_event TO transfer_app;
 --> statement-breakpoint
-GRANT SELECT ON TABLE participation, project_entry_wave TO transfer_app;
+GRANT SELECT ON TABLE participation, profiling_exception_request, project_entry_wave TO transfer_app;

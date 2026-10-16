@@ -56,7 +56,12 @@ Decided in the Slice 1 plan (D2, sections 5.4 and 5.10) and built in PR 1g-1:
   `public`) and granted to `transfer_app` only. Each writes its change and its audit event in
   the caller's transaction; errors are `P0001` with a stable code, never a value. Grants,
   atomicity and drift are integration-tested.
-- **Grants:** `transfer_app` may `SELECT` `participation` and `project_entry_wave` and has no
+- **Profiling-exception requests are first-class rows** (`profiling_exception_request`, round 16,
+  Q94): one immutable row per request (reason and evidence identity, by an opaque evidence-record
+  id and a canonical fingerprint), whose status and decision progress on the row under a trigger;
+  the participation references its current request. Never overwritten by the next request.
+- **Grants:** `transfer_app` may `SELECT` `participation`, `profiling_exception_request` and
+  `project_entry_wave` and has no
   privilege on `audit_event` or `lifecycle_edge` in Slice 1. Without `UPDATE` it can't
   `SELECT … FOR UPDATE`, so the status service locks through `lock_participation`.
 - **`lifecycle_edge`** holds the domain's edge list as reference data for the functions; a

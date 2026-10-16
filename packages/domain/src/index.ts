@@ -138,6 +138,7 @@ export {
   AuditActor,
   AuditEvent,
   AuditEventType,
+  EvidenceFingerprint,
   lifecycleEventTypes,
   StatusField,
   statusFieldOfTrack,

@@ -29,6 +29,7 @@ export const operationFailures = {
     "status_not_open",
     "dsv_already_offered",
     "wave_of_other_project",
+    "wave_unchanged",
   ],
   requestProfilingException: [
     "actor_not_allowed",
@@ -85,6 +86,8 @@ export function assignEntryWave(
   if (!waveStatuses.has(ctx.current.status)) return fail("status_not_open");
   if (ctx.current.dsvStatus !== "not_offered") return fail("dsv_already_offered");
   if (target.wave.projectId !== target.projectId) return fail("wave_of_other_project");
+  // Assigning the current wave again is a no-op, refused without a write (round 16).
+  if (ctx.wave?.id === target.wave.id) return fail("wave_unchanged");
   return { ok: true, next: { waveId: target.wave.id } };
 }
 
@@ -96,8 +99,9 @@ export function assignEntryWave(
 export type ProfilingException = {
   status: Exclude<ProfilingExceptionStatus, "none">;
   reason: ProfilingExceptionReason;
-  /** The evidence item or BA reference: an id, never free text. */
-  evidenceRef: string;
+  /** The immutable evidence record (Q94): its id and canonical fingerprint, never contents. */
+  evidenceRecordId: string;
+  evidenceFingerprint: string;
   requestedBy: string;
   decidedBy: string | null;
   /** The decision's Berlin date and instant: an approval counts only from them (round 9). */
@@ -106,8 +110,12 @@ export type ProfilingException = {
   supersededBecause: ProfilingExceptionSupersededReason | null;
 };
 
-/** Supporting evidence or a BA reference (Q81). No evidence storage until Slice 4b (D4). */
-export type EvidenceFact = DatedFact & { ref: string };
+/**
+ * One immutable evidence record (Q81, Q94): accepted evidence document versions or a structured
+ * BA confirmation, with its canonical fingerprint (Slice 4b computes it from the content digests
+ * or the normalised BA facts). No evidence storage until Slice 4b (D4).
+ */
+export type EvidenceFact = DatedFact & { recordId: string; fingerprint: string };
 
 export type ExceptionRequest = {
   reason: ProfilingExceptionReason;
@@ -145,7 +153,10 @@ export function requestProfilingException(
   if (!ProfilingExceptionReason.safeParse(request.reason).success) return fail("reason_invalid");
   const { evidence } = request;
   if (!evidence || !validBy(evidence, ctx.today)) return fail("evidence_missing");
-  if (latest && latest.evidenceRef === evidence.ref) return fail("evidence_unchanged");
+  // Changed evidence means a different fingerprint, not just another record (Q94).
+  if (latest && latest.evidenceFingerprint === evidence.fingerprint) {
+    return fail("evidence_unchanged");
+  }
   if (request.reason === "ba_confirmed_other" && !validBy(request.baConfirmation, ctx.today)) {
     return fail("ba_confirmation_missing");
   }
@@ -154,7 +165,8 @@ export function requestProfilingException(
     next: {
       status: "requested",
       reason: request.reason,
-      evidenceRef: evidence.ref,
+      evidenceRecordId: evidence.recordId,
+      evidenceFingerprint: evidence.fingerprint,
       requestedBy: ctx.actor.staffUserId,
       decidedBy: null,
       decidedOn: null,

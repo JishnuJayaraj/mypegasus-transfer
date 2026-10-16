@@ -1,6 +1,6 @@
 {
-  "id": "51aeccf6-762b-42c7-8b53-a8cdd539402b",
-  "prevId": "16d2956c-87dd-4a44-b468-a2248afe7e0d",
+  "id": "aed9ff0c-2919-4143-98e6-3790044c4374",
+  "prevId": "7f8315ad-eb2b-478d-b81a-bfedb5033f6f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -426,54 +426,9 @@
           "notNull": true,
           "default": "'{}'"
         },
-        "profiling_exception_status": {
-          "name": "profiling_exception_status",
-          "type": "profiling_exception_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "profiling_exception_reason_code": {
-          "name": "profiling_exception_reason_code",
-          "type": "profiling_exception_reason",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profiling_exception_requested_by": {
-          "name": "profiling_exception_requested_by",
+        "profiling_exception_request_id": {
+          "name": "profiling_exception_request_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profiling_exception_requested_on": {
-          "name": "profiling_exception_requested_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profiling_exception_decided_by": {
-          "name": "profiling_exception_decided_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profiling_exception_decided_on": {
-          "name": "profiling_exception_decided_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profiling_exception_decided_at": {
-          "name": "profiling_exception_decided_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "profiling_exception_superseded_reason": {
-          "name": "profiling_exception_superseded_reason",
-          "type": "profiling_exception_superseded_reason",
-          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -519,24 +474,6 @@
           "onUpdate": "no action",
           "onDelete": "no action"
         },
-        "participation_profiling_exception_requested_by_staff_user_id_fk": {
-          "name": "participation_profiling_exception_requested_by_staff_user_id_fk",
-          "tableFrom": "participation",
-          "columnsFrom": ["profiling_exception_requested_by"],
-          "tableTo": "staff_user",
-          "columnsTo": ["id"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "participation_profiling_exception_decided_by_staff_user_id_fk": {
-          "name": "participation_profiling_exception_decided_by_staff_user_id_fk",
-          "tableFrom": "participation",
-          "columnsFrom": ["profiling_exception_decided_by"],
-          "tableTo": "staff_user",
-          "columnsTo": ["id"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
         "participation_entry_wave_same_project_fk": {
           "name": "participation_entry_wave_same_project_fk",
           "tableFrom": "participation",
@@ -545,10 +482,25 @@
           "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
+        },
+        "participation_current_exception_request_fk": {
+          "name": "participation_current_exception_request_fk",
+          "tableFrom": "participation",
+          "columnsFrom": ["profiling_exception_request_id", "id"],
+          "tableTo": "profiling_exception_request",
+          "columnsTo": ["id", "participation_id"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "participation_id_project_unique": {
+          "name": "participation_id_project_unique",
+          "columns": ["id", "project_id"],
+          "nullsNotDistinct": false
+        }
+      },
       "policies": {},
       "checkConstraints": {
         "participation_tg_dates_ordered": {
@@ -606,30 +558,189 @@
         "participation_unmatched_has_no_wave": {
           "name": "participation_unmatched_has_no_wave",
           "value": "not (\"participation\".\"status\" in ('self_registered', 'rejected')) or \"participation\".\"entry_wave_id\" is null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.profiling_exception_request": {
+      "name": "profiling_exception_request",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "participation_exception_reason": {
-          "name": "participation_exception_reason",
-          "value": "(\"participation\".\"profiling_exception_status\" <> 'none') = (\"profiling_exception_reason_code\" is not null)"
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
         },
-        "participation_exception_requested_by": {
-          "name": "participation_exception_requested_by",
-          "value": "(\"participation\".\"profiling_exception_status\" <> 'none') = (\"profiling_exception_requested_by\" is not null)"
+        "participation_id": {
+          "name": "participation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
         },
-        "participation_exception_requested_on": {
-          "name": "participation_exception_requested_on",
-          "value": "(\"participation\".\"profiling_exception_status\" <> 'none') = (\"profiling_exception_requested_on\" is not null)"
+        "reason_code": {
+          "name": "reason_code",
+          "type": "profiling_exception_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
         },
-        "participation_exception_decision": {
-          "name": "participation_exception_decision",
-          "value": "(\"participation\".\"profiling_exception_decided_by\" is null) = (\"participation\".\"profiling_exception_decided_on\" is null) and (\"participation\".\"profiling_exception_decided_by\" is null) = (\"participation\".\"profiling_exception_decided_at\" is null) and (not (\"participation\".\"profiling_exception_status\" in ('approved', 'rejected')) or \"participation\".\"profiling_exception_decided_by\" is not null) and (not (\"participation\".\"profiling_exception_status\" in ('none', 'requested', 'superseded')) or \"participation\".\"profiling_exception_decided_by\" is null)"
+        "status": {
+          "name": "status",
+          "type": "profiling_exception_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
         },
-        "participation_exception_superseded_reason": {
-          "name": "participation_exception_superseded_reason",
-          "value": "(\"participation\".\"profiling_exception_status\" in ('superseded')) = (\"profiling_exception_superseded_reason\" is not null)"
+        "requested_by": {
+          "name": "requested_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
         },
-        "participation_exception_four_eyes": {
-          "name": "participation_exception_four_eyes",
-          "value": "\"participation\".\"profiling_exception_decided_by\" <> \"participation\".\"profiling_exception_requested_by\""
+        "requested_on": {
+          "name": "requested_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "evidence_record_id": {
+          "name": "evidence_record_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence_fingerprint": {
+          "name": "evidence_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decided_by": {
+          "name": "decided_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_on": {
+          "name": "decided_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "superseded_reason": {
+          "name": "superseded_reason",
+          "type": "profiling_exception_superseded_reason",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "profiling_exception_request_one_open_idx": {
+          "name": "profiling_exception_request_one_open_idx",
+          "columns": [
+            {
+              "expression": "participation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"profiling_exception_request\".\"status\" in ('requested', 'approved')",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "profiling_exception_request_project_id_project_id_fk": {
+          "name": "profiling_exception_request_project_id_project_id_fk",
+          "tableFrom": "profiling_exception_request",
+          "columnsFrom": ["project_id"],
+          "tableTo": "project",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "profiling_exception_request_requested_by_staff_user_id_fk": {
+          "name": "profiling_exception_request_requested_by_staff_user_id_fk",
+          "tableFrom": "profiling_exception_request",
+          "columnsFrom": ["requested_by"],
+          "tableTo": "staff_user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "profiling_exception_request_decided_by_staff_user_id_fk": {
+          "name": "profiling_exception_request_decided_by_staff_user_id_fk",
+          "tableFrom": "profiling_exception_request",
+          "columnsFrom": ["decided_by"],
+          "tableTo": "staff_user",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "profiling_exception_request_participation_fk": {
+          "name": "profiling_exception_request_participation_fk",
+          "tableFrom": "profiling_exception_request",
+          "columnsFrom": ["participation_id", "project_id"],
+          "tableTo": "participation",
+          "columnsTo": ["id", "project_id"],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "profiling_exception_request_id_participation_unique": {
+          "name": "profiling_exception_request_id_participation_unique",
+          "columns": ["id", "participation_id"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "profiling_exception_request_status_not_none": {
+          "name": "profiling_exception_request_status_not_none",
+          "value": "\"profiling_exception_request\".\"status\" <> 'none'"
+        },
+        "profiling_exception_request_fingerprint": {
+          "name": "profiling_exception_request_fingerprint",
+          "value": "\"profiling_exception_request\".\"evidence_fingerprint\" ~ '^sha256:[0-9a-f]{64}$'"
+        },
+        "profiling_exception_request_decision": {
+          "name": "profiling_exception_request_decision",
+          "value": "(\"profiling_exception_request\".\"decided_by\" is null) = (\"profiling_exception_request\".\"decided_on\" is null) and (\"profiling_exception_request\".\"decided_by\" is null) = (\"profiling_exception_request\".\"decided_at\" is null) and (not (\"profiling_exception_request\".\"status\" in ('approved', 'rejected')) or \"profiling_exception_request\".\"decided_by\" is not null) and (not (\"profiling_exception_request\".\"status\" in ('requested', 'superseded')) or \"profiling_exception_request\".\"decided_by\" is null)"
+        },
+        "profiling_exception_request_superseded_reason": {
+          "name": "profiling_exception_request_superseded_reason",
+          "value": "(\"profiling_exception_request\".\"status\" in ('superseded')) = (\"superseded_reason\" is not null)"
+        },
+        "profiling_exception_request_four_eyes": {
+          "name": "profiling_exception_request_four_eyes",
+          "value": "\"profiling_exception_request\".\"decided_by\" <> \"profiling_exception_request\".\"requested_by\""
         }
       },
       "isRLSEnabled": false

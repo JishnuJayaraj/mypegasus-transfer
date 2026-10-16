@@ -196,18 +196,30 @@ describe("status_changed", () => {
   });
 });
 
+// Every exception event identifies its request record; only the request names the evidence (Q94).
+const ofRequest = { profilingExceptionRequestId: "00000000-0000-4000-8000-0000000000c1" };
+const requested = {
+  ...ofRequest,
+  evidenceRecordId: "00000000-0000-4000-8000-0000000000d1",
+  evidenceFingerprint: `sha256:${"ab".repeat(32)}`,
+};
+
 describe("the other event types", () => {
   it.each([
     ["participation_created", { to: "imported", details: { entryWaveId: otherId } }],
     ["participation_created", { to: "imported", details: {} }],
     ["entry_wave_assigned", { details: { waveId: otherId, previousWaveId: null } }],
-    ["profiling_exception_requested", { reasonCode: "force_majeure", details: {} }],
-    ["profiling_exception_approved", { details: {} }],
-    ["profiling_exception_rejected", { details: {} }],
-    ["profiling_exception_revoked", { details: {} }],
+    ["profiling_exception_requested", { reasonCode: "force_majeure", details: requested }],
+    ["profiling_exception_approved", { details: ofRequest }],
+    ["profiling_exception_rejected", { details: ofRequest }],
+    ["profiling_exception_revoked", { details: ofRequest }],
     [
       "profiling_exception_superseded",
-      { actor: system, reasonCode: "profiling_closed", details: { statusChangeId: otherId } },
+      {
+        actor: system,
+        reasonCode: "profiling_closed",
+        details: { ...ofRequest, statusChangeId: otherId },
+      },
     ],
     [
       "end_reason_corrected",
@@ -260,9 +272,19 @@ describe("the other event types", () => {
     ["participation_created", { to: "contacted", details: {} }],
     ["participation_created", { participationId: null, to: "imported", details: {} }],
     ["entry_wave_assigned", { details: { waveId: "W1", previousWaveId: null } }],
-    ["profiling_exception_requested", { reasonCode: "late_joiner", details: {} }],
-    ["profiling_exception_requested", { reasonCode: "force_majeure", details: { text: "x" } }],
-    ["profiling_exception_superseded", { reasonCode: "profiling_closed", details: {} }],
+    ["profiling_exception_requested", { reasonCode: "late_joiner", details: requested }],
+    [
+      "profiling_exception_requested",
+      { reasonCode: "force_majeure", details: { ...requested, text: "x" } },
+    ],
+    [
+      "profiling_exception_requested",
+      { reasonCode: "force_majeure", details: { ...requested, evidenceFingerprint: "md5:abc" } },
+    ],
+    ["profiling_exception_requested", { reasonCode: "force_majeure", details: ofRequest }],
+    ["profiling_exception_approved", { details: {} }],
+    ["profiling_exception_revoked", { details: { ...ofRequest, reason: "x" } }],
+    ["profiling_exception_superseded", { reasonCode: "profiling_closed", details: ofRequest }],
     [
       "end_reason_corrected",
       {

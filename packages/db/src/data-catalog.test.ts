@@ -49,6 +49,7 @@ describe("data catalog", () => {
       staff_user: entry("staff_account", "confidential"),
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),
+      profiling_exception_request: entry("participation_record", "confidential", true),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
     });
