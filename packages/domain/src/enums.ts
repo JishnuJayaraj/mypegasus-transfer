@@ -16,3 +16,11 @@ export const StaffRole = z
   .meta({ id: "StaffRole" });
 
 export type StaffRole = z.infer<typeof StaffRole>;
+
+/** Organisation-wide roles, scoped to regions or all (D6, Q80). Replace `StaffRole` in Slice 3. */
+export const OrgRole = z.enum(["admin", "regional_admin", "regional_operations_manager"]);
+export type OrgRole = z.infer<typeof OrgRole>;
+
+/** Project roles: zero or more per person and project; permissions are the union (D6, Q61). */
+export const ProjectRole = z.enum(["project_lead", "consultant", "back_office"]);
+export type ProjectRole = z.infer<typeof ProjectRole>;

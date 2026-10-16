@@ -113,13 +113,15 @@ apps/
                   @transfer/staff-*; staff-only packages are named @transfer/staff-*)
   api/            Hono API; in production also serves both built SPAs (/ and /portal/)
 packages/
-  domain/         entities, lifecycle state machine, Zod schemas, completeness rules (no I/O)
+  domain/         entities, lifecycle vocabulary and state machine, date helpers, field
+                  catalog, Zod schemas, completeness rules (no I/O, no system time)
   db/             Drizzle schema, migrations, seed (synthetic only), data catalog
   api-client/     generated OpenAPI document + types and the typed client both SPAs use
   ui/             thin wrappers around Carbon components, layout, tokens, i18n helpers
-  config/         (Slice 1) regional/project configuration model + resolver
-  adapters/       (Slice 1) interfaces + mock implementations (pdf, mail, sms, storage, virus
-                  scan, export, clock) — see ADR-0006
+  config/         (Slice 1, PR 1f) regional/project configuration model + resolver
+  adapters/       interfaces + implementations behind them (ADR-0006). Only `Clock` so far
+                  (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus
+                  scan and export come with the slices that need them (D9)
   forms/          (Slice 4b) official BA form templates (blank PDF, field map, manifest) — ADR-0009
 fixtures/         synthetic test files only (e.g. filled test forms)
 docs/             product + domain + architecture docs (source of truth)
