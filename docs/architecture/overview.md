@@ -67,6 +67,16 @@ admission cutoff, `active_in_tg`), two-stage retention/deletion, PDF batch gener
 idempotent, run with the `system` actor, take time from the `Clock` adapter, and carry only IDs
 in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
+- **Where:** in the API process (D7), started before the server listens when `JOBS_ENABLED=true`
+  (default); a separate worker is a Slice 9 scaling decision.
+- **Schema and roles:** `db:migrate` / `node dist/migrate.js` install or upgrade the `pgboss`
+  schema as `transfer_owner` and re-apply `transfer_app`'s DML grants; the API runs pg-boss as
+  `transfer_app` with its migration off.
+- **Schedule:** the nightly lifecycle sweep is a cron at `JOBS_LIFECYCLE_TIME` in
+  `Europe/Berlin` (default 04:15). It catches up the days after the last completed run recorded in
+  `job_run` and evaluates each project in its own `lifecycle.evaluate-project` job through the
+  status service as `system` (Slice 1, PR 1h-2).
+
 ## Performance approach (frontend)
 
 - Route-level code splitting + TanStack Router preloading on hover/intent.

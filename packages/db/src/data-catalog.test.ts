@@ -52,6 +52,7 @@ describe("data catalog", () => {
       profiling_exception_request: entry("participation_record", "confidential", true),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
+      job_run: entry("reference_data", "internal"),
     });
   });
 

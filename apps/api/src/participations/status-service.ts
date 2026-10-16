@@ -1,6 +1,8 @@
 import type { Clock } from "@transfer/adapters";
 import {
+  and,
   eq,
+  jobRun,
   participation,
   profilingExceptionRequest,
   project,
@@ -38,6 +40,7 @@ import {
   type TransitionContext,
 } from "@transfer/domain";
 import type { SQL } from "drizzle-orm";
+import { jobNames } from "../jobs/names";
 import { failClosedFacts, type GuardFactsProvider, type Transaction } from "./guard-facts";
 
 /**
@@ -78,8 +81,6 @@ export type StatusChange = {
   entryKind?: TgEntryKind;
   /** The scheduled run time the automatic entry kinds take their snapshot at (round 9). */
   scheduledAt?: Date;
-  /** That day's run completed: a reconciliation may follow the same day. */
-  scheduledRunCompleted?: boolean;
   endReason?: EndReason;
   secondaryReasons?: EndReason[];
   /** An explicit offer deadline for `→ dsv_offered` (required for a re-offer, Q69). */
@@ -166,6 +167,18 @@ async function selectFirst<T>(rows: Promise<T[]>): Promise<T | undefined> {
 async function call(tx: Transaction, query: SQL): Promise<string> {
   const { rows } = await tx.execute<{ result: string }>(sql`select ${query} as result`);
   return rows[0]!.result;
+}
+
+/**
+ * Whether the lifecycle run of `day` has completed: its `job_run` row exists (round 19). A
+ * reconciliation on the TG start day needs it; read inside the transaction, never from a caller.
+ */
+async function lifecycleRunCompleted(tx: Transaction, day: IsoDate): Promise<boolean> {
+  const rows = await tx
+    .select({ runDate: jobRun.runDate })
+    .from(jobRun)
+    .where(and(eq(jobRun.jobName, jobNames.lifecycleSweep), eq(jobRun.runDate, day)));
+  return rows.length > 0;
 }
 
 /** The participation's wave cutoff, else the project's final entry date (Q84); none in ta_only. */
@@ -356,7 +369,9 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
           ...context,
           entryKind,
           scheduledAt: change.scheduledAt,
-          scheduledRunCompleted: change.scheduledRunCompleted,
+          ...(entryKind === "reconciliation" && {
+            scheduledRunCompleted: await lifecycleRunCompleted(tx, context.today),
+          }),
           facts: await facts.facts(tx, {
             participationId: change.participationId,
             currentRequest: exception,

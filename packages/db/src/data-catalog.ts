@@ -60,6 +60,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // Job names, run dates and instants only (plan 5.10).
+  job_run: { retentionClass: "reference_data", dataClass: "internal", holdsParticipantData: false },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */

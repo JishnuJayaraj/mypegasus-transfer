@@ -1,4 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
+import type { Clock } from "@transfer/adapters";
 import type { Database } from "@transfer/db";
 import type { StaffUser } from "@transfer/domain";
 import type { Logger } from "pino";
@@ -10,6 +11,8 @@ export interface Deps {
   db: Database;
   env: Env;
   logger: Logger;
+  /** The only source of the current time (ADR-0006, plan 5.8). */
+  clock: Clock;
   /** The built SPAs to serve (production image, `pnpm start`); Vite serves them in dev. */
   spa?: SpaRoots | undefined;
 }

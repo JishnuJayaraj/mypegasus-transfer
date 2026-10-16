@@ -47,3 +47,45 @@ For PR 1h:
   `standard` and `singleton` two sends with the same key both succeed. Create
   `lifecycle.evaluate-project` with one of those, and keep idempotency in the planner and the
   compare-and-set (plan 5.9).
+
+## Amendment 2026-10-16: setup, runtime role and schedule (Slice 1, PR 1h-1)
+
+Decided in the Slice 1 plan (D7, section 5.9) and built in PR 1h-1; the sweep, the catch-up
+window and the per-project job follow in PR 1h-2.
+- **Schema install:** `db:migrate` (and `node dist/migrate.js` in the image) installs pg-boss's
+  `pgboss` schema after the app migrations, as `transfer_owner`, from pg-boss's exported SQL
+  plans: the construction plan on a fresh database, the migration plan from the installed
+  version on an upgrade (its `CREATE INDEX CONCURRENTLY` builds run one by one after its
+  transaction, since the app instance never runs pg-boss's own background migrations). A schema
+  newer than the pinned pg-boss is refused. The target version comes from the pinned package
+  (`pg-boss@12.38.0`: 46).
+- **Runtime role:** every migration run re-applies `transfer_app`'s grants on the existing
+  objects: `USAGE` on the schema, `SELECT, INSERT, UPDATE, DELETE` on its tables, `USAGE, SELECT`
+  on its sequences, `EXECUTE` on its functions; no `CREATE`, no DDL. The API starts pg-boss as
+  `transfer_app` with migration off, `persistQueueStats` off and `reindex: false`; a missing or
+  outdated schema fails the API's start.
+- **In-process:** pg-boss runs in the API process (D7) when `JOBS_ENABLED=true` (the default),
+  started before the server listens. `SIGTERM`/`SIGINT` start a single-flight shutdown: the
+  server stops accepting, HTTP draining and pg-boss's graceful stop are both awaited, then the
+  pool is closed; failures are logged without their message and give a non-zero exit code. Tests and the
+  Playwright server run with `false`; tests start it explicitly.
+- **Queues** (round 19): `lifecycle.sweep` is **`singleton`** (one active sweep, the others kept
+  queued: a missed occurrence can arrive beside the due one and must not displace it; `job_run`
+  makes a second sweep of a completed day a no-op); `lifecycle.evaluate-project` is
+  **`exclusive`** per `singletonKey` `<projectId>:<runDate>`. Both retry with backoff; their
+  options are kept current on every start and a queue with another policy fails it.
+- **Time zone:** the nightly sweep is a pg-boss cron at `JOBS_LIFECYCLE_TIME` (Berlin local time,
+  default `04:15`, 02:00–02:59 refused) with `tz: "Europe/Berlin"`, whose instants equal the
+  `Clock` adapter's `scheduledAt`, DST days included. An occurrence missed while the API was down
+  is sent once at the next start (`missed: "once"`).
+- **`job_run`** (`job_name`, `run_date`, `scheduled_at`, `completed_at`): one row per job and Berlin
+  run day, inserted once when the day's run has completed and never changed. `transfer_app` may
+  `SELECT` it and `INSERT` only `job_name`, `run_date` and `scheduled_at`, so `completed_at` is
+  always database time; `CHECK`s keep the scheduled time on the run date in Berlin and the
+  completion not before it (round 19). Reference data (retention class `reference_data`). The
+  sweep reads it for its catch-up window (PR 1h-2); the status service reads today's row before a
+  same-day reconciliation.
+- **Database time is authoritative** in every environment (Q96, round 20): a lifecycle run whose
+  scheduled time hasn't passed by database time stops before any change (`run_not_due`); there is
+  no database clock for development.
+- Events are logged without their data and errors without their message (CLAUDE.md rule 9).

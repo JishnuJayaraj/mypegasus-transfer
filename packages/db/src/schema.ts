@@ -26,6 +26,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -454,6 +455,35 @@ export const auditEvent = pgTable(
   ],
 );
 
+/**
+ * One row per job and Berlin run day, inserted once when that day's run has completed (plan 5.9):
+ * the lifecycle sweep's catch-up window starts after the latest, and a same-day reconciliation
+ * needs today's row. No personal data. `transfer_app` may select it and insert only `job_name`,
+ * `run_date` and `scheduled_at`, never update or delete: `completed_at` is always database time
+ * and never before the scheduled run (round 19).
+ */
+export const jobRun = pgTable(
+  "job_run",
+  {
+    jobName: text("job_name").notNull(),
+    runDate: dateColumn("run_date").notNull(),
+    /** The day's originally scheduled run time (`JOBS_LIFECYCLE_TIME`, Europe/Berlin). */
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true, mode: "date" }).notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "job_run_pkey", columns: [t.jobName, t.runDate] }),
+    check("job_run_job_name_is_name", sql`${t.jobName} ~ ${sql.raw(`'${systemJobPattern}'`)}`),
+    check(
+      "job_run_scheduled_on_run_date",
+      sql`(${t.scheduledAt} at time zone 'Europe/Berlin')::date = ${t.runDate}`,
+    ),
+    check("job_run_completed_after_scheduled", sql`${t.completedAt} >= ${t.scheduledAt}`),
+  ],
+);
+
 export const tables = [
   staffUser,
   project,
@@ -462,4 +492,5 @@ export const tables = [
   profilingExceptionRequest,
   lifecycleEdge,
   auditEvent,
+  jobRun,
 ];

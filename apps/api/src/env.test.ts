@@ -11,6 +11,8 @@ const dev = {
 const parseInvalid = () =>
   parseEnv({ ...dev, DATABASE_URL: undefined, AUTH_MODE: "Zzyzx-secret", LOG_LEVEL: "loud" });
 
+const parseMalformedRunTime = () => parseEnv({ ...dev, JOBS_LIFECYCLE_TIME: "4:15am" });
+
 describe("parseEnv", () => {
   it("parses the dev defaults and generates a session secret", () => {
     const env = parseEnv(dev);
@@ -20,6 +22,9 @@ describe("parseEnv", () => {
       appOrigins: ["http://localhost:5173", "http://localhost:5174"],
       port: 3001,
       logLevel: "info",
+      jobsEnabled: true,
+      jobsLifecycleTime: "04:15",
+      clock: "system",
     });
     expect(env.sessionSecret.length).toBeGreaterThanOrEqual(32);
   });
@@ -56,5 +61,52 @@ describe("parseEnv", () => {
     expect(parseInvalid).toThrow(/DATABASE_URL/);
     expect(parseInvalid).toThrow(/AUTH_MODE/);
     expect(parseInvalid).not.toThrow(/Zzyzx/);
+  });
+
+  // Plan 5.8, 5.9 (PR 1h-1).
+  it("parses the jobs switch, the Berlin run time and the clock", () => {
+    expect(
+      parseEnv({
+        ...dev,
+        JOBS_ENABLED: "false",
+        JOBS_LIFECYCLE_TIME: "05:30",
+        CLOCK: "fixed:2091-03-01T03:15:00Z",
+      }),
+    ).toMatchObject({
+      jobsEnabled: false,
+      jobsLifecycleTime: "05:30",
+      clock: "fixed:2091-03-01T03:15:00Z",
+    });
+    expect(parseEnv({ ...dev, JOBS_ENABLED: "", JOBS_LIFECYCLE_TIME: "" })).toMatchObject({
+      jobsEnabled: true,
+      jobsLifecycleTime: "04:15",
+    });
+    expect(() => parseEnv({ ...dev, JOBS_ENABLED: "yes" })).toThrow(/JOBS_ENABLED/);
+  });
+
+  it.each(["02:00", "02:59"])(
+    "refuses the run time %s, which doesn't exist or repeats on the DST days (round 9)",
+    (time) => {
+      expect(() => parseEnv({ ...dev, JOBS_LIFECYCLE_TIME: time })).toThrow(
+        /JOBS_LIFECYCLE_TIME: Run times from 02:00 to 02:59 are not allowed/,
+      );
+    },
+  );
+
+  it("refuses a malformed run time without echoing it", () => {
+    expect(parseMalformedRunTime).toThrow(/JOBS_LIFECYCLE_TIME: Expected a run time HH:MM/);
+    expect(parseMalformedRunTime).not.toThrow(/4:15am/);
+  });
+
+  it("refuses an invalid clock, and a fixed clock in production", () => {
+    expect(() => parseEnv({ ...dev, CLOCK: "fixed:yesterday" })).toThrow(/Invalid CLOCK/);
+    expect(() =>
+      parseEnv({
+        ...dev,
+        NODE_ENV: "production",
+        SESSION_SECRET: "s".repeat(32),
+        CLOCK: "fixed:2091-03-01T03:15:00Z",
+      }),
+    ).toThrow(/CLOCK=fixed is not allowed with NODE_ENV=production/);
   });
 });
