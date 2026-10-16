@@ -5,11 +5,13 @@ import {
   DsvStatus,
   EndReason,
   KugOutcome,
+  LifecycleFlag,
   MainStatus,
   ProfilingExceptionReason,
   ProfilingExceptionStatus,
   ProfilingExceptionSupersededReason,
   ProfilingStatus,
+  ProjectFlag,
   Step,
   TgEntryKind,
   Track,
@@ -60,6 +62,15 @@ describe("vocabulary (plan 5.2)", () => {
       words`participation_closed project_ta_only profiling_closed`,
     ],
     ["KugOutcome", KugOutcome, words`eligible excluded ba_review_required`],
+    [
+      "LifecycleFlag",
+      LifecycleFlag,
+      words`tg_start_missed cutoff_warning cutoff_final_reminder
+            conflict_dsv_signed_profiling_declined dsv_never_offered
+            informed_without_wave_at_cutoff profiling_exception_deadline_missed
+            profiling_declined_after_entry`,
+    ],
+    ["ProjectFlag", ProjectFlag, words`latest_entry_date_missing`],
     ["ActorType", ActorType, words`user participant system`],
     ["OrgRole", OrgRole, words`admin regional_admin regional_operations_manager`],
     ["ProjectRole", ProjectRole, words`project_lead consultant back_office`],

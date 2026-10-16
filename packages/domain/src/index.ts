@@ -30,6 +30,17 @@ export {
   type ProfilingException,
 } from "./lifecycle/operations";
 export {
+  lifecycleFlags,
+  planSystemTransitions,
+  projectFlags,
+  type ParticipationSnapshot,
+  type Plan,
+  type PlanWindow,
+  type PlannedChange,
+  type PlannerProject,
+  type RunDay,
+} from "./lifecycle/planner";
+export {
   deriveOverallStatus,
   isConsistentState,
   type LifecycleState,

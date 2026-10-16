@@ -154,5 +154,24 @@ export type ProfilingExceptionSupersededReason = z.infer<typeof ProfilingExcepti
 export const KugOutcome = z.enum(["eligible", "excluded", "ba_review_required"]);
 export type KugOutcome = z.infer<typeof KugOutcome>;
 
+/**
+ * Per-participation flags the planner derives; never stored (plan 5.3). Informational or
+ * escalations, never a status change.
+ */
+export const LifecycleFlag = z.enum([
+  "tg_start_missed",
+  "cutoff_warning",
+  "cutoff_final_reminder",
+  "conflict_dsv_signed_profiling_declined",
+  "dsv_never_offered",
+  "informed_without_wave_at_cutoff",
+  "profiling_exception_deadline_missed",
+  "profiling_declined_after_entry",
+]);
+export type LifecycleFlag = z.infer<typeof LifecycleFlag>;
+
+export const ProjectFlag = z.enum(["latest_entry_date_missing"]);
+export type ProjectFlag = z.infer<typeof ProjectFlag>;
+
 export const ActorType = z.enum(["user", "participant", "system"]);
 export type ActorType = z.infer<typeof ActorType>;

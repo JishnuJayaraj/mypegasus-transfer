@@ -161,6 +161,9 @@ waves and effective dates, offer deadlines, the three TG entry kinds, `pnpm test
 **1b-2** the operations (wave assignment, profiling exception request/decide/revoke, end-reason
 correction), the derived overall status and the generated transitions table.
 
+**1c is split** the same way: **1c-1** `planSystemTransitions`, `lifecycleFlags` and
+`projectFlags`; **1c-2** `transferKugEligibility`.
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -428,8 +431,22 @@ nothing.
    (approved exception, not done, `today > addMonths(tgEntryDate, 1)`),
    `profiling_declined_after_entry`. Immediate escalations, never a status change.
 
-Flags are **derived, not stored** (`lifecycleFlags(snapshot, wave, project, today)`); the PL
-dashboard (Slice 5) calls it.
+Flags are **derived, not stored** (`lifecycleFlags(snapshot, project, today)`; the project flag
+from `projectFlags(project)`); the PL dashboard (Slice 5) calls them.
+
+Readings taken in PR 1c-1 (fail safe, D10; correct them if wrong):
+- No `config` parameter: nothing in these rules is configurable in Slice 1 (Q78 fixes 14 and 3
+  days).
+- The planner plans only what `canTransition` allows the `system` actor, so a participation with
+  a signed DSV is never withdrawn by the system, and an impossible state moves nothing.
+- Warnings judge the participation as it will be at the cutoff: an open offer counts as expired
+  (its deadline is no later than `latestEntryDate`, Q69).
+- `informed` with `not_offered` is flagged (`dsv_never_offered`), not withdrawn, even with
+  `profiling_declined`; without a wave every `informed` participation is flagged.
+- An offer without any effective deadline never expires automatically (the offer guard keeps it
+  from arising).
+- Compliance flags are raised only while `active_in_tg`; the exception deadline is missed from
+  the day after `addMonths(tgEntryDate, 1)`.
 
 #### Transfer-KuG eligibility (`packages/domain/src/eligibility`, PR 1c; *verify* Q74/Q82)
 
