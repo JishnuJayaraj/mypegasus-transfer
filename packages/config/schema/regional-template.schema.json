@@ -1,0 +1,1174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "rules": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "asu_registration",
+              "data_collection",
+              "profiling",
+              "agentur_submission",
+              "dsv",
+              "project_checklist"
+            ]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "required"
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "requiredIf"
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "when": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "equals": {
+                              "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "equals"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "exists": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "exists"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "field",
+                    "when"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "documentPresent"
+                    },
+                    "documentType": {
+                      "type": "string",
+                      "enum": [
+                        "tl407_signed_scan",
+                        "kug200b_signed_scan",
+                        "dsv_signed_scan",
+                        "dsv_cancellation",
+                        "asu_proof",
+                        "profiling_exception_evidence",
+                        "participant_upload",
+                        "qualification_certificate"
+                      ]
+                    },
+                    "accepted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "documentType"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "helpTexts": {
+          "type": "object",
+          "properties": {
+            "de": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "en": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "kind": {
+          "type": "string",
+          "const": "base_defaults"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "nationwide": {
+          "type": "object",
+          "properties": {
+            "asuDueDate": {
+              "type": "object",
+              "properties": {
+                "monthsBeforeEnd": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                },
+                "daysAfterKnowledge": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "monthsBeforeEnd",
+                "daysAfterKnowledge"
+              ],
+              "additionalProperties": false
+            },
+            "profilingExceptionDeadlineMonths": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "kug200bConfirmationFollowUpDays": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "tl407EscalationDaysAfterTgStart": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "cutoffWarningDays": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            },
+            "cutoffFinalReminderDays": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "asuDueDate",
+            "profilingExceptionDeadlineMonths",
+            "kug200bConfirmationFollowUpDays",
+            "tl407EscalationDaysAfterTgStart",
+            "cutoffWarningDays",
+            "cutoffFinalReminderDays"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind",
+        "version",
+        "nationwide"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "rules": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "asu_registration",
+              "data_collection",
+              "profiling",
+              "agentur_submission",
+              "dsv",
+              "project_checklist"
+            ]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "required"
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "requiredIf"
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "when": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "equals": {
+                              "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "equals"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "exists": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "exists"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "field",
+                    "when"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "documentPresent"
+                    },
+                    "documentType": {
+                      "type": "string",
+                      "enum": [
+                        "tl407_signed_scan",
+                        "kug200b_signed_scan",
+                        "dsv_signed_scan",
+                        "dsv_cancellation",
+                        "asu_proof",
+                        "profiling_exception_evidence",
+                        "participant_upload",
+                        "qualification_certificate"
+                      ]
+                    },
+                    "accepted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "documentType"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "helpTexts": {
+          "type": "object",
+          "properties": {
+            "de": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "en": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "kind": {
+          "type": "string",
+          "const": "regional_template"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "agenturKey": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "sample": {
+          "type": "boolean"
+        },
+        "label": {
+          "type": "object",
+          "properties": {
+            "de": {
+              "type": "string",
+              "minLength": 1
+            },
+            "en": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "de"
+          ],
+          "additionalProperties": false
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "asu_registration": {
+              "type": "object",
+              "properties": {
+                "defaultChannel": {
+                  "type": "string",
+                  "enum": [
+                    "kug_200b",
+                    "online_self",
+                    "in_person"
+                  ]
+                },
+                "batchSubmissionChannel": {
+                  "type": "string",
+                  "enum": [
+                    "paper_courier",
+                    "paper_post",
+                    "scan_email",
+                    "upload"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            },
+            "agentur_submission": {
+              "type": "object",
+              "properties": {
+                "submissionChannel": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "upload",
+                    "paper_original"
+                  ]
+                },
+                "originalRequired": {
+                  "type": "boolean"
+                },
+                "leadTimeDays": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "rejectsOutdatedFormVersions": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "fields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^custom\\.[a-z][a-z0-9_]{0,62}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "enum": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "const": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "format": {
+                "type": "string",
+                "const": "date"
+              },
+              "minLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000
+              },
+              "maxLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000
+              },
+              "pattern": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "x-dataClass": {
+                "type": "string",
+                "enum": [
+                  "confidential",
+                  "internal"
+                ]
+              },
+              "x-retentionClass": {
+                "type": "string",
+                "enum": [
+                  "participation_record",
+                  "personnel_file",
+                  "evidence_set"
+                ]
+              },
+              "x-label": {
+                "type": "object",
+                "properties": {
+                  "de": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "en": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "de"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "x-dataClass",
+              "x-retentionClass",
+              "x-label"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind",
+        "id",
+        "version",
+        "agenturKey",
+        "label"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "type": "number",
+          "const": 1
+        },
+        "rules": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "asu_registration",
+              "data_collection",
+              "profiling",
+              "agentur_submission",
+              "dsv",
+              "project_checklist"
+            ]
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "required"
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "field"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "requiredIf"
+                    },
+                    "field": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "when": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "equals": {
+                              "type": [
+                                "string",
+                                "number",
+                                "boolean"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "equals"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "exists": {
+                              "type": "boolean",
+                              "const": true
+                            }
+                          },
+                          "required": [
+                            "field",
+                            "exists"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "field",
+                    "when"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "statutory",
+                        "ba_form",
+                        "operational_default"
+                      ]
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "documentPresent"
+                    },
+                    "documentType": {
+                      "type": "string",
+                      "enum": [
+                        "tl407_signed_scan",
+                        "kug200b_signed_scan",
+                        "dsv_signed_scan",
+                        "dsv_cancellation",
+                        "asu_proof",
+                        "profiling_exception_evidence",
+                        "participant_upload",
+                        "qualification_certificate"
+                      ]
+                    },
+                    "accepted": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "documentType"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "helpTexts": {
+          "type": "object",
+          "properties": {
+            "de": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "en": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+              },
+              "additionalProperties": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "kind": {
+          "type": "string",
+          "const": "project_override"
+        },
+        "agenturSettings": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "settings": {
+                "type": "object",
+                "properties": {
+                  "asu_registration": {
+                    "type": "object",
+                    "properties": {
+                      "defaultChannel": {
+                        "type": "string",
+                        "enum": [
+                          "kug_200b",
+                          "online_self",
+                          "in_person"
+                        ]
+                      },
+                      "batchSubmissionChannel": {
+                        "type": "string",
+                        "enum": [
+                          "paper_courier",
+                          "paper_post",
+                          "scan_email",
+                          "upload"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "agentur_submission": {
+                    "type": "object",
+                    "properties": {
+                      "submissionChannel": {
+                        "type": "string",
+                        "enum": [
+                          "email",
+                          "upload",
+                          "paper_original"
+                        ]
+                      },
+                      "originalRequired": {
+                        "type": "boolean"
+                      },
+                      "leadTimeDays": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "rejectsOutdatedFormVersions": {
+                        "type": "boolean"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "phone_call_agentur",
+                  "email_agentur",
+                  "letter_agentur",
+                  "meeting_agentur"
+                ]
+              },
+              "confirmedBy": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "confirmedOn": {
+                "type": "string",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "format": "date",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "settings",
+              "source",
+              "confirmedBy",
+              "confirmedOn"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "fields": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^custom\\.[a-z][a-z0-9_]{0,62}$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "integer",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "enum": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean"
+                  ]
+                }
+              },
+              "const": {
+                "type": [
+                  "string",
+                  "number",
+                  "boolean"
+                ]
+              },
+              "format": {
+                "type": "string",
+                "const": "date"
+              },
+              "minLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000
+              },
+              "maxLength": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000
+              },
+              "pattern": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "minimum": {
+                "type": "number"
+              },
+              "maximum": {
+                "type": "number"
+              },
+              "title": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "x-dataClass": {
+                "type": "string",
+                "enum": [
+                  "confidential",
+                  "internal"
+                ]
+              },
+              "x-retentionClass": {
+                "type": "string",
+                "enum": [
+                  "participation_record",
+                  "personnel_file",
+                  "evidence_set"
+                ]
+              },
+              "x-label": {
+                "type": "object",
+                "properties": {
+                  "de": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "en": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "de"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "x-dataClass",
+              "x-retentionClass",
+              "x-label"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "relax": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ruleId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reasonCode": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,63}$"
+              },
+              "approvedBy": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "approvedOn": {
+                "type": "string",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "format": "date",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "ruleId",
+              "reasonCode",
+              "approvedBy",
+              "approvedOn"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "kind"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "title": "Regional configuration layer",
+  "description": "Base defaults, a regional template or a project override (ADR-0004). Generated from packages/config/src/model.ts by `pnpm generate`; do not edit."
+}

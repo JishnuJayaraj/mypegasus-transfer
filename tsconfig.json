@@ -5,6 +5,8 @@
     { "path": "./packages/domain" },
     { "path": "./packages/domain/scripts" },
     { "path": "./packages/adapters" },
+    { "path": "./packages/config" },
+    { "path": "./packages/config/scripts" },
     { "path": "./packages/db" },
     { "path": "./apps/api" },
     { "path": "./packages/api-client" },

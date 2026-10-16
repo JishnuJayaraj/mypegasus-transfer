@@ -30,12 +30,12 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      # The committed OpenAPI document and client types must match the API (ADR-0010), and the
-      # generated docs tables the domain code.
+      # The committed OpenAPI document and client types must match the API (ADR-0010), the
+      # generated docs tables the domain code, and the config JSON Schema the Zod model.
       - name: Generated files drift
         run: |
           pnpm generate
-          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts docs/domain/generated
+          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema docs/domain/generated
 
   lint:
     runs-on: ubuntu-24.04

@@ -18,8 +18,8 @@
     "build": "pnpm -r run build",
     "start": "pnpm --filter @transfer/api start",
     "api:generate": "pnpm --filter @transfer/api-client run generate",
-    "generate": "pnpm api:generate && pnpm --filter @transfer/domain run generate",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts docs/domain/generated",
+    "generate": "pnpm api:generate && pnpm --filter @transfer/domain --filter @transfer/config run generate",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema docs/domain/generated",
     "test:e2e": "pnpm --filter @transfer/web test:e2e"
   },
   "devDependencies": {

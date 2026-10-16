@@ -6,6 +6,7 @@
     "pnpm-lock.yaml",
     "packages/api-client/openapi.json",
     "packages/api-client/src/schema.d.ts",
+    "packages/config/schema/*.json",
     "apps/*/src/routeTree.gen.ts"
   ]
 }

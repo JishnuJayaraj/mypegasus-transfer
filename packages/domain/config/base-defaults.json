@@ -1,0 +1,85 @@
+{
+  "$schema": "../../config/schema/regional-template.schema.json",
+  "schemaVersion": 1,
+  "kind": "base_defaults",
+  "version": 1,
+  "nationwide": {
+    "asuDueDate": { "monthsBeforeEnd": 3, "daysAfterKnowledge": 3 },
+    "profilingExceptionDeadlineMonths": 1,
+    "kug200bConfirmationFollowUpDays": 14,
+    "tl407EscalationDaysAfterTgStart": 14,
+    "cutoffWarningDays": 14,
+    "cutoffFinalReminderDays": 3
+  },
+  "rules": {
+    "asu_registration": [
+      {
+        "id": "base-asu-proof",
+        "kind": "documentPresent",
+        "documentType": "asu_proof",
+        "accepted": true,
+        "basis": "statutory"
+      },
+      {
+        "id": "base-kug200b-rv-nummer",
+        "kind": "required",
+        "field": "pensionInsuranceNumber",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-kug200b-declarations",
+        "kind": "documentPresent",
+        "documentType": "kug200b_signed_scan",
+        "accepted": true,
+        "basis": "ba_form"
+      }
+    ],
+    "data_collection": [
+      {
+        "id": "base-import-personnelNumber",
+        "kind": "required",
+        "field": "personnelNumber",
+        "basis": "operational_default"
+      },
+      {
+        "id": "base-import-lastName",
+        "kind": "required",
+        "field": "lastName",
+        "basis": "operational_default"
+      },
+      {
+        "id": "base-import-firstName",
+        "kind": "required",
+        "field": "firstName",
+        "basis": "operational_default"
+      },
+      {
+        "id": "base-import-birthDate",
+        "kind": "required",
+        "field": "birthDate",
+        "basis": "operational_default"
+      },
+      {
+        "id": "base-import-oldEmploymentEndDate",
+        "kind": "required",
+        "field": "oldEmploymentEndDate",
+        "basis": "operational_default"
+      },
+      {
+        "id": "base-import-address",
+        "kind": "required",
+        "field": "address",
+        "basis": "operational_default"
+      }
+    ],
+    "dsv": [
+      {
+        "id": "base-dsv-signed-scan",
+        "kind": "documentPresent",
+        "documentType": "dsv_signed_scan",
+        "accepted": true,
+        "basis": "statutory"
+      }
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import { addDays, addMonths } from "../dates";
+import { profilingExceptionDeadlineMonths } from "../eligibility/transfer-kug";
 import type { IsoDate } from "../iso-date";
 import type { ProjectType } from "../project";
 import { canTransition, type AnyStatus, type TransitionContext } from "./transition";
@@ -52,8 +53,8 @@ export type PlannedChange = {
 export type Plan = { changes: PlannedChange[]; flags: LifecycleFlag[] };
 
 /** Q78: warning from 14 calendar days before the cutoff, final reminder from 3 days before. */
-const warningDays = 14;
-const reminderDays = 3;
+export const cutoffWarningDays = 14;
+export const cutoffFinalReminderDays = 3;
 const cutoffStatuses = new Set<MainStatus>(["imported", "contacted", "unreachable", "informed"]);
 
 type CutoffOutcome =
@@ -158,8 +159,8 @@ export function lifecycleFlags(
     const atCutoff = dsvStatus === "dsv_offered" ? "dsv_expired" : dsvStatus;
     const cutoff = addDays(latest, 1);
     if (cutoffOutcome({ ...s, current: { ...s.current, dsvStatus: atCutoff } })) {
-      if (today >= addDays(cutoff, -warningDays)) flags.push("cutoff_warning");
-      if (today >= addDays(cutoff, -reminderDays)) flags.push("cutoff_final_reminder");
+      if (today >= addDays(cutoff, -cutoffWarningDays)) flags.push("cutoff_warning");
+      if (today >= addDays(cutoff, -cutoffFinalReminderDays)) flags.push("cutoff_final_reminder");
     }
   }
 
@@ -171,7 +172,7 @@ export function lifecycleFlags(
       profilingStatus !== "profiling_done" &&
       validBy(s.facts.profilingExceptionApproved, today) &&
       entry &&
-      today > addMonths(entry, 1)
+      today > addMonths(entry, profilingExceptionDeadlineMonths)
     ) {
       flags.push("profiling_exception_deadline_missed");
     }

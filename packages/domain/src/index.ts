@@ -9,7 +9,7 @@ export {
   type AsuDueDateParams,
 } from "./dates";
 export { CreateProjectInput, Project, ProjectType, projectRuleCodes } from "./project";
-export { DataClass, OrgRole, ProjectRole, StaffRole } from "./enums";
+export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole, StaffRole } from "./enums";
 export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
 export { guardIds, type DatedFact, type GuardFacts, type GuardId } from "./lifecycle/guards";
@@ -30,6 +30,8 @@ export {
   type ProfilingException,
 } from "./lifecycle/operations";
 export {
+  cutoffFinalReminderDays,
+  cutoffWarningDays,
   lifecycleFlags,
   planSystemTransitions,
   projectFlags,
@@ -61,6 +63,7 @@ export {
   type ParticipationDates,
 } from "./lifecycle/waves";
 export {
+  profilingExceptionDeadlineMonths,
   transferKugEligibility,
   type KugDetermination,
   type KugEligibility,

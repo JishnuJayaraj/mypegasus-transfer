@@ -2,6 +2,9 @@ import { addDays, addMonths, compareIsoDates, laterIsoDate } from "../dates";
 import type { IsoDate } from "../iso-date";
 import type { KugOutcome } from "../lifecycle/enums";
 
+/** Q17: profiling under an approved exception must be completed within one month of entry. */
+export const profilingExceptionDeadlineMonths = 1;
+
 /** The participation facts eligibility is derived from (plan 5.3; verify Q74, Q82). */
 export type KugEligibilityInput = {
   tgEntryDate: IsoDate | null;
@@ -68,7 +71,7 @@ function computedPeriods(entry: IsoDate, input: KugEligibilityInput, today: IsoD
   const approved = input.exceptionApprovedOn;
   if (!approved || approved > entry) return review;
 
-  const deadline = addMonths(entry, 1);
+  const deadline = addMonths(entry, profilingExceptionDeadlineMonths);
   if (done) {
     if (done > deadline) return review; // a later completion doesn't clear the miss
     return [

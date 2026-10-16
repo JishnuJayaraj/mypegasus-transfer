@@ -173,6 +173,18 @@ roles in the generated transitions table, the `append_evidence_correction` permi
 round 12 corrections to `decideAccess` (evidence-set intersection, audit phase). 1g depends on
 1d-2.
 
+**1f is split** the same way: **1f-1** the Zod-authored layer model (base defaults, regional
+template, project override) with nationwide vs. regional settings, Agentur-scoped temporary
+settings and relaxations as shapes, the JSON Schema export (`pnpm generate`, drift-checked), the
+field-schema profile, per-layer validation (`parseLayer`, reusing the domain's
+`CompletenessRule` and `validateRules`), `base-defaults.json` and the 100 % threshold on
+`packages/config/src/**` (AC-31 for the base defaults, AC-34, the per-layer parts of AC-32 and
+AC-33); **1f-2** the two-level resolver with provenance (merge by id, templates only adding,
+relaxing only `operational_default` rules, no redefined fields, Agentur-scoped settings applied
+only to their Agentur), the blockers, `projectActivationBlockers`, pinned-version loading
+(`load.ts`), the validator cache per (template id, version), the two sample templates (D8) and
+the resolver parts of the docs (AC-31 for the samples, AC-32, AC-33, AC-35).
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -193,7 +205,7 @@ packages/
     schema/regional-template.schema.json   generated from the Zod model, committed
     templates/beispielstadt-nord/1.json    sample (D8)
     templates/beispielstadt-sued/1.json    sample (D8)
-    src/model.ts · field-schema.ts · resolve.ts · load.ts
+    src/model.ts · field-schema.ts · validate.ts · json-schema.ts · resolve.ts · load.ts
   adapters/                          NEW @transfer/adapters: src/clock/ (D9)
   db/                                + waves, participation, audit, edges, job_run, functions, grants
 apps/api/src/
@@ -931,6 +943,69 @@ resolveForProject({ base, templatesByAgentur, override, kugAgenturKey })
 
 TL 407's required fields come with the form registry in Slice 6 (`ba_form`, from the blank
 form's `*` markers). The basis of each base rule is reviewed in PR 1f.
+
+Built in PR 1f-1 (`packages/config`, 100 % covered): `model.ts` (`ConfigLayer`, a discriminated
+union of `BaseDefaults`, `RegionalTemplate` and `ProjectOverride`, strict objects at every
+level; `RegionalSettings`, `NationwideSettings`, `TemporaryAgenturSetting`, `RuleRelaxation`,
+the channel enums), `json-schema.ts` (the committed
+`schema/regional-template.schema.json`), `field-schema.ts` (`FieldSchema`,
+`compileFieldSchema`) and `validate.ts`: `parseLayer(input, { inheritedFields })` → the layer or
+every issue with its path (`invalid`, `invalid_date`, `unknown_key`, `regional_setting_in_base`,
+`nationwide_setting`, `project_wide_setting`, `template_id_mismatch`, `field_redefined`, the
+profile's codes and the rule codes of 5.5). Base defaults have a `nationwide` block and no
+`settings`; templates have `settings` and no `nationwide`; overrides have `agenturSettings` and
+neither. `base-defaults.json` holds:
+
+| Rule id | Step | Rule | Basis |
+|---|---|---|---|
+| `base-asu-proof` | `asu_registration` | `asu_proof` document, accepted | `statutory` (§111(4) Nr. 4) |
+| `base-kug200b-rv-nummer` | `asu_registration` | `pensionInsuranceNumber` | `ba_form` (Kug 200b field 11) |
+| `base-kug200b-declarations` | `asu_registration` | `kug200b_signed_scan`, accepted | `ba_form` (Kug 200b fields 16, 17) |
+| `base-import-<field>` | `data_collection` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | `operational_default` (PRD F2) |
+| `base-dsv-signed-scan` | `dsv` | `dsv_signed_scan`, accepted | `statutory` (§623 BGB) |
+
+Readings taken in PR 1f (fail safe, D10; correct them if wrong):
+- **No regional value in the base defaults at all**, the ASU `defaultChannel` included: round 8
+  lists the submission settings, and a default channel is a regional setting
+  (regional-variation.md) whose value for a real Agentur is never guessed. Without a template or
+  temporary setting the ASU default channel stays unset; that blocks nothing, since any channel
+  with proof counts (Q55). The base defaults declare no custom fields (the nationwide fields are
+  the field catalog).
+- **Nationwide settings are the values the domain applies** (no `config` parameter in Slice 1,
+  1c-1): a test keeps them equal to `asuDueDateDefaults`, `profilingExceptionDeadlineMonths`,
+  `cutoffWarningDays` and `cutoffFinalReminderDays`. The Kug 200b follow-up (14 days) and the
+  TL 407 escalation (14 days, Q54) have no domain code yet (Slice 5).
+- **Base rules:** the `asu_proof` document stands for the proof of every Q55 channel (how a
+  BA-Kundennummer noted by the PL is recorded as that proof comes with the ASU records). Kug 200b
+  declarations 16 and 17 are ticked by hand on the paper form and have no field, so the accepted
+  signed Kug 200b scan represents them; it is also the "still offer Kug 200b" item for people
+  who registered themselves (process-and-lifecycle.md). "Austrittsdatum" is
+  `oldEmploymentEndDate`. The DSV rule stays `statutory`: §623 BGB requires the written form and
+  the scan is its evidence. Document rules need `accepted: true` (stricter: an unreviewed upload
+  shows as `not_accepted`). Relaxing an import rule never relaxes a form requirement on the same
+  field: TL 407's rules (Slice 6) get their own ids.
+- **Project type:** the rule language has no project-type condition, so the base rules apply
+  in every project, `ta_only` included, until Q89 is answered (a missing item is shown, never
+  skipped). The `dsv` step is inactive in `ta_only` anyway (track activity).
+- **Custom fields:** keys are `custom.` plus lower snake_case (at most 63 characters after the
+  prefix). `x-dataClass`, `x-retentionClass` and `x-label` (with `de`) are required. Known
+  retention classes are the participant classes shared with the document-type catalog
+  (`ParticipantRetentionClass`: `participation_record`, `personnel_file`, `evidence_set`; the db
+  data catalog gets them with its tables in 1g); project and staff classes are refused. A field
+  needs `type`, `enum` or `const`; keywords must fit the type and `enum`/`const` values must
+  match it; a free string (no `enum`, `const` or `format`) needs `maxLength`; bounds must be
+  ordered; patterns with `\p{…}`, `\P{…}` or `\u{…}` (which need the `u` flag, S1) are refused.
+- **A template's `id` is its `agenturKey`** (one template per Agentur,
+  `templates/<agenturKey>/<version>.json`).
+- **Temporary settings** name a `source` code (`phone_call_agentur`, `email_agentur`,
+  `letter_agentur`, `meeting_agentur`) and a staff user id as confirmer. A relaxation's
+  `reasonCode` is a snake_case code from a list that Slice 2's override approval defines; no
+  free text is stored.
+- **Help texts:** keys `<scope>.<key>` in snake_case, languages `de` and `en`, at most 2000
+  characters.
+- **The JSON Schema describes the shape**; the profile's cross-keyword checks, the template id
+  and the catalog checks are code only (`parseLayer`). Tests validate the files against the
+  committed schema compiled with `z.fromJSONSchema` and with `parseLayer`.
 
 ### 5.8 `packages/adapters`: `Clock`
 
