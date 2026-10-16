@@ -34,9 +34,16 @@ function oracle(kind: TgEntryKind, facts: FactState[]): boolean {
   );
 }
 
+/** An entry with a signed DSV on its track (Q97 requires it beside the dated fact). */
+const signed = {
+  status: "informed",
+  profilingStatus: "not_started",
+  dsvStatus: "dsv_signed",
+} as const;
+
 function enter(kind: TgEntryKind, facts: GuardFacts, extra: Partial<TransitionContext> = {}) {
   return canTransition("main", "informed", "active_in_tg", {
-    ...context({ ...kinds[kind], facts, ...extra }),
+    ...context({ ...kinds[kind], current: signed, facts, ...extra }),
     entryKind: kind,
   });
 }
@@ -86,6 +93,28 @@ describe("TG entry, the three cases (AC-4)", () => {
     asuRegisteredWithProof: fact(["before", "before"]),
     profilingDone: fact(["before", "before"]),
   };
+
+  it.each(["not_offered", "dsv_offered", "dsv_declined", "dsv_expired"] as const)(
+    "never enters with the DSV track %s, even with the executed-DSV fact (Q97)",
+    (dsvStatus) => {
+      for (const kind of Object.keys(kinds) as TgEntryKind[]) {
+        expect(enter(kind, allValid, { current: { ...signed, dsvStatus } })).toEqual({
+          ok: false,
+          code: "guard_failed",
+          failedGuards: ["dsv_fully_executed"],
+        });
+      }
+    },
+  );
+
+  it("needs the executed-DSV fact beside the signed track (Q97)", () => {
+    const { dsvFullyExecuted: _dsv, ...withoutDsv } = allValid;
+    expect(enter("reconciliation", withoutDsv)).toMatchObject({
+      ok: false,
+      failedGuards: ["dsv_fully_executed"],
+    });
+    expect(enter("reconciliation", allValid)).toMatchObject({ ok: true });
+  });
 
   it("names every failed guard", () => {
     expect(enter("scheduled_entry", {})).toEqual({

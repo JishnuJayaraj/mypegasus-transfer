@@ -79,6 +79,24 @@ describe("TG entry and the catch-up window (AC-10, Q68, rounds 8–9)", () => {
     expect(plan).toEqual({ changes: [], flags: ["tg_start_missed"] });
   });
 
+  it.each([
+    ["dsv_offered", ["dsv_expired"]],
+    ["dsv_expired", []],
+    ["dsv_declined", []],
+  ] as const)(
+    "never plans an entry whose DSV track is %s, whatever the facts say (Q97)",
+    (dsvStatus, expected) => {
+      const inconsistent = snapshot({
+        current: state("informed", "profiling_done", dsvStatus),
+        facts: ready,
+        participation: { tgStart: null, offerDeadline: null, tgEntryDate: null },
+      });
+      const plan = planSystemTransitions(inconsistent, project, outage);
+      expect(plan.changes.map((c) => c.to)).toEqual(expected);
+      expect(plan.flags).toContain("tg_start_missed");
+    },
+  );
+
   it("a second run plans nothing", () => {
     const first = planSystemTransitions(entrant(), project, outage);
     const after = replay(entrant(), first.changes, "ta_tg", "2027-04-02");

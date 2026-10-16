@@ -21,6 +21,8 @@
       "Bash(pnpm db:generate)",
       "Bash(pnpm db:reset)",
       "Bash(pnpm db:setup)",
+      "Bash(pnpm jobs:lifecycle)",
+      "Bash(pnpm jobs:lifecycle *)",
       "Bash(pnpm exec *)",
       "Bash(npx playwright *)",
       "Bash(service postgresql start)",

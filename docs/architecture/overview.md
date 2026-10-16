@@ -75,7 +75,8 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - **Schedule:** the nightly lifecycle sweep is a cron at `JOBS_LIFECYCLE_TIME` in
   `Europe/Berlin` (default 04:15). It catches up the days after the last completed run recorded in
   `job_run` and evaluates each project in its own `lifecycle.evaluate-project` job through the
-  status service as `system` (Slice 1, PR 1h-2).
+  status service as `system`. A run counts as due only by database time (Q96).
+  `pnpm jobs:lifecycle [--today YYYY-MM-DD]` runs it once in its own process (dev, CI).
 
 ## Performance approach (frontend)
 

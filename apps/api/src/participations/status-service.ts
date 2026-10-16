@@ -144,7 +144,7 @@ const waveColumns = {
 
 type Request = typeof profilingExceptionRequest.$inferSelect;
 
-function exceptionOf(request: Request | undefined): ProfilingException | null {
+export function exceptionOf(request: Request | undefined): ProfilingException | null {
   if (!request) return null;
   return {
     status: request.status as ProfilingException["status"],

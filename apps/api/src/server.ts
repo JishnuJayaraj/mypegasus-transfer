@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createApp } from "./app";
 import { loadDotEnv, parseEnv } from "./env";
 import { startJobs } from "./jobs/jobs";
+import { failClosedFacts } from "./participations/guard-facts";
 import { createLogger } from "./logger";
 import { createShutdown } from "./shutdown";
 
@@ -22,6 +23,8 @@ const jobs = env.jobsEnabled
       connectionString: env.databaseUrl,
       lifecycleTime: env.jobsLifecycleTime,
       logger,
+      // Slice 1 fails closed (D4): nobody enters the TG until the facts are recorded.
+      work: { db, clock, facts: failClosedFacts },
     })
   : undefined;
 

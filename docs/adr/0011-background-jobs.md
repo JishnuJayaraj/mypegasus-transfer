@@ -89,3 +89,34 @@ window and the per-project job follow in PR 1h-2.
   scheduled time hasn't passed by database time stops before any change (`run_not_due`); there is
   no database clock for development.
 - Events are logged without their data and errors without their message (CLAUDE.md rule 9).
+
+## Amendment 2026-10-16: the nightly lifecycle sweep (Slice 1, PR 1h-2)
+
+Built in PR 1h-2 (plan 5.9; rounds 9, 18–20):
+- **`lifecycle.sweep`**: the run date is the `Clock`'s Berlin today. The run is due only once its
+  scheduled time has passed **by database time** (Q96); otherwise it stops before any change
+  (`not_due`). A due run evaluates the **catch-up window**, every day after the last completed
+  run in `job_run` up to today (the first run: today); a completed day is never evaluated
+  again (`already_completed`). It dispatches one `lifecycle.evaluate-project` job per project
+  with the window's bounds only (`{ projectId, firstDay, runDate }`, `singletonKey`
+  `<projectId>:<runDate>`; a taken key waits for the existing job), waits for all of them and
+  only then inserts today's `job_run` row. A failed or cancelled project job fails the sweep: no row, so the next sweep covers the
+  gap.
+- **`lifecycle.evaluate-project`** trusts its payload for nothing but the bounds (round 21): it
+  runs only on its run date, only once that day's scheduled time has passed by database time,
+  and only for the window starting the day after the last completed run; it derives the days and
+  their scheduled instants from `JOBS_LIFECYCLE_TIME` itself. It plans each open participation
+  with `planSystemTransitions` (the snapshot of each day's scheduled run, round 9) and applies each
+  change through the status service as `system` with the job id; the service locks, re-checks the
+  guards and validates the effective dates (round 18). Of the service's refusals, a lost race is
+  counted and any other fails the job after the other participations were applied; any other
+  error propagates at once.
+- **Payloads** are strict Zod schemas of IDs and dates; a failed job stores only a `JobError`
+  with its code. **Logs** carry the job name, job id, project id, outcome and counts; an error's
+  stack keeps only its frames, never a line of its message.
+- **`pnpm jobs:lifecycle [--today YYYY-MM-DD]`** runs the sweep once with the projects evaluated
+  in its own process (never through the queue, so a running API's workers don't take a `--today`
+  run); `--today` uses a `ManualClock` at that day's run time; a run not due exits non-zero with
+  `run_not_due`; refused with `NODE_ENV=production`.
+- The API's workers use the Slice 1 facts provider, which fails closed (D4): DSV expiry and cutoff
+  withdrawals run, nobody enters the TG.
