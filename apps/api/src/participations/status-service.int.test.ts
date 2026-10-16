@@ -61,6 +61,13 @@ async function state(id: string) {
   return rows[0];
 }
 
+/** A completed run, as the owner may record it (the runtime role can't state `completed_at`). */
+const run = (job: string, day: string, scheduled: string) =>
+  owner.query(
+    "insert into job_run (job_name, run_date, scheduled_at, completed_at) values ($1, $2, $3, $3::timestamptz + interval '5 minutes')",
+    [job, day, scheduled],
+  );
+
 /** A participation of Werk Nord moved to `informed`, optionally in W1. */
 async function informed(options: { wave?: boolean } = {}) {
   const { participationId } = await service.createParticipation(pl, {
@@ -223,6 +230,42 @@ describe("status changes", () => {
       [id],
     );
     expect(rows[0].tg_entry_date).toBe(w1.defaultTgStart);
+  });
+
+  it("allows a reconciliation on the TG start day only after that day's lifecycle run is recorded (round 19)", async () => {
+    const id = await informed({ wave: true });
+    const facts = {
+      dsvGenerated: fact,
+      dsvScanReceived: fact,
+      dsvFullyExecuted: fact,
+      asuRegisteredWithProof: fact,
+      profilingDone: fact,
+    };
+    const entering = createStatusService({ db, clock, facts: withFacts(facts) });
+    for (const [from, to] of [
+      ["not_offered", "dsv_offered"],
+      ["dsv_offered", "dsv_signed"],
+    ] as const) {
+      await entering.changeStatus(backOffice, { participationId: id, track: "dsv", from, to });
+    }
+    clock.set(new Date("2091-03-01T09:00:00Z")); // W1's TG start, after the 04:15 run time
+    const reconcile = () =>
+      entering.changeStatus(pl, {
+        participationId: id,
+        track: "main",
+        from: "informed",
+        to: "active_in_tg",
+        entryKind: "reconciliation",
+      });
+    // No row for today: the run isn't complete, whatever a caller believes.
+    await expect(reconcile()).rejects.toEqual(refused("domain", "guard_failed", ["tg_start_date"]));
+    await run("lifecycle.sweep", "2091-02-28", "2091-02-28T03:15:00Z");
+    await run("lifecycle.other", "2091-03-01", "2091-03-01T03:15:00Z");
+    await expect(reconcile()).rejects.toEqual(refused("domain", "guard_failed", ["tg_start_date"]));
+    expect(await state(id)).toMatchObject({ status: "informed" });
+    await run("lifecycle.sweep", "2091-03-01", "2091-03-01T03:15:00Z");
+    await reconcile();
+    expect(await state(id)).toMatchObject({ status: "active_in_tg" });
   });
 
   it("lets nobody into the TG with the Slice 1 facts (fail closed, D4)", async () => {

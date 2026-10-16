@@ -202,27 +202,49 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
   });
 });
 
-const insertRun = (client: Client, runDate = "2027-04-01") =>
+/** A past run day: completion is database time, never before the scheduled run (round 19). */
+const insertRun = (client: Client, runDate = "2025-04-01") =>
   client.query(
     "insert into job_run (job_name, run_date, scheduled_at) values ('lifecycle.sweep', $1, $2)",
     [runDate, `${runDate}T02:15:00Z`],
   );
 
-// Plan 5.4 grants, 5.10: one row per job and run day, written once and never changed.
+// Plan 5.4 grants, 5.10, round 19: one row per job and run day, written once and never changed.
 describe("transfer_app and job_run (PR 1h-1)", () => {
   it("may insert and select runs; the database records the completion", async () => {
     await insertRun(app);
     const { rows } = await app.query(
-      "select job_name, run_date::text, scheduled_at, completed_at is not null as completed from job_run",
+      `select job_name, run_date::text, scheduled_at,
+         completed_at > scheduled_at and completed_at <= now() as completed_by_database
+       from job_run`,
     );
     expect(rows).toEqual([
       {
         job_name: "lifecycle.sweep",
-        run_date: "2027-04-01",
-        scheduled_at: new Date("2027-04-01T02:15:00Z"),
-        completed: true,
+        run_date: "2025-04-01",
+        scheduled_at: new Date("2025-04-01T02:15:00Z"),
+        completed_by_database: true,
       },
     ]);
+  });
+
+  it("may not state the completion itself (42501): database time is authoritative", async () => {
+    await expect(
+      app.query(
+        "insert into job_run (job_name, run_date, scheduled_at, completed_at) values ('lifecycle.sweep', '2025-04-01', '2025-04-01T02:15:00Z', '2025-04-01T02:20:00Z')",
+      ),
+    ).rejects.toMatchObject(permissionDenied);
+  });
+
+  it("can't store a completion before the scheduled run (23514)", async () => {
+    // The runtime role's completion is now(), before a run scheduled in the future.
+    await expect(insertRun(app, "2091-04-01")).rejects.toMatchObject({ code: "23514" });
+    // Not even the owner, who may state the completion.
+    await expect(
+      owner.query(
+        "insert into job_run (job_name, run_date, scheduled_at, completed_at) values ('lifecycle.sweep', '2025-04-01', '2025-04-01T02:15:00Z', '2025-04-01T02:14:59Z')",
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
   });
 
   it("keeps one row per job and run day", async () => {
@@ -233,11 +255,11 @@ describe("transfer_app and job_run (PR 1h-1)", () => {
   it.each([
     [
       "a job name that is not a name",
-      "insert into job_run (job_name, run_date, scheduled_at) values ('Lifecycle sweep', '2027-04-01', '2027-04-01T02:15:00Z')",
+      "insert into job_run (job_name, run_date, scheduled_at) values ('Lifecycle sweep', '2025-04-01', '2025-04-01T02:15:00Z')",
     ],
     [
       "a scheduled time on another Berlin day",
-      "insert into job_run (job_name, run_date, scheduled_at) values ('lifecycle.sweep', '2027-04-01', '2027-03-31T21:59:00Z')",
+      "insert into job_run (job_name, run_date, scheduled_at) values ('lifecycle.sweep', '2025-04-01', '2025-03-31T21:59:00Z')",
     ],
   ])("refuses %s (23514)", async (_label, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject({ code: "23514" });

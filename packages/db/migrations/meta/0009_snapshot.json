@@ -1,6 +1,6 @@
 {
-  "id": "87e4c652-306c-40f5-b04a-3a8d966b3a66",
-  "prevId": "d2a662e8-1a91-45bd-897e-069a011a4cc9",
+  "id": "90a5d8ee-0867-45b8-b4bb-b54957c4a2ac",
+  "prevId": "2d66edae-f67e-43b2-9d2e-8ae92f91d64d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -302,6 +302,10 @@
         "job_run_scheduled_on_run_date": {
           "name": "job_run_scheduled_on_run_date",
           "value": "(\"job_run\".\"scheduled_at\" at time zone 'Europe/Berlin')::date = \"job_run\".\"run_date\""
+        },
+        "job_run_completed_after_scheduled": {
+          "name": "job_run_completed_after_scheduled",
+          "value": "\"job_run\".\"completed_at\" >= \"job_run\".\"scheduled_at\""
         }
       },
       "isRLSEnabled": false

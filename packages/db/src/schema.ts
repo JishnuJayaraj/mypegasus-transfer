@@ -457,8 +457,10 @@ export const auditEvent = pgTable(
 
 /**
  * One row per job and Berlin run day, inserted once when that day's run has completed (plan 5.9):
- * the lifecycle sweep's catch-up window starts after the latest. No personal data. `transfer_app`
- * may select and insert, never update or delete. `completed_at` is database time.
+ * the lifecycle sweep's catch-up window starts after the latest, and a same-day reconciliation
+ * needs today's row. No personal data. `transfer_app` may select it and insert only `job_name`,
+ * `run_date` and `scheduled_at`, never update or delete: `completed_at` is always database time
+ * and never before the scheduled run (round 19).
  */
 export const jobRun = pgTable(
   "job_run",
@@ -478,6 +480,7 @@ export const jobRun = pgTable(
       "job_run_scheduled_on_run_date",
       sql`(${t.scheduledAt} at time zone 'Europe/Berlin')::date = ${t.runDate}`,
     ),
+    check("job_run_completed_after_scheduled", sql`${t.completedAt} >= ${t.scheduledAt}`),
   ],
 );
 

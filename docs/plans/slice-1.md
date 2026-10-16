@@ -207,8 +207,9 @@ as `transfer_app` (migration off) with the two queues and the `lifecycle.sweep` 
 project, `job_run` written only after all finished), the project job through the status service,
 the payload schemas and the log rule, the workers, `pnpm jobs:lifecycle` (AC-38, AC-39, AC-40) and
 the rest of the docs (ADR-0011 sweep part, the command, the settings allowlist). Until 1h-2 the
-cron enqueues a sweep that no worker takes; the exclusive queue holds at most one, and 1h-2's
-first sweep covers the missed days through the catch-up window.
+cron enqueues sweeps that no worker takes (the singleton queue keeps them, bounded by pg-boss's
+retention, round 19); 1h-2's first sweep covers the missed days through the catch-up window and
+the rest are no-ops.
 
 ## 5. Design
 
@@ -397,7 +398,8 @@ Readings taken in PR 1b-1 (fail safe, D10; correct them if wrong):
   `tgStart`: the bounds can't be checked.
 - A system kind without `scheduledAt` fails every dated TG entry guard (nothing to snapshot
   against). Reconciliation on `tgStart` itself needs that day's run to have completed
-  (`scheduledRunCompleted`); otherwise from the next day.
+  (`scheduledRunCompleted`, derived by the status service from `job_run`, round 19); otherwise
+  from the next day.
 - The confirmation in `withdrawal_after_dsv_signed` and `ta_completion` is a staff action, so
   a system withdrawal from `dsv_signed` never passes.
 - TG entry exists only in `ta_tg` and `ta_completed` only in `ta_only` (`no_edge` otherwise);
@@ -667,7 +669,7 @@ and applied:
 | `project_entry_wave` | `SELECT` (creation and edits with project setup, Slice 2) |
 | `audit_event` | nothing in Slice 1 (`SELECT` with the first feature that reads it) |
 | `lifecycle_edge` | nothing (read by the functions as owner) |
-| `job_run` | `SELECT`, `INSERT` (one row per job and day, never updated) |
+| `job_run` | `SELECT`, `INSERT` on `job_name`, `run_date`, `scheduled_at` only (one row per job and day, never updated; `completed_at` is database time, round 19) |
 | the nine functions | `EXECUTE` |
 | `pgboss` schema | `USAGE` + DML on its tables and sequences (spike S2) |
 
@@ -1269,51 +1271,59 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 
 Built in PR 1h-1 (section 4): `job_run` (migrations `0008_job_run`, generated, and
 `0009_job_run_grants`), `packages/db/src/jobs-schema.ts` (the `pgboss` install in
-`runMigrations`), `apps/api/src/jobs/jobs.ts` (`startJobs`), the environment and the `Clock` in
-`createApp`. Fail safe (D10); correct them if wrong:
+`runMigrations`), `apps/api/src/jobs/` (`startJobs`, the job names), `apps/api/src/shutdown.ts`,
+the environment and the `Clock` in `createApp`. The twelve readings were answered in
+[round 19](../decisions/2026-10-16-answers-round-19.md); the answers are applied:
 
-1. **The split** (section 4): ~650 hand-written production lines for all of 1h; 1h-1 is the setup,
-   1h-2 the sweep, the project job and the CLI.
-2. **Schema install from pg-boss's exported SQL**, not by starting pg-boss as the owner: the
-   construction plan on a fresh database; on an upgrade the migration plan from the installed
-   version, whose `CREATE INDEX CONCURRENTLY` builds run one by one after its transaction.
-   Starting pg-boss with migration on would hand those builds to its background migration
-   worker, which runs only in an instance with migration on, and the app never is one. A schema
-   newer than the pinned pg-boss (a downgrade) is refused. Tested by rolling back to version 45.
-3. **Grants** exactly as in spike S2, re-applied on every migration run; `transfer_app` gets no
-   `CREATE` on `pgboss` and can't alter, drop or truncate its tables (tested).
-4. **Both queues `exclusive`** rather than `stately`: a second evaluation of the same project and
-   day can't even be queued while one runs. Retries: `retryLimit: 3` with backoff, base delay
-   60 s for the sweep (expiry 60 min, it waits for the project jobs in 1h-2) and 30 s for the
-   project job (expiry 15 min). The options are re-applied on every start; a queue with another
-   policy (which pg-boss can't change after creation) fails the start.
-5. **`missed: "once"`** on the cron (pg-boss's default is `skip`): when the API was down at the run
-   time, one sweep is sent at the next start instead of waiting a day. Planned for 1h-2: the sweep
-   evaluates only once today's scheduled time has passed (so a start at 01:00 sends a sweep that
-   does nothing and the 04:15 run catches up), and its window covers the missed days.
-6. **Start order:** pg-boss starts before the server listens, so a missing or outdated schema
-   fails the API's start (checked with the built bundle); `SIGTERM`/`SIGINT` stop the server, let
-   active jobs finish and close the pool.
-7. **Events:** pg-boss `error` events are logged as name, code and stack without the message;
-   `warning` events with pg-boss's fixed message only, never their `data`.
-8. **`job_run`:** primary key `(job_name, run_date)`; `CHECK`s that the job name has the
-   `system_job` pattern and that `scheduled_at` falls on `run_date` in Berlin; `completed_at` is
-   database time (round 16, 13: instants from the database); both timestamps in Drizzle's `date`
-   mode, so jobs code never needs `new Date`. Kept indefinitely as `reference_data` (one row a
-   day, no personal data).
-9. **The clock:** `CLOCK` is validated when the environment is parsed, before the auth checks,
-   so `fixed:` is refused in production even before OIDC exists; `createApp` gets the `Clock` in
-   its dependencies (no route reads it yet); `testApp` defaults to the system clock.
-10. **Playwright runs with `JOBS_ENABLED=false`:** its web server starts before the global setup
-    recreates `transfer_e2e` (and its `pgboss` schema). The image smoke test starts pg-boss
-    (`LOG_LEVEL=info` to see the start; the migration runs twice to prove it idempotent).
-11. **Until 1h-2** the cron enqueues a sweep that no worker takes: the exclusive queue holds at
-    most one, pg-boss deletes a job left queued after 14 days, and 1h-2's first sweep covers the
-    days since the last completed run.
-12. **For 1h-2 / Slice 2:** a reconciliation on the TG start day needs that day's run to have
-    completed (`scheduledRunCompleted`, PR 1b-1). The status service still takes it from its
-    caller; the route that offers reconciliation should read it from `job_run` rather than trust
-    the caller, as round 18 asks for effective dates.
+1. **The split** (section 4) — confirmed.
+2. **Schema install from pg-boss's exported SQL** — confirmed: the construction plan on a fresh
+   database; on an upgrade the migration plan from the installed version, whose
+   `CREATE INDEX CONCURRENTLY` builds run one by one after its transaction (pg-boss's background
+   migration worker never runs in the app, whose migration is off). A downgrade is refused.
+   Tested by rolling back to version 45.
+3. **Grants** exactly as in spike S2, re-applied on every migration run — confirmed.
+4. **Queue policies — corrected:** `lifecycle.sweep` is **`singleton`** (one active sweep, every
+   other one kept queued: a missed occurrence can arrive beside the due one, and an exclusive
+   queue would collapse them, so a missed-run sweep doing nothing before 04:15 would discard the
+   real 04:15 occurrence until the next day); `job_run` makes a second sweep of a completed day a
+   no-op. `lifecycle.evaluate-project` is **`exclusive`** per `singletonKey`
+   `<projectId>:<runDate>`. Tested: a second sweep stays queued while one is active and runs
+   after it; a duplicate project/day job is refused, queued or active; other keys stay queueable.
+   Retries: `retryLimit: 3` with backoff, base delay 60 s for the sweep (expiry 60 min) and 30 s
+   for the project job (expiry 15 min); options re-applied on every start; a queue with another
+   policy fails the start.
+5. **`missed: "once"`** — confirmed with the singleton sweep queue. For 1h-2: before today's
+   scheduled time the missed-run sweep may do nothing; the current occurrence stays queued and
+   runs at the run time, and its window covers the missed days.
+6. **Start order** — confirmed: pg-boss starts before the server listens, so a missing or
+   outdated schema fails the API's start.
+   **Shutdown — corrected:** single-flight (a second signal joins the first); the server stops
+   accepting, HTTP draining and pg-boss's graceful stop are both awaited, and only then is the
+   pool closed; a failed step is logged without its message, doesn't skip the others and sets a
+   non-zero exit code (`createShutdown`, unit-tested).
+7. **Sanitized event logging** — confirmed: `error` events as name, code and stack without the
+   message; `warning` events with pg-boss's fixed message only, never their `data`.
+8. **`job_run` — corrected:** primary key `(job_name, run_date)`; `CHECK`s that the job name has
+   the `system_job` pattern, that `scheduled_at` falls on `run_date` in Berlin and that
+   **`completed_at >= scheduled_at`**; `transfer_app` may `SELECT` and **`INSERT` only
+   `job_name`, `run_date` and `scheduled_at`**, so `completed_at` is always the database's
+   `now()` (tested: an explicit `completed_at` is `42501`, a completion before the scheduled run
+   `23514`, the owner included). Both timestamps in Drizzle's `date` mode, so jobs code never
+   needs `new Date`. Kept indefinitely as `reference_data` — confirmed. Consequence: a run whose
+   clock is ahead of database time can't record its completion (Q96).
+9. **The clock** — confirmed: `CLOCK` is validated before the auth checks; `createApp` gets the
+   `Clock` (no route reads it yet); `testApp` defaults to the system clock.
+10. **Playwright runs with `JOBS_ENABLED=false`** — confirmed. The image smoke test starts
+    pg-boss (`LOG_LEVEL=info` to see the start; the migration runs twice to prove it idempotent).
+11. **Until 1h-2** — confirmed temporarily: the cron enqueues sweeps that no worker takes; with
+    the singleton queue more than one may wait, bounded by pg-boss's retention (a job left queued
+    is deleted after 14 days). Once 1h-2 runs, the first useful sweep catches up and the queued
+    ones are idempotent no-ops.
+12. **Same-day reconciliation — corrected and built here:** the status service derives
+    `scheduledRunCompleted` itself, inside the participation's transaction after the lock: for a
+    reconciliation it checks for the `lifecycle.sweep` row of the Clock's today in `job_run`; no
+    row means the run is not complete. `StatusChange` no longer carries it (tested: no row, a row
+    for yesterday or for another job refuses with `tg_start_date`; today's sweep row allows it).
 
 ### 5.10 Database, data catalog and seed
 
@@ -1324,7 +1334,7 @@ Built in PR 1h-1 (section 4): `job_run` (migrations `0008_job_run`, generated, a
 | `profiling_exception_request` (new, round 16) | `id`, `project_id`, `participation_id`, `reason_code`, `status`, `requested_by`, `requested_on`, `requested_at`, `evidence_record_id`, `evidence_fingerprint`, `decided_by`, `decided_on`, `decided_at`, `superseded_reason`; one row per request, reason and evidence identity immutable, status and decision progress on the row | `participation_record` | `confidential` | yes |
 | `audit_event` (new) | section 5.4 | **`audit_log`** (new): 3 years, pseudonymised on deletion of the subject; evidence-set entries follow it; *verify* Q3; `unset` until Slice 7 | `confidential` | yes |
 | `lifecycle_edge` (new) | `track`, `from_value`, `to_value`, `kind` (pk), `actors` | **`reference_data`** (new): no personal data, never touched by the retention job | `internal` | no |
-| `job_run` (new) | `job_name`, `run_date` (pk), `scheduled_at`, `completed_at` | `reference_data` | `internal` | no |
+| `job_run` (new) | `job_name`, `run_date` (pk), `scheduled_at`, `completed_at` (database time, `≥ scheduled_at`, round 19) | `reference_data` | `internal` | no |
 
 - `CHECK`s on `participation`: `tg_start ≤ tg_end`; `offer_deadline ≤ tg_start` when both set;
   `dsv_status <> 'not_offered'` ⇒ `entry_wave_id` set; `end_reason` set exactly for

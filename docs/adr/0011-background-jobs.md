@@ -65,19 +65,24 @@ window and the per-project job follow in PR 1h-2.
   `transfer_app` with migration off, `persistQueueStats` off and `reindex: false`; a missing or
   outdated schema fails the API's start.
 - **In-process:** pg-boss runs in the API process (D7) when `JOBS_ENABLED=true` (the default),
-  started before the server listens and stopped gracefully on `SIGTERM`/`SIGINT`. Tests and the
+  started before the server listens. `SIGTERM`/`SIGINT` start a single-flight shutdown: the
+  server stops accepting, HTTP draining and pg-boss's graceful stop are both awaited, then the
+  pool is closed; failures are logged without their message and give a non-zero exit code. Tests and the
   Playwright server run with `false`; tests start it explicitly.
-- **Queues:** `lifecycle.sweep` and `lifecycle.evaluate-project`, both **`exclusive`** (at most one
-  queued or active job, per `singletonKey` where given: the project job's
-  `<projectId>:<runDate>`), with retries and backoff; their options are kept current on every
-  start and a queue with another policy fails it.
+- **Queues** (round 19): `lifecycle.sweep` is **`singleton`** (one active sweep, the others kept
+  queued: a missed occurrence can arrive beside the due one and must not displace it; `job_run`
+  makes a second sweep of a completed day a no-op); `lifecycle.evaluate-project` is
+  **`exclusive`** per `singletonKey` `<projectId>:<runDate>`. Both retry with backoff; their
+  options are kept current on every start and a queue with another policy fails it.
 - **Time zone:** the nightly sweep is a pg-boss cron at `JOBS_LIFECYCLE_TIME` (Berlin local time,
   default `04:15`, 02:00–02:59 refused) with `tz: "Europe/Berlin"`, whose instants equal the
   `Clock` adapter's `scheduledAt`, DST days included. An occurrence missed while the API was down
   is sent once at the next start (`missed: "once"`).
 - **`job_run`** (`job_name`, `run_date`, `scheduled_at`, `completed_at`): one row per job and Berlin
-  run day, inserted once when the day's run has completed and never changed (`transfer_app`:
-  `SELECT`, `INSERT`); the scheduled time must fall on the run date in Berlin; `completed_at` is
-  database time. Reference data (retention class `reference_data`). The sweep reads it for its
-  catch-up window (PR 1h-2).
+  run day, inserted once when the day's run has completed and never changed. `transfer_app` may
+  `SELECT` it and `INSERT` only `job_name`, `run_date` and `scheduled_at`, so `completed_at` is
+  always database time; `CHECK`s keep the scheduled time on the run date in Berlin and the
+  completion not before it (round 19). Reference data (retention class `reference_data`). The
+  sweep reads it for its catch-up window (PR 1h-2); the status service reads today's row before a
+  same-day reconciliation.
 - Events are logged without their data and errors without their message (CLAUDE.md rule 9).

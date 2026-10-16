@@ -51,12 +51,16 @@ describe("startJobs (AC-37)", () => {
     expect(owners).toEqual([{ rolname: "transfer_owner" }]);
   });
 
-  it("creates both queues as exclusive, with retries and backoff", async () => {
+  it("creates the sweep queue as singleton and the project queue as exclusive (round 19)", async () => {
     const { boss } = await start();
-    for (const name of [jobNames.lifecycleSweep, jobNames.evaluateProject]) {
+    const policies = {
+      [jobNames.lifecycleSweep]: "singleton",
+      [jobNames.evaluateProject]: "exclusive",
+    };
+    for (const [name, policy] of Object.entries(policies)) {
       expect(await boss.getQueue(name)).toMatchObject({
         name,
-        policy: "exclusive",
+        policy,
         retryLimit: 3,
         retryBackoff: true,
       });
@@ -126,5 +130,69 @@ describe("startJobs (AC-37)", () => {
     } finally {
       await owner.query(`alter schema pgboss_aside rename to ${jobsSchema}`);
     }
+  });
+});
+
+/** pg-boss started with empty queues. */
+async function startedEmpty() {
+  const { boss } = await start();
+  for (const name of Object.values(jobNames)) await boss.deleteAllJobs(name);
+  return boss;
+}
+
+// Round 19: a missed occurrence can arrive beside the due one, so the sweep queue keeps every
+// job and runs one at a time (job_run makes a second sweep a no-op); the project queue refuses a
+// second job for the same project and day.
+describe("queue policies (round 19)", () => {
+  const today = "2026-10-16";
+  const projectA = "00000000-0000-4000-9000-000000000001";
+  const projectB = "00000000-0000-4000-9000-000000000002";
+
+  it("keeps a second sweep queued while one is active, and runs it after", async () => {
+    const boss = await startedEmpty();
+    const first = await boss.send(jobNames.lifecycleSweep, {});
+    const [active] = await boss.fetch(jobNames.lifecycleSweep);
+    expect(active?.id).toBe(first);
+    const second = await boss.send(jobNames.lifecycleSweep, {});
+    const third = await boss.send(jobNames.lifecycleSweep, {});
+    expect(second).toEqual(expect.any(String));
+    expect(third).toEqual(expect.any(String));
+    // Only one sweep is active at a time.
+    expect(await boss.fetch(jobNames.lifecycleSweep)).toEqual([]);
+    await boss.complete(jobNames.lifecycleSweep, active!.id);
+    const [next] = await boss.fetch(jobNames.lifecycleSweep);
+    expect(next?.id).toBe(second);
+  });
+
+  it("refuses a duplicate project/day job, queued or active", async () => {
+    const boss = await startedEmpty();
+    const send = (projectId: string, runDate = today) =>
+      boss.send(
+        jobNames.evaluateProject,
+        { projectId, runDate },
+        { singletonKey: `${projectId}:${runDate}` },
+      );
+    expect(await send(projectA)).toEqual(expect.any(String));
+    expect(await send(projectA)).toBeNull();
+    const [active] = await boss.fetch(jobNames.evaluateProject);
+    expect(active?.data).toEqual({ projectId: projectA, runDate: today });
+    expect(await send(projectA)).toBeNull();
+  });
+
+  it("keeps different project/day keys queueable", async () => {
+    const boss = await startedEmpty();
+    const send = (projectId: string, runDate: string) =>
+      boss.send(
+        jobNames.evaluateProject,
+        { projectId, runDate },
+        { singletonKey: `${projectId}:${runDate}` },
+      );
+    const ids = [
+      await send(projectA, today),
+      await send(projectB, today),
+      await send(projectA, "2026-10-17"),
+    ];
+    expect(ids).toEqual([expect.any(String), expect.any(String), expect.any(String)]);
+    expect(new Set(ids).size).toBe(3);
   });
 });

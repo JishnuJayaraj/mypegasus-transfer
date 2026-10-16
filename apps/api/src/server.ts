@@ -7,6 +7,7 @@ import { createApp } from "./app";
 import { loadDotEnv, parseEnv } from "./env";
 import { startJobs } from "./jobs/jobs";
 import { createLogger } from "./logger";
+import { createShutdown } from "./shutdown";
 
 // Node entry (`tsx watch` in dev, `dist/server.js` in the image and `pnpm start`).
 loadDotEnv();
@@ -38,13 +39,13 @@ const server = serve(
   ({ port }) => logger.info({ port, serveSpas, jobs: Boolean(jobs) }, "api listening"),
 );
 
-// Stops taking requests, lets active jobs finish (pg-boss's graceful stop), closes the pool.
-async function shutdown(signal: string) {
-  logger.info({ signal }, "api stopping");
-  server.close();
-  await jobs?.stop();
-  await db.$client.end();
-}
+// Graceful and single-flight (round 19): HTTP draining and pg-boss's stop, then the pool. A
+// failed step sets a non-zero exit code.
+const shutdown = createShutdown({ server, jobs, pool: db.$client, logger });
 for (const signal of ["SIGTERM", "SIGINT"] as const) {
-  process.once(signal, (name) => void shutdown(name));
+  process.on(signal, (name) => {
+    void shutdown(name).then((ok) => {
+      if (!ok) process.exitCode = 1;
+    });
+  });
 }
