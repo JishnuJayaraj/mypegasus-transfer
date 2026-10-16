@@ -96,6 +96,67 @@
   regional admin contacts the PL (Q57).
 - **Customer**: no login in the MVP (Q47). See the next section.
 
+### Resources, categories and the generated matrix *(assumed, round 11)*
+
+The rules in this file are code in `packages/domain/src/access` (`decideAccess`), with tests for
+every cell. **[The generated access matrix](generated/access-matrix.md)** (`pnpm generate`,
+checked in CI) shows every subject × resource × action × mode × phase, and every cell the docs
+don't cover yet as `undecided` (denied) with its question (Q65).
+
+Access is decided per **resource kind**: a participant **field** (its category from the field
+catalog), a **document** (its type from the document-type catalog), **audit metadata** (a
+filtered projection) or an **aggregate**. An action a kind doesn't have (opening a field,
+aggregate or audit entry as a document, writing an aggregate) is `not_applicable`.
+
+| Category | Fields / documents | Class |
+|---|---|---|
+| `case_internal` | statuses, dates | internal |
+| `confidential` | confidential data; CVs, uploads, qualification certificates | confidential |
+| `health` | health (structured); profiling-exception evidence; the health-related end reason value (not storable before Slice 8, which applies this category to it) | special category |
+| `disability` | Schwerbehinderung/Gleichstellung, GdB | special category |
+| `identifiers` | RV-Nr., IBAN, Steuer-ID, BA-Kundennummer; ASU proof | highly confidential |
+| `residence_social` | nationality, residence status, Bürgergeld | highly confidential |
+| `profiling_assessment` | section C, Gesamteinschätzung, weiteres Vorgehen | highly confidential |
+| `signed_tl407`, `signed_kug200b` | signed TL 407 / Kug 200b | most sensitive content |
+| `employment_contract` | signed DSV and its cancellation | highly confidential, encrypted |
+| `absence` | sub-status periods | payroll records; not in lists until Q85 |
+
+**Documents** *(assumed, Q87 B)*: a versioned document-type catalog
+(`packages/domain/src/documents/catalog.ts`) gives each type its category, class, retention
+class, the roles that may use it and participant visibility. Reading a document gives its
+metadata; the file only through an explicit, logged opening (`document_opened`). Existing
+documents never change: signed ones are immutable, and adding a document or a new version is a
+document operation. Signed documents aren't in the MVP portal (Q67).
+
+| Document type | Who may open it |
+|---|---|
+| Signed TL 407, Kug 200b | assigned profiler, PL |
+| Signed DSV, DSV cancellation | PL, back office |
+| ASU proof | assigned profiler; PL metadata, the file only through break-glass |
+| Profiling-exception evidence | assigned profiler; PL only in assisted mode or through break-glass; regional operations manager "evidence present" (metadata) only |
+| CV and general uploads, qualification certificates | the participant (own), assigned consultant, PL; back office for certificates only when funding or settlement needs it (not before Slice 8) |
+
+Generated reports and exports become a resource of their own with the reporting slice; every
+generation and download is logged.
+
+**Audit metadata** *(assumed, Q87 A)*: no unrestricted audit stream; read-only filtered
+projections. PL: the operational case history of their projects (lifecycle changes, document
+status, assignments, corrections). Assigned consultant/profiler: that history for the assigned
+participation, plus their own actions. Back office: DSV, payroll, absence and settlement
+history. Regional operations manager: only events awaiting or recording their approval or
+review. No projection contains sensitive-access or security events (except the break-glass
+events the regional operations manager reviews) or a reason code the role couldn't otherwise
+read. Participants: no audit-log UI in the MVP (data-subject export). Admins: none.
+
+**Evidence set** *(assumed, Q87 C)*: immutable through field and document writes. Exceptional
+corrections required by the BA or by law go through **`append_evidence_correction`**: PL or back
+office by document type, a mandatory BA/legal reference and reason code, approval by the
+regional operations manager, a new append-only artifact linked to the one it corrects (which is
+kept), fully audited.
+
+**Sensitive writes** are audited as `sensitive_write` with the field or document key, actor,
+subject and timestamp, **never the old or new value**.
+
 ### Write permissions *(assumed until DPO and PL review, Q65)*
 
 | Who | May write |
