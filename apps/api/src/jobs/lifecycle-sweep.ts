@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { scheduledAt, type Clock } from "@transfer/adapters";
 import { project, sql, type Database } from "@transfer/db";
-import { addDays, type IsoDate } from "@transfer/domain";
+import type { IsoDate } from "@transfer/domain";
 import { evaluateProject, type EvaluateDeps } from "./evaluate-project";
 import { jobNames } from "./names";
-import { EvaluateProjectPayload, type EvaluateProjectJob } from "./payloads";
+import { EvaluateProjectPayload, type EvaluateProject } from "./payloads";
+import { lifecycleRunState, runDays } from "./run-window";
 
 export type SweepDeps = { db: Database; clock: Clock; lifecycleTime: string };
 
@@ -13,7 +14,7 @@ export type SweepResult =
   | { outcome: "completed"; runDate: IsoDate; days: number; projects: number };
 
 /** Runs the project jobs; resolves once every one finished, rejects if any failed. */
-export type Dispatch = (jobs: EvaluateProjectJob[]) => Promise<void>;
+export type Dispatch = (jobs: EvaluateProject[]) => Promise<void>;
 
 /**
  * `lifecycle.sweep` (plan 5.9, rounds 9, 19, 20). The run date is the Clock's Berlin today; it is
@@ -29,30 +30,20 @@ export async function runLifecycleSweep(
   dispatch: Dispatch,
 ): Promise<SweepResult> {
   const runDate = clock.today();
-  const due = scheduledAt(runDate, lifecycleTime).toISOString();
-  const { rows } = await db.execute<{ due: boolean; last: IsoDate | null }>(sql`
-    select now() >= ${due}::timestamptz as due,
-      (select max(run_date)::text from job_run where job_name = ${jobNames.lifecycleSweep}) as last`);
-  const { due: isDue, last } = rows[0]!;
-  if (!isDue) return { outcome: "not_due", runDate };
+  const { due, last, firstDay } = await lifecycleRunState(db, runDate, lifecycleTime);
+  if (!due) return { outcome: "not_due", runDate };
   if (last !== null && last >= runDate) return { outcome: "already_completed", runDate };
 
-  const days: EvaluateProjectJob["days"] = [];
-  for (
-    let day = last === null ? runDate : addDays(last, 1);
-    day <= runDate;
-    day = addDays(day, 1)
-  ) {
-    days.push({ day, scheduledAt: scheduledAt(day, lifecycleTime).toISOString() });
-  }
   const projects = await db.select({ id: project.id }).from(project).orderBy(project.id);
-  await dispatch(projects.map(({ id }) => ({ projectId: id, runDate, days })));
+  await dispatch(projects.map(({ id }) => ({ projectId: id, firstDay, runDate })));
   // Only the three columns the runtime role may insert: completed_at is the database's now().
+  const at = scheduledAt(runDate, lifecycleTime).toISOString();
   await db.execute(sql`
     insert into job_run (job_name, run_date, scheduled_at)
-    values (${jobNames.lifecycleSweep}, ${runDate}, ${due}::timestamptz)
+    values (${jobNames.lifecycleSweep}, ${runDate}, ${at}::timestamptz)
     on conflict do nothing`);
-  return { outcome: "completed", runDate, days: days.length, projects: projects.length };
+  const days = runDays(firstDay, runDate, lifecycleTime).length;
+  return { outcome: "completed", runDate, days, projects: projects.length };
 }
 
 /**

@@ -25,12 +25,15 @@ import {
 import { JobError } from "./errors";
 import { jobNames } from "./names";
 import type { EvaluateProject } from "./payloads";
+import { lifecycleRunState, runDays } from "./run-window";
 
 export type EvaluateDeps = {
   db: Database;
   clock: Clock;
   facts: GuardFactsProvider;
   logger: Logger;
+  /** `JOBS_LIFECYCLE_TIME`: the job derives each day's scheduled instant from it. */
+  lifecycleTime: string;
 };
 
 export type EvaluationCounts = {
@@ -49,18 +52,30 @@ const system: ServiceActor = { kind: "system", job: jobNames.evaluateProject };
  * participation of one project for the window's days (`planSystemTransitions`, with the snapshot
  * of each day's scheduled run, round 9) and applies each change through the status service as
  * `system`, with the job id. The service locks, re-checks the guards and validates the planner's
- * effective dates (round 18). Idempotent: a moved participation plans nothing, and a change that
- * lost a race is `stale_status` (counted, not an error). Any other refusal fails the job after
- * the other participations were applied, so the day isn't recorded as completed. Runs only on
- * its run date: once the clock has left it, the next sweep catches up.
+ * effective dates (round 18).
+ *
+ * The job trusts its payload for nothing but the bounds (round 21): it runs only on its run date
+ * (`run_date_passed`), only once that day's scheduled time has passed by database time
+ * (`run_not_due`, Q96), and only for the window that starts after the last completed run
+ * (`window_mismatch`: no completed day again, no missing day); it derives the days and their
+ * scheduled instants from `JOBS_LIFECYCLE_TIME` itself. All checks come before any planning or
+ * write.
+ *
+ * Idempotent: a moved participation plans nothing. Only the status service's refusals are
+ * lifecycle refusals: a lost race (`stale`) is counted, not an error; any other is counted, the
+ * other participations are still applied, and the job then fails (`changes_refused`), so the day
+ * isn't recorded. Any other error (database, infrastructure, a bug) propagates at once.
  */
 export async function evaluateProject(
-  { db, clock, facts, logger }: EvaluateDeps,
-  payload: EvaluateProject,
+  { db, clock, facts, logger, lifecycleTime }: EvaluateDeps,
+  { projectId, firstDay, runDate }: EvaluateProject,
   jobId: string,
 ): Promise<EvaluationCounts> {
-  const { projectId, runDate, days } = payload;
   if (clock.today() !== runDate) throw new JobError("run_date_passed");
+  const state = await lifecycleRunState(db, runDate, lifecycleTime);
+  if (!state.due) throw new JobError("run_not_due");
+  if (firstDay !== state.firstDay) throw new JobError("window_mismatch");
+  const days = runDays(firstDay, runDate, lifecycleTime);
 
   const plans = await db.transaction(async (tx) => {
     const [found] = await tx
@@ -132,7 +147,8 @@ export async function evaluateProject(
         await service.changeStatus(system, { participationId, ...change }, { jobId });
         counts.applied += 1;
       } catch (error) {
-        if (error instanceof StatusServiceError && error.kind === "stale") counts.stale += 1;
+        if (!(error instanceof StatusServiceError)) throw error;
+        if (error.kind === "stale") counts.stale += 1;
         else counts.refused += 1;
         break;
       }

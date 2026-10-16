@@ -146,7 +146,8 @@ function guardPasses(guard: GuardId, edge: Edge, ctx: TransitionContext): boolea
 
   switch (guard) {
     case "dsv_fully_executed":
-      return byEntry(facts.dsvFullyExecuted);
+      // Q97: the DSV track must say signed too; inconsistent data stays informed, never repaired.
+      return ctx.current.dsvStatus === "dsv_signed" && byEntry(facts.dsvFullyExecuted);
     case "asu_registered_with_proof":
       return byEntry(facts.asuRegisteredWithProof);
     case "profiling_done_or_approved_exception":

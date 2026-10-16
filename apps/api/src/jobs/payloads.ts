@@ -9,25 +9,15 @@ import { z } from "zod";
 /** The nightly sweep takes nothing: the cron sends no data. */
 export const SweepPayload = z.strictObject({}).nullish();
 
-/** A run day of the catch-up window with its originally scheduled run time (round 9). */
-const RunDay = z.strictObject({
-  day: isoDate,
-  scheduledAt: z.iso.datetime().pipe(z.coerce.date()),
-});
-
-/** One project's evaluation for the window ending on `runDate` (the sweep's today). */
+/**
+ * One project's evaluation of the window `firstDay` … `runDate` (the sweep's today). Only the
+ * bounds travel (round 21): the job derives the contiguous days and their scheduled instants
+ * from `JOBS_LIFECYCLE_TIME` and checks `firstDay` against `job_run` itself.
+ */
 export const EvaluateProjectPayload = z
-  .strictObject({
-    projectId: z.uuid(),
-    runDate: isoDate,
-    days: z.array(RunDay).min(1),
-  })
-  .refine(
-    ({ days, runDate }) =>
-      days.at(-1)?.day === runDate && days.every((d, i) => i === 0 || days[i - 1]!.day < d.day),
-    { message: "days must be ascending and end on the run date" },
-  );
+  .strictObject({ projectId: z.uuid(), firstDay: isoDate, runDate: isoDate })
+  .refine(({ firstDay, runDate }) => firstDay <= runDate, {
+    message: "firstDay must not be after runDate",
+  });
 
-/** What a dispatcher sends: the serialized form (instants as ISO strings). */
-export type EvaluateProjectJob = z.input<typeof EvaluateProjectPayload>;
-export type EvaluateProject = z.output<typeof EvaluateProjectPayload>;
+export type EvaluateProject = z.infer<typeof EvaluateProjectPayload>;

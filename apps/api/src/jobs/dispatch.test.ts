@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { queueDispatch, type DispatchQueue } from "./dispatch";
-import type { EvaluateProjectJob } from "./payloads";
+import type { EvaluateProject } from "./payloads";
 
 // The sweep's queue dispatch (plan 5.9): one project job per project and day, keyed; resolves
 // when all completed, rejects when one failed; a duplicate waits for the existing job.
-const job = (projectId: string): EvaluateProjectJob => ({
+const job = (projectId: string): EvaluateProject => ({
   projectId,
+  firstDay: "2025-03-03",
   runDate: "2025-03-03",
-  days: [{ day: "2025-03-03", scheduledAt: "2025-03-03T03:15:00.000Z" }],
 });
 type State = "created" | "retry" | "active" | "completed" | "cancelled" | "failed";
 

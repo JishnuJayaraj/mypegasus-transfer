@@ -120,7 +120,7 @@ function sweep(day: string, facts = provider(), time = "04:15") {
   clock.set(scheduledAt(day, time));
   return runLifecycleSweep(
     { db, clock, lifecycleTime: "04:15" },
-    inlineDispatch({ db, clock, facts, logger }),
+    inlineDispatch({ db, clock, facts, logger, lifecycleTime: "04:15" }),
   );
 }
 
@@ -267,9 +267,8 @@ describe("the lifecycle sweep (AC-38)", () => {
     expect(summary).toMatchObject({ applied: 1, stale: 1, refused: 0 });
   });
 
-  it("fails the project job on a refusal the planner didn't foresee, after the others; no record", async () => {
-    // Inconsistent facts (Q97): A's DSV executed by the facts though its track expired. The
-    // planner enters A; the database refuses (a TG entry needs a signed DSV).
+  it("never enters a participation whose DSV track isn't signed, whatever the facts (Q97)", async () => {
+    // Inconsistent data: A's facts say the DSV was fully executed, its track says offered.
     const inconsistent: GuardFactsProvider = {
       ...provider(),
       facts: async (tx, input) => ({
@@ -277,16 +276,52 @@ describe("the lifecycle sweep (AC-38)", () => {
         ...(input.participationId === ids.c ? {} : entryFacts),
       }),
     };
-    await expect(sweep("2025-03-03", inconsistent)).rejects.toMatchObject({
-      code: "changes_refused",
-    });
+    expect(await sweep("2025-03-03", inconsistent)).toMatchObject({ outcome: "completed" });
     expect(await statuses()).toMatchObject({
       [ids.a]: { status: "informed", dsv_status: "dsv_expired" },
       [ids.b]: { status: "active_in_tg" },
     });
+    const summary = logs.map((l) => JSON.parse(l)).find((l) => l.projectId === lagerSued);
+    expect(summary).toMatchObject({ planned: 2, applied: 2, refused: 0 });
+  });
+
+  it("fails the project job on a lifecycle refusal, after the others; no record", async () => {
+    // B's facts are withdrawn between planning and applying: the service refuses the entry.
+    let calls = 0;
+    const withdrawn: GuardFactsProvider = {
+      ...provider(),
+      facts: async (tx, input) =>
+        input.participationId === ids.b && ++calls > 1
+          ? failClosedFacts.facts(tx, input)
+          : provider().facts(tx, input),
+    };
+    await expect(sweep("2025-03-03", withdrawn)).rejects.toMatchObject({
+      name: "JobError",
+      code: "changes_refused",
+    });
+    expect(await statuses()).toMatchObject({
+      [ids.a]: { dsv_status: "dsv_expired" },
+      [ids.b]: { status: "informed" },
+    });
     expect(await runDates()).toEqual([]);
     const summary = logs.map((l) => JSON.parse(l)).find((l) => l.projectId === lagerSued);
-    expect(summary).toMatchObject({ planned: 3, applied: 2, refused: 1 });
+    expect(summary).toMatchObject({ planned: 2, applied: 1, refused: 1 });
+  });
+
+  it("lets an unexpected error propagate at once, never as a refusal (round 21)", async () => {
+    let calls = 0;
+    const breaking: GuardFactsProvider = {
+      ...provider(),
+      facts: async (tx, input) => {
+        if (input.participationId === ids.b && ++calls > 1) {
+          throw Object.assign(new Error("connection lost"), { code: "57P01" });
+        }
+        return provider().facts(tx, input);
+      },
+    };
+    await expect(sweep("2025-03-03", breaking)).rejects.toMatchObject({ code: "57P01" });
+    expect(await runDates()).toEqual([]);
+    expect(logs.map((l) => JSON.parse(l)).find((l) => l.projectId === lagerSued)).toBeUndefined();
   });
 
   it("writes no record when a project evaluation fails; the next run completes the day", async () => {
@@ -303,6 +338,19 @@ describe("the lifecycle sweep (AC-38)", () => {
   });
 });
 
+/** A project job evaluated directly, as a directly queued job would be. */
+const evaluate = (firstDay: string, runDate: string) =>
+  evaluateProject(
+    { db, clock, facts: provider(), logger, lifecycleTime: "04:15" },
+    { projectId: lagerSued, firstDay, runDate },
+    "job-1",
+  );
+const completedRun = (day: string) =>
+  owner.query(
+    "insert into job_run (job_name, run_date, scheduled_at, completed_at) values ('lifecycle.sweep', $1, $2, $2)",
+    [day, scheduledAt(day, "04:15")],
+  );
+
 describe("database time is authoritative (Q96)", () => {
   it("stops a run that isn't due before any change, and records nothing", async () => {
     const events = await auditCount();
@@ -313,14 +361,33 @@ describe("database time is authoritative (Q96)", () => {
 
   it("refuses a project job whose run date the clock has left", async () => {
     clock.set(scheduledAt("2025-03-04", "04:15"));
-    const days = [{ day: "2025-03-03", scheduledAt: scheduledAt("2025-03-03", "04:15") }];
-    await expect(
-      evaluateProject(
-        { db, clock, facts: provider(), logger },
-        { projectId: lagerSued, runDate: "2025-03-03", days },
-        "job-1",
-      ),
-    ).rejects.toMatchObject({ name: "JobError", code: "run_date_passed" });
+    await expect(evaluate("2025-03-03", "2025-03-03")).rejects.toMatchObject({
+      name: "JobError",
+      code: "run_date_passed",
+    });
+  });
+
+  it("checks a directly queued project job against database time itself (round 21)", async () => {
+    const events = await auditCount();
+    clock.set(scheduledAt("2091-03-01", "04:15"));
+    await expect(evaluate("2091-03-01", "2091-03-01")).rejects.toMatchObject({
+      code: "run_not_due",
+    });
+    expect(await auditCount()).toBe(events);
+  });
+
+  it("refuses a window that re-evaluates a completed day or misses one (round 21)", async () => {
+    await completedRun("2025-03-01");
+    clock.set(scheduledAt("2025-03-04", "04:15"));
+    const events = await auditCount();
+    // The window must start on 2025-03-02, the day after the completed run.
+    for (const firstDay of ["2025-03-01", "2025-03-03", "2025-03-04"]) {
+      await expect(evaluate(firstDay, "2025-03-04")).rejects.toMatchObject({
+        code: "window_mismatch",
+      });
+    }
+    expect(await auditCount()).toBe(events);
+    expect(await evaluate("2025-03-02", "2025-03-04")).toMatchObject({ applied: 2 });
   });
 });
 
@@ -392,12 +459,11 @@ describe("through pg-boss (AC-37, AC-38, AC-40)", () => {
       );
       const [projectJob] = await boss.findJobs(jobNames.evaluateProject, { id: rows[0].job_id });
       expect(projectJob).toMatchObject({ singletonKey: `${lagerSued}:2025-03-03` });
+      // The window's bounds only: the job derives the days and instants itself (round 21).
       expect(projectJob!.data).toEqual({
         projectId: lagerSued,
+        firstDay: "2025-03-03",
         runDate: "2025-03-03",
-        days: [
-          { day: "2025-03-03", scheduledAt: scheduledAt("2025-03-03", "04:15").toISOString() },
-        ],
       });
 
       // A second sweep the same day (a missed occurrence beside the due one) changes nothing.
@@ -429,7 +495,12 @@ describe("through pg-boss (AC-37, AC-38, AC-40)", () => {
       // Free text in a payload is refused before anything runs.
       const id = (await boss.send(
         jobNames.evaluateProject,
-        { projectId: lagerSued, runDate: "2025-03-03", days: [], note: "participant 4711" },
+        {
+          projectId: lagerSued,
+          firstDay: "2025-03-03",
+          runDate: "2025-03-03",
+          note: "participant 4711",
+        },
         { retryLimit: 0 },
       ))!;
       let state = "";

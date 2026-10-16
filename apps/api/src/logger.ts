@@ -30,12 +30,24 @@ export function requestLogger(logger: Logger): MiddlewareHandler<AppEnv> {
   };
 }
 
-/** The stack frames of an error without its message, which may contain personal data. */
+/** A V8 stack frame: `at <where> (<file>:<line>:<col>)` or `at <file>:<line>:<col>`. */
+const stackFrame = /^\s+at .+:\d+:\d+\)?$/;
+
+/**
+ * The stack frames of an error without its message, which may contain personal data (CLAUDE.md
+ * rule 9). The stack starts with `name: message`, which may span lines (round 21): that head is
+ * cut off exactly, and of the rest only lines shaped like frames are kept.
+ */
 export function errorForLog(error: unknown) {
   if (!(error instanceof Error)) return { name: typeof error };
+  const head = `${error.name}: ${error.message}`;
+  const body = error.stack?.startsWith(head) ? error.stack.slice(head.length) : error.stack;
   return {
     name: error.name,
     code: (error as { code?: unknown }).code,
-    stack: error.stack?.split("\n").slice(1).join("\n"),
+    stack: body
+      ?.split("\n")
+      .filter((line) => stackFrame.test(line))
+      .join("\n"),
   };
 }

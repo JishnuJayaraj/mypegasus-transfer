@@ -246,7 +246,7 @@ been met **on that date** (the facts carry dates):
 
 | Condition | Override |
 |---|---|
-| `dsvFullyExecuted` (participant, customer and TG signatures) | **none** — no employment without the written contract (§623 BGB) |
+| `dsvFullyExecuted` (participant, customer and TG signatures) **and** the DSV track `dsv_signed` (Q97: both must agree; inconsistent data stays `informed` and is never repaired automatically) | **none** — no employment without the written contract (§623 BGB) |
 | ASU registered **with proof**, any channel (Q55), required before transfer into the beE by §111(4) Nr. 4 SGB III | **none** — the profiling exception does not extend to the ASU |
 | `profilingStatus = profiling_done` (TL 407 signed by participant and profiler) **or** an **approved** profiling exception (Q80) | the approved exception itself is the alternative |
 

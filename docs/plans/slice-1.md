@@ -378,7 +378,7 @@ A test asserts this list exactly.
 
 | Guard | Transition | Passes when | Source |
 |---|---|---|---|
-| `dsv_fully_executed` | TG entry | all three signature dates set, the last valid on/before `tgStart` (system kinds: recorded by `scheduledAt(tgStart)`) | §623 BGB |
+| `dsv_fully_executed` | TG entry | the DSV track is `dsv_signed` **and** all three signature dates set, the last valid on/before `tgStart` (system kinds: recorded by `scheduledAt(tgStart)`); inconsistent data stays `informed` (Q97) | §623 BGB |
 | `asu_registered_with_proof` | TG entry | ASU with proof, any channel, valid on/before `tgStart` (system kinds: recorded by `scheduledAt`) | §111(4) Nr. 4 |
 | `profiling_done_or_approved_exception` | TG entry | `profilingDoneOn ≤ tgStart`, or an exception **approved** on/before `tgStart` (system kinds: recorded by `scheduledAt`) | Q17, Q74, Q80 |
 | `tg_start_date` | TG entry | per entry kind (table above) | Q68 |
@@ -1340,49 +1340,44 @@ the environment and the `Clock` in `createApp`. The twelve readings were answere
 #### Readings taken in PR 1h (1h-2)
 
 Built in PR 1h-2: `apps/api/src/jobs/` `lifecycle-sweep.ts` (the sweep and the inline dispatch),
-`evaluate-project.ts`, `dispatch.ts` (the queue dispatch), `payloads.ts`, `errors.ts`, the
-workers in `jobs.ts`, `cli.ts` and `scripts/jobs-lifecycle.ts`. Fail safe (D10); correct them if
-wrong:
+`run-window.ts` (the due check and the window), `evaluate-project.ts`, `dispatch.ts` (the queue
+dispatch), `payloads.ts`, `errors.ts`, the workers in `jobs.ts`, `cli.ts` and
+`scripts/jobs-lifecycle.ts`. The twelve readings and Q97 were answered in
+[round 21](../decisions/2026-10-16-answers-round-21.md); the answers are applied:
 
-1. **Due by database time only** (Q96): the run date is the `Clock`'s Berlin today; whether its
-   scheduled time has passed is asked of the database (`now()`), not of the `Clock`, so a cron
-   firing at 04:15 by pg-boss's database-time scheduler is never lost to a few seconds of clock
-   skew between the API host and the database.
-2. **The record:** only the run date gets a `job_run` row; the earlier days of the window get
-   none, since the next window starts after the run date anyway. The first run ever covers today
-   only.
-3. **Every project** gets a project job, `ta_only` included (it plans nothing there).
-4. **Planning** reads the project, its waves, its open participations (main status not terminal)
-   and their current requests in one read transaction, with the facts per participation;
-   **applying** goes through the status service one change at a time, in plan order, and a
-   participation's remaining changes stop at its first refusal.
-5. **Refusals:** a lost race (`stale`) is counted, not an error. Any other refusal is counted,
-   the other participations are still applied, and the job then fails (`changes_refused`): the
-   day isn't recorded and the failure is visible; retries re-plan, which resolves a transient
-   race. A persistent refusal fails every day and keeps the catch-up window open (the snapshot
-   rules still hold on every re-evaluation); see Q97 for the one case found.
-6. **Run date passed:** a project job runs only while the `Clock` still shows its run date
-   (`run_date_passed` otherwise); the next sweep catches the day up.
-7. **The sweep waits** for its project jobs by polling pg-boss every second for up to 50 minutes
-   (within its 60-minute expiry); a failed or cancelled project job fails it at once; a taken key
-   (an earlier attempt's job still queued or running) is waited for instead.
-8. **`pnpm jobs:lifecycle`** evaluates the projects in its own process, never through the queue,
-   so a running API's workers (on the system clock) never take a `--today` run; it uses the same
-   payload schema and function, with a random UUID as each project's job id in the audit trail.
-   Without `--today` it uses `CLOCK`, so before today's run time it also exits with
-   `run_not_due`. Exit 0 for `completed` and `already_completed`; otherwise 1 with the stable
-   code on stderr (`run_not_due`, `invalid_arguments`, `refused_in_production`,
-   `changes_refused`, `unexpected`, …).
-9. **Failed jobs** are stored by pg-boss as a `JobError` carrying only the code (tested with free
-   text in a payload); the log line has the job, job id, code and the stack without the message.
-10. **Logs:** a project job logs `job`, `jobId`, `projectId` and the counts (`participations`,
-    `planned`, `applied`, `stale`, `refused`, `flagged`: participations with at least one flag;
-    the flags themselves stay derived, for the Slice 5 dashboard); the sweep logs `job`, `jobId`,
-    `outcome`, `runDate`, `days`, `projects`. No participation id appears in a log (tested).
-11. **The API's workers use the Slice 1 facts provider** (fail closed, D4): DSV expiry and cutoff
-    withdrawals run automatically, nobody enters the TG (AC-39).
-12. **Tests** use a synthetic wave of Lager Süd in 2025, before database time (Q96), with facts
-    per participation; the seed's 2091 timeline is not used by any job test.
+1. **Due by database time — confirmed, and applied to the project job too:** the run date is the
+   `Clock`'s Berlin today; whether its scheduled time has passed is asked of the database, by the
+   sweep **and independently by every project job** before any planning or write
+   (`run_not_due`), so a directly queued project job can't run early.
+2. **Only the run date gets a `job_run` row** — confirmed. The first run ever covers today only.
+3. **Every project gets a project job** — confirmed (`ta_only` plans nothing).
+4. **Planning and applying — confirmed, with the payload hardened:** the payload is only
+   `{ projectId, firstDay, runDate }`; the job derives the contiguous days and their canonical
+   scheduled instants from `JOBS_LIFECYCLE_TIME` and refuses a `firstDay` other than the day after
+   the last completed run (`window_mismatch`: neither a completed day again nor a missing day).
+   Planning reads the open participations in one read transaction; changes apply one at a time
+   in plan order, and a participation stops at its first refusal.
+5. **Refusals — corrected:** only a `StatusServiceError` is a lifecycle refusal: `stale` is
+   counted; any other is counted as refused, the other participations are still applied, and the
+   job then fails (`changes_refused`). Database, infrastructure and programming errors propagate
+   at once as `unexpected`, never as `changes_refused`.
+6. **A project job runs only on its run date** — confirmed.
+7. **The wait policy** (poll every second, up to 50 minutes, a failed or cancelled job fails the
+   sweep, a taken key is waited for) — confirmed.
+8. **The CLI evaluates in its own process** — confirmed (`run_not_due` also before today's run
+   time without `--today`; exit 0 for `completed`/`already_completed`, otherwise 1 with the code).
+9. **Failed jobs store only a `JobError` code** — confirmed after fixing `errorForLog`: it cut
+   only the first line, so a multiline message leaked its other lines. It now cuts the exact
+   `name: message` head and keeps only lines shaped like stack frames (tested with a multiline
+   message, including a line that imitates a frame).
+10. **Log fields and counts** — confirmed.
+11. **Fail-closed facts in the API's workers** — confirmed.
+12. **Past-dated job fixtures** — confirmed.
+
+**Q97 (confirmed):** TG entry needs both the DSV track `dsv_signed` and the dated
+`dsvFullyExecuted` fact under the existing validity and recording rules. Inconsistent data stays
+`informed`; nothing repairs or overrides the status; the planner never proposes an entry the
+database would refuse (domain, planner and job tests).
 
 ### 5.10 Database, data catalog and seed
 

@@ -46,7 +46,7 @@ export async function runLifecycleCli({
     : createClock({ CLOCK: env.clock, NODE_ENV: env.nodeEnv });
   const result = await runLifecycleSweep(
     { db, clock, lifecycleTime },
-    inlineDispatch({ db, clock, facts, logger }),
+    inlineDispatch({ db, clock, facts, logger, lifecycleTime }),
   );
   logger.info({ job: jobNames.lifecycleSweep, ...result }, "lifecycle sweep");
   if (result.outcome === "not_due") throw new JobError("run_not_due");

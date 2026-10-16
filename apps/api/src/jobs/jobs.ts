@@ -143,7 +143,7 @@ async function startWorkers(
     for (const job of jobs) {
       await runJob(logger, job, async () => {
         const payload = EvaluateProjectPayload.parse(job.data);
-        await evaluateProject({ db, clock, facts, logger }, payload, job.id);
+        await evaluateProject({ db, clock, facts, logger, lifecycleTime }, payload, job.id);
       });
     }
   });
