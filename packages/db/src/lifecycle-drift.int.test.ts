@@ -5,7 +5,7 @@ import {
   EndReason,
   edges,
   endReasonsForPhase,
-  lifecycleEventTypes,
+  reservedEventTypes,
   MainStatus,
   ProfilingExceptionReason,
   ProfilingExceptionStatus,
@@ -118,7 +118,7 @@ describe("record_audit_event (AC-16)", () => {
       (error: { code: string; message: string }) =>
         error.code === "P0001" ? error.message : error.code,
     );
-    const expected = lifecycleEventTypes.has(eventType)
+    const expected = reservedEventTypes.has(eventType)
       ? "event_type_reserved"
       : personLevel.has(eventType)
         ? "23514"

@@ -6,7 +6,7 @@
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
-- Decisions it rests on: rounds 1–22 in [`decisions/`](../decisions/), in particular round 8
+- Decisions it rests on: rounds 1–23 in [`decisions/`](../decisions/), in particular round 8
   (Agentur-scoped settings), round 10 (waves vs. beE), round 14 (controlled reason codes), round 15
   (Project Agentur, cross-chain invariants, immutable versions, migration review), round 16
   (functions, typed parameters), round 19 (`scheduledRunCompleted`), round 20 (database time)
@@ -68,16 +68,16 @@ data exists while retention periods are `unset`.
 | R21 | **Problem mapping** of service refusals: `not_found` 404, `forbidden` 403, `stale` 409 (`conflict`), `domain` and `integrity` 422 (`domain-error`, the code and failed guards, never a value). | 5.12 | — |
 | R22 | Template content identity is the **SHA-256 of canonical JSON** (sorted keys, no insignificant whitespace), so formatting never counts as a change and any content change does. | 5.8 | — |
 
-### Readings taken while applying round 22 (for confirmation)
+### Readings taken while applying round 22 (answered in [round 23](../decisions/2026-10-16-answers-round-23.md))
 
 | # | Reading | Where | Question |
 |---|---|---|---|
-| R23 | **Foreign addresses:** Slice 2 has no country target and stores German addresses only; a postal code that isn't exactly five digits is a row error (`postal_code_invalid`), so a foreign address is rejected explicitly rather than stored half-understood. If Q103 adds an ISO 3166-1 country target, `participant_details` gains a nullable `address_country` column (additive migration) and the five-digit check applies only to `DE`. | 5.11 | Q103 |
-| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. | 5.11 | Q103 |
-| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). | 5.6, 5.7 | Q102 |
-| R26 | **Configuration-dependent audited operations** that record the base-defaults version: activation, template pins and migrations, override writes, relaxation decisions, the confirmed import and every later operation that resolves configuration (a test lists the event types that must carry `baseDefaultsVersion`). | 5.3 | Q107 |
-| R27 | `config_template_version` is global reference data (no participant data), so it has **no `project_id`**: the owner chose this normalisation in round 22. Retention class `reference_data`, never touched by the retention job; the pins that use it carry `project_id`. | 5.2 | — |
-| R28 | **Lock keys:** `pg_advisory_xact_lock(hashtextextended('project:' || id, 0))` (exclusive) and its `_shared` form; a hash collision only serialises two projects more than needed. The template-version identity is serialised by its primary key (the insert of a new version waits for a concurrent one to commit, then compares). | 5.3 | — |
+| R23 | **Foreign addresses — corrected in round 23:** five digits don't prove a German address. Until Q103 is answered, an import must **establish DE explicitly**, through a country column or a country constant the PL selects for the import; it is never inferred from the postal code. Rows of another country are refused (`foreign_address_unsupported`); without a country source the import can't be confirmed (`country_required`). The five-digit postal-code check applies to DE rows. | 5.11 | Q103 |
+| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. | 5.11 | Q103 ✔ |
+| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). | 5.6, 5.7 | Q102 ✔ (conservative, pending Q102) |
+| R26 | **Configuration-dependent audited operations — confirmed with this exact list (round 23):** `project_activated`, `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`, `import_confirmed`. Rejection and withdrawal carry none unless they resolve configuration; a later operation that resolves configuration joins the list (a test keeps it). | 5.3 | Q107 ✔ |
+| R27 | `config_template_version` is global reference data (no participant data), so it has **no `project_id`**: the owner chose this normalisation in round 22. Retention class `reference_data`, never touched by the retention job; the pins that use it carry `project_id`. | 5.2 | ✔ |
+| R28 | **Lock keys:** `pg_advisory_xact_lock(hashtextextended('project:' || id, 0))` (exclusive) and its `_shared` form; a hash collision only serialises two projects more than needed. The template-version identity is serialised by its primary key (the insert of a new version waits for a concurrent one to commit, then compares). | 5.3 | ✔ |
 
 ### What the decisions and the Slice 1 plan already settle (not re-decided)
 
@@ -142,7 +142,7 @@ Nothing failed. One cosmetic item: the web component tests print jsdom's "Not im
 Window's scrollTo()" 17 times (TanStack Router's scroll restoration under jsdom); harmless, but
 it buries real output. A one-line stub in `apps/web/src/test-setup.ts` fixes it (PR 2a).
 
-### 2.2 Dependencies (checked against npm on 2026-10-16; **approval needed**)
+### 2.2 Dependencies (checked against npm on 2026-10-16; approved in round 22)
 
 | Package | Pin | Released | Notes |
 |---|---|---|---|
@@ -219,6 +219,50 @@ hand-written production lines (SQL included, tests excluded).
 parallel after 2a; 2d-1 and 2e-1 in parallel after 2c-2. Between 2a
 and 2b the web app has no way to enter contractual dates; nothing depends on them in that gap.
 
+### Built in PR 2a, with the readings taken (for confirmation)
+
+Built: `ProjectStatus`, `CreateProjectInput` without dates, `UpdateProjectInput`,
+`checkProjectUpdate` and `mayCreateProject` (`packages/domain/src/project.ts`, now under the 100 %
+threshold); the operation `editProject` (PL); the audit types `project_created` and
+`project_changed` with `setupEventTypes` / `reservedEventTypes`; migrations `0010_project_setup`
+(generated: `project_status`, `project_role`, the project columns, `project_membership`, the
+two event types), `0011_project_setup_functions` (hand-written: the W1 copy, `project_lock_key`,
+`lock_project_setup`, the shared lock in `lock_participation` and `create_participation`,
+`create_project`, `update_project`, `record_audit_event` refusing the new types, the grants) and
+`0012_drop_project_dates` (generated); the seed's memberships; `apps/api/src/access.ts`
+(`staffSubjectOf`, project visibility); the project routes scoped by membership with `PATCH`; the
+`domain-error` problem type; the web form and list without dates (with the status); the jsdom
+`scrollTo` stub.
+
+1. **Event types join with their PRs:** only `project_created` and `project_changed` now; the
+   others (activation, waves, pins, …) come with the functions that write them.
+2. **`project_agentur_key` exists but is set only in PR 2c-2**, together with the pin;
+   `update_project` takes name, customer and type only.
+3. **`create_project` re-checks the flat role in SQL** (defence in depth for Q106), and both
+   functions refuse assisted mode and non-staff actors.
+4. **A change to the current values is refused** (`project_unchanged`, 422, no write), like
+   `wave_unchanged` in Slice 1.
+5. **A project the user can't see is 404**, not 403, so its existence isn't revealed; a visible
+   project the user may not edit (a consultant, an admin) is 403.
+6. **The W1 copy** runs only for `ta_tg` projects with at least one Slice 0 date and no wave at
+   all; a project with waves already has its dates there (migration 0003 or the seed).
+7. **Seed memberships:** the seeded projects are created through `create_project` by the seeded PL
+   (round 23), which makes the PL a member; the consultant and back office hold their role in all
+   three projects as **direct seed fixtures**, because member management (with its own audited
+   function) is Slice 3. Org roles have none.
+8. **`conflict` (409)** joins the problem types with the first route that returns it.
+9. **No behaviour change for lifecycle work yet:** every project is `draft`, and the draft gate
+   comes with activation (PR 2e-1).
+
+Round 23 ([review of PR 2a](../decisions/2026-10-16-answers-round-23.md)) added: the PL backfill
+for existing projects with a failing check (no silent elevation); the new project's exclusive lock
+first in `create_project` and the project lock first in `update_project`; the seed through
+`create_project`; one `P0001` decoder (`apps/api/src/database-errors.ts`) for the status service
+and the routes, with the project route allowlisting `project_unchanged`, `project_not_draft`,
+`project_has_participations` and `project_has_waves` (422), mapping `project_not_found` to 404
+and rethrowing everything else; strict create and update inputs, whose unknown fields are listed
+one by one (`unrecognized_keys`).
+
 ## 4. Design overview
 
 ```
@@ -261,7 +305,7 @@ fixtures/imports/  synthetic sample files
 | `RelaxationRequestStatus` | `requested`, `approved`, `rejected`, `withdrawn` |
 | `ImportTarget` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `addressStreet`, `addressPostalCode`, `addressCity`, `phone`, `mobile`, `privateEmail`, `workEmail` |
 | `ImportRowOutcome` | `create`, `update`, `unchanged`, `skip`, `error` |
-| `ImportIssueCode` | errors: `required_missing`, `invalid_date`, `date_has_time`, `birth_date_in_future`, `end_before_birth`, `too_long`, `control_characters`, `duplicate_in_file`, `identifier_cell_numeric`, `postal_code_invalid`; warnings: `age_implausible`, `value_invalid_dropped`, `possible_duplicate`, `terminal_not_updated`, `kept_existing` |
+| `ImportIssueCode` | errors: `required_missing`, `invalid_date`, `date_has_time`, `birth_date_in_future`, `end_before_birth`, `too_long`, `control_characters`, `duplicate_in_file`, `identifier_cell_numeric`, `postal_code_invalid`, `foreign_address_unsupported`, `country_required`; warnings: `age_implausible`, `value_invalid_dropped`, `possible_duplicate`, `terminal_not_updated`, `kept_existing` |
 
 ### 5.2 Data model
 
@@ -333,9 +377,9 @@ the exclusive lock can still create and lock participations (re-entrant).
   `SELECT, INSERT, UPDATE` on `import_column_mapping`; `EXECUTE` on the new functions. Tested like
   Slice 1 AC-15.
 - `audit_event` stays without an app `SELECT`: Slice 2 shows no history UI.
-- **Base-defaults version (R26):** `project_activated`, `config_template_pinned`,
-  `config_override_changed`, `rule_relaxation_approved` and `import_confirmed` carry
-  `baseDefaultsVersion` in their details; the functions require the parameter, and an audit-model
+- **Base-defaults version (R26, round 23):** exactly `project_activated`,
+  `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`,
+  `rule_relaxation_approved` and `import_confirmed` carry `baseDefaultsVersion` in their details; the functions require the parameter, and an audit-model
   test keeps the list of configuration-dependent event types.
 
 ### 5.4 Access (R9, R17)
@@ -556,8 +600,10 @@ POST /projects/{id}/imports           { same input, mapping, decisions: { confir
     (`end_before_birth`); age at the Austrittsdatum outside 15–67 → warning `age_implausible`;
   - identifiers (R24): a numeric XLSX cell in `personnelNumber` or `addressPostalCode` →
     `identifier_cell_numeric` (error); in `phone` or `mobile` → dropped with that warning;
-  - address (R23): the postal code is exactly five digits (`postal_code_invalid`), German
-    addresses only until Q103 is answered;
+  - address (R23, round 23): the country comes from a mapped country column or a constant the
+    PL selects, never from the postal code; a row of another country is refused
+    (`foreign_address_unsupported`) and an import without a country source can't be confirmed
+    (`country_required`); a DE postal code is exactly five digits (`postal_code_invalid`);
   - optional contact values: an invalid email (Zod's email check) or phone (digits, spaces, `+`,
     `/`, `-`, `(`, `)`, 6–30 characters) is dropped with `value_invalid_dropped`;
   - issues carry the row number (as in the file, header = row 1), the target and the code,
@@ -669,9 +715,12 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       fails with `42501`; only a flat `project_lead` may create (403 otherwise). (I)
 - [ ] **AC-2** `GET /projects` lists exactly the projects where the subject holds a project role,
       plus all for global org roles; `GET /projects/{id}` of another project is 404. (I)
-- [ ] **AC-3** The migration copies the dates of every project without a wave into W1, then drops
-      the three columns and their checks; nothing references them afterwards (domain, API, seed,
-      web). (I)
+- [ ] **AC-3** The migration creates W1 for every `ta_tg` project without a wave that has **at least
+      one** legacy date, with those dates (never an empty W1, which would needlessly block a later
+      type change), then drops the three columns and their checks; nothing references them
+      afterwards (domain, API, seed, web). It also gives every existing project its creator as PL
+      member when the creator's flat role is `project_lead`, and fails, changing nothing, if a
+      project would be left without a PL (round 23). (I)
 - [ ] **AC-4** The type changes only in draft without participations or waves, the Project Agentur
       only in draft; `project_changed` lists the changed keys. (U, I)
 - [ ] **AC-4a** Locks live in the functions: each setup function blocks while another transaction

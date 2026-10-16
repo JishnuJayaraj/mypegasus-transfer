@@ -9,7 +9,7 @@ const loggedIn = {
 };
 
 describe("project list", () => {
-  it("redirects / to the list and shows projects with German dates", async () => {
+  it("redirects / to the list and shows projects with their status and German timestamps", async () => {
     const { api } = mockApi({
       ...loggedIn,
       "GET /api/v1/projects": () => json({ items: [project], nextCursor: null }),
@@ -19,7 +19,7 @@ describe("project list", () => {
     const row = (await screen.findByText("Restrukturierung Werk Nord")).closest("tr")!;
     expect(within(row).getByText("Beispiel Maschinenbau GmbH")).toBeInTheDocument();
     expect(within(row).getByText("Transferagentur und Transfergesellschaft")).toBeInTheDocument();
-    expect(within(row).getByText("15.02.2027")).toBeInTheDocument();
+    expect(within(row).getByText("Entwurf")).toBeInTheDocument();
     // 08:30 UTC is 10:30 in Berlin (summer time).
     expect(within(row).getByText("15.10.2026, 10:30")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Mehr laden" })).not.toBeInTheDocument();
@@ -97,42 +97,22 @@ const fill = async (fields: Record<string, string>) => {
 const submit = () => userEvent.click(screen.getByRole("button", { name: "Projekt anlegen" }));
 
 describe("create project form", () => {
-  it("shows the TG dates only for ta_tg projects", async () => {
+  it("asks for no contractual dates: they belong to the entry waves (Q79)", async () => {
     renderApp("/projects/new", mockApi(loggedIn).api);
-    expect(await screen.findByLabelText("TG-Beginn")).toBeInTheDocument();
-    await userEvent.click(screen.getByLabelText("Transferagentur"));
+    expect(await screen.findByLabelText("Projektname")).toBeInTheDocument();
     expect(screen.queryByLabelText("TG-Beginn")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Unterschriftsfrist")).not.toBeInTheDocument();
+    expect(screen.getByText(/je Eintrittswelle erfasst/)).toBeInTheDocument();
   });
 
   it("validates on the client with the domain rules and sends nothing", async () => {
     const { api, calls } = mockApi(loggedIn);
     renderApp("/projects/new", api);
-    await fill({
-      Kunde: "Beispiel GmbH",
-      Unterschriftsfrist: "31.02.2027",
-      "TG-Beginn": "01.03.2027",
-      "TG-Ende": "03.14.1998",
-    });
+    await fill({ Kunde: "Beispiel GmbH" });
     await submit();
 
     expect(await screen.findByText("Pflichtfeld")).toBeInTheDocument();
-    expect(screen.getAllByText("Ungültiges Datum, bitte im Format TT.MM.JJJJ")).toHaveLength(2);
     expect(calls.some((c) => c.key === "POST /api/v1/projects")).toBe(false);
-  });
-
-  it("reports a TG end before the TG start", async () => {
-    renderApp("/projects/new", mockApi(loggedIn).api);
-    await fill({
-      Projektname: "P",
-      Kunde: "K",
-      "TG-Beginn": "01.03.2027",
-      "TG-Ende": "28.02.2027",
-    });
-    await submit();
-    expect(
-      await screen.findByText("Das TG-Ende darf nicht vor dem TG-Beginn liegen"),
-    ).toBeInTheDocument();
   });
 
   it("shows server validation problems on the field from the JSON pointer", async () => {
@@ -161,7 +141,8 @@ describe("create project form", () => {
       },
     });
     const { router } = renderApp("/projects/new", api);
-    await fill({ Projektname: "  Projekt Ost ", Kunde: "Beispiel GmbH", "TG-Beginn": "1.3.2027" });
+    await userEvent.click(await screen.findByLabelText("Transferagentur"));
+    await fill({ Projektname: "  Projekt Ost ", Kunde: "Beispiel GmbH" });
     await submit();
 
     expect(await screen.findByText("Projekt angelegt")).toBeInTheDocument();
@@ -173,8 +154,7 @@ describe("create project form", () => {
       body: {
         name: "Projekt Ost",
         customerName: "Beispiel GmbH",
-        type: "ta_tg",
-        defaultTgStart: "2027-03-01",
+        type: "ta_only",
       },
     });
   });

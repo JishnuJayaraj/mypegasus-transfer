@@ -8,7 +8,16 @@ export {
   laterIsoDate,
   type AsuDueDateParams,
 } from "./dates";
-export { CreateProjectInput, Project, ProjectType, projectRuleCodes } from "./project";
+export {
+  checkProjectUpdate,
+  CreateProjectInput,
+  mayCreateProject,
+  Project,
+  ProjectStatus,
+  ProjectType,
+  UpdateProjectInput,
+  type ProjectUpdateRefusal,
+} from "./project";
 export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole, StaffRole } from "./enums";
 export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
@@ -140,6 +149,8 @@ export {
   AuditEventType,
   EvidenceFingerprint,
   lifecycleEventTypes,
+  reservedEventTypes,
+  setupEventTypes,
   StatusField,
   statusFieldOfTrack,
 } from "./audit/events";

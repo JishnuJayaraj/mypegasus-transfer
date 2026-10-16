@@ -142,7 +142,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Projects, newest first (cursor pagination) */
+        /** The projects the user may see, newest first (cursor pagination) */
         get: {
             parameters: {
                 query?: {
@@ -186,7 +186,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a project */
+        /** Create a project; the creator becomes its PL */
         post: {
             parameters: {
                 query?: never;
@@ -315,7 +315,87 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Change name, customer or type (the type only while draft and unused, Q98) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateProjectInput"];
+                };
+            };
+            responses: {
+                /** @description The changed project */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Project"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/dev/staff-users": {
@@ -495,24 +575,14 @@ export interface components {
             name: string;
             customerName: string;
             type: components["schemas"]["ProjectType"];
+            status: components["schemas"]["ProjectStatus"];
+            /** @description The Project Agentur (the KuG-Agentur for ta_tg, Q90) */
+            projectAgenturKey: string | null;
             /**
-             * Format: date
-             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-             * @example 2027-03-01
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
              */
-            signingDeadline: string | null;
-            /**
-             * Format: date
-             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-             * @example 2027-03-01
-             */
-            defaultTgStart: string | null;
-            /**
-             * Format: date
-             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-             * @example 2027-03-01
-             */
-            defaultTgEnd: string | null;
+            activatedAt: string | null;
             /**
              * Format: date-time
              * @description UTC timestamp (ISO 8601)
@@ -529,28 +599,20 @@ export interface components {
          * @enum {string}
          */
         ProjectType: "ta_only" | "ta_tg";
+        /**
+         * @description draft: setup only, no lifecycle transitions. active: activated (one-way).
+         * @enum {string}
+         */
+        ProjectStatus: "draft" | "active";
         CreateProjectInput: {
             name: string;
             customerName: string;
             type: components["schemas"]["ProjectType"];
-            /**
-             * Format: date
-             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-             * @example 2027-03-01
-             */
-            signingDeadline?: string;
-            /**
-             * Format: date
-             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-             * @example 2027-03-01
-             */
-            defaultTgStart?: string;
-            /**
-             * Format: date
-             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-             * @example 2027-03-01
-             */
-            defaultTgEnd?: string;
+        };
+        UpdateProjectInput: {
+            name?: string;
+            customerName?: string;
+            type?: components["schemas"]["ProjectType"];
         };
     };
     responses: never;

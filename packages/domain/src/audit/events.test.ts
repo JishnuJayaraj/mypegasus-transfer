@@ -4,6 +4,8 @@ import {
   AuditEventType,
   EvidenceFingerprint,
   lifecycleEventTypes,
+  reservedEventTypes,
+  setupEventTypes,
   StatusField,
   statusFieldOfTrack,
 } from "./events";
@@ -55,11 +57,18 @@ describe("audit event types (plan 5.4)", () => {
       "config_override_changed",
       "review_recorded",
       "clarification_requested",
+      "project_created",
+      "project_changed",
     ]);
   });
 
   it("reserves the lifecycle and exception types for their own functions", () => {
     expect([...lifecycleEventTypes]).toEqual(AuditEventType.options.slice(0, 9));
+  });
+
+  it("reserves the setup types too (Slice 2, D2)", () => {
+    expect([...setupEventTypes]).toEqual(["project_created", "project_changed"]);
+    expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
   });
 
   it("names the status columns of the three tracks", () => {
@@ -278,6 +287,9 @@ describe("the other event types", () => {
     ["config_override_changed", { participationId: null, reasonCode: "relaxed", details: {} }],
     ["review_recorded", { reasonCode: "no_concern", details: { reviewedEventId: otherId } }],
     ["clarification_requested", { details: { reviewedEventId: otherId } }],
+    ["project_created", { participationId: null, details: { type: "ta_tg" } }],
+    ["project_changed", { participationId: null, details: { fields: ["name", "customerName"] } }],
+    ["project_changed", { participationId: null, details: { fields: ["type"], type: "ta_only" } }],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -334,6 +346,10 @@ describe("the other event types", () => {
     ],
     ["warning_confirmed", { reasonCode: "implausible_date", details: { comment: "ok" } }],
     ["review_recorded", { reasonCode: null, details: {} }],
+    ["project_created", { details: { type: "ta_tg" } }],
+    ["project_created", { participationId: null, details: { type: "ta_tg", name: "Werk Nord" } }],
+    ["project_changed", { participationId: null, details: { fields: [] } }],
+    ["project_changed", { participationId: null, details: { fields: ["signingDeadline"] } }],
   ])("reject an invalid %s", (type, fields) => {
     expect(AuditEvent.safeParse({ ...base, type, ...fields }).success).toBe(false);
   });

@@ -1,6 +1,6 @@
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink } from "@tanstack/react-router";
-import { Add, Button, formatDate, formatTimestamp, PageHeader, SimpleTable } from "@transfer/ui";
+import { Add, Button, formatTimestamp, PageHeader, SimpleTable } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { projectsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
@@ -25,12 +25,13 @@ function ProjectsPage() {
       name: project.name,
       customerName: project.customerName,
       type: t(`projects.types.${project.type}`),
-      signingDeadline: formatDate(project.signingDeadline),
+      status: t(`projects.statuses.${project.status}`),
       createdAt: formatTimestamp(project.createdAt),
     }));
-  const columns = (["name", "customerName", "type", "signingDeadline", "createdAt"] as const).map(
-    (key) => ({ key, header: t(`projects.columns.${key}`) }),
-  );
+  const columns = (["name", "customerName", "type", "status", "createdAt"] as const).map((key) => ({
+    key,
+    header: t(`projects.columns.${key}`),
+  }));
 
   return (
     <>

@@ -18,25 +18,24 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await chooseDevUser(page, "Petra Projektleitung · Projektleitung");
   await expect(page.getByRole("row")).toHaveCount(4);
   await expect(page.getByRole("cell", { name: "Beispiel Maschinenbau GmbH" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "15.02.2091" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Entwurf" }).first()).toBeVisible();
   await expectAccessible(page);
 
-  // AC-3: create a project; it shows at the top without a reload, dates as TT.MM.JJJJ.
+  // AC-3: create a project; it shows at the top without a reload, as a draft. Its contractual
+  // dates belong to its entry waves (Slice 2, Q79), not to this form.
   await page.getByRole("link", { name: "Projekt anlegen" }).click();
   await expect(page).toHaveURL(/\/projects\/new$/);
   await expectAccessible(page);
   await page.getByLabel("Projektname").fill("E2E Projekt Ost");
   await page.getByLabel("Kunde").fill("Beispiel Anlagenbau GmbH");
-  await page.getByLabel("Unterschriftsfrist").fill("15.04.2027");
-  await page.getByLabel("TG-Beginn").fill("01.05.2027");
-  await page.getByLabel("TG-Ende").fill("30.04.2028");
+  await expect(page.getByLabel("TG-Beginn")).toHaveCount(0);
   await page.getByRole("button", { name: "Projekt anlegen" }).click();
 
   await expect(page.getByText("Projekt angelegt")).toBeVisible();
   await expect(page).toHaveURL(/\/projects$/);
   const firstRow = page.getByRole("row").nth(1);
   await expect(firstRow).toContainText("E2E Projekt Ost");
-  await expect(firstRow).toContainText("15.04.2027");
+  await expect(firstRow).toContainText("Entwurf");
   await expect(page.getByRole("row")).toHaveCount(5);
 
   // AC-11: createdBy is the active user, and switching users changes /api/v1/me.
@@ -45,4 +44,6 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   expect((await me(page)).id).toBe(seedStaffUserIds.projectLead);
   await chooseDevUser(page, "Erika Musterfrau · Admin");
   await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.admin);
+  // Slice 2 (Q106): the admin, a global org role, sees every project's metadata.
+  await expect(page.getByRole("row")).toHaveCount(5);
 });

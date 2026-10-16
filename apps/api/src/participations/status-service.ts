@@ -40,6 +40,7 @@ import {
   type TransitionContext,
 } from "@transfer/domain";
 import type { SQL } from "drizzle-orm";
+import { functionRefusal } from "../database-errors";
 import { jobNames } from "../jobs/names";
 import { failClosedFacts, type GuardFactsProvider, type Transaction } from "./guard-facts";
 
@@ -107,9 +108,8 @@ const stale = new Set(["stale_status", "request_not_current"]);
 
 /** A refusal of a status function (`P0001`, the code is the message) as a service error. */
 function fromDatabase(error: unknown): unknown {
-  const cause = (error as { cause?: { code?: string; message?: string } }).cause;
-  if (cause?.code !== "P0001" || !cause.message) return error;
-  const { message: code } = cause;
+  const code = functionRefusal(error);
+  if (code === undefined) return error;
   const kind = notFound.has(code) ? "not_found" : stale.has(code) ? "stale" : "integrity";
   return new StatusServiceError(kind, code);
 }

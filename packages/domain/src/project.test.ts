@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { CreateProjectInput, ProjectType, projectRuleCodes } from "./project";
+import {
+  checkProjectUpdate,
+  CreateProjectInput,
+  mayCreateProject,
+  ProjectStatus,
+  ProjectType,
+  UpdateProjectInput,
+} from "./project";
 
 const validTaTg = {
   name: "Restrukturierung Werk Nord",
   customerName: "Beispiel Maschinenbau GmbH",
   type: "ta_tg",
-  signingDeadline: "2027-02-15",
-  defaultTgStart: "2027-03-01",
-  defaultTgEnd: "2028-02-29",
 } as const;
 
 const validTaOnly = {
@@ -23,14 +27,7 @@ function issuePaths(input: unknown): string[] {
   return result.error.issues.map((issue) => issue.path.join("."));
 }
 
-/** The `params.code` of all issues. */
-function issueCodes(input: unknown): (string | undefined)[] | undefined {
-  return CreateProjectInput.safeParse(input).error?.issues.map(
-    (issue) => (issue as { params?: { code?: string } }).params?.code,
-  );
-}
-
-describe("ProjectType", () => {
+describe("ProjectType and ProjectStatus", () => {
   it("has exactly the two project types", () => {
     expect(ProjectType.options).toEqual(["ta_only", "ta_tg"]);
   });
@@ -38,25 +35,15 @@ describe("ProjectType", () => {
   it("rejects unknown types", () => {
     expect(ProjectType.safeParse("tg_only").success).toBe(false);
   });
+
+  it("has exactly draft and active (Q98)", () => {
+    expect(ProjectStatus.options).toEqual(["draft", "active"]);
+  });
 });
 
 describe("CreateProjectInput", () => {
-  it("accepts a complete ta_tg project", () => {
-    expect(CreateProjectInput.parse(validTaTg)).toEqual(validTaTg);
-  });
-
-  it("accepts a ta_only project without dates", () => {
-    expect(CreateProjectInput.parse(validTaOnly)).toEqual(validTaOnly);
-  });
-
-  it("accepts a ta_tg project without any dates (they are required at activation, not at creation)", () => {
-    const { signingDeadline, defaultTgStart, defaultTgEnd, ...withoutDates } = validTaTg;
-    expect(CreateProjectInput.safeParse(withoutDates).success).toBe(true);
-  });
-
-  it("accepts a ta_tg project where TG start and end are the same day", () => {
-    const input = { ...validTaTg, defaultTgStart: "2027-03-01", defaultTgEnd: "2027-03-01" };
-    expect(CreateProjectInput.safeParse(input).success).toBe(true);
+  it.each([validTaTg, validTaOnly])("accepts a %s project", (input) => {
+    expect(CreateProjectInput.parse(input)).toEqual(input);
   });
 
   it("trims name and customer name", () => {
@@ -94,75 +81,97 @@ describe("CreateProjectInput", () => {
     });
   });
 
-  describe("dates", () => {
-    it.each(["signingDeadline", "defaultTgStart", "defaultTgEnd"])(
-      "rejects an impossible %s",
-      (field) => {
-        expect(issuePaths({ ...validTaTg, [field]: "2027-02-31" })).toContain(field);
-      },
-    );
-
-    it("rejects a TG end before the TG start, on the end date", () => {
-      const input = { ...validTaTg, defaultTgStart: "2027-03-01", defaultTgEnd: "2027-02-28" };
-      expect(issuePaths(input)).toEqual(["defaultTgEnd"]);
-    });
-
-    it("allows only one of TG start and TG end", () => {
-      const { defaultTgEnd, ...onlyStart } = validTaTg;
-      const { defaultTgStart, ...onlyEnd } = validTaTg;
-      expect(issuePaths(onlyStart)).toEqual([]);
-      expect(issuePaths(onlyEnd)).toEqual([]);
-    });
-  });
-
-  describe("ta_only projects have no DSV track and no beE", () => {
-    it.each(["signingDeadline", "defaultTgStart", "defaultTgEnd"])(
-      "rejects %s on a ta_only project",
-      (field) => {
-        expect(issuePaths({ ...validTaOnly, [field]: "2027-03-01" })).toEqual([field]);
-      },
-    );
-
-    it("reports every date set on a ta_only project", () => {
-      const input = {
-        ...validTaOnly,
-        signingDeadline: "2027-02-15",
-        defaultTgStart: "2027-03-01",
-        defaultTgEnd: "2028-02-29",
-      };
-      expect(issuePaths(input)).toEqual(["signingDeadline", "defaultTgStart", "defaultTgEnd"]);
-    });
-  });
-
-  it("reports field errors and cross-field errors together", () => {
-    const input = { ...validTaOnly, name: "", defaultTgStart: "2027-03-01" };
-    expect(issuePaths(input)).toEqual(["name", "defaultTgStart"]);
-  });
-
   it("does not echo the submitted values in issue messages", () => {
     const secretLookingName = "Zzyzx-Unverwechselbar-4711";
     const result = CreateProjectInput.safeParse({
       ...validTaOnly,
       name: secretLookingName.repeat(20),
       customerName: "",
-      defaultTgEnd: "2027-02-31",
     });
     expect(result.success).toBe(false);
     expect(JSON.stringify(result.error?.issues.map((i) => i.message))).not.toContain("Zzyzx");
-    expect(JSON.stringify(result.error?.issues.map((i) => i.message))).not.toContain("2027-02-31");
   });
 
-  it("carries stable codes for the cross-field rules", () => {
-    expect(issueCodes({ ...validTaTg, defaultTgEnd: "2027-01-01" })).toEqual([
-      projectRuleCodes.tgEndBeforeStart,
+  it("rejects unknown keys, the Slice 0 dates included, instead of dropping them (round 23)", () => {
+    const result = CreateProjectInput.safeParse({
+      ...validTaTg,
+      signingDeadline: "2027-02-15",
+      projectAgenturKey: "beispielstadt-nord",
+    });
+    expect(result.error?.issues.map((i) => [i.code, (i as { keys?: string[] }).keys])).toEqual([
+      ["unrecognized_keys", ["signingDeadline", "projectAgenturKey"]],
     ]);
-    expect(issueCodes({ ...validTaOnly, defaultTgStart: "2027-03-01" })).toEqual([
-      projectRuleCodes.notAllowedForTaOnly,
+  });
+});
+
+describe("UpdateProjectInput", () => {
+  it("accepts any non-empty subset of name, customer and type", () => {
+    expect(UpdateProjectInput.parse({ name: " Neu " })).toEqual({ name: "Neu" });
+    expect(UpdateProjectInput.parse({ type: "ta_only" })).toEqual({ type: "ta_only" });
+  });
+
+  it("refuses an empty change with a stable code", () => {
+    const result = UpdateProjectInput.safeParse({});
+    expect(result.error?.issues.map((i) => (i as { params?: object }).params)).toEqual([
+      { code: "nothing_to_change" },
     ]);
   });
 
-  it("strips unknown keys", () => {
-    const parsed = CreateProjectInput.parse({ ...validTaOnly, createdBy: "someone" });
-    expect(parsed).not.toHaveProperty("createdBy");
+  it("rejects unknown keys, e.g. a premature projectAgenturKey (round 23)", () => {
+    expect(UpdateProjectInput.safeParse({ projectAgenturKey: "beispielstadt-nord" }).success).toBe(
+      false,
+    );
+  });
+
+  it("validates the fields like creation", () => {
+    expect(UpdateProjectInput.safeParse({ name: "  " }).success).toBe(false);
+    expect(UpdateProjectInput.safeParse({ type: "tg_only" }).success).toBe(false);
+  });
+});
+
+describe("checkProjectUpdate (Q98, round 22)", () => {
+  const draft = { status: "draft", type: "ta_tg" } as const;
+  const unused = { participations: 0, waves: 0 };
+
+  it("allows a type change of a draft project without participations or waves", () => {
+    expect(checkProjectUpdate(draft, unused, { type: "ta_only" })).toEqual([]);
+  });
+
+  it("ignores changes that don't touch the type, or set it to the current one", () => {
+    const used = { participations: 3, waves: 1 };
+    const active = { status: "active", type: "ta_tg" } as const;
+    expect(checkProjectUpdate(active, used, {})).toEqual([]);
+    expect(checkProjectUpdate(active, used, { type: "ta_tg" })).toEqual([]);
+  });
+
+  it("refuses a type change once active, with participations or with waves, giving every reason", () => {
+    expect(checkProjectUpdate(draft, { participations: 1, waves: 0 }, { type: "ta_only" })).toEqual(
+      ["project_has_participations"],
+    );
+    expect(checkProjectUpdate(draft, { participations: 0, waves: 1 }, { type: "ta_only" })).toEqual(
+      ["project_has_waves"],
+    );
+    expect(
+      checkProjectUpdate(
+        { status: "active", type: "ta_only" },
+        { participations: 2, waves: 1 },
+        { type: "ta_tg" },
+      ),
+    ).toEqual(["project_not_draft", "project_has_participations", "project_has_waves"]);
+  });
+});
+
+describe("mayCreateProject (Q106)", () => {
+  it("allows only the flat project_lead role until Slice 3", () => {
+    expect(mayCreateProject("project_lead")).toBe(true);
+    for (const role of [
+      "admin",
+      "regional_admin",
+      "consultant",
+      "back_office",
+      "regional_operations_manager",
+    ]) {
+      expect(mayCreateProject(role)).toBe(false);
+    }
   });
 });

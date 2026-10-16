@@ -8,6 +8,8 @@ import {
   ProfilingExceptionStatus,
   ProfilingExceptionSupersededReason,
   ProfilingStatus,
+  ProjectRole,
+  ProjectStatus,
   ProjectType,
   StaffRole,
   StatusField,
@@ -42,6 +44,8 @@ const values = <T extends string>(e: { options: T[] }) => e.options as [T, ...T[
 
 export const staffRole = pgEnum("staff_role", values(StaffRole));
 export const projectType = pgEnum("project_type", values(ProjectType));
+export const projectStatus = pgEnum("project_status", values(ProjectStatus));
+export const projectRole = pgEnum("project_role", values(ProjectRole));
 
 /** Synthetic staff users only in Slice 0 (the dev session stub). Never hard-deleted (Q59). */
 export const staffUser = pgTable("staff_user", {
@@ -52,7 +56,10 @@ export const staffUser = pgTable("staff_user", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-/** The root of project scoping, so it has no project_id itself (ADR-0002). */
+/**
+ * The root of project scoping, so it has no project_id itself (ADR-0002). Written only by the
+ * setup functions (Slice 2, D2); `transfer_app` only reads it.
+ */
 export const project = pgTable(
   "project",
   {
@@ -60,25 +67,51 @@ export const project = pgTable(
     name: text("name").notNull(),
     customerName: text("customer_name").notNull(),
     type: projectType("type").notNull(),
-    // Legal dates: `date` columns as ISO strings, so no time zone can shift them.
-    signingDeadline: date("signing_deadline", { mode: "string" }),
-    defaultTgStart: date("default_tg_start", { mode: "string" }),
-    defaultTgEnd: date("default_tg_end", { mode: "string" }),
+    // The contractual dates live on the entry waves (Q79); Slice 2 dropped the Slice 0 columns.
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .notNull()
       .defaultNow(),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => staffUser.id),
+    /** Draft until activated (Q98); one-way in Slice 2. Written only by the setup functions. */
+    status: projectStatus("status").notNull().default("draft"),
+    /** The Project Agentur (Q90); chosen with its pinned template (PR 2c-2). */
+    projectAgenturKey: text("project_agentur_key"),
+    activatedAt: timestamp("activated_at", { withTimezone: true, mode: "string" }),
+    activatedBy: uuid("activated_by").references(() => staffUser.id),
   },
   (t) => [
-    check("project_tg_dates_ordered", sql`${t.defaultTgStart} <= ${t.defaultTgEnd}`),
-    // A ta_only project has no DSV track and no beE (process-and-lifecycle.md).
     check(
-      "project_ta_only_has_no_tg_dates",
-      sql`${t.type} <> 'ta_only' or (${t.signingDeadline} is null and ${t.defaultTgStart} is null and ${t.defaultTgEnd} is null)`,
+      "project_activated",
+      sql`(${t.status} = 'active') = (${t.activatedAt} is not null) and (${t.activatedAt} is null) = (${t.activatedBy} is null)`,
     ),
+    check("project_agentur_key_format", sql`${t.projectAgenturKey} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
     index("project_created_at_id_idx").on(t.createdAt.desc(), t.id.desc()),
+  ],
+);
+
+/**
+ * Project roles of staff (D6, Q61): zero or more per person and project; permissions are their
+ * union. Filled by project creation and the seed; managing members is Slice 3 (plan D4).
+ */
+export const projectMembership = pgTable(
+  "project_membership",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    staffUserId: uuid("staff_user_id")
+      .notNull()
+      .references(() => staffUser.id),
+    role: projectRole("role").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "project_membership_pkey", columns: [t.projectId, t.staffUserId, t.role] }),
+    index("project_membership_staff_user_idx").on(t.staffUserId),
   ],
 );
 
@@ -487,6 +520,7 @@ export const jobRun = pgTable(
 export const tables = [
   staffUser,
   project,
+  projectMembership,
   projectEntryWave,
   participation,
   profilingExceptionRequest,

@@ -125,38 +125,23 @@
           "type": {
             "$ref": "#/components/schemas/ProjectType"
           },
-          "signingDeadline": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
+          "status": {
+            "$ref": "#/components/schemas/ProjectStatus"
           },
-          "defaultTgStart": {
+          "projectAgenturKey": {
             "type": [
               "string",
               "null"
             ],
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
+            "description": "The Project Agentur (the KuG-Agentur for ta_tg, Q90)"
           },
-          "defaultTgEnd": {
+          "activatedAt": {
             "type": [
               "string",
               "null"
             ],
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
           },
           "createdAt": {
             "type": "string",
@@ -174,9 +159,9 @@
           "name",
           "customerName",
           "type",
-          "signingDeadline",
-          "defaultTgStart",
-          "defaultTgEnd",
+          "status",
+          "projectAgenturKey",
+          "activatedAt",
           "createdAt",
           "createdBy"
         ]
@@ -188,6 +173,14 @@
           "ta_tg"
         ],
         "description": "ta_only: Transferagentur only. ta_tg: Transferagentur and Transfergesellschaft."
+      },
+      "ProjectStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "active"
+        ],
+        "description": "draft: setup only, no lifecycle transitions. active: activated (one-way)."
       },
       "CreateProjectInput": {
         "type": "object",
@@ -204,37 +197,33 @@
           },
           "type": {
             "$ref": "#/components/schemas/ProjectType"
-          },
-          "signingDeadline": {
-            "type": "string",
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
-          },
-          "defaultTgStart": {
-            "type": "string",
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
-          },
-          "defaultTgEnd": {
-            "type": "string",
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
           }
         },
         "required": [
           "name",
           "customerName",
           "type"
-        ]
+        ],
+        "additionalProperties": false
+      },
+      "UpdateProjectInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "customerName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "type": {
+            "$ref": "#/components/schemas/ProjectType"
+          }
+        },
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -355,7 +344,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Projects, newest first (cursor pagination)",
+        "summary": "The projects the user may see, newest first (cursor pagination)",
         "parameters": [
           {
             "schema": {
@@ -416,7 +405,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Create a project",
+        "summary": "Create a project; the creator becomes its PL",
         "requestBody": {
           "required": true,
           "content": {
@@ -531,6 +520,105 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Change name, customer or type (the type only while draft and unused, Q98)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed project",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

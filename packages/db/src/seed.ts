@@ -1,5 +1,6 @@
+import { sql } from "drizzle-orm";
 import type { Database } from "./client";
-import { project, projectEntryWave, staffUser } from "./schema";
+import { project, projectEntryWave, projectMembership, staffUser } from "./schema";
 
 // Synthetic data only (CLAUDE.md rule 1): obviously fictional names, emails at example.org.
 // Fixed UUIDs make the seed idempotent.
@@ -20,7 +21,6 @@ export const seedProjectIds = {
 } as const;
 
 type NewStaffUser = typeof staffUser.$inferInsert;
-type NewProject = typeof project.$inferInsert;
 
 const staffUsers: NewStaffUser[] = (
   [
@@ -37,31 +37,41 @@ const staffUsers: NewStaffUser[] = (
   ] satisfies Omit<NewStaffUser, "email">[]
 ).map((user) => ({ ...user, email: `${user.role.replaceAll("_", "-")}@example.org` }));
 
-const projects: NewProject[] = (
-  [
-    {
-      id: seedProjectIds.werkNord,
-      name: "Restrukturierung Werk Nord",
-      customerName: "Beispiel Maschinenbau GmbH",
-      type: "ta_tg",
-      signingDeadline: "2091-02-15",
-      defaultTgStart: "2091-03-01",
-      defaultTgEnd: "2092-02-29",
-    },
-    {
-      id: seedProjectIds.lagerSued,
-      name: "Standortschließung Lager Süd",
-      customerName: "Musterfirma Logistik AG",
-      type: "ta_tg",
-    },
-    {
-      id: seedProjectIds.verwaltung,
-      name: "Transferagentur Verwaltung",
-      customerName: "Fiktiv Versicherungen KG",
-      type: "ta_only",
-    },
-  ] satisfies Omit<NewProject, "createdBy">[]
-).map((p) => ({ ...p, createdBy: seedStaffUserIds.projectLead }));
+/** Created through `create_project` by the seeded PL (round 23), like any other project. */
+const projects = [
+  {
+    id: seedProjectIds.werkNord,
+    name: "Restrukturierung Werk Nord",
+    customerName: "Beispiel Maschinenbau GmbH",
+    type: "ta_tg",
+  },
+  {
+    id: seedProjectIds.lagerSued,
+    name: "Standortschließung Lager Süd",
+    customerName: "Musterfirma Logistik AG",
+    type: "ta_tg",
+  },
+  {
+    id: seedProjectIds.verwaltung,
+    name: "Transferagentur Verwaltung",
+    customerName: "Fiktiv Versicherungen KG",
+    type: "ta_only",
+  },
+] as const satisfies Pick<typeof project.$inferInsert, "id" | "name" | "customerName" | "type">[];
+
+/**
+ * Memberships (D4): `create_project` makes the seeded PL a member of each seeded project; the
+ * consultant and back office hold their role in every one too. Members are managed in Slice 3, so
+ * these two are seed fixtures written directly. Org roles need none.
+ */
+export const seedMemberships = Object.values(seedProjectIds).flatMap((projectId) =>
+  (
+    [
+      [seedStaffUserIds.consultant, "consultant"],
+      [seedStaffUserIds.backOffice, "back_office"],
+    ] as const
+  ).map(([staffUserId, role]) => ({ projectId, staffUserId, role })),
+) satisfies (typeof projectMembership.$inferInsert)[];
 
 /**
  * Werk Nord's two entry waves (Q79, plan 5.10): W1 matches the project's Slice 0 dates, W2 is a
@@ -91,14 +101,24 @@ export const seedWaves = [
 ] as const satisfies (typeof projectEntryWave.$inferInsert)[];
 
 /**
- * Inserts the synthetic staff users, projects and waves; existing staff users and projects are
+ * Inserts the synthetic staff users, projects, memberships and waves; existing rows are
  * left alone. A wave with the same code (e.g. the W1 the Slice 1 migration made from the Slice 0
  * dates) gets the seed's dates, so the participation seed finds a usable cutoff.
  */
 export async function seed(db: Database): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.insert(staffUser).values(staffUsers).onConflictDoNothing();
-    await tx.insert(project).values(projects).onConflictDoNothing();
+    // Through the audited creation function, so every seeded project has `project_created`.
+    const existing = new Set((await tx.select({ id: project.id }).from(project)).map((p) => p.id));
+    for (const p of projects.filter(({ id }) => !existing.has(id))) {
+      await tx.execute(
+        sql`select create_project(p_name => ${p.name}, p_customer_name => ${p.customerName},
+          p_type => ${p.type}::project_type, p_id => ${p.id}::uuid,
+          p_context => row('user'::actor_type, ${seedStaffUserIds.projectLead}::uuid, null::uuid,
+            null::text, null::uuid, null::text, null::text)::audit_context)`,
+      );
+    }
+    await tx.insert(projectMembership).values(seedMemberships).onConflictDoNothing();
     for (const wave of seedWaves) {
       const { id: _id, projectId: _projectId, code: _code, ...dates } = wave;
       await tx
