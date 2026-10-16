@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DataClass, OrgRole, ProjectRole } from "../enums";
+import type { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole } from "../enums";
 import type { AccessCategory } from "../fields/catalog";
 
 /** Document types (round 11, Q87 B; the first six are the completeness types of plan 5.5). */
@@ -39,7 +39,7 @@ export type DocumentTypeEntry = {
    * Of the raw file; periods `unset` until the DPO confirms them (Slice 7, ADR-0008). After
    * stage-one deletion only the minimum derived evidence facts stay (round 12).
    */
-  retentionClass: "evidence_set" | "personnel_file" | "participation_record";
+  retentionClass: ParticipantRetentionClass;
   /** Signed or submitted: never changed; a correction is a new version. */
   signed: boolean;
   /** Consultants only for assigned participations; `participant`: their own, in the portal. */

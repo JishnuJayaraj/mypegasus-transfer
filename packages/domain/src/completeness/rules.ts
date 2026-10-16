@@ -2,12 +2,20 @@ import { z } from "zod";
 import { DocumentType } from "../documents/catalog";
 import { fieldCatalog } from "../fields/catalog";
 import { Step } from "../lifecycle/enums";
+import { ProjectType } from "../project";
 
 /** Why a rule exists (Q75): only an `operational_default` may be relaxed by a project override. */
 export const RuleBasis = z.enum(["statutory", "ba_form", "operational_default"]);
 export type RuleBasis = z.infer<typeof RuleBasis>;
 
-const base = { id: z.string().min(1), basis: RuleBasis.optional() };
+/** The project types a rule applies to (Q89); absent means every project type. */
+const projectTypes = z
+  .array(ProjectType)
+  .min(1)
+  .refine((types) => new Set(types).size === types.length)
+  .optional();
+
+const base = { id: z.string().min(1), basis: RuleBasis.optional(), projectTypes };
 const fieldKey = z.string().min(1);
 
 /**
@@ -38,6 +46,10 @@ export type RulesByStep = Partial<Record<Step, readonly CompletenessRule[]>>;
 
 /** Statutory, BA-form and unclassified rules are locked (Q75). */
 export const isLocked = (rule: CompletenessRule) => rule.basis !== "operational_default";
+
+/** A rule for other project types is skipped: no missing item, no reminder (Q89). */
+export const ruleAppliesTo = (rule: CompletenessRule, projectType: ProjectType) =>
+  !rule.projectTypes || rule.projectTypes.includes(projectType);
 
 export type RuleIssue = {
   code:

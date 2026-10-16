@@ -8,7 +8,7 @@ import {
 } from "./engine";
 import type { CompletenessRule, RulesByStep } from "./rules";
 
-const noFacts: CompletenessFacts = { fields: {}, documents: {} };
+const noFacts: CompletenessFacts = { projectType: "ta_tg", fields: {}, documents: {} };
 
 const missingItem = (step: string, ruleId: string, kind: string, key: string, reason: string) => ({
   step,
@@ -156,6 +156,7 @@ describe("evaluateCompleteness", () => {
 
   it("reports one item per failed rule, in rule order, with step, rule id, kind and key", () => {
     const facts: CompletenessFacts = {
+      projectType: "ta_tg",
       fields: { healthRestrictions: "x" },
       documents: { asu_proof: ["uploaded"], dsv_signed_scan: ["accepted"] },
     };
@@ -176,6 +177,7 @@ describe("evaluateCompleteness", () => {
   it("carries keys, never values", () => {
     const secret = "SYNTHETIC-SECRET";
     const facts: CompletenessFacts = {
+      projectType: "ta_tg",
       fields: { lastName: ` ${secret} `, healthRestrictions: [secret], maritalStatus: secret },
       documents: { asu_proof: ["rejected"] },
     };
@@ -197,5 +199,36 @@ describe("evaluateCompleteness", () => {
     for (const item of items) {
       expect(Object.keys(item).toSorted()).toEqual(["key", "kind", "reason", "ruleId", "step"]);
     }
+  });
+});
+
+describe("project-type applicability (Q89)", () => {
+  const rules: RulesByStep = {
+    data_collection: [
+      { id: "all", kind: "required", field: "lastName" },
+      { id: "both", kind: "required", field: "firstName", projectTypes: ["ta_only", "ta_tg"] },
+    ],
+    dsv: [
+      {
+        id: "tg",
+        kind: "documentPresent",
+        documentType: "dsv_signed_scan",
+        projectTypes: ["ta_tg"],
+      },
+    ],
+  };
+  const ids = (projectType: CompletenessFacts["projectType"]) =>
+    Object.values(evaluateCompleteness(rules, { ...noFacts, projectType }).byStep)
+      .flatMap((step) => step.missing)
+      .map((item) => item.ruleId);
+
+  it("applies a rule without projectTypes, or listing the type", () => {
+    expect(ids("ta_tg")).toEqual(["all", "both", "tg"]);
+  });
+
+  it("skips a rule for another project type: no item, the step is complete", () => {
+    expect(ids("ta_only")).toEqual(["all", "both"]);
+    const { byStep } = evaluateCompleteness(rules, { ...noFacts, projectType: "ta_only" });
+    expect(byStep.dsv).toEqual({ complete: true, missing: [] });
   });
 });

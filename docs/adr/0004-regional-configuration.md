@@ -71,3 +71,29 @@ Two details for PR 1f (`field-schema.ts`):
 - `pattern` is compiled **without the `u` flag** (like a hand-written `z.string().regex()`), so
   `\p{…}` classes don't work. The profile should reject patterns that need the flag.
 - String lengths count code points, as JSON Schema requires (a hand-written `.max()` does too).
+
+## Amendment 2026-10-16: the configuration model (Slice 1, PR 1f-1)
+
+- **One Zod-authored model, exported as JSON Schema.** Base defaults, regional templates and
+  project overrides are layers of one schema (`packages/config/src/model.ts`), exported by
+  `pnpm generate` to the committed `packages/config/schema/regional-template.schema.json`
+  (2020-12) and drift-checked in CI. Zod is the authority: checks JSON Schema can't express
+  (the custom-field profile's keyword combinations, rule fields against the field catalog) run
+  in `parseLayer`. No `ajv`.
+- **Nationwide vs. regional settings.** Nationwide settings (ASU formula, profiling-exception
+  deadline, Kug 200b follow-up, TL 407 escalation, cutoff warning and reminder) exist only in
+  the base defaults and equal what the domain applies. Regional settings (channels,
+  `originalRequired`, `leadTimeDays`, `rejectsOutdatedFormVersions`) exist only in templates
+  and in Agentur-scoped temporary settings of an override; the base defaults have none
+  (round 8), and an override has no project-wide settings.
+- **Temporary Agentur settings** carry a source code, the confirming staff user and the
+  confirmation date.
+- **Rules reuse the domain's closed `CompletenessRule` schema** with its basis (Q75) and its
+  optional `projectTypes` (Q89, round 14: absent = every type; completeness skips a rule for
+  another type, so it is never missing or reminded). A relaxation names an
+  `operational_default` rule, a reason code (a controlled list from Slice 2) and its approval.
+- **Custom fields use a restricted JSON Schema profile** compiled with `z.fromJSONSchema`
+  (spike S1): only `confidential` or `internal` data, a participant retention class and a label;
+  everything else is rejected before compiling.
+- The resolver, its provenance and blockers, pinned-version loading and the sample templates
+  follow in PR 1f-2 and amend this ADR then.

@@ -24,3 +24,14 @@ export type OrgRole = z.infer<typeof OrgRole>;
 /** Project roles: zero or more per person and project; permissions are the union (D6, Q61). */
 export const ProjectRole = z.enum(["project_lead", "consultant", "back_office"]);
 export type ProjectRole = z.infer<typeof ProjectRole>;
+
+/**
+ * Retention classes of participant data items and documents (ADR-0008): retention is per item,
+ * never per person. Periods stay `unset` until the DPO confirms them (Slice 7).
+ */
+export const ParticipantRetentionClass = z.enum([
+  "participation_record",
+  "personnel_file",
+  "evidence_set",
+]);
+export type ParticipantRetentionClass = z.infer<typeof ParticipantRetentionClass>;

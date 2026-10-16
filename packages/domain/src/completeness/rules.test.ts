@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DocumentType } from "../documents/catalog";
-import { isLocked, validateRules, type CompletenessRule } from "./rules";
+import { isLocked, ruleAppliesTo, validateRules, type CompletenessRule } from "./rules";
 
 const custom = { customFields: new Set(["custom.beispiel_nachweis_nr"]) };
 
@@ -160,5 +160,38 @@ describe("isLocked (Q75)", () => {
     ["operational_default", "operational_default", false],
   ] as const)("%s → locked %s", (_, basis, locked) => {
     expect(isLocked(withBasis(basis))).toBe(locked);
+  });
+});
+
+const rule = (projectTypes?: unknown) => ({
+  data_collection: [{ id: "r", ...required, ...(projectTypes !== undefined && { projectTypes }) }],
+});
+
+describe("project-type applicability (Q89)", () => {
+  it("accepts a non-empty list of project types", () => {
+    expect(issues(rule(["ta_tg"]))).toEqual([]);
+    expect(issues(rule(["ta_only", "ta_tg"]))).toEqual([]);
+  });
+
+  it.each<[unknown, (string | number)[]]>([
+    [[], []],
+    [["ta_tg", "ta_tg"], []],
+    ["ta_tg", []],
+    [["tg"], [0]],
+  ])("rejects %j", (projectTypes, rest) => {
+    expect(issues(rule(projectTypes))).toEqual([
+      { code: "invalid_rule", path: ["data_collection", 0, "projectTypes", ...rest] },
+    ]);
+  });
+
+  it("absence means every project type", () => {
+    const [all, tgOnly] = [{}, { projectTypes: ["ta_tg"] }].map(
+      (extra) => ({ id: "r", ...required, ...extra }) as CompletenessRule,
+    ) as [CompletenessRule, CompletenessRule];
+    expect([ruleAppliesTo(all, "ta_only"), ruleAppliesTo(all, "ta_tg")]).toEqual([true, true]);
+    expect([ruleAppliesTo(tgOnly, "ta_only"), ruleAppliesTo(tgOnly, "ta_tg")]).toEqual([
+      false,
+      true,
+    ]);
   });
 });

@@ -173,6 +173,18 @@ roles in the generated transitions table, the `append_evidence_correction` permi
 round 12 corrections to `decideAccess` (evidence-set intersection, audit phase). 1g depends on
 1d-2.
 
+**1f is split** the same way: **1f-1** the Zod-authored layer model (base defaults, regional
+template, project override) with nationwide vs. regional settings, Agentur-scoped temporary
+settings and relaxations as shapes, the JSON Schema export (`pnpm generate`, drift-checked), the
+field-schema profile, per-layer validation (`parseLayer`, reusing the domain's
+`CompletenessRule` and `validateRules`), `base-defaults.json` and the 100 % threshold on
+`packages/config/src/**` (AC-31 for the base defaults, AC-34, the per-layer parts of AC-32 and
+AC-33); **1f-2** the two-level resolver with provenance (merge by id, templates only adding,
+relaxing only `operational_default` rules, no redefined fields, Agentur-scoped settings applied
+only to their Agentur), the blockers, `projectActivationBlockers`, pinned-version loading
+(`load.ts`), the validator cache per (template id, version), the two sample templates (D8) and
+the resolver parts of the docs (AC-31 for the samples, AC-32, AC-33, AC-35).
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -193,7 +205,7 @@ packages/
     schema/regional-template.schema.json   generated from the Zod model, committed
     templates/beispielstadt-nord/1.json    sample (D8)
     templates/beispielstadt-sued/1.json    sample (D8)
-    src/model.ts · field-schema.ts · resolve.ts · load.ts
+    src/model.ts · field-schema.ts · validate.ts · json-schema.ts · resolve.ts · load.ts
   adapters/                          NEW @transfer/adapters: src/clock/ (D9)
   db/                                + waves, participation, audit, edges, job_run, functions, grants
 apps/api/src/
@@ -585,13 +597,13 @@ Minimal rule language (ADR-0004), no scripting; rules are data validated by a cl
 
 ```ts
 type RuleBasis = "statutory" | "ba_form" | "operational_default";   // Q75
-type CompletenessRule = { id: string; basis?: RuleBasis } & (
+type CompletenessRule = { id: string; basis?: RuleBasis; projectTypes?: ProjectType[] } & (
   | { kind: "required"; field: FieldKey }
   | { kind: "requiredIf"; field: FieldKey;
       when: { field: FieldKey; equals: string | number | boolean } | { field: FieldKey; exists: true } }
   | { kind: "documentPresent"; documentType: DocumentType; accepted?: boolean });
 
-evaluateCompleteness(rulesByStep, facts) → { byStep: Record<Step, { complete: boolean; missing: MissingItem[] }> }
+evaluateCompleteness(rulesByStep, { projectType, fields, documents }) → { byStep: Record<Step, { complete: boolean; missing: MissingItem[] }> }
 type MissingItem = { step: Step; ruleId: string; kind: "field" | "document"; key: string;
                      reason: "missing" | "not_accepted" };
 ```
@@ -932,6 +944,64 @@ resolveForProject({ base, templatesByAgentur, override, kugAgenturKey })
 TL 407's required fields come with the form registry in Slice 6 (`ba_form`, from the blank
 form's `*` markers). The basis of each base rule is reviewed in PR 1f.
 
+Built in PR 1f-1 (`packages/config`, 100 % covered): `model.ts` (`ConfigLayer`, a discriminated
+union of `BaseDefaults`, `RegionalTemplate` and `ProjectOverride`, strict objects at every
+level; `RegionalSettings`, `NationwideSettings`, `TemporaryAgenturSetting`, `RuleRelaxation`,
+the channel enums), `json-schema.ts` (the committed
+`schema/regional-template.schema.json`), `field-schema.ts` (`FieldSchema`,
+`compileFieldSchema`) and `validate.ts`: `parseLayer(input, { inheritedFields })` → the layer or
+every issue with its path (`invalid`, `invalid_date`, `unknown_key`, `regional_setting_in_base`,
+`nationwide_setting`, `project_wide_setting`, `template_id_mismatch`, `field_redefined`, the
+profile's codes and the rule codes of 5.5). Base defaults have a `nationwide` block and no
+`settings`; templates have `settings` and no `nationwide`; overrides have `agenturSettings` and
+neither. `base-defaults.json` holds:
+
+| Rule id | Step | Rule | Basis | Project types |
+|---|---|---|---|---|
+| `base-asu-proof` | `asu_registration` | `asu_proof` document, accepted | `statutory` (§111(4) Nr. 4) | `ta_tg` |
+| `base-import-<field>` | `data_collection` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | `operational_default` (PRD F2) | all |
+| `base-dsv-signed-scan` | `dsv` | `dsv_signed_scan`, accepted | `statutory` (§623 BGB) | `ta_tg` |
+
+**Project types** (Q89, [round 14](../decisions/2026-10-16-answers-round-14.md)): every
+`CompletenessRule` may carry `projectTypes` (non-empty, no duplicates; absent = every type).
+`evaluateCompleteness` takes the `projectType` in its facts (required) and skips a rule for
+another type: no missing item, no reminder, the step can be complete. `ruleAppliesTo` gives
+displays and reminders the same answer. TL 407's rules (Slice 6) apply to both types, subject to
+the configured or assigned profiling activity.
+
+**Kug 200b rules are deferred to Slice 6** (round 14): the RV-Nummer and the accepted signed
+scan apply only to `ta_tg` participations whose ASU uses `kug_200b`. Slice 6 brings the ASU
+record (channel) and the Kug 200b offer with its outcome (offered for the profile-access consent
+even after `online_self` or `in_person`, and the participant may decline); a declined offer is
+an outcome, never a missing scan. A scan counts as accepted for fields 16 and 17 only when the
+review checked both declarations and the handwritten signature.
+
+The nine readings taken in PR 1f-1 were answered in
+[round 14](../decisions/2026-10-16-answers-round-14.md) and are reflected here:
+- **No regional value in the base defaults**, the ASU `defaultChannel` included; an unset
+  default channel blocks nothing (any channel with proof counts, Q55), while Q76's KuG-Agentur
+  blocker stands. The base defaults declare no custom fields.
+- **Nationwide settings equal the domain constants** (a test keeps `asuDueDateDefaults`,
+  `profilingExceptionDeadlineMonths`, `cutoffWarningDays`, `cutoffFinalReminderDays` in step);
+  the Kug 200b follow-up and the TL 407 escalation stay configuration-only until Slice 5.
+- **Base rules:** an accepted `asu_proof` stands for the proof of any valid channel, including a
+  structured PL attestation of the BA-Kundennummer; it never needs a fabricated upload (Slice 6's
+  ASU record supplies the state). "Austrittsdatum" is `oldEmploymentEndDate`. Document rules need
+  `accepted: true`. The DSV rule stays locked. Relaxing an import rule never relaxes a form
+  requirement on the same field: TL 407's rules get their own ids.
+- **Custom fields:** keys `custom.` plus lower snake_case (at most 63 characters after the
+  prefix); `x-dataClass`, `x-retentionClass` (a `ParticipantRetentionClass`) and `x-label.de`
+  required; a field needs `type`, `enum` or `const`; keywords fit the type; a free string needs
+  `maxLength`; bounds ordered; `\p{…}`, `\P{…}` and `\u{…}` refused (S1).
+- **A template's `id` is its `agenturKey`** (one template per Agentur and version).
+- **Temporary-setting sources** `phone_call_agentur`, `email_agentur`, `letter_agentur`,
+  `meeting_agentur` (provisional, enough for Slice 1). A relaxation's `reasonCode` is an open
+  snake_case code **only until Slice 2**, which validates it against a controlled list before
+  overrides can be activated; no free text in `reasonCode`.
+- **Help texts:** keys `<scope>.<key>`, `de` and `en`, at most 2000 characters.
+- **The JSON Schema describes the structure; `parseLayer`** does the cross-field, catalog and
+  template-identity checks; both stay covered by drift and validation tests.
+
 ### 5.8 `packages/adapters`: `Clock`
 
 ```ts
@@ -1184,7 +1254,8 @@ exceptions), AC-28, AC-30 (roles in the transitions table). AC-29 was met in 1a.
 | Customer-notification flag after withdrawal from `dsv_signed` | Slice 7 |
 | `self_registered` creation and the 30-day rejection job | Slice 4c |
 | Sending reminders, "what's missing" UI, dashboards, escalations | Slice 5 (they call `evaluateCompleteness`, `lifecycleFlags`, `transferKugEligibility`) |
-| TL 407 required-field list | Slice 6 (ADR-0009) |
+| TL 407 required-field list; the Kug 200b RV-Nummer and signed-scan rules on the `kug_200b` route, with the Kug 200b offer and its outcome (round 14) | Slice 6 (ADR-0009) |
+| A controlled list of relaxation `reasonCode`s, validated before overrides can be activated (round 14) | Slice 2 |
 | Retention job, pseudonymisation role, retention periods in executable config | Slice 7, after the DPO confirms (Q3, Q77) |
 | Row-level security | pre-pilot gate (ADR-0005) |
 | Other adapter interfaces, separate worker, admin UI for templates | their slices (D9), Slice 9 (D7), later (ADR-0004) |

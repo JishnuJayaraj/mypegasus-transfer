@@ -1,6 +1,7 @@
 # Regional variation (Agentur-specific requirements)
 
-> Status: updated 2026-10-15 from the decisions log. Items marked *(provisional, Qnn)* rest on
+> Status: updated 2026-10-15 from the decisions log; the configuration model on 2026-10-16
+> (Slice 1, PR 1f-1). Items marked *(provisional, Qnn)* rest on
 > answers that are not yet confirmed.
 
 BA requirements are mostly the same everywhere. Each Agentur für Arbeit has small differences,
@@ -41,27 +42,56 @@ Deadlines are contractual, never regional BA rules.
 
 ## Configuration model
 
+Base defaults, regional templates and project overrides are **layers of one schema**, authored
+in Zod (`packages/config/src/model.ts`) and exported by `pnpm generate` to the committed JSON
+Schema `packages/config/schema/regional-template.schema.json` (2020-12, drift-checked in CI).
+Every object is closed: an unknown key is an error.
+
 ```
-RegionalTemplate (e.g. "Agentur Nürnberg", version 3)
-  ├─ agenturId
-  ├─ steps (keys = Step enum from packages/domain):
-  │    asu_registration:   defaultChannel, batchSubmissionChannel
-  │    data_collection:    requiredFields[], requiredDocuments[], fieldSchemas (JSON Schema)
-  │    profiling:          requiredFields[] (beyond the TL 407 required fields)
-  │    agentur_submission: submissionChannel, originalRequired, leadTimeDays,
-  │                        rejectsOutdatedFormVersions
-  │    project_checklist:  (KuG-Agentur only) items, deadlines
-  ├─ reminderRules[]
-  └─ helpTexts{}  (per language)
+ConfigLayer (schemaVersion 1), one of:
+
+BaseDefaults        kind "base_defaults", version          packages/domain/config/base-defaults.json
+  ├─ nationwide       asuDueDate { monthsBeforeEnd, daysAfterKnowledge }, profilingExceptionDeadlineMonths,
+  │                   kug200bConfirmationFollowUpDays, tl407EscalationDaysAfterTgStart,
+  │                   cutoffWarningDays, cutoffFinalReminderDays       (all required, nowhere else)
+  ├─ rules            { <Step>: CompletenessRule[] }   basis (Q75), projectTypes (Q89)
+  └─ helpTexts        { de, en: { "<scope>.<key>": text } }
+                      no `settings` (no regional default, round 8), no custom fields
+
+RegionalTemplate    kind "regional_template", id = agenturKey, version, label { de, en? }, sample?
+  ├─ settings         asu_registration:   defaultChannel, batchSubmissionChannel
+  │                   agentur_submission: submissionChannel, originalRequired, leadTimeDays,
+  │                                       rejectsOutdatedFormVersions
+  ├─ fields           { "custom.<key>": field schema (profile below) }
+  ├─ rules            additions only
+  └─ helpTexts
+
+ProjectOverride     kind "project_override"
+  ├─ agenturSettings  { <agenturKey>: { settings, source, confirmedBy, confirmedOn } }
+  ├─ fields, rules    additions
+  ├─ relax            [ { ruleId, reasonCode, approvedBy, approvedOn } ]  operational_default only
+  └─ helpTexts        no project-wide `settings`, no `nationwide`
 
 Project
-  └─ kugAgenturId
-  └─ appliedTemplates: { agenturId → RegionalTemplate@version }  (snapshotted)
-  └─ projectOverrides: partial config (audited)
-
+  └─ kugAgenturKey, the snapshotted template versions per Agentur and the override (Slice 2)
 Participation
-  └─ placementAgenturId   (from place of residence)
+  └─ placementAgenturKey   (from place of residence)
 ```
+
+- **Channel values** are enums in the schema: ASU `kug_200b` / `online_self` / `in_person`;
+  Kug 200b batch `paper_courier` / `paper_post` / `scan_email` / `upload`; TL 407 `email` /
+  `upload` / `paper_original`.
+- **Custom fields** use a restricted JSON Schema profile, compiled with `z.fromJSONSchema` (spike
+  S1, ADR-0004): `type` (`string`, `integer`, `number`, `boolean`), `enum`, `const`,
+  `format: "date"`, `minLength`/`maxLength` (≤ 2000), `pattern` (≤ 200 characters, no `u`-flag
+  syntax), `minimum`/`maximum`, `title`, `description`, plus the required `x-dataClass` (only
+  `confidential` or `internal`: special-category and highly confidential data needs encrypted
+  columns, never `jsonb`), `x-retentionClass` (a participant retention class) and `x-label`.
+  Keys start with `custom.`. Everything else is rejected before compiling.
+- `parseLayer` validates one layer: its shape, the profile, and its rules against the field
+  catalog plus the custom fields it declares or inherits. Merging the layers, provenance and
+  blockers are the resolver's (Slice 1, PR 1f-2).
+- Reminder rules are left to Slice 5; deadlines are entry-wave data (above).
 
 - The **Step enum** in `packages/domain` is the single vocabulary for steps, used by both the
   lifecycle guards and the config.
@@ -95,6 +125,11 @@ Participation
 - **Base defaults** contain the nationwide rules, the **allowed channel values** and the
   official form requirements, but **no default** for an Agentur's submission channel, batch
   channel, `originalRequired`, `leadTimeDays` or `rejectsOutdatedFormVersions` (round 8).
+  The base rules and their bases are listed in the Slice 1 plan (5.7).
+- **Project types** (Q89): a rule may name the project types it applies to (`projectTypes`;
+  absent = every type). Completeness skips a rule for another type, so it is never a missing
+  item or a reminder. The ASU proof and the DSV scan are `ta_tg` only; the Kug 200b rules apply
+  only on the `kug_200b` ASU route and come with Slice 6 (round 14).
 - **Temporary Agentur settings** (no template yet) are recorded in the project override **scoped
   to that Agentur**, with source, confirmer and confirmation date, and audited. They are never a
   project-wide value that silently applies to every placement Agentur.

@@ -118,7 +118,10 @@ packages/
   db/             Drizzle schema, migrations, seed (synthetic only), data catalog
   api-client/     generated OpenAPI document + types and the typed client both SPAs use
   ui/             thin wrappers around Carbon components, layout, tokens, i18n helpers
-  config/         (Slice 1, PR 1f) regional/project configuration model + resolver
+  config/         regional configuration: the Zod-authored layer model (base defaults, Agentur
+                  templates, project overrides) exported as JSON Schema, the custom-field
+                  profile; the resolver comes with PR 1f-2. Base defaults live in
+                  packages/domain/config/base-defaults.json
   adapters/       interfaces + implementations behind them (ADR-0006). Only `Clock` so far
                   (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus
                   scan and export come with the slices that need them (D9)
@@ -172,7 +175,8 @@ pnpm db:migrate
 pnpm db:seed          # synthetic data only
 pnpm db:reset         # dev only: empty schema, migrate, seed
 pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
-pnpm generate         # all generators: api:generate and docs/domain/generated (committed)
+pnpm generate         # all generators: api:generate, docs/domain/generated and the config JSON
+                      # Schema (packages/config/schema, committed)
 docker build -t transfer .          # the production image (CI builds and smoke-tests it)
 scripts/image-smoke.sh transfer     # migration + /api/v1/health/ready, / and /portal/
 ```
