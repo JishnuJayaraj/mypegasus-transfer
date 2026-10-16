@@ -1337,6 +1337,53 @@ the environment and the `Clock` in `createApp`. The twelve readings were answere
     row means the run is not complete. `StatusChange` no longer carries it (tested: no row, a row
     for yesterday or for another job refuses with `tg_start_date`; today's sweep row allows it).
 
+#### Readings taken in PR 1h (1h-2)
+
+Built in PR 1h-2: `apps/api/src/jobs/` `lifecycle-sweep.ts` (the sweep and the inline dispatch),
+`evaluate-project.ts`, `dispatch.ts` (the queue dispatch), `payloads.ts`, `errors.ts`, the
+workers in `jobs.ts`, `cli.ts` and `scripts/jobs-lifecycle.ts`. Fail safe (D10); correct them if
+wrong:
+
+1. **Due by database time only** (Q96): the run date is the `Clock`'s Berlin today; whether its
+   scheduled time has passed is asked of the database (`now()`), not of the `Clock`, so a cron
+   firing at 04:15 by pg-boss's database-time scheduler is never lost to a few seconds of clock
+   skew between the API host and the database.
+2. **The record:** only the run date gets a `job_run` row; the earlier days of the window get
+   none, since the next window starts after the run date anyway. The first run ever covers today
+   only.
+3. **Every project** gets a project job, `ta_only` included (it plans nothing there).
+4. **Planning** reads the project, its waves, its open participations (main status not terminal)
+   and their current requests in one read transaction, with the facts per participation;
+   **applying** goes through the status service one change at a time, in plan order, and a
+   participation's remaining changes stop at its first refusal.
+5. **Refusals:** a lost race (`stale`) is counted, not an error. Any other refusal is counted,
+   the other participations are still applied, and the job then fails (`changes_refused`): the
+   day isn't recorded and the failure is visible; retries re-plan, which resolves a transient
+   race. A persistent refusal fails every day and keeps the catch-up window open (the snapshot
+   rules still hold on every re-evaluation); see Q97 for the one case found.
+6. **Run date passed:** a project job runs only while the `Clock` still shows its run date
+   (`run_date_passed` otherwise); the next sweep catches the day up.
+7. **The sweep waits** for its project jobs by polling pg-boss every second for up to 50 minutes
+   (within its 60-minute expiry); a failed or cancelled project job fails it at once; a taken key
+   (an earlier attempt's job still queued or running) is waited for instead.
+8. **`pnpm jobs:lifecycle`** evaluates the projects in its own process, never through the queue,
+   so a running API's workers (on the system clock) never take a `--today` run; it uses the same
+   payload schema and function, with a random UUID as each project's job id in the audit trail.
+   Without `--today` it uses `CLOCK`, so before today's run time it also exits with
+   `run_not_due`. Exit 0 for `completed` and `already_completed`; otherwise 1 with the stable
+   code on stderr (`run_not_due`, `invalid_arguments`, `refused_in_production`,
+   `changes_refused`, `unexpected`, …).
+9. **Failed jobs** are stored by pg-boss as a `JobError` carrying only the code (tested with free
+   text in a payload); the log line has the job, job id, code and the stack without the message.
+10. **Logs:** a project job logs `job`, `jobId`, `projectId` and the counts (`participations`,
+    `planned`, `applied`, `stale`, `refused`, `flagged`: participations with at least one flag;
+    the flags themselves stay derived, for the Slice 5 dashboard); the sweep logs `job`, `jobId`,
+    `outcome`, `runDate`, `days`, `projects`. No participation id appears in a log (tested).
+11. **The API's workers use the Slice 1 facts provider** (fail closed, D4): DSV expiry and cutoff
+    withdrawals run automatically, nobody enters the TG (AC-39).
+12. **Tests** use a synthetic wave of Lager Süd in 2025, before database time (Q96), with facts
+    per participation; the seed's 2091 timeline is not used by any job test.
+
 ### 5.10 Database, data catalog and seed
 
 | Table | Columns (main) | `retentionClass` | `dataClass` | Participant data |

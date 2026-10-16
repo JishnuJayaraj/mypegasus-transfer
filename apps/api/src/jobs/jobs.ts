@@ -1,9 +1,15 @@
-import { assertRunTime } from "@transfer/adapters";
-import { jobsSchema } from "@transfer/db";
-import { PgBoss, type Queue } from "pg-boss";
+import { assertRunTime, type Clock } from "@transfer/adapters";
+import { jobsSchema, type Database } from "@transfer/db";
+import { PgBoss, type Job, type Queue } from "pg-boss";
 import type { Logger } from "pino";
 import { errorForLog } from "../logger";
+import type { GuardFactsProvider } from "../participations/guard-facts";
+import { queueDispatch } from "./dispatch";
+import { JobError, jobErrorCode } from "./errors";
+import { evaluateProject } from "./evaluate-project";
+import { runLifecycleSweep } from "./lifecycle-sweep";
 import { jobNames, timeZone } from "./names";
+import { EvaluateProjectPayload, SweepPayload } from "./payloads";
 
 export { jobNames, timeZone } from "./names";
 
@@ -40,12 +46,23 @@ export function lifecycleCron(time: string): string {
   return `${minute} ${hour} * * *`;
 }
 
+/** What the workers need; without it pg-boss runs with the schedule but takes no jobs. */
+export type WorkDeps = {
+  db: Database;
+  clock: Clock;
+  facts: GuardFactsProvider;
+  /** pg-boss's polling (default 2 s) and the sweep's wait for its project jobs (default 1 s). */
+  pollingIntervalSeconds?: number;
+  dispatchPollMs?: number;
+};
+
 export type JobsOptions = {
   /** The runtime role's URL (`DATABASE_URL`, transfer_app). */
   connectionString: string;
   /** `JOBS_LIFECYCLE_TIME`. */
   lifecycleTime: string;
   logger: Logger;
+  work?: WorkDeps;
 };
 
 export type Jobs = { boss: PgBoss; stop: () => Promise<void> };
@@ -56,13 +73,15 @@ export type Jobs = { boss: PgBoss; stop: () => Promise<void> };
  * `reindex`, which would need DDL (spike S2). Creates the queues (idempotent), keeps their options
  * current and refuses one whose policy differs, then (re)registers the nightly sweep's cron in
  * Europe/Berlin. A missed occurrence (the API was down at the run time) is sent once on the next
- * start, beside the due one; the sweep's catch-up window covers the days in between (1h-2).
- * Events are logged without their data, errors without their message (CLAUDE.md rule 9).
+ * start, beside the due one; the sweep's catch-up window covers the days in between. With `work`,
+ * the two workers run in this process. Events are logged without their data, errors without
+ * their message (CLAUDE.md rule 9).
  */
 export async function startJobs({
   connectionString,
   lifecycleTime,
   logger,
+  work,
 }: JobsOptions): Promise<Jobs> {
   const cron = lifecycleCron(lifecycleTime);
   const boss = new PgBoss({
@@ -87,10 +106,54 @@ export async function startJobs({
       await boss.updateQueue(name, options);
     }
     await boss.schedule(jobNames.lifecycleSweep, cron, null, { tz: timeZone, missed: "once" });
+    if (work) await startWorkers(boss, { ...work, lifecycleTime, logger });
   } catch (error) {
     await boss.stop({ graceful: false });
     throw error;
   }
   logger.info({ queues: Object.keys(queues), cron, tz: timeZone }, "jobs started");
   return { boss, stop: () => boss.stop({ graceful: true }) };
+}
+
+/**
+ * Runs one job; a failure is logged with its code and stored by pg-boss as a `JobError` carrying
+ * only that code, never the original message (CLAUDE.md rule 9).
+ */
+async function runJob(logger: Logger, job: Job<unknown>, work: () => Promise<void>) {
+  try {
+    await work();
+  } catch (error) {
+    const code = jobErrorCode(error);
+    logger.error({ job: job.name, jobId: job.id, code, error: errorForLog(error) }, "job failed");
+    throw new JobError(code);
+  }
+}
+
+/**
+ * The workers (plan 5.9): the sweep dispatches one project job per project through the queue and
+ * waits for them; the project job evaluates its project. Both parse their payload first.
+ */
+async function startWorkers(
+  boss: PgBoss,
+  deps: WorkDeps & { lifecycleTime: string; logger: Logger },
+) {
+  const { db, clock, facts, lifecycleTime, logger, pollingIntervalSeconds = 2 } = deps;
+  const dispatch = queueDispatch(boss, { pollMs: deps.dispatchPollMs });
+  await boss.work(jobNames.evaluateProject, { pollingIntervalSeconds }, async (jobs) => {
+    for (const job of jobs) {
+      await runJob(logger, job, async () => {
+        const payload = EvaluateProjectPayload.parse(job.data);
+        await evaluateProject({ db, clock, facts, logger }, payload, job.id);
+      });
+    }
+  });
+  await boss.work(jobNames.lifecycleSweep, { pollingIntervalSeconds }, async (jobs) => {
+    for (const job of jobs) {
+      await runJob(logger, job, async () => {
+        SweepPayload.parse(job.data);
+        const result = await runLifecycleSweep({ db, clock, lifecycleTime }, dispatch);
+        logger.info({ job: job.name, jobId: job.id, ...result }, "lifecycle sweep");
+      });
+    }
+  });
 }

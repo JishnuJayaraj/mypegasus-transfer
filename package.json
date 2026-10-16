@@ -14,6 +14,7 @@
     "db:migrate": "pnpm --filter @transfer/db run migrate",
     "db:seed": "pnpm --filter @transfer/db run seed && pnpm --filter @transfer/api run seed",
     "db:reset": "pnpm --filter @transfer/db run reset && pnpm --filter @transfer/api run seed",
+    "jobs:lifecycle": "pnpm --filter @transfer/api run jobs:lifecycle",
     "dev": "pnpm db:migrate && pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "start": "pnpm --filter @transfer/api start",

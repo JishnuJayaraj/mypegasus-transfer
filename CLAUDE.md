@@ -178,6 +178,9 @@ pnpm db:generate      # drizzle-kit: SQL migration from the schema
 pnpm db:migrate       # app migrations, then pg-boss's pgboss schema and its transfer_app grants
 pnpm db:seed          # synthetic data only: base seed, then participations through the status service
 pnpm db:reset         # dev only: empty schema, migrate, seed
+pnpm jobs:lifecycle [--today YYYY-MM-DD]
+                      # the nightly lifecycle sweep once (dev/CI); not due by database time:
+                      # exits 1 with run_not_due (Q96); refused with NODE_ENV=production
 pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
 pnpm generate         # all generators: api:generate, docs/domain/generated and the config JSON
                       # Schema (packages/config/schema, committed)

@@ -11,7 +11,8 @@
     "dev": "tsx watch src/server.ts",
     "build": "vite build",
     "start": "node dist/server.js",
-    "seed": "tsx src/scripts/seed.ts"
+    "seed": "tsx src/scripts/seed.ts",
+    "jobs:lifecycle": "tsx src/scripts/jobs-lifecycle.ts"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",
