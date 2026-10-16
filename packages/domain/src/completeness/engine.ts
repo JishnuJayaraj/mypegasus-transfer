@@ -1,14 +1,19 @@
 import { z } from "zod";
 import type { DocumentType } from "../documents/catalog";
 import { Step } from "../lifecycle/enums";
-import type { CompletenessRule, RulesByStep } from "./rules";
+import type { ProjectType } from "../project";
+import { ruleAppliesTo, type CompletenessRule, type RulesByStep } from "./rules";
 
 /** Review states of a stored document (plan 5.5); document review comes with Slice 4b. */
 export const DocumentState = z.enum(["uploaded", "accepted", "rejected"]);
 export type DocumentState = z.infer<typeof DocumentState>;
 
-/** Field values by key, and the states of a participation's documents by type. */
+/**
+ * The project's type (rules for other types are skipped, Q89), field values by key, and the
+ * states of a participation's documents by type.
+ */
 export type CompletenessFacts = {
+  projectType: ProjectType;
   fields: Readonly<Record<string, unknown>>;
   documents: Readonly<Partial<Record<DocumentType, readonly DocumentState[]>>>;
 };
@@ -38,7 +43,8 @@ export function isPresent(value: unknown): boolean {
 
 /**
  * Evaluates rules that passed `validateRules` against one participation's facts. Every step
- * is in the result; a step without rules is complete. Each failed rule gives one item.
+ * is in the result; a step without applicable rules is complete. Each failed rule gives one
+ * item; a rule for another project type gives none.
  */
 export function evaluateCompleteness(
   rulesByStep: RulesByStep,
@@ -46,7 +52,9 @@ export function evaluateCompleteness(
 ): Completeness {
   const byStep = Object.fromEntries(
     Step.options.map((step) => {
-      const missing = (rulesByStep[step] ?? []).flatMap((rule) => check(step, rule, facts));
+      const missing = (rulesByStep[step] ?? [])
+        .filter((rule) => ruleAppliesTo(rule, facts.projectType))
+        .flatMap((rule) => check(step, rule, facts));
       return [step, { complete: missing.length === 0, missing }];
     }),
   );

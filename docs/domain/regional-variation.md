@@ -54,7 +54,7 @@ BaseDefaults        kind "base_defaults", version          packages/domain/confi
   ├─ nationwide       asuDueDate { monthsBeforeEnd, daysAfterKnowledge }, profilingExceptionDeadlineMonths,
   │                   kug200bConfirmationFollowUpDays, tl407EscalationDaysAfterTgStart,
   │                   cutoffWarningDays, cutoffFinalReminderDays       (all required, nowhere else)
-  ├─ rules            { <Step>: CompletenessRule[] }   each with its basis (Q75)
+  ├─ rules            { <Step>: CompletenessRule[] }   basis (Q75), projectTypes (Q89)
   └─ helpTexts        { de, en: { "<scope>.<key>": text } }
                       no `settings` (no regional default, round 8), no custom fields
 
@@ -125,8 +125,11 @@ Participation
 - **Base defaults** contain the nationwide rules, the **allowed channel values** and the
   official form requirements, but **no default** for an Agentur's submission channel, batch
   channel, `originalRequired`, `leadTimeDays` or `rejectsOutdatedFormVersions` (round 8).
-  The base rules and their bases are listed in the Slice 1 plan (5.7). They carry no
-  project-type condition yet, so they apply in `ta_only` projects too (Q89, open).
+  The base rules and their bases are listed in the Slice 1 plan (5.7).
+- **Project types** (Q89): a rule may name the project types it applies to (`projectTypes`;
+  absent = every type). Completeness skips a rule for another type, so it is never a missing
+  item or a reminder. The ASU proof and the DSV scan are `ta_tg` only; the Kug 200b rules apply
+  only on the `kug_200b` ASU route and come with Slice 6 (round 14).
 - **Temporary Agentur settings** (no template yet) are recorded in the project override **scoped
   to that Agentur**, with source, confirmer and confirmation date, and audited. They are never a
   project-wide value that silently applies to every placement Agentur.

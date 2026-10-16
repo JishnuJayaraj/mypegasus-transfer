@@ -4,7 +4,10 @@
   "kind": "base_defaults",
   "version": 1,
   "nationwide": {
-    "asuDueDate": { "monthsBeforeEnd": 3, "daysAfterKnowledge": 3 },
+    "asuDueDate": {
+      "monthsBeforeEnd": 3,
+      "daysAfterKnowledge": 3
+    },
     "profilingExceptionDeadlineMonths": 1,
     "kug200bConfirmationFollowUpDays": 14,
     "tl407EscalationDaysAfterTgStart": 14,
@@ -18,20 +21,8 @@
         "kind": "documentPresent",
         "documentType": "asu_proof",
         "accepted": true,
-        "basis": "statutory"
-      },
-      {
-        "id": "base-kug200b-rv-nummer",
-        "kind": "required",
-        "field": "pensionInsuranceNumber",
-        "basis": "ba_form"
-      },
-      {
-        "id": "base-kug200b-declarations",
-        "kind": "documentPresent",
-        "documentType": "kug200b_signed_scan",
-        "accepted": true,
-        "basis": "ba_form"
+        "basis": "statutory",
+        "projectTypes": ["ta_tg"]
       }
     ],
     "data_collection": [
@@ -78,7 +69,8 @@
         "kind": "documentPresent",
         "documentType": "dsv_signed_scan",
         "accepted": true,
-        "basis": "statutory"
+        "basis": "statutory",
+        "projectTypes": ["ta_tg"]
       }
     ]
   }

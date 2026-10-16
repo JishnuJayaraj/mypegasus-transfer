@@ -88,8 +88,10 @@ Two details for PR 1f (`field-schema.ts`):
   (round 8), and an override has no project-wide settings.
 - **Temporary Agentur settings** carry a source code, the confirming staff user and the
   confirmation date.
-- **Rules reuse the domain's closed `CompletenessRule` schema** with its basis (Q75); a
-  relaxation names an `operational_default` rule, a reason code and its approval.
+- **Rules reuse the domain's closed `CompletenessRule` schema** with its basis (Q75) and its
+  optional `projectTypes` (Q89, round 14: absent = every type; completeness skips a rule for
+  another type, so it is never missing or reminded). A relaxation names an
+  `operational_default` rule, a reason code (a controlled list from Slice 2) and its approval.
 - **Custom fields use a restricted JSON Schema profile** compiled with `z.fromJSONSchema`
   (spike S1): only `confidential` or `internal` data, a participant retention class and a label;
   everything else is rejected before compiling.

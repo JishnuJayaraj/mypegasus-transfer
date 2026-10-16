@@ -597,13 +597,13 @@ Minimal rule language (ADR-0004), no scripting; rules are data validated by a cl
 
 ```ts
 type RuleBasis = "statutory" | "ba_form" | "operational_default";   // Q75
-type CompletenessRule = { id: string; basis?: RuleBasis } & (
+type CompletenessRule = { id: string; basis?: RuleBasis; projectTypes?: ProjectType[] } & (
   | { kind: "required"; field: FieldKey }
   | { kind: "requiredIf"; field: FieldKey;
       when: { field: FieldKey; equals: string | number | boolean } | { field: FieldKey; exists: true } }
   | { kind: "documentPresent"; documentType: DocumentType; accepted?: boolean });
 
-evaluateCompleteness(rulesByStep, facts) → { byStep: Record<Step, { complete: boolean; missing: MissingItem[] }> }
+evaluateCompleteness(rulesByStep, { projectType, fields, documents }) → { byStep: Record<Step, { complete: boolean; missing: MissingItem[] }> }
 type MissingItem = { step: Step; ruleId: string; kind: "field" | "document"; key: string;
                      reason: "missing" | "not_accepted" };
 ```
@@ -956,56 +956,51 @@ profile's codes and the rule codes of 5.5). Base defaults have a `nationwide` bl
 `settings`; templates have `settings` and no `nationwide`; overrides have `agenturSettings` and
 neither. `base-defaults.json` holds:
 
-| Rule id | Step | Rule | Basis |
-|---|---|---|---|
-| `base-asu-proof` | `asu_registration` | `asu_proof` document, accepted | `statutory` (§111(4) Nr. 4) |
-| `base-kug200b-rv-nummer` | `asu_registration` | `pensionInsuranceNumber` | `ba_form` (Kug 200b field 11) |
-| `base-kug200b-declarations` | `asu_registration` | `kug200b_signed_scan`, accepted | `ba_form` (Kug 200b fields 16, 17) |
-| `base-import-<field>` | `data_collection` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | `operational_default` (PRD F2) |
-| `base-dsv-signed-scan` | `dsv` | `dsv_signed_scan`, accepted | `statutory` (§623 BGB) |
+| Rule id | Step | Rule | Basis | Project types |
+|---|---|---|---|---|
+| `base-asu-proof` | `asu_registration` | `asu_proof` document, accepted | `statutory` (§111(4) Nr. 4) | `ta_tg` |
+| `base-import-<field>` | `data_collection` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | `operational_default` (PRD F2) | all |
+| `base-dsv-signed-scan` | `dsv` | `dsv_signed_scan`, accepted | `statutory` (§623 BGB) | `ta_tg` |
 
-Readings taken in PR 1f (fail safe, D10; correct them if wrong):
-- **No regional value in the base defaults at all**, the ASU `defaultChannel` included: round 8
-  lists the submission settings, and a default channel is a regional setting
-  (regional-variation.md) whose value for a real Agentur is never guessed. Without a template or
-  temporary setting the ASU default channel stays unset; that blocks nothing, since any channel
-  with proof counts (Q55). The base defaults declare no custom fields (the nationwide fields are
-  the field catalog).
-- **Nationwide settings are the values the domain applies** (no `config` parameter in Slice 1,
-  1c-1): a test keeps them equal to `asuDueDateDefaults`, `profilingExceptionDeadlineMonths`,
-  `cutoffWarningDays` and `cutoffFinalReminderDays`. The Kug 200b follow-up (14 days) and the
-  TL 407 escalation (14 days, Q54) have no domain code yet (Slice 5).
-- **Base rules:** the `asu_proof` document stands for the proof of every Q55 channel (how a
-  BA-Kundennummer noted by the PL is recorded as that proof comes with the ASU records). Kug 200b
-  declarations 16 and 17 are ticked by hand on the paper form and have no field, so the accepted
-  signed Kug 200b scan represents them; it is also the "still offer Kug 200b" item for people
-  who registered themselves (process-and-lifecycle.md). "Austrittsdatum" is
-  `oldEmploymentEndDate`. The DSV rule stays `statutory`: §623 BGB requires the written form and
-  the scan is its evidence. Document rules need `accepted: true` (stricter: an unreviewed upload
-  shows as `not_accepted`). Relaxing an import rule never relaxes a form requirement on the same
-  field: TL 407's rules (Slice 6) get their own ids.
-- **Project type:** the rule language has no project-type condition, so the base rules apply
-  in every project, `ta_only` included, until Q89 is answered (a missing item is shown, never
-  skipped). The `dsv` step is inactive in `ta_only` anyway (track activity).
-- **Custom fields:** keys are `custom.` plus lower snake_case (at most 63 characters after the
-  prefix). `x-dataClass`, `x-retentionClass` and `x-label` (with `de`) are required. Known
-  retention classes are the participant classes shared with the document-type catalog
-  (`ParticipantRetentionClass`: `participation_record`, `personnel_file`, `evidence_set`; the db
-  data catalog gets them with its tables in 1g); project and staff classes are refused. A field
-  needs `type`, `enum` or `const`; keywords must fit the type and `enum`/`const` values must
-  match it; a free string (no `enum`, `const` or `format`) needs `maxLength`; bounds must be
-  ordered; patterns with `\p{…}`, `\P{…}` or `\u{…}` (which need the `u` flag, S1) are refused.
-- **A template's `id` is its `agenturKey`** (one template per Agentur,
-  `templates/<agenturKey>/<version>.json`).
-- **Temporary settings** name a `source` code (`phone_call_agentur`, `email_agentur`,
-  `letter_agentur`, `meeting_agentur`) and a staff user id as confirmer. A relaxation's
-  `reasonCode` is a snake_case code from a list that Slice 2's override approval defines; no
-  free text is stored.
-- **Help texts:** keys `<scope>.<key>` in snake_case, languages `de` and `en`, at most 2000
-  characters.
-- **The JSON Schema describes the shape**; the profile's cross-keyword checks, the template id
-  and the catalog checks are code only (`parseLayer`). Tests validate the files against the
-  committed schema compiled with `z.fromJSONSchema` and with `parseLayer`.
+**Project types** (Q89, [round 14](../decisions/2026-10-16-answers-round-14.md)): every
+`CompletenessRule` may carry `projectTypes` (non-empty, no duplicates; absent = every type).
+`evaluateCompleteness` takes the `projectType` in its facts (required) and skips a rule for
+another type: no missing item, no reminder, the step can be complete. `ruleAppliesTo` gives
+displays and reminders the same answer. TL 407's rules (Slice 6) apply to both types, subject to
+the configured or assigned profiling activity.
+
+**Kug 200b rules are deferred to Slice 6** (round 14): the RV-Nummer and the accepted signed
+scan apply only to `ta_tg` participations whose ASU uses `kug_200b`. Slice 6 brings the ASU
+record (channel) and the Kug 200b offer with its outcome (offered for the profile-access consent
+even after `online_self` or `in_person`, and the participant may decline); a declined offer is
+an outcome, never a missing scan. A scan counts as accepted for fields 16 and 17 only when the
+review checked both declarations and the handwritten signature.
+
+The nine readings taken in PR 1f-1 were answered in
+[round 14](../decisions/2026-10-16-answers-round-14.md) and are reflected here:
+- **No regional value in the base defaults**, the ASU `defaultChannel` included; an unset
+  default channel blocks nothing (any channel with proof counts, Q55), while Q76's KuG-Agentur
+  blocker stands. The base defaults declare no custom fields.
+- **Nationwide settings equal the domain constants** (a test keeps `asuDueDateDefaults`,
+  `profilingExceptionDeadlineMonths`, `cutoffWarningDays`, `cutoffFinalReminderDays` in step);
+  the Kug 200b follow-up and the TL 407 escalation stay configuration-only until Slice 5.
+- **Base rules:** an accepted `asu_proof` stands for the proof of any valid channel, including a
+  structured PL attestation of the BA-Kundennummer; it never needs a fabricated upload (Slice 6's
+  ASU record supplies the state). "Austrittsdatum" is `oldEmploymentEndDate`. Document rules need
+  `accepted: true`. The DSV rule stays locked. Relaxing an import rule never relaxes a form
+  requirement on the same field: TL 407's rules get their own ids.
+- **Custom fields:** keys `custom.` plus lower snake_case (at most 63 characters after the
+  prefix); `x-dataClass`, `x-retentionClass` (a `ParticipantRetentionClass`) and `x-label.de`
+  required; a field needs `type`, `enum` or `const`; keywords fit the type; a free string needs
+  `maxLength`; bounds ordered; `\p{…}`, `\P{…}` and `\u{…}` refused (S1).
+- **A template's `id` is its `agenturKey`** (one template per Agentur and version).
+- **Temporary-setting sources** `phone_call_agentur`, `email_agentur`, `letter_agentur`,
+  `meeting_agentur` (provisional, enough for Slice 1). A relaxation's `reasonCode` is an open
+  snake_case code **only until Slice 2**, which validates it against a controlled list before
+  overrides can be activated; no free text in `reasonCode`.
+- **Help texts:** keys `<scope>.<key>`, `de` and `en`, at most 2000 characters.
+- **The JSON Schema describes the structure; `parseLayer`** does the cross-field, catalog and
+  template-identity checks; both stay covered by drift and validation tests.
 
 ### 5.8 `packages/adapters`: `Clock`
 
@@ -1259,7 +1254,8 @@ exceptions), AC-28, AC-30 (roles in the transitions table). AC-29 was met in 1a.
 | Customer-notification flag after withdrawal from `dsv_signed` | Slice 7 |
 | `self_registered` creation and the 30-day rejection job | Slice 4c |
 | Sending reminders, "what's missing" UI, dashboards, escalations | Slice 5 (they call `evaluateCompleteness`, `lifecycleFlags`, `transferKugEligibility`) |
-| TL 407 required-field list | Slice 6 (ADR-0009) |
+| TL 407 required-field list; the Kug 200b RV-Nummer and signed-scan rules on the `kug_200b` route, with the Kug 200b offer and its outcome (round 14) | Slice 6 (ADR-0009) |
+| A controlled list of relaxation `reasonCode`s, validated before overrides can be activated (round 14) | Slice 2 |
 | Retention job, pseudonymisation role, retention periods in executable config | Slice 7, after the DPO confirms (Q3, Q77) |
 | Row-level security | pre-pilot gate (ADR-0005) |
 | Other adapter interfaces, separate worker, admin UI for templates | their slices (D9), Slice 9 (D7), later (ADR-0004) |

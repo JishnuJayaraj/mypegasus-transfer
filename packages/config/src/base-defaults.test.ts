@@ -3,7 +3,9 @@ import {
   asuDueDateDefaults,
   cutoffFinalReminderDays,
   cutoffWarningDays,
+  evaluateCompleteness,
   profilingExceptionDeadlineMonths,
+  type ProjectType,
 } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -55,28 +57,24 @@ describe("base-defaults.json (plan 5.7)", () => {
     });
   });
 
-  it("classifies every base rule; TL 407's required fields wait for Slice 6", () => {
+  it("classifies every base rule and scopes the TG-only ones (round 14)", () => {
     const rules = Object.entries(layer.rules ?? {}).flatMap(([step, list]) =>
       list.map((rule) => ({
         step,
         id: rule.id,
         basis: rule.basis,
         key: rule.kind === "documentPresent" ? rule.documentType : rule.field,
+        projectTypes: rule.projectTypes,
       })),
     );
+    const tg = ["ta_tg"];
     expect(rules).toEqual([
-      { step: "asu_registration", id: "base-asu-proof", basis: "statutory", key: "asu_proof" },
       {
         step: "asu_registration",
-        id: "base-kug200b-rv-nummer",
-        basis: "ba_form",
-        key: "pensionInsuranceNumber",
-      },
-      {
-        step: "asu_registration",
-        id: "base-kug200b-declarations",
-        basis: "ba_form",
-        key: "kug200b_signed_scan",
+        id: "base-asu-proof",
+        basis: "statutory",
+        key: "asu_proof",
+        projectTypes: tg,
       },
       ...[
         "personnelNumber",
@@ -90,9 +88,34 @@ describe("base-defaults.json (plan 5.7)", () => {
         id: `base-import-${key}`,
         basis: "operational_default",
         key,
+        projectTypes: undefined,
       })),
-      { step: "dsv", id: "base-dsv-signed-scan", basis: "statutory", key: "dsv_signed_scan" },
+      {
+        step: "dsv",
+        id: "base-dsv-signed-scan",
+        basis: "statutory",
+        key: "dsv_signed_scan",
+        projectTypes: tg,
+      },
     ]);
+  });
+
+  it("leaves out the Kug 200b rules until the ASU route and the offer outcome exist (Slice 6)", () => {
+    expect(JSON.stringify(layer.rules)).not.toMatch(/kug200b|pensionInsuranceNumber/);
+  });
+
+  const missing = (projectType: ProjectType) =>
+    Object.values(
+      evaluateCompleteness(layer.rules ?? {}, { projectType, fields: {}, documents: {} }).byStep,
+    )
+      .flatMap((step) => step.missing)
+      .map((item) => item.ruleId);
+
+  it("shows no TG-only item in a ta_only project", () => {
+    const imports = missing("ta_only");
+    expect(imports).toHaveLength(6);
+    expect(imports.every((id) => id.startsWith("base-import-"))).toBe(true);
+    expect(missing("ta_tg")).toEqual(["base-asu-proof", ...imports, "base-dsv-signed-scan"]);
   });
 
   it("requires accepted documents", () => {

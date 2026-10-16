@@ -43,6 +43,13 @@
                         "operational_default"
                       ]
                     },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
+                    },
                     "kind": {
                       "type": "string",
                       "const": "required"
@@ -73,6 +80,13 @@
                         "ba_form",
                         "operational_default"
                       ]
+                    },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
                     },
                     "kind": {
                       "type": "string",
@@ -148,6 +162,13 @@
                         "ba_form",
                         "operational_default"
                       ]
+                    },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
                     },
                     "kind": {
                       "type": "string",
@@ -330,6 +351,13 @@
                         "operational_default"
                       ]
                     },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
+                    },
                     "kind": {
                       "type": "string",
                       "const": "required"
@@ -360,6 +388,13 @@
                         "ba_form",
                         "operational_default"
                       ]
+                    },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
                     },
                     "kind": {
                       "type": "string",
@@ -435,6 +470,13 @@
                         "ba_form",
                         "operational_default"
                       ]
+                    },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
                     },
                     "kind": {
                       "type": "string",
@@ -750,6 +792,13 @@
                         "operational_default"
                       ]
                     },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
+                    },
                     "kind": {
                       "type": "string",
                       "const": "required"
@@ -780,6 +829,13 @@
                         "ba_form",
                         "operational_default"
                       ]
+                    },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
                     },
                     "kind": {
                       "type": "string",
@@ -855,6 +911,13 @@
                         "ba_form",
                         "operational_default"
                       ]
+                    },
+                    "projectTypes": {
+                      "minItems": 1,
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/ProjectType"
+                      }
                     },
                     "kind": {
                       "type": "string",
@@ -1170,5 +1233,15 @@
     }
   ],
   "title": "Regional configuration layer",
-  "description": "Base defaults, a regional template or a project override (ADR-0004). Generated from packages/config/src/model.ts by `pnpm generate`; do not edit."
+  "description": "Base defaults, a regional template or a project override (ADR-0004). Generated from packages/config/src/model.ts by `pnpm generate`; do not edit.",
+  "$defs": {
+    "ProjectType": {
+      "type": "string",
+      "enum": [
+        "ta_only",
+        "ta_tg"
+      ],
+      "description": "ta_only: Transferagentur only. ta_tg: Transferagentur and Transfergesellschaft."
+    }
+  }
 }

@@ -118,6 +118,7 @@ export {
   CompletenessRule,
   isLocked,
   RuleBasis,
+  ruleAppliesTo,
   validateRules,
   type RuleIssue,
   type RulesByStep,

@@ -224,6 +224,16 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
 - If someone registered themselves, **still offer Kug 200b**, because it carries the consent
   that gives the TG access to the BA profile. This is a "what's missing" item, not a guard.
   Without it, the profile-access consent record simply stays empty.
+- The **Kug 200b offer and its outcome are recorded separately** from the ASU proof (round 14):
+  the participant may decline it, and a declined offer is an outcome, never a "missing signed
+  scan". The RV-Nummer and the accepted signed scan are required only when ASU uses
+  `kug_200b`; after `online_self` or `in_person` the ASU proof is enough for entry.
+- An accepted ASU proof stands for the proof of **any valid channel**, including a structured PL
+  attestation of the BA-Kundennummer; it never requires an uploaded file. A Kug 200b scan is
+  accepted only when the review checked both declarations (fields 16 and 17) and the
+  handwritten signature.
+- The ASU completeness rules apply in `ta_tg` projects only (Q89); `ta_only` participants
+  register themselves.
 - `asuDueDate` (see Dates) drives reminders.
 
 ### TG entry guard (`informed → active_in_tg`)
