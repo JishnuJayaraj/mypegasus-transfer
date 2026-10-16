@@ -176,7 +176,7 @@ pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:
 pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
 pnpm db:generate      # drizzle-kit: SQL migration from the schema
 pnpm db:migrate
-pnpm db:seed          # synthetic data only
+pnpm db:seed          # synthetic data only: base seed, then participations through the status service
 pnpm db:reset         # dev only: empty schema, migrate, seed
 pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
 pnpm generate         # all generators: api:generate, docs/domain/generated and the config JSON

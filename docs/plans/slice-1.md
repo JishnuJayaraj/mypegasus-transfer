@@ -590,6 +590,45 @@ wave, project and dated guard facts (`GuardFactsProvider`; fail closed in Slice 
 the function → commit. Later slices that write facts (DSV, ASU) take the same lock. The nightly
 job uses the same service as `system`.
 
+Readings taken in PR 1g-2 (fail safe, D10; correct them if wrong):
+
+1. **Order of checks:** lock → load → **permission** (`mayPerformTransition` for the actor's own
+   edge of the step, else any edge of it, so a wrong actor type is `forbidden`; without any edge
+   the lifecycle check says `no_edge`) → expected status (`stale_status`) → `canTransition` or
+   the operation's domain check → the function. Refusals carry a kind for the later API mapping:
+   `not_found`, `forbidden`, `stale` (`stale_status`, `request_not_current`), `domain` (the
+   domain code and failed guards), `integrity` (a function's refusal the domain didn't foresee),
+   and a code, never a value.
+2. **No region yet:** projects get their region in Slice 3, so the permission target's region is
+   `null` and only a global-scope org role reaches it (round 11, reading 12); the seeded regional
+   operations manager has global scope.
+3. **The Slice 1 facts provider** gives no DSV, ASU, profiling, TL 407, cancellation or
+   TA-completion fact (D4) and resolves no evidence (every exception request is
+   `evidence_missing`, round 16). The one fact it gives is the participation's own **approved
+   exception** (decision date, recorded instant), since that approval is our record, not
+   evidence; it is what lets profiling move in the TG under the exception (Q74).
+4. **Effective dates:** a TG entry is always recorded on its effective TG start (a different
+   date is refused, `effective_date_mismatch`); other effective dates come from the caller (the
+   planner's for system changes, staff input for exit, withdrawal and `profiling_done`) and are
+   not bounded by the service. A request's and a decision's business date is the Clock's today.
+5. **Superseding** is done by `change_participation_status` inside the service's transaction;
+   the service makes no separate call.
+6. **No assisted mode** (`onBehalfOf`) in Slice 1: the service never sets it.
+7. **An unknown wave** is refused like another project's (`wave_of_other_project`).
+8. **The fingerprint never leaves the service:** a request returns its id only; the service logs
+   nothing.
+9. **The seed** (`apps/api/src/participations/seed.ts`, run by `pnpm db:seed` / `db:reset` after
+   the base seed, as the runtime role) uses the production service with a manual clock on
+   fictional 2027 dates and a **seed facts provider** that adds synthetic dated facts and evidence
+   records (no documents exist before Slices 4b–7). 18 participations (15 in Werk Nord, 3 in the
+   `ta_only` project) cover every main status except `self_registered` and `rejected` (Slice 4c's
+   anonymous flow), every track status, every exception state and, on the scenario's dates, every
+   lifecycle flag. Entries under an approved exception are **reconciled** (flagged for review)
+   rather than scheduled, because an approval's recorded instant is database time. The base seed
+   gives Werk Nord waves W1 and W2 and updates a same-coded wave's dates (a migrated W1 in an
+   older dev database). `StaffRole` gains `regional_operations_manager` ("Regionale
+   Betriebsleitung") for the seeded reviewer.
+
 #### Grants (custom migration, Slice 0 pattern)
 
 | Object | `transfer_app` |
@@ -1220,9 +1259,11 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 - **Seed (synthetic only):** "Restrukturierung Werk Nord" gets two waves with
   `latest_entry_date`; about 15 participations cover every main status, each track status, the
   exception states and every flag case; three in the `ta_only` project. No names. Created and
-  moved **through the functions** as `system` / `seed` (exception approvals by a seeded regional
-  operations manager), so every seeded state has its audit trail. Idempotent by fixed UUIDs.
-  The seed adds one synthetic staff user with the new org role.
+  moved **through the status service and its functions**: creation and every user edge by the
+  seeded staff user the Q60 matrix allows, system edges as `system` with job `seed`, no bypass
+  actor (Q95, round 16); exception decisions by a seeded regional operations manager, so every
+  seeded state has its audit trail. Idempotent by fixed UUIDs. The seed adds one synthetic staff
+  user with the new org role.
 - **Generated tables** (`pnpm generate`, drift-checked in `pnpm verify`):
   `docs/domain/generated/lifecycle-transitions.md` (every edge and operation with actors, roles,
   entry kinds and guards) and `docs/domain/generated/access-matrix.md` (role × category × mode ×

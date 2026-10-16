@@ -14,13 +14,14 @@ describe("DataClass", () => {
 });
 
 describe("StaffRole", () => {
-  it("has the five provisional staff roles", () => {
+  it("has the provisional staff roles, with the regional operations manager (Q80)", () => {
     expect(StaffRole.options).toEqual([
       "admin",
       "regional_admin",
       "project_lead",
       "consultant",
       "back_office",
+      "regional_operations_manager",
     ]);
   });
 

@@ -909,7 +909,7 @@ describe("assign_entry_wave", () => {
   it("assigns and reassigns before the first offer, within the project", async () => {
     const [w2, w3] = [
       await createWave(owner),
-      await createWave(owner, seedProjectIds.werkNord, "W3"),
+      await createWave(owner, seedProjectIds.werkNord, "T2"),
     ];
     const id = await informedParticipation(app);
     await call(app, "assign_entry_wave", { id, waveId: w2, context: pl });

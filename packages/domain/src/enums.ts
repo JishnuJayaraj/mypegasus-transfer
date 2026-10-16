@@ -12,7 +12,15 @@ export type DataClass = z.infer<typeof DataClass>;
  * The customer has no login in the MVP (Q47); participants are not staff.
  */
 export const StaffRole = z
-  .enum(["admin", "regional_admin", "project_lead", "consultant", "back_office"])
+  .enum([
+    "admin",
+    "regional_admin",
+    "project_lead",
+    "consultant",
+    "back_office",
+    // Q80; added for the seed's synthetic reviewer (PR 1g-2)
+    "regional_operations_manager",
+  ])
   .meta({ id: "StaffRole" });
 
 export type StaffRole = z.infer<typeof StaffRole>;

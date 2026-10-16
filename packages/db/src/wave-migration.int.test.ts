@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb } from "./client";
 import { migrationsFolder, runMigrations } from "./migrate";
 import { project, projectEntryWave } from "./schema";
-import { seed, seedProjectIds } from "./seed";
+import { seedProjectIds, seedStaffUserIds } from "./seed";
 import { testDatabaseUrls } from "./testing";
 
 // AC-20: migrating a Slice 0 database gives each ta_tg project one wave W1 with its dates.
@@ -34,7 +34,23 @@ describe("the Slice 0 → Slice 1 migration (AC-20)", () => {
   it("creates one wave W1 per ta_tg project from the project's dates", async () => {
     await db.$client.query("drop owned by transfer_owner");
     await runMigrations(url, slice0Folder);
-    await seed(db); // two ta_tg projects (one with dates, one without) and a ta_only one
+    // The Slice 0 seed's projects: two ta_tg (one with dates, one without) and a ta_only one.
+    await db.$client.query(
+      "insert into staff_user (id, display_name, email, role) values ($1, 'Petra Projektleitung', 'project-lead@example.org', 'project_lead')",
+      [seedStaffUserIds.projectLead],
+    );
+    await db.$client.query(
+      `insert into project (id, name, customer_name, type, signing_deadline, default_tg_start, default_tg_end, created_by) values
+        ($1, 'Restrukturierung Werk Nord', 'Beispiel Maschinenbau GmbH', 'ta_tg', '2027-02-15', '2027-03-01', '2028-02-29', $4),
+        ($2, 'Standortschließung Lager Süd', 'Musterfirma Logistik AG', 'ta_tg', null, null, null, $4),
+        ($3, 'Transferagentur Verwaltung', 'Fiktiv Versicherungen KG', 'ta_only', null, null, null, $4)`,
+      [
+        seedProjectIds.werkNord,
+        seedProjectIds.lagerSued,
+        seedProjectIds.verwaltung,
+        seedStaffUserIds.projectLead,
+      ],
+    );
     await runMigrations(url);
 
     const waves = await db

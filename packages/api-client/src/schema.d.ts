@@ -484,7 +484,7 @@ export interface components {
             role: components["schemas"]["StaffRole"];
         };
         /** @enum {string} */
-        StaffRole: "admin" | "regional_admin" | "project_lead" | "consultant" | "back_office";
+        StaffRole: "admin" | "regional_admin" | "project_lead" | "consultant" | "back_office" | "regional_operations_manager";
         ProjectPage: {
             items: components["schemas"]["Project"][];
             nextCursor: string | null;

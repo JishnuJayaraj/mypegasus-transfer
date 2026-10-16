@@ -49,7 +49,7 @@ describe("dev session stub", () => {
 
   it("lists the synthetic staff users for the switcher", async () => {
     const res = await app.request("/api/v1/dev/staff-users");
-    expect(await readJson(res, z.array(StaffUser))).toHaveLength(5);
+    expect(await readJson(res, z.array(StaffUser))).toHaveLength(6);
   });
 
   it("gives a 404 problem for an unknown staff user", async () => {

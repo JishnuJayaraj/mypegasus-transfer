@@ -36,6 +36,13 @@
       "when": 1792166704388,
       "tag": "0004_status_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792168290108,
+      "tag": "0005_regional_operations_manager_role",
+      "breakpoints": true
     }
   ]
 }
