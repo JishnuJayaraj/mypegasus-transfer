@@ -121,7 +121,7 @@ CREATE TABLE "profiling_exception_request" (
 	"superseded_reason" "profiling_exception_superseded_reason",
 	CONSTRAINT "profiling_exception_request_id_participation_unique" UNIQUE("id","participation_id"),
 	CONSTRAINT "profiling_exception_request_status_not_none" CHECK ("profiling_exception_request"."status" <> 'none'),
-	CONSTRAINT "profiling_exception_request_fingerprint" CHECK ("profiling_exception_request"."evidence_fingerprint" ~ '^sha256:[0-9a-f]{64}$'),
+	CONSTRAINT "profiling_exception_request_fingerprint" CHECK ("profiling_exception_request"."evidence_fingerprint" ~ '^sha256:v1:[0-9a-f]{64}$'),
 	CONSTRAINT "profiling_exception_request_decision" CHECK (("profiling_exception_request"."decided_by" is null) = ("profiling_exception_request"."decided_on" is null) and ("profiling_exception_request"."decided_by" is null) = ("profiling_exception_request"."decided_at" is null) and (not ("profiling_exception_request"."status" in ('approved', 'rejected')) or "profiling_exception_request"."decided_by" is not null) and (not ("profiling_exception_request"."status" in ('requested', 'superseded')) or "profiling_exception_request"."decided_by" is null)),
 	CONSTRAINT "profiling_exception_request_superseded_reason" CHECK (("profiling_exception_request"."status" in ('superseded')) = ("superseded_reason" is not null)),
 	CONSTRAINT "profiling_exception_request_four_eyes" CHECK ("profiling_exception_request"."decided_by" <> "profiling_exception_request"."requested_by")

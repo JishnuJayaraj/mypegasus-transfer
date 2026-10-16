@@ -516,7 +516,7 @@ describe("change_participation_status (AC-16)", () => {
   });
 });
 
-const fingerprint = (c: string) => `sha256:${c.repeat(64)}`;
+const fingerprint = (c: string) => `sha256:v1:${c.repeat(64)}`;
 const evidenceRecord = "00000000-0000-4000-8000-0000000000e1";
 
 const request = (id: string, extra: { context?: string; fingerprint?: string } = {}) =>
@@ -577,15 +577,19 @@ describe("profiling exception requests (Q94, round 16)", () => {
       decided_at: expect.any(Date),
     });
     expect((await row(id)).status_version).toBe(4);
+    // The fingerprint stays on the request: never in audit details (round 17).
+    const requestedEvent = (await events(id)).find(
+      (e) => e.event_type === "profiling_exception_requested",
+    );
+    expect(requestedEvent.details).toEqual({
+      profilingExceptionRequestId: requestId,
+      evidenceRecordId: evidenceRecord,
+    });
     expect((await events(id)).slice(-2)).toMatchObject([
       {
         event_type: "profiling_exception_requested",
         reason_code: "agentur_scheduling_unavailable",
-        details: {
-          profilingExceptionRequestId: requestId,
-          evidenceRecordId: evidenceRecord,
-          evidenceFingerprint: fingerprint("a"),
-        },
+        details: { profilingExceptionRequestId: requestId, evidenceRecordId: evidenceRecord },
       },
       {
         event_type: "profiling_exception_approved",
@@ -675,7 +679,11 @@ describe("profiling exception requests (Q94, round 16)", () => {
       ).rejects.toMatchObject(failsWith("evidence_missing"));
     }
     await expect(
-      call(app, "request_profiling_exception", { ...args, evidenceFingerprint: "md5:abc" }),
+      // Unversioned (round 16's format) is malformed now (round 17).
+      call(app, "request_profiling_exception", {
+        ...args,
+        evidenceFingerprint: `sha256:${"a".repeat(64)}`,
+      }),
     ).rejects.toMatchObject({
       code: "23514",
       constraint: "profiling_exception_request_fingerprint",
@@ -794,23 +802,71 @@ async function asOwner(sql: string, params: unknown[]) {
 }
 
 describe("profiling_exception_request in the table itself (defence in depth)", () => {
-  it("never changes a request's reason or evidence identity, and never lets its status go back", async () => {
+  it("never changes a request's identity, reason or evidence", async () => {
     const id = await informedParticipation(app);
     const requestId = await request(id);
-    await decide(requestId, true);
     for (const change of [
       "reason_code = 'force_majeure'",
       "evidence_record_id = gen_random_uuid()",
       `evidence_fingerprint = '${fingerprint("e")}'`,
       "requested_on = '2027-01-01'",
-      "status = 'requested', decided_by = null, decided_on = null, decided_at = null",
-      "decided_on = '2027-02-04'",
-      "status = 'rejected'",
+      "requested_at = now() - interval '1 day'",
+      `requested_by = '${seedStaffUserIds.consultant}'`,
     ]) {
       await expect(
         asOwner(`update profiling_exception_request set ${change} where id = $1`, [requestId]),
       ).rejects.toMatchObject(failsWith("request_immutable"));
     }
+  });
+
+  // The exact transition matrix (round 17); every other update is request_immutable.
+  const decision = `decided_by = '${seedStaffUserIds.admin}', decided_on = '2027-02-03', decided_at = now()`;
+  const noDecision = "decided_by = null, decided_on = null, decided_at = null";
+  const superseded = "status = 'superseded', superseded_reason = 'profiling_closed'";
+  it.each([
+    ["requested", `status = 'approved', ${decision}`, "allowed"],
+    ["requested", `status = 'rejected', ${decision}`, "allowed"],
+    [
+      "requested",
+      "status = 'approved', decided_by = requested_by, decided_on = '2027-02-03'",
+      "request_immutable",
+    ],
+    ["requested", "status = 'revoked'", "allowed"],
+    ["requested", `status = 'revoked', ${decision}`, "request_immutable"],
+    ["requested", superseded, "allowed"],
+    ["requested", `${superseded}, ${decision}`, "request_immutable"],
+    ["requested", "status = 'requested'", "request_immutable"],
+    ["approved", "status = 'revoked'", "allowed"],
+    ["approved", "status = 'revoked', decided_on = '2027-02-04'", "request_immutable"],
+    ["approved", `status = 'revoked', ${noDecision}`, "request_immutable"],
+    ["approved", "status = 'rejected'", "request_immutable"],
+    ["approved", "decided_at = now() + interval '1 hour'", "request_immutable"],
+    ["approved", `${superseded}, ${noDecision}`, "request_immutable"],
+    ["rejected", "status = 'approved'", "request_immutable"],
+    ["rejected", "status = 'revoked'", "request_immutable"],
+    ["revoked", `status = 'requested'`, "request_immutable"],
+    ["superseded", "status = 'requested', superseded_reason = null", "request_immutable"],
+  ])("from %s: set %s → %s", async (from, change, expected) => {
+    const id = await informedParticipation(app);
+    const requestId = await request(id);
+    if (from === "approved" || from === "revoked") await decide(requestId, true);
+    if (from === "rejected") await decide(requestId, false);
+    if (from === "revoked") await revoke(requestId);
+    if (from === "superseded") {
+      await changeStatus(app, id, {
+        field: "profiling_status",
+        from: "not_started",
+        to: "profiling_declined",
+      });
+    }
+    const outcome = await asOwner(
+      `update profiling_exception_request set ${change} where id = $1`,
+      [requestId],
+    ).then(
+      () => "allowed",
+      (error: { message: string }) => error.message,
+    );
+    expect(outcome).toBe(expected);
   });
 
   it("keeps four eyes and one open request per participation", async () => {

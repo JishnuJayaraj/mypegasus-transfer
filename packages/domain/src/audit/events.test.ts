@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AuditEvent,
   AuditEventType,
+  EvidenceFingerprint,
   lifecycleEventTypes,
   StatusField,
   statusFieldOfTrack,
@@ -196,13 +197,26 @@ describe("status_changed", () => {
   });
 });
 
-// Every exception event identifies its request record; only the request names the evidence (Q94).
+// Every exception event identifies its request record; only the request names its opaque
+// evidence record, never the fingerprint or contents (Q94, round 17).
 const ofRequest = { profilingExceptionRequestId: "00000000-0000-4000-8000-0000000000c1" };
-const requested = {
-  ...ofRequest,
-  evidenceRecordId: "00000000-0000-4000-8000-0000000000d1",
-  evidenceFingerprint: `sha256:${"ab".repeat(32)}`,
-};
+const requested = { ...ofRequest, evidenceRecordId: "00000000-0000-4000-8000-0000000000d1" };
+
+describe("EvidenceFingerprint (round 17)", () => {
+  it("names the hash and the canonicalisation version", () => {
+    expect(EvidenceFingerprint.safeParse(`sha256:v1:${"0a".repeat(32)}`).success).toBe(true);
+  });
+
+  it.each([
+    ["no canonicalisation version", `sha256:${"0a".repeat(32)}`],
+    ["upper-case hex", `sha256:v1:${"0A".repeat(32)}`],
+    ["a short digest", `sha256:v1:${"0a".repeat(31)}`],
+    ["another hash", `md5:v1:${"0a".repeat(32)}`],
+    ["an unversioned v", `sha256:v:${"0a".repeat(32)}`],
+  ])("rejects %s", (_label, value) => {
+    expect(EvidenceFingerprint.safeParse(value).success).toBe(false);
+  });
+});
 
 describe("the other event types", () => {
   it.each([
@@ -279,7 +293,10 @@ describe("the other event types", () => {
     ],
     [
       "profiling_exception_requested",
-      { reasonCode: "force_majeure", details: { ...requested, evidenceFingerprint: "md5:abc" } },
+      {
+        reasonCode: "force_majeure",
+        details: { ...requested, evidenceFingerprint: `sha256:v1:${"ab".repeat(32)}` },
+      },
     ],
     ["profiling_exception_requested", { reasonCode: "force_majeure", details: ofRequest }],
     ["profiling_exception_approved", { details: {} }],

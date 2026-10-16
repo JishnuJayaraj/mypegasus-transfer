@@ -276,7 +276,11 @@ export const profilingExceptionRequest = pgTable(
       .defaultNow(),
     /** The immutable evidence record (Slice 4b); no FK until it exists. */
     evidenceRecordId: uuid("evidence_record_id").notNull(),
-    /** Its canonical fingerprint: changed evidence means a different fingerprint (Q94). */
+    /**
+     * Its versioned canonical fingerprint (`sha256:v1:…`, round 17): changed evidence means a
+     * different fingerprint (Q94). Confidential evidence metadata: never in audit details, logs
+     * or client responses.
+     */
     evidenceFingerprint: text("evidence_fingerprint").notNull(),
     decidedBy: uuid("decided_by").references(() => staffUser.id),
     decidedOn: dateColumn("decided_on"),
@@ -299,7 +303,7 @@ export const profilingExceptionRequest = pgTable(
     check("profiling_exception_request_status_not_none", sql`${t.status} <> 'none'`),
     check(
       "profiling_exception_request_fingerprint",
-      sql`${t.evidenceFingerprint} ~ '^sha256:[0-9a-f]{64}$'`,
+      sql`${t.evidenceFingerprint} ~ '^sha256:v1:[0-9a-f]{64}$'`,
     ),
     // A decision has its decider, date and instant; only approvals and rejections are decided,
     // and a revoked request keeps the decision it had (approved) or none (pending).

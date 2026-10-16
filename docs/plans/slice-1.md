@@ -631,35 +631,45 @@ applied:
   **Q94**); every exception event carries `profilingExceptionRequestId` (3, 15); the current wave
   again is refused with `wave_unchanged`, without a write (17).
 
-Readings taken while applying round 16 (fail safe, D10; correct them if wrong):
+The nine readings taken while applying round 16 were answered in
+[round 17](../decisions/2026-10-16-answers-round-17.md) and are applied:
 
-1. **The fingerprint** is `sha256:` plus 64 hex digits (`EvidenceFingerprint`), opaque in
-   Slice 1; Slice 4b computes it from the evidence record's canonical form (sorted, de-duplicated
-   content digests of the accepted document versions, or the normalised BA facts) by the rules of
-   round 16. The table checks only its format; `request_profiling_exception` refuses a missing
-   id or fingerprint (`evidence_missing`) and the latest request's fingerprint
+1. **The fingerprint** is `sha256:v1:` plus 64 lowercase hex digits (`EvidenceFingerprint`): the
+   version names the canonicalisation, so a later `v2` never looks like changed evidence
+   (corrected in round 17). Slice 4b computes it over the domain-separated payload
+   `profiling-exception-evidence:v1`, the participation id and the canonical evidence (sorted,
+   de-duplicated content digests of accepted immutable document versions, or normalised BA facts
+   with stable key order); so re-uploads and reordering change nothing and fingerprints can't
+   correlate evidence across participants. It is **confidential evidence metadata**: only on
+   `profiling_exception_request`, never in audit details (the `profiling_exception_requested`
+   event keeps the request id and the opaque `evidenceRecordId`), logs or client responses. The
+   table checks its format (a malformed one is `23514`); `request_profiling_exception` refuses a
+   missing id or fingerprint (`evidence_missing`) and the latest request's fingerprint
    (`evidence_unchanged`). The domain's `EvidenceFact` is `{ recordId, fingerprint }`;
    `requestProfilingException` compares fingerprints, never record ids.
-2. **Deciding and revoking name the request** (`request_id`), not the participation, and act
-   only on the participation's current request (`request_not_found`, `request_not_current`).
-   They lock the participation first, like every write.
-3. **One open request per participation** (`requested` or `approved`), a partial unique index.
-4. **A trigger enforces "immutable request"** for every writer (`request_immutable`): id, project,
-   participation, reason, requester, request date and instant and the evidence identity never
-   change; the status only progresses (`requested` → `approved`/`rejected`/`revoked`/
-   `superseded`, `approved` → `revoked`); a recorded decision stays (a revoked approval keeps
-   it).
-5. **Status column:** the request reuses the `profiling_exception_status` enum and refuses
-   `none` (a participation without a request has a null reference).
-6. **Composite FKs** keep both sides consistent: a request's `(participation_id, project_id)` is
-   its participation's, and the participation's current request is one of its own.
-7. **`status_version`** is bumped on the participation for every request, decision and
-   revocation, so they serialise with status changes; a supersession rides on the change's
-   bump.
-8. **`transfer_app` may select `profiling_exception_request`:** the status service (1g-2) reads
-   the latest fingerprint and the approval (`approvedExceptionFact`). It writes nothing there.
-9. **New error codes:** `wave_unchanged`, `evidence_missing`, `evidence_unchanged`,
-   `request_not_found`, `request_not_current`, `request_immutable`.
+2. **Deciding and revoking name the request** and act only on the participation's current
+   request (`request_not_found`, `request_not_current`), after locking the participation
+   (confirmed).
+3. **One open request per participation** (`requested` or `approved`), a partial unique index
+   (confirmed).
+4. **The trigger enforces the exact transition matrix** (corrected in round 17):
+   `requested → approved/rejected` only from no decision to a complete one,
+   `requested → revoked/superseded` only without a decision, `approved → revoked` only with the
+   decision unchanged; everything else, a no-op included, is `request_immutable`. Identity,
+   reason, requester, request date and instant, evidence id and fingerprint never change; the
+   table's `CHECK`s keep the superseded reason to `superseded` and the decider apart from the
+   requester. A direct-owner test covers every row, including fabricated decision fields on
+   `revoked` and `superseded`.
+5. **The request reuses `profiling_exception_status`** and refuses `none`, which only means "no
+   current request" (confirmed).
+6. **Composite FKs** on both sides (confirmed).
+7. **`status_version`** is bumped for every request, decision and revocation; a supersession
+   shares the change's bump (confirmed).
+8. **`transfer_app` may select `profiling_exception_request`**, no writes (confirmed with scope):
+   the status service reads the current request, requester, fingerprint and approval fact; the
+   API applies project/role access, never exposes request rows or fingerprints through generic
+   endpoints, and pre-pilot RLS remains required.
+9. **The new error codes** are confirmed (below).
 
 Error codes (SQLSTATE `P0001`, the code is the whole message): `actor_not_allowed`,
 `invalid_actor`, `invalid_argument`, `project_not_found`, `participation_not_found`,

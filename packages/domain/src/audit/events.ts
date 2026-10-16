@@ -69,10 +69,15 @@ const systemJob = z.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/);
 const resourceKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_.]{0,99}$/);
 
 /**
- * The canonical fingerprint of an evidence record (Q94): `sha256:` and 64 hex digits. Slice 4b
- * computes it from the record's content digests or normalised BA facts.
+ * The canonical fingerprint of an evidence record (Q94, round 17): `sha256:v1:` and 64 lowercase
+ * hex digits; the version names the canonicalisation, so a new one (v2) never looks like changed
+ * evidence. Slice 4b computes it over the domain-separated payload
+ * `profiling-exception-evidence:v1`, the participation id and the canonical evidence (the sorted,
+ * de-duplicated content digests of accepted document versions, or the normalised BA facts).
+ * Confidential evidence metadata: only on the request record, never in audit details, logs or
+ * client responses.
  */
-export const EvidenceFingerprint = z.string().regex(/^sha256:[0-9a-f]{64}$/);
+export const EvidenceFingerprint = z.string().regex(/^sha256:v1:[0-9a-f]{64}$/);
 
 /** Who acted (ADR-0002): `onBehalfOf` only for staff in assisted mode. */
 export const AuditActor = z.discriminatedUnion("type", [
@@ -192,15 +197,11 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     details: z.strictObject({ waveId: z.uuid(), previousWaveId: z.uuid().nullable() }),
   }),
-  /** The request names its evidence record by id and fingerprint, never its contents (Q94). */
+  /** The request names its opaque evidence record; never the fingerprint or contents (Q94). */
   event("profiling_exception_requested", {
     ...ofParticipation,
     reasonCode: ProfilingExceptionReason,
-    details: z.strictObject({
-      ...ofRequest,
-      evidenceRecordId: z.uuid(),
-      evidenceFingerprint: EvidenceFingerprint,
-    }),
+    details: z.strictObject({ ...ofRequest, evidenceRecordId: z.uuid() }),
   }),
   event("profiling_exception_approved", { ...ofParticipation, details: z.strictObject(ofRequest) }),
   event("profiling_exception_rejected", { ...ofParticipation, details: z.strictObject(ofRequest) }),

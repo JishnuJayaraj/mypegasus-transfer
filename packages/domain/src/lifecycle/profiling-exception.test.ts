@@ -17,7 +17,7 @@ import { canTransition } from "./transition";
 
 // Fixture: informed, ta_tg, today 2027-03-01, wave default TG start 2027-04-01.
 const fact: DatedFact = { validOn: "2027-02-20", recordedAt: new Date("2027-02-20T10:00:00Z") };
-const digest = (c: string) => `sha256:${c.repeat(64)}`;
+const digest = (c: string) => `sha256:v1:${c.repeat(64)}`;
 const evidence: EvidenceFact = { ...fact, recordId: "record-1", fingerprint: digest("a") };
 const now = new Date("2027-03-01T09:00:00Z");
 const pl = { type: "user", staffUserId: "pl-1" } as const;

@@ -114,7 +114,7 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     ...writes(
       "profiling_exception_request",
       "id",
-      `insert into profiling_exception_request (project_id, participation_id, reason_code, status, requested_by, requested_on, evidence_record_id, evidence_fingerprint) select project_id, id, 'force_majeure', 'requested', '${seedStaffUserIds.projectLead}', '2027-02-01', gen_random_uuid(), 'sha256:${"0".repeat(64)}' from participation`,
+      `insert into profiling_exception_request (project_id, participation_id, reason_code, status, requested_by, requested_on, evidence_record_id, evidence_fingerprint) select project_id, id, 'force_majeure', 'requested', '${seedStaffUserIds.projectLead}', '2027-02-01', gen_random_uuid(), 'sha256:v1:${"0".repeat(64)}' from participation`,
     ),
     ...writes(
       "project_entry_wave",

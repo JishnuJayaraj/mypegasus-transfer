@@ -1,5 +1,5 @@
 {
-  "id": "864fa06e-4a5d-4304-bbcb-a1a037e696f2",
+  "id": "f654a0ba-0a31-4f27-bf65-b2f9ed37aa06",
   "prevId": "816b58eb-3b3d-4c00-8624-44060d2b28a0",
   "version": "7",
   "dialect": "postgresql",
@@ -728,7 +728,7 @@
         },
         "profiling_exception_request_fingerprint": {
           "name": "profiling_exception_request_fingerprint",
-          "value": "\"profiling_exception_request\".\"evidence_fingerprint\" ~ '^sha256:[0-9a-f]{64}$'"
+          "value": "\"profiling_exception_request\".\"evidence_fingerprint\" ~ '^sha256:v1:[0-9a-f]{64}$'"
         },
         "profiling_exception_request_decision": {
           "name": "profiling_exception_request_decision",

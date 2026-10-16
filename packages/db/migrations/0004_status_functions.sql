@@ -337,8 +337,9 @@ BEGIN
   WHERE id = p_id;
   PERFORM public.write_audit_event(r.project_id, p_id, 'profiling_exception_requested', p_context, NULL,
     NULL, NULL, p_reason::text, NULL,
+    -- The opaque evidence record id only; the fingerprint stays on the request (round 17).
     jsonb_build_object('profilingExceptionRequestId', v_request_id,
-      'evidenceRecordId', p_evidence_record_id, 'evidenceFingerprint', p_evidence_fingerprint), false);
+      'evidenceRecordId', p_evidence_record_id), false);
   RETURN v_request_id;
 END $$;
 --> statement-breakpoint
@@ -431,22 +432,37 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- Defence in depth for "immutable request" (round 16), whoever writes: the reason, the evidence
--- identity and the request itself never change; the status only progresses
--- (requested → approved/rejected/revoked/superseded, approved → revoked) and a decision, once
--- recorded, stays as it is.
+-- Defence in depth for "immutable request" (rounds 16 and 17), whoever writes. The identity,
+-- reason, requester, request date and instant and the evidence identity never change. The
+-- status moves only along this matrix, with the decision fields as stated:
+--   requested → approved / rejected   decision changes from none to a complete decision
+--   requested → revoked / superseded  no decision, before or after
+--   approved  → revoked               the decision stays exactly as it was
+-- Everything else, a no-op update included, is request_immutable. The table's CHECKs keep the
+-- superseded reason to `superseded` and the decider apart from the requester.
 CREATE FUNCTION profiling_exception_request_progresses()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  v_old_undecided boolean := OLD.decided_by IS NULL AND OLD.decided_on IS NULL AND OLD.decided_at IS NULL;
+  v_new_undecided boolean := NEW.decided_by IS NULL AND NEW.decided_on IS NULL AND NEW.decided_at IS NULL;
+  v_new_complete boolean := NEW.decided_by IS NOT NULL AND NEW.decided_on IS NOT NULL AND NEW.decided_at IS NOT NULL;
+  v_allowed boolean;
 BEGIN
   IF (NEW.id, NEW.project_id, NEW.participation_id, NEW.reason_code, NEW.requested_by,
       NEW.requested_on, NEW.requested_at, NEW.evidence_record_id, NEW.evidence_fingerprint)
      IS DISTINCT FROM
      (OLD.id, OLD.project_id, OLD.participation_id, OLD.reason_code, OLD.requested_by,
-      OLD.requested_on, OLD.requested_at, OLD.evidence_record_id, OLD.evidence_fingerprint)
-     OR OLD.decided_by IS NOT NULL
-       AND (NEW.decided_by, NEW.decided_on, NEW.decided_at) IS DISTINCT FROM (OLD.decided_by, OLD.decided_on, OLD.decided_at)
-     OR NOT (OLD.status = 'requested' AND NEW.status IN ('approved', 'rejected', 'revoked', 'superseded')
-             OR OLD.status = 'approved' AND NEW.status = 'revoked') THEN
+      OLD.requested_on, OLD.requested_at, OLD.evidence_record_id, OLD.evidence_fingerprint) THEN
+    RAISE EXCEPTION 'request_immutable';
+  END IF;
+  v_allowed := CASE
+    WHEN OLD.status = 'requested' AND NEW.status IN ('approved', 'rejected') THEN v_old_undecided AND v_new_complete
+    WHEN OLD.status = 'requested' AND NEW.status IN ('revoked', 'superseded') THEN v_old_undecided AND v_new_undecided
+    WHEN OLD.status = 'approved' AND NEW.status = 'revoked' THEN
+      (NEW.decided_by, NEW.decided_on, NEW.decided_at) IS NOT DISTINCT FROM (OLD.decided_by, OLD.decided_on, OLD.decided_at)
+    ELSE false
+  END;
+  IF NOT v_allowed THEN
     RAISE EXCEPTION 'request_immutable';
   END IF;
   RETURN NEW;

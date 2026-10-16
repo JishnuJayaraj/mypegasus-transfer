@@ -58,7 +58,9 @@ Decided in the Slice 1 plan (D2, sections 5.4 and 5.10) and built in PR 1g-1:
   atomicity and drift are integration-tested.
 - **Profiling-exception requests are first-class rows** (`profiling_exception_request`, round 16,
   Q94): one immutable row per request (reason and evidence identity, by an opaque evidence-record
-  id and a canonical fingerprint), whose status and decision progress on the row under a trigger;
+  id and a versioned canonical fingerprint, which never leaves the row: not in audit details,
+  logs or responses, round 17), whose status and decision progress on the row along an exact
+  transition matrix enforced by a trigger;
   the participation references its current request. Never overwritten by the next request.
 - **Grants:** `transfer_app` may `SELECT` `participation`, `profiling_exception_request` and
   `project_entry_wave` and has no

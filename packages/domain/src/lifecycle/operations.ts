@@ -112,8 +112,8 @@ export type ProfilingException = {
 
 /**
  * One immutable evidence record (Q81, Q94): accepted evidence document versions or a structured
- * BA confirmation, with its canonical fingerprint (Slice 4b computes it from the content digests
- * or the normalised BA facts). No evidence storage until Slice 4b (D4).
+ * BA confirmation, with its versioned canonical fingerprint (`EvidenceFingerprint`, Slice 4b).
+ * No evidence storage until Slice 4b (D4).
  */
 export type EvidenceFact = DatedFact & { recordId: string; fingerprint: string };
 
