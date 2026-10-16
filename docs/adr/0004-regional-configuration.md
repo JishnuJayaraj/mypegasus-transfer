@@ -48,3 +48,26 @@ Accepted in the PR #1 review:
   validated by the same JSON Schema as regional templates. It holds the nationwide process:
   default channels, deadlines (ASU formula, signing-deadline offset, reminder intervals) and
   default completeness rules. Regional templates override only what differs.
+
+## Note 2026-10-16: spike S1 (`z.fromJSONSchema`, Slice 1 plan section 3)
+
+**Passed; no fallback, `ajv` is not added.** Checked with `zod@4.6.7` in a cloud session
+(Node 22.22.0, Chromium via Playwright):
+
+- **Same behaviour as hand-written Zod** for every keyword of the field-schema profile (plan
+  5.7): `type` (`string`, `integer`, `number`, `boolean`), `enum` (typed and untyped), `const`,
+  `minLength`/`maxLength`, `pattern`, `minimum`/`maximum`, `title`/`description`; 63 values
+  compared, no difference. `x-dataClass`, `x-retentionClass` and `x-label` compile and are
+  ignored for validation.
+- **`format: "date"`** compiles to `z.iso.date()`: rejects `2027-02-31`, `2027-02-29`,
+  `2027-04-31`, `1900-02-29`, `2027-13-01`, `2027-1-1` and timestamps; accepts `2028-02-29` and
+  `2000-02-29`. Same results as our `isoDate`, so no own `format` mapping is needed.
+- **CSP:** a Vite 8 build validating a compiled object schema in the browser, served with the
+  API's exact CSP, raised **no violation** with `z.config({ jitless: true })` and returned the
+  right results. Without `jitless` the same page raised one `script-src` `eval` violation
+  (Zod's JIT probe), so the setting is required in both SPAs (Slice 4a), as planned.
+
+Two details for PR 1f (`field-schema.ts`):
+- `pattern` is compiled **without the `u` flag** (like a hand-written `z.string().regex()`), so
+  `\p{…}` classes don't work. The profile should reject patterns that need the flag.
+- String lengths count code points, as JSON Schema requires (a hand-written `.max()` does too).
