@@ -12,11 +12,13 @@ dated file in [`decisions/`](decisions/), update the status here, and update the
 - `open`: no answer yet.
 
 **Gate:** before the pilot, nothing in the categories data protection, retention or legal
-deadlines may be `assumed` or `verify` (rows marked 🔒).
+deadlines may be `assumed` or `verify` (rows marked 🔒). A confirmation should normally change
+policy tables, configuration and tests; if a reviewer requires a design change, real data stays
+blocked until it is implemented (round 9).
 
 Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-10-15-answers-round-2.md) ·
 [round 3](decisions/2026-10-15-answers-round-3.md) · [round 4](decisions/2026-10-15-answers-round-4.md) · [round 5](decisions/2026-10-15-answers-round-5.md) (all 2026-10-15) ·
-[round 6](decisions/2026-10-15-answers-round-6.md) · [round 7](decisions/2026-10-16-answers-round-7.md) · [round 8](decisions/2026-10-16-answers-round-8.md) (2026-10-16)
+[round 6](decisions/2026-10-15-answers-round-6.md) · [round 7](decisions/2026-10-16-answers-round-7.md) · [round 8](decisions/2026-10-16-answers-round-8.md) · [round 9](decisions/2026-10-16-answers-round-9.md) (2026-10-16)
 
 | # | Topic | Owner | Status | Answer (short) | Confirmed by / date |
 |---|---|---|---|---|---|
@@ -103,4 +105,4 @@ Answers: [round 1](decisions/2026-10-15-answers.md) · [round 2](decisions/2026-
 | 81 | Profiling-exception reason codes. | PLs | confirmed | `participant_prevented_documented`, `agentur_scheduling_unavailable`, `force_majeure`, `ba_confirmed_other` (with who at the BA and when). Every code needs evidence or a BA reference (stored separately, encrypted once available). No `late_joiner`, no `profiler_capacity`, no unrestricted `other`. | Product owner, 2026-10-16 |
 | 82 | Transfer-KuG exclusion details. 🔒 | Legal / BA process owners | verify | Outcomes `eligible` / `excluded` / `ba_review_required`. Under an approved exception, entry through profiling completion is excluded and eligibility starts the next day; a refusal keeps the exclusion anchored at the entry date; a missed one-month deadline → `ba_review_required`, not cleared by later completion; only a recorded BA/legal determination clears or alters it. Employment isn't ended automatically. Affected periods are blocked from Transfer-KuG exports. | |
 | 83 | Does `ta_completed` require `profiling_done`? | PLs | confirmed | Not universally: only if profiling is in the approved measure plan, assigned, or required by the resolved configuration. Guard: every assigned required §110 activity completed or formally closed, required evidence present, PL confirms; Slice 1 evaluates a generic `taMeasuresComplete` fact. | Product owner, 2026-10-16 |
-| 84 | Participations not yet assigned to an entry wave (assignment is only required before the DSV offer): which cutoff applies to the Q70 withdrawals (`imported` → `never_contacted`, `contacted` → `not_informed`, `unreachable` → `no_response`)? | Product owner | open | Proposed: the project's final entry date (the latest wave cutoff), since they can no longer enter any wave after it. Until answered: flagged at that date, not withdrawn. | |
+| 84 | Participations not yet assigned to an entry wave: which cutoff applies to the Q70 withdrawals? | Product owner | confirmed | The project's final entry date (latest `latestEntryDate` across all waves). On the next Berlin day: `imported` → `never_contacted`, `contacted` → `not_informed`, `unreachable` → `no_response`, with the project-level 14-day warning and 3-day reminder. Once assigned, the wave's cutoff applies. `informed` without a wave/DSV offer stays a flagged exception. | Product owner, 2026-10-16 |

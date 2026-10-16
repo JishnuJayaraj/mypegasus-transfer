@@ -45,6 +45,8 @@ operates a Hetzner cluster in German data centres.
 - [ ] TLS, monitoring and alerting in place; logs checked for personal data
 - [ ] Security review / penetration test of auth, permissions and uploads
 - [ ] Retention values confirmed by DPO and tax advisor
+- [ ] Every DPO/legal confirmation implemented; if one required a design change, that change
+      is built and tested (round 9)
 
 ## Consequences
 + Data stays in German infrastructure under company control.

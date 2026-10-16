@@ -142,6 +142,8 @@ Slice 1 evaluates a generic **`taMeasuresComplete`** fact instead of hard-coding
 
 ## Noted while applying (for review)
 
+> Note 1 was corrected and note 5 (Q84) answered in [round 9](2026-10-16-answers-round-9.md).
+
 1. **Catch-up window:** the nightly run on day D evaluates TG starts from the date of the last
    completed run through D (that day is looked at once more). So evidence recorded later on the
    start day itself, after that night's run, is still caught up the next night. Automatic entry

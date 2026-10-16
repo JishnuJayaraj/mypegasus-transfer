@@ -1,12 +1,13 @@
 # Slice 1 — Domain core: plan
 
-- Status: **Approved** (rounds 7 and 8, 2026-10-16). One follow-up (Q84) is open and built
-  fail-safe; it doesn't block implementation.
+- Status: **Approved** (rounds 7–9, 2026-10-16). No domain question is open; the remaining DPO
+  and legal confirmations are pre-pilot gates.
 - Date: 2026-10-15, revised 2026-10-16
 - Roadmap: [Slice 1](../roadmap.md#slice-1--domain-core)
 - Builds on: [Slice 0](slice-0.md) (merged, PRs 0a–0d)
 - Decisions: [round 7](../decisions/2026-10-16-answers-round-7.md),
-  [round 8](../decisions/2026-10-16-answers-round-8.md)
+  [round 8](../decisions/2026-10-16-answers-round-8.md),
+  [round 9](../decisions/2026-10-16-answers-round-9.md)
 - Relevant ADRs: 0002 (status writes enforced in the DB, append-only audit, `project_id`), 0004
   (fixed lifecycle core, regional templates, base defaults, completeness rules), 0006 (adapters,
   `Clock`), 0007 (access model in Slice 1), 0008 (retention per item), 0011 (pg-boss, `system`
@@ -35,7 +36,7 @@
 Dependencies: `pg-boss@12.38.0` and its peer **`@opentelemetry/api@1.9.1` added explicitly**;
 `ajv@8.20.0` only on the S1 fallback; exact versions, pg-boss upgraded only in deliberate PRs.
 
-### What rounds 7 and 8 settled (summary)
+### What rounds 7–9 settled (summary)
 
 - **Deadlines are contractual and live on entry waves** (Q69, Q77, Q79): each `ta_tg` project
   has one or more waves (signing deadline, default TG start/end, `latestEntryDate`); a
@@ -43,10 +44,13 @@ Dependencies: `pg-boss@12.38.0` and its peer **`@opentelemetry/api@1.9.1` added 
   `offerDeadline`. The **final admission cutoff** (the Berlin day after the wave's
   `latestEntryDate`) replaces the 90-day grace period. Cutoff withdrawals add `never_contacted`
   and `not_informed`, with a 14-day warning and a 3-day final reminder (Q70, Q78).
-- **TG entry after the planned date** has three cases (Q68, round 8): automatic **catch-up** of
-  a missed run when every prerequisite was recorded and valid by the start date; audited
-  **reconciliation** by the PL when evidence recorded later proves it; otherwise a **new start
-  date**. Guard facts carry a validity date and a recording date.
+  Participations without a wave use the project's final entry date (Q84).
+- **TG entry after the planned date** has three cases (Q68, rounds 8–9): automatic **catch-up**
+  of a genuinely missed run when every prerequisite was valid and recorded before that day's
+  originally scheduled run time; audited **reconciliation** by the PL when evidence recorded
+  later proves it; otherwise a **new start date**. Automatic entry uses a snapshot as of the
+  scheduled run: a completed run whose guard failed is never reconsidered automatically. Guard
+  facts carry a validity date and a `recordedAt` timestamp.
 - **No guard is overridable** (Q71). A **profiling exception** needs evidence, one of four
   reason codes (Q81) and **approval by a different user** (`regional_operations_manager`)
   before it satisfies the TG entry guard.
@@ -63,13 +67,10 @@ Dependencies: `pg-boss@12.38.0` and its peer **`@opentelemetry/api@1.9.1` added 
 
 ### Open
 
-| Q | Gap | Built in Slice 1 until answered |
-|---|---|---|
-| Q84 | Which cutoff applies to participations not yet assigned to a wave (Q70 withdrawals)? | At the project's final entry date they are flagged `no_entry_wave_at_project_cutoff`; nothing moves. |
-
-Still `assumed` (DPO to confirm before the pilot, not blocking): Q61–Q67, Q77 (retention part),
-Q80. Still `verify`: Q74, Q82. None of these changes the design; an answer changes data and
-tests.
+No domain question is open. Still `assumed` (DPO): Q61–Q67, the retention part of Q77, Q80.
+Still `verify` (legal/BA): Q74, Q82. They are **pre-pilot gates**: a confirmation should
+normally change policy tables, configuration and tests; if a reviewer requires a design change,
+real data stays blocked until it is built (round 9, ADR-0005 gate).
 
 ## 1. Goal
 
@@ -230,15 +231,20 @@ docs/domain/generated/               lifecycle-transitions.md, access-matrix.md 
 #### Dated guard facts
 
 `GuardFacts` carry, per fact, the date it became **valid** (e.g. DSV fully executed on, ASU
-registered on, TL 407 signed on, exception approved on) and the Berlin date it was **recorded**
-in the system. This is what separates the three TG-entry cases (Q68, round 8):
+registered on, TL 407 signed on, exception approved on) and the instant it was **recorded** in
+the system (`recordedAt`, a timestamp). Each day `d` has an originally **scheduled run time**
+`scheduledAt(d)` = `d` at `JOBS_LIFECYCLE_TIME` (Europe/Berlin). This separates the three
+TG-entry cases (Q68, rounds 8–9):
 
 | Kind | Actor | When | Facts must be |
 |---|---|---|---|
-| `scheduled_entry` | system | `today = tgStart` | valid and recorded on or before `tgStart` |
-| `scheduled_entry_catchup` | system | `tgStart` inside the catch-up window, `tgStart < today` | valid and recorded on or before `tgStart` |
-| `reconciliation` | PL | `today > tgStart` | valid on or before `tgStart` (recorded any time); reviewed after the fact (Q80) |
+| `scheduled_entry` | system | the run for `tgStart` (`tgStart = today`) | valid on/before `tgStart` **and** `recordedAt ≤ scheduledAt(tgStart)` |
+| `scheduled_entry_catchup` | system | `tgStart` is a **missed** run day (inside the catch-up window), `tgStart < today` | valid on/before `tgStart` **and** `recordedAt ≤ scheduledAt(tgStart)` |
+| `reconciliation` | PL | `today > tgStart`, or the scheduled run failed the guard | valid on/before `tgStart` (recorded any time); reviewed after the fact (Q80) |
 | — (case 3) | — | a fact valid only after `tgStart` | no entry; the PL records a new start date (Slice 2) |
+
+Automatic entry is a **snapshot as of `scheduledAt(tgStart)`**: if the run for that day
+completed and the guard failed, no later run reconsiders it (round 9).
 
 #### Edges
 
@@ -286,7 +292,7 @@ type TransitionContext = {
   actor: { type: "user"; staffUserId: string } | { type: "participant" } | { type: "system" };
   entryKind?: TgEntryKind;             // only for informed → active_in_tg
   today: IsoDate;                      // from the Clock, Europe/Berlin
-  catchUpFrom?: IsoDate;               // first day of the catch-up window (system runs)
+  scheduledAt?: Instant;               // scheduled run time of tgStart's day (system kinds)
   wave: EntryWave | null;              // the participation's wave
   participation: { tgStart: IsoDate | null; offerDeadline: IsoDate | null;
                    profilingException: ProfilingExceptionState };
@@ -313,9 +319,9 @@ A test asserts this list exactly.
 
 | Guard | Transition | Passes when | Source |
 |---|---|---|---|
-| `dsv_fully_executed` | TG entry | all three signature dates set, the last valid on/before `tgStart` (+ recorded by then for system kinds) | §623 BGB |
-| `asu_registered_with_proof` | TG entry | ASU with proof, any channel, valid on/before `tgStart` (+ recorded) | §111(4) Nr. 4 |
-| `profiling_done_or_approved_exception` | TG entry | `profilingDoneOn ≤ tgStart`, or an exception **approved** on/before `tgStart` (+ recorded) | Q17, Q74, Q80 |
+| `dsv_fully_executed` | TG entry | all three signature dates set, the last valid on/before `tgStart` (system kinds: recorded by `scheduledAt(tgStart)`) | §623 BGB |
+| `asu_registered_with_proof` | TG entry | ASU with proof, any channel, valid on/before `tgStart` (system kinds: recorded by `scheduledAt`) | §111(4) Nr. 4 |
+| `profiling_done_or_approved_exception` | TG entry | `profilingDoneOn ≤ tgStart`, or an exception **approved** on/before `tgStart` (system kinds: recorded by `scheduledAt`) | Q17, Q74, Q80 |
 | `tg_start_date` | TG entry | per entry kind (table above) | Q68 |
 | `ta_completion` | `→ ta_completed` | `ta_only`, fact `taMeasuresComplete` (assigned required §110 activities completed or closed, evidence present; includes profiling only where the plan or configuration requires it), PL confirms | Q73, Q83 |
 | `withdrawal_after_dsv_signed` | `→ withdrawn` with `dsv_signed` | three-party cancellation present **and** PL confirms | *verify* Q46, Q71 |
@@ -342,18 +348,21 @@ domain tests cover every outcome with explicit facts.
 #### System planner (`planSystemTransitions`, PR 1c)
 
 A pure function: `(participation, wave, project, facts, window, config) → { changes[], flags[] }`
-where `window = { from, to = today }` and `from` is **the date of the last completed run** (that
-day is evaluated once more, so evidence recorded later on the start day itself still counts
-the next night; first run: `from = today`). Rules apply in order on the updated snapshot; a
-second run on the same day plans nothing.
+where `window = { days, today }` lists the run days this run covers: the days **after the last
+completed run** up to `today` (normally just `today`; after an outage every missed day; first
+run: `today`). A completed day is **never evaluated again** (round 9). Each day carries its
+`scheduledAt`. Rules apply in order on the updated snapshot; a second run on the same day plans
+nothing.
 
 1. **`dsv_expired`:** `dsv_offered` and `today >` effective offer deadline. Effective date =
    deadline + 1.
-2. **TG entry:** `informed`, effective `tgStart` within the window, all TG guards pass with
-   facts valid **and recorded** by `tgStart` → `active_in_tg`, effective date and `tgEntryDate` =
-   `tgStart`, entry kind `scheduled_entry` (`tgStart = today`) or `scheduled_entry_catchup`
-   (`tgStart < today`). Still `informed` with `tgStart < today` after this step → flag
-   **`tg_start_missed`** (the PL reconciles or records a new start date).
+2. **TG entry:** `informed`, effective `tgStart` is one of the window's days, all TG guards pass
+   with facts valid by `tgStart` **and recorded by `scheduledAt(tgStart)`** → `active_in_tg`,
+   effective date and `tgEntryDate` = `tgStart`, entry kind `scheduled_entry` (`tgStart = today`)
+   or `scheduled_entry_catchup` (a missed day), with `scheduledAt` in the audit details. Still
+   `informed` with `tgStart < today` after this step → flag **`tg_start_missed`** (the PL
+   reconciles or records a new start date). DSV expiry and cutoff withdrawals are state-based
+   and catch up normally after an outage.
 3. **Cutoff withdrawals** (`ta_tg`, wave with `latestEntryDate`, `today > latestEntryDate`),
    effective date and `withdrawnOn` = `latestEntryDate + 1`:
 
@@ -372,10 +381,17 @@ second run on the same day plans nothing.
    `cutoff_warning` from 14 calendar days before the cutoff, `cutoff_final_reminder` from 3 days
    before. Both persist while the condition holds; a wave activated late is warned at once.
    Informational only.
-5. **Missing dates:** a `ta_tg` project without any wave with a `latestEntryDate` → project flag
-   `latest_entry_date_missing`; participations without a wave after the project's final entry
-   date → `no_entry_wave_at_project_cutoff` (Q84). Nothing moves or is deleted.
-6. **Compliance flags** after entry (Q74, Q82): `profiling_exception_deadline_missed`
+5. **Participations without a wave** (Q84): the cutoff is the project's **final entry date**
+   (latest `latestEntryDate` across the waves), derived only when **every** wave has one (round
+   9, note 2). On the next Berlin day `imported` → `never_contacted`, `contacted` →
+   `not_informed`, `unreachable` → `no_response` (effective date and `withdrawnOn` = final entry
+   date + 1), with the same 14-day warning and 3-day reminder. `informed` without a wave →
+   flag `informed_without_wave_at_cutoff`, never withdrawn automatically. Once assigned, the
+   wave's cutoff applies.
+6. **Missing dates:** a `ta_tg` project with no wave, or a wave without `latestEntryDate` →
+   project flag `latest_entry_date_missing`; participations without a wave are then not
+   withdrawn. Nothing moves or is deleted.
+7. **Compliance flags** after entry (Q74, Q82): `profiling_exception_deadline_missed`
    (approved exception, not done, `today > addMonths(tgEntryDate, 1)`),
    `profiling_declined_after_entry`. Immediate escalations, never a status change.
 
@@ -766,13 +782,15 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
   `transfer_owner` and (re)applies the grants for `transfer_app` (idempotent). The API starts
   pg-boss as `transfer_app` with migration off when `JOBS_ENABLED=true` (default; `false` in
   tests, which start it explicitly).
-- **Schedule:** `lifecycle.sweep`, cron `JOBS_LIFECYCLE_CRON` (default `15 2 * * *`),
-  `tz: Europe/Berlin`. It enqueues one `lifecycle.evaluate-project` job per project with
-  `singletonKey = <projectId>:<today>`.
-- **Catch-up window:** the sweep reads the last completed run from `job_run` and passes
-  `window = { from: lastRunDate ?? today, to: today }` to every project job; when all project
-  jobs of the sweep have finished, it inserts today's `job_run` row. A failed sweep writes no
-  row, so the next night's window covers the missed days.
+- **Schedule:** `lifecycle.sweep` daily at `JOBS_LIFECYCLE_TIME` (Berlin local time, default
+  `04:15`; times from 02:00 to 02:59 are rejected because of the DST switches), registered as a
+  pg-boss cron with `tz: Europe/Berlin`. It enqueues one `lifecycle.evaluate-project` job per
+  project with `singletonKey = <projectId>:<today>`.
+- **Catch-up window:** the sweep reads the last completed run from `job_run` and passes the
+  days after it up to today, each with its `scheduledAt`, to every project job; when all project
+  jobs have finished, it inserts today's `job_run` row (with `scheduled_at` and
+  `completed_at`). A failed sweep writes no row, so the next run covers the missed days; a
+  completed day is never re-evaluated.
 - **Per-project job:** runs `planSystemTransitions` per participation and applies each change
   through the status service as `system` (`system_job`, `job_id`, `details.entryKind`).
   Idempotent: the planner plans nothing for moved participations, and compare-and-set rejects a
@@ -793,7 +811,7 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 | `participation` (new) | `id`, `project_id` (FK, not null), `entry_wave_id` (FK, null), `status`, `profiling_status`, `dsv_status`, `offer_deadline`, `tg_start`, `tg_end` (overrides, null = wave default), `tg_entry_date`, `exit_date`, `withdrawn_on`, `profiling_done_on` (all `date`), `end_reason`, `end_reason_secondary end_reason[]`, `profiling_exception_status`, `profiling_exception_reason_code`, `profiling_exception_requested_by`, `profiling_exception_requested_on`, `profiling_exception_decided_by`, `profiling_exception_decided_on`, `status_version`, `created_at` | **`participation_record`** (new): ADR-0008 rules; non-signer clock from `withdrawn_on` (90 days *assumed*, Q77); `unset` in code until the DPO confirms (Slice 7) | `confidential` | yes |
 | `audit_event` (new) | section 5.4 | **`audit_log`** (new): 3 years, pseudonymised on deletion of the subject; evidence-set entries follow it; *verify* Q3; `unset` until Slice 7 | `confidential` | yes |
 | `lifecycle_edge` (new) | `track`, `from_value`, `to_value`, `kind` (pk), `actors` | **`reference_data`** (new): no personal data, never touched by the retention job | `internal` | no |
-| `job_run` (new) | `job_name`, `run_date` (pk), `completed_at` | `reference_data` | `internal` | no |
+| `job_run` (new) | `job_name`, `run_date` (pk), `scheduled_at`, `completed_at` | `reference_data` | `internal` | no |
 
 - `CHECK`s on `participation`: `tg_start ≤ tg_end`; `offer_deadline ≤ tg_start` when both set;
   `dsv_status <> 'not_offered'` ⇒ `entry_wave_id` set; `end_reason` set exactly for
@@ -826,7 +844,7 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 | `pnpm db:migrate` | also installs/migrates the `pgboss` schema and applies its grants | 1h |
 
 New environment variables (`.env.example`, PR 1h): `JOBS_ENABLED` (`true`),
-`JOBS_LIFECYCLE_CRON` (`15 2 * * *`), `CLOCK` (`system`); `DATABASE_JOBS_URL` only on the S2
+`JOBS_LIFECYCLE_TIME` (`04:15`, Berlin), `CLOCK` (`system`); `DATABASE_JOBS_URL` only on the S2
 fallback.
 
 ## 7. Acceptance criteria
@@ -843,9 +861,9 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
       only `user`; system-only edges reject `user`; user-only edges reject `system`. (U)
 - [ ] **AC-4** TG entry, the three cases: every combination of {DSV fully executed, ASU with
       proof, profiling done / approved exception} × fact valid before / on / after `tgStart` ×
-      recorded before / on / after `tgStart` × entry kind. Automatic kinds need valid **and**
-      recorded by `tgStart`; reconciliation needs valid by `tgStart`; a fact valid only after
-      `tgStart` never allows entry. (U `lifecycle/tg-entry.test.ts`)
+      recorded before / after `scheduledAt(tgStart)` × entry kind. Automatic kinds need valid by
+      `tgStart` **and** recorded by `scheduledAt`; reconciliation needs valid by `tgStart`; a
+      fact valid only after `tgStart` never allows entry. (U `lifecycle/tg-entry.test.ts`)
 - [ ] **AC-5** The guard list equals 5.3; there is no override path. (U `lifecycle/guards.test.ts`)
 - [ ] **AC-6** Profiling exception: request needs a Q81 code and the evidence fact (and the BA
       confirmation for `ba_confirmed_other`); never after `profiling_declined`; only an
@@ -862,13 +880,15 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
 - [ ] **AC-9** Cutoff planner: every combination of main ∈ {`imported`, `contacted`,
       `unreachable`, `informed`} × 5 profiling × 5 DSV × project type × wave/no wave gives the
       primary reason, the secondary list or the right flag; nothing on `latestEntryDate` itself;
-      `withdrawnOn = latestEntryDate + 1`; warnings from 14 and 3 days before; no wave or no
-      `latestEntryDate` → flags only. (U `lifecycle/planner-cutoff.test.ts`)
+      `withdrawnOn = latestEntryDate + 1`; warnings from 14 and 3 days before; participations
+      without a wave use the project's final entry date (Q84), `informed` ones are only
+      flagged; a wave without `latestEntryDate` → flags only. (U `lifecycle/planner-cutoff.test.ts`)
 - [ ] **AC-10** Catch-up: with a window covering N missed days, entries happen with
-      `scheduled_entry_catchup` and effective date `tgStart` exactly when facts were valid and
-      recorded by `tgStart`; evidence recorded on the start day after that night's run is caught
-      up the next night; otherwise `tg_start_missed`; a second run plans nothing.
-      (U `lifecycle/planner-catchup.test.ts`)
+      `scheduled_entry_catchup` and effective date `tgStart` exactly when facts were valid by
+      `tgStart` and recorded by `scheduledAt(tgStart)`; evidence recorded after a **completed**
+      run (even on the same day) never causes an automatic entry, only `tg_start_missed`; a
+      completed day is not re-evaluated; a second run plans nothing; DSV expiry and cutoff
+      withdrawals catch up after an outage. (U `lifecycle/planner-catchup.test.ts`)
 - [ ] **AC-11** End-reason correction keeps the terminal status, enforces the phase, and moves a
       system-derived reason to the secondary list. (U)
 - [ ] **AC-12** `transferKugEligibility` for every row of the table in 5.3, including the deadline
@@ -941,8 +961,9 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
       version 1. (U)
 
 ### Clock and jobs (PRs 1a, 1h)
-- [ ] **AC-36** `today()` is the Berlin date around midnight UTC and across both DST switches; no
-      `Date.now()`/`new Date()` in domain, config and jobs (source scan). (U)
+- [ ] **AC-36** `today()` is the Berlin date around midnight UTC and across both DST switches;
+      `scheduledAt(d)` is correct on both DST days and `JOBS_LIFECYCLE_TIME` in 02:00–02:59 is
+      rejected; no `Date.now()`/`new Date()` in domain, config and jobs (source scan). (U)
 - [ ] **AC-37** pg-boss starts as `transfer_app` on the schema installed by `db:migrate`; the
       nightly schedule is registered with `Europe/Berlin`. (I)
 - [ ] **AC-38** With a `ManualClock` and fake facts, the job produces `dsv_expired`, scheduled
@@ -995,8 +1016,9 @@ U = unit, I = DB/API integration, CI = workflow, R = review.
 
 ## 9. Doc changes
 
-**In this PR (rounds 7 and 8):** `docs/decisions/2026-10-16-answers-round-7.md` and
-`-round-8.md`; `open-questions.md` (Q60–Q83 answered with their statuses, Q3 note, new Q84);
+**In this PR (rounds 7–9):** `docs/decisions/2026-10-16-answers-round-7.md`, `-round-8.md` and
+`-round-9.md`; `open-questions.md` (Q60–Q84 answered with their statuses, Q3 note, gate note);
+ADR-0005 (gate item for design changes from confirmations);
 process-and-lifecycle.md (entry waves and contractual deadlines, cutoff withdrawals and
 warnings, the three TG-entry cases, profiling exceptions with approval, three Transfer-KuG
 outcomes, `taMeasuresComplete`, no overridable documentary guards, transition permissions,
@@ -1029,7 +1051,7 @@ period).
 |---|---|
 | The Transfer-KuG rules (Q74/Q82, *verify*) change after implementation | Isolated pure function with table-driven tests; an answer changes a table, not the design. |
 | Reading the app as deciding employment or eligibility | D4 wording in code and docs: the app records effective dates and reports outcomes; it doesn't create the employment relationship or decide a benefit. |
-| Catch-up enters someone on evidence entered late | Automatic kinds require **recorded** by `tgStart`; later evidence goes through the audited, reviewed reconciliation (AC-4, AC-10). |
+| Catch-up enters someone on evidence entered late | Automatic kinds use a snapshot as of the scheduled run time (`recordedAt ≤ scheduledAt`); completed days are never re-evaluated; later evidence goes through the audited, reviewed reconciliation (AC-4, AC-10). |
 | A failed sweep looks like success | `job_run` is written only after every project job finished; the next window covers the gap. |
 | `z.fromJSONSchema` is experimental upstream | Restricted profile validated first; spike S1 with the Ajv fallback; contained in `field-schema.ts`. |
 | Zod's JIT probe raising CSP violations in the SPAs | `z.config({ jitless: true })` (S1; enforced by the e2e CSP check from Slice 4a). |
@@ -1043,6 +1065,5 @@ period).
 
 ## 11. Approval
 
-Approved in rounds 7 and 8. Implementation starts with PR 1a on a new branch after this PR is
-merged. Q84 and the DPO/legal confirmations can come at any time; each changes data and tests
-only.
+Approved in rounds 7–9. Implementation starts with PR 1a on a new branch after this PR is
+merged. The DPO/legal confirmations are pre-pilot gates (section 0).

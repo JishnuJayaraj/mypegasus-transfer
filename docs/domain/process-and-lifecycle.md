@@ -4,7 +4,8 @@
 > two-track model from the PR #1 review (round 4), and 2026-10-16 from round 7 (deadlines from
 > the contract, final admission cutoff, no overrides of documentary guards, employment vs.
 > Transfer-KuG eligibility), and from round 8 (entry waves, catch-up of missed runs, approval of
-> profiling exceptions, three Transfer-KuG outcomes, `taMeasuresComplete`). Items marked *(provisional, Qnn)* rest on
+> profiling exceptions, three Transfer-KuG outcomes, `taMeasuresComplete`) and round 9 (cutoff
+> for participations without a wave, snapshot rule for TG entry). Items marked *(provisional, Qnn)* rest on
 > answers that are still `assumed` or `verify` in `open-questions.md`.
 
 ## Big picture
@@ -228,10 +229,14 @@ documentary or contractual guard is overridable at all**.
 
 **Entry after the planned date** (Q68, round 8) — three cases, never backdating on evidence
 created later:
-1. **The scheduled job didn't run**, but every prerequisite was already **recorded and valid by
-   the TG start date**: the next run **catches up automatically** with the `system` actor and
-   the original TG start as effective date (audit detail `scheduled_entry_catchup`). This is
-   reliability recovery, not late entry.
+1. **The scheduled job didn't run**, but every prerequisite was valid for the TG start and
+   already **recorded before that day's originally scheduled run time**: the next run **catches
+   up automatically** with the `system` actor and the original TG start as effective date
+   (audit detail `scheduled_entry_catchup`). This is reliability recovery, not late entry.
+   - Automatic entry always uses a **snapshot as of the scheduled run** (facts store
+     `recordedAt` timestamps). If the scheduled run **completed** and the guard failed, the
+     start date is never reconsidered automatically, even if evidence arrives later that day
+     (round 9).
 2. **Evidence was recorded later** but proves that every requirement already existed on the TG
    start date: the PL performs an **audited reconciliation** (reviewed after the fact by
    regional operations management, Q80).
@@ -284,8 +289,14 @@ doesn't issue a legal benefit determination. KuG billing itself is outside the M
 At the cutoff (the Berlin day after the wave's `latestEntryDate`), a nightly job with the
 `system` actor moves participations to `withdrawn` when they can no longer reach the TG,
 evaluated against **the participation's entry wave**. Without a `latestEntryDate`, the cases are
-flagged and nothing moves or is deleted automatically (Q70, Q77). Participations not yet
-assigned to a wave: Q84 (until answered, flagged and not withdrawn).
+flagged and nothing moves or is deleted automatically (Q70, Q77).
+
+**Participations without a wave** (Q84): the cutoff is the project's **final entry date** (the
+latest `latestEntryDate` across all waves); on the next Berlin day `imported` → `never_contacted`,
+`contacted` → `not_informed`, `unreachable` → `no_response`, with the same project-level warning
+and reminder. Once a participation is assigned to a wave, that wave's cutoff applies. An
+`informed` participation without a wave/DSV offer stays a flagged exception and is not withdrawn
+automatically.
 
 - **Warning** (Q78): from 14 calendar days before the cutoff, persistent until resolved, plus a
   final reminder 3 days before; a wave activated fewer than 14 days before is warned
