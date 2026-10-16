@@ -11,6 +11,13 @@ export type ConfigIssueCode =
   | "project_wide_setting"
   | "template_id_mismatch"
   | "field_redefined"
+  // merging the layers (resolve.ts) and loading a pinned template (load.ts)
+  | "wrong_layer_kind"
+  | "template_key_mismatch"
+  | "rule_redefined"
+  | "relaxation_locked"
+  | "invalid_reference"
+  | "path_mismatch"
   // the field-schema profile
   | "data_class_not_allowed"
   | "unknown_retention_class"
@@ -23,6 +30,19 @@ export type ConfigIssueCode =
 
 /** One problem with a layer, with its path; `key` names an offending key, never a value. */
 export type ConfigIssue = { code: ConfigIssueCode; path: (string | number)[]; key?: string };
+
+/** A layer that can't be used. Its message names codes, never values. */
+export class ConfigError extends Error {
+  readonly layer: string;
+  readonly issues: readonly ConfigIssue[];
+
+  constructor(layer: string, issues: readonly ConfigIssue[]) {
+    super(`${layer}: ${issues.map((issue) => issue.code).join(", ")}`);
+    this.name = "ConfigError";
+    this.layer = layer;
+    this.issues = issues;
+  }
+}
 
 export type LayerValidation =
   | { ok: true; layer: ConfigLayer }

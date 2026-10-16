@@ -1,7 +1,7 @@
 # Regional variation (Agentur-specific requirements)
 
 > Status: updated 2026-10-15 from the decisions log; the configuration model on 2026-10-16
-> (Slice 1, PR 1f-1). Items marked *(provisional, Qnn)* rest on
+> (Slice 1, PRs 1f-1 and 1f-2). Items marked *(provisional, Qnn)* rest on
 > answers that are not yet confirmed.
 
 BA requirements are mostly the same everywhere. Each Agentur für Arbeit has small differences,
@@ -73,7 +73,8 @@ ProjectOverride     kind "project_override"
   └─ helpTexts        no project-wide `settings`, no `nationwide`
 
 Project
-  └─ kugAgenturKey, the snapshotted template versions per Agentur and the override (Slice 2)
+  └─ projectAgenturKey (the KuG-Agentur for ta_tg, Q90), the snapshotted template versions per
+     Agentur and the override (Slice 2)
 Participation
   └─ placementAgenturKey   (from place of residence)
 ```
@@ -89,8 +90,28 @@ Participation
   columns, never `jsonb`), `x-retentionClass` (a participant retention class) and `x-label`.
   Keys start with `custom.`. Everything else is rejected before compiling.
 - `parseLayer` validates one layer: its shape, the profile, and its rules against the field
-  catalog plus the custom fields it declares or inherits. Merging the layers, provenance and
-  blockers are the resolver's (Slice 1, PR 1f-2).
+  catalog plus the custom fields it declares or inherits.
+- **The resolver** (`packages/config/src/resolve.ts`) merges the layers:
+  `resolveForParticipation` (participant steps from the placement Agentur, project steps from
+  the Project Agentur) and `resolveForProject` (project steps only). Both return the resolved
+  config, the **provenance** of every setting, field, rule, relaxation and help text (`base`,
+  `template:<id>@<version>`, `override`, `override:agentur:<key>` with source, confirmer and
+  date), the **blockers** and a **warning** for each blocker. Settings merge per key (later
+  layer wins), rules by id (never redefined), help texts per language and key. Resolved rules
+  keep their `basis` and `projectTypes`. An invalid layer is an error.
+- **Blockers** (Q76): `project_activation_blocked` without a Project-Agentur template, for both
+  project types (Q90); only a pinned template lifts it, never a temporary setting.
+  `agentur_submission_blocked` is **step-scoped** and never blocks activation or other work:
+  `agentur_submission` needs `submissionChannel`, `originalRequired`, `leadTimeDays` and
+  `rejectsOutdatedFormVersions` (Q92: the app never guesses whether an Agentur accepts an older
+  form); `asu_registration` blocks only the Kug 200b batch submission, needs the
+  `batchSubmissionChannel` in `ta_tg` projects only, and is a configuration warning until Slice 6
+  (Q91). The ASU `defaultChannel` never blocks (round 14). Project
+  activation additionally needs, for `ta_tg`, an entry wave with a `latestEntryDate` (Q77,
+  `projectActivationBlockers` in the domain).
+- **Samples** (D8): `packages/config/templates/beispielstadt-nord/1.json` and `2.json`,
+  `beispielstadt-sued/1.json`: fictional Agenturen with `sample: true`, never a real Agentur's
+  rules. `@transfer/config/load` reads a pinned version and checks its path.
 - Reminder rules are left to Slice 5; deadlines are entry-wave data (above).
 
 - The **Step enum** in `packages/domain` is the single vocabulary for steps, used by both the
@@ -98,7 +119,8 @@ Participation
 - **Two-level resolution** *(provisional, Q15)*:
   - participant steps: base defaults → template of the participant's **placement Agentur** →
     project overrides
-  - project steps: base defaults → template of the project's **KuG-Agentur** → project overrides
+  - project steps: base defaults → template of the project's **Project Agentur** (the
+    KuG-Agentur for `ta_tg`, Q90) → project overrides
 - **Base defaults** are `packages/domain/config/base-defaults.json` (ADR-0004), validated by the
   same JSON Schema as regional templates. It describes the nationwide
   process (fields required by TL 407 and Kug 200b, standard documents). Templates only add or
@@ -118,7 +140,8 @@ Participation
   only an `operational_default`, with reason, approval and audit. An unclassified rule is
   locked.
 - **Missing template** (Q76): base defaults apply for data collection, but operations don't
-  silently continue. A missing **KuG-Agentur** template blocks project activation. A missing
+  silently continue. A missing **Project-Agentur** template blocks project activation (both
+  project types, Q90). A missing
   **placement-Agentur** template allows contact, data collection and profiling, but **blocks
   Agentur submission** until channel, original requirement and lead time are confirmed and
   recorded; the PL gets a blocking task and a warning. A real Agentur's rules are never guessed.
@@ -130,9 +153,16 @@ Participation
   absent = every type). Completeness skips a rule for another type, so it is never a missing
   item or a reminder. The ASU proof and the DSV scan are `ta_tg` only; the Kug 200b rules apply
   only on the `kug_200b` ASU route and come with Slice 6 (round 14).
-- **Temporary Agentur settings** (no template yet) are recorded in the project override **scoped
-  to that Agentur**, with source, confirmer and confirmation date, and audited. They are never a
-  project-wide value that silently applies to every placement Agentur.
+- **Agentur-scoped project settings** are recorded in the project override **scoped to that
+  Agentur**, with source, confirmer and confirmation date, and audited: a fallback while the
+  Agentur has no template, or a confirmed project-specific exception to its pinned template
+  (Q93). Per key: base → pinned template → Agentur-scoped setting, which wins only for the keys
+  it supplies. They are never a project-wide value that silently applies to every placement
+  Agentur. When a project migrates to another template version, Slice 2 surfaces them for
+  review.
+- **Overrides apply project-wide** (round 15): Slice 2 validates an override against every
+  pinned Agentur template and rejects a relaxation that matches none of them. Agentur-specific
+  fields and rules belong in that Agentur's template.
 - In the MVP, templates are seed files. A new region therefore needs a deploy until an admin UI
   exists.
 

@@ -27,7 +27,8 @@ Decided (from the decisions log; details in `docs/domain/regional-variation.md`)
   configure *channels*: ASU default channel, Kug 200b batch channel, TL 407 submission channel,
   `originalRequired`, `leadTimeDays`, `rejectsOutdatedFormVersions`.
 - **Two Agenturen** *(provisional, Q15)*: the project has a KuG-Agentur and each participation
-  has a placement Agentur. Participant steps resolve against the placement Agentur's template,
+  has a placement Agentur. (Round 15: the project-level Agentur is the **Project Agentur**, the
+  KuG-Agentur only in `ta_tg` projects; see the 1f-2 amendment.) Participant steps resolve against the placement Agentur's template,
   project steps against the KuG-Agentur's template. A project therefore snapshots **one
   template version per Agentur** in use.
 - **Pinning and migration** *(provisional, Q36)*: projects stay pinned to their template
@@ -96,4 +97,40 @@ Two details for PR 1f (`field-schema.ts`):
   (spike S1): only `confidential` or `internal` data, a participant retention class and a label;
   everything else is rejected before compiling.
 - The resolver, its provenance and blockers, pinned-version loading and the sample templates
-  follow in PR 1f-2 and amend this ADR then.
+  follow in PR 1f-2 (amendment below).
+
+## Amendment 2026-10-16: the resolver (Slice 1, PR 1f-2)
+
+- **Two levels** *(provisional, Q15)*: `resolveForParticipation` resolves participant steps
+  against the Placement Agentur's template and project steps against the **Project Agentur's**
+  (`projectAgenturKey`; the KuG-Agentur in `ta_tg`, the Agentur responsible for the §110 measure
+  in `ta_only`, Q90);
+  `resolveForProject` resolves only the project steps. Each level is base defaults → that
+  Agentur's pinned template → project override, every layer validated by `parseLayer` with the
+  custom fields of the layers below.
+- **Merge rules:** settings per key, the later layer wins; an override's Agentur-scoped
+  settings apply only when resolving for that Agentur and win only for the keys they supply
+  (Q93). Rules are merged by id and
+  never redefined; templates only add; an override adds rules and relaxes only
+  `operational_default` rules (Q75). Custom fields are never redefined. Help texts: the later
+  layer wins per language and key. Resolved rules keep `basis` and `projectTypes` (Q89).
+  An invalid layer is an error, not a blocker.
+- **Provenance** for every setting, field, rule, relaxation and help text: `base`,
+  `template:<id>@<version>`, `override`, or `override:agentur:<key>` with source, confirmer and
+  date.
+- **Blockers and warnings** (Q76): no Project-Agentur template → `project_activation_blocked`
+  (both project types, Q90; only a pinned template lifts it); an Agentur submission setting
+  supplied neither by the template nor by an Agentur-scoped setting → `agentur_submission_blocked`
+  for that step only (`agentur_submission`: all four settings, Q92; `asu_registration`: the
+  Kug 200b batch channel in `ta_tg` projects, Q91), never a project blocker. Each blocker also gives a
+  warning. `projectActivationBlockers` in the domain adds `no_entry_wave_with_latest_entry_date`
+  for `ta_tg` projects (Q77).
+- **Pinned versions** *(provisional, Q36)*: the resolver takes the project's template objects;
+  `@transfer/config/load` (Node only) reads `templates/<agenturKey>/<version>.json` and checks
+  that the file is the template its path names. Compiled custom-field validators are cached per
+  (template id, version). Two fictional samples (D8): `beispielstadt-nord` (versions 1 and 2)
+  and `beispielstadt-sued`.
+- **Slice 2 invariants** (round 15): an override is validated against every pinned Agentur
+  template, and each relaxation must match a rule in at least one pinned chain; an existing
+  template version can't be modified or replaced; a migration to another version surfaces the
+  Agentur-scoped settings for review.

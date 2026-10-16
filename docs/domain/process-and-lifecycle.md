@@ -31,11 +31,12 @@ Customer (employer) ──► Transferprojekt (type: ta_only | ta_tg)
 
 | Role | Belongs to | Determined by | Responsible for |
 |---|---|---|---|
-| **KuG-Agentur** | project | business location of the TG | Anzeige über Arbeitsausfall, Transfer-KuG, final KuG settlement |
+| **Project Agentur** (`ta_tg`: the **KuG-Agentur**) | project | set at project setup (`ta_tg`: business location of the TG) | `ta_tg`: Anzeige über Arbeitsausfall, Transfer-KuG, final KuG settlement; `ta_only`: the §110 measure and its funding administration (Q90) |
 | **Placement Agentur** | participation | participant's place of residence | Arbeitsuchendmeldung (Kug 200b), TL 407 submission, placement |
 
 Participant steps resolve configuration from the placement Agentur's template, and project
-steps from the KuG-Agentur's template (see regional-variation.md).
+steps from the Project Agentur's template (see regional-variation.md). Without a Project-Agentur
+template a project of either type can't be activated (Q76, Q90).
 
 ## Dates
 
@@ -413,7 +414,7 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 
 | Step | Who | Output |
 |---|---|---|
-| Project setup | PL | project type, KuG-Agentur, dates (signing deadline, default TG start/end), regional templates |
+| Project setup | PL | project type, Project Agentur (KuG-Agentur for `ta_tg`), dates (signing deadline, default TG start/end), regional templates |
 | Import | PL | participations in `imported`; import report with row errors/duplicates |
 | Registration QR | PL → participants | `self_registered` participations, matched manually by the PL |
 | Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |

@@ -39,8 +39,9 @@ identifiers. If you find a term that is not here, add it.
 | Remanenzkosten | Residual costs | `remanenzkosten` | Costs of the TG not covered by Transfer-KuG (e.g. social insurance, holiday pay), paid by the customer per head. |
 | Ausscheiden vor Eintritt in die beE | Withdrawal (pre-TG) | `withdrawn` | Terminal state for people who leave before the TG, with a reason (`declined_dsv`, `no_response`, `placed_direct`, …). |
 | Nachweisbestand | Evidence set | `evidenceSet` | Minimal records kept for funding audits after full deletion (ADR-0008). |
-| KuG-Agentur | KuG Agentur | `kugAgentur` | Agentur responsible for the project's Anzeige and Transfer-KuG. |
-| Vermittlungs-Agentur | Placement Agentur | `placementAgentur` | Agentur responsible for a participant (by residence): ASU, TL 407, placement. |
+| Projekt-Agentur | Project Agentur | `projectAgentur` | The project-level Agentur; project steps resolve against its template, and a project can't be activated without one (Q90). In a `ta_tg` project it is the KuG-Agentur; in a `ta_only` project the Agentur responsible for the §110 measure and its funding administration. |
+| KuG-Agentur | KuG Agentur | `kugAgentur` | The Project Agentur of a `ta_tg` project: responsible for the Anzeige and Transfer-KuG. Use this label only for `ta_tg`. |
+| Vermittlungs-Agentur | Placement Agentur | `placementAgentur` | Agentur responsible for a participant (by residence): ASU, profiling (TL 407), placement; participant steps resolve against its template. |
 | Schlussabrechnung | Final settlement | `kugFinalSettlementDate`, `measure110SettlementDate` | Agentur's final check of Transfer-KuG / the §110 grant; starts the evidence-set clock. |
 | Grad der Behinderung (GdB) | Degree of disability | `gdb` | Special-category data; back office may see it for payroll. |
 | eAU | Electronic sick note | — | Employer retrieves sick notes electronically; we store only "AU confirmed" + dates. |

@@ -1,4 +1,10 @@
-export { compileFieldSchema, CustomFieldKey, FieldSchema, LocalizedText } from "./field-schema";
+export {
+  compileFieldSchema,
+  CustomFieldKey,
+  FieldSchema,
+  LocalizedText,
+  templateFieldValidators,
+} from "./field-schema";
 export { renderJsonSchema } from "./json-schema";
 export {
   AgenturKey,
@@ -15,6 +21,17 @@ export {
   Tl407SubmissionChannel,
 } from "./model";
 export {
+  resolveForParticipation,
+  resolveForProject,
+  type Blocker,
+  type LayerRef,
+  type ParticipationResolveInput,
+  type ProjectResolveInput,
+  type Resolution,
+  type ResolvedConfig,
+} from "./resolve";
+export {
+  ConfigError,
   parseLayer,
   type ConfigIssue,
   type ConfigIssueCode,

@@ -120,7 +120,9 @@ packages/
   ui/             thin wrappers around Carbon components, layout, tokens, i18n helpers
   config/         regional configuration: the Zod-authored layer model (base defaults, Agentur
                   templates, project overrides) exported as JSON Schema, the custom-field
-                  profile; the resolver comes with PR 1f-2. Base defaults live in
+                  profile, the two-level resolver with provenance and blockers, pinned template
+                  loading (@transfer/config/load, Node only) and the fictional sample templates
+                  in templates/<agenturKey>/<version>.json. Base defaults live in
                   packages/domain/config/base-defaults.json
   adapters/       interfaces + implementations behind them (ADR-0006). Only `Clock` so far
                   (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus

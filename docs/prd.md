@@ -31,7 +31,8 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 ## User flows (MVP)
 
 ### F1 Project setup
-- Create project: customer, location, type (`ta_only` / `ta_tg`), KuG-Agentur, dates (TA start,
+- Create project: customer, location, type (`ta_only` / `ta_tg`), Project Agentur
+  (the KuG-Agentur for `ta_tg`, Q90), dates (TA start,
   signing deadline, default TG start/end), regional templates.
 - Project checklist: Agentur consultation of the Betriebsparteien, Anzeige über Arbeitsausfall,
   later the settlement dates (`kugFinalSettlementDate`, `measure110SettlementDate`).
