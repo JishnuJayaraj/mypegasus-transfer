@@ -217,6 +217,8 @@ export const participation = pgTable(
     iff("participation_withdrawn_on_when_withdrawn", statusIn("withdrawn"), t.withdrawnOn),
     iff("participation_tg_entry_date_in_tg", statusIn("active_in_tg", "exited"), t.tgEntryDate),
     iff("participation_exit_date_when_exited", statusIn("exited"), t.exitDate),
+    // Round 18: no exit before the TG entry.
+    check("participation_exit_after_entry", sql`${t.exitDate} >= ${t.tgEntryDate}`),
     iff(
       "participation_profiling_done_on_when_done",
       sql.raw(`"participation"."profiling_status" = 'profiling_done'`),

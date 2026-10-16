@@ -9,14 +9,17 @@ import {
   type Database,
 } from "@transfer/db";
 import {
+  addDays,
   assignEntryWave,
   canTransition,
   correctEndReason,
   decideProfilingException,
   edges,
+  effectiveOfferDeadline,
   effectiveTgStart,
   mayPerformOperation,
   mayPerformTransition,
+  projectFinalEntryDate,
   requestProfilingException,
   revokeProfilingException,
   statusFieldOfTrack,
@@ -90,6 +93,14 @@ export type StatusChange = {
 type Deps = { db: Database; clock: Clock; facts?: GuardFactsProvider };
 
 const entryKinds: ReadonlySet<string> = new Set(TgEntryKind.options);
+/** The transitions that record a business date (round 18). */
+const datedTransitions: ReadonlySet<string> = new Set([
+  "active_in_tg",
+  "exited",
+  "withdrawn",
+  "profiling_done",
+  "dsv_expired",
+]);
 const notFound = new Set(["participation_not_found", "project_not_found", "request_not_found"]);
 const stale = new Set(["stale_status", "request_not_current"]);
 
@@ -120,6 +131,16 @@ function transitionActor(actor: ServiceActor): TransitionContext["actor"] {
   return { type: actor.kind };
 }
 
+/** A wave as the domain's `EntryWave`. */
+const waveColumns = {
+  id: projectEntryWave.id,
+  code: projectEntryWave.code,
+  signingDeadline: projectEntryWave.signingDeadline,
+  defaultTgStart: projectEntryWave.defaultTgStart,
+  defaultTgEnd: projectEntryWave.defaultTgEnd,
+  latestEntryDate: projectEntryWave.latestEntryDate,
+};
+
 type Request = typeof profilingExceptionRequest.$inferSelect;
 
 function exceptionOf(request: Request | undefined): ProfilingException | null {
@@ -147,6 +168,21 @@ async function call(tx: Transaction, query: SQL): Promise<string> {
   return rows[0]!.result;
 }
 
+/** The participation's wave cutoff, else the project's final entry date (Q84); none in ta_only. */
+async function applicableLatestEntryDate(
+  tx: Transaction,
+  context: OperationContext,
+  projectId: string,
+): Promise<IsoDate | null> {
+  if (context.projectType !== "ta_tg") return null;
+  if (context.wave) return context.wave.latestEntryDate;
+  const waves = await tx
+    .select(waveColumns)
+    .from(projectEntryWave)
+    .where(eq(projectEntryWave.projectId, projectId));
+  return projectFinalEntryDate(waves);
+}
+
 export function createStatusService({ db, clock, facts = failClosedFacts }: Deps) {
   /** One transaction; a function's refusal becomes a service error. */
   async function transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<T> {
@@ -169,14 +205,7 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
     const wave: EntryWave | null = p.entryWaveId
       ? ((await selectFirst(
           tx
-            .select({
-              id: projectEntryWave.id,
-              code: projectEntryWave.code,
-              signingDeadline: projectEntryWave.signingDeadline,
-              defaultTgStart: projectEntryWave.defaultTgStart,
-              defaultTgEnd: projectEntryWave.defaultTgEnd,
-              latestEntryDate: projectEntryWave.latestEntryDate,
-            })
+            .select(waveColumns)
             .from(projectEntryWave)
             .where(eq(projectEntryWave.id, p.entryWaveId)),
         )) ?? null)
@@ -204,6 +233,54 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
   }
 
   type Loaded = Awaited<ReturnType<typeof load>>;
+
+  /**
+   * The business date a change records (round 18), validated after the lock, never taken on
+   * trust from a caller: derived dates must match exactly (a TG entry its effective TG start,
+   * DSV expiry the offer deadline + 1, an automatic cutoff withdrawal the applicable cutoff + 1);
+   * staff dates (manual withdrawal, exit, `profiling_done`) may be backdated, never future-dated,
+   * and an exit never precedes the entry. A transition without a dependent date takes none.
+   */
+  async function effectiveDateOf(
+    tx: Transaction,
+    change: StatusChange,
+    { context, p }: Loaded,
+  ): Promise<IsoDate | null> {
+    const given = change.effectiveDate ?? null;
+    if (!datedTransitions.has(change.to)) {
+      if (given !== null) fail("domain", "effective_date_not_allowed");
+      return null;
+    }
+    let derived: IsoDate | null | undefined;
+    if (change.to === "active_in_tg") {
+      derived = effectiveTgStart(context.participation, context.wave);
+    } else if (change.to === "dsv_expired") {
+      const deadline = effectiveOfferDeadline(context.participation, context.wave);
+      derived = deadline && addDays(deadline, 1);
+    } else if (change.to === "withdrawn" && context.actor.type === "system") {
+      const latest = await applicableLatestEntryDate(tx, context, p.projectId);
+      derived = latest && addDays(latest, 1);
+    }
+    let date: IsoDate;
+    if (derived === undefined) {
+      if (given === null) return fail("domain", "effective_date_required");
+      date = given;
+    } else {
+      if (derived === null || (given !== null && given !== derived)) {
+        return fail("domain", "effective_date_mismatch");
+      }
+      // A TG entry's date is always its start; the other derived dates are stated by the caller.
+      if (given === null && change.to !== "active_in_tg") {
+        return fail("domain", "effective_date_required");
+      }
+      date = derived;
+    }
+    if (date > context.today) fail("domain", "effective_date_in_future");
+    if (change.to === "exited" && p.tgEntryDate !== null && date < p.tgEntryDate) {
+      fail("domain", "effective_date_before_entry");
+    }
+    return date;
+  }
 
   function permitOperation(actor: ServiceActor, operation: Operation, loaded: Loaded) {
     const permission = mayPerformOperation(actor, operation, loaded.target);
@@ -290,15 +367,7 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
         });
         if (!check.ok) fail("domain", check.code, check.failedGuards);
 
-        // A TG entry is recorded on the effective TG start, whatever its kind (plan 5.3).
-        let effectiveDate = change.effectiveDate ?? null;
-        if (to === "active_in_tg") {
-          const tgStart = effectiveTgStart(context.participation, context.wave);
-          if (effectiveDate !== null && effectiveDate !== tgStart) {
-            fail("domain", "effective_date_mismatch");
-          }
-          effectiveDate = tgStart;
-        }
+        const effectiveDate = await effectiveDateOf(tx, change, loaded);
         const secondary = change.secondaryReasons ?? [];
         return {
           auditEventId: await call(

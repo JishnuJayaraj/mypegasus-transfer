@@ -43,6 +43,20 @@
       "when": 1792168290108,
       "tag": "0005_regional_operations_manager_role",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792169630487,
+      "tag": "0006_exit_after_entry",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792169632594,
+      "tag": "0007_effective_dates",
+      "breakpoints": true
     }
   ]
 }

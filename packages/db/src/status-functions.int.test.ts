@@ -1102,3 +1102,55 @@ describe("record_audit_event", () => {
     await record(seedProjectIds.werkNord, own);
   });
 });
+
+describe("effective dates in the function (round 18)", () => {
+  it("requires one for DSV expiry and refuses one where it means nothing", async () => {
+    const waveId = await createWave(owner);
+    const id = await informedParticipation(app, { entryWaveId: waveId });
+    await expect(
+      changeStatus(app, id, {
+        field: "status",
+        from: "informed",
+        to: "unreachable",
+        effectiveDate: "2027-02-01",
+      }),
+    ).rejects.toMatchObject(failsWith("invalid_transition"));
+    await expect(
+      changeStatus(app, id, {
+        field: "dsv_status",
+        from: "not_offered",
+        to: "dsv_offered",
+        effectiveDate: "2027-02-01",
+      }),
+    ).rejects.toMatchObject(failsWith("effective_date_not_allowed"));
+    await changeStatus(app, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
+    await expect(
+      changeStatus(app, id, {
+        field: "dsv_status",
+        from: "dsv_offered",
+        to: "dsv_expired",
+        context: nightly,
+      }),
+    ).rejects.toMatchObject(failsWith("effective_date_required"));
+  });
+
+  it("never records an exit before the TG entry", async () => {
+    const id = await signedParticipation();
+    await changeStatus(app, id, {
+      field: "status",
+      from: "informed",
+      to: "active_in_tg",
+      entryKind: "reconciliation",
+      effectiveDate: "2027-03-01",
+    });
+    await expect(
+      changeStatus(app, id, {
+        field: "status",
+        from: "active_in_tg",
+        to: "exited",
+        endReason: "other",
+        effectiveDate: "2027-02-28",
+      }),
+    ).rejects.toMatchObject({ code: "23514", constraint: "participation_exit_after_entry" });
+  });
+});

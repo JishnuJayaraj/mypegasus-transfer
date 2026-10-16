@@ -40,6 +40,6 @@ describe("the base seed", () => {
       name: "W1",
     });
     await seed(db);
-    expect((await waves())[0]).toEqual({ id: migrated, code: "W1", latestEntryDate: "2027-03-15" });
+    expect((await waves())[0]).toEqual({ id: migrated, code: "W1", latestEntryDate: "2091-03-15" });
   });
 });

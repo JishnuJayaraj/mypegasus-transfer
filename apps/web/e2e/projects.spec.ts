@@ -18,7 +18,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await chooseDevUser(page, "Petra Projektleitung · Projektleitung");
   await expect(page.getByRole("row")).toHaveCount(4);
   await expect(page.getByRole("cell", { name: "Beispiel Maschinenbau GmbH" })).toBeVisible();
-  await expect(page.getByRole("cell", { name: "15.02.2027" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "15.02.2091" })).toBeVisible();
   await expectAccessible(page);
 
   // AC-3: create a project; it shows at the top without a reload, dates as TT.MM.JJJJ.

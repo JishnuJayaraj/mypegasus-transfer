@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { ManualClock, scheduledAt } from "@transfer/adapters";
 import {
+  eq,
   inArray,
   participation,
+  profilingExceptionRequest,
   seedProjectIds,
   seedStaffUserIds,
   seedWaves,
@@ -18,9 +20,11 @@ import { staffSubject } from "./subjects";
  * created and moved only through the status service and its functions, so every seeded state has
  * its audit trail. Each staff step is taken by the seeded user the Q60 matrix allows; system
  * steps by `system` with job `seed`. Idempotent by fixed UUIDs: an existing participation is
- * skipped. The service runs with a manual clock on fictional 2027 dates and a seed facts
+ * skipped. The service runs with a manual clock on fictional dates in 2091–2092 and a seed facts
  * provider that supplies synthetic dated facts and evidence the guards need (no documents exist
- * before Slices 4b–7); everything else is the production path.
+ * before Slices 4b–7); everything else is the production path. The timeline lies far ahead so
+ * that the instants the database records (an exception's approval) precede the scheduled runs
+ * (round 18); the seed refuses to run once that no longer holds.
  */
 
 const { werkNord, verwaltung } = seedProjectIds;
@@ -73,10 +77,18 @@ const recorded = (validOn: IsoDate): DatedFact => ({
   validOn,
   recordedAt: new Date(`${validOn}T09:00:00Z`),
 });
-const before = recorded("2027-01-25");
+const before = recorded("2091-01-25");
 const dsvDocuments = { dsvGenerated: before, dsvScanReceived: before };
 const entryFacts = { ...dsvDocuments, dsvFullyExecuted: before, asuRegisteredWithProof: before };
-const profiled = { tl407Signed: recorded("2027-02-01"), profilingDone: recorded("2027-02-01") };
+/**
+ * Valid before the TG start but recorded after its scheduled run: the late documentary evidence
+ * that justifies a reconciliation instead of the scheduled entry (Q68, round 18).
+ */
+const lateAsu: DatedFact = {
+  validOn: "2091-02-20",
+  recordedAt: new Date("2091-03-01T12:00:00Z"),
+};
+const profiled = { tl407Signed: recorded("2091-02-01"), profilingDone: recorded("2091-02-01") };
 
 /** Synthetic evidence: one record per participation, fingerprinted as Slice 4b will (round 17). */
 function evidenceFor(participationId: string): RequestEvidence {
@@ -90,15 +102,15 @@ function evidenceFor(participationId: string): RequestEvidence {
   };
 }
 
-const seedFacts: Record<string, GuardFacts> = {
+export const seedFacts: Readonly<Record<string, GuardFacts>> = {
   [p.offeredExceptionRequested]: dsvDocuments,
   [p.signedExceptionRejected]: dsvDocuments,
   [p.signedProfilingDeclined]: dsvDocuments,
   [p.declinedProfilingDone]: { ...dsvDocuments, ...profiled },
   [p.expiredWithdrawn]: dsvDocuments,
   [p.enteredScheduled]: { ...entryFacts, ...profiled },
-  [p.enteredWithException]: entryFacts,
-  [p.enteredProfilingDeclined]: entryFacts,
+  [p.enteredWithException]: { ...entryFacts, asuRegisteredWithProof: lateAsu },
+  [p.enteredProfilingDeclined]: { ...entryFacts, asuRegisteredWithProof: lateAsu },
   [p.exited]: { ...entryFacts, ...profiled },
   [p.withdrawnCorrected]: dsvDocuments,
   [p.taOnlyCompleted]: { taMeasuresComplete: before },
@@ -113,15 +125,21 @@ const seedFactsProvider: GuardFactsProvider = {
   evidence: async (_tx, { participationId }) => evidenceFor(participationId),
 };
 
-type Step = { on: IsoDate; at?: string; run: (s: StatusService) => Promise<unknown> };
+type Step = {
+  on: IsoDate;
+  at?: string;
+  run: (s: StatusService, db: Database) => Promise<unknown>;
+};
 type Scenario = { id: string; steps: Step[] };
 
-const D1 = "2027-02-01"; // contact, info event, offers, profiling, exception decisions
-const D2 = "2027-02-16"; // the day after W1's signing deadline
-const TG = "2027-03-01"; // W1's TG start, scheduled run at 04:15 Berlin
-const D4 = "2027-03-02"; // reconciliations after the TG start
-const CUTOFF = "2027-03-16"; // the day after W1's latest entry date
-const EXIT = "2027-07-01";
+const D1 = "2091-02-01"; // contact, info event, offers, profiling, exception decisions
+const D2 = "2091-02-16"; // the day after W1's signing deadline
+const TG = "2091-03-01"; // W1's TG start, scheduled run at 04:15 Berlin
+/** The scheduled run of W1's TG start (`JOBS_LIFECYCLE_TIME` default). */
+export const seedTgStartRun = scheduledAt(TG, "04:15");
+const D4 = "2091-03-02"; // reconciliations after the TG start
+const CUTOFF = "2091-03-16"; // the day after W1's latest entry date
+const EXIT = "2091-07-01";
 
 // Step builders. `on` is the Berlin day the step happens; the clock stands at 10:00 Berlin.
 const create = (
@@ -192,21 +210,46 @@ const scheduledEntry = (participationId: string): Step => ({
       from: "informed",
       to: "active_in_tg",
       entryKind: "scheduled_entry",
-      scheduledAt: scheduledAt(TG, "04:15"),
+      scheduledAt: seedTgStartRun,
     }),
 });
-// An approval's recorded instant is database time, so an entry relying on it is reconciled
-// afterwards instead of taken by the scheduled run (independent of when the seed runs).
-const reconciledEntry = (participationId: string): Step =>
-  move(
-    pl,
-    participationId,
-    "main",
-    "informed",
-    "active_in_tg",
-    { entryKind: "reconciliation" },
-    D4,
+/**
+ * A reconciliation under an approved exception (round 18): only when the exception was approved
+ * before the scheduled run (an approval after it can't authorise the entry retroactively) and a
+ * documentary fact valid at the TG start was recorded after the run. Checked before the step.
+ */
+async function assertReconciliationJustified(db: Database, participationId: string) {
+  const [row] = await db
+    .select({ decidedAt: profilingExceptionRequest.decidedAt })
+    .from(participation)
+    .innerJoin(
+      profilingExceptionRequest,
+      eq(profilingExceptionRequest.id, participation.profilingExceptionRequestId),
+    )
+    .where(eq(participation.id, participationId));
+  // Fails closed on a missing or unparsable instant too.
+  if (!row?.decidedAt || !(new Date(row.decidedAt).getTime() <= seedTgStartRun.getTime())) {
+    throw new Error("Seed: the exception was not approved before the scheduled run");
+  }
+  const late = Object.values(seedFacts[participationId] ?? {}).some(
+    (fact) => fact.validOn <= TG && fact.recordedAt > seedTgStartRun,
   );
+  if (!late) throw new Error("Seed: no fact was recorded after the scheduled run");
+}
+
+const reconciledEntry = (participationId: string): Step => ({
+  on: D4,
+  run: async (s, db) => {
+    await assertReconciliationJustified(db, participationId);
+    return s.changeStatus(pl, {
+      participationId,
+      track: "main",
+      from: "informed",
+      to: "active_in_tg",
+      entryKind: "reconciliation",
+    });
+  },
+});
 
 const scenarios: Scenario[] = [
   { id: p.imported, steps: [create(p.imported)] },
@@ -339,7 +382,7 @@ const scenarios: Scenario[] = [
               "main",
               "active_in_tg",
               "exited",
-              { endReason: "placed_permanent", effectiveDate: "2027-06-30" },
+              { endReason: "placed_permanent", effectiveDate: "2091-06-30" },
               EXIT,
             ),
           ]
@@ -439,7 +482,7 @@ export async function seedParticipations(db: Database): Promise<number> {
   for (const scenario of scenarios.filter((s) => !existing.has(s.id))) {
     for (const step of scenario.steps) {
       clock.set(atBerlin(step.on, step.at));
-      await step.run(service);
+      await step.run(service, db);
     }
     created += 1;
   }

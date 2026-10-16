@@ -13,7 +13,7 @@ import {
 } from "@transfer/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { failClosedFacts } from "./guard-facts";
-import { seedParticipationIds, seedParticipations } from "./seed";
+import { seedFacts, seedParticipationIds, seedParticipations, seedTgStartRun } from "./seed";
 
 // AC-43: seeded participations exist only through the service and its functions, each with its
 // audit trail; synthetic only (fixed UUIDs, no names).
@@ -137,12 +137,35 @@ describe("the participation seed (AC-43)", () => {
           currentRequest: requests[0] ?? null,
         }),
       };
-      for (const today of ["2027-04-02", "2027-07-05", "2027-07-14", "2027-07-16"]) {
+      for (const today of ["2091-04-02", "2091-07-05", "2091-07-14", "2091-07-16"]) {
         for (const flag of lifecycleFlags(snapshot, werkNord, today)) flags.add(flag);
       }
     }
     expect(flags).toEqual(new Set(LifecycleFlag.options));
     expect(projectFlags(werkNord)).toEqual([]);
     expect(projectFlags({ type: "ta_tg", waves: [] })).toEqual(["latest_entry_date_missing"]);
+  });
+
+  it("reconciles an entry only after an approval before the run and late evidence (round 18)", async () => {
+    const { rows: reconciled } = await owner.query(
+      `select e.participation_id, e.effective_date::text as tg_start, r.decided_at
+       from audit_event e
+       join participation p on p.id = e.participation_id
+       left join profiling_exception_request r on r.id = p.profiling_exception_request_id
+       where e.event_type = 'status_changed' and e.details->>'entryKind' = 'reconciliation'`,
+    );
+    expect(reconciled.map((r) => r.participation_id).toSorted()).toEqual(
+      [
+        seedParticipationIds.enteredWithException,
+        seedParticipationIds.enteredProfilingDeclined,
+      ].toSorted(),
+    );
+    for (const { participation_id: id, tg_start: tgStart, decided_at: decidedAt } of reconciled) {
+      expect(decidedAt.getTime()).toBeLessThanOrEqual(seedTgStartRun.getTime());
+      const late = Object.values(seedFacts[id] ?? {}).filter(
+        (fact) => fact.validOn <= tgStart && fact.recordedAt > seedTgStartRun,
+      );
+      expect(late.length).toBeGreaterThan(0);
+    }
   });
 });

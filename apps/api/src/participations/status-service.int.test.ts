@@ -11,13 +11,13 @@ import { createStatusService, StatusServiceError, type ServiceActor } from "./st
 // function, in one transaction; a refusal writes nothing.
 const db = createDb(testDatabaseUrls().app);
 const owner = createDb(testDatabaseUrls().owner).$client;
-const clock = new ManualClock(new Date("2027-02-01T09:00:00Z")); // Berlin 2027-02-01
+const clock = new ManualClock(new Date("2091-02-01T09:00:00Z")); // Berlin 2091-02-01
 const service = createStatusService({ db, clock });
 
 afterAll(() => Promise.all([db.$client.end(), owner.end()]));
 beforeEach(async () => {
   await resetTestDatabase({ seed: true });
-  clock.set(new Date("2027-02-01T09:00:00Z"));
+  clock.set(new Date("2091-02-01T09:00:00Z"));
 });
 
 const { werkNord, verwaltung } = seedProjectIds;
@@ -36,7 +36,7 @@ const consultantFor = (...assigned: string[]) =>
   staffSubject(seedStaffUserIds.consultant, { [werkNord]: ["consultant"] }, {}, assigned);
 const system: ServiceActor = { kind: "system", job: "lifecycle.evaluate-project" };
 
-const fact: DatedFact = { validOn: "2027-01-20", recordedAt: new Date("2027-01-20T10:00:00Z") };
+const fact: DatedFact = { validOn: "2091-01-20", recordedAt: new Date("2091-01-20T10:00:00Z") };
 const fingerprint = `sha256:v1:${"ab".repeat(32)}`;
 /** A provider with recorded facts and evidence, as Slice 4b and later will supply. */
 const withFacts = (facts: GuardFacts): GuardFactsProvider => ({
@@ -174,7 +174,7 @@ describe("status changes", () => {
         from: "informed",
         to: "withdrawn",
         endReason: "other",
-        effectiveDate: "2027-02-01",
+        effectiveDate: "2091-02-01",
       });
     const results = await Promise.allSettled([change(), change()]);
     expect(results.map((r) => r.status).toSorted()).toEqual(["fulfilled", "rejected"]);
@@ -206,7 +206,7 @@ describe("status changes", () => {
       from: "dsv_offered",
       to: "dsv_signed",
     });
-    clock.set(new Date("2027-03-02T09:00:00Z"));
+    clock.set(new Date("2091-03-02T09:00:00Z"));
     const entry = {
       participationId: id,
       track: "main",
@@ -215,7 +215,7 @@ describe("status changes", () => {
       entryKind: "reconciliation",
     } as const;
     await expect(
-      entering.changeStatus(pl, { ...entry, effectiveDate: "2027-03-02" }),
+      entering.changeStatus(pl, { ...entry, effectiveDate: "2091-03-02" }),
     ).rejects.toEqual(refused("domain", "effective_date_mismatch"));
     await entering.changeStatus(pl, entry);
     const { rows } = await owner.query(
@@ -234,7 +234,7 @@ describe("status changes", () => {
         from: "informed",
         to: "active_in_tg",
         entryKind: "scheduled_entry",
-        scheduledAt: new Date("2027-03-01T03:15:00Z"),
+        scheduledAt: new Date("2091-03-01T03:15:00Z"),
       }),
     ).rejects.toEqual(
       refused("domain", "guard_failed", [
@@ -255,8 +255,10 @@ describe("status changes", () => {
         from: "informed",
         to: "withdrawn",
         endReason: "other",
+        secondaryReasons: ["other"],
+        effectiveDate: "2091-02-01",
       }),
-    ).rejects.toEqual(refused("integrity", "effective_date_required"));
+    ).rejects.toEqual(refused("integrity", "invalid_argument"));
   });
 
   it("reports an unknown participation as not found", async () => {
@@ -411,13 +413,15 @@ describe("profiling exceptions", () => {
 describe("end-reason correction", () => {
   it("corrects a system-derived reason through the PL (Q72)", async () => {
     const id = await informed();
+    // Without a wave the cutoff is the project's final entry date (W2's, 2091-07-15; Q84).
+    clock.set(new Date("2091-07-16T09:00:00Z"));
     await service.changeStatus(system, {
       participationId: id,
       track: "main",
       from: "informed",
       to: "withdrawn",
       endReason: "no_response",
-      effectiveDate: "2027-03-16",
+      effectiveDate: "2091-07-16",
     });
     await expect(
       service.correctEndReason(consultantFor(id), {
@@ -440,5 +444,173 @@ describe("end-reason correction", () => {
     await expect(
       service.correctEndReason(pl, { participationId: id, endReason: "other" }),
     ).rejects.toEqual(refused("domain", "no_end_reason"));
+  });
+});
+
+describe("effective dates (round 18)", () => {
+  const facts = {
+    dsvGenerated: fact,
+    dsvScanReceived: fact,
+    dsvFullyExecuted: fact,
+    asuRegisteredWithProof: fact,
+    profilingDone: fact,
+    tl407Signed: fact,
+  };
+  const dated = createStatusService({ db, clock, facts: withFacts(facts) });
+  const offered = async () => {
+    const id = await informed({ wave: true });
+    await dated.changeStatus(backOffice, {
+      participationId: id,
+      track: "dsv",
+      from: "not_offered",
+      to: "dsv_offered",
+    });
+    return id;
+  };
+
+  it("refuses a date on a transition where it means nothing", async () => {
+    const id = await informed();
+    await expect(
+      service.changeStatus(pl, {
+        participationId: id,
+        track: "profiling",
+        from: "not_started",
+        to: "profiling_accepted",
+        effectiveDate: "2091-02-01",
+      }),
+    ).rejects.toEqual(refused("domain", "effective_date_not_allowed"));
+  });
+
+  it("expires a DSV exactly on the offer deadline + 1, and not before", async () => {
+    const id = await offered();
+    const expire = (effectiveDate?: string) =>
+      dated.changeStatus(system, {
+        participationId: id,
+        track: "dsv",
+        from: "dsv_offered",
+        to: "dsv_expired",
+        ...(effectiveDate && { effectiveDate }),
+      });
+    clock.set(new Date("2091-02-16T09:00:00Z")); // W1's signing deadline is 2091-02-15
+    await expect(expire()).rejects.toEqual(refused("domain", "effective_date_required"));
+    await expect(expire("2091-02-17")).rejects.toEqual(
+      refused("domain", "effective_date_mismatch"),
+    );
+    clock.set(new Date("2091-02-15T09:00:00Z"));
+    await expect(expire("2091-02-16")).rejects.toEqual(
+      refused("domain", "effective_date_in_future"),
+    );
+    clock.set(new Date("2091-02-16T09:00:00Z"));
+    await expire("2091-02-16");
+    expect(await state(id)).toMatchObject({ dsv_status: "dsv_expired" });
+  });
+
+  it("withdraws at the cutoff exactly on the applicable cutoff + 1, never in ta_only", async () => {
+    const id = await informed({ wave: true });
+    const withdraw = (effectiveDate: string) =>
+      service.changeStatus(system, {
+        participationId: id,
+        track: "main",
+        from: "informed",
+        to: "withdrawn",
+        endReason: "no_response",
+        effectiveDate,
+      });
+    clock.set(new Date("2091-03-16T09:00:00Z")); // W1's latest entry date is 2091-03-15
+    await expect(withdraw("2091-03-15")).rejects.toEqual(
+      refused("domain", "effective_date_mismatch"),
+    );
+    await withdraw("2091-03-16");
+
+    const { participationId: taOnly } = await service.createParticipation(pl, {
+      projectId: verwaltung,
+    });
+    await expect(
+      service.changeStatus(system, {
+        participationId: taOnly,
+        track: "main",
+        from: "imported",
+        to: "withdrawn",
+        endReason: "no_response",
+        effectiveDate: "2091-03-16",
+      }),
+    ).rejects.toEqual(refused("domain", "effective_date_mismatch"));
+  });
+
+  it("lets staff backdate a withdrawal or profiling_done, never future-date it", async () => {
+    const id = await informed();
+    const withdraw = (effectiveDate?: string) =>
+      service.changeStatus(pl, {
+        participationId: id,
+        track: "main",
+        from: "informed",
+        to: "withdrawn",
+        endReason: "other",
+        ...(effectiveDate && { effectiveDate }),
+      });
+    await expect(withdraw()).rejects.toEqual(refused("domain", "effective_date_required"));
+    await expect(withdraw("2091-02-02")).rejects.toEqual(
+      refused("domain", "effective_date_in_future"),
+    );
+    await withdraw("2091-01-15");
+
+    const profiled = await informed();
+    const consultant = consultantFor(profiled);
+    await dated.changeStatus(consultant, {
+      participationId: profiled,
+      track: "profiling",
+      from: "not_started",
+      to: "profiling_accepted",
+    });
+    await dated.changeStatus(consultant, {
+      participationId: profiled,
+      track: "profiling",
+      from: "profiling_accepted",
+      to: "profiling_in_progress",
+    });
+    const done = {
+      participationId: profiled,
+      track: "profiling",
+      from: "profiling_in_progress",
+      to: "profiling_done",
+    } as const;
+    await expect(
+      dated.changeStatus(consultant, { ...done, effectiveDate: "2091-02-02" }),
+    ).rejects.toEqual(refused("domain", "effective_date_in_future"));
+    await dated.changeStatus(consultant, { ...done, effectiveDate: "2091-01-31" });
+  });
+
+  it("records an exit on or after the entry, never in the future", async () => {
+    const id = await offered();
+    await dated.changeStatus(backOffice, {
+      participationId: id,
+      track: "dsv",
+      from: "dsv_offered",
+      to: "dsv_signed",
+    });
+    clock.set(new Date("2091-03-02T09:00:00Z"));
+    await dated.changeStatus(pl, {
+      participationId: id,
+      track: "main",
+      from: "informed",
+      to: "active_in_tg",
+      entryKind: "reconciliation",
+    });
+    const exit = (effectiveDate: string) =>
+      dated.changeStatus(consultantFor(id), {
+        participationId: id,
+        track: "main",
+        from: "active_in_tg",
+        to: "exited",
+        endReason: "placed_permanent",
+        effectiveDate,
+      });
+    clock.set(new Date("2091-06-30T09:00:00Z"));
+    await expect(exit("2091-02-28")).rejects.toEqual(
+      refused("domain", "effective_date_before_entry"),
+    );
+    await expect(exit("2091-07-01")).rejects.toEqual(refused("domain", "effective_date_in_future"));
+    await exit("2091-03-01");
+    expect(await state(id)).toMatchObject({ status: "exited" });
   });
 });
