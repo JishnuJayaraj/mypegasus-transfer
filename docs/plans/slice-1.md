@@ -468,6 +468,19 @@ or alter a period after a deadline miss; the type is defined now, its table come
 export (Slice 8). Periods other than `eligible` are blocked from any Transfer-KuG export. The
 application reports facts and decisions; it doesn't issue a benefit determination.
 
+Readings taken in PR 1c-2 (fail safe, D10; *verify* with Q74/Q82, open in Q86):
+- The signature is `transferKugEligibility(input, today, determinations = [])`: whether the
+  one-month deadline is still running depends on `today` (from the Clock). The input carries
+  `tgEntryDate`, `exitDate`, `profilingDoneOn`, `profilingDeclinedOn` and the exception's
+  approval date.
+- A refusal counts as "before completion" only up to the deadline; a refusal after a missed
+  deadline stays `ba_review_required`.
+- An entry without profiling done or an exception approved by the entry date (which the entry
+  guard prevents) gives `ba_review_required` from entry.
+- The exit closes every period; a period that would start after the exit is dropped.
+- Determinations apply only within `ba_review_required` periods, may not overlap (an error), and
+  record their reference on the period they set (Q86).
+
 #### Derived overall status
 
 `deriveOverallStatus(main, profiling, dsv)` returns one i18n key per *consistent* combination;

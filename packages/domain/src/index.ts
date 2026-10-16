@@ -61,6 +61,13 @@ export {
   type ParticipationDates,
 } from "./lifecycle/waves";
 export {
+  transferKugEligibility,
+  type KugDetermination,
+  type KugEligibility,
+  type KugEligibilityInput,
+  type KugPeriod,
+} from "./eligibility/transfer-kug";
+export {
   AccessCategory,
   fieldCatalog,
   fieldEntry,
