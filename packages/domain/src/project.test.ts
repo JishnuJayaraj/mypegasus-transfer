@@ -92,13 +92,15 @@ describe("CreateProjectInput", () => {
     expect(JSON.stringify(result.error?.issues.map((i) => i.message))).not.toContain("Zzyzx");
   });
 
-  it("strips unknown keys, the Slice 0 dates included (they live on waves, Q79)", () => {
-    const parsed = CreateProjectInput.parse({
+  it("rejects unknown keys, the Slice 0 dates included, instead of dropping them (round 23)", () => {
+    const result = CreateProjectInput.safeParse({
       ...validTaTg,
-      createdBy: "someone",
       signingDeadline: "2027-02-15",
+      projectAgenturKey: "beispielstadt-nord",
     });
-    expect(parsed).toEqual(validTaTg);
+    expect(result.error?.issues.map((i) => [i.code, (i as { keys?: string[] }).keys])).toEqual([
+      ["unrecognized_keys", ["signingDeadline", "projectAgenturKey"]],
+    ]);
   });
 });
 
@@ -113,6 +115,12 @@ describe("UpdateProjectInput", () => {
     expect(result.error?.issues.map((i) => (i as { params?: object }).params)).toEqual([
       { code: "nothing_to_change" },
     ]);
+  });
+
+  it("rejects unknown keys, e.g. a premature projectAgenturKey (round 23)", () => {
+    expect(UpdateProjectInput.safeParse({ projectAgenturKey: "beispielstadt-nord" }).success).toBe(
+      false,
+    );
   });
 
   it("validates the fields like creation", () => {

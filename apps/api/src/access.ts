@@ -26,10 +26,3 @@ export function hasGlobalOrgRole(subject: StaffSubject): boolean {
 export function seesProject(subject: StaffSubject, projectId: string): boolean {
   return hasGlobalOrgRole(subject) || (subject.projectRoles[projectId]?.size ?? 0) > 0;
 }
-
-/** The stable code of a database function's refusal (`P0001`), or undefined. */
-export function functionRefusal(error: unknown): string | undefined {
-  const cause = (error as { cause?: { code?: string; message?: string } }).cause ?? error;
-  const { code, message } = cause as { code?: string; message?: string };
-  return code === "P0001" ? message : undefined;
-}

@@ -21,8 +21,9 @@ import {
   page,
 } from "@transfer/domain";
 
-import { functionRefusal, hasGlobalOrgRole, seesProject, staffSubjectOf } from "../access";
+import { hasGlobalOrgRole, seesProject, staffSubjectOf } from "../access";
 import { createRouter, type Deps } from "../context";
+import { functionRefusal } from "../database-errors";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
@@ -44,6 +45,14 @@ const columns = {
   createdAt: utc(project.createdAt),
   createdBy: project.createdBy,
 };
+
+/** The refusals of `update_project` (and `checkProjectUpdate`) that are a 422; others propagate. */
+const projectRefusals: ReadonlySet<string> = new Set([
+  "project_unchanged",
+  "project_not_draft",
+  "project_has_participations",
+  "project_has_waves",
+]);
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
   description,
@@ -237,9 +246,12 @@ export function projectRoutes(deps: Deps) {
         })
         .catch((error: unknown) => {
           const code = functionRefusal(error);
-          if (code === undefined) throw error;
-          return [code];
+          // Deleted meanwhile: never a 422 or a 500 (projects aren't deleted before Slice 7).
+          if (code === "project_not_found") return null;
+          if (code !== undefined && projectRefusals.has(code)) return [code];
+          throw error;
         });
+      if (refused === null) return problem(c, "not-found");
       if (refused.length) return domainProblem(c, refused);
       const [changed] = await db.select(columns).from(project).where(eq(project.id, projectId));
       return c.json(changed!, 200);

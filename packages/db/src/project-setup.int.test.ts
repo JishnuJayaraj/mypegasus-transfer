@@ -271,4 +271,34 @@ describe("the project lock lives in the functions (D3, round 22, AC-4a)", () => 
       ),
     ).toBe("project_not_found");
   });
+
+  it("takes the new project's exclusive lock in create_project and first in update_project", async () => {
+    const newId = "00000000-0000-4000-9000-0000000000aa";
+    await app.query("begin");
+    try {
+      // Held by another transaction (here, on the id a creation is about to use).
+      await app.query("select pg_advisory_xact_lock(hashtextextended('project:' || $1, 0))", [
+        newId,
+      ]);
+      expect(
+        await tryWithin(
+          other,
+          `select create_project(p_name => 'X', p_customer_name => 'Y', p_type => 'ta_only',
+             p_context => $1::audit_context, p_id => $2)`,
+          [pl, newId],
+        ),
+      ).toBe("55P03");
+      await app.query("select lock_project_setup($1)", [seedProjectIds.lagerSued]);
+      // Even an invalid actor waits for the lock before it is refused.
+      expect(
+        await tryWithin(
+          other,
+          "select update_project(p_id => $1, p_context => $2::audit_context, p_name => 'X')",
+          [seedProjectIds.lagerSued, auditContext({ actorType: "system", systemJob: "seed" })],
+        ),
+      ).toBe("55P03");
+    } finally {
+      await app.query("rollback");
+    }
+  });
 });

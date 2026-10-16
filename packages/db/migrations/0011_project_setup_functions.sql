@@ -13,6 +13,27 @@ WHERE p.type = 'ta_tg'
   AND NOT EXISTS (SELECT FROM public.project_entry_wave w WHERE w.project_id = p.id);
 --> statement-breakpoint
 
+-- Every existing project gets its PL member (D4, round 23): the creator, when their flat role is
+-- project_lead (the only role that may create a project, Q106). Nobody else is elevated: a
+-- project left without a PL member fails the migration, to be resolved by hand.
+INSERT INTO public.project_membership (project_id, staff_user_id, role)
+SELECT p.id, p.created_by, 'project_lead'
+FROM public.project p
+JOIN public.staff_user s ON s.id = p.created_by AND s.role = 'project_lead'
+ON CONFLICT DO NOTHING;
+--> statement-breakpoint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM public.project p
+    WHERE NOT EXISTS (
+      SELECT FROM public.project_membership m WHERE m.project_id = p.id AND m.role = 'project_lead')
+  ) THEN
+    RAISE EXCEPTION 'project_without_project_lead';
+  END IF;
+END $$;
+--> statement-breakpoint
+
 -- The project lock (D3, round 22): a transaction-scoped advisory lock per project, acquired inside
 -- the functions, never left to a service. Setup mutations take it exclusively; everything that
 -- locks or creates a participation takes it shared first. Order everywhere: project → template
@@ -102,6 +123,8 @@ DECLARE
   v_id uuid := coalesce(p_id, gen_random_uuid());
   v_staff uuid := (p_context).staff_user_id;
 BEGIN
+  -- The new project's exclusive lock first, like every setup mutation (D3, round 23).
+  PERFORM pg_catalog.pg_advisory_xact_lock(public.project_lock_key(v_id));
   PERFORM public.assert_context(p_context, NULL, '{user}');
   IF (p_context).on_behalf_of IS NOT NULL
      OR NOT EXISTS (SELECT FROM public.staff_user WHERE id = v_staff AND role = 'project_lead') THEN
@@ -132,11 +155,12 @@ DECLARE
   r public.project;
   v_fields text[] := '{}';
 BEGIN
+  -- The exclusive project lock is the first operation (D3, round 23).
+  PERFORM public.lock_project_setup(p_id);
   PERFORM public.assert_context(p_context, NULL, '{user}');
   IF (p_context).on_behalf_of IS NOT NULL THEN
     RAISE EXCEPTION 'invalid_actor';
   END IF;
-  PERFORM public.lock_project_setup(p_id);
   SELECT * INTO r FROM public.project WHERE id = p_id;
   IF p_name IS NOT NULL AND NOT public.project_text_valid(p_name)
      OR p_customer_name IS NOT NULL AND NOT public.project_text_valid(p_customer_name) THEN

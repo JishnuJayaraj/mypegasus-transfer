@@ -24,16 +24,20 @@ export type ProjectStatus = z.infer<typeof ProjectStatus>;
 
 const requiredText = z.string().trim().min(1).max(200);
 
-/** Contractual dates live on the entry waves (Q79), so a project is created without dates. */
+/**
+ * Contractual dates live on the entry waves (Q79), so a project is created without dates. Strict:
+ * an unknown field (a stale client's dates, a premature `projectAgenturKey`) is a validation
+ * error, never silently dropped (round 23).
+ */
 export const CreateProjectInput = z
-  .object({ name: requiredText, customerName: requiredText, type: ProjectType })
+  .strictObject({ name: requiredText, customerName: requiredText, type: ProjectType })
   .meta({ id: "CreateProjectInput" });
 
 export type CreateProjectInput = z.infer<typeof CreateProjectInput>;
 
-/** The fields a PL may change; at least one. Type changes follow `checkProjectUpdate`. */
+/** The fields a PL may change; at least one; strict. Type changes follow `checkProjectUpdate`. */
 export const UpdateProjectInput = z
-  .object({
+  .strictObject({
     name: requiredText.optional(),
     customerName: requiredText.optional(),
     type: ProjectType.optional(),

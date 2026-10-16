@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb } from "./client";
 import { migrationsFolder, runMigrations } from "./migrate";
-import { project, projectEntryWave } from "./schema";
+import { project, projectEntryWave, projectMembership } from "./schema";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
 import { testDatabaseUrls } from "./testing";
 
@@ -133,5 +133,38 @@ describe("the Slice 1 → Slice 2 migration (AC-3)", () => {
     expect(rows).toEqual([]);
     const statuses = await db.select({ status: project.status }).from(project);
     expect(statuses).toEqual([{ status: "draft" }, { status: "draft" }]);
+    // Round 23: each existing project gets its creator as PL member.
+    const members = await db
+      .select({
+        projectId: projectMembership.projectId,
+        staffUserId: projectMembership.staffUserId,
+      })
+      .from(projectMembership)
+      .orderBy(projectMembership.projectId);
+    expect(members).toEqual([
+      { projectId: seedProjectIds.werkNord, staffUserId: seedStaffUserIds.projectLead },
+      { projectId: seedProjectIds.lagerSued, staffUserId: seedStaffUserIds.projectLead },
+    ]);
+  });
+
+  it("fails, changing nothing, when a project would be left without a PL (no silent elevation)", async () => {
+    await db.$client.query("drop owned by transfer_owner");
+    await runMigrations(url, slice1Folder);
+    await db.$client.query(
+      "insert into staff_user (id, display_name, email, role) values ($1, 'Bernd Beratung', 'consultant@example.org', 'consultant')",
+      [seedStaffUserIds.consultant],
+    );
+    // A Slice 0 project created by a consultant (the Slice 0 API had no role check).
+    await db.$client.query(
+      "insert into project (id, name, customer_name, type, created_by) values ($1, 'Transferagentur Verwaltung', 'Fiktiv Versicherungen KG', 'ta_only', $2)",
+      [seedProjectIds.verwaltung, seedStaffUserIds.consultant],
+    );
+    await expect(runMigrations(url)).rejects.toMatchObject({
+      cause: { message: "project_without_project_lead" },
+    });
+    const { rows } = await db.$client.query(
+      `select count(*)::int as n from information_schema.tables where table_name = 'project_membership'`,
+    );
+    expect(rows).toEqual([{ n: 0 }]);
   });
 });

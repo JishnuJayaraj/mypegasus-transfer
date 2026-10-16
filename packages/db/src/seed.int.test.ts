@@ -1,7 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
+import { eq } from "drizzle-orm";
 import { createDb } from "./client";
-import { projectEntryWave, staffUser } from "./schema";
-import { seed, seedProjectIds, seedWaves } from "./seed";
+import { auditEvent, projectEntryWave, projectMembership, staffUser } from "./schema";
+import { seed, seedProjectIds, seedStaffUserIds, seedWaves } from "./seed";
 import { resetTestDatabase, testDatabaseUrls } from "./testing";
 
 const db = createDb(testDatabaseUrls().owner);
@@ -41,5 +42,22 @@ describe("the base seed", () => {
     });
     await seed(db);
     expect((await waves())[0]).toEqual({ id: migrated, code: "W1", latestEntryDate: "2091-03-15" });
+  });
+
+  it("creates the projects through create_project, once each, with their PL member (round 23)", async () => {
+    await seed(db);
+    await seed(db);
+    const created = await db
+      .select({ projectId: auditEvent.projectId, actor: auditEvent.actorStaffUserId })
+      .from(auditEvent);
+    expect(created.map((e) => e.projectId).toSorted()).toEqual(
+      Object.values(seedProjectIds).toSorted(),
+    );
+    expect(new Set(created.map((e) => e.actor))).toEqual(new Set([seedStaffUserIds.projectLead]));
+    const leads = await db
+      .select({ projectId: projectMembership.projectId })
+      .from(projectMembership)
+      .where(eq(projectMembership.role, "project_lead"));
+    expect(leads).toHaveLength(3);
   });
 });

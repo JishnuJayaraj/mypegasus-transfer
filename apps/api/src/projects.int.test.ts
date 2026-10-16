@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Project, page } from "@transfer/domain";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
@@ -30,6 +30,9 @@ const create = (body: unknown, headers = auth) =>
 const list = (query = "", headers = auth) => app.request(`/api/v1/projects${query}`, { headers });
 const patch = (id: string, body: unknown, headers = auth) =>
   app.request(`/api/v1/projects/${id}`, jsonRequest("PATCH", body, headers));
+/** A database function's refusal as Drizzle reports it. */
+const refusal = (code: string) =>
+  Object.assign(new Error("Failed query"), { cause: { code: "P0001", message: code } });
 const ids = async (res: Response) => (await readJson(res, ProjectPage)).items.map((p) => p.id);
 
 beforeAll(async () => {
@@ -88,12 +91,17 @@ describe("POST /api/v1/projects (AC-1)", () => {
     expect(body.errors?.map((e) => e.pointer)).toEqual([pointer]);
   });
 
-  it("ignores the Slice 0 date fields: dates live on the entry waves", async () => {
-    const created = await readJson(
-      await create({ ...valid, signingDeadline: "2027-02-15" }),
-      Project,
+  it("rejects the Slice 0 date fields and other unknown fields instead of dropping them (round 23)", async () => {
+    const body = await expectProblem(
+      await create({ ...valid, signingDeadline: "2027-02-15", projectAgenturKey: "x" }),
+      400,
+      "validation-error",
     );
-    expect(created).not.toHaveProperty("signingDeadline");
+    expect(body.errors?.map((e) => [e.pointer, e.code])).toEqual([
+      ["/signingDeadline", "unrecognized_keys"],
+      ["/projectAgenturKey", "unrecognized_keys"],
+    ]);
+    expect((await readJson(await list(), ProjectPage)).items).toHaveLength(3);
   });
 
   it("never echoes the submitted values", async () => {
@@ -219,11 +227,16 @@ describe("PATCH /api/v1/projects/{projectId} (AC-4)", () => {
   it("changes name and customer and records the changed keys", async () => {
     const res = await patch(seedProjectIds.werkNord, { name: "Werk Nord neu" });
     expect(await readJson(res, Project)).toMatchObject({ name: "Werk Nord neu", type: "ta_tg" });
-    const [event] = await owner
+    // After the seed's project_created (round 23).
+    const events = await owner
       .select({ type: auditEvent.eventType, details: auditEvent.details })
       .from(auditEvent)
-      .where(eq(auditEvent.projectId, seedProjectIds.werkNord));
-    expect(event).toEqual({ type: "project_changed", details: { fields: ["name"] } });
+      .where(eq(auditEvent.projectId, seedProjectIds.werkNord))
+      .orderBy(auditEvent.seq);
+    expect(events).toEqual([
+      { type: "project_created", details: { type: "ta_tg" } },
+      { type: "project_changed", details: { fields: ["name"] } },
+    ]);
   });
 
   it("changes the type of an unused draft project", async () => {
@@ -275,5 +288,30 @@ describe("PATCH /api/v1/projects/{projectId} (AC-4)", () => {
       "validation-error",
     );
     expect(body.errors?.map((e) => e.code)).toEqual(["nothing_to_change"]);
+  });
+
+  it("rejects a premature projectAgenturKey (set with its pin, PR 2c-2)", async () => {
+    const body = await expectProblem(
+      await patch(seedProjectIds.werkNord, { name: "X", projectAgenturKey: "beispielstadt-nord" }),
+      400,
+      "validation-error",
+    );
+    expect(body.errors?.map((e) => e.pointer)).toEqual(["/projectAgenturKey"]);
+  });
+
+  it("maps project_not_found to 404 and lets an unexpected function refusal propagate (500)", async () => {
+    const transaction = vi.spyOn(db, "transaction");
+    try {
+      transaction.mockRejectedValueOnce(refusal("project_not_found"));
+      await expectProblem(await patch(seedProjectIds.werkNord, { name: "X" }), 404, "not-found");
+      transaction.mockRejectedValueOnce(refusal("invalid_argument"));
+      await expectProblem(
+        await patch(seedProjectIds.werkNord, { name: "X" }),
+        500,
+        "internal-error",
+      );
+    } finally {
+      transaction.mockRestore();
+    }
   });
 });

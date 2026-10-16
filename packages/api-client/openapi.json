@@ -203,7 +203,8 @@
           "name",
           "customerName",
           "type"
-        ]
+        ],
+        "additionalProperties": false
       },
       "UpdateProjectInput": {
         "type": "object",
@@ -221,7 +222,8 @@
           "type": {
             "$ref": "#/components/schemas/ProjectType"
           }
-        }
+        },
+        "additionalProperties": false
       }
     },
     "parameters": {}

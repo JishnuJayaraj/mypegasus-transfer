@@ -30,20 +30,31 @@ export function problem<T extends ProblemType>(
   return c.json(body, status as ProblemStatus<T>, { "Content-Type": "application/problem+json" });
 }
 
+/** A JSON pointer into the body, or the name of a query or path parameter. */
+function location(target: string, path: readonly PropertyKey[]) {
+  return target === "json"
+    ? {
+        pointer: `/${path.map((p) => String(p).replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`,
+      }
+    : { parameter: String(path[0]) };
+}
+
 /**
  * Maps Zod issues to `errors[]`: a JSON pointer for the body, a parameter name for query and
  * path. Only the issue code and message; never the submitted value.
  */
 export function validationProblem(c: Context, error: ZodError, target: string) {
-  const errors = error.issues.map((issue): ProblemError => {
+  const errors = error.issues.flatMap((issue): ProblemError[] => {
+    // A strict schema's unknown fields: one error per field, at the field's own location.
+    if (issue.code === "unrecognized_keys") {
+      return issue.keys.map((key) => ({
+        ...location(target, [...issue.path, key]),
+        code: issue.code,
+        detail: "Unknown field",
+      }));
+    }
     const code = (issue as { params?: { code?: string } }).params?.code ?? issue.code;
-    const location =
-      target === "json"
-        ? {
-            pointer: `/${issue.path.map((p) => String(p).replaceAll("~", "~0").replaceAll("/", "~1")).join("/")}`,
-          }
-        : { parameter: String(issue.path[0]) };
-    return { ...location, code, detail: issue.message };
+    return [{ ...location(target, issue.path), code, detail: issue.message }];
   });
   return problem(c, "validation-error", { errors });
 }
