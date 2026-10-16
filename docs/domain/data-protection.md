@@ -146,13 +146,38 @@ participation, plus their own actions. Back office: DSV, payroll, absence and se
 history. Regional operations manager: only events awaiting or recording their approval or
 review. No projection contains sensitive-access or security events (except the break-glass
 events the regional operations manager reviews) or a reason code the role couldn't otherwise
-read. Participants: no audit-log UI in the MVP (data-subject export). Admins: none.
+read. Participants: no audit-log UI in the MVP (data-subject export). Admins: none. Once only
+the evidence set is left, the operational projections need break-glass; the review queue stays
+open to the regional operations manager, who reviews those break-glass actions (round 12).
 
-**Evidence set** *(assumed, Q87 C)*: immutable through field and document writes. Exceptional
-corrections required by the BA or by law go through **`append_evidence_correction`**: PL or back
-office by document type, a mandatory BA/legal reference and reason code, approval by the
-regional operations manager, a new append-only artifact linked to the one it corrects (which is
-kept), fully audited.
+**Evidence set** *(assumed, Q87 C, round 12)*: access is the intersection of the role's
+active-phase entitlement (in any mode) and break-glass, with the active view; lists never.
+Immutable through field and document writes. Of the raw files, only what the evidence set
+lists stays (signed TL 407 / Kug 200b, proof of submission); otherwise only the **minimum
+derived evidence facts** remain after stage-one deletion (e.g. ASU proof checked; exception
+decision, reason and approval; references and timestamps), not raw health-related exception
+evidence.
+
+**Evidence corrections** *(assumed, Q88, round 12)*: never by in-place editing, only through
+**`append_evidence_correction`**, targeting a document or a field. Who may request it is an
+explicit correction-authority table (`packages/domain/src/access/corrections.ts`), separate from
+who may open a document; requesting grants no read access.
+- Documents: PL for TL 407, Kug 200b, ASU proof, exception evidence, uploads and certificates;
+  PL or back office for the DSV and its cancellation.
+- Fields: PL for identity, case facts, measure participation and operational dates; back office
+  for payroll/BA identifiers and payroll dates; either for DSV/TG employment dates. Statuses
+  aren't corrected this way (status functions); other data isn't evidence-set data.
+- Consultants and participants can't alter the evidence set; they raise a task or rectification
+  request for the responsible role.
+- Append-only, the original kept and linked (corrects/supersedes); a reason code and a
+  documented source (BA/legal reference, data-subject rectification request, corrected source
+  document or documented internal error); approval by the regional operations manager, four
+  eyes; corrected sensitive values encrypted; audit events with IDs, field key, actor and
+  timestamps, never the values; the approver sees category, basis and references, no value they
+  couldn't otherwise read.
+- A correction alone never bypasses lifecycle guards or changes Transfer-KuG eligibility,
+  contractual dates or payments: that takes a reconciliation, contractual amendment or recorded
+  BA/legal determination.
 
 **Sensitive writes** are audited as `sensitive_write` with the field or document key, actor,
 subject and timestamp, **never the old or new value**.

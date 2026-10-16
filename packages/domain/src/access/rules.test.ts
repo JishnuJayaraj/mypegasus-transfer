@@ -66,6 +66,8 @@ const categoryOf = (r: ReturnType<typeof personResources>[number]) =>
     ? fieldEntry(r.field).accessCategory
     : documentTypeEntry(r.documentType).accessCategory;
 const identifiers = (key: string) => ({ ...field("identifiers"), field: key });
+const evidenceAudit = (stream: AuditStream, actor: string | null = "staff-other") =>
+  sampleAudit(stream, actor, "evidence_set");
 const rom = (regions: string[] | "all") =>
   staff([], { org: [["regional_operations_manager", regions]] });
 const evidence = (
@@ -160,7 +162,11 @@ describe("break-glass (AC-27, Q63)", () => {
       view: "full",
       audit: "break_glass_access",
       flagForReview: true,
-      grant: { participationId: sample.participationId, category: "health", action: "read" },
+      grant: {
+        participationId: sample.participationId,
+        action: "read",
+        target: { kind: "field", category: "health" },
+      },
     });
     expect(decide(pl, field("disability"), "read", breakGlass)).toBe(
       "allow full break_glass_access review grant",
@@ -171,7 +177,10 @@ describe("break-glass (AC-27, Q63)", () => {
     expect(decideAccess(pl, doc("asu_proof"), "open_document", breakGlass)).toMatchObject({
       view: "full",
       audit: "break_glass_access",
-      grant: { category: "identifiers", documentType: "asu_proof", action: "open_document" },
+      grant: {
+        action: "open_document",
+        target: { kind: "document", documentType: "asu_proof", category: "identifiers" },
+      },
     });
     expect(decide(pl, doc("profiling_exception_evidence"), "read", breakGlass)).toBe(
       "allow metadata_only break_glass_access review grant",
@@ -207,7 +216,7 @@ describe("break-glass (AC-27, Q63)", () => {
   });
 });
 
-describe("evidence-set phase (Q64, round 11)", () => {
+describe("evidence-set phase (Q64, rounds 11–12)", () => {
   it("needs break-glass for what the role has in the active phase, with its view", () => {
     const granted = "allow full break_glass_access review grant";
     const confidential = field("confidential", "evidence_set");
@@ -226,11 +235,28 @@ describe("evidence-set phase (Q64, round 11)", () => {
       granted,
     );
     expect(evidence("back_office", tl407, "open_document")).toBe("deny never");
-    expect(evidence("project_lead", field("health", "evidence_set"), "read")).toBe("deny never");
-    expect(evidence("project_lead", doc("asu_proof", "evidence_set"), "open_document")).toBe(
+    // the intersection of the active entitlement (any mode) and break-glass (round 12)
+    const health = field("health", "evidence_set");
+    expect(evidence("project_lead", health, "read")).toBe(granted);
+    expect(evidence("project_lead", health, "read", accessModes.assisted)).toBe(
+      "deny needs_break_glass",
+    );
+    const exceptionEvidence = doc("profiling_exception_evidence", "evidence_set");
+    expect(evidence("project_lead", exceptionEvidence, "open_document")).toBe(granted);
+    expect(evidence("project_lead", exceptionEvidence, "open_document", accessModes.normal)).toBe(
+      "deny needs_break_glass",
+    );
+    expect(evidence("project_lead", field("identifiers", "evidence_set"), "read")).toBe(
       "deny never",
     );
+    const asuProof = doc("asu_proof", "evidence_set");
+    expect(evidence("project_lead", asuProof, "open_document")).toBe(granted);
+    expect(evidence("project_lead", asuProof, "open_document", accessModes.normal)).toBe(
+      "deny needs_break_glass",
+    );
     expect(evidence("consultant_unassigned", confidential, "read")).toBe("deny not_assigned");
+    const projectWide = { ...confidential, participationId: null };
+    expect(evidence("project_lead", projectWide, "read")).toBe("deny needs_break_glass");
   });
 
   it("never lists and never writes; signed documents stay immutable", () => {
@@ -242,9 +268,7 @@ describe("evidence-set phase (Q64, round 11)", () => {
           expect(evidence(key, resource, "write", mode)).toMatch(
             signed ? /^deny (immutable|never)$/ : /^deny never$/,
           );
-          expect(evidence(key, resource, "list", mode)).toMatch(
-            /^deny (never|not_in_list_payloads)$/,
-          );
+          expect(evidence(key, resource, "list", mode)).toBe("deny never");
         }
       }
     }
@@ -318,7 +342,7 @@ describe("audit projections (Q87 A)", () => {
     }
   });
 
-  it("doesn't depend on mode", () => {
+  it("doesn't depend on mode in the active phase", () => {
     for (const { subject } of accessProfiles) {
       for (const stream of AuditStream.options) {
         const resource = sampleAudit(stream, null);
@@ -326,6 +350,26 @@ describe("audit projections (Q87 A)", () => {
         for (const mode of modes) expect(decide(subject, resource, "read", mode)).toBe(normal);
       }
     }
+  });
+
+  it("needs break-glass for operational streams once only the evidence set is left (round 12)", () => {
+    const pl = profile("project_lead");
+    expect(decide(pl, evidenceAudit("case"), "read")).toBe("deny needs_break_glass");
+    expect(decideAccess(pl, evidenceAudit("case"), "read", breakGlass)).toMatchObject({
+      audit: "break_glass_access",
+      flagForReview: true,
+      grant: { action: "read", target: { kind: "audit", stream: "case" } },
+    });
+    expect(decide(pl, evidenceAudit("case"), "list", breakGlass)).toBe("deny never");
+    expect(decide(pl, evidenceAudit("security"), "read", breakGlass)).toBe("deny never");
+    expect(decide(profile("consultant"), evidenceAudit("dsv", "staff-a"), "read")).toBe(
+      "deny needs_break_glass",
+    );
+    // the review queue stays open, so the break-glass actions can be reviewed
+    const romProfile = profile("regional_operations_manager");
+    expect(decide(romProfile, evidenceAudit("review"), "read")).toBe("allow full");
+    expect(decide(romProfile, evidenceAudit("review"), "list")).toBe("allow full");
+    expect(decide(profile("admin"), evidenceAudit("case"), "read", breakGlass)).toBe("deny never");
   });
 });
 

@@ -139,12 +139,12 @@ Only the staff cells that differ from normal mode.
 | Participant (own, no birth-date check) | `absence` | no: never | no: never | no: never |
 | Consultant/profiler (assigned) | `case_internal` | no: needs_break_glass | no: never | no: never |
 | Consultant/profiler (assigned) | `confidential` | no: needs_break_glass | no: never | no: never |
-| Consultant/profiler (assigned) | `health` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Consultant/profiler (assigned) | `disability` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Consultant/profiler (assigned) | `identifiers` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Consultant/profiler (assigned) | `residence_social` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Consultant/profiler (assigned) | `profiling_assessment` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Consultant/profiler (assigned) | `absence` | no: needs_break_glass | no: not_in_list_payloads | no: never |
+| Consultant/profiler (assigned) | `health` | no: needs_break_glass | no: never | no: never |
+| Consultant/profiler (assigned) | `disability` | no: needs_break_glass | no: never | no: never |
+| Consultant/profiler (assigned) | `identifiers` | no: needs_break_glass | no: never | no: never |
+| Consultant/profiler (assigned) | `residence_social` | no: needs_break_glass | no: never | no: never |
+| Consultant/profiler (assigned) | `profiling_assessment` | no: needs_break_glass | no: never | no: never |
+| Consultant/profiler (assigned) | `absence` | no: needs_break_glass | no: never | no: never |
 | Consultant/profiler (not assigned) | `case_internal` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `confidential` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `health` | no: not_assigned | no: not_assigned | no: not_assigned |
@@ -155,44 +155,44 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (not assigned) | `absence` | no: not_assigned | no: not_assigned | no: not_assigned |
 | PL | `case_internal` | no: needs_break_glass | no: never | no: never |
 | PL | `confidential` | no: needs_break_glass | no: never | no: never |
-| PL | `health` | no: never | no: not_in_list_payloads | no: never |
-| PL | `disability` | no: never | no: not_in_list_payloads | no: never |
-| PL | `identifiers` | no: never | no: not_in_list_payloads | no: never |
-| PL | `residence_social` | no: never | no: not_in_list_payloads | no: never |
-| PL | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
-| PL | `absence` | no: needs_break_glass | no: not_in_list_payloads | no: never |
+| PL | `health` | no: needs_break_glass | no: never | no: never |
+| PL | `disability` | no: needs_break_glass | no: never | no: never |
+| PL | `identifiers` | no: never | no: never | no: never |
+| PL | `residence_social` | no: never | no: never | no: never |
+| PL | `profiling_assessment` | no: never | no: never | no: never |
+| PL | `absence` | no: needs_break_glass | no: never | no: never |
 | Back office | `case_internal` | no: needs_break_glass | no: never | no: never |
 | Back office | `confidential` | no: needs_break_glass | no: never | no: never |
-| Back office | `health` | no: never | no: not_in_list_payloads | no: never |
-| Back office | `disability` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Back office | `identifiers` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Back office | `residence_social` | no: needs_break_glass | no: not_in_list_payloads | no: never |
-| Back office | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
-| Back office | `absence` | no: needs_break_glass | no: not_in_list_payloads | no: never |
+| Back office | `health` | no: never | no: never | no: never |
+| Back office | `disability` | no: needs_break_glass | no: never | no: never |
+| Back office | `identifiers` | no: needs_break_glass | no: never | no: never |
+| Back office | `residence_social` | no: needs_break_glass | no: never | no: never |
+| Back office | `profiling_assessment` | no: never | no: never | no: never |
+| Back office | `absence` | no: needs_break_glass | no: never | no: never |
 | Regional operations manager | `case_internal` | no: never | no: never | no: never |
 | Regional operations manager | `confidential` | no: never | no: never | no: never |
-| Regional operations manager | `health` | no: never | no: not_in_list_payloads | no: never |
-| Regional operations manager | `disability` | no: never | no: not_in_list_payloads | no: never |
-| Regional operations manager | `identifiers` | no: never | no: not_in_list_payloads | no: never |
-| Regional operations manager | `residence_social` | no: never | no: not_in_list_payloads | no: never |
-| Regional operations manager | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
-| Regional operations manager | `absence` | no: never | no: not_in_list_payloads | no: never |
+| Regional operations manager | `health` | no: never | no: never | no: never |
+| Regional operations manager | `disability` | no: never | no: never | no: never |
+| Regional operations manager | `identifiers` | no: never | no: never | no: never |
+| Regional operations manager | `residence_social` | no: never | no: never | no: never |
+| Regional operations manager | `profiling_assessment` | no: never | no: never | no: never |
+| Regional operations manager | `absence` | no: never | no: never | no: never |
 | Regional admin | `case_internal` | no: never | no: never | no: never |
 | Regional admin | `confidential` | no: never | no: never | no: never |
-| Regional admin | `health` | no: never | no: not_in_list_payloads | no: never |
-| Regional admin | `disability` | no: never | no: not_in_list_payloads | no: never |
-| Regional admin | `identifiers` | no: never | no: not_in_list_payloads | no: never |
-| Regional admin | `residence_social` | no: never | no: not_in_list_payloads | no: never |
-| Regional admin | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
-| Regional admin | `absence` | no: never | no: not_in_list_payloads | no: never |
+| Regional admin | `health` | no: never | no: never | no: never |
+| Regional admin | `disability` | no: never | no: never | no: never |
+| Regional admin | `identifiers` | no: never | no: never | no: never |
+| Regional admin | `residence_social` | no: never | no: never | no: never |
+| Regional admin | `profiling_assessment` | no: never | no: never | no: never |
+| Regional admin | `absence` | no: never | no: never | no: never |
 | Admin | `case_internal` | no: never | no: never | no: never |
 | Admin | `confidential` | no: never | no: never | no: never |
-| Admin | `health` | no: never | no: not_in_list_payloads | no: never |
-| Admin | `disability` | no: never | no: not_in_list_payloads | no: never |
-| Admin | `identifiers` | no: never | no: not_in_list_payloads | no: never |
-| Admin | `residence_social` | no: never | no: not_in_list_payloads | no: never |
-| Admin | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
-| Admin | `absence` | no: never | no: not_in_list_payloads | no: never |
+| Admin | `health` | no: never | no: never | no: never |
+| Admin | `disability` | no: never | no: never | no: never |
+| Admin | `identifiers` | no: never | no: never | no: never |
+| Admin | `residence_social` | no: never | no: never | no: never |
+| Admin | `profiling_assessment` | no: never | no: never | no: never |
+| Admin | `absence` | no: never | no: never | no: never |
 
 ### Evidence-set phase, assisted mode
 
@@ -216,6 +216,8 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `absence` | `read` | no: needs_break_glass | absence_only · break_glass_access · grant · review |
 | PL | `case_internal` | `read` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | PL | `confidential` | `read` | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `health` | `read` | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `disability` | `read` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | PL | `absence` | `read` | no: needs_break_glass | absence_only · break_glass_access · grant · review |
 | Back office | `case_internal` | `read` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | Back office | `confidential` | `read` | no: needs_break_glass | yes · break_glass_access · grant · review |
@@ -342,12 +344,12 @@ Only the staff cells that differ from normal mode.
 | Participant (own, no birth-date check) | `profiling_exception_evidence` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `participant_upload` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `qualification_certificate` | no: never | no: never | no: never | no: never |
-| Consultant/profiler (assigned) | `tl407_signed_scan` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| Consultant/profiler (assigned) | `kug200b_signed_scan` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| Consultant/profiler (assigned) | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Consultant/profiler (assigned) | `dsv_cancellation` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Consultant/profiler (assigned) | `asu_proof` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: never |
-| Consultant/profiler (assigned) | `profiling_exception_evidence` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: never |
+| Consultant/profiler (assigned) | `tl407_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| Consultant/profiler (assigned) | `kug200b_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| Consultant/profiler (assigned) | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
+| Consultant/profiler (assigned) | `dsv_cancellation` | no: never | no: never | no: never | no: never |
+| Consultant/profiler (assigned) | `asu_proof` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | Consultant/profiler (assigned) | `participant_upload` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | Consultant/profiler (assigned) | `qualification_certificate` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | Consultant/profiler (not assigned) | `tl407_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
@@ -358,44 +360,44 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (not assigned) | `profiling_exception_evidence` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `participant_upload` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `qualification_certificate` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
-| PL | `tl407_signed_scan` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| PL | `kug200b_signed_scan` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| PL | `dsv_signed_scan` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| PL | `dsv_cancellation` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| PL | `asu_proof` | no: needs_break_glass | no: not_in_list_payloads | no: never | no: never |
-| PL | `profiling_exception_evidence` | no: never | no: not_in_list_payloads | no: never | no: never |
+| PL | `tl407_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| PL | `kug200b_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| PL | `dsv_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| PL | `dsv_cancellation` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| PL | `asu_proof` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
+| PL | `profiling_exception_evidence` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | PL | `participant_upload` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | PL | `qualification_certificate` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
-| Back office | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Back office | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Back office | `dsv_signed_scan` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| Back office | `dsv_cancellation` | no: needs_break_glass | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| Back office | `asu_proof` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Back office | `profiling_exception_evidence` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Back office | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
+| Back office | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
+| Back office | `dsv_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| Back office | `dsv_cancellation` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| Back office | `asu_proof` | no: never | no: never | no: never | no: never |
+| Back office | `profiling_exception_evidence` | no: never | no: never | no: never | no: never |
 | Back office | `participant_upload` | no: never | no: never | no: never | no: never |
 | Back office | `qualification_certificate` | no: never | no: never | no: never | no: never |
-| Regional operations manager | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional operations manager | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional operations manager | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional operations manager | `dsv_cancellation` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional operations manager | `asu_proof` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional operations manager | `profiling_exception_evidence` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Regional operations manager | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `dsv_cancellation` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `asu_proof` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `profiling_exception_evidence` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `participant_upload` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `qualification_certificate` | no: never | no: never | no: never | no: never |
-| Regional admin | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional admin | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional admin | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional admin | `dsv_cancellation` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional admin | `asu_proof` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Regional admin | `profiling_exception_evidence` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Regional admin | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
+| Regional admin | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
+| Regional admin | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
+| Regional admin | `dsv_cancellation` | no: never | no: never | no: never | no: never |
+| Regional admin | `asu_proof` | no: never | no: never | no: never | no: never |
+| Regional admin | `profiling_exception_evidence` | no: never | no: never | no: never | no: never |
 | Regional admin | `participant_upload` | no: never | no: never | no: never | no: never |
 | Regional admin | `qualification_certificate` | no: never | no: never | no: never | no: never |
-| Admin | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Admin | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Admin | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Admin | `dsv_cancellation` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Admin | `asu_proof` | no: never | no: not_in_list_payloads | no: never | no: never |
-| Admin | `profiling_exception_evidence` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Admin | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
+| Admin | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
+| Admin | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
+| Admin | `dsv_cancellation` | no: never | no: never | no: never | no: never |
+| Admin | `asu_proof` | no: never | no: never | no: never | no: never |
+| Admin | `profiling_exception_evidence` | no: never | no: never | no: never | no: never |
 | Admin | `participant_upload` | no: never | no: never | no: never | no: never |
 | Admin | `qualification_certificate` | no: never | no: never | no: never | no: never |
 
@@ -432,6 +434,9 @@ Only the staff cells that differ from normal mode.
 | PL | `dsv_cancellation` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
 | PL | `dsv_cancellation` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | PL | `asu_proof` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
+| PL | `asu_proof` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `profiling_exception_evidence` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
+| PL | `profiling_exception_evidence` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | PL | `participant_upload` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
 | PL | `participant_upload` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | PL | `qualification_certificate` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
@@ -443,65 +448,66 @@ Only the staff cells that differ from normal mode.
 
 ## Audit metadata
 
-Filtered projections (Q87 A), the same in every mode; `list` as `read`; `write` is
-`never` (append-only).
+Filtered projections (Q87 A), the same in every mode in the active phase; `list` as `read`
+(never in the evidence set); `write` is `never` (append-only). Once only the evidence set
+is left, the operational streams need break-glass; the review queue stays open (round 12).
 
-| Subject | Stream | Others' events | Own actions |
-| --- | --- | --- | --- |
-| Participant (own) | `case` | no: never | no: never |
-| Participant (own) | `profiling` | no: never | no: never |
-| Participant (own) | `dsv` | no: never | no: never |
-| Participant (own) | `payroll` | no: never | no: never |
-| Participant (own) | `security` | no: never | no: never |
-| Participant (own) | `review` | no: never | no: never |
-| Participant (own, no birth-date check) | `case` | no: never | no: never |
-| Participant (own, no birth-date check) | `profiling` | no: never | no: never |
-| Participant (own, no birth-date check) | `dsv` | no: never | no: never |
-| Participant (own, no birth-date check) | `payroll` | no: never | no: never |
-| Participant (own, no birth-date check) | `security` | no: never | no: never |
-| Participant (own, no birth-date check) | `review` | no: never | no: never |
-| Consultant/profiler (assigned) | `case` | yes | yes |
-| Consultant/profiler (assigned) | `profiling` | yes | yes |
-| Consultant/profiler (assigned) | `dsv` | no: never | yes |
-| Consultant/profiler (assigned) | `payroll` | no: never | yes |
-| Consultant/profiler (assigned) | `security` | no: never | no: never |
-| Consultant/profiler (assigned) | `review` | no: never | no: never |
-| Consultant/profiler (not assigned) | `case` | no: not_assigned | no: not_assigned |
-| Consultant/profiler (not assigned) | `profiling` | no: not_assigned | no: not_assigned |
-| Consultant/profiler (not assigned) | `dsv` | no: not_assigned | no: not_assigned |
-| Consultant/profiler (not assigned) | `payroll` | no: not_assigned | no: not_assigned |
-| Consultant/profiler (not assigned) | `security` | no: not_assigned | no: not_assigned |
-| Consultant/profiler (not assigned) | `review` | no: not_assigned | no: not_assigned |
-| PL | `case` | yes | yes |
-| PL | `profiling` | yes | yes |
-| PL | `dsv` | yes | yes |
-| PL | `payroll` | no: never | no: never |
-| PL | `security` | no: never | no: never |
-| PL | `review` | no: never | no: never |
-| Back office | `case` | no: never | no: never |
-| Back office | `profiling` | no: never | no: never |
-| Back office | `dsv` | yes | yes |
-| Back office | `payroll` | yes | yes |
-| Back office | `security` | no: never | no: never |
-| Back office | `review` | no: never | no: never |
-| Regional operations manager | `case` | no: never | no: never |
-| Regional operations manager | `profiling` | no: never | no: never |
-| Regional operations manager | `dsv` | no: never | no: never |
-| Regional operations manager | `payroll` | no: never | no: never |
-| Regional operations manager | `security` | no: never | no: never |
-| Regional operations manager | `review` | yes | yes |
-| Regional admin | `case` | no: never | no: never |
-| Regional admin | `profiling` | no: never | no: never |
-| Regional admin | `dsv` | no: never | no: never |
-| Regional admin | `payroll` | no: never | no: never |
-| Regional admin | `security` | no: never | no: never |
-| Regional admin | `review` | no: never | no: never |
-| Admin | `case` | no: never | no: never |
-| Admin | `profiling` | no: never | no: never |
-| Admin | `dsv` | no: never | no: never |
-| Admin | `payroll` | no: never | no: never |
-| Admin | `security` | no: never | no: never |
-| Admin | `review` | no: never | no: never |
+| Subject | Stream | Others' events | Own actions | Evidence set | Evidence set, break-glass |
+| --- | --- | --- | --- | --- | --- |
+| Participant (own) | `case` | no: never | no: never | no: never | no: never |
+| Participant (own) | `profiling` | no: never | no: never | no: never | no: never |
+| Participant (own) | `dsv` | no: never | no: never | no: never | no: never |
+| Participant (own) | `payroll` | no: never | no: never | no: never | no: never |
+| Participant (own) | `security` | no: never | no: never | no: never | no: never |
+| Participant (own) | `review` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `case` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `profiling` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `dsv` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `payroll` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `security` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `review` | no: never | no: never | no: never | no: never |
+| Consultant/profiler (assigned) | `case` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| Consultant/profiler (assigned) | `profiling` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| Consultant/profiler (assigned) | `dsv` | no: never | yes | no: never | no: never |
+| Consultant/profiler (assigned) | `payroll` | no: never | yes | no: never | no: never |
+| Consultant/profiler (assigned) | `security` | no: never | no: never | no: never | no: never |
+| Consultant/profiler (assigned) | `review` | no: never | no: never | no: never | no: never |
+| Consultant/profiler (not assigned) | `case` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `profiling` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `dsv` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `payroll` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `security` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `review` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| PL | `case` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `profiling` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `dsv` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `payroll` | no: never | no: never | no: never | no: never |
+| PL | `security` | no: never | no: never | no: never | no: never |
+| PL | `review` | no: never | no: never | no: never | no: never |
+| Back office | `case` | no: never | no: never | no: never | no: never |
+| Back office | `profiling` | no: never | no: never | no: never | no: never |
+| Back office | `dsv` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| Back office | `payroll` | yes | yes | no: needs_break_glass | yes · break_glass_access · grant · review |
+| Back office | `security` | no: never | no: never | no: never | no: never |
+| Back office | `review` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `case` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `profiling` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `dsv` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `payroll` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `security` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `review` | yes | yes | yes | yes |
+| Regional admin | `case` | no: never | no: never | no: never | no: never |
+| Regional admin | `profiling` | no: never | no: never | no: never | no: never |
+| Regional admin | `dsv` | no: never | no: never | no: never | no: never |
+| Regional admin | `payroll` | no: never | no: never | no: never | no: never |
+| Regional admin | `security` | no: never | no: never | no: never | no: never |
+| Regional admin | `review` | no: never | no: never | no: never | no: never |
+| Admin | `case` | no: never | no: never | no: never | no: never |
+| Admin | `profiling` | no: never | no: never | no: never | no: never |
+| Admin | `dsv` | no: never | no: never | no: never | no: never |
+| Admin | `payroll` | no: never | no: never | no: never | no: never |
+| Admin | `security` | no: never | no: never | no: never | no: never |
+| Admin | `review` | no: never | no: never | no: never | no: never |
 
 ## Aggregates
 

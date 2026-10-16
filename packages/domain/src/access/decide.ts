@@ -47,6 +47,8 @@ export type DocumentResource = Person & { kind: "document"; documentType: Docume
 export type AuditResource = Scope & {
   kind: "audit";
   participationId: string | null;
+  /** In the evidence-set phase operational projections need break-glass (round 12). */
+  phase: AccessPhase;
   stream: AuditStream;
   actorStaffUserId: string | null;
 };
@@ -84,14 +86,13 @@ type Allow = {
   view: AccessView;
   audit: null | "sensitive_read" | "sensitive_write" | "document_opened" | "break_glass_access";
   flagForReview: boolean;
-  /** Break-glass covers one participant, one category or document type, one action (Q63). */
-  grant?: {
-    participationId: string;
-    category: AccessCategory;
-    documentType?: DocumentType;
-    action: AccessAction;
-  };
+  /** Break-glass covers one participant, one category, document type or stream, one action. */
+  grant?: { participationId: string; action: AccessAction; target: GrantTarget };
 };
+export type GrantTarget =
+  | { kind: "field"; category: AccessCategory }
+  | { kind: "document"; documentType: DocumentType; category: AccessCategory }
+  | { kind: "audit"; stream: AuditStream };
 export type Decision =
   | Allow
   | { effect: "deny"; because: Exclude<DenyReason, "undecided"> }
@@ -207,16 +208,26 @@ const categoryOf = (r: PersonResource) =>
     ? fieldEntry(r.field).accessCategory
     : documentTypeEntry(r.documentType).accessCategory;
 
+function grantTarget(resource: PersonResource | AuditResource): GrantTarget {
+  if (resource.kind === "audit") return { kind: "audit", stream: resource.stream };
+  const category = categoryOf(resource);
+  return resource.kind === "field"
+    ? { kind: "field", category }
+    : { kind: "document", documentType: resource.documentType, category };
+}
+
 /** Break-glass needs a reason code and one participant (Q63); it never grants list or write. */
-function breakGlass({ resource, action, mode }: Request<PersonResource>, view: AccessView) {
+function breakGlass(
+  { resource, action, mode }: Request<PersonResource | AuditResource>,
+  view: AccessView,
+): Allow | null {
   if (mode.kind !== "break_glass" || !mode.reasonCode.trim() || !resource.participationId) {
     return null;
   }
   const grant = {
     participationId: resource.participationId,
-    category: categoryOf(resource),
-    ...(resource.kind === "document" && { documentType: resource.documentType }),
     action,
+    target: grantTarget(resource),
   };
   return { ...allow(view, "break_glass_access"), flagForReview: true, grant };
 }
@@ -277,52 +288,67 @@ function activeDecision(role: AccessRole, request: Request<PersonResource>): Dec
     : documentDecision(role, request as Request<DocumentResource>);
 }
 
+/** The best view the role has on the resource in the active phase, in any mode (round 12). */
+function activeEntitlement(role: AccessRole, request: Request<PersonResource>): AccessView | null {
+  const { participationId } = request.resource;
+  const modes: AccessMode[] = participationId
+    ? [
+        { kind: "normal" },
+        { kind: "assisted", onBehalfOf: participationId },
+        { kind: "break_glass", reasonCode: "entitlement" },
+      ]
+    : [{ kind: "normal" }];
+  const best = union(modes.map((mode) => activeDecision(role, { ...request, mode })));
+  return best.effect === "allow" ? best.view : null;
+}
+
 /**
- * Evidence set (Q64, round 11): reads only through break-glass, with what the role has in the
- * active phase in normal mode; no lists; no writes (signed documents stay immutable). The
- * exceptional `append_evidence_correction` is an operation of its own.
+ * Evidence set (Q64, rounds 11–12): the intersection of the role's active-phase entitlement and
+ * break-glass, with the active view; lists never; no writes (signed documents stay immutable).
+ * Exceptional corrections are `append_evidence_correction`, an operation of its own.
  */
 function evidenceSetDecision(role: AccessRole, request: Request<PersonResource>): Decision {
   const { action } = request;
   // Break-glass on the evidence set: consultant, PL and back office only (matrix, Q63).
-  if (!ProjectRole.safeParse(role).success) return deny("never");
-  const base = activeDecision(role, { ...request, mode: { kind: "normal" } });
+  if (!ProjectRole.safeParse(role).success || action === "list") return deny("never");
   if (action === "write") {
+    const base = activeDecision(role, { ...request, mode: { kind: "normal" } });
     return deny(base.effect === "deny" && base.because === "immutable" ? "immutable" : "never");
   }
-  if (base.effect === "deny") {
-    const lifted = base.because === "needs_assisted_mode" || base.because === "needs_break_glass";
-    return lifted ? deny("never") : base;
-  }
-  if (action === "list") return deny("never");
-  return breakGlass(request, base.view) ?? deny("needs_break_glass");
+  const view = activeEntitlement(role, request);
+  if (!view) return deny("never");
+  return breakGlass(request, view) ?? deny("needs_break_glass");
 }
 
 function personDecision(role: AccessRole, request: Request<PersonResource>): Decision {
+  if (request.resource.phase === "evidence_set") return evidenceSetDecision(role, request);
   if (request.action === "list" && unlisted.has(categoryOf(request.resource))) {
     return deny("not_in_list_payloads");
   }
-  return request.resource.phase === "evidence_set"
-    ? evidenceSetDecision(role, request)
-    : activeDecision(role, request);
+  return activeDecision(role, request);
 }
 
-function auditDecision(
-  role: AccessRole,
-  resource: AuditResource,
-  action: AccessAction,
-  staffUserId: string,
-) {
+/**
+ * Filtered projections (Q87 A). Once only the evidence set is left, the operational streams
+ * need break-glass; the review queue stays open to the regional operations manager (round 12).
+ */
+function auditDecision(role: AccessRole, request: Request<AuditResource>, staffUserId: string) {
+  const { resource, action } = request;
   if (action === "write") return deny("never"); // append-only, written by the operations
   const own = role === "consultant" && resource.actorStaffUserId === staffUserId;
   const streams = own ? ownActionStreams : (auditRights[role] ?? []);
-  return streams.includes(resource.stream) ? allow("full") : deny("never");
+  if (!streams.includes(resource.stream)) return deny("never");
+  if (resource.phase === "active" || resource.stream === "review") return allow("full");
+  if (action === "list") return deny("never");
+  return breakGlass(request, "full") ?? deny("needs_break_glass");
 }
 
 function staffDecision(role: AccessRole, request: Request, staffUserId: string): Decision {
   const { resource } = request;
   if (resource.kind === "aggregate") return allow("full");
-  if (resource.kind === "audit") return auditDecision(role, resource, request.action, staffUserId);
+  if (resource.kind === "audit") {
+    return auditDecision(role, request as Request<AuditResource>, staffUserId);
+  }
   return personDecision(role, request as Request<PersonResource>);
 }
 

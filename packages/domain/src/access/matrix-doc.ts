@@ -94,12 +94,27 @@ function section(index: number, phase: AccessPhase, mode: Mode): string {
 function audit(): string {
   const rows = accessProfiles.flatMap(({ label, subject }) =>
     AuditStream.options.map((stream) => {
-      const decide = (actor: string) =>
-        text(decideAccess(subject, sampleAudit(stream, actor), "read", accessModes.normal));
-      return [label, code(stream), decide("staff-other"), decide("staff-a")];
+      const decide = (actor: string, phase: AccessPhase, mode: Mode) =>
+        text(decideAccess(subject, sampleAudit(stream, actor, phase), "read", accessModes[mode]));
+      return [
+        label,
+        code(stream),
+        decide("staff-other", "active", "normal"),
+        decide("staff-a", "active", "normal"),
+        decide("staff-other", "evidence_set", "normal"),
+        decide("staff-other", "evidence_set", "break_glass"),
+      ];
     }),
   );
-  return table(["Subject", "Stream", "Others' events", "Own actions"], rows);
+  const head = [
+    "Subject",
+    "Stream",
+    "Others' events",
+    "Own actions",
+    "Evidence set",
+    "Evidence set, break-glass",
+  ];
+  return table(head, rows);
 }
 
 function aggregates(): string {
@@ -159,8 +174,9 @@ ${personSections.join("\n\n")}
 
 ## Audit metadata
 
-Filtered projections (Q87 A), the same in every mode; \`list\` as \`read\`; \`write\` is
-\`never\` (append-only).
+Filtered projections (Q87 A), the same in every mode in the active phase; \`list\` as \`read\`
+(never in the evidence set); \`write\` is \`never\` (append-only). Once only the evidence set
+is left, the operational streams need break-glass; the review queue stays open (round 12).
 
 ${audit()}
 

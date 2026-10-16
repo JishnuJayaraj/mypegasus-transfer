@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DocumentType } from "../documents/catalog";
+import { fieldCatalog } from "../fields/catalog";
+import { fieldCorrectionAuthority } from "./corrections";
 import type { OrgRole, ProjectRole } from "../enums";
 import { edges, type Edge } from "../lifecycle/edges";
 import type { Subject } from "./decide";
@@ -11,6 +13,7 @@ import {
   type Operation,
   type PermissionTarget,
 } from "./permissions";
+import type { EvidenceCorrectionTarget } from "./corrections";
 import { sample } from "./profiles";
 
 const target: PermissionTarget = {
@@ -62,7 +65,7 @@ const allowed = (check: (actor: Actor) => { ok: boolean }) =>
 // Q60, Q80, plan 5.6: track from to actor kind → who may take it. Restated by hand.
 const transitions = `
 main - imported user manual: PL
-main - self_registered participant manual:
+main - self_registered participant anonymous_self_registration:
 main self_registered imported user manual: PL
 main self_registered rejected user manual: PL
 main self_registered rejected system system: SYS
@@ -131,6 +134,12 @@ describe("mayPerformTransition (AC-28, Q60)", () => {
     expect(result(mayPerformTransition(actors.PL!, expiry, target))).toBe("actor_not_allowed");
     expect(result(mayPerformTransition(actors.SYS!, contact, target))).toBe("actor_not_allowed");
     expect(result(mayPerformTransition(participant, create, target))).toBe("actor_not_allowed");
+    const selfRegistration = edges.find((e) => e.kind === "anonymous_self_registration")!;
+    for (const actor of Object.values(actors)) {
+      expect(result(mayPerformTransition(actor, selfRegistration, target))).toBe(
+        "anonymous_registration_only",
+      );
+    }
     expect(result(mayPerformTransition(actors.ROM!, contact, target))).toBe("role_not_allowed");
   });
 });
@@ -146,7 +155,7 @@ const operations: Record<OperationKind, string> = {
   reviewReconciliation: "ROM",
   reviewBreakGlass: "ROM",
   requestClarification: "ROM",
-  requestEvidenceCorrection: "PL",
+  requestEvidenceCorrection: "PL BO",
   approveEvidenceCorrection: "ROM",
 };
 
@@ -159,11 +168,24 @@ const operation = (kind: OperationKind, other = "staff-other"): Operation => {
     case "reviewBreakGlass":
       return { kind, actorStaffUserId: other };
     case "requestEvidenceCorrection":
-      return { kind, documentType: "tl407_signed_scan" };
+      return {
+        kind,
+        target: { kind: "document", documentType: "dsv_signed_scan", documentId: "d" },
+      };
     default:
       return { kind };
   }
 };
+
+const correction = (correctionTarget: EvidenceCorrectionTarget) =>
+  allowed((actor) =>
+    mayPerformOperation(
+      actor,
+      { kind: "requestEvidenceCorrection", target: correctionTarget },
+      target,
+    ),
+  );
+const correctedField = (fieldKey: string) => correction({ kind: "field", fieldKey });
 
 describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
   it("lists every operation", () => {
@@ -205,25 +227,36 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
     expect(result(mayPerformOperation(all, decide, noRegion))).toBe("ok");
   });
 
-  it("lets the PL or back office request evidence corrections by document type (round 11)", () => {
-    const who = Object.fromEntries(
+  it("takes evidence-correction requesters from the authority table, not open rights (round 12)", () => {
+    const byType = Object.fromEntries(
       DocumentType.options.map((documentType) => [
         documentType,
-        allowed((actor) =>
-          mayPerformOperation(actor, { kind: "requestEvidenceCorrection", documentType }, target),
-        ),
+        correction({ kind: "document", documentType, documentId: "d" }),
       ]),
     );
-    expect(who).toEqual({
+    expect(byType).toEqual({
       tl407_signed_scan: "PL",
       kug200b_signed_scan: "PL",
       dsv_signed_scan: "PL BO",
       dsv_cancellation: "PL BO",
-      asu_proof: "",
-      profiling_exception_evidence: "",
+      asu_proof: "PL",
+      profiling_exception_evidence: "PL",
       participant_upload: "PL",
       qualification_certificate: "PL",
     });
+  });
+
+  it("corrects evidence-set fields by responsibility, nothing else (Q88)", () => {
+    expect(correctedField("lastName")).toBe("PL");
+    expect(correctedField("profilingSessions")).toBe("PL");
+    expect(correctedField("iban")).toBe("BO");
+    expect(correctedField("absencePeriods")).toBe("BO");
+    expect(correctedField("tgEntryDate")).toBe("PL BO");
+    expect(correctedField("status")).toBe("");
+    expect(correctedField("healthRestrictions")).toBe("");
+    expect(() => correctedField("custom.unknown")).toThrow("Unknown field custom.unknown");
+    const keys = new Set(fieldCatalog.map((f) => f.key));
+    for (const key of Object.keys(fieldCorrectionAuthority)) expect(keys.has(key)).toBe(true);
   });
 
   it("keeps staff operations from the system and participants, and the system's from staff", () => {

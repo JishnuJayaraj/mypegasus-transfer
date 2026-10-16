@@ -35,7 +35,10 @@ export type DocumentTypeEntry = {
   accessCategory: AccessCategory;
   /** The class of its most sensitive content. */
   dataClass: DataClass;
-  /** Periods are `unset` until the DPO confirms them (Slice 7, ADR-0008). */
+  /**
+   * Of the raw file; periods `unset` until the DPO confirms them (Slice 7, ADR-0008). After
+   * stage-one deletion only the minimum derived evidence facts stay (round 12).
+   */
   retentionClass: "evidence_set" | "personnel_file" | "participation_record";
   /** Signed or submitted: never changed; a correction is a new version. */
   signed: boolean;

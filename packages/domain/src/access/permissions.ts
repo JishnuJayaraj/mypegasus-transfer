@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { documentTypeEntry, type DocumentType } from "../documents/catalog";
 import type { OrgRole, ProjectRole } from "../enums";
 import type { Edge } from "../lifecycle/edges";
+import { correctionRequesters, type EvidenceCorrectionTarget } from "./corrections";
 import type { RegionScope, Subject } from "./decide";
 
 /**
  * Who may take a lifecycle edge or perform an operation (plan 5.6; Q60 confirmed, Q80
- * *assumed*, round 10 §6, round 11). The status service (PR 1g) checks this and the lifecycle
+ * *assumed*, round 10 §6, rounds 11–12). The status service (PR 1g) checks this and the lifecycle
  * rules (`canTransition`, the operations) before it calls a status function; nothing callable
  * from outside bypasses either.
  */
@@ -25,7 +25,9 @@ export type PermissionDenial =
   | "not_assigned"
   | "out_of_region"
   | "role_not_allowed"
-  | "four_eyes";
+  | "four_eyes"
+  /** The anonymous self-registration of Slice 4c, never through the transition service. */
+  | "anonymous_registration_only";
 export type Permission = { ok: true } | { ok: false; because: PermissionDenial };
 
 export const OperationKind = z.enum([
@@ -57,7 +59,7 @@ export type Operation =
     }
   | { kind: "decideProfilingException" | "approveEvidenceCorrection"; requestedBy: string }
   | { kind: "reviewReconciliation" | "reviewBreakGlass"; actorStaffUserId: string }
-  | { kind: "requestEvidenceCorrection"; documentType: DocumentType };
+  | { kind: "requestEvidenceCorrection"; target: EvidenceCorrectionTarget };
 
 type Role = ProjectRole | OrgRole;
 
@@ -78,7 +80,7 @@ const transitionRoles: Partial<Record<Role, (edge: Edge) => boolean>> = {
   back_office: (edge) => edge.track === "dsv", // offer, re-offer, signed, declined (Q60)
 };
 
-/** The roles an operation needs; the evidence correction also by document type (round 11). */
+/** The roles an operation needs; evidence corrections also by the authority table (round 12). */
 const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, Role[]> = {
   assignEntryWave: ["project_lead"],
   requestProfilingException: ["project_lead"],
@@ -136,8 +138,9 @@ export function mayPerformTransition(
   edge: Edge,
   target: PermissionTarget,
 ): Permission {
+  if (edge.kind === "anonymous_self_registration") return no("anonymous_registration_only");
   if (actor.kind === "system") return edge.actor === "system" ? ok : no("actor_not_allowed");
-  // Participants take no transition (Q60); self-registration is the anonymous QR flow (4c).
+  // An authenticated participant takes no transition (Q60, round 12).
   if (actor.kind === "participant" || edge.actor !== "user") return no("actor_not_allowed");
   return staffPermission(actor, target, (role) => transitionRoles[role]?.(edge) ?? false);
 }
@@ -155,7 +158,7 @@ export function mayPerformOperation(
   const allows = (role: Role) =>
     roles.includes(role) &&
     (operation.kind !== "requestEvidenceCorrection" ||
-      documentTypeEntry(operation.documentType).roles[role] === "open");
+      (correctionRequesters(operation.target) as readonly Role[]).includes(role));
   const otherParty =
     "requestedBy" in operation
       ? operation.requestedBy

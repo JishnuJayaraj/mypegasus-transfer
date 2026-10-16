@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { fieldCorrectionAuthority } from "../access/corrections";
 import { OperationKind } from "../access/permissions";
 import { DocumentType } from "../documents/catalog";
 import { edges } from "./edges";
@@ -16,21 +17,24 @@ it("renders every edge, guard and operation (docs/domain/generated/lifecycle-tra
         (line) =>
           line.startsWith("| ") &&
           !line.startsWith("| Track") &&
-          !/^\| (Guard|Operation|Document type) \|/.test(line),
+          !/^\| (Guard|Operation|Target) \|/.test(line),
       );
 
   expect(doc).toMatch(/^# Lifecycle transitions \(generated\)\n/);
   expect(rows("Edges")).toHaveLength(edges.length);
   expect(rows("Guards")).toHaveLength(guardIds.length);
   expect(rows("Operations without a status change")).toHaveLength(
-    OperationKind.options.length + DocumentType.options.length,
+    OperationKind.options.length +
+      DocumentType.options.length +
+      Object.keys(fieldCorrectionAuthority).length,
   );
   expect(doc).toContain(
     "| main | `active_in_tg` | `exited` | user | manual | Consultant/profiler (assigned), PL | — | all |",
   );
   expect(doc).toContain("| `decideProfilingException` | Regional operations manager |");
   expect(doc).toContain("| `requestEvidenceCorrection` | PL, Back office | — |");
-  expect(doc).toContain("| `asu_proof` | nobody |");
+  expect(doc).toContain("| document | `asu_proof` | PL |");
+  expect(doc).toContain("| field | `tgEntryDate` | PL, Back office |");
   expect(doc).toContain("| main | *(create)* | `imported` | user | manual | PL | — | all |");
   expect(doc).toContain(
     "| dsv | `dsv_expired` | `dsv_offered` | user | manual | PL, Back office | `before_cutoff`, `offer_deadline_valid` | all |",

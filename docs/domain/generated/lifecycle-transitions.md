@@ -13,7 +13,7 @@ consultant/profiler only for assigned participations, the PL and back office in 
 | Track | From | To | Actor | Kind | Who | Guards | Project types |
 |---|---|---|---|---|---|---|---|
 | main | *(create)* | `imported` | user | manual | PL | — | all |
-| main | *(create)* | `self_registered` | participant | manual | nobody | — | all |
+| main | *(create)* | `self_registered` | participant | anonymous_self_registration | nobody | — | all |
 | main | `self_registered` | `imported` | user | manual | PL | — | all |
 | main | `self_registered` | `rejected` | user | manual | PL | — | all |
 | main | `self_registered` | `rejected` | system | system | system | — | all |
@@ -67,7 +67,7 @@ consultant/profiler only for assigned participations, the PL and back office in 
 
 ## Operations without a status change
 
-"Who" is `mayPerformOperation` (Q60, Q80, round 10 §6, round 11); the regional operations
+"Who" is `mayPerformOperation` (Q60, Q80, round 10 §6, rounds 11–12); the regional operations
 manager only in its own region, and never on their own request or action (four eyes:
 `decideProfilingException`, `reviewReconciliation`, `reviewBreakGlass`,
 `approveEvidenceCorrection`). The failure codes of the lifecycle operations are listed in the
@@ -88,15 +88,36 @@ their slices (3, 5, 7).
 | `requestEvidenceCorrection` | PL, Back office | — |
 | `approveEvidenceCorrection` | Regional operations manager | — |
 
-`requestEvidenceCorrection` by document type (the roles that may open it, round 11):
+`requestEvidenceCorrection` (`append_evidence_correction`) by target, from the
+correction-authority table (round 12, Q88), not from who may open a document; requesting grants
+no read access. Every other field can't be corrected this way: statuses change only through the
+status functions, and the rest isn't evidence-set data.
 
-| Document type | Who |
-|---|---|
-| `tl407_signed_scan` | PL |
-| `kug200b_signed_scan` | PL |
-| `dsv_signed_scan` | PL, Back office |
-| `dsv_cancellation` | PL, Back office |
-| `asu_proof` | nobody |
-| `profiling_exception_evidence` | nobody |
-| `participant_upload` | PL |
-| `qualification_certificate` | PL |
+| Target | Key | Who |
+|---|---|---|
+| document | `tl407_signed_scan` | PL |
+| document | `kug200b_signed_scan` | PL |
+| document | `dsv_signed_scan` | PL, Back office |
+| document | `dsv_cancellation` | PL, Back office |
+| document | `asu_proof` | PL |
+| document | `profiling_exception_evidence` | PL |
+| document | `participant_upload` | PL |
+| document | `qualification_certificate` | PL |
+| field | `tgStart` | PL, Back office |
+| field | `tgEnd` | PL, Back office |
+| field | `dsvSignedOn` | PL, Back office |
+| field | `tgEntryDate` | PL, Back office |
+| field | `exitDate` | PL, Back office |
+| field | `withdrawnOn` | PL |
+| field | `profilingDoneOn` | PL |
+| field | `firstName` | PL |
+| field | `lastName` | PL |
+| field | `personnelNumber` | PL |
+| field | `birthDate` | PL |
+| field | `address` | PL |
+| field | `profilingSessions` | PL |
+| field | `pensionInsuranceNumber` | Back office |
+| field | `taxId` | Back office |
+| field | `iban` | Back office |
+| field | `baCustomerNumber` | Back office |
+| field | `absencePeriods` | Back office |

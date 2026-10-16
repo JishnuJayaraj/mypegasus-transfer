@@ -39,7 +39,12 @@ export function renderTransitionsDoc(): string {
     const names = kind === "requestEvidenceCorrection" ? byType : operationWho(kind);
     return `${code(kind)} | ${who(names)} | ${list(failures[kind] ?? [])}`;
   });
-  const correctionRows = corrections.map(([type, names]) => `${code(type)} | ${who(names)}`);
+  const correctionRows = corrections
+    .filter(([, names]) => names.length)
+    .map(([target, names]) => {
+      const [kind, key] = target.split(" ") as [string, string];
+      return `${kind} | ${code(key)} | ${who(names)}`;
+    });
 
   return `# Lifecycle transitions (generated)
 
@@ -61,7 +66,7 @@ ${table("Guard | Edges", guardRows)}
 
 ## Operations without a status change
 
-"Who" is \`mayPerformOperation\` (Q60, Q80, round 10 §6, round 11); the regional operations
+"Who" is \`mayPerformOperation\` (Q60, Q80, round 10 §6, rounds 11–12); the regional operations
 manager only in its own region, and never on their own request or action (four eyes:
 \`decideProfilingException\`, \`reviewReconciliation\`, \`reviewBreakGlass\`,
 \`approveEvidenceCorrection\`). The failure codes of the lifecycle operations are listed in the
@@ -70,8 +75,11 @@ their slices (3, 5, 7).
 
 ${table("Operation | Who | Failure codes", operationRows)}
 
-\`requestEvidenceCorrection\` by document type (the roles that may open it, round 11):
+\`requestEvidenceCorrection\` (\`append_evidence_correction\`) by target, from the
+correction-authority table (round 12, Q88), not from who may open a document; requesting grants
+no read access. Every other field can't be corrected this way: statuses change only through the
+status functions, and the rest isn't evidence-set data.
 
-${table("Document type | Who", correctionRows)}
+${table("Target | Key | Who", correctionRows)}
 `;
 }
