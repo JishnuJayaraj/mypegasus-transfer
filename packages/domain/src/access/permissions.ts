@@ -1,12 +1,12 @@
 import { z } from "zod";
 import type { OrgRole, ProjectRole } from "../enums";
 import type { Edge } from "../lifecycle/edges";
-import { correctionRequesters, type EvidenceCorrectionTarget } from "./corrections";
+import { correctionRequesters, needsEntry, type EvidenceCorrectionTarget } from "./corrections";
 import type { RegionScope, Subject } from "./decide";
 
 /**
  * Who may take a lifecycle edge or perform an operation (plan 5.6; Q60 confirmed, Q80
- * *assumed*, round 10 §6, rounds 11–12). The status service (PR 1g) checks this and the lifecycle
+ * *assumed*, round 10 §6, rounds 11–13). The status service (PR 1g) checks this and the lifecycle
  * rules (`canTransition`, the operations) before it calls a status function; nothing callable
  * from outside bypasses either.
  */
@@ -27,7 +27,9 @@ export type PermissionDenial =
   | "role_not_allowed"
   | "four_eyes"
   /** The anonymous self-registration of Slice 4c, never through the transition service. */
-  | "anonymous_registration_only";
+  | "anonymous_registration_only"
+  /** A correction of a collection field names the entry it corrects. */
+  | "entry_required";
 export type Permission = { ok: true } | { ok: false; because: PermissionDenial };
 
 export const OperationKind = z.enum([
@@ -154,6 +156,9 @@ export function mayPerformOperation(
     return actor.kind === "system" ? ok : no("actor_not_allowed");
   }
   if (actor.kind !== "staff") return no("actor_not_allowed");
+  if (operation.kind === "requestEvidenceCorrection" && needsEntry(operation.target)) {
+    return no("entry_required");
+  }
   const roles: Role[] = operationRoles[operation.kind];
   const allows = (role: Role) =>
     roles.includes(role) &&

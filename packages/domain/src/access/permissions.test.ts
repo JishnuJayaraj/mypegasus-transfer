@@ -185,7 +185,8 @@ const correction = (correctionTarget: EvidenceCorrectionTarget) =>
       target,
     ),
   );
-const correctedField = (fieldKey: string) => correction({ kind: "field", fieldKey });
+const correctedField = (fieldKey: string, entryId?: string) =>
+  correction({ kind: "field", fieldKey, ...(entryId && { entryId }) });
 
 describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
   it("lists every operation", () => {
@@ -246,15 +247,33 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
     });
   });
 
-  it("corrects evidence-set fields by responsibility, nothing else (Q88)", () => {
+  it("corrects evidence-set fields by responsibility, nothing else (Q88, round 13)", () => {
     expect(correctedField("lastName")).toBe("PL");
-    expect(correctedField("profilingSessions")).toBe("PL");
-    expect(correctedField("iban")).toBe("BO");
-    expect(correctedField("absencePeriods")).toBe("BO");
+    expect(correctedField("personnelNumber")).toBe("PL");
+    expect(correctedField("pensionInsuranceNumber")).toBe("BO");
+    expect(correctedField("baCustomerNumber")).toBe("BO");
     expect(correctedField("tgEntryDate")).toBe("PL BO");
-    expect(correctedField("status")).toBe("");
-    expect(correctedField("healthRestrictions")).toBe("");
+    // not evidence-set data: corrected by the active/payroll operations while retained
+    for (const key of [
+      "address",
+      "taxId",
+      "iban",
+      "absencePeriods",
+      "status",
+      "healthRestrictions",
+    ]) {
+      expect([key, correctedField(key)]).toEqual([key, ""]);
+    }
     expect(() => correctedField("custom.unknown")).toThrow("Unknown field custom.unknown");
+    // a profiling-session correction names the session, never the whole collection
+    expect(correctedField("profilingSessions", "session-1")).toBe("PL");
+    expect(correctedField("profilingSessions")).toBe("");
+    const pl = actors.PL!;
+    const whole = {
+      kind: "requestEvidenceCorrection",
+      target: { kind: "field", fieldKey: "profilingSessions" },
+    } as const;
+    expect(result(mayPerformOperation(pl, whole, target))).toBe("entry_required");
     const keys = new Set(fieldCatalog.map((f) => f.key));
     for (const key of Object.keys(fieldCorrectionAuthority)) expect(keys.has(key)).toBe(true);
   });

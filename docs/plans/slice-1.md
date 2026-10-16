@@ -763,7 +763,8 @@ Built in PR 1d-2 as `mayPerformTransition(actor, edge, target)` and
 `mayPerformOperation(actor, operation, target)` (`packages/domain/src/access/permissions.ts`,
 authority table in `access/corrections.ts`): `actor` is a `Subject` or `{ kind: "system" }`; the
 result is `{ ok: true }` or a denial (`actor_not_allowed`, `not_member`, `not_assigned`,
-`out_of_region`, `role_not_allowed`, `four_eyes`, `anonymous_registration_only`), allowed when
+`out_of_region`, `role_not_allowed`, `four_eyes`, `anonymous_registration_only`,
+`entry_required`), allowed when
 any role of the actor allows it (D6). The generated transitions table shows who for every edge,
 operation and correction target. Operations: the six lifecycle operations of 5.3,
 `reviewReconciliation`, `reviewBreakGlass`, `requestClarification` (Q80),
@@ -773,21 +774,15 @@ creation edge has the kind `anonymous_self_registration` and is refused for ever
 (Slice 4c's anonymous QR flow brings its own check).
 
 The eight readings taken in PR 1d-2 were answered in
-[round 12](../decisions/2026-10-16-answers-round-12.md) and are reflected above (the
-evidence-correction requester was corrected). Readings taken while applying round 12 (fail
-safe, D10; correct them if wrong):
-- **Field correction authority** by key. PL: `firstName`, `lastName`, `birthDate`, `address`,
-  `personnelNumber` (identity), `profilingSessions` (measure participation), `withdrawnOn`,
-  `profilingDoneOn` (operational dates). Back office: `pensionInsuranceNumber`, `taxId`,
-  `iban`, `baCustomerNumber`, `absencePeriods`. Either: `dsvSignedOn`, `tgStart`, `tgEnd`,
-  `tgEntryDate`, `exitDate` (DSV/TG employment dates that are also operational dates). No one:
-  statuses (status functions) and every field that isn't evidence-set data.
-- **Active entitlement** for the evidence set means normal, assisted or break-glass access in
-  the active phase; the evidence-set view is the best of them.
-- **Audit in the evidence set:** the consultant's own actions need break-glass too; lists of
-  operational streams are `never`; the review queue, list included, stays as in the active
-  phase. A break-glass grant names its target: a field category, a document type (with its
-  category) or an audit stream.
+[round 12](../decisions/2026-10-16-answers-round-12.md) (the evidence-correction requester was
+corrected), the three taken while applying it in
+[round 13](../decisions/2026-10-16-answers-round-13.md); both are reflected above and in
+data-protection.md. Round 13 narrowed the field-correction authority to fields retained in the
+evidence set (PL: identity without the address, `profilingSessions`, operational dates; back
+office: `pensionInsuranceNumber`, `baCustomerNumber`; either: DSV/TG dates). A correction of a
+collection field names its entry (`entryId`; otherwise `entry_required`). In the evidence set
+the role gets the best view of any active-phase mode, only through break-glass, within its
+assignment, project and region; a consultant's own audit events need break-glass there too.
 
 ### 5.7 `packages/config`
 

@@ -56,7 +56,7 @@ export const operationWho = (
   correction: EvidenceCorrectionTarget = document("tl407_signed_scan"),
 ) => names((actor) => mayPerformOperation(actor, sampleOperation(kind, correction), target));
 
-/** `requestEvidenceCorrection` per document type and per field (round 12, Q88). */
+/** `requestEvidenceCorrection` per document type and per field (rounds 12–13, Q88). */
 export const evidenceCorrectionWho = () => [
   ...DocumentType.options.map(
     (type) =>
@@ -66,7 +66,11 @@ export const evidenceCorrectionWho = () => [
     ({ key }) =>
       [
         `field ${key}`,
-        operationWho("requestEvidenceCorrection", { kind: "field", fieldKey: key }),
+        operationWho("requestEvidenceCorrection", {
+          kind: "field",
+          fieldKey: key,
+          entryId: "entry-a",
+        }),
       ] as const,
   ),
 ];

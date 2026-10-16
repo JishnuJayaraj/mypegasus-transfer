@@ -164,9 +164,13 @@ explicit correction-authority table (`packages/domain/src/access/corrections.ts`
 who may open a document; requesting grants no read access.
 - Documents: PL for TL 407, Kug 200b, ASU proof, exception evidence, uploads and certificates;
   PL or back office for the DSV and its cancellation.
-- Fields: PL for identity, case facts, measure participation and operational dates; back office
-  for payroll/BA identifiers and payroll dates; either for DSV/TG employment dates. Statuses
-  aren't corrected this way (status functions); other data isn't evidence-set data.
+- Fields (round 13), only those retained in the evidence set: PL for `firstName`, `lastName`,
+  `birthDate`, `personnelNumber`, `profilingSessions` (one session per correction, never the
+  whole collection), `withdrawnOn`, `profilingDoneOn`; back office for
+  `pensionInsuranceNumber`, `baCustomerNumber`; either for `dsvSignedOn`, `tgStart`, `tgEnd`,
+  `tgEntryDate`, `exitDate`. Payroll and personnel fields (address, tax ID, IBAN, absence
+  periods) don't join the evidence set to be corrected; while retained, their own active or
+  payroll operations correct them. Statuses change only through the status functions.
 - Consultants and participants can't alter the evidence set; they raise a task or rectification
   request for the responsible role.
 - Append-only, the original kept and linked (corrects/supersedes); a reason code and a

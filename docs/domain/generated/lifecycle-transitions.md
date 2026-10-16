@@ -114,10 +114,6 @@ status functions, and the rest isn't evidence-set data.
 | field | `lastName` | PL |
 | field | `personnelNumber` | PL |
 | field | `birthDate` | PL |
-| field | `address` | PL |
 | field | `profilingSessions` | PL |
 | field | `pensionInsuranceNumber` | Back office |
-| field | `taxId` | Back office |
-| field | `iban` | Back office |
 | field | `baCustomerNumber` | Back office |
-| field | `absencePeriods` | Back office |
