@@ -1,5 +1,5 @@
 import type { Database } from "./client";
-import { project, staffUser } from "./schema";
+import { project, projectEntryWave, staffUser } from "./schema";
 
 // Synthetic data only (CLAUDE.md rule 1): obviously fictional names, emails at example.org.
 // Fixed UUIDs make the seed idempotent.
@@ -10,6 +10,7 @@ export const seedStaffUserIds = {
   projectLead: "00000000-0000-4000-8000-000000000003",
   consultant: "00000000-0000-4000-8000-000000000004",
   backOffice: "00000000-0000-4000-8000-000000000005",
+  regionalOperationsManager: "00000000-0000-4000-8000-000000000006",
 } as const;
 
 export const seedProjectIds = {
@@ -28,8 +29,13 @@ const staffUsers: NewStaffUser[] = (
     { id: seedStaffUserIds.projectLead, displayName: "Petra Projektleitung", role: "project_lead" },
     { id: seedStaffUserIds.consultant, displayName: "Bernd Beratung", role: "consultant" },
     { id: seedStaffUserIds.backOffice, displayName: "Birgit Backoffice", role: "back_office" },
+    {
+      id: seedStaffUserIds.regionalOperationsManager,
+      displayName: "Rolf Regionalbetrieb",
+      role: "regional_operations_manager",
+    },
   ] satisfies Omit<NewStaffUser, "email">[]
-).map((user) => ({ ...user, email: `${user.role.replace("_", "-")}@example.org` }));
+).map((user) => ({ ...user, email: `${user.role.replaceAll("_", "-")}@example.org` }));
 
 const projects: NewProject[] = (
   [
@@ -38,9 +44,9 @@ const projects: NewProject[] = (
       name: "Restrukturierung Werk Nord",
       customerName: "Beispiel Maschinenbau GmbH",
       type: "ta_tg",
-      signingDeadline: "2027-02-15",
-      defaultTgStart: "2027-03-01",
-      defaultTgEnd: "2028-02-29",
+      signingDeadline: "2091-02-15",
+      defaultTgStart: "2091-03-01",
+      defaultTgEnd: "2092-02-29",
     },
     {
       id: seedProjectIds.lagerSued,
@@ -57,10 +63,51 @@ const projects: NewProject[] = (
   ] satisfies Omit<NewProject, "createdBy">[]
 ).map((p) => ({ ...p, createdBy: seedStaffUserIds.projectLead }));
 
-/** Inserts the synthetic staff users and projects; existing rows are left alone. */
+/**
+ * Werk Nord's two entry waves (Q79, plan 5.10): W1 matches the project's Slice 0 dates, W2 is a
+ * later cohort. Fictional contractual dates.
+ */
+export const seedWaves = [
+  {
+    id: "00000000-0000-4000-b000-000000000001",
+    projectId: seedProjectIds.werkNord,
+    code: "W1",
+    name: "Welle 1 – kurze Kündigungsfristen",
+    signingDeadline: "2091-02-15",
+    defaultTgStart: "2091-03-01",
+    defaultTgEnd: "2092-02-29",
+    latestEntryDate: "2091-03-15",
+  },
+  {
+    id: "00000000-0000-4000-b000-000000000002",
+    projectId: seedProjectIds.werkNord,
+    code: "W2",
+    name: "Welle 2 – lange Kündigungsfristen",
+    signingDeadline: "2091-05-14",
+    defaultTgStart: "2091-07-01",
+    defaultTgEnd: "2092-06-30",
+    latestEntryDate: "2091-07-15",
+  },
+] as const satisfies (typeof projectEntryWave.$inferInsert)[];
+
+/**
+ * Inserts the synthetic staff users, projects and waves; existing staff users and projects are
+ * left alone. A wave with the same code (e.g. the W1 the Slice 1 migration made from the Slice 0
+ * dates) gets the seed's dates, so the participation seed finds a usable cutoff.
+ */
 export async function seed(db: Database): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.insert(staffUser).values(staffUsers).onConflictDoNothing();
     await tx.insert(project).values(projects).onConflictDoNothing();
+    for (const wave of seedWaves) {
+      const { id: _id, projectId: _projectId, code: _code, ...dates } = wave;
+      await tx
+        .insert(projectEntryWave)
+        .values(wave)
+        .onConflictDoUpdate({
+          target: [projectEntryWave.projectId, projectEntryWave.code],
+          set: dates,
+        });
+    }
   });
 }

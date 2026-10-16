@@ -94,11 +94,11 @@ export async function informedParticipation(
   return id;
 }
 
-/** Inserts a wave as the owner (waves are created with project setup, Slice 2). */
+/** Inserts a test wave as the owner (waves are created with project setup, Slice 2). */
 export async function createWave(
   owner: Pick<Client, "query">,
   projectId: string = seedProjectIds.werkNord,
-  code = "W2",
+  code = "T1",
 ): Promise<string> {
   const { rows } = await owner.query(
     `insert into project_entry_wave (project_id, code, name, signing_deadline, default_tg_start, default_tg_end, latest_entry_date)

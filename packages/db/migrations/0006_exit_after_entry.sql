@@ -1,0 +1,1 @@
+ALTER TABLE "participation" ADD CONSTRAINT "participation_exit_after_entry" CHECK ("participation"."exit_date" >= "participation"."tg_entry_date");

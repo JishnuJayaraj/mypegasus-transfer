@@ -84,7 +84,8 @@
           "regional_admin",
           "project_lead",
           "consultant",
-          "back_office"
+          "back_office",
+          "regional_operations_manager"
         ]
       },
       "ProjectPage": {

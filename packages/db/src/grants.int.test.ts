@@ -31,7 +31,7 @@ describe("transfer_app", () => {
 
   it("may select staff users", async () => {
     const { rowCount } = await app.query("select id from staff_user");
-    expect(rowCount).toBe(5);
+    expect(rowCount).toBe(6);
   });
 
   it.each([
@@ -98,7 +98,11 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     expect((await app.query("select status from participation")).rows).toEqual([
       { status: "imported" },
     ]);
-    expect((await app.query("select code from project_entry_wave")).rows).toEqual([{ code: "W2" }]);
+    expect((await app.query("select code from project_entry_wave order by code")).rows).toEqual([
+      { code: "T1" },
+      { code: "W1" },
+      { code: "W2" },
+    ]);
     expect((await app.query("select id from profiling_exception_request")).rows).toEqual([]);
     await expect(app.query("select * from audit_event")).rejects.toMatchObject(permissionDenied);
     await expect(app.query("select * from lifecycle_edge")).rejects.toMatchObject(permissionDenied);

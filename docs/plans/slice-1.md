@@ -590,6 +590,61 @@ wave, project and dated guard facts (`GuardFactsProvider`; fail closed in Slice 
 the function → commit. Later slices that write facts (DSV, ASU) take the same lock. The nightly
 job uses the same service as `system`.
 
+Readings taken in PR 1g-2, answered in [round 18](../decisions/2026-10-16-answers-round-18.md)
+and applied:
+
+1. **Order of checks** (confirmed): lock → load → **permission** (`mayPerformTransition` for the
+   actor's own edge of the step, else any edge of it, so a wrong actor type is `forbidden`;
+   without any edge the lifecycle check says `no_edge`) → expected status (`stale_status`) →
+   `canTransition` or the operation's domain check → the function. Refusals carry a kind for the
+   later API mapping: `not_found`, `forbidden`, `stale` (`stale_status`, `request_not_current`),
+   `domain` (the domain code and failed guards), `integrity` (a function's refusal the domain
+   didn't foresee), and a code, never a value.
+2. **No region yet** (confirmed temporarily): projects get their region in Slice 3, so the
+   permission target's region is `null` and only a global-scope org role reaches it. The seeded
+   regional operations manager has global scope; global production access is never inferred from
+   the stored role, and Slice 3 assigns regional scope before real use.
+3. **The Slice 1 facts provider** (confirmed) gives no documentary fact and resolves no evidence
+   (D4; every exception request is `evidence_missing`, round 16). Only the participation's own
+   **approved exception** (decision date, recorded instant) is reconstructed.
+4. **Effective dates are bounded** (corrected in round 18), validated by the service after the
+   lock, never taken on trust from a caller, system callers included:
+   - `active_in_tg`: exactly the effective TG start (supplied or derived);
+   - `dsv_expired`: required, exactly the effective offer deadline + 1;
+   - automatic (system) cutoff withdrawal: exactly the applicable cutoff + 1 (the wave's
+     `latestEntryDate`, else the project's final entry date, Q84; none in `ta_only`);
+   - manual withdrawal, `exited`, `profiling_done`: required, may be backdated, never in the
+     future; derived dates aren't in the future either;
+   - an exit never before the TG entry (also the table `CHECK participation_exit_after_entry`);
+   - no date on any other transition.
+
+   Errors (`domain`): `effective_date_required`, `effective_date_mismatch`,
+   `effective_date_in_future`, `effective_date_before_entry`, `effective_date_not_allowed`.
+   Migration `0007` makes the function require a date for `dsv_expired` and refuse one where it
+   means nothing; `0006` adds the exit constraint. Request and decision dates are the Clock's
+   today.
+5. **Superseding** (confirmed) is done by `change_participation_status` inside the service's
+   transaction; the service makes no separate call.
+6. **No assisted mode** (`onBehalfOf`) in Slice 1 (confirmed).
+7. **An unknown wave** is refused like another project's (`wave_of_other_project`, confirmed).
+8. **The fingerprint never leaves the service:** a request returns its id only; the service logs
+   nothing.
+9. **The seed** (`apps/api/src/participations/seed.ts`, run by `pnpm db:seed` / `db:reset` after
+   the base seed, as the runtime role) uses the production service with a manual clock and a
+   **seed facts provider** that adds synthetic dated facts and evidence records (no documents
+   exist before Slices 4b–7). Its fictional timeline lies in **2091–2092** (round 18), so the
+   instants the database records (an exception's approval) precede the scheduled runs; the
+   Werk Nord project's legacy Slice 0 dates moved with it. 18 participations (15 in Werk Nord, 3
+   in the `ta_only` project) cover every main status except `self_registered` and `rejected`
+   (Slice 4c), every track status, every exception state and, on the scenario's dates, every
+   lifecycle flag. The two entries under an approved exception are **reconciliations** only
+   because the approval precedes the scheduled run and the ASU proof, valid before the TG start,
+   was recorded after it (Q68, round 18); the seed checks both before each reconciliation and
+   refuses to continue otherwise, and a test asserts them. The base seed gives Werk Nord waves
+   W1 and W2 and updates a same-coded wave's dates (a migrated W1 in an older dev database).
+10. **`StaffRole` gains `regional_operations_manager`** ("Regionale Betriebsleitung", confirmed):
+    an organisation role, represented by the flat staff role until Slice 3.
+
 #### Grants (custom migration, Slice 0 pattern)
 
 | Object | `transfer_app` |
@@ -1220,9 +1275,11 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 - **Seed (synthetic only):** "Restrukturierung Werk Nord" gets two waves with
   `latest_entry_date`; about 15 participations cover every main status, each track status, the
   exception states and every flag case; three in the `ta_only` project. No names. Created and
-  moved **through the functions** as `system` / `seed` (exception approvals by a seeded regional
-  operations manager), so every seeded state has its audit trail. Idempotent by fixed UUIDs.
-  The seed adds one synthetic staff user with the new org role.
+  moved **through the status service and its functions**: creation and every user edge by the
+  seeded staff user the Q60 matrix allows, system edges as `system` with job `seed`, no bypass
+  actor (Q95, round 16); exception decisions by a seeded regional operations manager, so every
+  seeded state has its audit trail. Idempotent by fixed UUIDs. The seed adds one synthetic staff
+  user with the new org role.
 - **Generated tables** (`pnpm generate`, drift-checked in `pnpm verify`):
   `docs/domain/generated/lifecycle-transitions.md` (every edge and operation with actors, roles,
   entry kinds and guards) and `docs/domain/generated/access-matrix.md` (role × category × mode ×
