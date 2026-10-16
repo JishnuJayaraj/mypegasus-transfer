@@ -56,7 +56,7 @@ export type ProjectResolveInput = {
   templatesByAgentur: Readonly<Record<string, RegionalTemplate>>;
   override?: ProjectOverride;
   projectType: ProjectType;
-  kugAgenturKey: string | null;
+  projectAgenturKey: string | null;
 };
 export type ParticipationResolveInput = ProjectResolveInput & {
   placementAgenturKey: string | null;
@@ -75,20 +75,23 @@ const submissionSettings: Record<SubmissionStep, readonly string[]> = {
   ],
 };
 
-/** Project steps, resolved against the KuG-Agentur's template (two levels, Q15). */
+/**
+ * Project steps, resolved against the Project Agentur's template (two levels, Q15, Q90): the
+ * KuG-Agentur in a `ta_tg` project, the Agentur responsible for the §110 measure in `ta_only`.
+ */
 export function resolveForProject(input: ProjectResolveInput): Resolution {
-  const { config, provenance } = resolveLevel(input, "project", input.kugAgenturKey);
+  const { config, provenance } = resolveLevel(input, "project", input.projectAgenturKey);
   return finish(config, provenance, activationBlockers(input));
 }
 
 /**
  * A participation's configuration: participant steps from its placement Agentur's template,
- * project steps from the KuG-Agentur's (two levels, Q15). Settings, custom fields and help texts
+ * project steps from the Project Agentur's (two levels, Q15, Q90). Settings, custom fields and help texts
  * are the participant level's.
  */
 export function resolveForParticipation(input: ParticipationResolveInput): Resolution {
   const own = resolveLevel(input, "participant", input.placementAgenturKey);
-  const project = resolveLevel(input, "project", input.kugAgenturKey);
+  const project = resolveLevel(input, "project", input.projectAgenturKey);
   const config = {
     ...own.config,
     rules: { ...own.config.rules, ...project.config.rules },
@@ -112,16 +115,20 @@ const templateFor = (input: ProjectResolveInput, agenturKey: string | null) =>
     ? input.templatesByAgentur[agenturKey]
     : undefined;
 
-/** Only a template lifts this one; Q76 has no temporary path for the KuG-Agentur. */
+/**
+ * Every project type needs its Project Agentur's template (Q76, Q90). Only a pinned template
+ * lifts this blocker; temporary settings can't stand in for it (round 15).
+ */
 function activationBlockers(input: ProjectResolveInput): Blocker[] {
-  if (templateFor(input, input.kugAgenturKey)) return [];
-  return [{ code: "project_activation_blocked", agenturKey: input.kugAgenturKey }];
+  if (templateFor(input, input.projectAgenturKey)) return [];
+  return [{ code: "project_activation_blocked", agenturKey: input.projectAgenturKey }];
 }
 
 function submissionBlockers(input: ParticipationResolveInput, settings: RegionalSettings) {
   const known = settings as Partial<Record<SubmissionStep, Record<string, unknown>>>;
   return (Object.keys(submissionSettings) as SubmissionStep[]).flatMap((step): Blocker[] => {
-    // The Kug 200b batch exists only on the TG route (round 14, Q91).
+    // Step-scoped: blocks only the Kug 200b batch submission, which exists only on the TG
+    // route (Q91), and the TL 407 submission (Q92); never activation or other work.
     if (step === "asu_registration" && input.projectType === "ta_only") return [];
     const missing = submissionSettings[step].filter((key) => known[step]?.[key] === undefined);
     if (!missing.length) return [];

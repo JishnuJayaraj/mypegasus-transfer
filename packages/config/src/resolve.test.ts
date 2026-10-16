@@ -118,7 +118,7 @@ const input = (extra: Partial<ParticipationResolveInput> = {}): ParticipationRes
   base,
   templatesByAgentur,
   projectType: "ta_tg",
-  kugAgenturKey: nord,
+  projectAgenturKey: nord,
   placementAgenturKey: nord,
   ...extra,
 });
@@ -227,9 +227,9 @@ describe("resolution order and provenance (AC-32)", () => {
 });
 
 describe("two levels (Q15, provisional)", () => {
-  const twoAgenturen = input({ placementAgenturKey: nord, kugAgenturKey: sued });
+  const twoAgenturen = input({ placementAgenturKey: nord, projectAgenturKey: sued });
 
-  it("participant steps use the placement Agentur, project steps the KuG-Agentur", () => {
+  it("participant steps use the Placement Agentur, project steps the Project Agentur", () => {
     const { config, provenance } = resolveForParticipation(twoAgenturen);
     expect(ids(config.rules.data_collection)).toEqual([
       "base-name",
@@ -376,7 +376,7 @@ describe("custom fields", () => {
     });
     expect(() => resolveForProject(input({ override: usesNord }))).not.toThrow();
     expect(
-      failure(() => resolveForProject(input({ override: usesNord, kugAgenturKey: sued }))),
+      failure(() => resolveForProject(input({ override: usesNord, projectAgenturKey: sued }))),
     ).toEqual({
       layer: "override",
       issues: [{ code: "unknown_field", path: "rules/profiling/0/field", key: "custom.nord_nr" }],
@@ -415,7 +415,7 @@ describe("invalid layers", () => {
       issues: [{ code: "template_key_mismatch", path: "agenturKey", key: nord }],
     });
     // never an inherited property
-    const { blockers } = resolveForProject(input({ kugAgenturKey: "constructor" }));
+    const { blockers } = resolveForProject(input({ projectAgenturKey: "constructor" }));
     expect(blockers).toEqual([{ code: "project_activation_blocked", agenturKey: "constructor" }]);
   });
 });
@@ -443,11 +443,11 @@ describe("Agentur-scoped temporary settings (AC-33)", () => {
     expect(config.settings).toEqual(settings);
     expect(Object.values(provenance)).not.toContainEqual(ostRef);
     expect(
-      resolveForProject(input({ override: withOst, kugAgenturKey: ost })).config.settings,
+      resolveForProject(input({ override: withOst, projectAgenturKey: ost })).config.settings,
     ).toEqual({});
   });
 
-  it("fill and win over their Agentur's template per key (ADR-0004 order, Q93)", () => {
+  it("win over their Agentur's pinned template only for the keys they supply (Q93)", () => {
     const partial = template(nord, {
       settings: {
         agentur_submission: {
@@ -481,17 +481,17 @@ describe("Agentur-scoped temporary settings (AC-33)", () => {
 });
 
 describe("blockers (Q76)", () => {
-  it("no KuG-Agentur template blocks project activation, with a warning", () => {
-    for (const kugAgenturKey of [ost, null]) {
-      const blocker = { code: "project_activation_blocked", agenturKey: kugAgenturKey };
+  it("no Project-Agentur template blocks project activation, with a warning (Q90)", () => {
+    for (const projectAgenturKey of [ost, null]) {
+      const blocker = { code: "project_activation_blocked", agenturKey: projectAgenturKey };
       // a temporary setting doesn't replace the template here
       const project = resolveForProject(
-        input({ kugAgenturKey, override: override({ agenturSettings: { [ost]: temporary } }) }),
+        input({ projectAgenturKey, override: override({ agenturSettings: { [ost]: temporary } }) }),
       );
       expect(project.blockers).toEqual([blocker]);
       expect(project.warnings).toEqual([blocker]);
       expect(project.config.rules).toEqual({ project_checklist: [rule.check] });
-      expect(resolveForParticipation(input({ kugAgenturKey })).blockers).toEqual([blocker]);
+      expect(resolveForParticipation(input({ projectAgenturKey })).blockers).toEqual([blocker]);
     }
   });
 

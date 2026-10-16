@@ -66,7 +66,7 @@ describe("the sample templates (D8, AC-31)", () => {
         base,
         templatesByAgentur: { [sample.agenturKey]: template },
         projectType: "ta_tg",
-        kugAgenturKey: sample.agenturKey,
+        projectAgenturKey: sample.agenturKey,
         placementAgenturKey: sample.agenturKey,
       });
       expect(resolution.blockers).toEqual([]);
@@ -81,7 +81,7 @@ describe("pinned versions (Q36, AC-35)", () => {
       base,
       templatesByAgentur: { [nord]: loadTemplate(nord, version), [sued]: loadTemplate(sued, 1) },
       projectType: "ta_tg",
-      kugAgenturKey: sued,
+      projectAgenturKey: sued,
       placementAgenturKey: nord,
     });
 

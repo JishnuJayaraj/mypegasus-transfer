@@ -22,7 +22,11 @@ Base defaults file (`packages/domain/config/base-defaults.json`). pg-boss set up
 
 ## Slice 2 — Projects & import (F1, F2)
 Project setup with template selection, Excel/CSV import with column mapping, validation report,
-duplicate handling, synthetic sample files.
+duplicate handling, synthetic sample files. Configuration invariants from round 15: the Project
+Agentur (the KuG-Agentur for `ta_tg`) and its pinned template; an override is validated against
+every pinned Agentur template and each relaxation must match at least one pinned chain; existing
+template versions are immutable; a version migration surfaces Agentur-scoped settings for
+review.
 
 ## Slice 3 — Auth & roles
 Connect login and identity to the Slice 1 access model: staff OIDC (dev stub first) in

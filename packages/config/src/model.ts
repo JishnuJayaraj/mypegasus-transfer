@@ -44,7 +44,11 @@ export type NationwideSettings = z.infer<typeof NationwideSettings>;
 
 export const AgenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 
-/** A temporary setting while an Agentur has no template: scoped to that Agentur (round 8). */
+/**
+ * An Agentur-scoped project setting (round 8, Q93): a fallback while the Agentur has no
+ * template, or a confirmed project-specific exception to its pinned template. It wins only for
+ * the keys it supplies and keeps its source, confirmer and confirmation date.
+ */
 export const TemporaryAgenturSetting = z.strictObject({
   settings: RegionalSettings,
   source: z.enum(["phone_call_agentur", "email_agentur", "letter_agentur", "meeting_agentur"]),

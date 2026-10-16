@@ -7,9 +7,9 @@ export type ProjectActivationBlocker =
 
 /**
  * Why a project can't be activated yet; activation itself is Slice 2. The resolved project
- * configuration blocks without a KuG-Agentur template (Q76, for every project type until Q90
- * is answered), and a `ta_tg` project needs at least one entry wave with a `latestEntryDate`
- * (Q77). Other configuration blockers (Agentur submission) don't block activation.
+ * configuration blocks without a Project-Agentur template (Q76, every project type, Q90), and
+ * a `ta_tg` project needs at least one entry wave with a `latestEntryDate` (Q77); other waves
+ * may stay drafts. Agentur-submission blockers are step-scoped and never block activation.
  */
 export function projectActivationBlockers(
   project: { type: ProjectType },

@@ -11,7 +11,7 @@ const wave = (latestEntryDate: string | null): EntryWave => ({
   latestEntryDate,
 });
 const resolved = { blockers: [] };
-const noKugTemplate = {
+const noProjectAgenturTemplate = {
   blockers: [
     { code: "agentur_submission_blocked" },
     { code: "project_activation_blocked" },
@@ -36,11 +36,11 @@ describe("projectActivationBlockers (Q76, Q77)", () => {
     expect(projectActivationBlockers({ type: "ta_only" }, [], resolved)).toEqual([]);
   });
 
-  it("passes on the configuration's blocker for every project type (fail safe, Q90)", () => {
-    expect(projectActivationBlockers({ type: "ta_only" }, [], noKugTemplate)).toEqual([
+  it("passes on the configuration's blocker for every project type (Q90)", () => {
+    expect(projectActivationBlockers({ type: "ta_only" }, [], noProjectAgenturTemplate)).toEqual([
       "project_activation_blocked",
     ]);
-    expect(projectActivationBlockers({ type: "ta_tg" }, [], noKugTemplate)).toEqual([
+    expect(projectActivationBlockers({ type: "ta_tg" }, [], noProjectAgenturTemplate)).toEqual([
       "project_activation_blocked",
       "no_entry_wave_with_latest_entry_date",
     ]);
