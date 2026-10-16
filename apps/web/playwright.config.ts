@@ -28,6 +28,9 @@ export default defineConfig({
       APP_ORIGINS: origin,
       API_PORT: String(PORT),
       LOG_LEVEL: "warn",
+      // Playwright starts the server before the global setup recreates transfer_e2e (and its
+      // pgboss schema), so pg-boss stays off here; the image smoke test starts it (AC-41).
+      JOBS_ENABLED: "false",
     },
   },
 });

@@ -1,3 +1,4 @@
+import { SystemClock } from "@transfer/adapters";
 import { createDb } from "@transfer/db";
 import { pino } from "pino";
 import { createApp, openApiConfig } from "./app";
@@ -19,8 +20,12 @@ export function openApiDocument(): ReturnType<
       databaseUrl: "unused",
       port: 0,
       logLevel: "silent",
+      jobsEnabled: false,
+      jobsLifecycleTime: "04:15",
+      clock: "system",
     },
     logger: pino({ enabled: false }),
+    clock: new SystemClock(),
   });
   return app.getOpenAPI31Document(openApiConfig);
 }

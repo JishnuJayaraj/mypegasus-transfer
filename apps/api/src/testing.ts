@@ -1,3 +1,4 @@
+import { SystemClock, type Clock } from "@transfer/adapters";
 import { createDb, type Database } from "@transfer/db";
 import { testDatabaseUrls } from "@transfer/db/testing";
 import { ProblemDetails } from "@transfer/domain";
@@ -16,16 +17,28 @@ export const testEnv: Env = {
   databaseUrl: "unused",
   port: 0,
   logLevel: "info",
+  // Tests start pg-boss themselves (plan 5.9).
+  jobsEnabled: false,
+  jobsLifecycleTime: "04:15",
+  clock: "system",
 };
 
 export const origin = testEnv.appOrigins[0]!;
 
 /** An app on `transfer_test` whose log lines are captured as strings. */
-export function testApp(options: { env?: Partial<Env>; db?: Database; spa?: Deps["spa"] } = {}) {
+export function testApp(
+  options: { env?: Partial<Env>; db?: Database; spa?: Deps["spa"]; clock?: Clock } = {},
+) {
   const logs: string[] = [];
   const logger = pino({ level: "info" }, { write: (line: string) => logs.push(line) });
   const db = options.db ?? createDb(testDatabaseUrls().app);
-  const app = createApp({ db, env: { ...testEnv, ...options.env }, logger, spa: options.spa });
+  const app = createApp({
+    db,
+    env: { ...testEnv, ...options.env },
+    logger,
+    clock: options.clock ?? new SystemClock(),
+    spa: options.spa,
+  });
   return { app, db, logs };
 }
 

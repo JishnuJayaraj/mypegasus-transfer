@@ -201,3 +201,50 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     }
   });
 });
+
+const insertRun = (client: Client, runDate = "2027-04-01") =>
+  client.query(
+    "insert into job_run (job_name, run_date, scheduled_at) values ('lifecycle.sweep', $1, $2)",
+    [runDate, `${runDate}T02:15:00Z`],
+  );
+
+// Plan 5.4 grants, 5.10: one row per job and run day, written once and never changed.
+describe("transfer_app and job_run (PR 1h-1)", () => {
+  it("may insert and select runs; the database records the completion", async () => {
+    await insertRun(app);
+    const { rows } = await app.query(
+      "select job_name, run_date::text, scheduled_at, completed_at is not null as completed from job_run",
+    );
+    expect(rows).toEqual([
+      {
+        job_name: "lifecycle.sweep",
+        run_date: "2027-04-01",
+        scheduled_at: new Date("2027-04-01T02:15:00Z"),
+        completed: true,
+      },
+    ]);
+  });
+
+  it("keeps one row per job and run day", async () => {
+    await insertRun(app);
+    await expect(insertRun(app)).rejects.toMatchObject({ code: "23505" });
+  });
+
+  it.each([
+    [
+      "a job name that is not a name",
+      "insert into job_run (job_name, run_date, scheduled_at) values ('Lifecycle sweep', '2027-04-01', '2027-04-01T02:15:00Z')",
+    ],
+    [
+      "a scheduled time on another Berlin day",
+      "insert into job_run (job_name, run_date, scheduled_at) values ('lifecycle.sweep', '2027-04-01', '2027-03-31T21:59:00Z')",
+    ],
+  ])("refuses %s (23514)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject({ code: "23514" });
+  });
+
+  it.each(writes("job_run", "run_date", "").slice(1))("may not %s (42501)", async (_label, sql) => {
+    await insertRun(owner);
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});

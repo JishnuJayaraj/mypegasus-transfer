@@ -1,8 +1,10 @@
 #!/bin/bash
-# Smoke test for the production image (AC-22, plan section 5.8), used by the CI `image` job.
+# Smoke test for the production image (AC-22, plan section 5.8; AC-41, Slice 1 plan 5.9), used by
+# the CI `image` job.
 #   scripts/image-smoke.sh <image>
 # Needs a PostgreSQL with the dev roles (`pnpm db:setup`) on the host, reachable through
-# DATABASE_URL and DATABASE_MIGRATION_URL. Runs the migration, starts the server and checks
+# DATABASE_URL and DATABASE_MIGRATION_URL. Runs the migration (twice: installing the pgboss schema
+# and its grants is idempotent), starts the server with pg-boss as the runtime role and checks
 # /api/v1/health/ready, / and /portal/. Synthetic setup only; no data is read.
 set -euo pipefail
 
@@ -23,14 +25,17 @@ trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 uid="$(docker run --rm "$image" id -u)"
 [ "$uid" != "0" ] || fail "the image runs as root"
 
-# Migrations are a separate command (a Job on the cluster).
-docker run --rm --network host -e DATABASE_MIGRATION_URL "$image" node dist/migrate.js ||
-  fail "node dist/migrate.js failed"
+# Migrations are a separate command (a Job on the cluster); they also install pg-boss's schema.
+for run in first second; do
+  docker run --rm --network host -e DATABASE_MIGRATION_URL "$image" node dist/migrate.js ||
+    fail "node dist/migrate.js failed ($run run)"
+done
 
 # The server. NODE_ENV=development and AUTH_MODE=dev because the image refuses to start in
-# production with the dev auth stub, and OIDC only comes in Slice 3 (plan section 5.4).
+# production with the dev auth stub, and OIDC only comes in Slice 3 (plan section 5.4). Jobs are
+# on by default: pg-boss starts as transfer_app before the server listens, or the start fails.
 docker run -d --name "$name" --network host -e PORT="$port" -e NODE_ENV=development \
-  -e AUTH_MODE=dev -e APP_ORIGINS="$base" -e DATABASE_URL -e LOG_LEVEL=warn "$image" >/dev/null
+  -e AUTH_MODE=dev -e APP_ORIGINS="$base" -e DATABASE_URL -e LOG_LEVEL=info "$image" >/dev/null
 
 for _ in $(seq 1 30); do
   curl -fsS -o /dev/null "$base/api/v1/health" 2>/dev/null && break
@@ -47,6 +52,8 @@ check() { # <path> <expected status> <expected body pattern>
 }
 
 check /api/v1/health/ready 200 '"status":"ok"'
+docker logs "$name" 2>&1 | grep -q '"msg":"jobs started"' || fail "pg-boss did not start"
+echo "ok  pg-boss started as transfer_app"
 check / 200 '<title>Transferplattform</title>'
 check /projects/new 200 '<title>Transferplattform</title>'
 check /portal/ 200 '<title>Teilnehmerportal</title>'

@@ -6,7 +6,10 @@ phase (coaching, qualification, applications, exit).
 
 **Status:** Slice 0 (walking skeleton) is complete: monorepo, `Project` list and create end to
 end (Postgres, Hono API, staff SPA), a thin participant portal shell (de/en), and one Node 24
-image that serves the API and both SPAs. Next: Slice 1 ([roadmap](docs/roadmap.md)).
+image that serves the API and both SPAs. Slice 1 (domain core, [plan](docs/plans/slice-1.md)) is
+nearly done: the lifecycle, Transfer-KuG eligibility, the access matrix, completeness, regional
+configuration, the status functions and service with the seed, and pg-boss in the API with the
+nightly schedule (PR 1h-1). Last: the nightly lifecycle sweep (PR 1h-2).
 
 ```
 pnpm install && pnpm db:setup && pnpm db:seed && pnpm dev   # web :5173, portal :5174/portal/

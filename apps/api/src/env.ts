@@ -1,3 +1,4 @@
+import { assertRunTime, createClock } from "@transfer/adapters";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
@@ -10,6 +11,12 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(3001),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  // Plan 5.9: pg-boss in the API process; tests switch it off and start it themselves.
+  JOBS_ENABLED: z.enum(["true", "false"]).default("true"),
+  // The nightly lifecycle run, Berlin local time (round 9).
+  JOBS_LIFECYCLE_TIME: z.string().default("04:15"),
+  // Plan 5.8: system, or fixed:<ISO instant> outside production.
+  CLOCK: z.string().default("system"),
 });
 
 /** Loads the repo's `.env` when present (not in the image); variables already set win. */
@@ -29,6 +36,11 @@ export interface Env {
   appOrigins: string[];
   port: number;
   logLevel: string;
+  jobsEnabled: boolean;
+  /** `HH:MM`, Europe/Berlin; never 02:00–02:59. */
+  jobsLifecycleTime: string;
+  /** Validated; the server builds the `Clock` from it with `createClock`. */
+  clock: string;
 }
 
 /**
@@ -44,6 +56,13 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     throw new Error(`Invalid environment variables: ${names.join(", ")} (see .env.example)`);
   }
   const env = result.data;
+  try {
+    assertRunTime(env.JOBS_LIFECYCLE_TIME);
+  } catch (error) {
+    // The RangeError names the rule, never the value.
+    throw new Error(`JOBS_LIFECYCLE_TIME: ${(error as Error).message}`, { cause: error });
+  }
+  createClock({ CLOCK: env.CLOCK, NODE_ENV: env.NODE_ENV });
   if (env.AUTH_MODE === "oidc") {
     throw new Error("AUTH_MODE=oidc is not implemented until Slice 3; use AUTH_MODE=dev");
   }
@@ -62,5 +81,8 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     appOrigins: env.APP_ORIGINS,
     port: env.PORT ?? env.API_PORT,
     logLevel: env.LOG_LEVEL,
+    jobsEnabled: env.JOBS_ENABLED === "true",
+    jobsLifecycleTime: env.JOBS_LIFECYCLE_TIME,
+    clock: env.CLOCK,
   };
 }

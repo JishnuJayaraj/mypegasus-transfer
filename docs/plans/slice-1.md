@@ -196,6 +196,20 @@ fail-closed facts provider, the permission checks and superseding in the same tr
 (AC-19), the seed through the functions (AC-43) with the synthetic regional operations manager.
 `job_run` stays with 1h.
 
+**1h is split** the same way (estimated ~650 hand-written production lines: the sweep and the
+project job alone are ~300): **1h-1** `job_run` (table, `SELECT`/`INSERT` grants, data
+catalog), the `pgboss` schema installed and upgraded by `db:migrate` / `dist/migrate.js` as
+`transfer_owner` with the `transfer_app` grants re-applied, the environment (`JOBS_ENABLED`,
+`JOBS_LIFECYCLE_TIME`, `CLOCK`), the `Clock` injected into `createApp`, pg-boss started in the API
+as `transfer_app` (migration off) with the two queues and the `lifecycle.sweep` cron in
+`Europe/Berlin`, graceful stop, the image smoke (AC-37, AC-41, AC-44) and the docs for these;
+**1h-2** the sweep (catch-up window from `job_run`, one `lifecycle.evaluate-project` job per
+project, `job_run` written only after all finished), the project job through the status service,
+the payload schemas and the log rule, the workers, `pnpm jobs:lifecycle` (AC-38, AC-39, AC-40) and
+the rest of the docs (ADR-0011 sweep part, the command, the settings allowlist). Until 1h-2 the
+cron enqueues a sweep that no worker takes; the exclusive queue holds at most one, and 1h-2's
+first sweep covers the missed days through the catch-up window.
+
 ## 5. Design
 
 ### 5.1 Repo layout after Slice 1
@@ -1251,6 +1265,56 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 - pg-boss's tables are outside the data catalog test; ADR-0011 excludes them from participant
   retention.
 
+#### Readings taken in PR 1h (1h-1)
+
+Built in PR 1h-1 (section 4): `job_run` (migrations `0008_job_run`, generated, and
+`0009_job_run_grants`), `packages/db/src/jobs-schema.ts` (the `pgboss` install in
+`runMigrations`), `apps/api/src/jobs/jobs.ts` (`startJobs`), the environment and the `Clock` in
+`createApp`. Fail safe (D10); correct them if wrong:
+
+1. **The split** (section 4): ~650 hand-written production lines for all of 1h; 1h-1 is the setup,
+   1h-2 the sweep, the project job and the CLI.
+2. **Schema install from pg-boss's exported SQL**, not by starting pg-boss as the owner: the
+   construction plan on a fresh database; on an upgrade the migration plan from the installed
+   version, whose `CREATE INDEX CONCURRENTLY` builds run one by one after its transaction.
+   Starting pg-boss with migration on would hand those builds to its background migration
+   worker, which runs only in an instance with migration on, and the app never is one. A schema
+   newer than the pinned pg-boss (a downgrade) is refused. Tested by rolling back to version 45.
+3. **Grants** exactly as in spike S2, re-applied on every migration run; `transfer_app` gets no
+   `CREATE` on `pgboss` and can't alter, drop or truncate its tables (tested).
+4. **Both queues `exclusive`** rather than `stately`: a second evaluation of the same project and
+   day can't even be queued while one runs. Retries: `retryLimit: 3` with backoff, base delay
+   60 s for the sweep (expiry 60 min, it waits for the project jobs in 1h-2) and 30 s for the
+   project job (expiry 15 min). The options are re-applied on every start; a queue with another
+   policy (which pg-boss can't change after creation) fails the start.
+5. **`missed: "once"`** on the cron (pg-boss's default is `skip`): when the API was down at the run
+   time, one sweep is sent at the next start instead of waiting a day. Planned for 1h-2: the sweep
+   evaluates only once today's scheduled time has passed (so a start at 01:00 sends a sweep that
+   does nothing and the 04:15 run catches up), and its window covers the missed days.
+6. **Start order:** pg-boss starts before the server listens, so a missing or outdated schema
+   fails the API's start (checked with the built bundle); `SIGTERM`/`SIGINT` stop the server, let
+   active jobs finish and close the pool.
+7. **Events:** pg-boss `error` events are logged as name, code and stack without the message;
+   `warning` events with pg-boss's fixed message only, never their `data`.
+8. **`job_run`:** primary key `(job_name, run_date)`; `CHECK`s that the job name has the
+   `system_job` pattern and that `scheduled_at` falls on `run_date` in Berlin; `completed_at` is
+   database time (round 16, 13: instants from the database); both timestamps in Drizzle's `date`
+   mode, so jobs code never needs `new Date`. Kept indefinitely as `reference_data` (one row a
+   day, no personal data).
+9. **The clock:** `CLOCK` is validated when the environment is parsed, before the auth checks,
+   so `fixed:` is refused in production even before OIDC exists; `createApp` gets the `Clock` in
+   its dependencies (no route reads it yet); `testApp` defaults to the system clock.
+10. **Playwright runs with `JOBS_ENABLED=false`:** its web server starts before the global setup
+    recreates `transfer_e2e` (and its `pgboss` schema). The image smoke test starts pg-boss
+    (`LOG_LEVEL=info` to see the start; the migration runs twice to prove it idempotent).
+11. **Until 1h-2** the cron enqueues a sweep that no worker takes: the exclusive queue holds at
+    most one, pg-boss deletes a job left queued after 14 days, and 1h-2's first sweep covers the
+    days since the last completed run.
+12. **For 1h-2 / Slice 2:** a reconciliation on the TG start day needs that day's run to have
+    completed (`scheduledRunCompleted`, PR 1b-1). The status service still takes it from its
+    caller; the route that offers reconciliation should read it from `job_run` rather than trust
+    the caller, as round 18 asks for effective dates.
+
 ### 5.10 Database, data catalog and seed
 
 | Table | Columns (main) | `retentionClass` | `dataClass` | Participant data |
@@ -1292,10 +1356,10 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 | `pnpm test:coverage` | `vitest run --coverage` with **100 % thresholds** on `packages/domain/src/{lifecycle,eligibility,access,completeness}/**`, `packages/domain/src/dates.ts`, `packages/config/src/resolve.ts`; CI runs it in the Node 24 test leg | 1b |
 | `pnpm generate` | all generators: `api:generate`, the config JSON Schema, the two docs tables | 1b, 1d, 1f |
 | `pnpm verify` | `typecheck`, `lint`, `test:coverage`, `generate` + `git diff --exit-code` on generated paths | 1b |
-| `pnpm jobs:lifecycle [--today YYYY-MM-DD]` | runs the lifecycle sweep once | 1h |
-| `pnpm db:migrate` | also installs/migrates the `pgboss` schema and applies its grants | 1h |
+| `pnpm jobs:lifecycle [--today YYYY-MM-DD]` | runs the lifecycle sweep once | 1h-2 |
+| `pnpm db:migrate` | also installs/migrates the `pgboss` schema and applies its grants | 1h-1 |
 
-New environment variables (`.env.example`, PR 1h): `JOBS_ENABLED` (`true`),
+New environment variables (`.env.example`, PR 1h-1): `JOBS_ENABLED` (`true`),
 `JOBS_LIFECYCLE_TIME` (`04:15`, Berlin), `CLOCK` (`system`); `DATABASE_JOBS_URL` only on the S2
 fallback.
 
