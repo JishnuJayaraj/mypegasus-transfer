@@ -1,10 +1,12 @@
 # Slice 2 — Projects & import (F1, F2): plan
 
-- Status: **Draft for approval** (2026-10-16). Nothing is implemented until it is approved.
+- Status: **Approved with amendments** ([round 22](../decisions/2026-10-16-answers-round-22.md),
+  2026-10-16). Q101 (PL), Q102 (PL, legal, BA process owner; before PR 2h), Q103 (PL; before PRs
+  2f/2g) and Q105 (DPO; before the pilot) are still open.
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
-- Decisions it rests on: rounds 1–21 in [`decisions/`](../decisions/), in particular round 8
+- Decisions it rests on: rounds 1–22 in [`decisions/`](../decisions/), in particular round 8
   (Agentur-scoped settings), round 10 (waves vs. beE), round 14 (controlled reason codes), round 15
   (Project Agentur, cross-chain invariants, immutable versions, migration review), round 16
   (functions, typed parameters), round 19 (`scheduledRunCompleted`), round 20 (database time)
@@ -12,41 +14,47 @@
   0006 (adapters), 0007 (dev stub until Slice 3), 0008 (retention per item), 0010 (API contract),
   0011 (jobs)
 
-Every reading taken in this plan is marked **(R*n*)** and listed in section 0 for confirmation.
-Every docs gap is handled fail safe (Slice 1 D10) and added to `open-questions.md` as Q98–Q107.
+Every reading taken in this plan is marked **(R*n*)** and listed in section 0. Every docs gap is
+handled fail safe (Slice 1 D10) and recorded in `open-questions.md` as Q98–Q107. Round 22's
+corrections are applied throughout; the readings taken while applying them are R23–R28.
 
 ## 0. Decisions, readings and open items
 
-### Decisions (for approval)
+### Decisions (round 22: all approved; D3, D5, D6, D9 as amended)
 
-| # | Topic | Proposal |
+| # | Topic | Decision |
 |---|---|---|
 | D1 | PR shape | **12 PRs, 2a–2h** (section 3), tests first, each green on its own, each under ~500 hand-written production lines. |
 | D2 | Writes with audit | Every write that must be audited goes through a narrowly scoped **`SECURITY DEFINER` function** that writes the change and its audit event in the caller's transaction, as in Slice 1 (D2, round 16): project creation and edits, activation, waves, participation dates, template pins, override versions, relaxation requests and decisions, person data. `transfer_app` gets `SELECT` on the new tables and no direct DML, except on `import_column_mapping` (no personal data, no audit). Typed parameters; the only `jsonb` parameter is an override's content, validated by the service first (5.9). |
-| D3 | Serialising setup and lifecycle | A transaction-scoped **project advisory lock**: setup writes (waves, pins, overrides, activation, import) take it exclusively (`lock_project_setup`), `lock_participation` takes it shared. So a wave edit never interleaves with a status change that reads the wave, and two imports of one project never race. |
+| D3 | Serialising setup and lifecycle | A transaction-scoped **project advisory lock**, **acquired inside the database functions** (round 22), never left to a service: every setup mutation function takes it exclusively itself; `lock_participation` takes it shared before its row lock; `create_participation` takes it shared. Lock order is always **project → template version → participation row**. A service that must read and decide before writing (activation, migration, the import confirm) also calls `lock_project_setup` first; the functions' own acquisition is re-entrant within the transaction. So a wave edit never interleaves with a status change that reads the wave, and two imports of one project never race. |
 | D4 | Memberships | A minimal **`project_membership`** table now (project, staff user, project role; zero or more roles, D6 of Slice 1), filled by project creation and the seed. Managing members and participant assignments is Slice 3. |
-| D5 | Templates | **Per-project snapshots** of each pinned template version (content + canonical SHA-256) in the database; resolution reads only the snapshots. Existing versions are immutable in the repo (generated manifest + CI check against the base branch) and in the database (a pin whose content differs from an earlier pin of the same version is refused). |
-| D6 | Import | **Stateless preview → confirm**: the preview stores nothing; the confirm sends the file again with the mapping and the PL's decisions and is refused if the result differs from the preview. No staged personal data on the server. Upload as base64 in JSON (the API keeps refusing non-JSON bodies). Parsing in a `worker_thread` with resource limits, subject to spike S1. |
+| D5 | Templates | Template versions are **normalised into `config_template_version`**, keyed by `(agentur_key, version)`, with content and canonical SHA-256; a project's pins reference it, and resolution reads only the stored content (the project snapshot). Cross-project serialisation by the primary key: the first pin of a version registers it, every later pin compares **both the stored `jsonb` content and the hash** (same claimed hash, different content → refused). Existing versions are immutable in the repo too (generated manifest + CI check against the base branch). |
+| D6 | Import | **Stateless preview → confirm**: the preview stores nothing; the confirm sends the file again with the mapping and the PL's decisions. Parsing happens before the transaction; **reloading configuration and state, re-planning, comparing the preview token, validating the decisions and every write happen in one transaction under the exclusive project lock** (round 22: no TOCTOU window). No staged personal data on the server. Upload as base64 in JSON (the API keeps refusing non-JSON bodies). A ZIP central-directory check (expanded size and ratio) **always** runs; parsing in a `worker_thread` with resource limits (spike S1). If S1 fails there is **no in-process XLSX parsing**: a child process, or CSV only until isolation works. |
 | D7 | Dependencies | **`read-excel-file@9.3.12`** and **`csv-parse@7.0.3`**, exact pins, in `@transfer/api` only (2.2). Nothing else. |
 | D8 | Person data | Two tables split by retention class (5.10). **No special-category or highly confidential column in Slice 2**: the import targets are all confidential, so encrypted storage is not needed yet and comes with the first such field (Slices 4a/6, unchanged). The field catalog gains a `retentionClass` for every field a table stores. |
-| D9 | Draft gate | A project is `draft` or `active`. Draft projects take setup and import but no lifecycle transition; the nightly job plans nothing for them (R1, Q98). |
+| D9 | Draft gate | A project is `draft` or `active`. Draft projects take setup, import and creation but **no post-creation lifecycle transition**; the nightly job plans nothing for them (R1, Q98). |
 | D10 | Reconciliation route | **Deferred to Slice 7** (recommended): with the fail-closed facts provider (Slice 1 D4) it could only refuse, and its after-the-fact review (Q80) belongs with it. The **new start date** (Q68 case 3) is in Slice 2 as part of the individual date overrides (5.7). |
 | D11 | Docs gaps | Unchanged: fail safe, unknown access denied, new question in `open-questions.md`. |
 
-### Readings (for confirmation)
+**Dependencies approved** (round 22): exact pins `read-excel-file@9.3.12` and `csv-parse@7.0.3`,
+subject to S1 and the containment rules of D6; a fresh production audit found no known
+vulnerabilities. **D8:** architecture approved; Q105 stays a DPO gate, and no production personal
+data exists while retention periods are `unset`.
+
+### Readings (round 22: accepted; R1, R5, R6, R10 as amended)
 
 | # | Reading | Where | Question |
 |---|---|---|---|
-| R1 | A **draft** project permits setup (project data, Project Agentur, pins, overrides, waves), import, manual creation, wave assignment and date overrides; **no lifecycle transition**, manual or system. The project job plans nothing for a draft project (like `ta_only` in round 21, reading 3). Activation is one-way in Slice 2; type and Project Agentur are fixed once active; the type changes only while draft **and** without participations, so round 10's "project becomes `ta_only`" supersession can't arise yet. | 5.5 | Q98 |
-| R2 | The **approver of a relaxation** (Q75 "with reason, approval and audit") is the regional operations manager, a different user from the requester, **before** it takes effect, like a profiling exception (Q80). Global scope until Slice 3 (round 18, reading 2). | 5.9 | Q99 |
-| R3 | The **controlled reason codes** for a relaxation are the four proposed in 5.9; the list is the owner's to set. | 5.9 | Q100 |
+| R1 | A **draft** project permits setup (project data, Project Agentur, pins, overrides, waves), import, manual creation (the creation edge), wave assignment and date overrides; **no post-creation lifecycle transition**, manual or system. The project job plans nothing for a draft project (like `ta_only` in round 21, reading 3). Activation is one-way in Slice 2; type and Project Agentur are fixed once active; the type changes only while draft and **without participations or entry waves** (Slice 2 can't delete waves), so round 10's "project becomes `ta_only`" supersession can't arise yet. | 5.5 | Q98 ✔ |
+| R2 | The **approver of a relaxation** (Q75 "with reason, approval and audit") is the regional operations manager, a different user from the requester, **before** it takes effect, like a profiling exception (Q80). Global scope until Slice 3 (round 18, reading 2). | 5.9 | Q99 ✔ |
+| R3 | The **controlled reason codes** for a relaxation are the four proposed in 5.9; the list is the owner's to set. | 5.9 | Q100 ✔ |
 | R4 | **Wave edits once in use** follow the rules in 5.6 (ordering derived from the offer and entry guards; no retroactive cutoff; no change of a signing deadline open offers depend on; a passed default TG start stays; dates clear only while unused; no deletion). | 5.6 | Q101 |
-| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; a new `tgStart` is never before today (Q68: no backdating), never after the wave's `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. No 12-month check. | 5.7 | Q102 |
-| R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. | 5.11 | Q103 |
-| R7 | **Saved column mappings "per customer"** are keyed by the project's customer name (trimmed, case-folded) until a customer entity exists, and store only a keyed hash of each normalised header, never header text (a file without a header row would otherwise store a person's name). | 5.11 | Q104 |
+| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. | 5.7 | Q102 (open) |
+| R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); **German addresses only until Q103 is answered** (R23); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; **numeric XLSX cells refused for identifiers** (R24); age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. Settled before PRs 2f/2g. | 5.11 | Q103 (open) |
+| R7 | **Saved column mappings "per customer"** are keyed by the project's customer name (trimmed, case-folded) until a customer entity exists, and store only a keyed hash of each normalised header, never header text (a file without a header row would otherwise store a person's name). | 5.11 | Q104 ✔ |
 | R8 | **Retention classes of the person data** 🔒: identity (`firstName`, `lastName`, `birthDate`, `personnelNumber`, the evidence-set identity of round 13) → `participation_record`; address, phone, mobile, private and work email, `oldEmploymentEndDate` → `personnel_file` (never in the evidence set, round 13). Periods stay `unset`. | 5.10 | Q105 |
-| R9 | **Project creation and project visibility until Slice 3**: staff with the flat role `project_lead` may create a project and become its PL member; project metadata (not participant data) is visible to the project's members and to global-scope org roles; nobody else. | 5.4 | Q106 |
-| R10 | **Base defaults are not pinned** per project (a nationwide release changes them for every project); their version is recorded in the activation and migration audit details. Only Agentur templates are pinned (Q36). | 5.8 | Q107 |
+| R9 | **Project creation and project visibility until Slice 3**: staff with the flat role `project_lead` may create a project and become its PL member; project metadata (not participant data) is visible to the project's members and to global-scope org roles; nobody else. | 5.4 | Q106 ✔ |
+| R10 | **Base defaults are not pinned** per project (a nationwide release changes them for every project). **Every audited operation whose result depends on them records the base-defaults version** (R26). Only Agentur templates are pinned (Q36). | 5.8 | Q107 ✔ |
 | R11 | The **project snapshot** is the set of pinned template contents per Agentur plus the current override version, not a stored resolved configuration: resolution depends on each participation's placement Agentur and is deterministic from the snapshot (Slice 1 AC-35). | 5.8 | — |
 | R12 | The **Project Agentur** is chosen from the Agenturen that have a template in the catalog; a project whose Agentur has none stays without a Project Agentur and therefore blocked (same outcome as Q76/Q90, fail safe). Further Agentur templates (expected placement Agenturen) may be pinned in setup; pinning on a participant's placement assignment comes with that assignment (later slice). | 5.8 | — |
 | R13 | In Slice 2 an override is changed only through **Agentur-scoped settings and relaxations**. Override rule, field and help-text additions stay valid in the model and are cross-chain checked, but have no API until the admin UI (ADR-0004). | 5.9 | — |
@@ -54,11 +62,22 @@ Every docs gap is handled fail safe (Slice 1 D10) and added to `open-questions.m
 | R15 | **A migration's review** (Q93) lists every Agentur-scoped setting of the migrated Agentur key by key, with the old and new template value; the PL must decide keep or remove for every key; removal writes a new override version in the same transaction. A migration that would leave the override invalid is refused with its issues. | 5.8 | — |
 | R16 | The cross-chain check (round 15) validates the override against **every pinned template chain and the base-only chain** (a participation without a placement template, round 15 reading 9). | 5.9 | — |
 | R17 | **The import is a domain operation** (`importParticipations`, PL, Q60 and PRD F2) that writes the import-sourced fields. It doesn't decide Q65's `undecided` cell for ordinary PL edits of confidential fields; Slice 2 has no generic person-data edit. | 5.4 | — |
-| R18 | A confirmed import is **atomic**: every row or none. | 5.11 | — |
+| R18 | A confirmed import is **atomic**: every row or none, in one transaction under the exclusive project lock that also reloads, re-plans and compares the preview (round 22). | 5.11 | — |
 | R19 | **No personal data in cursors or URLs**: the participant list pages by `(created_at, id)`, not by name or Personalnummer. | 5.12 | — |
 | R20 | Removing the Slice 0 date fields from `Project` and `CreateProjectInput` is a breaking change inside `/api/v1`, accepted because no client outside this repo exists before the pilot (ADR-0010). | 5.12 | — |
 | R21 | **Problem mapping** of service refusals: `not_found` 404, `forbidden` 403, `stale` 409 (`conflict`), `domain` and `integrity` 422 (`domain-error`, the code and failed guards, never a value). | 5.12 | — |
 | R22 | Template content identity is the **SHA-256 of canonical JSON** (sorted keys, no insignificant whitespace), so formatting never counts as a change and any content change does. | 5.8 | — |
+
+### Readings taken while applying round 22 (for confirmation)
+
+| # | Reading | Where | Question |
+|---|---|---|---|
+| R23 | **Foreign addresses:** Slice 2 has no country target and stores German addresses only; a postal code that isn't exactly five digits is a row error (`postal_code_invalid`), so a foreign address is rejected explicitly rather than stored half-understood. If Q103 adds an ISO 3166-1 country target, `participant_details` gains a nullable `address_country` column (additive migration) and the five-digit check applies only to `DE`. | 5.11 | Q103 |
+| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. | 5.11 | Q103 |
+| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). | 5.6, 5.7 | Q102 |
+| R26 | **Configuration-dependent audited operations** that record the base-defaults version: activation, template pins and migrations, override writes, relaxation decisions, the confirmed import and every later operation that resolves configuration (a test lists the event types that must carry `baseDefaultsVersion`). | 5.3 | Q107 |
+| R27 | `config_template_version` is global reference data (no participant data), so it has **no `project_id`**: the owner chose this normalisation in round 22. Retention class `reference_data`, never touched by the retention job; the pins that use it carry `project_id`. | 5.2 | — |
+| R28 | **Lock keys:** `pg_advisory_xact_lock(hashtextextended('project:' || id, 0))` (exclusive) and its `_shared` form; a hash collision only serialises two projects more than needed. The template-version identity is serialised by its primary key (the insert of a new version waits for a concurrent one to commit, then compares). | 5.3 | — |
 
 ### What the decisions and the Slice 1 plan already settle (not re-decided)
 
@@ -77,8 +96,14 @@ Every docs gap is handled fail safe (Slice 1 D10) and added to `open-questions.m
 
 ### Open
 
-New questions Q98–Q107 (section 9), each with its fail-safe reading in the Answer column. None
-blocks starting PR 2a; a different answer changes a table, a rule or a test, not the design.
+Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22). Still open, each with its fail-safe
+reading in `open-questions.md`:
+- **Q101** (PL): wave edits once in use. PR 2b builds the fail-safe rules; an answer changes a table.
+- **Q102** (PL, legal, BA process owner): individual dates and the twelve-month limit. **Settled
+  before PR 2h.**
+- **Q103** (PL): the import contract, incl. foreign addresses and numeric identifiers. **Settled
+  before PRs 2f/2g**, since it may change the schema and the target catalog.
+- **Q105** 🔒 (DPO): retention classes; a pre-pilot gate.
 
 ## 1. Goal
 
@@ -166,7 +191,7 @@ official Node 22/24 builds ship), SHA-256/HMAC (`node:crypto`), Hono's `bodyLimi
 
 | # | PR | Check | Fallback |
 |---|---|---|---|
-| S1 | 2g-1 | Parsing in a `worker_thread` with `resourceLimits` (old generation 256 MB) and a 15 s timeout, in `tsx` (dev), Vitest and the Vite-built `dist/` (an extra build entry); a synthetic zip bomb (small `.xlsx`, huge `sheet1.xml`) is stopped by the limit without affecting the API process. | In-process parsing behind a pre-check of the zip central directory (declared uncompressed total ≤ 50 MB, ratio ≤ 100 per entry) plus the 5 MB upload cap; recorded in an ADR-0003 note. |
+| S1 | 2g-1 | Parsing in a `worker_thread` with `resourceLimits` (old generation 256 MB) and a 15 s timeout, in `tsx` (dev), Vitest and the Vite-built `dist/` (an extra build entry); a synthetic zip bomb (small `.xlsx`, huge `sheet1.xml`, declared sizes lying) is stopped by the limit without affecting the API process. The ZIP central-directory check runs before the worker in every case. | **Never in-process XLSX parsing** (round 22): a child process (`child_process.fork` with `--max-old-space-size` and a kill timeout); if that also fails, Slice 2 ships **CSV only** and XLSX waits until isolation works. Recorded in an ADR-0003 note. |
 | S2 | 2c-1 | The Vite build copies `packages/config/templates` and `packages/domain/config/base-defaults.json` into `dist/config/`, and the API loads them from there in the image (`CONFIG_DIR`). | Bundle them as JSON imports through a generated index module. |
 
 ## 3. PR series
@@ -177,10 +202,10 @@ hand-written production lines (SQL included, tests excluded).
 
 | PR | Content | Est. | Depends on | Ends with |
 |---|---|---|---|---|
-| **2a** `feat: memberships, project status and the project form without dates` | `project_membership`; `project.status`, `project_agentur_key`, `activated_at/by`; the copy of late Slice 0 dates into W1, then dropping the three project date columns and their checks; `create_project` / `update_project` functions and grants (no `INSERT` on `project` any more); new audit event types (5.3); `lock_project_setup` and the shared lock in `lock_participation` (D3); the staff subject from memberships (5.4); project routes scoped by membership; `Project`/`CreateProjectInput` without dates; the web form without dates; base seed memberships; `scrollTo` stub. | ~420 | — | projects are membership-scoped, dates live only on waves |
+| **2a** `feat: memberships, project status and the project form without dates` | `project_membership`; `project.status`, `project_agentur_key`, `activated_at/by`; the copy of late Slice 0 dates into W1, then dropping the three project date columns and their checks; `create_project` / `update_project` functions and grants (no `INSERT` on `project` any more); new audit event types (5.3); the project lock inside the functions: `lock_project_setup`, exclusive in every setup function, shared in `lock_participation` (before the row lock) and `create_participation` (D3), with concurrency tests; the staff subject from memberships (5.4); project routes scoped by membership; `Project`/`CreateProjectInput` without dates; the web form without dates; base seed memberships; `scrollTo` stub. | ~420 | — | projects are membership-scoped, dates live only on waves |
 | **2b** `feat: entry waves` | Domain `checkWaveChange` (5.6, 100 %); `create_entry_wave` / `update_entry_wave`; wave routes; the project detail page with the wave list and form. | ~450 | 2a | a PL creates and edits waves |
 | **2c-1** `feat(config): template manifest, immutability and the config in the image` | Canonical hash; generated `templates/manifest.json` (drift-checked); `scripts/check-template-immutability.mjs` in `pnpm lint` and CI; `loadBaseDefaults(dir)`, `CONFIG_DIR`; the build copies the config (S2); `GET /config/templates`; image smoke. | ~250 | 2a | versions are immutable in the repo |
-| **2c-2** `feat: Project Agentur and pinned template snapshots` | `project_template_pin` (append-only, content + hash); `pin_agentur_template`; choosing the Project Agentur; pinning further Agenturen; `GET /projects/{id}/config` (pins, resolution, blockers per Agentur and step, activation blockers); the setup section of the project page. | ~420 | 2c-1 | a project has a snapshot and shows its blockers |
+| **2c-2** `feat: Project Agentur and pinned template snapshots` | `config_template_version` (content + hash, keyed by Agentur and version) and `project_template_pin` (append-only); `pin_agentur_template` with the content and hash comparison and the concurrent-pin test; choosing the Project Agentur; pinning further Agenturen; `GET /projects/{id}/config` (pins, resolution, blockers per Agentur and step, activation blockers); the setup section of the project page. | ~420 | 2c-1 | a project has a snapshot and shows its blockers |
 | **2d-1** `feat(config): project overrides and Agentur-scoped settings` | `validateProjectOverride` (cross-chain, 5.9, 100 %); `project_config_override` (versioned, append-only); `write_project_override`; set/remove an Agentur-scoped setting; UI. | ~430 | 2c-2 | temporary settings with source, confirmer, audit |
 | **2d-2** `feat: rule relaxations with approval` | Controlled reason codes (Q100); `config_relaxation_request`; request / decide (four eyes) / withdraw / remove; the approved relaxation enters a new override version; UI for the PL and the regional operations manager; new operation permissions. | ~420 | 2d-1 | relaxations need an approval by another user |
 | **2e-1** `feat: project activation and the draft gate` | `activateProject` (domain blockers + `activate_project` re-checks); the draft gate in the status service, in `change_participation_status` and in the project job; Slice 1 fixtures create active projects; the API seed pins and activates through the services. | ~300 | 2c-2 | only active projects move |
@@ -190,7 +215,8 @@ hand-written production lines (SQL included, tests excluded).
 | **2g-2** `feat(web): import wizard` | Upload → sheet → mapping → report (errors, warnings, duplicates, updates) → confirm; the participant list (first version); Playwright happy path. | ~420 | 2g-1 | **demo path works** |
 | **2h** `feat: participations — detail, manual creation, waves and dates` | Participant list/detail with field projection by `decideAccess`; manual creation (one row through the import rules); wave assignment route; `checkParticipationDates` (5.7, 100 %), `set_participation_dates`, the dates route and UI (new start date). | ~470 | 2g-2 | **slice done** |
 
-2b, 2c-1 and 2f can run in parallel after 2a; 2d-1 and 2e-1 in parallel after 2c-2. Between 2a
+**Gates** (round 22): PRs 2f and 2g wait for Q103; PR 2h waits for Q102. 2b and 2c-1 can run in
+parallel after 2a; 2d-1 and 2e-1 in parallel after 2c-2. Between 2a
 and 2b the web app has no way to enter contractual dates; nothing depends on them in that gap.
 
 ## 4. Design overview
@@ -235,7 +261,7 @@ fixtures/imports/  synthetic sample files
 | `RelaxationRequestStatus` | `requested`, `approved`, `rejected`, `withdrawn` |
 | `ImportTarget` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `addressStreet`, `addressPostalCode`, `addressCity`, `phone`, `mobile`, `privateEmail`, `workEmail` |
 | `ImportRowOutcome` | `create`, `update`, `unchanged`, `skip`, `error` |
-| `ImportIssueCode` | errors: `required_missing`, `invalid_date`, `date_has_time`, `birth_date_in_future`, `end_before_birth`, `too_long`, `control_characters`, `duplicate_in_file`; warnings: `age_implausible`, `value_invalid_dropped`, `possible_duplicate`, `terminal_not_updated`, `kept_existing` |
+| `ImportIssueCode` | errors: `required_missing`, `invalid_date`, `date_has_time`, `birth_date_in_future`, `end_before_birth`, `too_long`, `control_characters`, `duplicate_in_file`, `identifier_cell_numeric`, `postal_code_invalid`; warnings: `age_implausible`, `value_invalid_dropped`, `possible_duplicate`, `terminal_not_updated`, `kept_existing` |
 
 ### 5.2 Data model
 
@@ -243,17 +269,19 @@ fixtures/imports/  synthetic sample files
 |---|---|---|---|---|
 | `project` (changed) | − `signing_deadline`, `default_tg_start`, `default_tg_end` and their checks; + `status project_status not null default 'draft'`, `project_agentur_key text null` (Agentur key pattern), `activated_at timestamptz null`, `activated_by uuid null` FK `staff_user`; `CHECK` activated ⇔ both set | `project_master` | `internal` | no |
 | `project_membership` (new) | `project_id` FK, `staff_user_id` FK, `role project_role`, `created_at`; pk `(project_id, staff_user_id, role)` | `project_master` | `internal` | no |
-| `project_template_pin` (new, append-only) | `id`, `seq` identity, `project_id` FK, `agentur_key`, `version int`, `content jsonb`, `content_sha256 text` (`^[0-9a-f]{64}$`), `pinned_by` FK, `pinned_at` (database time); index `(agentur_key, version, content_sha256)`; current pin per Agentur = highest `seq` | `project_master` | `internal` | no |
+| `config_template_version` (new, append-only, global) | pk `(agentur_key, version)`, `content jsonb`, `content_sha256 text` (`^[0-9a-f]{64}$`), `registered_at` (database time); no `project_id` (R27) | `reference_data` | `internal` | no |
+| `project_template_pin` (new, append-only) | `id`, `seq` identity, `project_id` FK, FK `(agentur_key, version)` → `config_template_version`, `pinned_by` FK, `pinned_at` (database time); current pin per Agentur = highest `seq` | `project_master` | `internal` | no |
 | `project_config_override` (new, append-only) | `project_id` FK, `version int` (pk with project), `content jsonb` (a `ProjectOverride` layer), `created_by` FK, `created_at` | `project_master` | `internal` | no |
 | `config_relaxation_request` (new) | `id`, `project_id` FK, `rule_id`, `reason_code`, `status`, `requested_by`, `requested_on`, `requested_at`, `decided_by`, `decided_on`, `decided_at`; four-eyes and decision `CHECK`s like `profiling_exception_request`; one open (`requested`) request per project and rule | `project_master` | `internal` | no |
 | `participant_identity` (new) | `participation_id` pk, `project_id` FK; composite FK `(participation_id, project_id)` → `participation`; `personnel_number`, `last_name`, `first_name` (text, not null), `birth_date date null`, `created_at`, `updated_at`; unique `(project_id, personnel_number)` | `participation_record` (R8) | `confidential` | yes |
 | `participant_details` (new) | same keys; `address_street`, `address_postal_code`, `address_city`, `phone`, `mobile`, `private_email`, `work_email` (text null), `old_employment_end_date date null`, `created_at`, `updated_at` | `personnel_file` (new class in the data catalog, `unset`; R8) | `confidential` | yes |
 | `import_column_mapping` (new) | `project_id` FK, `header_hmac text`, `target import_target`, `updated_by`, `updated_at`; pk `(project_id, header_hmac)`; the customer comes from the project | `project_master` | `internal` | no |
 
-- Every new table has a data-catalog entry and a `project_id` FK; the catalog test enforces both.
+- Every new table has a data-catalog entry and, except the global `config_template_version`
+  (R27), a `project_id` FK; the catalog test enforces both.
 - `participant_identity` and `participant_details` are written only by `write_participant_data`;
   their rows are never deleted by the app (deletion is the retention job's, Slice 7).
-- Pins and override versions are never updated or deleted (no grant, and a trigger refuses
+- Template versions, pins and override versions are never updated or deleted (no grant, and a trigger refuses
   `UPDATE`/`DELETE` even for the owner, so immutability is testable).
 - `project_entry_wave` is unchanged in shape; it gains `updated_at` and is written only by its
   functions.
@@ -274,16 +302,24 @@ All `SECURITY DEFINER`, `SET search_path = pg_catalog, public, pg_temp`, schema-
 dynamic SQL, `EXECUTE` only for `transfer_app`, refusals as `P0001` with a stable code (Slice 1
 pattern). The service checks permissions and domain rules first; the functions check structure.
 
+**Locks (D3, round 22).** Every function in this table that mutates setup state acquires the
+exclusive project lock itself as its first statement; `lock_participation` and
+`create_participation` acquire the shared project lock before touching a row. Order: project →
+template version → participation row, everywhere. Integration tests prove that a setup function
+waits for a concurrent status change of the project and vice versa, and that a transaction holding
+the exclusive lock can still create and lock participations (re-entrant).
+
 | Function | Does | Audit event (new type unless noted) |
 |---|---|---|
-| `lock_project_setup(project_id)` | `pg_advisory_xact_lock` on the project | — |
-| `lock_participation` (replaced) | + `pg_advisory_xact_lock_shared` on its project first | — |
+| `lock_project_setup(project_id)` | `pg_advisory_xact_lock` on the project (R28); also called by every setup function below | — |
+| `lock_participation` (replaced) | `pg_advisory_xact_lock_shared` on its project, then the row lock | — |
+| `create_participation` (replaced) | + the shared project lock first | (unchanged) |
 | `create_project(name, customer, type, context)` | project + creator's `project_lead` membership | `project_created` |
-| `update_project(id, name?, customer?, type?, agentur_key?, context)` | type only while draft without participations; Agentur key only while draft | `project_changed` (changed keys) |
+| `update_project(id, name?, customer?, type?, agentur_key?, context)` | type only while draft without participations or waves; Agentur key only while draft | `project_changed` (changed keys) |
 | `activate_project(id, base_defaults_version, context)` | draft → active; re-checks: Project Agentur pinned; `ta_tg` has a wave with `latest_entry_date` | `project_activated` |
 | `create_entry_wave` / `update_entry_wave(… typed dates …, context)` | `ta_tg` only, ordering `CHECK`s, `updated_at` | `entry_wave_created` / `entry_wave_changed` (changed keys, old/new dates) |
 | `set_participation_dates(id, tg_start, tg_end, expected_version, context)` | compare-and-set on `status_version`, bumps it | `participation_dates_changed` (old/new dates) |
-| `pin_agentur_template(project, key, version, content, sha256, context)` | refuses `template_version_changed` if any pin of `(key, version)` has another hash; appends | `config_template_pinned` (key, version, previous version) |
+| `pin_agentur_template(project, key, version, content, sha256, context)` | project lock; `INSERT … ON CONFLICT DO NOTHING` into `config_template_version`, then refuses `template_version_changed` unless the stored content **equals the supplied `jsonb`** and the stored hash equals the supplied hash; appends the pin | `config_template_pinned` (key, version, previous version, base-defaults version) |
 | `write_project_override(project, expected_version, content, change, context)` | next version or `override_version_stale` | `config_override_changed` (exists; version, change kind, Agentur key or rule id) |
 | `request_rule_relaxation` / `decide_rule_relaxation` / `withdraw_rule_relaxation` | four eyes in SQL (decider ≠ requester) | `rule_relaxation_requested` / `…_approved` / `…_rejected` / `…_withdrawn` |
 | `write_participant_data(participation, typed columns…, context)` | upsert both rows; a `null` argument keeps the stored value (nothing in Slice 2 clears one); on update computes the changed keys with `IS DISTINCT FROM` | `participant_data_changed` (keys only, never values) |
@@ -297,6 +333,10 @@ pattern). The service checks permissions and domain rules first; the functions c
   `SELECT, INSERT, UPDATE` on `import_column_mapping`; `EXECUTE` on the new functions. Tested like
   Slice 1 AC-15.
 - `audit_event` stays without an app `SELECT`: Slice 2 shows no history UI.
+- **Base-defaults version (R26):** `project_activated`, `config_template_pinned`,
+  `config_override_changed`, `rule_relaxation_approved` and `import_confirmed` carry
+  `baseDefaultsVersion` in their details; the functions require the parameter, and an audit-model
+  test keeps the list of configuration-dependent event types.
 
 ### 5.4 Access (R9, R17)
 
@@ -324,14 +364,15 @@ the person resource; list payloads contain only fields that are `listable` and a
 ### 5.5 Project setup and activation (R1, Q98)
 
 - **Create:** name, customer, type (no dates). The creator becomes PL.
-- **Edit:** name and customer any time; type while draft without participations; Project Agentur
-  while draft.
+- **Edit:** name and customer any time; type while draft without participations and without
+  waves (a draft `ta_tg` project with waves can't become `ta_only`, round 22); Project Agentur while
+  draft.
 - **Activation** (`POST /projects/{id}/activation`): under `lock_project_setup`, resolve the
   project level from the snapshot (`resolveForProject`), load the waves, call
   `projectActivationBlockers` (Slice 1). Any blocker → 422 with the codes. Otherwise
   `activate_project`. Agentur-submission blockers never block (Q91, Q92); they are returned as
   warnings with their Agentur and step (round 15 reading 10).
-- **Draft gate:** the status service refuses every transition on a draft project
+- **Draft gate:** the status service refuses every post-creation transition on a draft project
   (`project_not_active`, `domain`); `change_participation_status` refuses it too (defence in
   depth); the project job plans nothing for a draft project. Creation, wave assignment, person
   data and date overrides are allowed in draft.
@@ -353,6 +394,7 @@ participation of the wave relies on the default TG start (no own `tgStart`, not 
 | code `^[A-Za-z0-9_-]{1,20}$`, unique per project; name 1–100 characters, no control characters (it is UI text: no personal data, a hint in the form) | `invalid_code`, `code_taken`, `invalid_name` |
 | `signingDeadline ≤ defaultTgStart`, `signingDeadline ≤ latestEntryDate` (the offer guard needs both, Q69) | `signing_after_start`, `signing_after_latest_entry` |
 | `defaultTgStart ≤ latestEntryDate` (an entry after the last possible entry can't happen) and `defaultTgStart ≤ defaultTgEnd` (existing check) | `start_after_latest_entry`, `end_before_start` |
+| the default period is at most twelve months (R25, Q102) | `period_exceeds_twelve_months` |
 | no retroactive cutoff: a new or changed `latestEntryDate` is not before today; once the cutoff has passed (`today > latestEntryDate`) it doesn't change | `latest_entry_in_past`, `cutoff_passed` |
 | `signingDeadline` doesn't change while first offers of the wave are open | `signing_deadline_in_use` |
 | a `defaultTgStart` that has passed doesn't change (individual new start dates instead, 5.7); a new one is not before today while participations rely on it | `default_start_passed`, `default_start_in_past` |
@@ -370,12 +412,14 @@ participations) and one form for create and edit.
 | Rule | Code |
 |---|---|
 | `ta_tg` only | `not_ta_tg` |
+| the participation has a wave with a `latestEntryDate` (round 22) | `wave_required`, `latest_entry_date_missing` |
 | no change on a terminal participation | `participation_closed` |
 | `tgStart` doesn't change after TG entry (`active_in_tg`: the entry date is recorded) | `entered` |
 | a new `tgStart` is not before today (Q68: never backdated) | `start_in_past` |
 | … not after the wave's `latestEntryDate` | `start_after_latest_entry` |
 | … not before an open `offerDeadline` (existing table check, as a domain error) | `start_before_offer_deadline` |
 | effective `tgEnd` is not before the effective `tgStart` | `end_before_start` |
+| the effective period is at most twelve months (R25; blocked until Q102 says what `tgEnd` means) | `period_exceeds_twelve_months` |
 | setting a date to `null` returns to the wave default and must satisfy the same rules | — |
 
 - **New start date (Q68 case 3):** an `informed` participation flagged `tg_start_missed` gets a
@@ -395,12 +439,14 @@ participations) and one form for create and edit.
   at the base must exist unchanged (canonical hash). Adding versions passes; changing or deleting
   one fails. Without a base ref locally it prints a notice and passes; CI never omits it.
 - **Snapshot:** pinning reads the file through `loadTemplate` (validated), computes the hash and
-  calls `pin_agentur_template`, which stores the content. From then on resolution reads only the
-  stored content (validated again, cached per `(key, version, hash)`); a later change of the file
-  can't change a pinned project (AC-11). A pin of a version whose content differs from any
-  earlier pin is refused (`template_version_changed`).
+  calls `pin_agentur_template`. The first pin of a version anywhere registers it in
+  `config_template_version`; every later pin, of any project, must match the stored content
+  (`jsonb` equality) and hash, or is refused (`template_version_changed`); two concurrent
+  conflicting first pins serialise on the primary key, so exactly one succeeds (AC-10). From then
+  on resolution reads only the stored content (validated again, cached per `(key, version,
+  hash)`); a later change of the file can't change a pinned project (AC-11).
 - **Base defaults** are read from the release, not pinned (R10); their `version` goes into the
-  activation and migration audit details.
+  details of every configuration-dependent audit event (R26).
 - **Project Agentur (R12):** chosen from the catalog; setting it pins that Agentur's latest
   version (the PL may choose an older one). Further Agentur templates may be pinned the same way.
 - **Migration (Q36, Q93, R15):** `migrationPreview(currentPin, target, override, base, otherPins)`
@@ -480,14 +526,18 @@ POST /projects/{id}/imports           { same input, mapping, decisions: { confir
   → { created, updated, unchanged, skipped }
 ```
 
-- **Parsing** (`apps/api/src/imports/parse*.ts`, worker per S1): `.xlsx` (zip signature) or
+- **Parsing** (`apps/api/src/imports/parse*.ts`, before the transaction): first the ZIP
+  central-directory check for `.xlsx` (declared expanded total ≤ 50 MB, ratio ≤ 100 per entry,
+  `file_too_complex` otherwise), always; then the worker (S1; never in-process for XLSX). `.xlsx`
+  (zip signature) or
   `.csv`/text; anything else → `unsupported_file`. Limits: 5 MB file, 5,000 data rows, 50
   columns, 500 characters per cell. The first row is the header row. CSV: strict UTF-8 (a BOM is
   dropped), otherwise Windows-1252 (the preview names the encoding so the PL can check umlauts);
   delimiter `;`, `,` or tab detected from the header row, overridable. XLSX: the chosen sheet
-  (default the first); text cells as text, numbers as their raw string, date cells as ISO dates
-  (UTC components; a time other than 00:00 → `date_has_time`); formulas as their cached values.
-  The worker returns only `string | { date }` cells.
+  (default the first); text cells as text, numeric cells marked as numeric with their stored value
+  (R24), date cells as ISO dates (UTC components; a time other than 00:00 → `date_has_time`);
+  formulas as their cached values. The worker returns only `string | { number } | { date }`
+  cells.
 - **Mapping:** one column per target, a target at most once; `personnelNumber`, `lastName`,
   `firstName` always required (the match key and the minimal identity, R6); `birthDate`,
   `oldEmploymentEndDate` and the address targets required unless the matching `base-import-*`
@@ -504,6 +554,10 @@ POST /projects/{id}/imports           { same input, mapping, decisions: { confir
     `29.02.2027` are errors; `29.02.2028` is valid); `birthDate` not after today
     (`birth_date_in_future`); `oldEmploymentEndDate` not before `birthDate`
     (`end_before_birth`); age at the Austrittsdatum outside 15–67 → warning `age_implausible`;
+  - identifiers (R24): a numeric XLSX cell in `personnelNumber` or `addressPostalCode` →
+    `identifier_cell_numeric` (error); in `phone` or `mobile` → dropped with that warning;
+  - address (R23): the postal code is exactly five digits (`postal_code_invalid`), German
+    addresses only until Q103 is answered;
   - optional contact values: an invalid email (Zod's email check) or phone (digits, spaces, `+`,
     `/`, `-`, `(`, `)`, 6–30 characters) is dropped with `value_invalid_dropped`;
   - issues carry the row number (as in the file, header = row 1), the target and the code,
@@ -520,11 +574,18 @@ POST /projects/{id}/imports           { same input, mapping, decisions: { confir
 - **Preview** returns the report (counts, rows with outcome, issues, and for updates the targets
   with old and new value: the PL may read both) and a `previewToken` = HMAC over (project, file
   hash, sheet, CSV options, mapping, wave, the plan's digest). **Nothing is written.**
-- **Confirm** re-parses and re-plans; a different digest → 409 `import_preview_stale`. Then, in
-  **one transaction** (R18) under `lock_project_setup`: for every `create`, the status service's
+- **Confirm** (round 22: no TOCTOU window): parse the file again **before** the transaction; then
+  **one transaction** (R18) that first takes the exclusive project lock (`lock_project_setup`)
+  and then, under it: reloads the project, pins, override and base defaults (the resolution and
+  its `relaxed` list), the existing participations and person data; re-plans; compares the plan's
+  digest with the preview token (different → 409 `import_preview_stale`, nothing written);
+  validates the decisions against this plan (every `possible_duplicate` row decided, no decision
+  for another row, warnings confirmed if any → `decisions_invalid` otherwise); then writes: for
+  every `create`, the status service's
   creation inside the transaction (`createParticipationIn(tx, …)`, PL, optional wave) and
   `write_participant_data`; for every `update`, `write_participant_data`; per participation with
-  confirmed warnings `warning_confirmed` (codes); `import_confirmed` with the counts; the mapping
+  confirmed warnings `warning_confirmed` (codes); `import_confirmed` with the counts and the
+  base-defaults version (R26); the mapping
   saved. Any failure rolls everything back. Correlation: the request id on every event.
 - **Manual creation** (`POST /projects/{id}/participations`): one row object through the same
   validation and plan.
@@ -611,8 +672,12 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - [ ] **AC-3** The migration copies the dates of every project without a wave into W1, then drops
       the three columns and their checks; nothing references them afterwards (domain, API, seed,
       web). (I)
-- [ ] **AC-4** The type changes only in draft without participations, the Project Agentur only in
-      draft; `project_changed` lists the changed keys. (U, I)
+- [ ] **AC-4** The type changes only in draft without participations or waves, the Project Agentur
+      only in draft; `project_changed` lists the changed keys. (U, I)
+- [ ] **AC-4a** Locks live in the functions: each setup function blocks while another transaction
+      holds a participation lock of the project (shared) and vice versa, without any service call;
+      `create_participation` takes the shared lock; a transaction holding the exclusive lock can
+      still create and lock participations of that project. (I)
 
 ### Waves (2b)
 - [ ] **AC-5** `checkWaveChange`: one expected result per rule of 5.6, at the boundary days. (U)
@@ -626,9 +691,10 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - [ ] **AC-9** The manifest matches the files (canonical hash, drift-checked); the immutability
       check fails for a changed or deleted existing version and passes for a new one; formatting
       alone changes no hash. (U, CI)
-- [ ] **AC-10** A pin stores content and hash; a pin of `(key, version)` with another hash than an
-      earlier pin is refused (`template_version_changed`); pins can't be updated or deleted, by the
-      owner either. (I)
+- [ ] **AC-10** The first pin registers the version; a later pin of `(key, version)`, of any
+      project, with another hash **or** the same claimed hash and different content is refused
+      (`template_version_changed`); of two concurrent conflicting pins in two projects exactly one
+      succeeds; versions and pins can't be updated or deleted, by the owner either. (I)
 - [ ] **AC-11** Resolution of a pinned project uses only the snapshot: changing the template file
       afterwards changes nothing. (I)
 - [ ] **AC-12** The image contains the templates and the base defaults; `GET
@@ -684,13 +750,16 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       unchanged, empty cells keep values, terminal participations skipped, missing participations
       counted. 100 %. (U)
 - [ ] **AC-26** The preview writes nothing (row counts of every table and `audit_event`
-      unchanged); a confirm whose plan differs from its preview is 409. (I)
+      unchanged); a confirm whose plan differs from its preview is 409; a confirm racing a
+      concurrent change (another import, a relaxation, a re-pin) waits for the lock and then
+      re-plans against the committed state (409 if the plan changed); decisions that don't match
+      the plan are refused. (I)
 - [ ] **AC-27** The confirm is atomic (a failure on the last row leaves nothing); creations go
       through the creation edge with `participation_created` per row; `import_confirmed` has the
       counts; confirmed warnings are audited. (I)
 - [ ] **AC-28** Limits: 6 MB → 413; 5,001 rows, 51 columns or a 501-character cell → validation
-      error; a non-spreadsheet → `unsupported_file`; the zip bomb is stopped (S1) and the API keeps
-      serving. (I)
+      error; a non-spreadsheet → `unsupported_file`; the zip bomb is refused by the central-directory
+      check, and one with lying sizes is stopped by the isolation (S1); the API keeps serving. (I)
 - [ ] **AC-29** CSV in UTF-8 with and without BOM, Windows-1252, `;` and `,`; XLSX sheet choice,
       text/number/date cells; the XLSX fixture parses to the CSV fixture's content. (U, I)
 - [ ] **AC-30** Only the project's PL may preview, confirm or create manually; logs of an import
@@ -707,8 +776,9 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - [ ] **AC-35** Playwright: the PL creates a `ta_tg` project, chooses the sample Project Agentur,
       adds a wave, activates, imports the sample CSV, sees the participants; the re-import updates
       instead of duplicating. (E)
-- [ ] **AC-36** `checkParticipationDates`: one expected result per rule of 5.7 at the boundaries.
-      100 %. (U)
+- [ ] **AC-36** `checkParticipationDates`: one expected result per rule of 5.7 at the boundaries,
+      including no wave, a wave without `latestEntryDate` and a period of twelve months exactly
+      vs. one day more (month-end cases). 100 %. (U)
 - [ ] **AC-37** The dates route writes through `set_participation_dates` with
       `participation_dates_changed` (old/new dates) and refuses a stale version (409); a new start
       date clears `tg_start_missed`. (U, I)
@@ -728,6 +798,11 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       `packages/config/src/{override,migration,hash}.ts`. (CI)
 - [ ] **AC-44** The generated transitions/permissions table shows the new operations; OpenAPI and
       the client have no drift. (U, CI)
+- [ ] **AC-45** Every configuration-dependent audit event (R26) carries `baseDefaultsVersion`; a
+      test fails for a listed type without it. (U, I)
+- [ ] **AC-46** Import identifiers and addresses: a numeric XLSX cell for Personalnummer or postal
+      code is `identifier_cell_numeric`, for a phone it is dropped with that warning; a postal code
+      that isn't five digits is `postal_code_invalid`. (U)
 
 ### Definition of done (CLAUDE.md) applied to this slice
 - Status changes through the audit helper: unchanged; setup writes get the same treatment (D2).
@@ -746,30 +821,31 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Override rule/field/help-text additions through the API; template publication and admin UI | later (ADR-0004) (R13) |
 | Generic editing of person data (Q65 `undecided` for the PL), self-service | Slices 3/4a; does an HR re-import overwrite participant-maintained contact data? — to raise in Slice 4a |
 | Special-category and highly confidential fields, encryption, separate logged endpoints | with the first such field (Slices 4a/6) |
-| Deleting waves, closing projects, returning to draft, changing the type of a project with participations (and round 10's supersession on a change to `ta_only`) | Q98, Q101 |
+| Deleting waves, closing projects, returning to draft, changing the type of a project with participations or waves (and round 10's supersession on a change to `ta_only`) | Q98, Q101 |
+| Foreign addresses (a country target) | Q103 (R23) |
 | A customer entity | Q104 |
 | Wave assignment in bulk, filters, "what's missing" and dashboards | Slice 5 |
 | Audit history UI (`audit_event` stays unreadable for the app) | Slice 5 |
 | `.xls` (binary Excel), multi-row headers, header row selection | not needed so far; added on demand |
-| The 12-month maximum check on individual TG dates | Q102 |
 | Retention job and periods | Slice 7 (Q3, Q58, Q77, Q105) |
 
 ## 9. Doc changes
 
-**In this PR:** `docs/plans/slice-2.md`; `open-questions.md` Q98–Q107:
+**In this PR:** `docs/plans/slice-2.md`; `docs/decisions/2026-10-16-answers-round-22.md`;
+`open-questions.md` Q98–Q107:
 
 | # | Topic | Status |
 |---|---|---|
-| Q98 | What a draft project permits; changes after activation | open (R1) |
-| Q99 | Who approves a relaxation | open (R2) |
-| Q100 | The controlled relaxation reason codes | open (R3) |
-| Q101 | Editing entry waves once in use | open (R4) |
-| Q102 | Individual TG dates and the new start date | open (R5) |
-| Q103 | The import contract | open (R6) |
-| Q104 | Saved column mappings without a customer entity | open (R7) |
-| Q105 🔒 | Retention classes of the person data | open (R8) |
-| Q106 | Project creation and visibility until Slice 3 | open (R9) |
-| Q107 | Pinning the base defaults | open (R10) |
+| Q98 | What a draft project permits; changes after activation | confirmed (R1, round 22) |
+| Q99 | Who approves a relaxation | confirmed (R2) |
+| Q100 | The controlled relaxation reason codes | confirmed (R3) |
+| Q101 | Editing entry waves once in use | open, PL (R4) |
+| Q102 | Individual TG dates, the new start date, twelve months | open, PL/legal/BA; before PR 2h (R5, R25) |
+| Q103 | The import contract | open, PL; before PRs 2f/2g (R6, R23, R24) |
+| Q104 | Saved column mappings without a customer entity | confirmed (R7) |
+| Q105 🔒 | Retention classes of the person data | open, DPO; pre-pilot gate (R8) |
+| Q106 | Project creation and visibility until Slice 3 | confirmed (R9) |
+| Q107 | Pinning the base defaults | confirmed with audit provenance (R10, R26) |
 
 **In the implementing PRs:**
 - **2a:** ADR-0002 amendment (setup functions, project lock, memberships); data-protection.md
@@ -790,11 +866,13 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Risk | Mitigation |
 |---|---|
 | `read-excel-file` has one maintainer and frequent releases | Exact pin, deliberate upgrades; parsing isolated in one module behind `parseSpreadsheet()`, so a replacement touches one file; the worker limits contain a parser bug. |
-| Zip bombs and pathological files exhaust the API | 5 MB cap, row/column/cell limits, worker resource limits and timeout (S1, with a fallback). |
+| Zip bombs and pathological files exhaust the API | 5 MB cap, the central-directory check (always), row/column/cell limits, worker resource limits and timeout (S1); never in-process XLSX parsing (child process or CSV only). |
 | Personal data leaks through the import (logs, problem bodies, stored previews, saved headers) | Stateless preview; issues carry codes and row numbers only; HMAC'd headers; log fields fixed; tests (AC-26, AC-30, AC-31). |
 | A re-import silently overwrites or deletes data | Empty cells never clear; terminal participations untouched; missing people only counted; updates listed with old/new values before confirm; audit with changed keys. |
 | Duplicates through concurrent imports or case/zero differences in Personalnummer | Project lock and unique index; exact matching is a stated reading (Q103), so a PL sees "new" rather than a wrong merge. |
-| A template file changes after projects pinned it | Snapshot in the database, refusal of a different hash for a pinned version, CI immutability check. |
+| A template file changes after projects pinned it, or two projects pin different contents for one version | One registry row per version (primary key), content and hash compared on every pin, CI immutability check (AC-9, AC-10). |
+| A service forgets a lock | The locks are acquired inside the functions (D3, AC-4a). |
+| An import confirmed against stale state | Reload, re-plan, token comparison and writes in one transaction under the exclusive project lock (AC-26). |
 | An override valid for one Agentur breaks another | Cross-chain validation on every override write, pin and migration (AC-13, AC-16). |
 | The draft gate blocks real work in a way the PLs don't expect | Q98 asks; the gate is one check in the service, one in the function and one in the job, easy to relax. |
 | Wave edits change who is withdrawn or offered | No retroactive cutoff, no change of a deadline open offers use, the project lock (5.6, AC-7). |
@@ -805,6 +883,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 
 ## 11. Approval
 
-Waiting for approval of D1–D11, the readings R1–R22, the two dependencies (2.2) and the answers
-or fail-safe readings of Q98–Q107. Implementation starts with PR 2a on a new branch after this PR
-is merged.
+Approved in [round 22](../decisions/2026-10-16-answers-round-22.md) with the amendments applied
+above. R23–R28 are readings taken while applying it, for confirmation in the PR 2a review.
+Implementation starts with PR 2a after this PR is merged; PRs 2f/2g wait for Q103 and PR 2h for
+Q102.
