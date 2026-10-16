@@ -363,7 +363,9 @@ automatically.
 - **Who may take which transition** (Q60): the PL all manual transitions of their project; the
   assigned consultant/profiler `contacted`/`unreachable`/`informed`, the profiling track and
   exits; back office DSV offered/signed/declined. Participants trigger no transition in the
-  MVP: a portal declaration is evidence that authorised staff verify and record.
+  MVP: a portal declaration is evidence that authorised staff verify and record. The "Who"
+  column of the [transitions table](generated/lifecycle-transitions.md) is generated from
+  `mayPerformTransition` / `mayPerformOperation` (PR 1d-2).
 - **Late joiners** come back along the explicit return arrows (`unreachable → contacted`,
   `profiling_declined → profiling_accepted`, `dsv_declined/dsv_expired → dsv_offered`) until
   the admission cutoff (Q77). Terminal states are final.

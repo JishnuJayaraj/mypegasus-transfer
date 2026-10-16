@@ -94,6 +94,16 @@ export {
   type Subject,
 } from "./access/decide";
 export {
+  mayPerformOperation,
+  mayPerformTransition,
+  OperationKind,
+  type Actor,
+  type Operation,
+  type Permission,
+  type PermissionDenial,
+  type PermissionTarget,
+} from "./access/permissions";
+export {
   DocumentType,
   documentTypeCatalog,
   documentTypeEntry,

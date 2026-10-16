@@ -776,6 +776,36 @@ above. Readings taken while applying round 11 (fail safe, D10; correct them if w
   operations manager (never their own request); the operation itself comes with evidence
   storage.
 
+Built in PR 1d-2 as `mayPerformTransition(actor, edge, target)` and
+`mayPerformOperation(actor, operation, target)` (`packages/domain/src/access/permissions.ts`):
+`actor` is a `Subject` or `{ kind: "system" }`; the result is `{ ok: true }` or a denial
+(`actor_not_allowed`, `not_member`, `not_assigned`, `out_of_region`, `role_not_allowed`,
+`four_eyes`), allowed when any role of the actor allows it (D6). The generated transitions table
+shows who for every edge and operation. Operations: the six lifecycle operations of 5.3,
+`reviewReconciliation`, `reviewBreakGlass`, `requestClarification` (Q80),
+`requestEvidenceCorrection` and `approveEvidenceCorrection` (`append_evidence_correction`,
+round 11); the last five get their failure codes with their slices (3, 5, 7).
+
+Readings taken in PR 1d-2 (fail safe, D10; correct them if wrong):
+- **Participants take no transition**, including the `participant` creation edge:
+  self-registration is the anonymous QR flow of Slice 4c, which brings its own check.
+- **Consultant/profiler** (assigned): the edges into `contacted`, `unreachable` and `informed`
+  (with `unreachable → contacted`), every profiling edge and `active_in_tg → exited`; no
+  withdrawal, creation or matching. Creating a participation (no participation yet) is the PL's.
+- **Back office:** every manual DSV edge (first offer, re-offer, signed, declined).
+- **Org roles take no transition**; the regional operations manager's part is the review and
+  approval operations, in its region (a target without a region is outside it).
+- **Four eyes:** deciding an exception, reviewing a reconciliation or break-glass and approving
+  an evidence correction are refused to the person who requested or acted. Someone who is both
+  PL and regional operations manager may request as PL but not decide their own request.
+  `requestClarification` has no four-eyes check (it asks the PL).
+- **Evidence corrections** "according to document type": requested by the PL or back office
+  where the document-type catalog lets that role open the type (TL 407, Kug 200b, uploads,
+  certificates: PL; DSV, cancellation: PL and back office); nobody for ASU proof and exception
+  evidence. Corrections of evidence-set **fields** aren't covered: none until Q88 is answered.
+- **`supersedeStaleException`** is the system's only (the status functions apply it, round 10).
+
+
 ### 5.7 `packages/config`
 
 #### Template model
