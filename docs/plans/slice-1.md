@@ -91,8 +91,10 @@ apps/api          status service (the only TypeScript caller of the status funct
 
 **Done when** (roadmap): tests document every allowed and forbidden transition and every access
 rule. Acceptance criteria are in section 7. There is no new UI; the "demo" is the two generated
-tables (transitions and access matrix, section 5.10) and a nightly run on seed data
-(`pnpm jobs:lifecycle --today …`).
+tables (transitions and access matrix, section 5.10). The 2091 seed timeline serves UI and
+domain demonstrations only: database time is authoritative, so a persisted lifecycle-job
+demonstration uses a separate past-dated synthetic fixture, or a later non-writing `--dry-run`,
+never the 2091 timeline (Q96).
 
 ## 2. Facts checked
 
@@ -1255,6 +1257,13 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
   jobs have finished, it inserts today's `job_run` row (with `scheduled_at` and
   `completed_at`). A failed sweep writes no row, so the next run covers the missed days; a
   completed day is never re-evaluated.
+- **Database time is authoritative** (Q96): before dispatching any project job the sweep checks
+  against database time that the run's `scheduledAt` has passed. A run that isn't due (a future
+  `--today`, or a fixed `Clock` ahead of database time) stops before any lifecycle change and
+  writes no `job_run` row (`run_not_due`). A normal missed-run sweep arriving before today's run
+  time may stay a no-op; the singleton queue keeps the due occurrence. Past run dates stay
+  supported for catch-up and tests. An ordinary crash may still leave partial, idempotent changes
+  without a completion row: recovery behaviour, never a simulation mechanism.
 - **Per-project job:** runs `planSystemTransitions` per participation and applies each change
   through the status service as `system` (`system_job`, `job_id`, `details.entryKind`).
   Idempotent: the planner plans nothing for moved participations, and compare-and-set rejects a
@@ -1262,8 +1271,9 @@ createClock(env)  // CLOCK=system (default) | fixed:<ISO instant> (dev/test only
 - **Payloads carry IDs and dates only** (Zod payload schema per job; a test checks it). Logs:
   job name, job id, project id, counts. Never free text.
 - Retries with backoff (`retryLimit: 3`); failures visible in `pgboss` and the log.
-- **`pnpm jobs:lifecycle [--today YYYY-MM-DD]`** runs the sweep once (dev, CI, demos; `--today`
-  uses a `ManualClock`, refused with `NODE_ENV=production`).
+- **`pnpm jobs:lifecycle [--today YYYY-MM-DD]`** runs the sweep once (dev, CI; `--today` uses a
+  `ManualClock`, refused with `NODE_ENV=production`). A run that isn't due by database time exits
+  non-zero with the stable code `run_not_due`, before any change (Q96).
 - pg-boss's tables are outside the data catalog test; ADR-0011 excludes them from participant
   retention.
 
@@ -1309,8 +1319,10 @@ the environment and the `Clock` in `createApp`. The twelve readings were answere
    `job_name`, `run_date` and `scheduled_at`**, so `completed_at` is always the database's
    `now()` (tested: an explicit `completed_at` is `42501`, a completion before the scheduled run
    `23514`, the owner included). Both timestamps in Drizzle's `date` mode, so jobs code never
-   needs `new Date`. Kept indefinitely as `reference_data` — confirmed. Consequence: a run whose
-   clock is ahead of database time can't record its completion (Q96).
+   needs `new Date`. Kept indefinitely as `reference_data` — confirmed. Consequence, decided in
+   Q96 ([round 20](../decisions/2026-10-16-answers-round-20.md)): a run whose clock is ahead of
+   database time is refused before any change (`run_not_due`, section 5.9), never applied without
+   its `job_run` row.
 9. **The clock** — confirmed: `CLOCK` is validated before the auth checks; `createApp` gets the
    `Clock` (no route reads it yet); `testApp` defaults to the system clock.
 10. **Playwright runs with `JOBS_ENABLED=false`** — confirmed. The image smoke test starts
@@ -1495,9 +1507,11 @@ exceptions), AC-28, AC-30 (roles in the transitions table). AC-29 was met in 1a.
       rejected; no `Date.now()`/`new Date()` in domain, config and jobs (source scan). (U)
 - [ ] **AC-37** pg-boss starts as `transfer_app` on the schema installed by `db:migrate`; the
       nightly schedule is registered with `Europe/Berlin`. (I)
-- [ ] **AC-38** With a `ManualClock` and fake facts, the job produces `dsv_expired`, scheduled
-      entries, catch-up entries after skipped days (no `job_run` row), and cutoff withdrawals as
-      `system`; running it twice adds no status change and no audit row. (I `api/jobs/lifecycle.int.test.ts`)
+- [ ] **AC-38** With a `ManualClock` on run days before database time and fake facts, the job
+      produces `dsv_expired`, scheduled entries, catch-up entries after skipped days (no
+      `job_run` row), and cutoff withdrawals as `system`; running it twice adds no status change
+      and no audit row; a run not due by database time stops with `run_not_due` before any
+      change and writes no row (Q96). (I `api/jobs/lifecycle.int.test.ts`)
 - [ ] **AC-39** With the Slice 1 facts provider, nobody enters the TG (fail closed). (I)
 - [ ] **AC-40** Job payloads contain only IDs and dates; job logs contain no participation data
       and no free text. (U, I)

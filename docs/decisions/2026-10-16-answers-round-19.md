@@ -50,5 +50,5 @@ failures.
 
 ## Applied in PR 1h-1
 
-See the plan, section 5.9, "Readings taken in PR 1h (1h-1)". One consequence of 8 is a new open
-question, Q96.
+See the plan, section 5.9, "Readings taken in PR 1h (1h-1)". One consequence of 8 was a new
+question, Q96, answered in [round 20](2026-10-16-answers-round-20.md).

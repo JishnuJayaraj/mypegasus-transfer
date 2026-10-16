@@ -85,4 +85,7 @@ window and the per-project job follow in PR 1h-2.
   completion not before it (round 19). Reference data (retention class `reference_data`). The
   sweep reads it for its catch-up window (PR 1h-2); the status service reads today's row before a
   same-day reconciliation.
+- **Database time is authoritative** in every environment (Q96, round 20): a lifecycle run whose
+  scheduled time hasn't passed by database time stops before any change (`run_not_due`); there is
+  no database clock for development.
 - Events are logged without their data and errors without their message (CLAUDE.md rule 9).
