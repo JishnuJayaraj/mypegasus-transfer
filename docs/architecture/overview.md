@@ -62,8 +62,8 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 
 ## Background jobs
 
-Reminders, deadline checks, system lifecycle transitions (`dsv_expired`, `withdrawn` after the
-grace period, `active_in_tg`), two-stage retention/deletion, PDF batch generation. All jobs are
+Reminders, deadline checks, system lifecycle transitions (`dsv_expired`, `withdrawn` at the
+admission cutoff, `active_in_tg`), two-stage retention/deletion, PDF batch generation. All jobs are
 idempotent, run with the `system` actor, take time from the `Clock` adapter, and carry only IDs
 in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 

@@ -48,7 +48,8 @@ confirmed before the pilot.
    DSV track; all go through the single status function, which writes the change and the audit
    entry in one transaction. The DB role cannot update status columns directly (ADR-0002).
    Guard overrides, break-glass access, document openings and confirmed warnings are audited
-   too. Some guards (DSV fully executed, ASU registered) have no override.
+   too. Documentary and contractual guards (signed DSV and TL 407, fully executed DSV, ASU
+   proof, cancellation, TA completion evidence) have no override (Q71).
 6. **Personal data never flows back to the customer (old employer)** at person level, **except a
    fixed whitelist** *(provisional, Q13/Q14)*: name, Personalnummer, DSV signed (yes/no + date),
    beE entry date, beE exit date. Everything else is aggregated with n < 5 suppressed. Enforce

@@ -15,7 +15,9 @@ duty.
   rules applies. **Never per person.**
 - Retention starts from lifecycle events: `withdrawn` (the grace period of 90 days after the
   signing deadline is built into the lifecycle), `rejected`, beE exit, end of year of exit,
-  project settlement dates.
+  project settlement dates. *Note 2026-10-16 (round 7): the fixed 90-day grace period is
+  reopened; withdrawal happens at the final admission cutoff after `latestEntryDate` (Q69, Q70,
+  Q77). Retention still starts from `withdrawn`; the non-signer period itself is Q3/Q77.*
 - **Two-stage deletion:**
   1. full deletion of everything not needed as evidence
   2. deletion of the **evidence set** (identity, measure, participation dates/times, signed

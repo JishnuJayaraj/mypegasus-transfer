@@ -45,3 +45,9 @@ identifiers. If you find a term that is not here, add it.
 | eAU | Electronic sick note | — | Employer retrieves sick notes electronically; we store only "AU confirmed" + dates. |
 | Niederlassung | Branch / region | `region` | Organisational unit grouping projects and staff; scope of regional admins. |
 | Integrationsquote | Integration rate | `integrationRate` | Placements ÷ all exits (which reasons count is configurable). |
+| Unterschriftsfrist | Signing deadline / offer deadline | `signingDeadline`, `offerDeadline` | Deadline to return the signed DSV: per project for the first offer, per participation for a re-offer (Q69). Inclusive; expiry the next day. |
+| Letzter Eintrittstermin | Latest entry date | `latestEntryDate` | Last possible entry into the beE, from the Sozialplan/DSV/entry wave. The day after is the final admission cutoff (Q69, Q77). |
+| Eintrittswelle | Entry wave | `entryWave` | A group of participants with common entry dates within one project (open, Q79). |
+| Anspruch auf Transfer-KuG | Transfer-KuG eligibility | `transferKugEligibility` | Whether Transfer-KuG can be claimed for a period. Separate from employment in the beE; under the profiling exception it starts no earlier than the day after profiling is completed (Q74, verify). |
+| Profiling-Ausnahme | Profiling exception | `profilingException` | Justified case where profiling is completed within 1 month after TG entry (Q17, Q74). Set by the PL with a reason code. |
+| Notfallzugriff | Break-glass access | `breakGlass` | Exceptional access with a mandatory reason: one participant, one category, one action; reviewed afterwards (Q63). |
