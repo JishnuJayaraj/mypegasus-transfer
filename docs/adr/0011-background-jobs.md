@@ -5,7 +5,7 @@
 
 ## Context
 Several rules are time-driven and exist well before Slice 5: the signing deadline
-(`dsv_expired`), TG start (`active_in_tg`), the grace-period withdrawal, the ASU due date,
+(`dsv_expired`), TG start (`active_in_tg`), the admission-cutoff withdrawal, the ASU due date,
 profiling-exception deadlines, reminders and the retention job (ADR-0008).
 
 ## Decision

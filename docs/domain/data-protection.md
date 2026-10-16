@@ -3,7 +3,9 @@
 > This is an engineering guideline, not legal advice. Have it reviewed by the company's data
 > protection officer before go-live.
 >
-> Status: updated 2026-10-15 from the decisions log. Most answers here are still **`assumed`**
+> Status: updated 2026-10-15 from the decisions log, and 2026-10-16 from round 7 (roles per
+> project, break-glass scope, evidence-set phase, write permissions, classification additions)
+> and round 8 (regional operations manager, approval of profiling exceptions, deletion clock). Most answers here are still **`assumed`**
 > (rows marked 🔒 in `open-questions.md`). Build on them, but **nothing in this file may be
 > `assumed` or `verify` at the pre-pilot gate.** Items marked *(Qnn)* point to the question.
 
@@ -36,6 +38,16 @@
 - **TG sub-status periods** (sickness, parental leave) are payroll records: type and dates only,
   never diagnoses, never AU scans (Q51).
 - Free text in section C is **never** included in exports.
+- **Additions (round 7, assumed, Q66):**
+  - Familienstand, gender, Personalnummer, end of the old employment, knowledge date, work
+    email, language skills, driving licence: **confidential**.
+  - End reason `long_term_illness_reduced_earning_capacity`: **special category**, never in
+    ordinary lists. End reason `deceased`: confidential.
+  - Profiling-exception reasons: **structured reason codes** where possible (Q81); a free-text
+    reason is **special category**, because it may disclose illness.
+  - Override and break-glass free text: **highly confidential**, encrypted, excluded from lists
+    and logs, visible only to the actor and the authorised reviewer.
+  - UI copy tells staff not to enter diagnoses or unnecessary personal details in free text.
 
 ## Access matrix *(assumed, Q28, Q49, Q51)*
 
@@ -51,13 +63,53 @@
 | Sub-status periods | "abwesend" + dates | "abwesend" + dates | type + dates | never | own |
 | Evidence set after exit | break-glass with reason (audits) | break-glass with reason | break-glass with reason | never | — |
 
-- **Break-glass**: mandatory reason, audited, flagged for review.
+- **Roles per project** *(assumed, Q61)*: a person has zero or more project roles per project
+  (e.g. PL and profiler in the same project). Permissions are the **union** of those roles,
+  but sensitive access still needs the participant assignment: a PL who is also a profiler sees
+  section C only for participants assigned to them as profiler.
+- **"Assigned" is strict** *(assumed, Q62)*: consultants/profilers get **no person-level data**
+  of participants not assigned to them, only aggregate workload counts. The PL assigns. There is
+  no project-wide directory of names.
+- **Break-glass** *(assumed, Q63)*: mandatory reason, audited, flagged for review. One grant
+  covers **one participant, one resource/category and one action**, never a reusable session;
+  every action is logged on its own. The **regional operations manager** (Q80) reviews it by
+  the next business day from audit metadata, without access to participant details. The DPO
+  gets periodic reports and immediate escalation of suspicious access, but is not the
+  operational approver.
+- **Four-eyes** *(assumed, Q63, Q80)*: actor and reviewer are always different staff users.
+  Break-glass and reconciliations of a TG entry are **reviewed after the fact** (next business
+  day). A profiling exception needs **approval before** it can satisfy the TG entry guard.
+- **Regional operations manager** *(assumed, Q80)*: an org role scoped to a region, with **no
+  ordinary participant access**. It approves profiling exceptions, reviews reconciliations and
+  break-glass, sees audit metadata, structured reason codes and the necessary dates, and can ask
+  the PL for clarification. It never sees case files, section C, health fields or signed
+  documents through this role.
+- **Evidence-set phase** *(assumed, Q64)*: starts **after the first retention/deletion stage**,
+  not at the terminal status. During close-out and the ordinary personnel-file retention,
+  normal authorised access applies; once only the evidence set is left, break-glass only.
+- **Signed TL 407 / Kug 200b for participants** *(assumed, Q67)*: not in the MVP portal; through
+  the data-subject export or a manual request.
 - **Regional admins and admins manage configuration, not cases.** They see no participant data.
   Escalations to the regional admin (e.g. TL 407 not submitted 14 days after TG start) show
   only: project, responsible PL, number of overdue items per type (e.g. "3 × TL 407 not
   submitted"), and days overdue for the oldest item. **No participant names.** For details the
   regional admin contacts the PL (Q57).
 - **Customer**: no login in the MVP (Q47). See the next section.
+
+### Write permissions *(assumed until DPO and PL review, Q65)*
+
+| Who | May write |
+|---|---|
+| Participant | own self-service fields and uploads; never lifecycle, payroll, audit or derived fields |
+| Profiler/Berater (assigned) | the case and profiling data their work needs; section C and health data only for assigned participants |
+| PL (project) | operational dates, assignments, status actions, exceptions, case administration; **no ordinary editing** of health data, section C or payroll identifiers |
+| Back office | DSV administration, payroll identifiers, payroll-relevant disability facts, absence types and dates, settlement data |
+| Regional admin / Admin | configuration only, no case data |
+
+- Assisted writes are recorded as actor + `onBehalfOf`.
+- **Signed or submitted documents are immutable**; corrections create a new version or a
+  correction record.
+- Sensitive writes and corrections are audited.
 
 ## Customer reporting *(assumed, Q5, Q13, Q47)*
 
@@ -101,7 +153,7 @@ so a long payroll rule never keeps a whole profile.
 | Data | Retention (from) |
 |---|---|
 | Unmatched / rejected self-registrations | 30 days |
-| Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion 90 days after the signing deadline (the grace period ends with `withdrawn`) |
+| Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion **90 calendar days after `withdrawnOn`** (manual or automatic withdrawal), if there was no fully executed DSV, funded §110 participation, legal hold or other retention duty. *Assumed (Q77): `unset` in executable configuration until the DPO confirms.* |
 | Non-signers with BA-funded §110 measures | full deletion after 90 days, **except the evidence set** |
 | Structured health fields | 3 months after beE exit, or with non-signer deletion |
 | Schwerbehinderung status for payroll | with payroll records, as long as payroll needs it |

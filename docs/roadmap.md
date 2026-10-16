@@ -11,7 +11,7 @@ end, with tests. API routes via `@hono/zod-openapi` under `/api/v1` (ADR-0010). 
 
 ## Slice 1 — Domain core
 `packages/domain`: entities, lifecycle (main status + profiling track + DSV track,
-`canTransition`), TG entry guard and grace-period withdrawal rules, audit event model,
+`canTransition`), TG entry guard and admission-cutoff withdrawal rules, audit event model,
 completeness engine, **field-level access matrix** (role × project × assignment × data class,
 from data-protection.md). `packages/config`: regional template model (JSON Schema) + resolver
 + 2 sample templates. 100 % unit-test coverage on transitions, guards, access rules and
@@ -50,7 +50,7 @@ Gotenberg), overflow attachment, scan upload, Agentur submission status.
 
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of
-"participant signed, not fully executed", grace period and system withdrawal (incl. conflict
+"participant signed, not fully executed", admission cutoff and system withdrawal (incl. conflict
 flags), TG entry guard, two-stage retention job (ADR-0008).
 
 ## Slice 8 — TG module basic (F9)

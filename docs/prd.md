@@ -97,8 +97,8 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - Generate DSV PDF per participant; statuses offered / signed / declined / expired;
   upload scan of signed paper; track customer and TG counter-signatures and the original
   (location, received, sent to customer).
-- Late joiners can be re-offered until the grace period ends (90 days after the signing
-  deadline); then the system moves them to `withdrawn`.
+- Late joiners can be re-offered with an explicit offer deadline until the final admission
+  cutoff (after `latestEntryDate`, Q69/Q77); then the system moves them to `withdrawn`.
 - Acceptance: no e-signature; signed status requires an uploaded scan + who received it; TG
   entry requires the DSV signed by all three parties.
 

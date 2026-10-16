@@ -33,7 +33,11 @@ Do **not** build a generic workflow engine. Only the edges are configurable.
 | Additional required fields/documents per step | rare; e.g. an extra certificate | |
 | Reminder rules, deadlines, help texts | | |
 
-Per **project** (not per Agentur): signing deadline, default TG start/end, project overrides.
+Per **project** (not per Agentur): signing deadline, `latestEntryDate`, default TG start/end, the
+contractual deadline rule (`deadlineRule`, from the Sozialplan/DSV, Q69), project overrides.
+Signing deadline, default TG dates and `latestEntryDate` live on the project's **entry waves**
+(Q79).
+Deadlines are contractual, never regional BA rules.
 
 ## Configuration model
 
@@ -46,7 +50,6 @@ RegionalTemplate (e.g. "Agentur Nürnberg", version 3)
   │    profiling:          requiredFields[] (beyond the TL 407 required fields)
   │    agentur_submission: submissionChannel, originalRequired, leadTimeDays,
   │                        rejectsOutdatedFormVersions
-  │    dsv:                deadlineRule
   │    project_checklist:  (KuG-Agentur only) items, deadlines
   ├─ reminderRules[]
   └─ helpTexts{}  (per language)
@@ -79,6 +82,22 @@ Participation
   validated by the resolved schema.
 - **Completeness rules** use a minimal declarative format (ADR-0004): `required`, `requiredIf` (field
   equals / exists), `documentPresent` (+ accepted). No scripting.
+- **What may be relaxed** (Q75): every base rule is classified `statutory`, `ba_form` or
+  `operational_default`. Statutory and BA-form requirements are **locked**. Regional templates
+  only add requirements or change explicitly regional settings. A project override may relax
+  only an `operational_default`, with reason, approval and audit. An unclassified rule is
+  locked.
+- **Missing template** (Q76): base defaults apply for data collection, but operations don't
+  silently continue. A missing **KuG-Agentur** template blocks project activation. A missing
+  **placement-Agentur** template allows contact, data collection and profiling, but **blocks
+  Agentur submission** until channel, original requirement and lead time are confirmed and
+  recorded; the PL gets a blocking task and a warning. A real Agentur's rules are never guessed.
+- **Base defaults** contain the nationwide rules, the **allowed channel values** and the
+  official form requirements, but **no default** for an Agentur's submission channel, batch
+  channel, `originalRequired`, `leadTimeDays` or `rejectsOutdatedFormVersions` (round 8).
+- **Temporary Agentur settings** (no template yet) are recorded in the project override **scoped
+  to that Agentur**, with source, confirmer and confirmation date, and audited. They are never a
+  project-wide value that silently applies to every placement Agentur.
 - In the MVP, templates are seed files. A new region therefore needs a deploy until an admin UI
   exists.
 
