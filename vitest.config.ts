@@ -10,6 +10,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**", "apps/*/src/**"],
+      exclude: ["**/testing/**"],
+      // Domain rules are 100 % covered (Slice 1 plan, section 6); more paths join with their PRs.
+      thresholds: Object.fromEntries(
+        ["packages/domain/src/lifecycle/**", "packages/domain/src/dates.ts"].map((glob) => [
+          glob,
+          { lines: 100, functions: 100, branches: 100, statements: 100 },
+        ]),
+      ),
     },
   },
 });

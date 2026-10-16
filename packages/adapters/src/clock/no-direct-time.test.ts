@@ -5,15 +5,16 @@ import { describe, expect, it } from "vitest";
 const root = new URL("../../../../", import.meta.url).pathname;
 
 // Plan 5.8: these read the time only through an injected Clock. Directories that don't exist
-// yet (config, jobs) are scanned as soon as they do.
+// yet (config, jobs) are scanned as soon as they do. Tests and `testing/` fixtures may.
 const scanned = ["packages/domain/src", "packages/config/src", "apps/api/src/jobs"];
 const forbidden = /\bDate\.now\s*\(|\bnew\s+Date\s*\(/;
 
 function* sourceFiles(dir: string): Generator<string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory()) yield* sourceFiles(path);
-    else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) yield path;
+    if (entry.isDirectory()) {
+      if (entry.name !== "testing") yield* sourceFiles(path);
+    } else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) yield path;
   }
 }
 

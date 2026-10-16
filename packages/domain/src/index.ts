@@ -11,6 +11,23 @@ export {
 export { CreateProjectInput, Project, ProjectType, projectRuleCodes } from "./project";
 export { DataClass, OrgRole, ProjectRole, StaffRole } from "./enums";
 export * from "./lifecycle/enums";
+export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
+export { guardIds, type DatedFact, type GuardFacts, type GuardId } from "./lifecycle/guards";
+export {
+  canTransition,
+  type AnyStatus,
+  type TransitionCheck,
+  type TransitionContext,
+  type TransitionFailure,
+} from "./lifecycle/transition";
+export {
+  effectiveOfferDeadline,
+  effectiveTgEnd,
+  effectiveTgStart,
+  projectFinalEntryDate,
+  type EntryWave,
+  type ParticipationDates,
+} from "./lifecycle/waves";
 export {
   AccessCategory,
   fieldCatalog,

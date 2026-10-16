@@ -160,11 +160,12 @@ pnpm dev              # db:migrate, then api :3001, web :5173, portal :5174/port
 pnpm build            # both SPAs + the API bundle (apps/api/dist: server.js, migrate.js)
 pnpm start            # the built API serving both SPAs on :3001 (production-like)
 pnpm test             # vitest: unit, component, integration (needs Postgres)
+pnpm test:coverage    # the same with coverage; 100 % thresholds on the domain rules
 pnpm test:e2e         # playwright against the built app (pnpm build first) on transfer_e2e
 pnpm lint             # oxlint (incl. the portal boundary rule) + oxfmt --check + tsconfig guard
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
-pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test, api drift
+pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, api drift
 pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
 pnpm db:generate      # drizzle-kit: SQL migration from the schema
 pnpm db:migrate

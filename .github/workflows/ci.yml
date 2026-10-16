@@ -87,7 +87,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:setup
-      - run: pnpm test
+      # The Node 24 leg also enforces the 100 % coverage thresholds (Slice 1 plan, section 6).
+      - run: pnpm ${{ matrix.node == 24 && 'test:coverage' || 'test' }}
 
   e2e:
     runs-on: ubuntu-24.04

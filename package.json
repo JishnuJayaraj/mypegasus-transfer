@@ -8,6 +8,7 @@
     "lint": "oxlint --deny-warnings --ignore-pattern 'apps/portal/lint-fixtures/**' && oxfmt --check && node scripts/check-tsconfig.mjs",
     "format": "oxfmt",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "db:setup": "pnpm --filter @transfer/db run setup",
     "db:generate": "pnpm --filter @transfer/db run generate",
     "db:migrate": "pnpm --filter @transfer/db run migrate",
@@ -17,7 +18,7 @@
     "build": "pnpm -r run build",
     "start": "pnpm --filter @transfer/api start",
     "api:generate": "pnpm --filter @transfer/api-client run generate",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test && pnpm api:generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm api:generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts",
     "test:e2e": "pnpm --filter @transfer/web test:e2e"
   },
   "devDependencies": {
