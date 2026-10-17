@@ -63,9 +63,29 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Die TG-Dauer darf zwölf Monate nicht überschreiten.")).toBeVisible();
   await expectAccessible(page);
+
+  // Slice 2 (PR 2c-2, plan 5.8): without a Project Agentur the project is blocked; the PL pins the
+  // sample Agentur's latest version from the catalog and the blocker clears.
+  await expect(
+    page.getByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
+  ).toBeVisible();
+  await expect(page.getByLabel("Version")).toHaveValue("2");
+  await page.getByRole("button", { name: "Als Projekt-Agentur festlegen" }).click();
+  await expect(page.getByText("Vorlage gepinnt")).toBeVisible();
+  await expect(
+    page.getByText(
+      "Projekt-Agentur: Agentur für Arbeit Beispielstadt Nord (Beispiel), Vorlage Version 2",
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Keine Blocker.")).toBeVisible();
+  await expectAccessible(page);
   await page.goto("/projects");
   await chooseDevUser(page, "Erika Musterfrau · Admin");
   await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.admin);
   // Slice 2 (Q106): the admin, a global org role, sees every project's metadata.
   await expect(page.getByRole("row")).toHaveCount(5);
+  // Round 26: the admin reads the project's setup but gets no pin form (only its PL pins).
+  await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await expect(page.getByText("Keine Blocker.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Als weitere Agentur pinnen" })).toHaveCount(0);
 });
