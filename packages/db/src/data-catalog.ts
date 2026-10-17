@@ -87,6 +87,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // Relaxation requests: rule id, reason code, status, staff ids and dates; project-wide, no
+  // participant data (5.2, AC-39).
+  config_relaxation_request: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */

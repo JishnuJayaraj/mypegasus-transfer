@@ -161,12 +161,16 @@ const operations: Record<OperationKind, string> = {
   editEntryWaves: "PL",
   pinTemplate: "PL",
   changeOverride: "PL",
+  requestRelaxation: "PL",
+  decideRelaxation: "ROM",
+  withdrawRelaxation: "PL",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {
   switch (kind) {
     case "decideProfilingException":
     case "approveEvidenceCorrection":
+    case "decideRelaxation":
       return { kind, requestedBy: other };
     case "reviewReconciliation":
     case "reviewBreakGlass":
@@ -209,6 +213,7 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
       "reviewReconciliation",
       "reviewBreakGlass",
       "approveEvidenceCorrection",
+      "decideRelaxation", // AC-15: never the requester (R2)
     ] as const) {
       expect([kind, result(mayPerformOperation(rom, operation(kind, "staff-r"), target))]).toEqual([
         kind,
@@ -220,6 +225,7 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
     expect(result(mayPerformOperation(rom, operation("requestProfilingException"), target))).toBe(
       "ok",
     );
+    expect(result(mayPerformOperation(rom, operation("requestRelaxation"), target))).toBe("ok");
   });
 
   it("keeps the regional operations manager to its region", () => {

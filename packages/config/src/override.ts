@@ -1,25 +1,26 @@
-import type { ProjectType } from "@transfer/domain";
-import { z } from "zod";
+import {
+  isLocked,
+  RelaxationReasonCode,
+  ruleAppliesTo,
+  type CompletenessRule,
+  type ProjectType,
+  type Step,
+} from "@transfer/domain";
 import type {
   BaseDefaults,
   ProjectOverride,
   RegionalTemplate,
+  RuleRelaxation,
   TemporaryAgenturSetting,
 } from "./model";
 import { resolveForParticipation, resolveForProject } from "./resolve";
 import { ConfigError, parseLayer, type ConfigIssue } from "./validate";
 
 /**
- * The controlled reason codes of a rule relaxation (round 14; Q100, confirmed in round 22):
- * project-wide, so none reveals anything about a person.
+ * The controlled reason codes of a rule relaxation (round 14; Q100, confirmed in round 22),
+ * declared once in the domain, whose audit model and database enum need them too (2d-2).
  */
-export const RelaxationReasonCode = z.enum([
-  "source_data_not_provided",
-  "not_needed_for_project_measures",
-  "collected_outside_platform",
-  "agentur_confirmed_not_required",
-]);
-export type RelaxationReasonCode = z.infer<typeof RelaxationReasonCode>;
+export { RelaxationReasonCode };
 
 export type OverrideValidation =
   | { ok: true; override: ProjectOverride }
@@ -89,4 +90,50 @@ export function withAgenturSetting(
   if (setting) next[agenturKey] = setting;
   else delete next[agenturKey];
   return Object.keys(next).length ? { ...rest, agenturSettings: next } : rest;
+}
+
+/** The override without `ruleId`'s relaxation (`null`), or with `relaxation` appended (5.9). */
+export function withRelaxation(
+  current: ProjectOverride | undefined,
+  change: { ruleId: string; relaxation: RuleRelaxation | null },
+): ProjectOverride {
+  const { relax = [], ...rest } = current ?? { schemaVersion: 1, kind: "project_override" };
+  const next = relax.filter(({ ruleId }) => ruleId !== change.ruleId);
+  if (change.relaxation) next.push(change.relaxation);
+  return next.length ? { ...rest, relax: next } : rest;
+}
+
+/**
+ * The rules a relaxation may be requested for (5.9): rules of the templates and base defaults
+ * that are `operational_default` and apply to the project type in some chain (the base-only chain
+ * and every pinned one) and locked in none, not relaxed yet; in rule-id order. The request is
+ * still checked by `validateProjectOverride`.
+ */
+export function relaxableRules(input: {
+  base: BaseDefaults;
+  templatesByAgentur: Readonly<Record<string, RegionalTemplate>>;
+  override: ProjectOverride | undefined;
+  projectType: ProjectType;
+}): { ruleId: string; step: Step }[] {
+  const open = new Map<string, Step>();
+  const locked = new Set<string>();
+  for (const agenturKey of [null, ...Object.keys(input.templatesByAgentur)]) {
+    const { config, provenance } = resolveForParticipation({
+      ...input,
+      projectAgenturKey: agenturKey,
+      placementAgenturKey: agenturKey,
+    });
+    for (const [step, rules] of Object.entries(config.rules) as [Step, CompletenessRule[]][]) {
+      for (const rule of rules) {
+        // The override's own rules are never relaxed by it (round 15).
+        if (provenance[`rules.${step}.${rule.id}`]?.layer === "override") continue;
+        if (isLocked(rule)) locked.add(rule.id);
+        else if (ruleAppliesTo(rule, input.projectType)) open.set(rule.id, step);
+      }
+    }
+  }
+  return [...open]
+    .filter(([ruleId]) => !locked.has(ruleId))
+    .map(([ruleId, step]) => ({ ruleId, step }))
+    .toSorted((a, b) => (a.ruleId < b.ruleId ? -1 : 1));
 }

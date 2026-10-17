@@ -62,12 +62,14 @@ describe("data catalog", () => {
       config_template_version: entry("reference_data", "internal"),
       project_template_pin: entry("project_master", "internal"),
       project_config_override: entry("project_master", "internal"),
+      config_relaxation_request: entry("project_master", "internal"),
     });
   });
 
   it("scopes the pins and overrides by a project_id FK; only the global template versions have none (R27, AC-39)", () => {
     expect(checkDataCatalog(tables, asParticipantData("project_template_pin"))).toEqual([]);
     expect(checkDataCatalog(tables, asParticipantData("project_config_override"))).toEqual([]);
+    expect(checkDataCatalog(tables, asParticipantData("config_relaxation_request"))).toEqual([]);
     expect(checkDataCatalog(tables, asParticipantData("config_template_version"))).toHaveLength(1);
   });
 

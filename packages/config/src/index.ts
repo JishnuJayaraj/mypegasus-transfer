@@ -22,8 +22,10 @@ export {
 } from "./model";
 export {
   RelaxationReasonCode,
+  relaxableRules,
   validateProjectOverride,
   withAgenturSetting,
+  withRelaxation,
   type OverrideValidation,
 } from "./override";
 export {

@@ -9,6 +9,7 @@ import {
   AgenturSettingSource,
   OverrideChange,
 } from "../projects/agentur-settings";
+import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
 import { waveDateFields } from "../projects/waves";
 import {
   DsvStatus,
@@ -54,6 +55,10 @@ export const AuditEventType = z.enum([
   "entry_wave_created",
   "entry_wave_changed",
   "config_template_pinned",
+  "rule_relaxation_requested",
+  "rule_relaxation_approved",
+  "rule_relaxation_rejected",
+  "rule_relaxation_withdrawn",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -70,6 +75,10 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
   "entry_wave_changed",
   "config_template_pinned",
   "config_override_changed",
+  "rule_relaxation_requested",
+  "rule_relaxation_approved",
+  "rule_relaxation_rejected",
+  "rule_relaxation_withdrawn",
 ]);
 
 /**
@@ -81,6 +90,8 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
 export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new Set([
   "config_override_changed",
   "config_template_pinned",
+  "rule_relaxation_requested",
+  "rule_relaxation_approved",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -235,25 +246,36 @@ const entryWaveChanged = event("entry_wave_changed", {
   if (!same || withValues.length !== changedDates.length) issue(ctx, "dates_mismatch");
 });
 /**
- * A new override version (5.9): its number, what changed, the Agentur key, the setting keys
- * (`step.key`) and, when set, the source; never a value or free text (round 8). R26: the
- * base-defaults version it was validated with.
+ * A new override version (5.9): its number, what changed, and either the Agentur key, the setting
+ * keys (`step.key`) and, when set, the source, or the relaxed rule's id; never a value or free
+ * text (round 8). R26: the base-defaults version it was validated with.
  */
 const configOverrideChanged = event("config_override_changed", {
   ...ofProject,
   details: z.strictObject({
     version: z.int().min(1),
     change: OverrideChange,
-    agenturKey,
-    settingKeys: z.array(z.string().regex(/^[a-z_]+\.[A-Za-z]+$/)).min(1),
+    agenturKey: agenturKey.optional(),
+    settingKeys: z
+      .array(z.string().regex(/^[a-z_]+\.[A-Za-z]+$/))
+      .min(1)
+      .optional(),
     source: AgenturSettingSource.optional(),
+    ruleId: RuleId.optional(),
     baseDefaultsVersion,
   }),
 }).superRefine(({ details }, ctx) => {
+  const setting = details.change.startsWith("agentur_setting_");
+  const named = [details.agenturKey, details.settingKeys].map((value) => value !== undefined);
+  if (named.some((present) => present !== setting) || setting === (details.ruleId !== undefined)) {
+    issue(ctx, "change_mismatch");
+  }
   if ((details.change === "agentur_setting_set") !== (details.source !== undefined)) {
     issue(ctx, "source_mismatch");
   }
 });
+/** Every relaxation event names its request and the rule (5.9); the reason code is its column. */
+const ofRelaxation = { relaxationRequestId: z.uuid(), ruleId: RuleId };
 /** Every profiling-exception event identifies its request record (Q94). */
 const ofRequest = { profilingExceptionRequestId: z.uuid() };
 const reviewOf = z.strictObject({ reviewedEventId: z.uuid() });
@@ -349,5 +371,18 @@ export const AuditEvent = z.discriminatedUnion("type", [
       baseDefaultsVersion,
     }),
   }),
+  /** Requested against the snapshot of this release (R26); approved as override `version`. */
+  event("rule_relaxation_requested", {
+    ...ofProject,
+    reasonCode: RelaxationReasonCode,
+    details: z.strictObject({ ...ofRelaxation, baseDefaultsVersion }),
+  }),
+  event("rule_relaxation_approved", {
+    ...ofProject,
+    reasonCode: RelaxationReasonCode,
+    details: z.strictObject({ ...ofRelaxation, version: z.int().min(1), baseDefaultsVersion }),
+  }),
+  event("rule_relaxation_rejected", { ...ofProject, details: z.strictObject(ofRelaxation) }),
+  event("rule_relaxation_withdrawn", { ...ofProject, details: z.strictObject(ofRelaxation) }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

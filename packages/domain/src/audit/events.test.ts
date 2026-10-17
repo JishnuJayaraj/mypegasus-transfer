@@ -63,6 +63,10 @@ describe("audit event types (plan 5.4)", () => {
       "entry_wave_created",
       "entry_wave_changed",
       "config_template_pinned",
+      "rule_relaxation_requested",
+      "rule_relaxation_approved",
+      "rule_relaxation_rejected",
+      "rule_relaxation_withdrawn",
     ]);
   });
 
@@ -78,6 +82,10 @@ describe("audit event types (plan 5.4)", () => {
       "entry_wave_changed",
       "config_template_pinned",
       "config_override_changed",
+      "rule_relaxation_requested",
+      "rule_relaxation_approved",
+      "rule_relaxation_rejected",
+      "rule_relaxation_withdrawn",
     ]);
     expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
   });
@@ -351,6 +359,69 @@ describe("the other event types", () => {
         },
       },
     ],
+    [
+      "config_override_changed",
+      {
+        participationId: null,
+        details: {
+          version: 3,
+          change: "relaxation_added",
+          ruleId: "base-import-birthDate",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "config_override_changed",
+      {
+        participationId: null,
+        details: {
+          version: 4,
+          change: "relaxation_removed",
+          ruleId: "base-import-birthDate",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "rule_relaxation_requested",
+      {
+        participationId: null,
+        reasonCode: "source_data_not_provided",
+        details: {
+          relaxationRequestId: otherId,
+          ruleId: "base-import-birthDate",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "rule_relaxation_approved",
+      {
+        participationId: null,
+        reasonCode: "collected_outside_platform",
+        details: {
+          relaxationRequestId: otherId,
+          ruleId: "beispielstadt-sued-private-email",
+          version: 2,
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "rule_relaxation_rejected",
+      {
+        participationId: null,
+        details: { relaxationRequestId: otherId, ruleId: "base-import-address" },
+      },
+    ],
+    [
+      "rule_relaxation_withdrawn",
+      {
+        participationId: null,
+        details: { relaxationRequestId: otherId, ruleId: "base-import-address" },
+      },
+    ],
     ["review_recorded", { reasonCode: "no_concern", details: { reviewedEventId: otherId } }],
     ["clarification_requested", { details: { reviewedEventId: otherId } }],
     ["project_created", { participationId: null, details: { type: "ta_tg" } }],
@@ -517,6 +588,90 @@ describe("the other event types", () => {
           },
         ] as [string, object],
     ),
+    // A relaxation change names the rule and nothing of a setting; a setting change no rule.
+    ...(
+      [
+        { ruleId: undefined },
+        { agenturKey: "beispielstadt-ost" },
+        { settingKeys: ["agentur_submission.leadTimeDays"] },
+        { source: "email_agentur" },
+        { ruleId: "Regel für Frau M." },
+        { baseDefaultsVersion: undefined },
+      ] as object[]
+    ).map(
+      (change) =>
+        [
+          "config_override_changed",
+          {
+            participationId: null,
+            details: {
+              version: 2,
+              change: "relaxation_added",
+              ruleId: "base-import-address",
+              baseDefaultsVersion: 1,
+              ...change,
+            },
+          },
+        ] as [string, object],
+    ),
+    [
+      "config_override_changed",
+      {
+        participationId: null,
+        details: {
+          version: 1,
+          change: "agentur_setting_removed",
+          agenturKey: "beispielstadt-ost",
+          settingKeys: ["agentur_submission.leadTimeDays"],
+          ruleId: "base-import-address",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    // Relaxation events: a controlled reason code where there is one, ids only, R26's version.
+    [
+      "rule_relaxation_requested",
+      {
+        participationId: null,
+        reasonCode: "too_much_work",
+        details: {
+          relaxationRequestId: otherId,
+          ruleId: "base-import-address",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "rule_relaxation_requested",
+      {
+        participationId: null,
+        reasonCode: "source_data_not_provided",
+        details: { relaxationRequestId: otherId, ruleId: "base-import-address" },
+      },
+    ],
+    [
+      "rule_relaxation_approved",
+      {
+        participationId: null,
+        reasonCode: "source_data_not_provided",
+        details: {
+          relaxationRequestId: otherId,
+          ruleId: "base-import-address",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "rule_relaxation_rejected",
+      {
+        participationId: null,
+        details: { relaxationRequestId: otherId, ruleId: "base-import-address", comment: "nein" },
+      },
+    ],
+    [
+      "rule_relaxation_withdrawn",
+      { details: { relaxationRequestId: otherId, ruleId: "base-import-address" } },
+    ],
     // Free text (the wave name) never enters the trail; dates only with their changed key.
     ["entry_wave_created", { participationId: null, details: { waveId: otherId, name: "W" } }],
     ["entry_wave_created", { details: { waveId: otherId } }],

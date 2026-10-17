@@ -100,6 +100,10 @@ const statusFunctions = [
   "pin_agentur_template",
   // Slice 2 (PR 2d-1): override versions
   "write_project_override",
+  // Slice 2 (PR 2d-2): rule relaxations
+  "request_rule_relaxation",
+  "decide_rule_relaxation",
+  "withdraw_rule_relaxation",
 ];
 const helpers = [
   "assert_context",
@@ -112,6 +116,11 @@ const helpers = [
   "entry_wave_text_valid",
   "refuse_config_change",
   "override_without_agentur",
+  "override_without_relaxation",
+  "override_relaxations_of",
+  "append_project_override",
+  "lock_relaxation_request",
+  "config_relaxation_request_progresses",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -296,6 +305,28 @@ describe("transfer_app and the override table", () => {
       await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
     },
   );
+});
+
+// Plan 5.2, 5.3 (PR 2d-2, AC-40): relaxation requests are read by the app and written only by
+// their functions.
+describe("transfer_app and the relaxation requests", () => {
+  const insert = `insert into config_relaxation_request (project_id, rule_id, reason_code, status, requested_by, requested_on)
+    values ('${seedProjectIds.werkNord}', 'base-import-address', 'source_data_not_provided', 'requested', '${staffUserId}', '2026-10-17')`;
+  beforeEach(() => owner.query(insert));
+
+  it("may select them", async () => {
+    expect((await app.query("select rule_id, status from config_relaxation_request")).rows).toEqual(
+      [{ rule_id: "base-import-address", status: "requested" }],
+    );
+  });
+
+  it.each([
+    ...writes("config_relaxation_request", "status", insert.replace("address", "birthDate")),
+    ["call an internal helper", "select override_without_relaxation('{}', 'x')"],
+    ["lock a request", `select lock_relaxation_request(gen_random_uuid(), null)`],
+  ])("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
 });
 
 /** A past run day: completion is database time, never before the scheduled run (round 19). */

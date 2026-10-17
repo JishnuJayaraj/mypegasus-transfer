@@ -49,6 +49,9 @@ export const OperationKind = z.enum([
   "editEntryWaves",
   "pinTemplate",
   "changeOverride",
+  "requestRelaxation",
+  "decideRelaxation",
+  "withdrawRelaxation",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -59,12 +62,16 @@ export type Operation =
         OperationKind,
         | "decideProfilingException"
         | "approveEvidenceCorrection"
+        | "decideRelaxation"
         | "reviewReconciliation"
         | "reviewBreakGlass"
         | "requestEvidenceCorrection"
       >;
     }
-  | { kind: "decideProfilingException" | "approveEvidenceCorrection"; requestedBy: string }
+  | {
+      kind: "decideProfilingException" | "approveEvidenceCorrection" | "decideRelaxation";
+      requestedBy: string;
+    }
   | { kind: "reviewReconciliation" | "reviewBreakGlass"; actorStaffUserId: string }
   | { kind: "requestEvidenceCorrection"; target: EvidenceCorrectionTarget };
 
@@ -103,6 +110,10 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   editEntryWaves: ["project_lead"],
   pinTemplate: ["project_lead"],
   changeOverride: ["project_lead"],
+  // Rule relaxations (Slice 2 plan 5.9, R2): the PL asks or withdraws, another person decides.
+  requestRelaxation: ["project_lead"],
+  decideRelaxation: ["regional_operations_manager"],
+  withdrawRelaxation: ["project_lead"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

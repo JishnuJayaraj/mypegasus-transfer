@@ -1,4 +1,10 @@
-import { isLocked, type CompletenessRule, type ProjectType, type Step } from "@transfer/domain";
+import {
+  isLocked,
+  ruleAppliesTo,
+  type CompletenessRule,
+  type ProjectType,
+  type Step,
+} from "@transfer/domain";
 import type { FieldSchema } from "./field-schema";
 import type {
   BaseDefaults,
@@ -215,7 +221,11 @@ function resolveLevel(
       seen.add(key);
       if (!found) return; // another Agentur's rule: it is relaxed where it is resolved
       if (isLocked(found.rule)) issues.push({ code: "relaxation_locked", path, key });
-      if (issues.length || !inLevel(found.step)) return;
+      // A rule for another project type is never relaxed (round 28): nothing applies to relax
+      // (Q89), so `validateProjectOverride` finds the relaxation unmatched.
+      if (issues.length || !inLevel(found.step) || !ruleAppliesTo(found.rule, input.projectType)) {
+        return;
+      }
       config.rules[found.step] = config.rules[found.step]!.filter((rule) => rule !== found.rule);
       config.relaxed.push({ ...relaxation, step: found.step });
       delete provenance[`rules.${found.step}.${key}`];

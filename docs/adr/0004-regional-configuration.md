@@ -177,3 +177,18 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
 - **Override versions** are stored per project (ADR-0002 amendment of the same date) and are part
   of the project snapshot: the configuration a project resolves is its pinned template contents
   plus its current override version (R11).
+
+## Amendment 2026-10-17: rule relaxations with approval (Slice 2, PR 2d-2)
+
+- **The reason codes in the domain:** `RelaxationReasonCode` (Q100) moved with the relaxation
+  vocabulary (request status, `RuleId`) to `packages/domain/src/projects/relaxations.ts`, because
+  the audit model and the database enum need it and the domain can't import `@transfer/config`;
+  `packages/config/src/override.ts` re-exports it, as `model.ts` does the Agentur vocabulary.
+  There is one list.
+- **A relaxation enters the override only through an approval** by another person (round 8,
+  R2): the approved entry `{ ruleId, reasonCode, approvedBy, approvedOn }` is a new override
+  version, validated by `validateProjectOverride` like every other write. The resolver never
+  relaxes a rule for another project type (Q89), so such a relaxation is `relaxation_unmatched`
+  (round 28). `withRelaxation` adds or
+  removes one; `relaxableRules` lists the rules a request may name (`operational_default` and
+  applicable in some chain, locked in none, not relaxed yet, never the override's own rules).
