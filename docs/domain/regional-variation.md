@@ -205,8 +205,9 @@ Participation
   `not_needed_for_project_measures`, `collected_outside_platform`,
   `agentur_confirmed_not_required`; Q100), never free text
   (`POST /api/v1/projects/{id}/config/relaxations`). The request is checked against the current
-  snapshot: the rule must exist in some chain and be `operational_default`
-  (`relaxation_unmatched`, `relaxation_locked`); one open request per rule. It **takes effect
+  snapshot: the rule must exist in some chain, apply there to the project's type and be
+  `operational_default` (`relaxation_unmatched`, `relaxation_locked`; round 28); one open request
+  per rule. It **takes effect
   only once another person approves it**: the regional operations manager, never the requester
   (four eyes in the access check and in SQL). The approval writes, in the same transaction, a new
   override version that adds `{ ruleId, reasonCode, approvedBy, approvedOn }` and is validated

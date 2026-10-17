@@ -10,8 +10,10 @@ import {
   sql,
 } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
+import { canonicalHash, loadTemplate } from "@transfer/config/load";
 import { ProjectConfig } from "@transfer/domain";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { auditContext } from "./sql";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
 // Slice 2 plan 5.3, 5.4, 5.9 and 5.12 (PR 2d-2): rule relaxations with approval (Q75, round 8,
@@ -19,7 +21,7 @@ import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing"
 const { app, db } = testApp({ clock: new ManualClock(new Date("2026-10-17T10:00:00Z")) });
 const owner = createDb(testDatabaseUrls().owner);
 const auth: Record<string, { Cookie: string }> = {};
-const { werkNord, lagerSued } = seedProjectIds;
+const { werkNord, lagerSued, verwaltung } = seedProjectIds;
 const rom = seedStaffUserIds.regionalOperationsManager;
 const ruleId = "base-import-birthDate";
 
@@ -189,6 +191,8 @@ describe("a relaxation takes effect only after another person's approval (AC-15)
       "forbidden",
     );
     await expectProblem(await remove(ruleId, "expectedVersion=0"), 409, "conflict");
+    // A stale version is a 409 before the current one is checked for the relaxation (round 28).
+    await expectProblem(await remove("base-import-address", "expectedVersion=0"), 409, "conflict");
     await expectProblem(await remove("base-import-address", "expectedVersion=1"), 404, "not-found");
     const res = await remove(ruleId, "expectedVersion=1");
     expect(res.status).toBe(200);
@@ -238,6 +242,38 @@ describe("POST …/config/relaxations", () => {
       200,
     );
   });
+
+  // Round 28: a direct request is held to the picker's eligibility. Süd's operational rule,
+  // restricted to one project type in a synthetic version pinned as the owner (no sample
+  // template restricts an operational rule).
+  it.each([
+    ["ta_only", "ta_tg", werkNord, 91],
+    ["ta_tg", "ta_only", verwaltung, 92],
+  ] as const)(
+    "refuses a %s-only rule in a %s project (relaxation_unmatched)",
+    async (ruleType, _projectType, projectId, version) => {
+      const template = structuredClone(loadTemplate("beispielstadt-sued", 1)) as {
+        version: number;
+        rules: { data_collection: { projectTypes?: string[] }[] };
+      };
+      template.version = version;
+      template.rules.data_collection[0]!.projectTypes = [ruleType];
+      await owner.execute(sql`select pin_agentur_template(p_project_id => ${projectId}::uuid,
+        p_agentur_key => 'beispielstadt-sued', p_version => ${version}::integer,
+        p_content => ${JSON.stringify(template)}::jsonb, p_sha256 => ${canonicalHash(template)},
+        p_base_defaults_version => 1,
+        p_context => ${auditContext(seedStaffUserIds.projectLead, null)})`);
+      const sued = "beispielstadt-sued-private-email";
+      expect((await get(projectId)).relaxableRules.map((r) => r.ruleId)).not.toContain(sued);
+      const res = await ask(
+        { ruleId: sued, reasonCode: "source_data_not_provided" },
+        "projectLead",
+        projectId,
+      );
+      expect(await codes(res)).toEqual(["override_invalid", "relaxation_unmatched"]);
+      expect(await owner.$count(configRelaxationRequest)).toBe(0);
+    },
+  );
 
   it("takes strict input with a controlled reason code (400)", async () => {
     const res = await ask({ ruleId, reasonCode: "too_much_work" });
@@ -293,6 +329,12 @@ describe("POST /config/relaxations/{requestId}/decision and …/withdrawal", () 
         requestedOn: "2026-10-17",
       })
       .returning({ id: configRelaxationRequest.id });
+    // Round 28's order: a stale version is a 409 before the snapshot is validated.
+    await expectProblem(
+      await decide(id!, { decision: "approved", expectedVersion: 1 }),
+      409,
+      "conflict",
+    );
     expect(await codes(await decide(id!, { decision: "approved", expectedVersion: 0 }))).toEqual([
       "override_invalid",
       "relaxation_unmatched",

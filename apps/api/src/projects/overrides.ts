@@ -119,10 +119,14 @@ async function nextOverride(
 }
 
 /** The relaxation an approval by the writer on `today` adds (5.9 step 3). */
-const approvedBy = (w: Writer, input: { ruleId: string; reasonCode: string }, today: string) => ({
+const approvedBy = (
+  writer: Writer,
+  input: { ruleId: string; reasonCode: string },
+  today: string,
+) => ({
   ruleId: input.ruleId,
   reasonCode: input.reasonCode,
-  approvedBy: w.actor.staffUserId,
+  approvedBy: writer.actor.staffUserId,
   approvedOn: today,
 });
 
@@ -132,18 +136,18 @@ const approvedBy = (w: Writer, input: { ruleId: string; reasonCode: string }, to
  * (`null`: nothing to remove, a 404), validates it, then `write_project_override`.
  */
 function writeOverride(
-  w: Writer,
+  writer: Writer,
   projectId: string,
   expectedVersion: number,
   change: { kind: OverrideChange; agenturKey?: string; ruleId?: string },
   build: (current: ProjectOverride | undefined) => ProjectOverride | null,
 ): Promise<OverrideOutcome> {
-  return underLock<"not-found" | "conflict">(w.db, projectId, overrideRefusals, async (tx) => {
+  return underLock<"not-found" | "conflict">(writer.db, projectId, overrideRefusals, async (tx) => {
     const current = await currentOverride(tx, projectId);
     if (current.version !== expectedVersion) return { problem: "conflict" };
     const content = build(current.content);
     if (!content) return { problem: "not-found" };
-    const next = await nextOverride(tx, w.release, projectId, content);
+    const next = await nextOverride(tx, writer.release, projectId, content);
     if ("issues" in next) return next;
     await callFunction(
       tx,
@@ -151,8 +155,8 @@ function writeOverride(
         p_expected_version => ${expectedVersion}::integer, p_content => ${next.content}::jsonb,
         p_change => ${change.kind}, p_agentur_key => ${change.agenturKey ?? null},
         p_rule_id => ${change.ruleId ?? null},
-        p_base_defaults_version => ${w.release.baseDefaults.version}::integer,
-        p_context => ${contextOf(w)})`,
+        p_base_defaults_version => ${writer.release.baseDefaults.version}::integer,
+        p_context => ${contextOf(writer)})`,
     );
     return { ok: true };
   });
@@ -164,28 +168,33 @@ function writeOverride(
  * (R14) are the route's, with the injected `Clock`.
  */
 export function changeAgenturSetting(
-  w: Writer,
+  writer: Writer,
   projectId: string,
   agenturKey: string,
   change: { expectedVersion: number; setting: TemporaryAgenturSetting | null },
 ): Promise<OverrideOutcome> {
   const kind = change.setting ? "agentur_setting_set" : "agentur_setting_removed";
-  return writeOverride(w, projectId, change.expectedVersion, { kind, agenturKey }, (current) =>
-    change.setting || Object.hasOwn(current?.agenturSettings ?? {}, agenturKey)
-      ? withAgenturSetting(current, agenturKey, change.setting)
-      : null,
+  return writeOverride(
+    writer,
+    projectId,
+    change.expectedVersion,
+    { kind, agenturKey },
+    (current) =>
+      change.setting || Object.hasOwn(current?.agenturSettings ?? {}, agenturKey)
+        ? withAgenturSetting(current, agenturKey, change.setting)
+        : null,
   );
 }
 
 /** Removes an approved relaxation (5.9 step 4: tightening, no approval); none is a 404. */
 export function removeRelaxation(
-  w: Writer,
+  writer: Writer,
   projectId: string,
   ruleId: string,
   expectedVersion: number,
 ): Promise<OverrideOutcome> {
   const change = { kind: "relaxation_removed", ruleId } as const;
-  return writeOverride(w, projectId, expectedVersion, change, (current) =>
+  return writeOverride(writer, projectId, expectedVersion, change, (current) =>
     current?.relax?.some((relaxation) => relaxation.ruleId === ruleId)
       ? withRelaxation(current, { ruleId, relaxation: null })
       : null,
@@ -214,21 +223,21 @@ export async function relaxationRequestOf(db: Pick<Database, "select">, requestI
  * `request_rule_relaxation` (one open request per rule; not relaxed already).
  */
 export function requestRelaxation(
-  w: Writer,
+  writer: Writer,
   projectId: string,
   input: RequestRelaxationInput,
   today: string,
 ): Promise<OverrideOutcome<"not-found">> {
-  return underLock(w.db, projectId, requestRefusals, async (tx) => {
+  return underLock(writer.db, projectId, requestRefusals, async (tx) => {
     const { content } = await currentOverride(tx, projectId);
     const { ruleId, reasonCode } = input;
     if (content?.relax?.some((relaxation) => relaxation.ruleId === ruleId)) {
       return issue("relaxation_exists");
     }
-    const relaxation = approvedBy(w, input, today);
+    const relaxation = approvedBy(writer, input, today);
     const next = await nextOverride(
       tx,
-      w.release,
+      writer.release,
       projectId,
       withRelaxation(content, { ruleId, relaxation }),
     );
@@ -237,8 +246,8 @@ export function requestRelaxation(
       tx,
       sql`request_rule_relaxation(p_project_id => ${projectId}::uuid, p_rule_id => ${ruleId},
         p_reason_code => ${reasonCode}::relaxation_reason_code, p_requested_on => ${today}::date,
-        p_base_defaults_version => ${w.release.baseDefaults.version}::integer,
-        p_context => ${contextOf(w)})`,
+        p_base_defaults_version => ${writer.release.baseDefaults.version}::integer,
+        p_context => ${contextOf(writer)})`,
     );
     return { ok: true };
   });
@@ -251,15 +260,15 @@ export function requestRelaxation(
  * `decide_rule_relaxation` writes the decision and that version in one transaction.
  */
 export function decideRelaxation(
-  w: Writer,
+  writer: Writer,
   requestId: string,
   input: DecideRelaxationInput,
   today: string,
 ): Promise<OverrideOutcome<"not-found" | "conflict" | "forbidden">> {
   const decision = sql`p_request_id => ${requestId}::uuid, p_decided_on => ${today}::date,
-    p_context => ${contextOf(w)}`;
+    p_context => ${contextOf(writer)}`;
   return underLock<"not-found" | "conflict" | "forbidden">(
-    w.db,
+    writer.db,
     { requestId },
     decisionRefusals,
     async (tx, projectId) => {
@@ -271,16 +280,16 @@ export function decideRelaxation(
       if (request.status !== "requested") return issue("relaxation_not_open");
       const current = await currentOverride(tx, projectId);
       if (current.version !== input.expectedVersion) return { problem: "conflict" };
-      const relaxation = approvedBy(w, request, today);
+      const relaxation = approvedBy(writer, request, today);
       const content = withRelaxation(current.content, { ruleId: request.ruleId, relaxation });
-      const next = await nextOverride(tx, w.release, projectId, content);
+      const next = await nextOverride(tx, writer.release, projectId, content);
       if ("issues" in next) return next;
       await callFunction(
         tx,
         sql`decide_rule_relaxation(${decision}, p_approve => true,
           p_expected_version => ${input.expectedVersion}::integer,
           p_content => ${next.content}::jsonb,
-          p_base_defaults_version => ${w.release.baseDefaults.version}::integer)`,
+          p_base_defaults_version => ${writer.release.baseDefaults.version}::integer)`,
       );
       return { ok: true };
     },
@@ -289,13 +298,13 @@ export function decideRelaxation(
 
 /** The PL withdraws a pending request (5.9 step 4); nothing in the configuration changes. */
 export function withdrawRelaxation(
-  w: Writer,
+  writer: Writer,
   requestId: string,
 ): Promise<OverrideOutcome<"not-found">> {
-  return underLock(w.db, { requestId }, withdrawalRefusals, async (tx) => {
+  return underLock(writer.db, { requestId }, withdrawalRefusals, async (tx) => {
     await callFunction(
       tx,
-      sql`withdraw_rule_relaxation(p_request_id => ${requestId}::uuid, p_context => ${contextOf(w)})`,
+      sql`withdraw_rule_relaxation(p_request_id => ${requestId}::uuid, p_context => ${contextOf(writer)})`,
     );
     return { ok: true };
   });
