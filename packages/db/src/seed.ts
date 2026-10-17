@@ -100,10 +100,22 @@ export const seedWaves = [
   },
 ] as const satisfies (typeof projectEntryWave.$inferInsert)[];
 
+const seedWaveDates = [
+  "signingDeadline",
+  "defaultTgStart",
+  "defaultTgEnd",
+  "latestEntryDate",
+] as const satisfies (keyof (typeof seedWaves)[number])[];
+
+/** The seeded PL acting, without a request (the audit context of the setup functions). */
+const asProjectLead = sql`row('user'::actor_type, ${seedStaffUserIds.projectLead}::uuid, null::uuid,
+  null::text, null::uuid, null::text, null::text)::audit_context`;
+
 /**
- * Inserts the synthetic staff users, projects, memberships and waves; existing rows are
- * left alone. A wave with the same code (e.g. the W1 the Slice 1 migration made from the Slice 0
- * dates) gets the seed's dates, so the participation seed finds a usable cutoff.
+ * Inserts the synthetic staff users, projects, memberships and waves; existing rows are left
+ * alone. Projects and waves go through their audited functions (round 23). A wave with the same
+ * code (e.g. the W1 the Slice 1 migration made from the Slice 0 dates) gets the seed's dates, so
+ * the participation seed finds a usable cutoff.
  */
 export async function seed(db: Database): Promise<void> {
   await db.transaction(async (tx) => {
@@ -113,21 +125,24 @@ export async function seed(db: Database): Promise<void> {
     for (const p of projects.filter(({ id }) => !existing.has(id))) {
       await tx.execute(
         sql`select create_project(p_name => ${p.name}, p_customer_name => ${p.customerName},
-          p_type => ${p.type}::project_type, p_id => ${p.id}::uuid,
-          p_context => row('user'::actor_type, ${seedStaffUserIds.projectLead}::uuid, null::uuid,
-            null::text, null::uuid, null::text, null::text)::audit_context)`,
+          p_type => ${p.type}::project_type, p_id => ${p.id}::uuid, p_context => ${asProjectLead})`,
       );
     }
     await tx.insert(projectMembership).values(seedMemberships).onConflictDoNothing();
+    const waves = await tx.select().from(projectEntryWave);
     for (const wave of seedWaves) {
-      const { id: _id, projectId: _projectId, code: _code, ...dates } = wave;
-      await tx
-        .insert(projectEntryWave)
-        .values(wave)
-        .onConflictDoUpdate({
-          target: [projectEntryWave.projectId, projectEntryWave.code],
-          set: dates,
-        });
+      const found = waves.find((w) => w.projectId === wave.projectId && w.code === wave.code);
+      const dates = sql`p_signing_deadline => ${wave.signingDeadline}::date,
+        p_default_tg_start => ${wave.defaultTgStart}::date,
+        p_default_tg_end => ${wave.defaultTgEnd}::date,
+        p_latest_entry_date => ${wave.latestEntryDate}::date, p_context => ${asProjectLead}`;
+      if (!found) {
+        await tx.execute(sql`select create_entry_wave(p_project_id => ${wave.projectId}::uuid,
+          p_code => ${wave.code}, p_name => ${wave.name}, p_id => ${wave.id}::uuid, ${dates})`);
+      } else if (seedWaveDates.some((key) => found[key] !== wave[key])) {
+        await tx.execute(sql`select update_entry_wave(p_project_id => ${wave.projectId}::uuid,
+          p_id => ${found.id}::uuid, p_code => ${found.code}, p_name => ${found.name}, ${dates})`);
+      }
     }
   });
 }

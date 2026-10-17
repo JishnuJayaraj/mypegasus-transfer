@@ -73,9 +73,18 @@ export function problemResponses<T extends ProblemType>(...types: T[]) {
   ) as { [K in T as ProblemStatus<K>]: { description: string; content: typeof problemContent } };
 }
 
-/** A domain refusal (422) with its stable codes (Slice 2 plan, R21). */
-export function domainProblem(c: Context, codes: readonly string[]) {
+/**
+ * A domain refusal (422) with its stable codes (Slice 2 plan, R21), each at the body field it
+ * belongs to when there is one (`field`), else at the whole body.
+ */
+export function domainProblem(
+  c: Context,
+  codes: readonly (string | { code: string; field: string | null })[],
+) {
   return problem(c, "domain-error", {
-    errors: codes.map((code) => ({ pointer: "", code, detail: "Refused by a domain rule" })),
+    errors: codes.map((item) => {
+      const { code, field } = typeof item === "string" ? { code: item, field: null } : item;
+      return { pointer: field ? `/${field}` : "", code, detail: "Refused by a domain rule" };
+    }),
   });
 }

@@ -18,6 +18,20 @@ export {
   UpdateProjectInput,
   type ProjectUpdateRefusal,
 } from "./project";
+export {
+  checkWaveChange,
+  CreateEntryWaveInput,
+  EntryWaveRecord,
+  UpdateEntryWaveInput,
+  waveDateFields,
+  type WaveChange,
+  type WaveDateField,
+  type WaveField,
+  type WaveIssue,
+  type WaveIssueCode,
+  type WaveUsage,
+  type WaveValues,
+} from "./projects/waves";
 export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole, StaffRole } from "./enums";
 export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";

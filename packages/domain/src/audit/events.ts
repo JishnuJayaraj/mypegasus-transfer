@@ -4,6 +4,7 @@ import { AccessCategory, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
 import { ProjectType } from "../project";
+import { waveDateFields } from "../projects/waves";
 import {
   DsvStatus,
   EndReason,
@@ -45,6 +46,8 @@ export const AuditEventType = z.enum([
   // Slice 2, written only by their own setup functions (`setupEventTypes`)
   "project_created",
   "project_changed",
+  "entry_wave_created",
+  "entry_wave_changed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -57,6 +60,8 @@ export const lifecycleEventTypes: ReadonlySet<AuditEventType> = new Set(
 export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
   "project_created",
   "project_changed",
+  "entry_wave_created",
+  "entry_wave_changed",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -183,6 +188,31 @@ const endReasonCorrected = event("end_reason_corrected", {
 });
 
 const noDetails = z.strictObject({});
+
+const waveDates = Object.fromEntries(waveDateFields.map((f) => [f, isoDate.optional()])) as Record<
+  (typeof waveDateFields)[number],
+  z.ZodOptional<typeof isoDate>
+>;
+
+/** The changed keys of a wave, and old and new value of each changed date; never the name. */
+const entryWaveChanged = event("entry_wave_changed", {
+  ...ofProject,
+  details: z.strictObject({
+    waveId: z.uuid(),
+    fields: z.array(z.enum(["code", "name", ...waveDateFields])).min(1),
+    dates: z
+      .partialRecord(
+        z.enum(waveDateFields),
+        z.strictObject({ from: isoDate.nullable(), to: isoDate.nullable() }),
+      )
+      .optional(),
+  }),
+}).superRefine(({ details }, ctx) => {
+  const changedDates = details.fields.filter((field) => field !== "code" && field !== "name");
+  const withValues = Object.keys(details.dates ?? {});
+  const same = withValues.every((field) => changedDates.includes(field as never));
+  if (!same || withValues.length !== changedDates.length) issue(ctx, "dates_mismatch");
+});
 /** Every profiling-exception event identifies its request record (Q94). */
 const ofRequest = { profilingExceptionRequestId: z.uuid() };
 const reviewOf = z.strictObject({ reviewedEventId: z.uuid() });
@@ -265,5 +295,11 @@ export const AuditEvent = z.discriminatedUnion("type", [
       type: ProjectType.optional(),
     }),
   }),
+  /** The wave's dates as created; the code and name stay on the row. */
+  event("entry_wave_created", {
+    ...ofProject,
+    details: z.strictObject({ waveId: z.uuid(), ...waveDates }),
+  }),
+  entryWaveChanged,
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

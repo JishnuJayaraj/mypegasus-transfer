@@ -4,4 +4,4 @@ export { jobsSchema, jobsSchemaVersion } from "./jobs-schema";
 export { runMigrations } from "./migrate";
 export * from "./schema";
 export { seedProjectIds, seedStaffUserIds, seedWaves } from "./seed";
-export { and, desc, eq, inArray, sql } from "drizzle-orm";
+export { and, asc, desc, eq, inArray, sql, type AnyColumn } from "drizzle-orm";

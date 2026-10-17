@@ -92,6 +92,20 @@
       "when": 1792191260033,
       "tag": "0012_drop_project_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792194215137,
+      "tag": "0013_entry_waves",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792194220802,
+      "tag": "0014_entry_wave_functions",
+      "breakpoints": true
     }
   ]
 }

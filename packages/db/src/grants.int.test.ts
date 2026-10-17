@@ -93,6 +93,9 @@ const statusFunctions = [
   "lock_project_setup",
   "create_project",
   "update_project",
+  // Slice 2 (PR 2b): entry waves
+  "create_entry_wave",
+  "update_entry_wave",
 ];
 const helpers = [
   "assert_context",
@@ -102,6 +105,7 @@ const helpers = [
   "profiling_exception_request_progresses",
   "project_lock_key",
   "project_text_valid",
+  "entry_wave_text_valid",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

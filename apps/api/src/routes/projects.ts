@@ -8,6 +8,7 @@ import {
   projectEntryWave,
   projectMembership,
   sql,
+  type AnyColumn,
   type Database,
 } from "@transfer/db";
 import {
@@ -32,7 +33,7 @@ const ProjectPage = page(Project).meta({ id: "ProjectPage" });
 const ProjectParams = z.object({ projectId: z.uuid() });
 
 // Timestamps as ISO 8601 UTC with the database's microseconds; createdAt doubles as an exact cursor.
-const utc = (column: typeof project.createdAt | typeof project.activatedAt) =>
+export const utc = (column: AnyColumn) =>
   sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 const columns = {
   id: project.id,
@@ -54,23 +55,27 @@ const projectRefusals: ReadonlySet<string> = new Set([
   "project_has_waves",
 ]);
 
-const json = <T extends z.ZodType>(schema: T, description: string) => ({
+export const json = <T extends z.ZodType>(schema: T, description: string) => ({
   description,
   content: { "application/json": { schema } },
 });
 
 /** Calls a setup function in `db` (a transaction or the pool); returns its result. */
-async function callFunction(db: Pick<Database, "execute">, query: ReturnType<typeof sql>) {
+export async function callFunction(db: Pick<Database, "execute">, query: ReturnType<typeof sql>) {
   const { rows } = await db.execute<{ result: string }>(sql`select ${query} as result`);
   return rows[0]!.result;
 }
 
-const auditContext = (staffUserId: string, requestId: string) =>
+export const auditContext = (staffUserId: string, requestId: string) =>
   sql`row('user'::actor_type, ${staffUserId}::uuid, null::uuid, null::text, null::uuid,
     ${requestId}::text, null::text)::audit_context`;
 
 /** The project's metadata, if the subject may see it (Q106); otherwise undefined (404). */
-async function visibleProject(deps: Deps, user: Parameters<typeof staffSubjectOf>[1], id: string) {
+export async function visibleProject(
+  deps: Deps,
+  user: Parameters<typeof staffSubjectOf>[1],
+  id: string,
+) {
   const subject = await staffSubjectOf(deps.db, user);
   if (!seesProject(subject, id)) return { subject, found: undefined };
   const [found] = await deps.db.select(columns).from(project).where(eq(project.id, id));
