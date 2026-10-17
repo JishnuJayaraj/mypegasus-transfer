@@ -232,5 +232,61 @@
       "invalid": "Bitte prüfen Sie diese Angabe.",
       "failed": "Die Einstellung konnte nicht gespeichert werden."
     }
+  },
+  "relaxations": {
+    "title": "Lockerungen von Regeln",
+    "intro": "Eine Regel mit betrieblicher Vorgabe kann für das Projekt gelockert werden. Die Lockerung gilt erst, wenn eine andere berechtigte Person sie genehmigt hat.",
+    "approvedTitle": "Genehmigte Lockerungen",
+    "approvedEmpty": "Es gibt keine genehmigten Lockerungen.",
+    "openTitle": "Offene Anträge",
+    "openEmpty": "Es gibt keine offenen Anträge.",
+    "columns": {
+      "rule": "Regel",
+      "reason": "Begründung",
+      "approvedBy": "Genehmigt von",
+      "approvedOn": "Genehmigt am",
+      "requestedBy": "Beantragt von",
+      "requestedOn": "Beantragt am",
+      "actions": "Aktionen"
+    },
+    "steps": {
+      "asu_registration": "Arbeitsuchendmeldung",
+      "data_collection": "Datenerfassung",
+      "profiling": "Profiling",
+      "agentur_submission": "Einreichung bei der Agentur",
+      "dsv": "DSV",
+      "project_checklist": "Projekt-Checkliste"
+    },
+    "reasons": {
+      "source_data_not_provided": "Die Daten des Kunden enthalten diese Angabe nicht",
+      "not_needed_for_project_measures": "Für die Maßnahmen des Projekts nicht erforderlich",
+      "collected_outside_platform": "Wird außerhalb der Plattform im Rahmen des Projektvertrags geführt",
+      "agentur_confirmed_not_required": "Die Agentur hat schriftlich bestätigt, dass sie nicht erforderlich ist"
+    },
+    "requestTitle": "Lockerung beantragen",
+    "request": "Beantragen",
+    "approve": "{{rule}} genehmigen",
+    "reject": "{{rule}} ablehnen",
+    "withdraw": "Antrag zu {{rule}} zurückziehen",
+    "remove": "Lockerung {{rule}} aufheben",
+    "done": {
+      "requested": "Lockerung beantragt",
+      "approved": "Lockerung genehmigt",
+      "rejected": "Antrag abgelehnt",
+      "withdrawn": "Antrag zurückgezogen",
+      "removed": "Lockerung aufgehoben"
+    },
+    "errors": {
+      "choose": "Bitte wählen Sie eine Regel und eine Begründung.",
+      "relaxation_locked": "Diese Regel ist gesetzlich oder durch ein BA-Formular vorgegeben und kann nicht gelockert werden.",
+      "relaxation_unmatched": "Diese Regel gibt es in keiner gepinnten Vorlage des Projekts.",
+      "relaxation_request_open": "Für diese Regel gibt es bereits einen offenen Antrag.",
+      "relaxation_exists": "Diese Regel ist bereits gelockert.",
+      "relaxation_not_open": "Dieser Antrag ist nicht mehr offen.",
+      "override_invalid": "Die Projektkonfiguration wäre mit den gepinnten Vorlagen ungültig.",
+      "conflict": "Die Konfiguration wurde inzwischen geändert und neu geladen. Bitte prüfen Sie den Antrag erneut.",
+      "forbidden": "Dazu fehlt Ihnen die Berechtigung in diesem Projekt.",
+      "failed": "Die Änderung konnte nicht gespeichert werden."
+    }
   }
 }

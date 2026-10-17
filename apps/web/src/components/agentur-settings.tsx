@@ -25,6 +25,7 @@ import {
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { meQuery, projectConfigQuery, useApi } from "../api";
+import { Relaxations } from "./relaxations";
 
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type Scoped = ProjectConfig["override"]["agenturSettings"][number];
@@ -165,6 +166,7 @@ export function AgenturSettings({ projectId }: { projectId: string }) {
             onDone={() => setEditing(null)}
           />
         ))}
+      <Relaxations projectId={projectId} />
     </section>
   );
 }

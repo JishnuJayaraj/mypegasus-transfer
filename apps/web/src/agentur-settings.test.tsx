@@ -36,7 +36,11 @@ const scoped = (agenturKey: string, confirmedBy = staffUsers[1]!.id) => ({
 const base = { ...unpinnedConfig, pins: [nordPin] };
 const withSettings = {
   ...base,
-  override: { version: 2, agenturSettings: [scoped(nord), scoped(ost, otherStaff)] },
+  override: {
+    version: 2,
+    agenturSettings: [scoped(nord), scoped(ost, otherStaff)],
+    relaxations: [],
+  },
 };
 
 function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = base) {
@@ -93,7 +97,12 @@ describe("Konfiguration: Agentur-scoped settings", () => {
   it("offers no changes without the changeOverride capability", async () => {
     const readOnly = {
       ...withSettings,
-      capabilities: { pinTemplate: false, setProjectAgentur: false, changeOverride: false },
+      capabilities: {
+        pinTemplate: false,
+        setProjectAgentur: false,
+        changeOverride: false,
+        requestRelaxation: false,
+      },
     };
     setup({}, readOnly);
     const form = await section();
@@ -103,7 +112,10 @@ describe("Konfiguration: Agentur-scoped settings", () => {
   });
 
   it("sets a setting for a pinned Agentur with the loaded version, sending only what is set", async () => {
-    const saved = { ...base, override: { version: 1, agenturSettings: [scoped(nord)] } };
+    const saved = {
+      ...base,
+      override: { version: 1, agenturSettings: [scoped(nord)], relaxations: [] },
+    };
     const calls = setup({ [`PUT ${settingPath(nord)}`]: () => json(saved) });
     const form = await fillForm();
     await userEvent.click(form.getByRole("button", { name: "Speichern" }));
