@@ -67,6 +67,7 @@ describe("audit event types (plan 5.4)", () => {
       "rule_relaxation_approved",
       "rule_relaxation_rejected",
       "rule_relaxation_withdrawn",
+      "project_activated",
     ]);
   });
 
@@ -86,6 +87,7 @@ describe("audit event types (plan 5.4)", () => {
       "rule_relaxation_approved",
       "rule_relaxation_rejected",
       "rule_relaxation_withdrawn",
+      "project_activated",
     ]);
     expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
   });
@@ -459,6 +461,17 @@ describe("the other event types", () => {
       { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
     ],
     [
+      "project_activated",
+      {
+        participationId: null,
+        details: {
+          projectAgenturKey: "beispielstadt-nord",
+          projectAgenturVersion: 1,
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
       "entry_wave_changed",
       {
         participationId: null,
@@ -671,6 +684,34 @@ describe("the other event types", () => {
     [
       "rule_relaxation_withdrawn",
       { details: { relaxationRequestId: otherId, ruleId: "base-import-address" } },
+    ],
+    [
+      "project_activated",
+      {
+        participationId: null,
+        details: { projectAgenturKey: "beispielstadt-nord", projectAgenturVersion: 1 },
+      },
+    ],
+    [
+      "project_activated",
+      {
+        details: {
+          projectAgenturKey: "beispielstadt-nord",
+          projectAgenturVersion: 1,
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "project_activated",
+      {
+        participationId: null,
+        details: {
+          projectAgenturKey: "Werk Nord",
+          projectAgenturVersion: 1,
+          baseDefaultsVersion: 1,
+        },
+      },
     ],
     // Free text (the wave name) never enters the trail; dates only with their changed key.
     ["entry_wave_created", { participationId: null, details: { waveId: otherId, name: "W" } }],

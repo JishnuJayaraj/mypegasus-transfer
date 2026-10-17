@@ -1,9 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import {
+  ActivateProjectInput,
   AgenturKey,
   checkAgenturSetting,
   DecideRelaxationInput,
   PinTemplateInput,
+  ProjectActivation,
   ProjectConfig,
   RemoveAgenturSettingQuery,
   RemoveRelaxationQuery,
@@ -16,6 +18,7 @@ import {
 import type { Context } from "hono";
 import { projectPermissions } from "../access";
 import { createRouter, json, type Deps } from "../context";
+import { activateProject } from "../projects/activation";
 import { domainProblem, problem, problemResponses } from "../problem";
 import {
   changeAgenturSetting,
@@ -338,6 +341,41 @@ export function projectConfigRoutes(deps: Deps) {
       const { expectedVersion } = c.req.valid("query");
       const outcome = await removeRelaxation(writer(c), projectId, ruleId, expectedVersion);
       return respond(c, outcome, projectId, may);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/projects/{projectId}/activation",
+      tags: ["projects"],
+      summary:
+        "Activate a draft project (one-way, plan 5.5): refused with the activation blockers; the Agentur-submission blockers come back as warnings",
+      middleware,
+      request: {
+        params: ProjectParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: ActivateProjectInput } },
+        },
+      },
+      responses: {
+        200: json(ProjectActivation, "The activated project, with the non-blocking warnings"),
+        ...problemResponses(...relaxationProblems, "unsupported-media-type"),
+      },
+    }),
+    async (c) => {
+      const { projectId } = c.req.valid("param");
+      // Visibility and the PL's operation first (404/403), then the state and blockers (422).
+      const user = sessionUser(c);
+      const may = await projectPermissions(db, user, projectId);
+      if (!may) return problem(c, "not-found");
+      if (!may({ kind: "activateProject" })) return problem(c, "forbidden");
+      const actor = { staffUserId: user.id, requestId: c.get("requestId") };
+      const result = await activateProject(db, release, actor, projectId);
+      if (result === null) return problem(c, "not-found");
+      if ("issues" in result) return domainProblem(c, result.issues);
+      return c.json(result, 200);
     },
   );
 

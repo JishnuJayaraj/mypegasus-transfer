@@ -88,6 +88,7 @@ their slices (3, 5, 7).
 | `requestEvidenceCorrection` | PL, Back office | — |
 | `approveEvidenceCorrection` | Regional operations manager | — |
 | `editProject` | PL | — |
+| `activateProject` | PL | — |
 | `editEntryWaves` | PL | — |
 | `pinTemplate` | PL | — |
 | `changeOverride` | PL | — |

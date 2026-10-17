@@ -79,9 +79,11 @@ export {
 } from "./lifecycle/transition";
 export { projectActivationBlockers, ProjectActivationBlocker } from "./lifecycle/activation";
 export {
+  ActivateProjectInput,
   ConfigBlocker,
   PinTemplateInput,
   planTemplatePin,
+  ProjectActivation,
   ProjectConfig,
   type PinIssue,
   type PinIssueCode,

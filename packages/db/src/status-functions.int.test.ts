@@ -23,7 +23,7 @@ const owner = new Client({ connectionString: urls.owner, types: textDates });
 
 beforeAll(() => Promise.all([app.connect(), owner.connect()]));
 afterAll(() => Promise.all([app.end(), owner.end()]));
-beforeEach(() => resetTestDatabase({ seed: true }));
+beforeEach(() => resetTestDatabase({ seed: true, active: true }));
 
 const failsWith = (code: string) => ({ code: "P0001", message: code });
 

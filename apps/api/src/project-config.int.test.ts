@@ -81,6 +81,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         setProjectAgentur: true,
         changeOverride: true,
         requestRelaxation: true,
+        activateProject: true,
       },
     });
   });
@@ -96,6 +97,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         setProjectAgentur: false,
         changeOverride: false,
         requestRelaxation: false,
+        activateProject: false,
       });
     },
   );
@@ -112,6 +114,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       setProjectAgentur: true,
       changeOverride: true,
       requestRelaxation: true,
+      activateProject: true,
     });
     const elsewhere = await readJson(await get(lagerSued, "consultant"), ProjectConfig);
     expect(elsewhere.capabilities).toEqual({
@@ -119,6 +122,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       setProjectAgentur: false,
       changeOverride: false,
       requestRelaxation: false,
+      activateProject: false,
     });
     await expectProblem(
       await pin(lagerSued, { agenturKey: "beispielstadt-sued" }, "consultant"),
@@ -248,6 +252,7 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
       setProjectAgentur: false,
       changeOverride: true,
       requestRelaxation: true,
+      activateProject: false,
     });
     expect(
       await codes(await pin(lagerSued, { agenturKey: "beispielstadt-sued", projectAgentur: true })),

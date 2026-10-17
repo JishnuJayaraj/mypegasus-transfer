@@ -46,6 +46,16 @@ template a project of either type can't be activated (Q76, Q90).
 - **The project carries no contractual dates** (Slice 2): they live on its entry waves. A
   project is `draft` (setup, import, creation; no post-creation lifecycle transition) until it is
   activated once its blockers are gone, then `active` (Q98).
+- **Draft and active** (Slice 2, PR 2e-1): a draft project takes project data, the Project
+  Agentur, pins, overrides, waves, import, creation along the creation edge, wave assignment,
+  person data and individual dates, but **no post-creation lifecycle transition**, manual or
+  system: the status service refuses it (`project_not_active`), the database function refuses it
+  too, and the nightly job plans nothing for a draft project. The PL activates the project
+  (`POST /projects/{id}/activation`) once `projectActivationBlockers` is empty: a pinned
+  Project-Agentur template (Q76, Q90) and, in `ta_tg`, a wave with a `latestEntryDate` (Q77).
+  Agentur-submission blockers never block activation; they come back as warnings with their
+  Agentur and step (Q91, Q92). Activation is one-way; the type and the Project Agentur are fixed
+  from then on (Q98).
 - **TG start and end are per participation**, defaulting from the participation's entry wave (Q18, Q79). TL 407 needs
   both ("voraussichtliche Verweildauer in der beE von/bis").
 - **ASU due date** *(verify, Q1)*: `asuDueDate = max(endDate − 3 months, knowledgeDate + 3 days)`,

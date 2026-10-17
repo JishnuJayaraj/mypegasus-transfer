@@ -879,13 +879,17 @@
               },
               "requestRelaxation": {
                 "type": "boolean"
+              },
+              "activateProject": {
+                "type": "boolean"
               }
             },
             "required": [
               "pinTemplate",
               "setProjectAgentur",
               "changeOverride",
-              "requestRelaxation"
+              "requestRelaxation",
+              "activateProject"
             ],
             "additionalProperties": false
           }
@@ -1143,6 +1147,39 @@
         ]
       },
       "WithdrawRelaxationInput": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "ProjectActivation": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active"
+            ]
+          },
+          "activatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigBlocker"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "activatedAt",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "ActivateProjectInput": {
         "type": "object",
         "properties": {},
         "additionalProperties": false
@@ -2710,6 +2747,107 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/activation": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Activate a draft project (one-way, plan 5.5): refused with the activation blockers; the Agentur-submission blockers come back as warnings",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateProjectInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The activated project, with the non-blocking warnings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectActivation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
             "content": {
               "application/problem+json": {
                 "schema": {

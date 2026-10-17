@@ -158,6 +158,7 @@ const operations: Record<OperationKind, string> = {
   requestEvidenceCorrection: "PL BO",
   approveEvidenceCorrection: "ROM",
   editProject: "PL",
+  activateProject: "PL",
   editEntryWaves: "PL",
   pinTemplate: "PL",
   changeOverride: "PL",

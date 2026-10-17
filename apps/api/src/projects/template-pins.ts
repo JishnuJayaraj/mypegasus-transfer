@@ -148,6 +148,26 @@ const participantLevel = (blockers: Blocker[]) =>
   blockers.filter((blocker) => blocker.code === "agentur_submission_blocked");
 
 /**
+ * Per pinned Agentur as the placement Agentur, its participant-level, step-scoped submission
+ * blockers and warnings (Q91, Q92), resolved from the snapshot with the current override.
+ */
+export const submissionBlockers = (
+  input: Omit<Parameters<typeof resolveForParticipation>[0], "placementAgenturKey">,
+  pins: readonly { agenturKey: string }[],
+) =>
+  pins.map(({ agenturKey }) => {
+    const { blockers, warnings } = resolveForParticipation({
+      ...input,
+      placementAgenturKey: agenturKey,
+    });
+    return {
+      agenturKey,
+      blockers: participantLevel(blockers),
+      warnings: participantLevel(warnings),
+    };
+  });
+
+/**
  * The project's snapshot and what it blocks (plan 5.12): the pins, the project level resolved
  * against the Project Agentur's pinned template, per pinned Agentur the participant-level
  * blockers and warnings, and the activation blockers (Q76, Q77), all resolved with the current
@@ -209,17 +229,7 @@ export async function projectConfig(
       pinnedBy: p.pinnedBy,
     })),
     projectBlockers: projectLevel.blockers,
-    agenturen: pins.map(({ agenturKey }) => {
-      const { blockers, warnings } = resolveForParticipation({
-        ...input,
-        placementAgenturKey: agenturKey,
-      });
-      return {
-        agenturKey,
-        blockers: participantLevel(blockers),
-        warnings: participantLevel(warnings),
-      };
-    }),
+    agenturen: submissionBlockers(input, pins),
     activationBlockers: projectActivationBlockers(found, waves, projectLevel),
     override: {
       version: override.version,
@@ -248,6 +258,8 @@ export async function projectConfig(
       setProjectAgentur: may({ kind: "pinTemplate" }) && found.status === "draft",
       changeOverride: may({ kind: "changeOverride" }),
       requestRelaxation: may({ kind: "requestRelaxation" }),
+      // Activation is one-way (R1): offered only while draft.
+      activateProject: may({ kind: "activateProject" }) && found.status === "draft",
     },
   };
 }

@@ -59,6 +59,7 @@ export const AuditEventType = z.enum([
   "rule_relaxation_approved",
   "rule_relaxation_rejected",
   "rule_relaxation_withdrawn",
+  "project_activated",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -79,6 +80,7 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
   "rule_relaxation_approved",
   "rule_relaxation_rejected",
   "rule_relaxation_withdrawn",
+  "project_activated",
 ]);
 
 /**
@@ -92,6 +94,7 @@ export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new
   "config_template_pinned",
   "rule_relaxation_requested",
   "rule_relaxation_approved",
+  "project_activated",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -384,5 +387,17 @@ export const AuditEvent = z.discriminatedUnion("type", [
   }),
   event("rule_relaxation_rejected", { ...ofProject, details: z.strictObject(ofRelaxation) }),
   event("rule_relaxation_withdrawn", { ...ofProject, details: z.strictObject(ofRelaxation) }),
+  /**
+   * Draft → active (plan 5.5): the Project Agentur and the version of its pinned template the
+   * activation was checked against, and the base-defaults version (R26).
+   */
+  event("project_activated", {
+    ...ofProject,
+    details: z.strictObject({
+      projectAgenturKey: agenturKey,
+      projectAgenturVersion: z.int().min(1),
+      baseDefaultsVersion,
+    }),
+  }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

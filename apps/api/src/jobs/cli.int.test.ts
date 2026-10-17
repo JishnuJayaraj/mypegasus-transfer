@@ -10,7 +10,7 @@ const urls = testDatabaseUrls();
 const db = createDb(urls.app);
 const owner = createDb(urls.owner).$client;
 afterAll(() => Promise.all([db.$client.end(), owner.end()]));
-beforeEach(() => resetTestDatabase({ seed: true }));
+beforeEach(() => resetTestDatabase({ seed: true, active: true }));
 
 const logs: string[] = [];
 const logger = pino(

@@ -12,6 +12,8 @@ import {
   type ParticipationSnapshot,
 } from "@transfer/domain";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { seedActivations, seedTemplatePins } from "../projects/seed";
+import { loadRelease } from "../projects/template-pins";
 import { failClosedFacts } from "./guard-facts";
 import { seedFacts, seedParticipationIds, seedParticipations, seedTgStartRun } from "./seed";
 
@@ -25,6 +27,10 @@ let firstRun = 0;
 let secondRun = 0;
 beforeAll(async () => {
   await resetTestDatabase({ seed: true });
+  // As `pnpm db:seed` does: pins and activations through their services first (plan 5.5).
+  const release = loadRelease(undefined);
+  await seedTemplatePins(db, release);
+  await seedActivations(db, release);
   firstRun = await seedParticipations(db);
   secondRun = await seedParticipations(db);
 });

@@ -104,6 +104,8 @@ const statusFunctions = [
   "request_rule_relaxation",
   "decide_rule_relaxation",
   "withdraw_rule_relaxation",
+  // Slice 2 (PR 2e-1): activation
+  "activate_project",
 ];
 const helpers = [
   "assert_context",
