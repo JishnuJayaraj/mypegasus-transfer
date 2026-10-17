@@ -107,5 +107,57 @@
       "forbidden": "Nur die Projektleitung kann Eintrittswellen bearbeiten.",
       "failed": "Die Eintrittswelle konnte nicht gespeichert werden."
     }
+  },
+  "setup": {
+    "title": "Einrichtung",
+    "projectAgentur": "Projekt-Agentur: {{label}}, Vorlage Version {{version}}",
+    "noProjectAgentur": "Es ist noch keine Projekt-Agentur gewählt. Ohne sie kann das Projekt nicht aktiviert werden.",
+    "pins": "Gepinnte Vorlagen",
+    "pinsEmpty": "Es ist noch keine Vorlage gepinnt.",
+    "projectAgenturRole": "Projekt-Agentur",
+    "furtherAgenturRole": "Weitere Agentur",
+    "columns": {
+      "label": "Agentur",
+      "agenturKey": "Schlüssel",
+      "version": "Version",
+      "sha256Prefix": "Prüfsumme",
+      "pinnedAt": "Gepinnt am",
+      "role": "Rolle"
+    },
+    "blockers": "Blocker",
+    "noBlockers": "Keine Blocker.",
+    "activation": {
+      "project_activation_blocked": "Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur.",
+      "no_entry_wave_with_latest_entry_date": "Aktivierung blockiert: Keine Eintrittswelle hat einen letztmöglichen Eintritt."
+    },
+    "submissionBlocked": "{{agentur}} – {{step}} blockiert, es fehlt: {{missing}}",
+    "steps": {
+      "asu_registration": "Arbeitsuchendmeldung (Kug 200b)",
+      "agentur_submission": "Einreichung bei der Agentur (TL 407)"
+    },
+    "settings": {
+      "batchSubmissionChannel": "Übermittlungsweg Kug 200b",
+      "submissionChannel": "Übermittlungsweg TL 407",
+      "originalRequired": "Original erforderlich",
+      "leadTimeDays": "Vorlauf in Tagen",
+      "rejectsOutdatedFormVersions": "Umgang mit veralteten Formularversionen"
+    },
+    "pinTitle": "Vorlage pinnen",
+    "agentur": "Agentur",
+    "version": "Version",
+    "versionHint": "Vorausgewählt ist die neueste Version; eine ältere ist möglich.",
+    "latestVersion": "{{version}} (neueste)",
+    "pinFurther": "Als weitere Agentur pinnen",
+    "pinProjectAgentur": "Als Projekt-Agentur festlegen",
+    "pinned": "Vorlage gepinnt",
+    "errors": {
+      "template_not_in_catalog": "Diese Vorlage ist nicht im Katalog.",
+      "template_already_pinned": "Diese Agentur ist bereits gepinnt. Eine andere Version wird über eine Migration übernommen.",
+      "template_version_changed": "Diese Vorlagenversion ist bereits mit anderem Inhalt registriert und kann nicht gepinnt werden.",
+      "agentur_not_pinned": "Die Agentur muss zuerst gepinnt werden.",
+      "project_not_draft": "Die Projekt-Agentur kann nach der Aktivierung nicht mehr geändert werden.",
+      "forbidden": "Nur die Projektleitung kann Vorlagen pinnen.",
+      "failed": "Die Vorlage konnte nicht gepinnt werden."
+    }
   }
 }

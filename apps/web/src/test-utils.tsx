@@ -71,3 +71,14 @@ export const project = {
   createdAt: "2026-10-15T08:30:00.123456Z",
   createdBy: staffUsers[1]!.id,
 };
+
+/** A project's configuration without pins (Slice 2 plan 5.12). */
+export const unpinnedConfig = {
+  projectAgenturKey: null,
+  baseDefaultsVersion: 1,
+  pins: [],
+  projectBlockers: [{ code: "project_activation_blocked", agenturKey: null }],
+  agenturen: [],
+  activationBlockers: ["project_activation_blocked"],
+  capabilities: { pinTemplate: true, setProjectAgentur: true },
+};

@@ -90,6 +90,20 @@ body {
   max-inline-size: 40rem;
 }
 
+.tp-section {
+  margin-block-end: $spacing-07;
+
+  h2,
+  h3 {
+    margin-block: $spacing-05;
+  }
+}
+
+.tp-list {
+  list-style: disc;
+  padding-inline-start: $spacing-06;
+}
+
 .tp-toasts {
   position: fixed;
   inset-block-start: 3.5rem;

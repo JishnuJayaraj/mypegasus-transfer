@@ -61,6 +61,32 @@ export const entryWavesQuery = (api: ApiClient, projectId: string) =>
     },
   });
 
+/** The project's pins and blockers (Slice 2 plan 5.12). */
+export const projectConfigQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "config"],
+    queryFn: () =>
+      unwrap(api.GET("/api/v1/projects/{projectId}/config", { params: { path: { projectId } } })),
+  });
+
+/** The whole template catalog (a handful of versions), page by page; 403 unless a PL (Q108). */
+export const templateCatalogQuery = (api: ApiClient) =>
+  queryOptions({
+    queryKey: ["config", "templates"],
+    queryFn: async () => {
+      const templates = [];
+      let cursor: string | undefined;
+      do {
+        const query = { limit: 100, ...(cursor && { cursor }) };
+        const page = await unwrap(api.GET("/api/v1/config/templates", { params: { query } }));
+        templates.push(...page.items);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      return templates;
+    },
+    staleTime: Infinity,
+  });
+
 export const projectsQuery = (api: ApiClient) =>
   infiniteQueryOptions({
     queryKey: ["projects"],

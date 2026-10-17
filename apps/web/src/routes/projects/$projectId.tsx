@@ -3,13 +3,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Add, Button, formatDate, PageHeader, SimpleTable, useToast } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { entryWavesQuery, projectQuery, useApi } from "../../api";
+import { entryWavesQuery, projectConfigQuery, projectQuery, useApi } from "../../api";
 import { EntryWaveForm } from "../../components/entry-wave-form";
+import { ProjectSetup } from "../../components/project-setup";
 import { RouteError } from "../../components/route-error";
 
 export const Route = createFileRoute("/projects/$projectId")({
   loader: async ({ context: { api, queryClient }, params: { projectId } }) => {
-    const project = await queryClient.ensureQueryData(projectQuery(api, projectId));
+    const [project] = await Promise.all([
+      queryClient.ensureQueryData(projectQuery(api, projectId)),
+      queryClient.ensureQueryData(projectConfigQuery(api, projectId)),
+    ]);
     if (project.type === "ta_tg")
       await queryClient.ensureQueryData(entryWavesQuery(api, projectId));
   },
@@ -31,6 +35,7 @@ function ProjectPage() {
           t(`projects.statuses.${project.status}`),
         ].join(" · ")}
       </p>
+      <ProjectSetup projectId={projectId} />
       {project.type === "ta_tg" ? (
         <EntryWaves projectId={projectId} />
       ) : (

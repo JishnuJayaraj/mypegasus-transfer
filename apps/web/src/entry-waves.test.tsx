@@ -1,13 +1,22 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { json, mockApi, problem, project, renderApp, staffUsers } from "./test-utils";
+import {
+  json,
+  mockApi,
+  problem,
+  project,
+  renderApp,
+  staffUsers,
+  unpinnedConfig,
+} from "./test-utils";
 
 // AC-8 (Slice 2 plan 5.6, 5.13): the project page lists the waves, and one form creates and
 // edits a wave and shows each domain error at its field.
 const loggedIn = {
   "GET /api/v1/me": () => json(staffUsers[1]),
   "GET /api/v1/dev/staff-users": () => json(staffUsers),
+  [`GET /api/v1/projects/${project.id}/config`]: () => json(unpinnedConfig),
 };
 const path = `/api/v1/projects/${project.id}`;
 const w1 = {
