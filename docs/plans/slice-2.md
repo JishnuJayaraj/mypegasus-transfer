@@ -691,6 +691,67 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
     `apps/web/src/api.tsx` isn't touched (the relaxations come with the configuration).
 13. **No docs gap found;** Q110 stays unused.
 
+### Built in PR 2e-1, with the readings taken (for confirmation)
+
+Split before review, like rounds 24, 26 and 27: **2e-1** (domain, database, API, seed, docs; this
+branch, about 360 non-blank, non-comment production lines, of which about 135 are the
+redeclared `change_participation_status`) and **2e-1-web** (the activation in Einrichtung, its
+component tests and the Playwright step; the `-web` branch on 2e-1). Each is green on its own.
+
+Built in 2e-1: the operation `activateProject` (PL); the audit type `project_activated` in
+`setupEventTypes` and `configurationDependentEventTypes` (R26) with its details schema;
+`ActivateProjectInput`, `ProjectActivation` and `ProjectConfig.capabilities.activateProject`
+(`packages/domain/src/projects/pins.ts`); migrations `0021_project_activation` (generated: the
+event type) and `0022_project_activation_functions` (hand-written: `activate_project`,
+`change_participation_status` with the draft gate, `record_audit_event` refusing the type, the
+grants); the service `apps/api/src/projects/activation.ts`; `POST
+/projects/{projectId}/activation`; the draft gate in the status service and in
+`lifecycle.evaluate-project`; the API seed's activations; the test fixture for active seeded
+projects; ADR-0002 and ADR-0011 notes, `process-and-lifecycle.md`.
+
+1. **The response is `ProjectActivation`** (`status`, `activatedAt`, `warnings`), not the
+   configuration: activation changes the project, and the warnings are the point of the answer.
+   The warnings are the participant-level, step-scoped Agentur-submission blockers of every
+   pinned Agentur (the `agenturen` of `GET …/config`, resolved with the current override):
+   `resolveForProject` never yields a submission blocker, because the steps are participant
+   steps (Q91, Q92; round 15 reading 10).
+2. **Input and order:** a strict empty JSON object (the API takes only JSON for writes); no
+   expected version, since nothing versioned is compared: the service decides on the snapshot read
+   under the exclusive project lock and the function re-checks under the same lock. Order (round
+   28): visibility 404 → `activateProject` 403 → the project's state 422 (`project_not_draft`) →
+   the blockers 422 (`project_activation_blocked`, `no_entry_wave_with_latest_entry_date`, exactly
+   as `projectActivationBlockers` names them) → the write. The route allowlists these three and
+   maps `project_not_found` to 404; anything else is a 500 (R21).
+3. **`project_activated`** carries `projectAgenturKey`, `projectAgenturVersion` (the Project
+   Agentur's current pin) and `baseDefaultsVersion`; the function computes the first two from the
+   row and the pins itself, so the trail can't disagree with what was checked (round 27).
+4. **`activate_project` checks structure, not the role:** like `update_project`,
+   `pin_agentur_template` and the wave functions, it refuses non-users and assisted mode and
+   leaves the PL check to the service (round 23). It re-checks deterministically in SQL what
+   makes activation valid (draft, a pinned Project-Agentur template, a wave with a
+   `latest_entry_date` in `ta_tg`); `activated_at` is database time.
+5. **The draft gate covers the transitions** (`changeStatus`, manual and system), after the
+   permission check and before the stale check: the project's state comes before the
+   participation's (round 28's order). The other lifecycle operations (a profiling exception's
+   request, decision and revocation; the end-reason correction) need `informed` or a terminal
+   status, which no participation of a draft project can reach, so they need no gate of their
+   own. In SQL, `change_participation_status` refuses it right after the participation lock (the
+   shared project lock serialises it with `activate_project`); a refusal there surfaces as an
+   `integrity` error of the service, which checks first.
+6. **The job:** the sweep still dispatches a job for every project (round 21 reading 3); the
+   project job reads the status in its planning transaction and plans nothing for a draft
+   (counts 0), and the day is recorded as usual.
+7. **Fixtures (2.3):** the base seed pins nothing, so `activate_project` would refuse its
+   projects. The Slice 1 tests that move participations reset with `active: true`, which makes
+   Werk Nord and Verwaltung active **directly as the owner** (`activateAsOwner`, a synthetic test
+   state, round 27); Lager Süd stays a draft for the draft-gate tests. The API seed (`pnpm
+   db:seed`) and its test pin and activate **through the services**, as 5.5 and 5.14 say: Werk
+   Nord and Verwaltung, then the participations; Lager Süd stays a draft with blockers.
+8. **`capabilities.activateProject`** is the `activateProject` operation in this project and only
+   while draft (round 26's pattern for `setProjectAgentur`).
+9. **No docs gap found;** Q110 stays unused.
+
+
 ## 4. Design overview
 
 ```

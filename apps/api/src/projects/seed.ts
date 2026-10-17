@@ -1,4 +1,5 @@
 import { seedProjectIds, seedStaffUserIds, type Database } from "@transfer/db";
+import { activateProject } from "./activation";
 import { pinTemplate, type Release } from "./template-pins";
 
 const { werkNord, verwaltung } = seedProjectIds;
@@ -24,5 +25,20 @@ export async function seedTemplatePins(db: Database, release: Release): Promise<
     const result = await pinTemplate(db, release, actor, projectId, input);
     if (result === true || result?.issues.every(alreadyPinned)) continue;
     throw new Error(`The seed could not pin ${input.agenturKey}@${input.version}`);
+  }
+}
+
+/**
+ * The seed's activations (plan 5.5, 5.14), through the activation service by the seeded PL after
+ * the pins and before the participations: Werk Nord and the `ta_only` project. Lager Süd stays a
+ * draft with its blockers (demo). Idempotent: an active project is skipped.
+ */
+export async function seedActivations(db: Database, release: Release): Promise<void> {
+  const actor = { staffUserId: seedStaffUserIds.projectLead, requestId: null };
+  for (const projectId of [werkNord, verwaltung]) {
+    const result = await activateProject(db, release, actor, projectId);
+    if (result && !("issues" in result)) continue;
+    if (result?.issues.every((code) => code === "project_not_draft")) continue;
+    throw new Error("The seed could not activate a project");
   }
 }

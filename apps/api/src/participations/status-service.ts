@@ -212,8 +212,11 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
     const p = (await selectFirst(
       tx.select().from(participation).where(eq(participation.id, participationId)),
     ))!;
-    const { type: projectType } = (await selectFirst(
-      tx.select({ type: project.type }).from(project).where(eq(project.id, p.projectId)),
+    const { type: projectType, status: projectStatus } = (await selectFirst(
+      tx
+        .select({ type: project.type, status: project.status })
+        .from(project)
+        .where(eq(project.id, p.projectId)),
     ))!;
     const wave: EntryWave | null = p.entryWaveId
       ? ((await selectFirst(
@@ -242,7 +245,7 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
     };
     // Projects get their region in Slice 3; until then only a global role reaches them.
     const target = { projectId: p.projectId, regionId: null, participationId };
-    return { p, request, exception: exceptionOf(request), context, target };
+    return { p, request, exception: exceptionOf(request), context, target, projectStatus };
   }
 
   type Loaded = Awaited<ReturnType<typeof load>>;
@@ -362,6 +365,9 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
           const permission = mayPerformTransition(actor, edge, loaded.target);
           if (!permission.ok) fail("forbidden", permission.because);
         }
+        // The draft gate (D9, R1, Q98): no post-creation transition before activation, manual or
+        // system; the project's state comes before the participation's (round 28's order).
+        if (loaded.projectStatus !== "active") fail("domain", "project_not_active");
         const field = { main: "status", profiling: "profilingStatus", dsv: "dsvStatus" } as const;
         if (context.current[field[track]] !== from) fail("stale", "stale_status");
 

@@ -164,3 +164,22 @@ Decided in the Slice 2 plan (D2, D3, 5.2, 5.3, 5.9; round 8 four eyes, R2) and b
   `decide_rule_relaxation`** in the transaction that approves the request: it passes the exact
   entry built from that locked request, the approver and the decision date, and the new content
   must hold exactly that entry (round 28; nothing is inferred from timestamps).
+
+## Amendment 2026-10-17: project activation and the draft gate (Slice 2, PR 2e-1)
+
+Decided in the Slice 2 plan (D2, D3, D9, R1, R26, 5.3, 5.5; Q98) and built in PR 2e-1:
+- **`activate_project(id, base_defaults_version, context)`** (`SECURITY DEFINER`) takes the
+  exclusive project lock first, refuses non-users and assisted mode, and re-checks under the lock
+  what the service decided with `projectActivationBlockers`: the project is `draft`
+  (`project_not_draft`; activation is one-way), its Project Agentur has a pinned template
+  (`project_activation_blocked`, Q76, Q90) and a `ta_tg` project has an entry wave with a
+  `latest_entry_date` (`no_entry_wave_with_latest_entry_date`, Q77). It sets `status = 'active'`,
+  `activated_at` (database time) and `activated_by` (the context's staff user) and writes
+  `project_activated` with the Project Agentur, the version of its pinned template and the
+  base-defaults version (R26), all computed in SQL. `record_audit_event` refuses the type.
+  `transfer_app` still has no `UPDATE` on `project`.
+- **The draft gate in the database:** `change_participation_status` (replaced, same signature)
+  refuses every transition of a project that isn't `active` (`project_not_active`), right after
+  the participation lock and before the stale check, as defence in depth for the status
+  service's own check (D9). Its shared project lock serialises it with `activate_project`.
+  Creation and wave assignment stay allowed in draft.

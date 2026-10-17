@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { PinTemplateInput, planTemplatePin, ProjectConfig } from "./pins";
+import {
+  ActivateProjectInput,
+  PinTemplateInput,
+  planTemplatePin,
+  ProjectActivation,
+  ProjectConfig,
+} from "./pins";
 
 const catalog = [
   { agenturKey: "nord", version: 1 },
@@ -157,6 +163,7 @@ describe("ProjectConfig", () => {
         setProjectAgentur: false,
         changeOverride: true,
         requestRelaxation: true,
+        activateProject: false,
       },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);
@@ -173,5 +180,26 @@ describe("ProjectConfig", () => {
       ],
     };
     expect(ProjectConfig.safeParse(otherStep).success).toBe(false);
+  });
+});
+
+describe("ProjectActivation (plan 5.5)", () => {
+  it("is active since a UTC timestamp, with the submission blockers as warnings", () => {
+    const activation = {
+      status: "active",
+      activatedAt: "2026-10-17T08:00:00.000000Z",
+      warnings: [
+        {
+          code: "agentur_submission_blocked",
+          step: "agentur_submission",
+          agenturKey: "beispielstadt-sued",
+          missing: ["leadTimeDays"],
+        },
+      ],
+    };
+    expect(ProjectActivation.parse(activation)).toEqual(activation);
+    expect(ProjectActivation.safeParse({ ...activation, status: "draft" }).success).toBe(false);
+    expect(ActivateProjectInput.safeParse({}).success).toBe(true);
+    expect(ActivateProjectInput.safeParse({ force: true }).success).toBe(false);
   });
 });

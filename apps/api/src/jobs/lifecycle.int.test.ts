@@ -1,6 +1,6 @@
 import { ManualClock, scheduledAt } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds } from "@transfer/db";
-import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
+import { activateAsOwner, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import type { DatedFact, GuardFacts } from "@transfer/domain";
 import { pino } from "pino";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -58,7 +58,7 @@ let ids: { a: string; b: string; c: string };
 let waveId: string;
 
 beforeEach(async () => {
-  await resetTestDatabase({ seed: true });
+  await resetTestDatabase({ seed: true, active: true });
   logs.length = 0;
   clock.set(scheduledAt("2025-02-03", "10:00"));
   // Signing deadline 14 Feb, TG start 3 Mar, latest entry 14 Mar 2025: cutoff on 15 Mar.
@@ -68,6 +68,7 @@ beforeEach(async () => {
     [lagerSued],
   );
   waveId = rows[0].id;
+  await activateAsOwner(owner, [lagerSued]);
   const service = createStatusService({ db, clock, facts: provider() });
   const create = async () =>
     (await service.createParticipation(pl, { projectId: lagerSued, entryWaveId: waveId }))
@@ -184,6 +185,25 @@ describe("the lifecycle sweep (AC-38)", () => {
         entry_kind: "scheduled_entry",
       }),
     ]);
+    expect(await runDates()).toEqual(["lifecycle.sweep:2025-03-03"]);
+  });
+
+  it("plans nothing for a draft project, whose job still runs; the day is recorded (D9, AC-18)", async () => {
+    // A synthetic draft with moved participations, written as the owner (round 27): production
+    // never returns a project to draft.
+    await owner.query(
+      "update project set status = 'draft', activated_at = null, activated_by = null where id = $1",
+      [lagerSued],
+    );
+    const before = await statuses();
+    expect(await sweep("2025-03-03")).toEqual({
+      outcome: "completed",
+      runDate: "2025-03-03",
+      days: 1,
+      projects: 3,
+    });
+    expect(await statuses()).toEqual(before);
+    expect(await systemEvents()).toEqual([]);
     expect(await runDates()).toEqual(["lifecycle.sweep:2025-03-03"]);
   });
 

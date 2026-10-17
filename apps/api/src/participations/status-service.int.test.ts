@@ -16,7 +16,7 @@ const service = createStatusService({ db, clock });
 
 afterAll(() => Promise.all([db.$client.end(), owner.end()]));
 beforeEach(async () => {
-  await resetTestDatabase({ seed: true });
+  await resetTestDatabase({ seed: true, active: true });
   clock.set(new Date("2091-02-01T09:00:00Z"));
 });
 
@@ -655,5 +655,56 @@ describe("effective dates (round 18)", () => {
     await expect(exit("2091-07-01")).rejects.toEqual(refused("domain", "effective_date_in_future"));
     await exit("2091-03-01");
     expect(await state(id)).toMatchObject({ status: "exited" });
+  });
+});
+
+describe("the draft gate (D9, R1, Q98; AC-18)", () => {
+  const { lagerSued } = seedProjectIds;
+  const lead = staffSubject(seedStaffUserIds.projectLead, { [lagerSued]: ["project_lead"] });
+
+  it("refuses every transition of a draft project, manual or system, and writes nothing; creation and wave assignment work", async () => {
+    const { rows } = await owner.query(
+      `insert into project_entry_wave (project_id, code, name, latest_entry_date)
+       values ($1, 'D1', 'D1', '2091-03-15') returning id`,
+      [lagerSued],
+    );
+    const { participationId } = await service.createParticipation(lead, { projectId: lagerSued });
+    await service.assignEntryWave(lead, { participationId, waveId: rows[0].id });
+    await expect(
+      service.changeStatus(lead, {
+        participationId,
+        track: "main",
+        from: "imported",
+        to: "contacted",
+      }),
+    ).rejects.toEqual(refused("domain", "project_not_active"));
+    // The project's state before the participation's (a stale `from` too) and for the system.
+    await expect(
+      service.changeStatus(system, {
+        participationId,
+        track: "main",
+        from: "informed",
+        to: "withdrawn",
+        endReason: "no_response",
+        effectiveDate: "2091-02-01",
+      }),
+    ).rejects.toEqual(refused("domain", "project_not_active"));
+    expect(await state(participationId)).toMatchObject({
+      status: "imported",
+      entry_wave_id: rows[0].id,
+      events: 2,
+    });
+  });
+
+  it("still checks the permission first (403 before the state)", async () => {
+    const { participationId } = await service.createParticipation(lead, { projectId: lagerSued });
+    await expect(
+      service.changeStatus(backOffice, {
+        participationId,
+        track: "main",
+        from: "imported",
+        to: "contacted",
+      }),
+    ).rejects.toEqual(expect.objectContaining({ kind: "forbidden" }));
   });
 });

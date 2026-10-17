@@ -128,16 +128,34 @@ export const ProjectConfig = z
      * What the user may do in this project, derived by the server (round 26): pin (the PL,
      * `pinTemplate`), make an Agentur the Project Agentur (the PL, while draft), change the
      * override's Agentur-scoped settings and remove an approved relaxation (the PL,
-     * `changeOverride`) and request a relaxation (the PL, `requestRelaxation`); each open request
-     * says whether the user may decide or withdraw it. The UI offers only these; the API's
-     * checks stay authoritative.
+     * `changeOverride`), request a relaxation (the PL, `requestRelaxation`) and activate the
+     * project (the PL, while draft, `activateProject`); each open request says whether the user
+     * may decide or withdraw it. The UI offers only these; the API's checks stay authoritative.
      */
     capabilities: z.strictObject({
       pinTemplate: z.boolean(),
       setProjectAgentur: z.boolean(),
       changeOverride: z.boolean(),
       requestRelaxation: z.boolean(),
+      activateProject: z.boolean(),
     }),
   })
   .meta({ id: "ProjectConfig" });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
+
+/** An activation carries nothing (`POST …/activation`, a JSON body like every write); strict. */
+export const ActivateProjectInput = z.strictObject({}).meta({ id: "ActivateProjectInput" });
+
+/**
+ * An activated project (plan 5.5): active since `activatedAt` (database time), with the
+ * Agentur-submission blockers that don't block activation as warnings, each with its Agentur and
+ * step (Q91, Q92; round 15 reading 10).
+ */
+export const ProjectActivation = z
+  .strictObject({
+    status: z.literal("active"),
+    activatedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
+    warnings: z.array(ConfigBlocker),
+  })
+  .meta({ id: "ProjectActivation" });
+export type ProjectActivation = z.infer<typeof ProjectActivation>;

@@ -120,3 +120,13 @@ Built in PR 1h-2 (plan 5.9; rounds 9, 18–20):
   `run_not_due`; refused with `NODE_ENV=production`.
 - The API's workers use the Slice 1 facts provider, which fails closed (D4): DSV expiry and cutoff
   withdrawals run, nobody enters the TG.
+
+## Note 2026-10-17: draft projects plan nothing (Slice 2, PR 2e-1)
+
+A project is `draft` until it is activated (Slice 2 plan D9, R1, Q98). The sweep still dispatches
+a `lifecycle.evaluate-project` job for every project (round 21 reading 3), but the job plans
+nothing for a draft project: it reads the project's status in its planning transaction and
+returns with no change (counts 0), like a project without open participations. The status
+service refuses any transition of a draft project too (`project_not_active`), and
+`change_participation_status` refuses it in the database (ADR-0002). Activation is one-way, so a
+project planned as active stays active until its changes are applied.

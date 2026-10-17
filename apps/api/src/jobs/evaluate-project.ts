@@ -61,6 +61,8 @@ const system: ServiceActor = { kind: "system", job: jobNames.evaluateProject };
  * scheduled instants from `JOBS_LIFECYCLE_TIME` itself. All checks come before any planning or
  * write.
  *
+ * A draft project plans nothing (D9): no transition before activation.
+ *
  * Idempotent: a moved participation plans nothing. Only the status service's refusals are
  * lifecycle refusals: a lost race (`stale`) is counted, not an error; any other is counted, the
  * other participations are still applied, and the job then fails (`changes_refused`), so the day
@@ -79,10 +81,12 @@ export async function evaluateProject(
 
   const plans = await db.transaction(async (tx) => {
     const [found] = await tx
-      .select({ type: project.type })
+      .select({ type: project.type, status: project.status })
       .from(project)
       .where(eq(project.id, projectId));
     if (!found) throw new JobError("project_not_found");
+    // A draft project plans nothing (D9, R1, Q98); its job still runs, like every project's.
+    if (found.status !== "active") return [];
     const waves: EntryWave[] = await tx
       .select({
         id: projectEntryWave.id,

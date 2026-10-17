@@ -148,6 +148,20 @@
       "when": 1792240030687,
       "tag": "0020_config_relaxation_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792254778603,
+      "tag": "0021_project_activation",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792254787899,
+      "tag": "0022_project_activation_functions",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ export * from "./lifecycle";
 import { createDb } from "../client";
 import { loadEnv, requireEnv } from "../env";
 import { runMigrations } from "../migrate";
-import { seed } from "../seed";
+import { seed, seedProjectIds, seedStaffUserIds } from "../seed";
 
 /** Integration tests use transfer_test, Playwright uses transfer_e2e. */
 export type TestDatabase = "transfer_test" | "transfer_e2e";
@@ -41,8 +41,33 @@ export async function recreateTestDatabase(
   }
 }
 
-/** Empties all tables of transfer_test (as owner) before a test; optionally seeds. */
-export async function resetTestDatabase(options: { seed?: boolean } = {}): Promise<void> {
+/**
+ * The seeded projects the participation tests move (Werk Nord, Verwaltung) made active, as the API
+ * seed leaves them after pinning and activating through the services (Slice 2 plan 5.5); Lager Süd
+ * stays a draft. A test fixture written directly as the owner (round 27): the base seed pins no
+ * template, so `activate_project` would refuse these projects.
+ */
+export const activeSeedProjectIds = [seedProjectIds.werkNord, seedProjectIds.verwaltung] as const;
+
+/** Makes draft projects active directly, as the owner (`client`): a test fixture, never production. */
+export async function activateAsOwner(
+  client: { query: (sql: string, params: unknown[]) => Promise<unknown> },
+  projectIds: readonly string[] = activeSeedProjectIds,
+): Promise<void> {
+  await client.query(
+    `update project set status = 'active', activated_at = now(), activated_by = $2
+     where id = any($1::uuid[]) and status = 'draft'`,
+    [projectIds, seedStaffUserIds.projectLead],
+  );
+}
+
+/**
+ * Empties all tables of transfer_test (as owner) before a test; optionally seeds, and with
+ * `active` makes the seeded Werk Nord and Verwaltung active (the draft gate, D9).
+ */
+export async function resetTestDatabase(
+  options: { seed?: boolean; active?: boolean } = {},
+): Promise<void> {
   const db = createDb(testDatabaseUrls().owner);
   try {
     // lifecycle_edge is reference data from the migrations, never truncated.
@@ -50,6 +75,7 @@ export async function resetTestDatabase(options: { seed?: boolean } = {}): Promi
       "truncate audit_event, config_relaxation_request, profiling_exception_request, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_user, job_run",
     );
     if (options.seed) await seed(db);
+    if (options.active) await activateAsOwner(db.$client);
   } finally {
     await db.$client.end();
   }
