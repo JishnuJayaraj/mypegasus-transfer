@@ -132,8 +132,32 @@ describe("ProjectConfig", () => {
             confirmedOn: "2026-10-16",
           },
         ],
+        relaxations: [
+          {
+            ruleId: "base-import-birthDate",
+            reasonCode: "source_data_not_provided",
+            approvedBy: "00000000-0000-4000-8000-000000000006",
+            approvedOn: "2026-10-17",
+          },
+        ],
       },
-      capabilities: { pinTemplate: true, setProjectAgentur: false, changeOverride: true },
+      relaxationRequests: [
+        {
+          id: "00000000-0000-4000-b000-000000000001",
+          ruleId: "base-import-address",
+          reasonCode: "collected_outside_platform",
+          requestedBy: "00000000-0000-4000-8000-000000000003",
+          requestedOn: "2026-10-17",
+          capabilities: { decide: false, withdraw: true },
+        },
+      ],
+      relaxableRules: [{ ruleId: "base-import-phone", step: "data_collection" }],
+      capabilities: {
+        pinTemplate: true,
+        setProjectAgentur: false,
+        changeOverride: true,
+        requestRelaxation: true,
+      },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);
     const blocked = { ...config, projectBlockers: [{ code: "project_activation_blocked" }] };

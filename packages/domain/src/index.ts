@@ -92,6 +92,7 @@ export {
   AgenturSettingSource,
   AsuChannel,
   checkAgenturSetting,
+  ExpectedOverrideVersion,
   Kug200bBatchChannel,
   OverrideChange,
   RegionalSettings,
@@ -102,7 +103,18 @@ export {
   Tl407SubmissionChannel,
   type AgenturSettingIssue,
 } from "./projects/agentur-settings";
-export { RelaxationReasonCode, RelaxationRequestStatus, RuleId } from "./projects/relaxations";
+export {
+  ApprovedRelaxation,
+  DecideRelaxationInput,
+  RelaxableRule,
+  RelaxationReasonCode,
+  RelaxationRequest,
+  RelaxationRequestStatus,
+  RemoveRelaxationQuery,
+  RequestRelaxationInput,
+  RuleId,
+  WithdrawRelaxationInput,
+} from "./projects/relaxations";
 export {
   effectiveOfferDeadline,
   effectiveTgEnd,

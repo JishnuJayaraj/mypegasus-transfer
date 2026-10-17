@@ -1,5 +1,6 @@
 import {
   parseLayer,
+  relaxableRules,
   resolveForParticipation,
   resolveForProject,
   validateProjectOverride,
@@ -19,6 +20,8 @@ import {
 } from "@transfer/config/load";
 import {
   and,
+  asc,
+  configRelaxationRequest as relaxationRequest,
   configTemplateVersion as templateVersion,
   desc,
   eq,
@@ -30,8 +33,10 @@ import {
   type Database,
 } from "@transfer/db";
 import {
+  ApprovedRelaxation,
   planTemplatePin,
   projectActivationBlockers,
+  type Operation,
   type PinIssue,
   type PinTemplateInput,
   type ProjectConfig,
@@ -146,14 +151,15 @@ const participantLevel = (blockers: Blocker[]) =>
  * The project's snapshot and what it blocks (plan 5.12): the pins, the project level resolved
  * against the Project Agentur's pinned template, per pinned Agentur the participant-level
  * blockers and warnings, and the activation blockers (Q76, Q77), all resolved with the current
- * override (R11), which is shown with its Agentur-scoped settings; and what the user may do here,
- * from the route's operation checks (round 26). Undefined for no project.
+ * override (R11), which is shown with its Agentur-scoped settings and approved relaxations; the
+ * open relaxation requests and the rules a request may name; and what the user may do here, from
+ * the route's operation check (round 26). Undefined for no project.
  */
 export async function projectConfig(
   db: Db,
   release: Release,
   projectId: string,
-  may: { pinTemplate: boolean; changeOverride: boolean },
+  may: (operation: Operation) => boolean,
 ): Promise<ProjectConfig | undefined> {
   const [found] = await db
     .select({
@@ -178,6 +184,19 @@ export async function projectConfig(
     projectAgenturKey: found.projectAgenturKey,
   };
   const projectLevel = resolveForProject(input);
+  const open = await db
+    .select({
+      id: relaxationRequest.id,
+      ruleId: relaxationRequest.ruleId,
+      reasonCode: relaxationRequest.reasonCode,
+      requestedBy: relaxationRequest.requestedBy,
+      requestedOn: relaxationRequest.requestedOn,
+    })
+    .from(relaxationRequest)
+    .where(
+      and(eq(relaxationRequest.projectId, projectId), eq(relaxationRequest.status, "requested")),
+    )
+    .orderBy(asc(relaxationRequest.requestedAt), asc(relaxationRequest.id));
   return {
     projectAgenturKey: found.projectAgenturKey,
     baseDefaultsVersion: release.baseDefaults.version,
@@ -207,12 +226,28 @@ export async function projectConfig(
       agenturSettings: Object.entries(override.content?.agenturSettings ?? {})
         .toSorted(([a], [b]) => (a < b ? -1 : 1))
         .map(([agenturKey, setting]) => ({ agenturKey, ...setting })),
+      // Stored versions passed validateProjectOverride, so the codes are the controlled ones.
+      relaxations: (override.content?.relax ?? [])
+        .map((relaxation) => ApprovedRelaxation.parse(relaxation))
+        .toSorted((a, b) => (a.ruleId < b.ruleId ? -1 : 1)),
     },
+    relaxationRequests: open.map((request) => ({
+      ...request,
+      capabilities: {
+        // Never the requester (four eyes, R2); the API's check stays authoritative.
+        decide: may({ kind: "decideRelaxation", requestedBy: request.requestedBy }),
+        withdraw: may({ kind: "withdrawRelaxation" }),
+      },
+    })),
+    relaxableRules: relaxableRules(input).filter(
+      ({ ruleId }) => !open.some((request) => request.ruleId === ruleId),
+    ),
     capabilities: {
-      pinTemplate: may.pinTemplate,
+      pinTemplate: may({ kind: "pinTemplate" }),
       // The Project Agentur is fixed once active (R1, Q98); further Agenturen may still be pinned.
-      setProjectAgentur: may.pinTemplate && found.status === "draft",
-      changeOverride: may.changeOverride,
+      setProjectAgentur: may({ kind: "pinTemplate" }) && found.status === "draft",
+      changeOverride: may({ kind: "changeOverride" }),
+      requestRelaxation: may({ kind: "requestRelaxation" }),
     },
   };
 }

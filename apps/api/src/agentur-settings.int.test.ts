@@ -94,6 +94,7 @@ describe("PUT …/config/agentur-settings/{agenturKey} (AC-14)", () => {
           confirmedOn: "2026-10-17",
         },
       ],
+      relaxations: [],
     });
     // The snapshot resolves with the override (R11): Nord's missing key is supplied; Süd keeps
     // its template's values and blockers.
@@ -206,7 +207,7 @@ describe("DELETE …/config/agentur-settings/{agenturKey}", () => {
     const res = await remove(werkNord, nord, "expectedVersion=1");
     expect(res.status).toBe(200);
     const config = await readJson(res, ProjectConfig);
-    expect(config.override).toEqual({ version: 2, agenturSettings: [] });
+    expect(config.override).toEqual({ version: 2, agenturSettings: [], relaxations: [] });
     expect(config.agenturen[0]!.blockers).toEqual([
       expect.objectContaining({ missing: ["leadTimeDays"] }),
     ]);

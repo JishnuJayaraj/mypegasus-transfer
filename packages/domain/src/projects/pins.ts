@@ -3,6 +3,7 @@ import { ProjectActivationBlocker } from "../lifecycle/activation";
 import { Step } from "../lifecycle/enums";
 import type { ProjectStatus } from "../project";
 import { AgenturKey, TemporaryAgenturSetting } from "./agentur-settings";
+import { ApprovedRelaxation, RelaxableRule, RelaxationRequest } from "./relaxations";
 
 /**
  * Pins an Agentur template from the catalog (Slice 2 plan 5.8, R12): its latest version unless
@@ -112,22 +113,30 @@ export const ProjectConfig = z
     activationBlockers: z.array(ProjectActivationBlocker),
     /**
      * The current override version (5.9; 0 = none), part of the snapshot (R11), with its
-     * Agentur-scoped settings in key order.
+     * Agentur-scoped settings in key order and its approved relaxations in rule order.
      */
     override: z.strictObject({
       version: z.int().min(0),
       agenturSettings: z.array(TemporaryAgenturSetting.extend({ agenturKey: AgenturKey })),
+      relaxations: z.array(ApprovedRelaxation),
     }),
+    /** The open relaxation requests, oldest first (5.9). */
+    relaxationRequests: z.array(RelaxationRequest),
+    /** The rules a relaxation may be requested for, in rule order. */
+    relaxableRules: z.array(RelaxableRule),
     /**
      * What the user may do in this project, derived by the server (round 26): pin (the PL,
-     * `pinTemplate`), make an Agentur the Project Agentur (the PL, while draft), and change the
-     * override's Agentur-scoped settings (the PL, `changeOverride`). The UI offers only these;
-     * the API's checks stay authoritative.
+     * `pinTemplate`), make an Agentur the Project Agentur (the PL, while draft), change the
+     * override's Agentur-scoped settings and remove an approved relaxation (the PL,
+     * `changeOverride`) and request a relaxation (the PL, `requestRelaxation`); each open request
+     * says whether the user may decide or withdraw it. The UI offers only these; the API's
+     * checks stay authoritative.
      */
     capabilities: z.strictObject({
       pinTemplate: z.boolean(),
       setProjectAgentur: z.boolean(),
       changeOverride: z.boolean(),
+      requestRelaxation: z.boolean(),
     }),
   })
   .meta({ id: "ProjectConfig" });

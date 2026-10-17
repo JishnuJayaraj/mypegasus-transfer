@@ -725,13 +725,145 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "relaxations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ruleId": {
+                      "type": "string"
+                    },
+                    "reasonCode": {
+                      "type": "string",
+                      "enum": [
+                        "source_data_not_provided",
+                        "not_needed_for_project_measures",
+                        "collected_outside_platform",
+                        "agentur_confirmed_not_required"
+                      ]
+                    },
+                    "approvedBy": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Staff user id"
+                    },
+                    "approvedOn": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                      "examples": [
+                        "2027-03-01"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "ruleId",
+                    "reasonCode",
+                    "approvedBy",
+                    "approvedOn"
+                  ],
+                  "additionalProperties": false
+                }
               }
             },
             "required": [
               "version",
-              "agenturSettings"
+              "agenturSettings",
+              "relaxations"
             ],
             "additionalProperties": false
+          },
+          "relaxationRequests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "ruleId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$"
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "enum": [
+                    "source_data_not_provided",
+                    "not_needed_for_project_measures",
+                    "collected_outside_platform",
+                    "agentur_confirmed_not_required"
+                  ]
+                },
+                "requestedBy": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Staff user id"
+                },
+                "requestedOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "decide": {
+                      "type": "boolean"
+                    },
+                    "withdraw": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "decide",
+                    "withdraw"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "ruleId",
+                "reasonCode",
+                "requestedBy",
+                "requestedOn",
+                "capabilities"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "relaxableRules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ruleId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$"
+                },
+                "step": {
+                  "type": "string",
+                  "enum": [
+                    "asu_registration",
+                    "data_collection",
+                    "profiling",
+                    "agentur_submission",
+                    "dsv",
+                    "project_checklist"
+                  ]
+                }
+              },
+              "required": [
+                "ruleId",
+                "step"
+              ],
+              "additionalProperties": false
+            }
           },
           "capabilities": {
             "type": "object",
@@ -744,12 +876,16 @@
               },
               "changeOverride": {
                 "type": "boolean"
+              },
+              "requestRelaxation": {
+                "type": "boolean"
               }
             },
             "required": [
               "pinTemplate",
               "setProjectAgentur",
-              "changeOverride"
+              "changeOverride",
+              "requestRelaxation"
             ],
             "additionalProperties": false
           }
@@ -762,6 +898,8 @@
           "agenturen",
           "activationBlockers",
           "override",
+          "relaxationRequests",
+          "relaxableRules",
           "capabilities"
         ],
         "additionalProperties": false
@@ -940,6 +1078,73 @@
           "source",
           "confirmedOn"
         ],
+        "additionalProperties": false
+      },
+      "RequestRelaxationInput": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$"
+          },
+          "reasonCode": {
+            "type": "string",
+            "enum": [
+              "source_data_not_provided",
+              "not_needed_for_project_measures",
+              "collected_outside_platform",
+              "agentur_confirmed_not_required"
+            ]
+          }
+        },
+        "required": [
+          "ruleId",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "DecideRelaxationInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "approved"
+                ]
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "decision",
+              "expectedVersion"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": [
+                  "rejected"
+                ]
+              }
+            },
+            "required": [
+              "decision"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "WithdrawRelaxationInput": {
+        "type": "object",
+        "properties": {},
         "additionalProperties": false
       }
     },
@@ -2014,6 +2219,430 @@
             },
             "required": true,
             "name": "agenturKey",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "required": false,
+            "name": "expectedVersion",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The project's configuration with the new override version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/config/relaxations": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Request the relaxation of an operational_default rule with a controlled reason code (plan 5.9); it takes effect only once another person approves it",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestRelaxationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The project's configuration after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/relaxations/{requestId}/decision": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Approve or reject a pending relaxation request (another person than the requester, R2); an approval adds the relaxation as a new override version",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideRelaxationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The project's configuration after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/config/relaxations/{requestId}/withdrawal": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Withdraw a pending relaxation request (plan 5.9)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawRelaxationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The project's configuration after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/config/relaxations/{ruleId}": {
+      "delete": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Remove an approved relaxation (tightening, no approval), as a new override version (plan 5.9)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$"
+            },
+            "required": true,
+            "name": "ruleId",
             "in": "path"
           },
           {

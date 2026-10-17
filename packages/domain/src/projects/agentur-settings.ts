@@ -72,7 +72,7 @@ export const OverrideChange = z.enum([
 export type OverrideChange = z.infer<typeof OverrideChange>;
 
 /** The override version a write expects (optimistic concurrency, 5.9); 0 = no override yet. */
-const expectedVersion = z.int().min(0);
+export const ExpectedOverrideVersion = z.int().min(0);
 
 /**
  * Sets an Agentur's scoped setting (`PUT …/config/agentur-settings/{agenturKey}`, 5.9). The
@@ -80,7 +80,7 @@ const expectedVersion = z.int().min(0);
  */
 export const SetAgenturSettingInput = z
   .strictObject({
-    expectedVersion,
+    expectedVersion: ExpectedOverrideVersion,
     settings: RegionalSettings,
     source: AgenturSettingSource,
     confirmedOn: isoDate,
@@ -90,7 +90,7 @@ export type SetAgenturSettingInput = z.infer<typeof SetAgenturSettingInput>;
 
 /** Removes an Agentur's scoped setting (`DELETE`, query); strict. */
 export const RemoveAgenturSettingQuery = z.strictObject({
-  expectedVersion: z.coerce.number().pipe(expectedVersion),
+  expectedVersion: z.coerce.number().pipe(ExpectedOverrideVersion),
 });
 
 /** `step.key` of every setting a scoped setting supplies, in a stable order. */
