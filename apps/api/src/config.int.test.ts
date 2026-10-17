@@ -61,10 +61,10 @@ describe("GET /api/v1/config/templates (plan 5.8, 5.12)", () => {
       { parameter: "agenturKey", code: "unrecognized_keys", detail: "Unknown field" },
     ]);
     await expectProblem(await get("?limit=0"), 400, "validation-error");
-    const forged = Buffer.from(JSON.stringify({ agenturKey: "x", version: 0 })).toString(
+    const schemaInvalid = Buffer.from(JSON.stringify({ agenturKey: "x", version: 0 })).toString(
       "base64url",
     );
-    for (const cursor of ["not-base64!", forged]) {
+    for (const cursor of ["not-base64!", schemaInvalid]) {
       const body = await expectProblem(await get(`?cursor=${cursor}`), 400, "validation-error");
       expect(body.errors).toEqual([
         { parameter: "cursor", code: "invalid_cursor", detail: "Malformed cursor" },
@@ -76,7 +76,7 @@ describe("GET /api/v1/config/templates (plan 5.8, 5.12)", () => {
     await expectProblem(await app.request("/api/v1/config/templates"), 401, "unauthenticated");
   });
 
-  // Fail safe until Q108 is answered: who chooses or pins templates, and global org roles.
+  // Q108 (confirmed in round 25): who chooses or pins templates, and global org roles.
   it.each(["projectLead", "admin", "regionalAdmin", "regionalOperationsManager"])(
     "is readable by %s",
     async (user) => {
@@ -128,5 +128,13 @@ describe("CONFIG_DIR (S2)", () => {
     expect(() => testApp({ db, env: { configDir: configDir({ templates: "x" }) } })).toThrow(
       ZodError,
     );
+  });
+
+  it.each([
+    ["duplicate", [templates[0], templates[1], templates[1]]],
+    ["out-of-order", [templates[1], templates[0], templates[2]]],
+  ])("refuses to start with %s catalog entries", (_, entries) => {
+    const dir = configDir({ templates: entries });
+    expect(() => testApp({ db, env: { configDir: dir } })).toThrow(/manifest_not_strictly_ordered/);
   });
 });

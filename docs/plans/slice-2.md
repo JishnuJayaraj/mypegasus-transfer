@@ -96,7 +96,7 @@ data exists while retention periods are `unset`.
 
 ### Open
 
-Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22). Still open, each with its fail-safe
+Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25. Still open, each with its fail-safe
 reading in `open-questions.md`:
 - **Q101** (PL): wave edits once in use. PR 2b builds the fail-safe rules; an answer changes a table.
 - **Q102** (PL, legal, BA process owner): individual dates and the twelve-month limit. **Settled
@@ -104,8 +104,6 @@ reading in `open-questions.md`:
 - **Q103** (PL): the import contract, incl. foreign addresses and numeric identifiers. **Settled
   before PRs 2f/2g**, since it may change the schema and the target catalog.
 - **Q105** 🔒 (DPO): retention classes; a pre-pilot gate.
-- **Q108** (product owner): who reads the global template catalog. PR 2c-1 builds the fail-safe
-  reading (item 7 of "Built in PR 2c-1").
 
 ## 1. Goal
 
@@ -335,6 +333,10 @@ schema-qualifies its built-ins.
 
 ### Built in PR 2c-1, with the readings taken (for confirmation)
 
+Round 25 ([review of PR 2c-1](../decisions/2026-10-17-answers-round-25.md)) added: the manifest
+schema requires strictly ordered entries, startup refuses duplicates and reordering (item 3); the
+cursor wording (item 8); Q108 confirmed (item 7).
+
 Built: `canonicalJson` and `canonicalHash` (`packages/config/src/hash.ts`, under the 100 %
 threshold, R22); the `TemplateManifest` schema and `compareTemplateVersions`
 (`manifest.ts`); `buildManifest`, `renderManifest`, `loadManifest`, `configDirs` and
@@ -361,7 +363,9 @@ smoke-tested by CI's `image` job (the cloud session's Docker daemon isn't runnin
    `sample` (`false` when the template doesn't say) and the full `sha256`, ordered by key, then
    version. Generation validates every file through `loadTemplate`; a file in a key directory
    that isn't `<version>.json` fails `pnpm generate`. The API validates the manifest with a
-   strict schema when it loads it.
+   strict schema when it loads it, which also requires the entries to be strictly increasing by
+   `compareTemplateVersions` (no duplicate `(agenturKey, version)`, no reordering;
+   `manifest_not_strictly_ordered`), because pagination relies on that order (round 25).
 4. **The immutability base ref:** CI's lint job checks out the full history and passes
    `TEMPLATE_BASE_REF` (the PR's base SHA, or `github.event.before` on `main`); the script also
    takes the ref as its argument. Under CI (`CI` set) a missing base ref fails; a ref that isn't a
@@ -374,12 +378,14 @@ smoke-tested by CI's `image` job (the cloud session's Docker daemon isn't runnin
    (`CONFIG_DIR=dist/config`) and Playwright set it; e2e therefore runs on the copied files too.
 6. **The catalog is read once when the API starts**, not per request: it is part of the release,
    and a missing or invalid catalog fails the start (and the smoke test), never a request.
-7. **Access (Q108, fail safe):** the flat role `project_lead`, the PL of any project and the
-   global org roles read the catalog; consultants and back office without a PL role get 403;
-   without a session 401. Recorded as Q108.
+7. **Access (Q108, confirmed in round 25):** the flat role `project_lead`, anyone holding the
+   `project_lead` membership in any project and the global org roles read the catalog;
+   consultants and back office without a PL membership get 403; without a session 401.
 8. **Pagination** as for every list (ADR-0010): keyset on `(agenturKey, version)` with an opaque
-   cursor; strict query (an unknown parameter is `unrecognized_keys`, a forged cursor
-   `invalid_cursor`).
+   cursor; strict query (an unknown parameter is `unrecognized_keys`, a malformed or
+   schema-invalid cursor `invalid_cursor`). The cursor is opaque but not authenticated: a caller
+   can build a schema-valid one, which is harmless for this read-only catalog, so it isn't signed
+   (round 25).
 9. **No "latest" flag** in the catalog: the latest version of a key is its highest `version`,
    derived where it is used (PR 2c-2, R12).
 10. **The smoke test's PL** is a synthetic staff user the script inserts as the owner and deletes

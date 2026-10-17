@@ -137,6 +137,34 @@ describe("loadManifest", () => {
       expect(() => loadManifest(url)).toThrow(ZodError);
     }
   });
+
+  // Pagination keys on (agenturKey, version): a duplicate or a misplaced entry would be skipped
+  // or repeated, so only strictly increasing entries load.
+  it.each(
+    (() => {
+      const [a, b, c] = committed.templates;
+      return [
+        ["a duplicate (agenturKey, version)", [a, b, b, c]],
+        ["a duplicate with another hash", [a, { ...a, sha256: "0".repeat(64) }]],
+        ["an out-of-order version", [b, a, c]],
+        ["an out-of-order key", [c, a]],
+      ] as const;
+    })(),
+  )("refuses %s", (_, templates) => {
+    const { dir, url } = scratch();
+    writeFileSync(join(dir, "manifest.json"), JSON.stringify({ templates }));
+    expect(() => loadManifest(url)).toThrow(/manifest_not_strictly_ordered/);
+  });
+
+  it("names every entry that isn't after its predecessor", () => {
+    const [a, b, c] = committed.templates;
+    const result = TemplateManifest.safeParse({ templates: [b, a, c, c] });
+    expect(result.error?.issues).toHaveLength(2);
+    expect(result.error?.issues).toMatchObject([
+      { path: ["templates", 1], params: { code: "manifest_not_strictly_ordered" } },
+      { path: ["templates", 3], params: { code: "manifest_not_strictly_ordered" } },
+    ]);
+  });
 });
 
 describe("CONFIG_DIR (S2)", () => {

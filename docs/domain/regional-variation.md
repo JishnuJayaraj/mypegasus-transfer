@@ -173,7 +173,8 @@ Participation
   R22), so reformatting a file never counts as a change and any change of content does.
 - **Catalog:** `pnpm generate` writes `packages/config/templates/manifest.json` with every
   version's key, version, labels, `sample` flag and hash; CI fails when it differs from the files.
-  `GET /api/v1/config/templates` serves it (who may read it: Q108).
+  `GET /api/v1/config/templates` serves it to the flat role `project_lead`, the PL members of any project and the global org
+  roles (Q108).
 - **Immutability:** a merged version never changes and is never deleted.
   `scripts/check-template-immutability.mjs` (in `pnpm lint` and CI) compares every version
   present at the base branch by hash. A change of an Agentur's rules is a **new version**, which

@@ -28,7 +28,7 @@ export function seesProject(subject: StaffSubject, projectId: string): boolean {
 }
 
 /**
- * Who reads the global template catalog (plan 5.8). Fail safe until Q108 is answered: those who
+ * Who reads the global template catalog (plan 5.8; Q108, confirmed in round 25): those who
  * choose or pin templates, i.e. the flat role `project_lead` (creates projects and chooses their
  * Project Agentur, R9, R12) and the PL of any project (`pinTemplate`), and the global org roles,
  * who see every project's configuration (Q106). Other members only see their projects' pins.
