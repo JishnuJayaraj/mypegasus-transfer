@@ -18,3 +18,6 @@ if (typeof window !== "undefined")
       removeListener: () => {},
       dispatchEvent: () => false,
     }) as MediaQueryList;
+
+// jsdom doesn't implement scrolling; TanStack Router's scroll restoration calls it on navigation.
+if (typeof window !== "undefined") window.scrollTo = () => {};

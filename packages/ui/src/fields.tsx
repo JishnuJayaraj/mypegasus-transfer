@@ -1,12 +1,12 @@
 import { DatePicker, DatePickerInput } from "@carbon/react";
-import type { ChangeEvent } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 
 interface DateFieldProps {
   id: string;
   labelText: string;
   onChange: (text: string) => void;
   defaultValue?: string;
-  invalidText?: string;
+  invalidText?: ReactNode;
 }
 
 /**

@@ -107,7 +107,7 @@ describe("wave form (AC-8)", () => {
     });
   });
 
-  it("edits a wave: prefilled, a cleared date is sent as null", async () => {
+  it("edits a wave: prefilled, only the changed fields are sent, a cleared date as null", async () => {
     const calls = setup({
       [`PATCH ${path}/entry-waves/${w1.id}`]: () => json({ ...w1, defaultTgEnd: null }),
     });
@@ -118,14 +118,43 @@ describe("wave form (AC-8)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(await screen.findByText("Eintrittswelle gespeichert")).toBeInTheDocument();
+    // Round 24: never the whole loaded wave, which could undo another PL's edit of another field.
     expect(calls.find((c) => c.key === `PATCH ${path}/entry-waves/${w1.id}`)?.body).toEqual({
-      code: "W1",
-      name: "Welle 1",
-      signingDeadline: "2091-02-15",
-      defaultTgStart: "2091-03-01",
       defaultTgEnd: null,
-      latestEntryDate: "2091-03-15",
     });
+  });
+
+  it("sends nothing for an edit without changes and says so", async () => {
+    const calls = setup();
+    await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText("Es wurde nichts geändert.")).toBeInTheDocument();
+    expect(calls.some((c) => c.key.startsWith("PATCH"))).toBe(false);
+  });
+
+  it("shows every error of one field (round 24)", async () => {
+    setup({
+      [`PATCH ${path}/entry-waves/${w1.id}`]: () =>
+        problem(422, "domain-error", {
+          errors: [
+            { pointer: "/latestEntryDate", code: "latest_entry_in_past", detail: "x" },
+            { pointer: "/latestEntryDate", code: "cutoff_passed", detail: "x" },
+          ],
+        }),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
+    const latest = screen.getByLabelText("Letztmöglicher Eintritt");
+    await userEvent.clear(latest);
+    await userEvent.type(latest, "01.01.2091");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(
+      await screen.findByText("Der letztmögliche Eintritt darf nicht in der Vergangenheit liegen."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Der letztmögliche Eintritt ist verstrichen und kann nicht mehr geändert werden.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows each domain error at its field and a whole-wave error above the form", async () => {
@@ -136,11 +165,12 @@ describe("wave form (AC-8)", () => {
             { pointer: "/code", code: "code_taken", detail: "x" },
             { pointer: "/defaultTgEnd", code: "period_exceeds_twelve_months", detail: "x" },
             { pointer: "/latestEntryDate", code: "cutoff_passed", detail: "x" },
-            { pointer: "", code: "wave_unchanged", detail: "x" },
+            { pointer: "", code: "not_ta_tg", detail: "x" },
           ],
         }),
     });
     await userEvent.click(await screen.findByRole("button", { name: "W1 bearbeiten" }));
+    await userEvent.type(screen.getByLabelText("Kürzel"), "x");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(
@@ -155,7 +185,9 @@ describe("wave form (AC-8)", () => {
         "Der letztmögliche Eintritt ist verstrichen und kann nicht mehr geändert werden.",
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText("Es wurde nichts geändert.")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Nur Projekte mit Transfergesellschaft haben Eintrittswellen.").length,
+    ).toBeGreaterThan(0);
   });
 
   it("refuses an impossible date without asking the API", async () => {

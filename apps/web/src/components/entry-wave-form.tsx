@@ -39,6 +39,14 @@ interface EntryWaveFormProps {
  * One form for creating and editing an entry wave (plan 5.6, 5.13). The API checks every rule;
  * each refusal is shown at its field, a refusal of the whole wave above the form.
  */
+/** What an edit sends: only the fields that differ from the loaded wave (round 24). */
+function changedFields(values: CreateEntryWaveInput, wave: EntryWave | undefined) {
+  if (!wave) return values;
+  return Object.fromEntries(
+    Object.entries(values).filter(([field, value]) => value !== wave[field as WaveField]),
+  );
+}
+
 export function EntryWaveForm({ projectId, wave, onSaved, onCancel }: EntryWaveFormProps) {
   const { t } = useTranslation();
   const api = useApi();
@@ -50,14 +58,15 @@ export function EntryWaveForm({ projectId, wave, onSaved, onCancel }: EntryWaveF
     defaultTgEnd: formatDate(wave?.defaultTgEnd),
     latestEntryDate: formatDate(wave?.latestEntryDate),
   }));
-  const [errors, setErrors] = useState<Partial<Record<WaveField, string>>>({});
+  // Every refusal of a field, not only the first (round 24).
+  const [errors, setErrors] = useState<Partial<Record<WaveField, string[]>>>({});
   const [formError, setFormError] = useState<string>();
   const message = (code: string) =>
     t(`waveForm.errors.${code as ErrorCode}`, { defaultValue: t("waveForm.errors.invalid") });
   const set = (field: WaveField) => (value: string) => setText({ ...text, [field]: value });
 
   const save = useMutation({
-    mutationFn: async (body: CreateEntryWaveInput) => {
+    mutationFn: async (body: Partial<CreateEntryWaveInput>) => {
       const path = { projectId, waveId: wave?.id ?? "" };
       const { data } = wave
         ? await api.PATCH("/api/v1/projects/{projectId}/entry-waves/{waveId}", {
@@ -66,7 +75,7 @@ export function EntryWaveForm({ projectId, wave, onSaved, onCancel }: EntryWaveF
           })
         : await api.POST("/api/v1/projects/{projectId}/entry-waves", {
             params: { path },
-            body,
+            body: body as CreateEntryWaveInput,
           });
       if (!data) throw new Error("Entry wave was not saved");
       return data;
@@ -74,13 +83,13 @@ export function EntryWaveForm({ projectId, wave, onSaved, onCancel }: EntryWaveF
     onSuccess: onSaved,
     onError: (error) => {
       const problem = error instanceof ApiProblemError ? error : undefined;
-      const fieldErrors: Partial<Record<WaveField, string>> = {};
+      const fieldErrors: Partial<Record<WaveField, string[]>> = {};
       let whole = problem?.status === 403 ? "forbidden" : undefined;
       for (const item of problem && [400, 422].includes(problem.status)
         ? (problem.problem.errors ?? [])
         : []) {
         const field = item.pointer?.split("/")[1];
-        if (isField(field)) fieldErrors[field] ??= item.code;
+        if (isField(field)) (fieldErrors[field] ??= []).push(item.code);
         else whole ??= item.code;
       }
       setErrors(fieldErrors);
@@ -90,23 +99,26 @@ export function EntryWaveForm({ projectId, wave, onSaved, onCancel }: EntryWaveF
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    const fieldErrors: Partial<Record<WaveField, string>> = {};
+    const fieldErrors: Partial<Record<WaveField, string[]>> = {};
     const dates: Record<string, string | null> = {};
     for (const field of waveDateFields) {
       const parsed = parseDisplayDate(text[field]);
       if (parsed.ok) dates[field] = parsed.value ?? null;
-      else fieldErrors[field] = "invalid_date";
+      else fieldErrors[field] = ["invalid_date"];
     }
     setErrors(fieldErrors);
     setFormError(undefined);
-    if (Object.keys(fieldErrors).length === 0) {
-      save.mutate({ code: text.code, name: text.name, ...dates });
-    }
+    if (Object.keys(fieldErrors).length) return;
+    const body = changedFields({ code: text.code, name: text.name, ...dates }, wave);
+    if (Object.keys(body).length === 0) setFormError("wave_unchanged");
+    else save.mutate(body);
   }
 
   const invalid = (field: WaveField) => {
-    const code = errors[field];
-    return code === undefined ? {} : { invalid: true, invalidText: message(code) };
+    const codes = errors[field];
+    if (codes === undefined) return {};
+    const invalidText = codes.map((code) => <span key={code}>{message(code)} </span>);
+    return { invalid: true, invalidText };
   };
 
   return (
