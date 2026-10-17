@@ -63,7 +63,8 @@ function EntryWaves({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const query = entryWavesQuery(useApi(), projectId);
+  const api = useApi();
+  const query = entryWavesQuery(api, projectId);
   const { data: waves } = useSuspenseQuery(query);
   // "new", a wave's id, or no form.
   const [editing, setEditing] = useState<string | null>(null);
@@ -103,7 +104,13 @@ function EntryWaves({ projectId }: { projectId: string }) {
           wave={waves.find((wave) => wave.id === editing)}
           onCancel={() => setEditing(null)}
           onSaved={async (wave) => {
-            await queryClient.invalidateQueries({ queryKey: query.queryKey });
+            // A wave's latest entry date changes the activation blockers (Q77).
+            await Promise.all([
+              queryClient.invalidateQueries({ queryKey: query.queryKey }),
+              queryClient.invalidateQueries({
+                queryKey: projectConfigQuery(api, projectId).queryKey,
+              }),
+            ]);
             showToast({ title: t("projectDetail.waveSaved"), subtitle: wave.code });
             setEditing(null);
           }}

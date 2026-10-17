@@ -102,10 +102,14 @@ describe("wave form (AC-8)", () => {
     await userEvent.type(screen.getByLabelText("Kürzel"), "W3");
     await userEvent.type(screen.getByLabelText("Bezeichnung"), "Welle 3");
     await userEvent.type(screen.getByLabelText("Letztmöglicher Eintritt"), "15.3.2091");
+    const configReads = () => calls.filter((c) => c.key === `GET ${path}/config`).length;
+    const before = configReads();
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     expect(await screen.findByText("Welle 3")).toBeInTheDocument();
     expect(screen.getByText("Eintrittswelle gespeichert")).toBeInTheDocument();
+    // A latest entry date changes the activation blockers (Q77): the configuration is reread.
+    expect(configReads()).toBeGreaterThan(before);
     expect(calls.find((c) => c.key === `POST ${path}/entry-waves`)?.body).toEqual({
       code: "W3",
       name: "Welle 3",

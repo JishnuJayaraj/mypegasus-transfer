@@ -88,5 +88,6 @@ export const unpinnedConfig = {
     setProjectAgentur: true,
     changeOverride: true,
     requestRelaxation: true,
+    activateProject: true,
   },
 };

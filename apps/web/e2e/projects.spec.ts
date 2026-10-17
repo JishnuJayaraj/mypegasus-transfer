@@ -66,9 +66,11 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
 
   // Slice 2 (PR 2c-2, plan 5.8): without a Project Agentur the project is blocked; the PL pins the
   // sample Agentur's latest version from the catalog and the blocker clears.
+  // Listed with the blockers and again at the activation it blocks (PR 2e-1).
   await expect(
     page.getByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
-  ).toBeVisible();
+  ).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Aktivieren" })).toBeDisabled();
   await expect(page.getByLabel("Version")).toHaveValue("2");
   await page.getByRole("button", { name: "Als Projekt-Agentur festlegen" }).click();
   await expect(page.getByText("Vorlage gepinnt")).toBeVisible();
@@ -78,6 +80,19 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
     ),
   ).toBeVisible();
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
+  await expectAccessible(page);
+
+  // Slice 2 (PR 2e-1, AC-17): with the Project Agentur pinned and W1's latest entry date nothing
+  // blocks, so the PL activates the project; activation is one-way, and the Project Agentur is
+  // fixed from then on (R1).
+  await expect(page.getByText("Status: Entwurf.", { exact: false })).toBeVisible();
+  await expect(page.getByText(/Die Aktivierung ist endgültig/)).toBeVisible();
+  await page.getByRole("button", { name: "Aktivieren" }).click();
+  await expect(page.getByText("Projekt aktiviert", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^Status: aktiv seit/)).toBeVisible();
+  await expect(page.getByText(/· Aktiv$/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Aktivieren" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Als Projekt-Agentur festlegen" })).toHaveCount(0);
   await expectAccessible(page);
 
   // Slice 2 (PR 2d-1, AC-14): an Agentur-scoped setting for an Agentur without a template, with
