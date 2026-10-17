@@ -763,7 +763,11 @@ its wave).
     the status the page shows. It names the activation blockers it would hit (the configuration's
     `activationBlockers`, also in the blocker list above it) and is **disabled while there are
     any**; the submission blockers don't disable it, and the hint says so. The API's 403 and 422
-    stay authoritative: a refusal is shown by its code and the configuration is read again.
+    stay authoritative: a refusal is shown by its code (a blocker with the blocker list's message).
+    **Round 29:** the refusal is kept in the setup section, which outlives the activation
+    component, and every refusal rereads the project, the project list and the configuration, so
+    after a concurrent activation (`project_not_draft`) "Das Projekt ist bereits aktiv." stays
+    visible while the status turns active and the action disappears.
 11. **After activation** the project, the project list and the configuration are read again, so
     the status ("aktiv seit …", database time) and the header show it and the action and "Als
     Projekt-Agentur festlegen" disappear (both capabilities are draft-only); the warnings the
