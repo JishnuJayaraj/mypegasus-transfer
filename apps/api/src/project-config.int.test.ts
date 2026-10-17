@@ -41,6 +41,14 @@ const pin = (projectId: string, body: unknown, user = "projectLead", on = app) =
   on.request(`${path(projectId)}/pins`, jsonRequest("POST", body, auth[user]));
 const codes = async (res: Response, status = 422, type = "domain-error") =>
   (await expectProblem(res, status, type)).errors?.map(({ code, pointer }) => ({ code, pointer }));
+const baseRelaxable = [
+  "base-import-address",
+  "base-import-birthDate",
+  "base-import-firstName",
+  "base-import-lastName",
+  "base-import-oldEmploymentEndDate",
+  "base-import-personnelNumber",
+].map((ruleId) => ({ ruleId, step: "data_collection" }));
 const prefixOf = (agenturKey: string, version: number) =>
   catalog.find((t) => t.agenturKey === agenturKey && t.version === version)!.sha256.slice(0, 12);
 
@@ -64,8 +72,16 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       projectBlockers: [{ code: "project_activation_blocked", agenturKey: null }],
       agenturen: [],
       activationBlockers: ["project_activation_blocked", "no_entry_wave_with_latest_entry_date"],
-      override: { version: 0, agenturSettings: [] },
-      capabilities: { pinTemplate: true, setProjectAgentur: true, changeOverride: true },
+      override: { version: 0, agenturSettings: [], relaxations: [] },
+      relaxationRequests: [],
+      // The base-only chain's operational defaults (5.9, PR 2d-2).
+      relaxableRules: baseRelaxable,
+      capabilities: {
+        pinTemplate: true,
+        setProjectAgentur: true,
+        changeOverride: true,
+        requestRelaxation: true,
+      },
     });
   });
 
@@ -79,6 +95,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         pinTemplate: false,
         setProjectAgentur: false,
         changeOverride: false,
+        requestRelaxation: false,
       });
     },
   );
@@ -94,12 +111,14 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       pinTemplate: true,
       setProjectAgentur: true,
       changeOverride: true,
+      requestRelaxation: true,
     });
     const elsewhere = await readJson(await get(lagerSued, "consultant"), ProjectConfig);
     expect(elsewhere.capabilities).toEqual({
       pinTemplate: false,
       setProjectAgentur: false,
       changeOverride: false,
+      requestRelaxation: false,
     });
     await expectProblem(
       await pin(lagerSued, { agenturKey: "beispielstadt-sued" }, "consultant"),
@@ -228,6 +247,7 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
       pinTemplate: true,
       setProjectAgentur: false,
       changeOverride: true,
+      requestRelaxation: true,
     });
     expect(
       await codes(await pin(lagerSued, { agenturKey: "beispielstadt-sued", projectAgentur: true })),

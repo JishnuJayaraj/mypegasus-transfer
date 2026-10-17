@@ -200,6 +200,23 @@ Participation
   expected version is a 409) with a `config_override_changed` audit event naming the keys and the
   source, never a value. The project snapshot is its pins plus its current override version
   (R11), so a setting lifts the step-scoped blockers it supplies, for its own Agentur only.
+- **Rule relaxations with approval (PR 2d-2; Q75, round 8, round 14, R2, R3):** the PL requests
+  the relaxation of one rule with a **controlled reason code** (`source_data_not_provided`,
+  `not_needed_for_project_measures`, `collected_outside_platform`,
+  `agentur_confirmed_not_required`; Q100), never free text
+  (`POST /api/v1/projects/{id}/config/relaxations`). The request is checked against the current
+  snapshot: the rule must exist in some chain, apply there to the project's type and be
+  `operational_default` (`relaxation_unmatched`, `relaxation_locked`; round 28); one open request
+  per rule. It **takes effect
+  only once another person approves it**: the regional operations manager, never the requester
+  (four eyes in the access check and in SQL). The approval writes, in the same transaction, a new
+  override version that adds `{ ruleId, reasonCode, approvedBy, approvedOn }` and is validated
+  against every chain again; the regional operations manager may reject instead, and the PL may
+  withdraw a pending request. The PL may remove an approved relaxation without approval
+  (tightening), as a new override version. Request, approval, rejection, withdrawal and removal
+  are audited (rule id and reason code, never free text); request and approval record the
+  base-defaults version (R26). The configuration response lists the approved relaxations, the
+  open requests and the rules a request may name, with what the viewer may do.
 - **Cross-chain validation (round 15, R16):** every override write and every pin validates the
   override against the base-only chain and every pinned Agentur chain
   (`validateProjectOverride`): a rule on a custom field only one template declares, an override

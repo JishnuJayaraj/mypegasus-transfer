@@ -64,20 +64,16 @@ const mayIn = (subject: StaffSubject, projectId: string, operation: Operation) =
   mayPerformOperation(subject, operation, { projectId, regionId: null, participationId: null }).ok;
 
 /**
- * Which of `kinds` the user may perform in the project, as the server-derived capabilities the
- * UI follows (round 26); undefined when they can't see it (a 404).
+ * The user's operation check in a project, from which the server derives the capabilities the UI
+ * follows (round 26); undefined when they can't see it (a 404).
  */
-export async function projectOperations<K extends Extract<Operation, { kind: string }>["kind"]>(
+export async function projectPermissions(
   db: Database,
   user: StaffUser,
   projectId: string,
-  kinds: readonly K[],
-): Promise<Record<K, boolean> | undefined> {
+): Promise<((operation: Operation) => boolean) | undefined> {
   const { subject, visible } = await projectAccess(db, user, projectId);
-  if (!visible) return undefined;
-  return Object.fromEntries(
-    kinds.map((kind) => [kind, mayIn(subject, projectId, { kind } as Operation)]),
-  ) as Record<K, boolean>;
+  return visible ? (operation) => mayIn(subject, projectId, operation) : undefined;
 }
 
 /**
