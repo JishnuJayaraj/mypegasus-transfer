@@ -91,6 +91,9 @@ their slices (3, 5, 7).
 | `editEntryWaves` | PL | — |
 | `pinTemplate` | PL | — |
 | `changeOverride` | PL | — |
+| `requestRelaxation` | PL | — |
+| `decideRelaxation` | Regional operations manager | — |
+| `withdrawRelaxation` | PL | — |
 
 `requestEvidenceCorrection` (`append_evidence_correction`) by target, from the
 correction-authority table (round 12, Q88), not from who may open a document; requesting grants

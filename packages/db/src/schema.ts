@@ -11,6 +11,8 @@ import {
   ProjectRole,
   ProjectStatus,
   ProjectType,
+  RelaxationReasonCode,
+  RelaxationRequestStatus,
   StaffRole,
   StatusField,
   TgEntryKind,
@@ -142,6 +144,11 @@ export const profilingExceptionSupersededReason = pgEnum(
   values(ProfilingExceptionSupersededReason),
 );
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
+export const relaxationReasonCode = pgEnum("relaxation_reason_code", values(RelaxationReasonCode));
+export const relaxationRequestStatus = pgEnum(
+  "relaxation_request_status",
+  values(RelaxationRequestStatus),
+);
 
 const dateColumn = (name: string) => date(name, { mode: "string" });
 const createdAt = () =>
@@ -594,6 +601,57 @@ export const projectConfigOverride = pgTable(
   ],
 );
 
+const relaxationStatusIn = (...list: string[]) =>
+  sql.raw(`"config_relaxation_request"."status" in (${list.map((v) => `'${v}'`).join(", ")})`);
+
+/**
+ * A request to relax one `operational_default` rule of a project (Slice 2 plan 5.2, 5.9; Q75,
+ * R2): the PL asks with a controlled reason code; another person approves or rejects it, or the
+ * PL withdraws it. Only an approval changes the configuration, as a new override version in the
+ * same transaction. At most one open request per project and rule. Written only by the
+ * relaxation functions; a trigger lets the status move only forward.
+ */
+export const configRelaxationRequest = pgTable(
+  "config_relaxation_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    ruleId: text("rule_id").notNull(),
+    reasonCode: relaxationReasonCode("reason_code").notNull(),
+    status: relaxationRequestStatus("status").notNull(),
+    requestedBy: uuid("requested_by")
+      .notNull()
+      .references(() => staffUser.id),
+    /** The Berlin business date, from the caller's Clock. */
+    requestedOn: dateColumn("requested_on").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    decidedBy: uuid("decided_by").references(() => staffUser.id),
+    decidedOn: dateColumn("decided_on"),
+    decidedAt: timestamp("decided_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    uniqueIndex("config_relaxation_request_one_open_idx")
+      .on(t.projectId, t.ruleId)
+      .where(sql`${t.status} = 'requested'`),
+    // A rule id as the domain's `RuleId` (it enters the audit trail).
+    check(
+      "config_relaxation_request_rule_id",
+      sql`${t.ruleId} ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$'`,
+    ),
+    // A decision has its decider, date and instant; only approvals and rejections are decided.
+    check(
+      "config_relaxation_request_decision",
+      sql`(${t.decidedBy} is null) = (${t.decidedOn} is null) and (${t.decidedBy} is null) = (${t.decidedAt} is null) and (${relaxationStatusIn("approved", "rejected")}) = (${t.decidedBy} is not null)`,
+    ),
+    // Four eyes (round 8, R2): the decider is never the requester.
+    check("config_relaxation_request_four_eyes", sql`${t.decidedBy} <> ${t.requestedBy}`),
+  ],
+);
+
 /**
  * One row per job and Berlin run day, inserted once when that day's run has completed (plan 5.9):
  * the lifecycle sweep's catch-up window starts after the latest, and a same-day reconciliation
@@ -636,4 +694,5 @@ export const tables = [
   configTemplateVersion,
   projectTemplatePin,
   projectConfigOverride,
+  configRelaxationRequest,
 ];

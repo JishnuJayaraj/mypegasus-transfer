@@ -102,6 +102,7 @@ export {
   Tl407SubmissionChannel,
   type AgenturSettingIssue,
 } from "./projects/agentur-settings";
+export { RelaxationReasonCode, RelaxationRequestStatus, RuleId } from "./projects/relaxations";
 export {
   effectiveOfferDeadline,
   effectiveTgEnd,

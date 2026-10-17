@@ -140,3 +140,24 @@ Decided in the Slice 2 plan (D2 as amended in round 26, D3, 5.2, 5.3, 5.9) and b
   that audit event, and a set is confirmed by the acting user. It writes `config_override_changed` with the version, the change, the
   Agentur key, the setting keys it computes itself, the source of a set and the base-defaults
   version (R26); `record_audit_event` refuses that type now.
+
+## Amendment 2026-10-17: rule relaxation requests (Slice 2, PR 2d-2)
+
+Decided in the Slice 2 plan (D2, D3, 5.2, 5.3, 5.9; round 8 four eyes, R2) and built in PR 2d-2:
+- **`config_relaxation_request`** holds one row per request (`project_id`, rule id, controlled
+  reason code, status `requested` → `approved` / `rejected` / `withdrawn`, requester and decider
+  with dates and instants). Like `profiling_exception_request`: decision and four-eyes `CHECK`s
+  (the decider is never the requester), a trigger that lets the status only move forward and
+  keeps the request's identity, at most one open request per project and rule (partial unique
+  index). `SELECT` only for `transfer_app`; retention class `project_master`.
+- **`request_rule_relaxation`, `decide_rule_relaxation`, `withdraw_rule_relaxation`**
+  (`SECURITY DEFINER`) take the exclusive project lock first (for a decision or withdrawal after
+  reading the request's immutable project id), refuse non-users and assisted mode, and write
+  `rule_relaxation_requested` / `…_approved` / `…_rejected` / `…_withdrawn`; request and approval
+  carry the base-defaults version (R26). `record_audit_event` refuses the four types.
+- **`write_project_override`** is replaced with a `p_rule_id` parameter and the change kinds
+  `relaxation_added` and `relaxation_removed`, keeping round 27's exact delta: apart from that
+  rule's relaxation the content equals the current one. A relaxation is **added only by an
+  approval** the acting user recorded in the same transaction (`decide_rule_relaxation` calls it),
+  with the request's reason code, the approver and the decision date, so the granted function
+  can't bypass four eyes; a removal needs no approval (tightening).

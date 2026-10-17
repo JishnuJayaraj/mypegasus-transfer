@@ -120,7 +120,8 @@ describe("write_project_override (5.9, AC-14)", () => {
   it.each([
     ["content that isn't an override", { content: { ...empty, kind: "regional_template" } }],
     ["no content", { content: null }],
-    ["an unknown change", { change: "relaxation_added" }],
+    ["an unknown change", { change: "template_migrated" }],
+    ["a relaxation change for an Agentur", { change: "relaxation_removed" }],
     ["a malformed Agentur key", { agenturKey: "Beispielstadt Ost" }],
     ["no base-defaults version", { baseDefaultsVersion: null }],
     ["a negative expected version", { expectedVersion: -1 }],

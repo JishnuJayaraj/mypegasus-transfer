@@ -134,6 +134,20 @@
       "when": 1792234955703,
       "tag": "0018_config_override_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792240029552,
+      "tag": "0019_config_relaxations",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792240030687,
+      "tag": "0020_config_relaxation_functions",
+      "breakpoints": true
     }
   ]
 }

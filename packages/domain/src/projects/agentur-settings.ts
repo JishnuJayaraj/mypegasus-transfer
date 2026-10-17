@@ -60,9 +60,15 @@ export type TemporaryAgenturSetting = z.infer<typeof TemporaryAgenturSetting>;
 
 /**
  * What a new override version changes (`config_override_changed`): an Agentur-scoped setting set
- * or removed. Relaxations (PR 2d-2) and the migration review (PR 2e-2) add theirs.
+ * or removed, or an approved relaxation added or removed (PR 2d-2). The migration review (PR
+ * 2e-2) adds its own.
  */
-export const OverrideChange = z.enum(["agentur_setting_set", "agentur_setting_removed"]);
+export const OverrideChange = z.enum([
+  "agentur_setting_set",
+  "agentur_setting_removed",
+  "relaxation_added",
+  "relaxation_removed",
+]);
 export type OverrideChange = z.infer<typeof OverrideChange>;
 
 /** The override version a write expects (optimistic concurrency, 5.9); 0 = no override yet. */
