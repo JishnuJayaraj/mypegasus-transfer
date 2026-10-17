@@ -54,5 +54,58 @@
     "required": "Pflichtfeld",
     "tooLong": "Höchstens 200 Zeichen",
     "invalid": "Ungültige Eingabe"
+  },
+  "projectDetail": {
+    "waves": "Eintrittswellen",
+    "wavesEmpty": "Es gibt noch keine Eintrittswellen.",
+    "addWave": "Welle anlegen",
+    "edit": "{{code}} bearbeiten",
+    "waveSaved": "Eintrittswelle gespeichert",
+    "columns": {
+      "code": "Kürzel",
+      "name": "Bezeichnung",
+      "signingDeadline": "Unterschriftsfrist",
+      "defaultTgStart": "TG-Beginn",
+      "defaultTgEnd": "TG-Ende",
+      "latestEntryDate": "Letzter Eintritt",
+      "participations": "Teilnehmende",
+      "actions": "Aktionen"
+    }
+  },
+  "waveForm": {
+    "createTitle": "Neue Eintrittswelle",
+    "editTitle": "Eintrittswelle {{code}} bearbeiten",
+    "code": "Kürzel",
+    "name": "Bezeichnung",
+    "nameHint": "Keine personenbezogenen Daten eintragen, z. B. „Welle 1 – kurze Kündigungsfristen“.",
+    "signingDeadline": "Unterschriftsfrist",
+    "defaultTgStart": "TG-Beginn (Standard)",
+    "defaultTgEnd": "TG-Ende (Standard)",
+    "latestEntryDate": "Letztmöglicher Eintritt",
+    "submit": "Speichern",
+    "cancel": "Abbrechen",
+    "errors": {
+      "not_ta_tg": "Nur Projekte mit Transfergesellschaft haben Eintrittswellen.",
+      "invalid_code": "1–20 Zeichen: Buchstaben, Ziffern, „-“ und „_“.",
+      "code_taken": "Dieses Kürzel hat schon eine andere Welle.",
+      "invalid_name": "1–100 Zeichen, ohne Steuerzeichen.",
+      "signing_after_start": "Die Unterschriftsfrist darf nicht nach dem TG-Beginn liegen.",
+      "signing_after_latest_entry": "Die Unterschriftsfrist darf nicht nach dem letztmöglichen Eintritt liegen.",
+      "start_after_latest_entry": "Der TG-Beginn darf nicht nach dem letztmöglichen Eintritt liegen.",
+      "end_before_start": "Das TG-Ende darf nicht vor dem TG-Beginn liegen.",
+      "period_exceeds_twelve_months": "Die TG-Dauer darf zwölf Monate nicht überschreiten.",
+      "latest_entry_in_past": "Der letztmögliche Eintritt darf nicht in der Vergangenheit liegen.",
+      "cutoff_passed": "Der letztmögliche Eintritt ist verstrichen und kann nicht mehr geändert werden.",
+      "signing_deadline_in_use": "Offene Angebote nutzen diese Unterschriftsfrist; sie kann nicht geändert werden.",
+      "default_start_passed": "Der TG-Beginn ist erreicht und kann nicht mehr geändert werden.",
+      "default_start_in_past": "Teilnehmende nutzen diesen TG-Beginn; er darf nicht in der Vergangenheit liegen.",
+      "date_in_use": "Die Welle hat Teilnehmende; das Datum kann nicht gelöscht werden.",
+      "last_latest_entry_date": "Ein aktives Projekt braucht eine Welle mit letztmöglichem Eintritt.",
+      "wave_unchanged": "Es wurde nichts geändert.",
+      "invalid_date": "Ungültiges Datum (TT.MM.JJJJ)",
+      "invalid": "Ungültige Eingabe",
+      "forbidden": "Nur die Projektleitung kann Eintrittswellen bearbeiten.",
+      "failed": "Die Eintrittswelle konnte nicht gespeichert werden."
+    }
   }
 }
