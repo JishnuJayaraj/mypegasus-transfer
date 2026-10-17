@@ -517,6 +517,214 @@
           "sha256"
         ],
         "additionalProperties": false
+      },
+      "ProjectConfig": {
+        "type": "object",
+        "properties": {
+          "projectAgenturKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "baseDefaultsVersion": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "agenturKey": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "label": {
+                  "type": "object",
+                  "properties": {
+                    "de": {
+                      "type": "string"
+                    },
+                    "en": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "de"
+                  ],
+                  "additionalProperties": false
+                },
+                "sha256Prefix": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{12}$"
+                },
+                "pinnedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "UTC timestamp (ISO 8601)"
+                },
+                "pinnedBy": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Staff user id"
+                }
+              },
+              "required": [
+                "agenturKey",
+                "version",
+                "label",
+                "sha256Prefix",
+                "pinnedAt",
+                "pinnedBy"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "projectBlockers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigBlocker"
+            }
+          },
+          "agenturen": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "agenturKey": {
+                  "type": "string"
+                },
+                "blockers": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigBlocker"
+                  }
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigBlocker"
+                  }
+                }
+              },
+              "required": [
+                "agenturKey",
+                "blockers",
+                "warnings"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "activationBlockers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectActivationBlocker"
+            }
+          }
+        },
+        "required": [
+          "projectAgenturKey",
+          "baseDefaultsVersion",
+          "pins",
+          "projectBlockers",
+          "agenturen",
+          "activationBlockers"
+        ],
+        "additionalProperties": false
+      },
+      "ConfigBlocker": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "project_activation_blocked"
+                ]
+              },
+              "agenturKey": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "agenturKey"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "agentur_submission_blocked"
+                ]
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "asu_registration",
+                  "agentur_submission"
+                ]
+              },
+              "agenturKey": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "missing": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "code",
+              "step",
+              "agenturKey",
+              "missing"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ProjectActivationBlocker": {
+        "type": "string",
+        "enum": [
+          "project_activation_blocked",
+          "no_entry_wave_with_latest_entry_date"
+        ]
+      },
+      "PinTemplateInput": {
+        "type": "object",
+        "properties": {
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "projectAgentur": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agenturKey"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -1276,6 +1484,168 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/config": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "summary": "The project's pinned templates, blockers per Agentur and activation blockers",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The project's configuration snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/config/pins": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Pin an Agentur template from the catalog (its latest version unless chosen), optionally as the Project Agentur (plan 5.8)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PinTemplateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The project's configuration after the pin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

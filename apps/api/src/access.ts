@@ -1,5 +1,12 @@
 import { eq, project, projectMembership, type Database } from "@transfer/db";
-import { mayCreateProject, OrgRole, type ProjectRole, type StaffUser } from "@transfer/domain";
+import {
+  mayCreateProject,
+  mayPerformOperation,
+  OrgRole,
+  type Operation,
+  type ProjectRole,
+  type StaffUser,
+} from "@transfer/domain";
 import { staffSubject, type StaffSubject } from "./participations/subjects";
 
 /**
@@ -50,4 +57,22 @@ export async function projectAccess(db: Database, user: StaffUser, projectId: st
     .from(project)
     .where(eq(project.id, projectId));
   return { subject, visible: found !== undefined };
+}
+
+/**
+ * Whether the user may read the project's setup (members and global org roles, R9) or, with an
+ * operation, perform it (5.4): undefined, else the problem type. A project the user can't see is
+ * a 404, so its existence isn't revealed; a visible one they may not change is a 403.
+ */
+export async function projectDenial(
+  db: Database,
+  user: StaffUser,
+  projectId: string,
+  operation?: Operation,
+): Promise<"not-found" | "forbidden" | undefined> {
+  const { subject, visible } = await projectAccess(db, user, projectId);
+  if (!visible) return "not-found";
+  const target = { projectId, regionId: null, participationId: null };
+  if (operation && !mayPerformOperation(subject, operation, target).ok) return "forbidden";
+  return undefined;
 }

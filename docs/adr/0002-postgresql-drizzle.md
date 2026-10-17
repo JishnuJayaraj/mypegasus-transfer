@@ -103,3 +103,22 @@ Decided in the Slice 2 plan (D2–D4, round 22) and built in PR 2a:
 - **The Slice 0 project date columns are gone**; their values live in the entry waves (W1 copied
   first for projects created after the Slice 1 migration). Projects have a `status`
   (`draft`/`active`) and a `project_agentur_key`.
+
+## Amendment 2026-10-17: template versions and pins (Slice 2, PR 2c-2)
+
+Decided in the Slice 2 plan (D3, D5, R27, R28; round 22) and built in PR 2c-2:
+- **`config_template_version`** holds each template version once, keyed by `(agentur_key,
+  version)`, with its content (`jsonb`) and canonical SHA-256; global reference data without
+  `project_id` (R27). **`project_template_pin`** is append-only (the current pin per Agentur is
+  the highest `seq`) and carries `project_id`.
+- **`pin_agentur_template`** (`SECURITY DEFINER`) takes the exclusive project lock first, then
+  registers the version with `INSERT … ON CONFLICT DO NOTHING`: two concurrent first pins of one
+  version serialise on the primary key, and every pin compares the stored content (`jsonb`
+  equality) and hash with the supplied ones (`template_version_changed`). Lock order stays
+  project → template version → participation row. It writes `config_template_pinned` with the
+  base-defaults version (R26).
+- **Append-only for every role:** a trigger refuses `UPDATE` and `DELETE` on both tables, for the
+  owner too; `transfer_app` has `SELECT` only. `record_audit_event` refuses the new type.
+- **`update_project`** is replaced with a `p_project_agentur_key` parameter: only while draft and
+  only to an Agentur the project has pinned (`agentur_not_pinned`), so a Project Agentur always
+  has its snapshot.

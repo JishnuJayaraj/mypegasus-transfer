@@ -505,6 +505,65 @@ export const auditEvent = pgTable(
 );
 
 /**
+ * A template version as first pinned anywhere (Slice 2 plan 5.2, 5.8; D5): global reference data
+ * without `project_id` (R27). Keyed by Agentur and version, so two first pins of one version
+ * serialise on the primary key; every later pin must match both the content and its canonical
+ * SHA-256 (R22). Written only by `pin_agentur_template`; a trigger refuses `UPDATE` and `DELETE`,
+ * for the owner too.
+ */
+export const configTemplateVersion = pgTable(
+  "config_template_version",
+  {
+    agenturKey: text("agentur_key").notNull(),
+    version: integer("version").notNull(),
+    content: jsonb("content").notNull(),
+    contentSha256: text("content_sha256").notNull(),
+    registeredAt: timestamp("registered_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "config_template_version_pkey", columns: [t.agenturKey, t.version] }),
+    check("config_template_version_version_positive", sql`${t.version} >= 1`),
+    check("config_template_version_sha256_hex", sql`${t.contentSha256} ~ '^[0-9a-f]{64}$'`),
+    // The content is the template its key names (as `loadTemplate` checks the file's path).
+    check(
+      "config_template_version_content_matches_key",
+      sql`${t.content} ->> 'kind' = 'regional_template' and ${t.content} ->> 'agenturKey' = ${t.agenturKey} and ${t.content} -> 'version' = to_jsonb(${t.version})`,
+    ),
+  ],
+);
+
+/**
+ * A project's pins (plan 5.2): append-only, the current pin per Agentur is the one with the
+ * highest `seq`. Written only by `pin_agentur_template`; a trigger refuses `UPDATE` and `DELETE`.
+ */
+export const projectTemplatePin = pgTable(
+  "project_template_pin",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    seq: bigint("seq", { mode: "number" }).notNull().generatedAlwaysAsIdentity(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    agenturKey: text("agentur_key").notNull(),
+    version: integer("version").notNull(),
+    pinnedBy: uuid("pinned_by")
+      .notNull()
+      .references(() => staffUser.id),
+    pinnedAt: timestamp("pinned_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "project_template_pin_version_fk",
+      columns: [t.agenturKey, t.version],
+      foreignColumns: [configTemplateVersion.agenturKey, configTemplateVersion.version],
+    }),
+    index("project_template_pin_project_agentur_seq_idx").on(t.projectId, t.agenturKey, t.seq),
+  ],
+);
+
+/**
  * One row per job and Berlin run day, inserted once when that day's run has completed (plan 5.9):
  * the lifecycle sweep's catch-up window starts after the latest, and a same-day reconciliation
  * needs today's row. No personal data. `transfer_app` may select it and insert only `job_name`,
@@ -543,4 +602,6 @@ export const tables = [
   lifecycleEdge,
   auditEvent,
   jobRun,
+  configTemplateVersion,
+  projectTemplatePin,
 ];

@@ -38,6 +38,11 @@ const entry = (retentionClass: string, dataClass: string, holdsParticipantData =
   holdsParticipantData,
 });
 
+const asParticipantData = (name: string) => ({
+  ...dataCatalog,
+  [name]: { ...dataCatalog[name]!, holdsParticipantData: true },
+});
+
 describe("data catalog", () => {
   it("covers every table in the schema, and the schema is fine", () => {
     expect(checkDataCatalog(tables, dataCatalog)).toEqual([]);
@@ -54,7 +59,14 @@ describe("data catalog", () => {
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),
+      config_template_version: entry("reference_data", "internal"),
+      project_template_pin: entry("project_master", "internal"),
     });
+  });
+
+  it("scopes the pins by a project_id FK; only the global template versions have none (R27, AC-39)", () => {
+    expect(checkDataCatalog(tables, asParticipantData("project_template_pin"))).toEqual([]);
+    expect(checkDataCatalog(tables, asParticipantData("config_template_version"))).toHaveLength(1);
   });
 
   it("leaves every period with personal data unset until the DPO confirms it (Q3, Q58, Q59, Q77)", () => {

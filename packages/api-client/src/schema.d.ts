@@ -711,6 +711,167 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's pinned templates, blockers per Agentur and activation blockers */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The project's configuration snapshot */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectConfig"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/config/pins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pin an Agentur template from the catalog (its latest version unless chosen), optionally as the Project Agentur (plan 5.8) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PinTemplateInput"];
+                };
+            };
+            responses: {
+                /** @description The project's configuration after the pin */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectConfig"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -1043,6 +1204,55 @@ export interface components {
             };
             sample: boolean;
             sha256: string;
+        };
+        ProjectConfig: {
+            projectAgenturKey: string | null;
+            baseDefaultsVersion: number;
+            pins: {
+                agenturKey: string;
+                version: number;
+                label: {
+                    de: string;
+                    en?: string;
+                };
+                sha256Prefix: string;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                pinnedAt: string;
+                /**
+                 * Format: uuid
+                 * @description Staff user id
+                 */
+                pinnedBy: string;
+            }[];
+            projectBlockers: components["schemas"]["ConfigBlocker"][];
+            agenturen: {
+                agenturKey: string;
+                blockers: components["schemas"]["ConfigBlocker"][];
+                warnings: components["schemas"]["ConfigBlocker"][];
+            }[];
+            activationBlockers: components["schemas"]["ProjectActivationBlocker"][];
+        };
+        ConfigBlocker: {
+            /** @enum {string} */
+            code: "project_activation_blocked";
+            agenturKey: string | null;
+        } | {
+            /** @enum {string} */
+            code: "agentur_submission_blocked";
+            /** @enum {string} */
+            step: "asu_registration" | "agentur_submission";
+            agenturKey: string | null;
+            missing: string[];
+        };
+        /** @enum {string} */
+        ProjectActivationBlocker: "project_activation_blocked" | "no_entry_wave_with_latest_entry_date";
+        PinTemplateInput: {
+            agenturKey: string;
+            version?: number;
+            projectAgentur?: boolean;
         };
     };
     responses: never;

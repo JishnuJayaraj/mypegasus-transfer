@@ -48,6 +48,7 @@ export const AuditEventType = z.enum([
   "project_changed",
   "entry_wave_created",
   "entry_wave_changed",
+  "config_template_pinned",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -62,6 +63,18 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
   "project_changed",
   "entry_wave_created",
   "entry_wave_changed",
+  "config_template_pinned",
+]);
+
+/**
+ * The events whose result depends on the release's base defaults carry their `version` as
+ * `baseDefaultsVersion` (R26, round 23: `project_activated`, `config_template_pinned`,
+ * `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`,
+ * `import_confirmed`); each joins this list with the PR that adds its type.
+ */
+export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new Set([
+  "config_override_changed",
+  "config_template_pinned",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -86,6 +99,9 @@ const code = z.string().regex(/^[a-z][a-z0-9_]{0,62}$/);
 const correlationId = z.string().regex(/^[A-Za-z0-9_.:-]{1,64}$/);
 /** A job name such as `lifecycle.evaluate-project` or `seed`. */
 const systemJob = z.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/);
+/** The base-defaults version of a configuration-dependent event (R26). */
+const baseDefaultsVersion = z.int().min(1);
+const agenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 /** A field key (`healthRestrictions`, `custom.…`) or document type. */
 const resourceKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_.]{0,99}$/);
 
@@ -231,7 +247,7 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
 /**
  * Every audit event, discriminated by `type`. The types of Slices 3–9 that the plan gives no
  * shape for (`warning_confirmed`, `export_created`, `config_override_changed`) carry a code and
- * no details until their slices define them.
+ * no details until their slices define them, except the base-defaults version (R26).
  */
 export const AuditEvent = z.discriminatedUnion("type", [
   event("participation_created", {
@@ -281,7 +297,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("config_override_changed", {
     ...ofProjectOrParticipation,
     reasonCode: code,
-    details: noDetails,
+    details: z.strictObject({ baseDefaultsVersion }),
   }),
   /** Reviews and clarification requests are new events pointing at the reviewed one (5.4). */
   event("review_recorded", { ...ofProjectOrParticipation, reasonCode: code, details: reviewOf }),
@@ -291,8 +307,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("project_changed", {
     ...ofProject,
     details: z.strictObject({
-      fields: z.array(z.enum(["name", "customerName", "type"])).min(1),
+      fields: z.array(z.enum(["name", "customerName", "type", "projectAgenturKey"])).min(1),
       type: ProjectType.optional(),
+      projectAgenturKey: agenturKey.optional(),
     }),
   }),
   /** The wave's dates as created; the code and name stay on the row. */
@@ -301,5 +318,15 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject({ waveId: z.uuid(), ...waveDates }),
   }),
   entryWaveChanged,
+  /** A pin of a template version (plan 5.8); `previousVersion` when it replaces one (2e-2). */
+  event("config_template_pinned", {
+    ...ofProject,
+    details: z.strictObject({
+      agenturKey,
+      version: z.int().min(1),
+      previousVersion: z.int().min(1).optional(),
+      baseDefaultsVersion,
+    }),
+  }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

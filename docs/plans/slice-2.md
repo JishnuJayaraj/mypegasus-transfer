@@ -396,6 +396,82 @@ smoke-tested by CI's `image` job (the cloud session's Docker daemon isn't runnin
 12. **Size:** about 270 non-blank, non-comment production lines (scripts, CI and build changes
     included; tests and generated files excluded).
 
+### Built in PR 2c-2, with the readings taken (for confirmation)
+
+Built: `planTemplatePin`, `PinTemplateInput`, `ProjectConfig`, `ConfigBlocker`
+(`packages/domain/src/projects/pins.ts`, under the 100 % threshold); the operation `pinTemplate`
+(PL); the audit type `config_template_pinned` in `setupEventTypes` and
+`configurationDependentEventTypes` (R26); migrations `0015_template_pins` (generated: the event
+type, `config_template_version`, `project_template_pin`) and `0016_template_pin_functions`
+(hand-written: the append-only trigger, `pin_agentur_template`, `update_project` with the Project
+Agentur, `record_audit_event` refusing the new type, the grants); the data catalog; the service
+`apps/api/src/projects/template-pins.ts` (`loadRelease`, `snapshotOf`, `projectConfig`,
+`pinTemplate`); `GET /projects/{projectId}/config` and `POST /projects/{projectId}/config/pins`;
+`projectDenial` in `access.ts` (the wave routes use it too); the API seed's pins through the
+service; the setup section of the project page with component tests and a Playwright step;
+ADR-0002, `regional-variation.md`, `data-protection.md`.
+
+1. **The Project Agentur is set by `update_project`** (5.3's `agentur_key?`), in the same
+   transaction as the pin, so a choice writes `config_template_pinned` and `project_changed`
+   (`fields: ["projectAgenturKey"]` with the key, a catalog key and no free text). The function
+   refuses an Agentur the project hasn't pinned (`agentur_not_pinned`), so a Project Agentur
+   always has its snapshot, and any change once active (`project_not_draft`).
+2. **What a pin request does** (`planTemplatePin`): it pins an Agentur the project hasn't pinned,
+   at the latest catalog version unless the PL chooses one; it may also make it the Project
+   Agentur; an Agentur pinned already may become the Project Agentur without a new pin. **Another
+   version of a pinned Agentur is refused** (`template_already_pinned`, at `/version`), in draft
+   too: changing a version is the migration with its review of Agentur-scoped settings (PR 2e-2),
+   never a plain pin. A request that would change nothing is `template_already_pinned` too; a key
+   or version outside the catalog is `template_not_in_catalog`.
+3. **Further Agenturen may be pinned in an active project** (R1 fixes only type and Project
+   Agentur; R12's pins on a placement assignment happen in active projects). The cross-chain check
+   of the override on every pin (5.9) comes with `validateProjectOverride` in PR 2d-1; no override
+   exists before it.
+4. **`pin_agentur_template` checks structure:** the content is a `regional_template` whose
+   `agenturKey` and `version` are the arguments (`invalid_argument`; a table `CHECK` holds the same
+   on the stored row), the hash is 64 lowercase hex digits, the base-defaults version is set; it
+   refuses the version the project has pinned already (`template_already_pinned`) and records the
+   replaced one as `previousVersion` (used by 2e-2). Its validation of the template itself is the
+   service's (`loadTemplate`), as 5.3 assigns.
+5. **The file must equal the manifest:** before pinning, the service compares the file's canonical
+   hash with the catalog entry; a difference is a broken release (500), not a domain error.
+6. **The snapshot** is the stored `jsonb`, validated by `parseLayer`, checked against its key,
+   version and hash (canonical hash of the stored content), and cached per `(key, version,
+   hash)`; a stored row that fails this is a 500. Resolution never reads a template file (AC-11).
+7. **`GET /projects/{projectId}/config`** returns `projectAgenturKey`, the release's
+   `baseDefaultsVersion`, the current pin per Agentur (key, version, label, a 12-digit hash
+   prefix, `pinnedAt`, `pinnedBy` as the staff id), `projectBlockers` (`resolveForProject`),
+   `agenturen` (per pinned Agentur, `resolveForParticipation` with it as the placement Agentur;
+   only the participant-level, step-scoped blockers and their warnings) and `activationBlockers`
+   (`projectActivationBlockers` with the waves). The override, relaxations and open requests of
+   5.12 join with PRs 2d-1/2d-2. `POST …/config/pins` answers 200 with the same body.
+8. **Refusals (R21, round 23):** domain issues at their field (`/agenturKey`, `/version`,
+   `/projectAgentur`); the route allowlists `template_version_changed`, `template_already_pinned`,
+   `agentur_not_pinned` and `project_not_draft` (422), maps `project_not_found` to 404 and rethrows
+   everything else. Strict input: the content and hash always come from the release, never the
+   client (`unrecognized_keys`).
+9. **Access (5.4):** members and global org roles read the configuration; only the project's PL
+   pins (403 otherwise); a project the user can't see is 404.
+10. **R26:** `configurationDependentEventTypes` holds the R26 types that exist so far
+    (`config_template_pinned`, `config_override_changed`), and a test keeps it equal to R26's list
+    restricted to existing types and requires `baseDefaultsVersion` in each. So the placeholder
+    shape of `config_override_changed` (nothing writes it before PR 2d-1) now requires it.
+11. **Append-only:** a row trigger refuses `UPDATE` and `DELETE` on both tables for every role;
+    `TRUNCATE` isn't a row operation and stays owner-only (the test reset uses it).
+12. **Retention:** `config_template_version` is `reference_data` (R27), `project_template_pin`
+    `project_master` with its `project_id` FK.
+13. **The seed** pins through the service as the seeded PL (no request id: `auditContext` takes
+    `null`): Werk Nord `beispielstadt-nord@1` as Project Agentur plus `beispielstadt-sued@1`,
+    Verwaltung `beispielstadt-sued@1`, Lager Süd nothing; reruns skip existing pins. It is the API
+    seed (`pnpm db:seed`), so the base seed that Playwright and the integration tests use stays
+    without pins.
+14. **Web:** the section **Einrichtung** sits above the waves (the tabs of 5.13 come with the
+    other sections); the pin form appears only when the catalog loads (Q108: 403 for others); the
+    latest version is preselected; "pinned by" isn't shown, since the web has no staff directory
+    before Slice 3.
+15. **Size:** about 640 production lines for domain, database and API, plus about 200 for the
+    web, so a split is proposed (round 24's cut).
+
 ## 4. Design overview
 
 ```

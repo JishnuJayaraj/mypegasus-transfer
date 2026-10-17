@@ -96,6 +96,8 @@ const statusFunctions = [
   // Slice 2 (PR 2b): entry waves
   "create_entry_wave",
   "update_entry_wave",
+  // Slice 2 (PR 2c-2): template pins
+  "pin_agentur_template",
 ];
 const helpers = [
   "assert_context",
@@ -106,6 +108,7 @@ const helpers = [
   "project_lock_key",
   "project_text_valid",
   "entry_wave_text_valid",
+  "refuse_config_change",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -232,6 +235,42 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
     } finally {
       await app.query("drop table pg_temp.participation");
     }
+  });
+});
+
+// Plan 5.2, 5.3 (PR 2c-2, AC-40): template versions and pins are read by the app and written
+// only by pin_agentur_template.
+describe("transfer_app and the template tables", () => {
+  const version = `insert into config_template_version (agentur_key, version, content, content_sha256)
+    values ('x', 1, '{"kind":"regional_template","agenturKey":"x","version":1}', '${"0".repeat(64)}')`;
+  beforeEach(async () => {
+    await owner.query(version);
+    await owner.query(
+      `insert into project_template_pin (project_id, agentur_key, version, pinned_by)
+       values ($1, 'x', 1, $2)`,
+      [seedProjectIds.werkNord, staffUserId],
+    );
+  });
+
+  it("may select both", async () => {
+    expect(
+      (await app.query("select agentur_key, version from config_template_version")).rows,
+    ).toEqual([{ agentur_key: "x", version: 1 }]);
+    expect((await app.query("select agentur_key from project_template_pin")).rows).toEqual([
+      { agentur_key: "x" },
+    ]);
+  });
+
+  it.each([
+    ...writes("config_template_version", "version", version),
+    ...writes(
+      "project_template_pin",
+      "version",
+      `insert into project_template_pin (project_id, agentur_key, version, pinned_by) values ('${seedProjectIds.lagerSued}', 'x', 1, '${staffUserId}')`,
+    ),
+    ["call the trigger function", "select refuse_config_change()"],
+  ])("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
   });
 });
 

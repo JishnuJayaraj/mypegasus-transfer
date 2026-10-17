@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AuditEvent,
   AuditEventType,
+  configurationDependentEventTypes,
   EvidenceFingerprint,
   lifecycleEventTypes,
   reservedEventTypes,
@@ -61,6 +62,7 @@ describe("audit event types (plan 5.4)", () => {
       "project_changed",
       "entry_wave_created",
       "entry_wave_changed",
+      "config_template_pinned",
     ]);
   });
 
@@ -74,6 +76,7 @@ describe("audit event types (plan 5.4)", () => {
       "project_changed",
       "entry_wave_created",
       "entry_wave_changed",
+      "config_template_pinned",
     ]);
     expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
   });
@@ -90,6 +93,35 @@ describe("audit event types (plan 5.4)", () => {
   it("has a schema for every type", () => {
     const covered = AuditEvent.options.map((o) => o.shape.type.value);
     expect(new Set(covered)).toEqual(new Set(AuditEventType.options));
+  });
+});
+
+// R26 (round 23): this exact list; a type joins `configurationDependentEventTypes` with its PR.
+const r26 = [
+  "project_activated",
+  "config_template_pinned",
+  "config_override_changed",
+  "rule_relaxation_requested",
+  "rule_relaxation_approved",
+  "import_confirmed",
+];
+
+describe("configuration-dependent events (R26, AC-45)", () => {
+  it("are exactly the R26 types that exist so far", () => {
+    const existing = r26.filter((type) => (AuditEventType.options as string[]).includes(type));
+    expect([...configurationDependentEventTypes].toSorted()).toEqual(existing.toSorted());
+  });
+
+  it("each require the base-defaults version", () => {
+    for (const type of configurationDependentEventTypes) {
+      const option = AuditEvent.options.find((o) => o.shape.type.value === type)!;
+      const details = option.shape.details as unknown as { shape: Record<string, unknown> };
+      expect(Object.keys(details.shape)).toContain("baseDefaultsVersion");
+      expect(
+        (details as unknown as { safeParse: (v: unknown) => { success: boolean } }).safeParse({})
+          .success,
+      ).toBe(false);
+    }
   });
 });
 
@@ -291,12 +323,41 @@ describe("the other event types", () => {
     ["document_opened", { details: { documentType: "dsv_signed_scan", documentId: otherId } }],
     ["warning_confirmed", { reasonCode: "implausible_date", details: {} }],
     ["export_created", { participationId: null, reasonCode: "monthly_report", details: {} }],
-    ["config_override_changed", { participationId: null, reasonCode: "relaxed", details: {} }],
+    [
+      "config_override_changed",
+      { participationId: null, reasonCode: "relaxed", details: { baseDefaultsVersion: 1 } },
+    ],
     ["review_recorded", { reasonCode: "no_concern", details: { reviewedEventId: otherId } }],
     ["clarification_requested", { details: { reviewedEventId: otherId } }],
     ["project_created", { participationId: null, details: { type: "ta_tg" } }],
     ["project_changed", { participationId: null, details: { fields: ["name", "customerName"] } }],
     ["project_changed", { participationId: null, details: { fields: ["type"], type: "ta_only" } }],
+    [
+      "project_changed",
+      {
+        participationId: null,
+        details: { fields: ["projectAgenturKey"], projectAgenturKey: "beispielstadt-nord" },
+      },
+    ],
+    [
+      "config_template_pinned",
+      {
+        participationId: null,
+        details: { agenturKey: "beispielstadt-nord", version: 1, baseDefaultsVersion: 1 },
+      },
+    ],
+    [
+      "config_template_pinned",
+      {
+        participationId: null,
+        details: {
+          agenturKey: "beispielstadt-nord",
+          version: 2,
+          previousVersion: 1,
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
     ["entry_wave_created", { participationId: null, details: { waveId: otherId } }],
     [
       "entry_wave_created",
@@ -380,6 +441,29 @@ describe("the other event types", () => {
     ["project_created", { participationId: null, details: { type: "ta_tg", name: "Werk Nord" } }],
     ["project_changed", { participationId: null, details: { fields: [] } }],
     ["project_changed", { participationId: null, details: { fields: ["signingDeadline"] } }],
+    [
+      "project_changed",
+      {
+        participationId: null,
+        details: { fields: ["projectAgenturKey"], projectAgenturKey: "Nord Süd" },
+      },
+    ],
+    [
+      "config_template_pinned",
+      { details: { agenturKey: "beispielstadt-nord", version: 1, baseDefaultsVersion: 1 } },
+    ],
+    [
+      "config_template_pinned",
+      {
+        participationId: null,
+        details: {
+          agenturKey: "beispielstadt-nord",
+          version: 1,
+          baseDefaultsVersion: 1,
+          sha256: "ab",
+        },
+      },
+    ],
     // Free text (the wave name) never enters the trail; dates only with their changed key.
     ["entry_wave_created", { participationId: null, details: { waveId: otherId, name: "W" } }],
     ["entry_wave_created", { details: { waveId: otherId } }],

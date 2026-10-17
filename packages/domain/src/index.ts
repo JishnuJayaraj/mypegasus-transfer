@@ -77,7 +77,16 @@ export {
   type TransitionContext,
   type TransitionFailure,
 } from "./lifecycle/transition";
-export { projectActivationBlockers, type ProjectActivationBlocker } from "./lifecycle/activation";
+export { projectActivationBlockers, ProjectActivationBlocker } from "./lifecycle/activation";
+export {
+  ConfigBlocker,
+  PinTemplateInput,
+  planTemplatePin,
+  ProjectConfig,
+  type PinIssue,
+  type PinIssueCode,
+  type PinPlan,
+} from "./projects/pins";
 export {
   effectiveOfferDeadline,
   effectiveTgEnd,
@@ -161,6 +170,7 @@ export {
   AuditActor,
   AuditEvent,
   AuditEventType,
+  configurationDependentEventTypes,
   EvidenceFingerprint,
   lifecycleEventTypes,
   reservedEventTypes,

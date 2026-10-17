@@ -179,9 +179,19 @@ Participation
   `scripts/check-template-immutability.mjs` (in `pnpm lint` and CI) compares every version
   present at the base branch by hash. A change of an Agentur's rules is a **new version**, which
   projects reach only through an explicit migration with review (Q36, Q93).
-- **Snapshot (PR 2c-2):** pinning stores the version's content and hash in the database; the first
-  pin of a version anywhere registers it, every later pin must match it. Resolution of a pinned
-  project reads only the stored content, so a later change of a file can't change a project.
+- **Snapshot (PR 2c-2):** pinning stores the version's content and hash in the database
+  (`config_template_version`, one row per key and version; `project_template_pin`, append-only);
+  the first pin of a version anywhere registers it, every later pin, in any project, must match
+  both the stored content and the hash (`template_version_changed`). Resolution of a pinned
+  project reads only the stored content (validated, cached per key, version and hash), so a later
+  change of a file can't change a project. Versions and pins are never updated or deleted.
+- **Choosing the Project Agentur (R12):** only an Agentur with a template in the catalog; the PL
+  pins its latest version (or an older one) and sets it as the Project Agentur in one step, while
+  the project is a draft. Further Agenturen are pinned the same way, also once the project is
+  active. Another version of an Agentur that is already pinned is a migration with review (PR
+  2e-2), never a plain pin. `GET /api/v1/projects/{id}/config` shows the pins and, from the
+  snapshot, the project's blockers, each pinned Agentur's step-scoped blockers and the activation
+  blockers.
 - **Base defaults** are release-managed, not pinned (Q107); configuration-dependent audit events
   record their `version`.
 - **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the

@@ -68,6 +68,18 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   },
   // Job names, run dates and instants only (plan 5.10).
   job_run: { retentionClass: "reference_data", dataClass: "internal", holdsParticipantData: false },
+  // Template versions as released (R27): no personal data, global, never deleted.
+  config_template_version: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  // Which versions a project pinned, by whom and when (staff ids only).
+  project_template_pin: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */

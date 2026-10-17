@@ -4,7 +4,6 @@ import {
   checkWaveChange,
   CreateEntryWaveInput,
   EntryWaveRecord,
-  mayPerformOperation,
   PageQuery,
   page,
   UpdateEntryWaveInput,
@@ -12,7 +11,7 @@ import {
   type WaveIssue,
   type WaveValues,
 } from "@transfer/domain";
-import { projectAccess } from "../access";
+import { projectDenial } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { functionRefusal } from "../database-errors";
@@ -133,15 +132,8 @@ export function entryWaveRoutes(deps: Deps) {
   ] as const;
 
   /** Members and global org roles see a project's waves; only its PL edits them (5.4). */
-  async function access(user: StaffUser, projectId: string, edit: boolean) {
-    const { subject, visible } = await projectAccess(db, user, projectId);
-    if (!visible) return "not-found";
-    const target = { projectId, regionId: null, participationId: null };
-    if (edit && !mayPerformOperation(subject, { kind: "editEntryWaves" }, target).ok) {
-      return "forbidden";
-    }
-    return undefined;
-  }
+  const access = (user: StaffUser, projectId: string, edit: boolean) =>
+    projectDenial(db, user, projectId, edit ? { kind: "editEntryWaves" } : undefined);
 
   /** The written wave, or the problem. */
   async function respond<S extends 200 | 201>(

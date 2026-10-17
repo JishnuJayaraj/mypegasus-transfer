@@ -9,6 +9,8 @@ import { ConfigError, parseLayer, type ConfigIssue } from "./validate";
 // Node only (reads files): exported as `@transfer/config/load`, never from the package root,
 // which the SPAs may import.
 
+export { canonicalHash } from "./hash";
+
 /** The seed templates: `templates/<agenturKey>/<version>.json` (MVP, ADR-0004). */
 export const templatesDir = new URL("../templates/", import.meta.url);
 /** The repo's directory of `base-defaults.json` (ADR-0004). */

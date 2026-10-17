@@ -10,7 +10,10 @@ export async function callFunction(db: Pick<Database, "execute">, query: ReturnT
   return rows[0]!.result;
 }
 
-/** The `audit_context` of a staff user acting in a request (never assisted mode here). */
-export const auditContext = (staffUserId: string, requestId: string) =>
+/**
+ * The `audit_context` of a staff user acting in a request (never assisted mode here); no request
+ * for the seed.
+ */
+export const auditContext = (staffUserId: string, requestId: string | null) =>
   sql`row('user'::actor_type, ${staffUserId}::uuid, null::uuid, null::text, null::uuid,
     ${requestId}::text, null::text)::audit_context`;

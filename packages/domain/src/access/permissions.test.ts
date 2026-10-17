@@ -159,6 +159,7 @@ const operations: Record<OperationKind, string> = {
   approveEvidenceCorrection: "ROM",
   editProject: "PL",
   editEntryWaves: "PL",
+  pinTemplate: "PL",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {
