@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, projectConfigQuery, projectQuery, useApi } from "../../api";
 import { EntryWaveForm } from "../../components/entry-wave-form";
+import { AgenturSettings } from "../../components/agentur-settings";
 import { ProjectSetup } from "../../components/project-setup";
 import { RouteError } from "../../components/route-error";
 
@@ -36,6 +37,7 @@ function ProjectPage() {
         ].join(" · ")}
       </p>
       <ProjectSetup projectId={projectId} />
+      <AgenturSettings projectId={projectId} />
       {project.type === "ta_tg" ? (
         <EntryWaves projectId={projectId} />
       ) : (

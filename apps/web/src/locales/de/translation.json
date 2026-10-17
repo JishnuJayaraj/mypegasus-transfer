@@ -140,7 +140,8 @@
       "submissionChannel": "Übermittlungsweg TL 407",
       "originalRequired": "Original erforderlich",
       "leadTimeDays": "Vorlauf in Tagen",
-      "rejectsOutdatedFormVersions": "Umgang mit veralteten Formularversionen"
+      "rejectsOutdatedFormVersions": "Umgang mit veralteten Formularversionen",
+      "defaultChannel": "Standardweg Arbeitsuchendmeldung"
     },
     "pinTitle": "Vorlage pinnen",
     "agentur": "Agentur",
@@ -158,6 +159,78 @@
       "project_not_draft": "Die Projekt-Agentur kann nach der Aktivierung nicht mehr geändert werden.",
       "forbidden": "Nur die Projektleitung kann Vorlagen pinnen.",
       "failed": "Die Vorlage konnte nicht gepinnt werden."
+    }
+  },
+  "overrides": {
+    "title": "Konfiguration",
+    "version": "Stand der Projektkonfiguration: Version {{version}}",
+    "tableTitle": "Agenturbezogene Einstellungen",
+    "empty": "Es gibt keine agenturbezogenen Einstellungen. Sie gelten nur für ihre Agentur und gehen der Vorlage für die Schlüssel vor, die sie festlegen.",
+    "columns": {
+      "agentur": "Agentur",
+      "settings": "Einstellungen",
+      "source": "Quelle",
+      "confirmedBy": "Bestätigt von",
+      "confirmedOn": "Bestätigt am",
+      "actions": "Aktionen"
+    },
+    "settings": {
+      "asu_registration": {
+        "defaultChannel": "Standardweg Arbeitsuchendmeldung",
+        "batchSubmissionChannel": "Übermittlungsweg Kug 200b"
+      },
+      "agentur_submission": {
+        "submissionChannel": "Übermittlungsweg TL 407",
+        "originalRequired": "Original erforderlich",
+        "leadTimeDays": "Vorlauf in Tagen",
+        "rejectsOutdatedFormVersions": "Lehnt veraltete Formularversionen ab"
+      }
+    },
+    "values": {
+      "true": "Ja",
+      "false": "Nein",
+      "kug_200b": "Kug 200b über die Transfergesellschaft",
+      "online_self": "Online durch die Person selbst",
+      "in_person": "Persönlich bei der Agentur",
+      "paper_courier": "Papieroriginale per Kurier",
+      "paper_post": "Papieroriginale per Post",
+      "scan_email": "Scan per E-Mail",
+      "upload": "Upload",
+      "email": "E-Mail",
+      "paper_original": "Papieroriginal"
+    },
+    "sources": {
+      "phone_call_agentur": "Telefonat mit der Agentur",
+      "email_agentur": "E-Mail der Agentur",
+      "letter_agentur": "Schreiben der Agentur",
+      "meeting_agentur": "Termin mit der Agentur"
+    },
+    "otherStaff": "Andere berechtigte Person",
+    "add": "Agenturbezogene Einstellung hinzufügen",
+    "editTitle": "Einstellung für {{agentur}} ändern",
+    "edit": "{{agentur}} bearbeiten",
+    "remove": "{{agentur}} entfernen",
+    "agentur": "Agentur der Einstellung",
+    "otherAgentur": "Andere Agentur (ohne Vorlage)",
+    "agenturKey": "Schlüssel der Agentur",
+    "agenturKeyHint": "Kleinbuchstaben, Ziffern und Bindestriche, z. B. beispielstadt-ost.",
+    "notSet": "Nicht festlegen (Vorlage gilt)",
+    "chooseSource": "Bitte wählen",
+    "cancel": "Abbrechen",
+    "submit": "Speichern",
+    "saved": "Einstellung gespeichert",
+    "removed": "Einstellung entfernt",
+    "errors": {
+      "settings_empty": "Legen Sie mindestens eine Einstellung fest.",
+      "confirmed_on_in_future": "Das Bestätigungsdatum darf nicht in der Zukunft liegen.",
+      "invalid_date": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
+      "invalid_number": "Der Vorlauf muss eine ganze Zahl ab 0 sein.",
+      "override_unchanged": "Die Einstellung ist unverändert.",
+      "override_invalid": "Die Projektkonfiguration wäre mit den gepinnten Vorlagen ungültig.",
+      "conflict": "Die Konfiguration wurde inzwischen geändert und neu geladen. Bitte prüfen Sie Ihre Eingabe und speichern Sie erneut.",
+      "forbidden": "Nur die Projektleitung kann agenturbezogene Einstellungen ändern.",
+      "invalid": "Bitte prüfen Sie diese Angabe.",
+      "failed": "Die Einstellung konnte nicht gespeichert werden."
     }
   }
 }
