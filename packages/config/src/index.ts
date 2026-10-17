@@ -37,3 +37,4 @@ export {
   type ConfigIssueCode,
   type LayerValidation,
 } from "./validate";
+export { compareTemplateVersions, TemplateManifest, TemplateManifestEntry } from "./manifest";

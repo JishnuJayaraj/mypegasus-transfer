@@ -1,0 +1,34 @@
+{
+  "templates": [
+    {
+      "agenturKey": "beispielstadt-nord",
+      "version": 1,
+      "label": {
+        "de": "Agentur für Arbeit Beispielstadt Nord (Beispiel)",
+        "en": "Employment agency Beispielstadt Nord (sample)"
+      },
+      "sample": true,
+      "sha256": "e5a0727e979a8798d482683343ec4b93d5edebca9542eceac7c76c14049fae5f"
+    },
+    {
+      "agenturKey": "beispielstadt-nord",
+      "version": 2,
+      "label": {
+        "de": "Agentur für Arbeit Beispielstadt Nord (Beispiel)",
+        "en": "Employment agency Beispielstadt Nord (sample)"
+      },
+      "sample": true,
+      "sha256": "68de4937f2fa5d263d3276ea11fba3b96e2b71d6a7117bde89fd2226ff3ed1c4"
+    },
+    {
+      "agenturKey": "beispielstadt-sued",
+      "version": 1,
+      "label": {
+        "de": "Agentur für Arbeit Beispielstadt Süd (Beispiel)",
+        "en": "Employment agency Beispielstadt Süd (sample)"
+      },
+      "sample": true,
+      "sha256": "f3c02d071133aee55c9b73477566c1480ad9ebd6f436f1600e167a46bd8d61c2"
+    }
+  ]
+}

@@ -7,6 +7,11 @@ import { defineConfig } from "vite";
 // come from `pnpm deploy --prod`, so whatever the bundle imports at runtime must be a
 // dependency of this package (e.g. `drizzle-orm` and `pg` for `@transfer/db`).
 const migrations = fileURLToPath(new URL("../../packages/db/migrations", import.meta.url));
+// The configuration the API reads at runtime (Slice 2 plan 5.8, spike S2), in CONFIG_DIR's layout.
+const templates = fileURLToPath(new URL("../../packages/config/templates", import.meta.url));
+const baseDefaults = fileURLToPath(
+  new URL("../../packages/domain/config/base-defaults.json", import.meta.url),
+);
 
 export default defineConfig({
   build: {
@@ -26,6 +31,14 @@ export default defineConfig({
       name: "copy-migrations",
       // dist/migrate.js applies the SQL migrations from dist/migrations.
       writeBundle: () => cpSync(migrations, "dist/migrations", { recursive: true }),
+    },
+    {
+      name: "copy-config",
+      // dist/server.js reads them from CONFIG_DIR=dist/config (the image and `pnpm start`).
+      writeBundle: () => {
+        cpSync(templates, "dist/config/templates", { recursive: true });
+        cpSync(baseDefaults, "dist/config/base-defaults.json");
+      },
     },
   ],
 });

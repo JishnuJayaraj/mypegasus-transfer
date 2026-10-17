@@ -104,6 +104,8 @@ reading in `open-questions.md`:
 - **Q103** (PL): the import contract, incl. foreign addresses and numeric identifiers. **Settled
   before PRs 2f/2g**, since it may change the schema and the target catalog.
 - **Q105** 🔒 (DPO): retention classes; a pre-pilot gate.
+- **Q108** (product owner): who reads the global template catalog. PR 2c-1 builds the fail-safe
+  reading (item 7 of "Built in PR 2c-1").
 
 ## 1. Goal
 
@@ -330,6 +332,63 @@ schema-qualifies its built-ins.
 14. **The web form sends only the changed fields** on an edit (2b-2), so the lock-scoped merge of
     item 6 can't overwrite another PL's edit of another field; the same field is still last write
     wins until optimistic versioning comes (round 24).
+
+### Built in PR 2c-1, with the readings taken (for confirmation)
+
+Built: `canonicalJson` and `canonicalHash` (`packages/config/src/hash.ts`, under the 100 %
+threshold, R22); the `TemplateManifest` schema and `compareTemplateVersions`
+(`manifest.ts`); `buildManifest`, `renderManifest`, `loadManifest`, `configDirs` and
+`loadBaseDefaults(dir)` in `@transfer/config/load`; `pnpm generate` writes
+`packages/config/templates/manifest.json`, and `verify` and CI's drift step check it;
+`scripts/check-template-immutability.mjs` in `pnpm lint` (tested against a scratch git
+repository); the API build copies the templates and the base defaults to `dist/config/`;
+`CONFIG_DIR`; `GET /api/v1/config/templates`; the image smoke test calls it (AC-12); ADR-0004,
+`regional-variation.md`, `.env.example`, the Dockerfile and CLAUDE.md's commands.
+
+**Spike S2 passed** (no fallback): the Vite build copies the files with a `writeBundle` step like
+the migrations; the bundle, copied outside the repo in the image's layout with `CONFIG_DIR` set,
+served the catalog, and without `CONFIG_DIR` it refused to start. The image itself is built and
+smoke-tested by CI's `image` job (the cloud session's Docker daemon isn't running).
+
+1. **What is hashed:** the whole file as parsed JSON, `$schema` included, so a changed `$schema`
+   path also counts as a changed version. `loadTemplate` returns the same object (no defaults or
+   transforms), so the manifest hash equals the hash of the content PR 2c-2 stores (tested).
+2. **Canonical form:** object keys sorted by UTF-16 code units at every level (the key order of
+   RFC 8785), arrays in order, strings and numbers as `JSON.stringify` writes them, no whitespace;
+   anything that isn't JSON (undefined, `NaN`, a class instance, an array hole) is refused. It
+   doesn't claim full RFC 8785 conformance; it only has to be stable for our files.
+3. **The manifest** lists per version `agenturKey`, `version`, `label` (`de`, optional `en`),
+   `sample` (`false` when the template doesn't say) and the full `sha256`, ordered by key, then
+   version. Generation validates every file through `loadTemplate`; a file in a key directory
+   that isn't `<version>.json` fails `pnpm generate`. The API validates the manifest with a
+   strict schema when it loads it.
+4. **The immutability base ref:** CI's lint job checks out the full history and passes
+   `TEMPLATE_BASE_REF` (the PR's base SHA, or `github.event.before` on `main`); the script also
+   takes the ref as its argument. Under CI (`CI` set) a missing base ref fails; a ref that isn't a
+   commit fails everywhere. A renamed version counts as deleted. `manifest.json` isn't checked by
+   it (generated and drift-checked).
+5. **`CONFIG_DIR`** is one directory holding `templates/` (with the manifest) and
+   `base-defaults.json`, the layout of `dist/config/`; a relative path is resolved against the
+   working directory; unset means the repo paths. The bundle has no working default (its
+   repo-relative URLs point outside `dist/`), so the image (`ENV`), `pnpm start`
+   (`CONFIG_DIR=dist/config`) and Playwright set it; e2e therefore runs on the copied files too.
+6. **The catalog is read once when the API starts**, not per request: it is part of the release,
+   and a missing or invalid catalog fails the start (and the smoke test), never a request.
+7. **Access (Q108, fail safe):** the flat role `project_lead`, the PL of any project and the
+   global org roles read the catalog; consultants and back office without a PL role get 403;
+   without a session 401. Recorded as Q108.
+8. **Pagination** as for every list (ADR-0010): keyset on `(agenturKey, version)` with an opaque
+   cursor; strict query (an unknown parameter is `unrecognized_keys`, a forged cursor
+   `invalid_cursor`).
+9. **No "latest" flag** in the catalog: the latest version of a key is its highest `version`,
+   derived where it is used (PR 2c-2, R12).
+10. **The smoke test's PL** is a synthetic staff user the script inserts as the owner and deletes
+    on exit: staff users have no audited write function before Slice 3, and the smoke database
+    isn't seeded.
+11. **Nothing loads the base defaults in the API yet**; `loadBaseDefaults(dir)` with
+    `configDirs(env.configDir).baseDefaults` is what PRs 2c-2 and 2e-1 call.
+12. **Size:** about 270 non-blank, non-comment production lines (scripts, CI and build changes
+    included; tests and generated files excluded).
 
 ## 4. Design overview
 

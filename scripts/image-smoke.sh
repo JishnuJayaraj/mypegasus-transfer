@@ -3,9 +3,10 @@
 # the CI `image` job.
 #   scripts/image-smoke.sh <image>
 # Needs a PostgreSQL with the dev roles (`pnpm db:setup`) on the host, reachable through
-# DATABASE_URL and DATABASE_MIGRATION_URL. Runs the migration (twice: installing the pgboss schema
-# and its grants is idempotent), starts the server with pg-boss as the runtime role and checks
-# /api/v1/health/ready, / and /portal/. Synthetic setup only; no data is read.
+# DATABASE_URL and DATABASE_MIGRATION_URL, and psql. Runs the migration (twice: installing the
+# pgboss schema and its grants is idempotent), starts the server with pg-boss as the runtime role
+# and checks /api/v1/health/ready, / and /portal/, and the template catalog from the bundle's
+# config (AC-12) as a synthetic PL that exists only during the run. Synthetic setup only.
 set -euo pipefail
 
 image="${1:?usage: scripts/image-smoke.sh <image>}"
@@ -13,13 +14,22 @@ image="${1:?usage: scripts/image-smoke.sh <image>}"
 port="${SMOKE_PORT:-8080}"
 base="http://localhost:${port}"
 name="transfer-smoke-$$"
+jar="$(mktemp)"
+# A synthetic staff user for the catalog check; removed again on exit.
+smoke_user=00000000-0000-4000-8000-0000000000aa
+sql() { psql --quiet --no-psqlrc -v ON_ERROR_STOP=1 "$DATABASE_MIGRATION_URL" -c "$1"; }
 
 fail() {
   echo "image-smoke: $*" >&2
   docker logs "$name" >&2 2>/dev/null || true
   exit 1
 }
-trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
+cleanup() {
+  docker rm -f "$name" >/dev/null 2>&1 || true
+  rm -f "$jar"
+  sql "delete from staff_user where id = '$smoke_user'" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 # Runs as the non-root `node` user.
 uid="$(docker run --rm "$image" id -u)"
@@ -61,6 +71,17 @@ check / 200 '<title>Transferplattform</title>'
 check /projects/new 200 '<title>Transferplattform</title>'
 check /portal/ 200 '<title>Teilnehmerportal</title>'
 check /api/v1/unknown 404 'urn:transfer:problem:not-found'
+
+# The template catalog, read from CONFIG_DIR (dist/config) at start (AC-12, spike S2).
+sql "insert into staff_user (id, display_name, email, role) values ('$smoke_user',
+  'Smoke Projektleitung', 'smoke-project-lead@example.org', 'project_lead') on conflict do nothing"
+curl -fsS -o /dev/null -c "$jar" -X POST -H 'Content-Type: application/json' -H "Origin: $base" \
+  -d "{\"staffUserId\":\"$smoke_user\"}" "$base/api/v1/dev/session" || fail "dev login failed"
+catalog="$(curl -fsS -b "$jar" "$base/api/v1/config/templates")" ||
+  fail "GET /api/v1/config/templates failed"
+grep -q '"agenturKey":"beispielstadt-nord","version":1,' <<<"$catalog" ||
+  fail "GET /api/v1/config/templates: the sample template is missing"
+echo "ok  GET /api/v1/config/templates -> 200 (the catalog from dist/config)"
 
 portal="$(curl -fsS "$base/portal/")" || fail "GET /portal/: no response"
 asset="$(grep -o '/portal/assets/[^"]*\.js' <<<"$portal" | sed -n 1p || true)"

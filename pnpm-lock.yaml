@@ -63,6 +63,9 @@ importers:
       '@transfer/adapters':
         specifier: workspace:*
         version: link:../../packages/adapters
+      '@transfer/config':
+        specifier: workspace:*
+        version: link:../../packages/config
       '@transfer/db':
         specifier: workspace:*
         version: link:../../packages/db

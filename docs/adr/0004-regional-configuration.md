@@ -134,3 +134,28 @@ Two details for PR 1f (`field-schema.ts`):
   template, and each relaxation must match a rule in at least one pinned chain; an existing
   template version can't be modified or replaced; a migration to another version surfaces the
   Agentur-scoped settings for review.
+
+## Amendment 2026-10-17: snapshots, manifest, immutability and `CONFIG_DIR` (Slice 2, PR 2c-1)
+
+Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
+- **Content identity:** a template version's identity is the SHA-256 of its canonical JSON
+  (object keys sorted, no insignificant whitespace; `packages/config/src/hash.ts`), so formatting
+  never changes it and any content change does.
+- **Manifest:** `pnpm generate` writes `packages/config/templates/manifest.json` (key, version,
+  labels, `sample`, hash per version), validated through `loadTemplate`; a test and the drift
+  check keep it equal to the files. It is the catalog the API serves
+  (`GET /api/v1/config/templates`).
+- **Immutability in the repo:** `scripts/check-template-immutability.mjs <base-ref>` runs in
+  `pnpm lint`; CI passes the PR's base or the previous commit on `main`. Every version present at
+  the base must exist with the same hash: adding a version passes, changing or deleting one fails.
+  Locally it uses `origin/main` when fetched, else it prints a notice and passes; under CI a
+  missing base ref fails.
+- **Snapshots** (PR 2c-2): a pin stores the version's content and hash in
+  `config_template_version`, keyed by `(agenturKey, version)`; every later pin of that version, in
+  any project, must match both. A project resolves only from its stored snapshot. Base defaults
+  are not pinned (Q107).
+- **`CONFIG_DIR`:** the API build copies the templates (with the manifest) and the base defaults
+  to `apps/api/dist/config/` (spike S2 passed, no JSON-import fallback). `CONFIG_DIR` names that
+  directory (`templates/`, `base-defaults.json`); unset, `@transfer/config/load` uses the repo
+  paths. The image sets it; the API reads the catalog once at start and refuses to start without
+  it.

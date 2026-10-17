@@ -31,26 +31,34 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       # The committed OpenAPI document and client types must match the API (ADR-0010), the
-      # generated docs tables the domain code, and the config JSON Schema the Zod model.
+      # generated docs tables the domain code, the config JSON Schema the Zod model and the
+      # template manifest the template files.
       - name: Generated files drift
         run: |
           pnpm generate
-          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema docs/domain/generated
+          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema packages/config/templates/manifest.json docs/domain/generated
 
   lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    env:
+      # Existing template versions must be unchanged against the PR's base, or on main against
+      # the previous commit (Slice 2 plan 5.8); the check fails under CI without it.
+      TEMPLATE_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # The full history, so the base commit is there for the immutability check.
+          fetch-depth: 0
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Oxlint, Oxfmt check, and the guard against ignoreDeprecations in tsconfig*.json
+      # Oxlint, Oxfmt check, the guard against ignoreDeprecations in tsconfig*.json and the
+      # template immutability check
       - run: pnpm lint
 
   test:

@@ -5,6 +5,7 @@ import packageJson from "../package.json" with { type: "json" };
 import { createRouter, type Deps } from "./context";
 import { errorForLog, requestLogger } from "./logger";
 import { problem } from "./problem";
+import { configRoutes } from "./routes/config";
 import { devRoutes } from "./routes/dev";
 import { entryWaveRoutes } from "./routes/entry-waves";
 import { healthRoutes } from "./routes/health";
@@ -59,6 +60,7 @@ export function createApp(deps: Deps) {
   api.route("/", meRoutes(deps));
   api.route("/", projectRoutes(deps));
   api.route("/", entryWaveRoutes(deps));
+  api.route("/", configRoutes(deps));
   if (env.authMode === "dev") api.route("/", devRoutes(deps));
   app.route("/api/v1", api);
 

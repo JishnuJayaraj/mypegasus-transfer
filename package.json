@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc -b",
-    "lint": "oxlint --deny-warnings --ignore-pattern 'apps/portal/lint-fixtures/**' && oxfmt --check && node scripts/check-tsconfig.mjs",
+    "lint": "oxlint --deny-warnings --ignore-pattern 'apps/portal/lint-fixtures/**' && oxfmt --check && node scripts/check-tsconfig.mjs && node scripts/check-template-immutability.mjs",
     "format": "oxfmt",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -20,7 +20,7 @@
     "start": "pnpm --filter @transfer/api start",
     "api:generate": "pnpm --filter @transfer/api-client run generate",
     "generate": "pnpm api:generate && pnpm --filter @transfer/domain --filter @transfer/config run generate",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema docs/domain/generated",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema packages/config/templates/manifest.json docs/domain/generated",
     "test:e2e": "pnpm --filter @transfer/web test:e2e"
   },
   "devDependencies": {

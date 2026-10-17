@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "vite build",
-    "start": "node dist/server.js",
+    "start": "CONFIG_DIR=dist/config node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
     "jobs:lifecycle": "tsx src/scripts/jobs-lifecycle.ts"
   },
@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@transfer/adapters": "workspace:*",
+    "@transfer/config": "workspace:*",
     "@transfer/db": "workspace:*",
     "@transfer/domain": "workspace:*",
     "tsx": "4.23.15"

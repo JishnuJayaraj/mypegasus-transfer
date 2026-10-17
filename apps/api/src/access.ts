@@ -1,5 +1,5 @@
 import { eq, project, projectMembership, type Database } from "@transfer/db";
-import { OrgRole, type ProjectRole, type StaffUser } from "@transfer/domain";
+import { mayCreateProject, OrgRole, type ProjectRole, type StaffUser } from "@transfer/domain";
 import { staffSubject, type StaffSubject } from "./participations/subjects";
 
 /**
@@ -25,6 +25,20 @@ export function hasGlobalOrgRole(subject: StaffSubject): boolean {
 
 export function seesProject(subject: StaffSubject, projectId: string): boolean {
   return hasGlobalOrgRole(subject) || (subject.projectRoles[projectId]?.size ?? 0) > 0;
+}
+
+/**
+ * Who reads the global template catalog (plan 5.8). Fail safe until Q108 is answered: those who
+ * choose or pin templates, i.e. the flat role `project_lead` (creates projects and chooses their
+ * Project Agentur, R9, R12) and the PL of any project (`pinTemplate`), and the global org roles,
+ * who see every project's configuration (Q106). Other members only see their projects' pins.
+ */
+export function readsTemplateCatalog(subject: StaffSubject, user: StaffUser): boolean {
+  return (
+    mayCreateProject(user.role) ||
+    hasGlobalOrgRole(subject) ||
+    Object.values(subject.projectRoles).some((roles) => roles.has("project_lead"))
+  );
 }
 
 /** The user's subject, and whether the project exists and they may see it (else a 404). */

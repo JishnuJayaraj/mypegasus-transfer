@@ -17,6 +17,8 @@ const schema = z.object({
   JOBS_LIFECYCLE_TIME: z.string().default("04:15"),
   // Plan 5.8: system, or fixed:<ISO instant> outside production.
   CLOCK: z.string().default("system"),
+  // Slice 2 plan 5.8 (S2): templates/ and base-defaults.json; unset, the repo paths.
+  CONFIG_DIR: z.string().optional(),
 });
 
 /** Loads the repo's `.env` when present (not in the image); variables already set win. */
@@ -41,6 +43,8 @@ export interface Env {
   jobsLifecycleTime: string;
   /** Validated; the server builds the `Clock` from it with `createClock`. */
   clock: string;
+  /** The configuration directory (`CONFIG_DIR`); undefined: the repo paths. */
+  configDir: string | undefined;
 }
 
 /**
@@ -84,5 +88,6 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     jobsEnabled: env.JOBS_ENABLED === "true",
     jobsLifecycleTime: env.JOBS_LIFECYCLE_TIME,
     clock: env.CLOCK,
+    configDir: env.CONFIG_DIR,
   };
 }

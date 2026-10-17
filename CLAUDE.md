@@ -123,8 +123,10 @@ packages/
   config/         regional configuration: the Zod-authored layer model (base defaults, Agentur
                   templates, project overrides) exported as JSON Schema, the custom-field
                   profile, the two-level resolver with provenance and blockers, pinned template
-                  loading (@transfer/config/load, Node only) and the fictional sample templates
-                  in templates/<agenturKey>/<version>.json. Base defaults live in
+                  loading (@transfer/config/load, Node only, from CONFIG_DIR in the image), the
+                  canonical template hash, the fictional sample templates in
+                  templates/<agenturKey>/<version>.json (immutable once merged) and their
+                  generated manifest.json. Base defaults live in
                   packages/domain/config/base-defaults.json
   adapters/       interfaces + implementations behind them (ADR-0006). Only `Clock` so far
                   (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus
@@ -170,6 +172,7 @@ pnpm test             # vitest: unit, component, integration (needs Postgres)
 pnpm test:coverage    # the same with coverage; 100 % thresholds on the domain rules
 pnpm test:e2e         # playwright against the built app (pnpm build first) on transfer_e2e
 pnpm lint             # oxlint (incl. the portal boundary rule) + oxfmt --check + tsconfig guard
+                      # + template immutability against origin/main (CI: the PR's base)
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
 pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, generated drift
@@ -182,10 +185,11 @@ pnpm jobs:lifecycle [--today YYYY-MM-DD]
                       # the nightly lifecycle sweep once (dev/CI); not due by database time:
                       # exits 1 with run_not_due (Q96); refused with NODE_ENV=production
 pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
-pnpm generate         # all generators: api:generate, docs/domain/generated and the config JSON
-                      # Schema (packages/config/schema, committed)
+pnpm generate         # all generators: api:generate, docs/domain/generated, the config JSON
+                      # Schema (packages/config/schema) and the template manifest, all committed
 docker build -t transfer .          # the production image (CI builds and smoke-tests it)
-scripts/image-smoke.sh transfer     # migration + /api/v1/health/ready, / and /portal/
+scripts/image-smoke.sh transfer     # migration + /api/v1/health/ready, /, /portal/ and the
+                                    # template catalog
 ```
 
 In cloud sessions PostgreSQL is pre-installed but not running: start it with
