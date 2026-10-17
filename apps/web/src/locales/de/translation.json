@@ -124,8 +124,23 @@
       "pinnedAt": "Gepinnt am",
       "role": "Rolle"
     },
+    "draft": "Status: Entwurf. Teilnehmende können angelegt, aber erst nach der Aktivierung weitergeführt werden.",
+    "activeSince": "Status: aktiv seit {{at}}.",
     "blockers": "Blocker",
     "noBlockers": "Keine Blocker.",
+    "activate": {
+      "title": "Projekt aktivieren",
+      "hint": "Die Aktivierung ist endgültig: Danach ändern sich Projekttyp und Projekt-Agentur nicht mehr, und die Teilnehmenden durchlaufen den Prozess. Blocker der Einreichung bei der Agentur hindern die Aktivierung nicht.",
+      "blocked": "Die Aktivierung ist erst möglich, wenn diese Blocker behoben sind:",
+      "action": "Aktivieren",
+      "done": "Projekt aktiviert",
+      "warnings": "Projekt aktiviert. Noch offen, ohne die Aktivierung zu blockieren:",
+      "errors": {
+        "project_not_draft": "Das Projekt ist bereits aktiv.",
+        "forbidden": "Nur die Projektleitung kann das Projekt aktivieren.",
+        "failed": "Das Projekt konnte nicht aktiviert werden."
+      }
+    },
     "activation": {
       "project_activation_blocked": "Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur.",
       "no_entry_wave_with_latest_entry_date": "Aktivierung blockiert: Keine Eintrittswelle hat einen letztmöglichen Eintritt."

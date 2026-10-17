@@ -89,9 +89,10 @@ describe("project setup", () => {
       await screen.findByText(/Es ist noch keine Projekt-Agentur gewählt/),
     ).toBeInTheDocument();
     expect(screen.getByText("Es ist noch keine Vorlage gepinnt.")).toBeInTheDocument();
+    // In the blocker list and again at the activation it blocks.
     expect(
-      screen.getByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
-    ).toBeInTheDocument();
+      screen.getAllByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
+    ).toHaveLength(2);
   });
 
   it("shows the pins with version and hash prefix, and the blockers per Agentur and step", async () => {
@@ -188,5 +189,132 @@ describe("project setup", () => {
       await screen.findByRole("button", { name: "Als weitere Agentur pinnen" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Als Projekt-Agentur festlegen" })).toBeNull();
+  });
+});
+
+// Slice 2 plan 5.5, 5.13 (PR 2e-1): the PL activates a draft project from the server's capability.
+describe("project activation", () => {
+  const activeProject = {
+    ...project,
+    status: "active",
+    activatedAt: "2026-10-17T08:30:00.123456Z",
+  };
+  const activeConfig = {
+    ...pinnedConfig,
+    capabilities: {
+      ...pinnedConfig.capabilities,
+      setProjectAgentur: false,
+      activateProject: false,
+    },
+  };
+  const warning = pinnedConfig.agenturen[0]!.blockers[0]!;
+
+  it("names the blockers it would hit and can't be used while there are any", async () => {
+    setup(
+      {},
+      {
+        ...unpinnedConfig,
+        activationBlockers: ["project_activation_blocked", "no_entry_wave_with_latest_entry_date"],
+      },
+    );
+    expect(await screen.findByText("Status: Entwurf.", { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText("Die Aktivierung ist erst möglich, wenn diese Blocker behoben sind:"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Aktivierung blockiert: Keine Eintrittswelle hat einen letztmöglichen Eintritt.",
+      ),
+    ).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Aktivieren" })).toBeDisabled();
+  });
+
+  it("activates, shows the status and the non-blocking warnings, and offers it no more", async () => {
+    let current = { project: project as object, config: pinnedConfig as object };
+    const calls = setup({
+      [`GET ${path}`]: () => json(current.project),
+      [`GET ${path}/config`]: () => json(current.config),
+      [`POST ${path}/activation`]: () => {
+        current = { project: activeProject, config: activeConfig };
+        return json({
+          status: "active",
+          activatedAt: activeProject.activatedAt,
+          warnings: [warning],
+        });
+      },
+    });
+    expect(await screen.findByText("Projekt aktivieren", { selector: "h3" })).toBeInTheDocument();
+    expect(screen.getByText(/Die Aktivierung ist endgültig/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Aktivieren" }));
+    expect(await screen.findByText("Projekt aktiviert")).toBeInTheDocument();
+    expect(calls.find((c) => c.key === `POST ${path}/activation`)?.body).toEqual({});
+    expect(await screen.findByText(/^Status: aktiv seit/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Projekt aktiviert. Noch offen, ohne die Aktivierung zu blockieren:"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Agentur Nord (Beispiel) – Einreichung bei der Agentur (TL 407) blockiert, es fehlt: Vorlauf in Tagen, Original erforderlich",
+      ).length,
+    ).toBeGreaterThan(1);
+    expect(screen.queryByRole("button", { name: "Aktivieren" })).toBeNull();
+  });
+
+  it("shows a refusal of the API and the current blockers", async () => {
+    let config: object = pinnedConfig;
+    setup({
+      [`GET ${path}/config`]: () => json(config),
+      [`POST ${path}/activation`]: () => {
+        config = { ...pinnedConfig, activationBlockers: ["no_entry_wave_with_latest_entry_date"] };
+        return problem(422, "domain-error", {
+          errors: [{ pointer: "", code: "no_entry_wave_with_latest_entry_date", detail: "x" }],
+        });
+      },
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Aktivieren" }));
+    expect(
+      await screen.findByText("Die Aktivierung ist erst möglich, wenn diese Blocker behoben sind:"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(
+        "Aktivierung blockiert: Keine Eintrittswelle hat einen letztmöglichen Eintritt.",
+      ),
+    ).toHaveLength(3);
+  });
+
+  // Round 29: activated concurrently by another request. The refusal outlives the activation,
+  // which unmounts once the reread configuration no longer offers it; the status follows.
+  it("keeps the refusal when another request activated the project meanwhile, and shows it active", async () => {
+    let current = { project: project as object, config: pinnedConfig as object };
+    setup({
+      [`GET ${path}`]: () => json(current.project),
+      [`GET ${path}/config`]: () => json(current.config),
+      [`POST ${path}/activation`]: () => {
+        current = { project: activeProject, config: activeConfig };
+        return problem(422, "domain-error", {
+          errors: [{ pointer: "", code: "project_not_draft", detail: "x" }],
+        });
+      },
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Aktivieren" }));
+    expect(await screen.findByText(/^Status: aktiv seit/)).toBeInTheDocument();
+    expect(screen.getByText("Das Projekt ist bereits aktiv.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aktivieren" })).toBeNull();
+    expect(screen.queryByText("Projekt aktivieren")).toBeNull();
+  });
+
+  // Round 26: only the server's capability offers it (a global org role, another project's PL,
+  // an active project); the API's 403 stays authoritative.
+  it.each([
+    [
+      "a role without the operation",
+      { ...pinnedConfig, capabilities: { ...pinnedConfig.capabilities, activateProject: false } },
+    ],
+    ["an active project", activeConfig],
+  ])("isn't offered to %s", async (_label, config) => {
+    setup({}, config);
+    expect(await screen.findByText("Einrichtung")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aktivieren" })).toBeNull();
+    expect(screen.queryByText("Projekt aktivieren")).toBeNull();
   });
 });

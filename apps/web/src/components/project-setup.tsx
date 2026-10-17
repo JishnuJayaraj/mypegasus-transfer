@@ -13,7 +13,8 @@ import {
 } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { projectConfigQuery, templateCatalogQuery, useApi } from "../api";
+import { projectConfigQuery, projectQuery, templateCatalogQuery, useApi } from "../api";
+import { ProjectActivation, useSubmissionText } from "./project-activation";
 
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type CatalogEntry = components["schemas"]["TemplateCatalogEntry"];
@@ -33,7 +34,14 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
   const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
   const { capabilities } = config;
   const catalog = useQuery({ ...templateCatalogQuery(api), enabled: capabilities.pinTemplate });
+  const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
   const projectAgentur = config.pins.find((pin) => pin.agenturKey === config.projectAgenturKey);
+  const submission = useSubmissionText(config);
+  // The non-blocking warnings of an activation in this view (Q91, Q92); empty ones aren't shown.
+  const [warnings, setWarnings] = useState<Blocker[]>();
+  // An activation's refusal, kept here because the activation unmounts once the project is
+  // active, e.g. after a concurrent activation (`project_not_draft`, round 29).
+  const [refusal, setRefusal] = useState<string>();
 
   const rows = config.pins.map((pin) => ({
     id: pin.agenturKey,
@@ -49,6 +57,11 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
     <section aria-labelledby="project-setup" className="tp-section">
       <h2 id="project-setup">{t("setup.title")}</h2>
       <p>
+        {project.status === "active" && project.activatedAt
+          ? t("setup.activeSince", { at: formatTimestamp(project.activatedAt) })
+          : t("setup.draft")}
+      </p>
+      <p>
         {projectAgentur
           ? t("setup.projectAgentur", {
               label: projectAgentur.label.de,
@@ -63,6 +76,28 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
         emptyState={t("setup.pinsEmpty")}
       />
       <Blockers config={config} />
+      {refusal && (
+        <InlineNotification kind="error" title={refusal} onClose={() => setRefusal(undefined)} />
+      )}
+      {warnings && (
+        <InlineNotification
+          kind="warning"
+          title={t("setup.activate.warnings")}
+          subtitle={warnings.map(submission).join(" · ")}
+          onClose={() => setWarnings(undefined)}
+        />
+      )}
+      {capabilities.activateProject && (
+        <ProjectActivation
+          projectId={projectId}
+          config={config}
+          onActivated={(found) => {
+            setRefusal(undefined);
+            setWarnings(found.length ? found : undefined);
+          }}
+          onRefused={setRefusal}
+        />
+      )}
       {capabilities.pinTemplate && catalog.data && (
         <PinForm
           projectId={projectId}
@@ -77,18 +112,7 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
 /** The activation blockers and, per pinned Agentur, its step-scoped submission blockers. */
 function Blockers({ config }: { config: ProjectConfig }) {
   const { t } = useTranslation();
-  const labelOf = (key: string | null) =>
-    config.pins.find((pin) => pin.agenturKey === key)?.label.de ?? key ?? "";
-  const submission = (blocker: Blocker) =>
-    blocker.code === "agentur_submission_blocked"
-      ? t("setup.submissionBlocked", {
-          agentur: labelOf(blocker.agenturKey),
-          step: t(`setup.steps.${blocker.step}`),
-          missing: blocker.missing
-            .map((key) => t(`setup.settings.${key}`, { defaultValue: key }))
-            .join(", "),
-        })
-      : t("setup.activation.project_activation_blocked");
+  const submission = useSubmissionText(config);
   const items = [
     ...config.activationBlockers.map((code) => t(`setup.activation.${code}`)),
     ...config.agenturen.flatMap(({ blockers }) => blockers.map(submission)),

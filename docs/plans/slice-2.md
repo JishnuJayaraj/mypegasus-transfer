@@ -754,6 +754,29 @@ projects; ADR-0002 and ADR-0011 notes, `process-and-lifecycle.md`.
    while draft (round 26's pattern for `setProjectAgentur`).
 9. **No docs gap found;** Q110 stays unused.
 
+Built in 2e-1-web (about 140 non-blank, non-comment production lines): the activation in
+**Einrichtung** (`apps/web/src/components/project-activation.tsx`), the project's status in the
+section, component tests and the Playwright step (the e2e project is activated after its pin and
+its wave).
+
+10. **The action follows `capabilities.activateProject` only** (round 26), never the role or
+    the status the page shows. It names the activation blockers it would hit (the configuration's
+    `activationBlockers`, also in the blocker list above it) and is **disabled while there are
+    any**; the submission blockers don't disable it, and the hint says so. The API's 403 and 422
+    stay authoritative: a refusal is shown by its code (a blocker with the blocker list's message).
+    **Round 29:** the refusal is kept in the setup section, which outlives the activation
+    component, and every refusal rereads the project, the project list and the configuration, so
+    after a concurrent activation (`project_not_draft`) "Das Projekt ist bereits aktiv." stays
+    visible while the status turns active and the action disappears.
+11. **After activation** the project, the project list and the configuration are read again, so
+    the status ("aktiv seit …", database time) and the header show it and the action and "Als
+    Projekt-Agentur festlegen" disappear (both capabilities are draft-only); the warnings the
+    activation returned stay as a closable notice with their Agentur and step, worded like the
+    blocker list. Nothing renders a staff id.
+12. **Saving a wave rereads the configuration**, because a `latestEntryDate` changes the
+    activation blockers (Q77). Round 26's page-exhaustion loop in `apps/web/src/api.tsx` isn't
+    touched (the activation adds no list query).
+
 
 ## 4. Design overview
 
