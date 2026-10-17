@@ -27,11 +27,14 @@ import {
   type Release,
 } from "./template-pins";
 
-/** A write's outcome: done, a problem type (404/403/409), or domain issues (422), per R21. */
+/**
+ * A write's outcome: done, a problem type (404/403/409), or domain issues (422, each a code or a
+ * code at its field), per R21.
+ */
 export type OverrideOutcome<P extends string = "not-found" | "conflict"> =
   | { ok: true }
   | { problem: P }
-  | { issues: readonly string[] };
+  | { issues: readonly (string | { code: string; field: string })[] };
 
 /** Who writes with which release: the acting staff user and the request id for the audit. */
 export type Writer = {
@@ -40,10 +43,10 @@ export type Writer = {
   actor: { staffUserId: string; requestId: string | null };
 };
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
-type Refusals<P extends string> = Readonly<Record<string, OverrideOutcome<P>>>;
+export type Refusals<P extends string> = Readonly<Record<string, OverrideOutcome<P>>>;
 
-const issue = (code: string) => ({ issues: [code] });
-const contextOf = ({ actor }: Writer) => auditContext(actor.staffUserId, actor.requestId);
+export const issue = (code: string) => ({ issues: [code] });
+export const contextOf = ({ actor }: Writer) => auditContext(actor.staffUserId, actor.requestId);
 
 // The function refusals each operation allowlists (R21, round 23); anything else is a 500.
 const overrideRefusals: Refusals<"not-found" | "conflict"> = {
@@ -71,7 +74,7 @@ const decisionRefusals: Refusals<"not-found" | "conflict" | "forbidden"> = {
  * Runs `write` in one transaction under the exclusive project lock (D3), mapping refusals. The
  * project is given, or read from a relaxation request (none: a 404).
  */
-function underLock<P extends string>(
+export function underLock<P extends string>(
   db: Database,
   projectId: string | { requestId: string },
   refusals: Refusals<P>,

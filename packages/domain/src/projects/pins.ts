@@ -98,6 +98,11 @@ export const ProjectConfig = z
         sha256Prefix: z.string().regex(/^[0-9a-f]{12}$/),
         pinnedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
         pinnedBy: z.uuid().meta({ description: "Staff user id" }),
+        /**
+         * The newer catalog versions this pin may migrate to (5.8), for a user who may migrate
+         * here (`capabilities.migrateTemplate`); empty otherwise.
+         */
+        migrationTargets: z.array(z.int().min(1)),
       }),
     ),
     /** The project level, resolved against the Project Agentur's pinned template. */
@@ -129,8 +134,9 @@ export const ProjectConfig = z
      * `pinTemplate`), make an Agentur the Project Agentur (the PL, while draft), change the
      * override's Agentur-scoped settings and remove an approved relaxation (the PL,
      * `changeOverride`), request a relaxation (the PL, `requestRelaxation`) and activate the
-     * project (the PL, while draft, `activateProject`); each open request says whether the user
-     * may decide or withdraw it. The UI offers only these; the API's checks stay authoritative.
+     * project (the PL, while draft, `activateProject`) and migrate a pinned template to a newer
+     * version (the PL, `migrateTemplate`, draft or active); each open request says whether the
+     * user may decide or withdraw it. The UI offers only these; the API's checks stay authoritative.
      */
     capabilities: z.strictObject({
       pinTemplate: z.boolean(),
@@ -138,6 +144,7 @@ export const ProjectConfig = z
       changeOverride: z.boolean(),
       requestRelaxation: z.boolean(),
       activateProject: z.boolean(),
+      migrateTemplate: z.boolean(),
     }),
   })
   .meta({ id: "ProjectConfig" });

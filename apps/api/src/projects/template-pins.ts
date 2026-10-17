@@ -34,6 +34,7 @@ import {
 } from "@transfer/db";
 import {
   ApprovedRelaxation,
+  migrationTargets,
   planTemplatePin,
   projectActivationBlockers,
   type Operation,
@@ -138,6 +139,44 @@ export async function currentOverride(
   return { version: row.version, content: result.layer };
 }
 
+/**
+ * The project's snapshot as read in `db` (R11): its type, status and Project Agentur, its current
+ * pins and override version, and the resolution input they make. Undefined for no project.
+ */
+export async function projectSnapshot(db: Db, release: Release, projectId: string) {
+  const [found] = await db
+    .select({
+      type: project.type,
+      status: project.status,
+      projectAgenturKey: project.projectAgenturKey,
+    })
+    .from(project)
+    .where(eq(project.id, projectId));
+  if (!found) return undefined;
+  const pins = await currentPins(db, projectId);
+  const override = await currentOverride(db, projectId);
+  const input = {
+    base: release.baseDefaults,
+    templatesByAgentur: templatesOf(pins),
+    override: override.content,
+    projectType: found.type,
+    projectAgenturKey: found.projectAgenturKey,
+  };
+  return { project: found, pins, override, input };
+}
+
+/**
+ * A template version of this release (5.8): the file through `loadTemplate` and its canonical hash
+ * (R22), which must be the catalog's (AC-9); a differing file is a broken image (500).
+ */
+export function releaseTemplate(release: Release, agenturKey: string, version: number) {
+  const template = loadTemplate(agenturKey, version, release.templatesDir);
+  const sha256 = canonicalHash(template);
+  const entry = release.catalog.find((t) => t.agenturKey === agenturKey && t.version === version);
+  if (entry?.sha256 !== sha256) throw new Error("template file differs from the manifest");
+  return { template, sha256 };
+}
+
 /** A refused override as domain issues (R21): `override_invalid`, then each issue's code. */
 export const overrideIssues = (validation: Extract<OverrideValidation, { ok: false }>) => [
   "override_invalid",
@@ -181,28 +220,13 @@ export async function projectConfig(
   projectId: string,
   may: (operation: Operation) => boolean,
 ): Promise<ProjectConfig | undefined> {
-  const [found] = await db
-    .select({
-      type: project.type,
-      status: project.status,
-      projectAgenturKey: project.projectAgenturKey,
-    })
-    .from(project)
-    .where(eq(project.id, projectId));
-  if (!found) return undefined;
-  const pins = await currentPins(db, projectId);
-  const override = await currentOverride(db, projectId);
+  const snapshot = await projectSnapshot(db, release, projectId);
+  if (!snapshot) return undefined;
+  const { project: found, pins, override, input } = snapshot;
   const waves = await db
     .select({ latestEntryDate: projectEntryWave.latestEntryDate })
     .from(projectEntryWave)
     .where(eq(projectEntryWave.projectId, projectId));
-  const input = {
-    base: release.baseDefaults,
-    templatesByAgentur: templatesOf(pins),
-    override: override.content,
-    projectType: found.type,
-    projectAgenturKey: found.projectAgenturKey,
-  };
   const projectLevel = resolveForProject(input);
   const open = await db
     .select({
@@ -227,6 +251,10 @@ export async function projectConfig(
       sha256Prefix: p.sha256.slice(0, 12),
       pinnedAt: p.pinnedAt,
       pinnedBy: p.pinnedBy,
+      // What this pin may migrate to (5.8), only for a user who may migrate here.
+      migrationTargets: may({ kind: "migrateTemplate" })
+        ? migrationTargets(release.catalog, p)
+        : [],
     })),
     projectBlockers: projectLevel.blockers,
     agenturen: submissionBlockers(input, pins),
@@ -260,6 +288,8 @@ export async function projectConfig(
       requestRelaxation: may({ kind: "requestRelaxation" }),
       // Activation is one-way (R1): offered only while draft.
       activateProject: may({ kind: "activateProject" }) && found.status === "draft",
+      // A pinned template migrates in draft and active projects alike (5.8).
+      migrateTemplate: may({ kind: "migrateTemplate" }),
     },
   };
 }
@@ -304,13 +334,7 @@ export async function pinTemplate(
       if ("issues" in plan) return { issues: plan.issues };
       const { agenturKey } = input;
       if (plan.pinVersion !== null) {
-        const template = loadTemplate(agenturKey, plan.pinVersion, release.templatesDir);
-        const sha256 = canonicalHash(template);
-        const entry = release.catalog.find(
-          (t) => t.agenturKey === agenturKey && t.version === plan.pinVersion,
-        );
-        // The release's files are its catalog (AC-9); a differing file is a broken image.
-        if (entry?.sha256 !== sha256) throw new Error("template file differs from the manifest");
+        const { template, sha256 } = releaseTemplate(release, agenturKey, plan.pinVersion);
         // Pinning a further Agentur keeps the override valid across every chain (2c-2 reading 3).
         const { content } = await currentOverride(tx, projectId);
         const validation = validateProjectOverride({
