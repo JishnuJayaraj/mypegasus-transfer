@@ -691,7 +691,10 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
     `apps/web/src/api.tsx` isn't touched (the relaxations come with the configuration).
 13. **No docs gap found;** Q110 stays unused.
 
-### Built in PR 2e-1, with the readings taken (for confirmation)
+### Built in PR 2e-1, with the readings taken (confirmed in round 29)
+
+[Round 29](../decisions/2026-10-17-answers-round-29.md) confirmed items 1–9 and 11–12, and item
+10 with the correction that a refusal outlives the activation component (2e-1-web, below).
 
 Split before review, like rounds 24, 26 and 27: **2e-1** (domain, database, API, seed, docs; this
 branch, about 360 non-blank, non-comment production lines, of which about 135 are the
