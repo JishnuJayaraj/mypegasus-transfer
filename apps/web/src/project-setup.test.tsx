@@ -45,6 +45,7 @@ const nordPin = {
   sha256Prefix: "bbbbbbbbbbbb",
   pinnedAt: "2026-10-17T08:30:00.123456Z",
   pinnedBy: staffUsers[1]!.id,
+  migrationTargets: [],
 };
 const pinnedConfig = {
   ...unpinnedConfig,

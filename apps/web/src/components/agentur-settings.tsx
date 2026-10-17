@@ -40,9 +40,9 @@ const choices = {
   "agentur_submission.leadTimeDays": "number",
   "agentur_submission.rejectsOutdatedFormVersions": ["true", "false"],
 } as const;
-type SettingPath = keyof typeof choices;
+export type SettingPath = keyof typeof choices;
 const paths = Object.keys(choices) as SettingPath[];
-type Value = Exclude<(typeof choices)[SettingPath], "number">[number];
+export type Value = Exclude<(typeof choices)[SettingPath], "number">[number];
 const FIELDS: readonly string[] = ["agenturKey", "settings", "source", "confirmedOn"];
 
 const valueAt = (settings: Scoped["settings"], path: string) => {

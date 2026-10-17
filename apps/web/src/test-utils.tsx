@@ -89,5 +89,6 @@ export const unpinnedConfig = {
     changeOverride: true,
     requestRelaxation: true,
     activateProject: true,
+    migrateTemplate: true,
   },
 };

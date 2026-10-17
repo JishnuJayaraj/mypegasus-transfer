@@ -24,6 +24,7 @@ const nordPin = {
   sha256Prefix: "bbbbbbbbbbbb",
   pinnedAt: "2026-10-17T08:30:00.123456Z",
   pinnedBy: staffUsers[1]!.id,
+  migrationTargets: [],
 };
 const otherStaff = "00000000-0000-4000-8000-000000000009";
 const scoped = (agenturKey: string, confirmedBy = staffUsers[1]!.id) => ({

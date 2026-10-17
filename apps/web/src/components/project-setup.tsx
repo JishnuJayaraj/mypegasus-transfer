@@ -15,18 +15,22 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { projectConfigQuery, projectQuery, templateCatalogQuery, useApi } from "../api";
 import { ProjectActivation, useSubmissionText } from "./project-activation";
+import { TemplateMigration } from "./template-migration";
 
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type CatalogEntry = components["schemas"]["TemplateCatalogEntry"];
 type Blocker = components["schemas"]["ConfigBlocker"];
 
 const columns = ["label", "agenturKey", "version", "sha256Prefix", "pinnedAt", "role"] as const;
+type Notice = { kind: "success" | "error"; text: string };
 
 /**
  * The setup section of the project page (Slice 2 plan 5.13): the Project Agentur, the pinned
  * templates and what blocks the project. The pin form follows the server's capabilities for this
  * project (round 26), never catalog access: only its PL pins, and the Project Agentur is chosen
- * only while draft. The API's 403 stays the enforcement.
+ * only while draft. A pin with newer catalog versions is migrated with review (5.8) when the
+ * server says so (`capabilities.migrateTemplate`, the pin's `migrationTargets`). The API's 403
+ * stays the enforcement.
  */
 export function ProjectSetup({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -42,6 +46,13 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
   // An activation's refusal, kept here because the activation unmounts once the project is
   // active, e.g. after a concurrent activation (`project_not_draft`, round 29).
   const [refusal, setRefusal] = useState<string>();
+  // The Agentur being migrated, and the migration's outcome, kept here because the migration
+  // unmounts once its pin has no newer version (round 29).
+  const [migrating, setMigrating] = useState<string>();
+  const [migration, setMigration] = useState<Notice>();
+  const migratable = config.pins.filter(
+    (pin) => capabilities.migrateTemplate && pin.migrationTargets.length > 0,
+  );
 
   const rows = config.pins.map((pin) => ({
     id: pin.agenturKey,
@@ -51,7 +62,20 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
     sha256Prefix: pin.sha256Prefix,
     pinnedAt: formatTimestamp(pin.pinnedAt),
     role: pin === projectAgentur ? t("setup.projectAgenturRole") : t("setup.furtherAgenturRole"),
+    actions: migratable.includes(pin) && (
+      <Button
+        kind="ghost"
+        size="sm"
+        onClick={() => {
+          setMigration(undefined);
+          setMigrating(pin.agenturKey);
+        }}
+      >
+        {t("setup.migrate", { agentur: pin.label.de })}
+      </Button>
+    ),
   }));
+  const migratingPin = migratable.find((pin) => pin.agenturKey === migrating);
 
   return (
     <section aria-labelledby="project-setup" className="tp-section">
@@ -71,10 +95,32 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
       </p>
       <SimpleTable
         title={t("setup.pins")}
-        columns={columns.map((key) => ({ key, header: t(`setup.columns.${key}`) }))}
+        columns={[...columns, ...(migratable.length ? (["actions"] as const) : [])].map((key) => ({
+          key,
+          header: t(`setup.columns.${key}`),
+        }))}
         rows={rows}
         emptyState={t("setup.pinsEmpty")}
       />
+      {migration && (
+        <InlineNotification
+          kind={migration.kind}
+          title={migration.text}
+          onClose={() => setMigration(undefined)}
+        />
+      )}
+      {migratingPin && (
+        <TemplateMigration
+          key={migratingPin.agenturKey}
+          projectId={projectId}
+          pin={migratingPin}
+          onDone={(notice) => {
+            setMigrating(undefined);
+            setMigration(notice);
+          }}
+          onCancel={() => setMigrating(undefined)}
+        />
+      )}
       <Blockers config={config} />
       {refusal && (
         <InlineNotification kind="error" title={refusal} onClose={() => setRefusal(undefined)} />

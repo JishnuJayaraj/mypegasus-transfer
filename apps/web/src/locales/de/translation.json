@@ -122,7 +122,8 @@
       "version": "Version",
       "sha256Prefix": "Prüfsumme",
       "pinnedAt": "Gepinnt am",
-      "role": "Rolle"
+      "role": "Rolle",
+      "actions": "Aktionen"
     },
     "draft": "Status: Entwurf. Teilnehmende können angelegt, aber erst nach der Aktivierung weitergeführt werden.",
     "activeSince": "Status: aktiv seit {{at}}.",
@@ -174,6 +175,50 @@
       "project_not_draft": "Die Projekt-Agentur kann nach der Aktivierung nicht mehr geändert werden.",
       "forbidden": "Nur die Projektleitung kann Vorlagen pinnen.",
       "failed": "Die Vorlage konnte nicht gepinnt werden."
+    },
+    "migrate": "{{agentur}} migrieren"
+  },
+  "migration": {
+    "title": "Vorlage von {{agentur}} migrieren",
+    "intro": "Die Agentur nutzt Version {{from}}. Wählen Sie eine neuere Version, prüfen Sie, was sich ändert, und entscheiden Sie für jede agenturbezogene Einstellung, ob sie bleibt.",
+    "version": "Neue Version",
+    "show": "Änderungen anzeigen",
+    "cancel": "Abbrechen",
+    "changesTitle": "Was Version {{version}} ändert",
+    "setting": "Einstellung {{setting}}: bisher {{from}}, neu {{to}}",
+    "rule": {
+      "added": "Neue Regel {{rule}} ({{step}})",
+      "removed": "Regel {{rule}} entfällt ({{step}})",
+      "changed": "Regel {{rule}} geändert ({{step}})"
+    },
+    "field": {
+      "added": "Neues Zusatzfeld {{field}}",
+      "removed": "Zusatzfeld {{field}} entfällt",
+      "changed": "Zusatzfeld {{field}} geändert"
+    },
+    "noChanges": "Die neue Version ändert weder Einstellungen noch Regeln oder Zusatzfelder.",
+    "overrideIssues": "Mit dieser Version wäre die Projektkonfiguration ungültig. Die Migration ist so nicht möglich.",
+    "reviewTitle": "Agenturbezogene Einstellungen prüfen",
+    "reviewEmpty": "Für diese Agentur gibt es keine agenturbezogene Einstellung zu prüfen.",
+    "review": "{{setting}}: im Projekt {{value}}; Vorlage bisher {{from}}, neu {{to}}",
+    "keep": "Beibehalten",
+    "remove": "Entfernen (dann gilt die Vorlage)",
+    "notSet": "nicht festgelegt",
+    "confirm": "Migration bestätigen",
+    "done": "Vorlage migriert",
+    "result": "{{agentur}} nutzt jetzt Version {{version}}.",
+    "resultRemoved": "{{agentur}} nutzt jetzt Version {{version}}. Entfernte Einstellungen: {{settings}}.",
+    "errors": {
+      "review_incomplete": "Bitte entscheiden Sie für jede Einstellung, ob sie bleibt.",
+      "override_invalid": "Mit dieser Version wäre die Projektkonfiguration ungültig. Die Migration ist so nicht möglich.",
+      "template_not_in_catalog": "Diese Version ist nicht im Katalog.",
+      "template_already_pinned": "Diese Version ist bereits gepinnt.",
+      "template_version_not_newer": "Es kann nur auf eine neuere Version migriert werden.",
+      "template_version_changed": "Diese Vorlagenversion ist bereits mit anderem Inhalt registriert und kann nicht übernommen werden.",
+      "conflict": "Die Vorlage oder die Projektkonfiguration wurde inzwischen geändert und neu geladen. Bitte zeigen Sie die Änderungen erneut an.",
+      "not_found": "Diese Agentur ist im Projekt nicht gepinnt.",
+      "forbidden": "Nur die Projektleitung kann Vorlagen migrieren.",
+      "failed": "Die Migration ist fehlgeschlagen."
     }
   },
   "overrides": {
