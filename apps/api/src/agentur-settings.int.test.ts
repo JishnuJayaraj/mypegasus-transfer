@@ -178,6 +178,25 @@ describe("PUT …/config/agentur-settings/{agenturKey} (AC-14)", () => {
     const unknown = "00000000-0000-4000-9000-0000000000ff";
     await expectProblem(await put(unknown, ost, body(0)), 404, "not-found");
   });
+
+  // Round 27: visibility and the operation come before the setting's rules, so an unauthorised
+  // caller never learns them from a 422.
+  it("checks access before the setting's rules: 403 and 404 for invalid data too", async () => {
+    const invalid = body(0, { settings: {}, confirmedOn: "2026-10-18" });
+    await expectProblem(await put(werkNord, ost, invalid, "consultant"), 403, "forbidden");
+    const created = await app.request(
+      "/api/v1/projects",
+      jsonRequest(
+        "POST",
+        { name: "Neu", customerName: "Beispiel GmbH", type: "ta_tg" },
+        auth.projectLead,
+      ),
+    );
+    const { id } = (await created.json()) as { id: string };
+    await expectProblem(await put(id, ost, invalid, "consultant"), 404, "not-found");
+    const unknown = "00000000-0000-4000-9000-0000000000ff";
+    await expectProblem(await put(unknown, ost, invalid), 404, "not-found");
+  });
 });
 
 describe("DELETE …/config/agentur-settings/{agenturKey}", () => {
@@ -221,8 +240,8 @@ describe("DELETE …/config/agentur-settings/{agenturKey}", () => {
 
 describe("the override across every pinned chain (5.9, AC-16)", () => {
   it("refuses a pin that would make the current override invalid, with the issues", async () => {
-    // An override field that Nord's template declares too (only possible here through the
-    // function: override fields have no API, R13).
+    // An override field that Nord's template declares too: a synthetic state inserted as the
+    // owner, since no function writes override fields before the admin UI (R13, round 27).
     const content = {
       schemaVersion: 1,
       kind: "project_override",
@@ -244,10 +263,12 @@ describe("the override across every pinned chain (5.9, AC-16)", () => {
         },
       },
     };
-    await owner.execute(sql`select write_project_override(p_project_id => ${lagerSued}::uuid,
-      p_expected_version => 0, p_content => ${JSON.stringify(content)}::jsonb,
-      p_change => 'agentur_setting_set', p_agentur_key => ${ost}, p_base_defaults_version => 1,
-      p_context => ${auditContext(seedStaffUserIds.projectLead, null)})`);
+    await owner.insert(projectConfigOverride).values({
+      projectId: lagerSued,
+      version: 1,
+      content,
+      createdBy: seedStaffUserIds.projectLead,
+    });
     expect((await pin(lagerSued, { agenturKey: sued })).status).toBe(200);
     expect(await codes(await pin(lagerSued, { agenturKey: nord }))).toEqual([
       { code: "override_invalid", pointer: "" },

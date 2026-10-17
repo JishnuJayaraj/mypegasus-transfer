@@ -9,9 +9,19 @@ CREATE TRIGGER project_config_override_append_only BEFORE UPDATE OR DELETE ON pu
   FOR EACH ROW EXECUTE FUNCTION public.refuse_config_change();
 --> statement-breakpoint
 
+-- An override's content without one Agentur's scoped setting; an empty map counts as none
+-- (round 27): what must stay equal when only that Agentur's setting changes.
+CREATE FUNCTION override_without_agentur(p_content jsonb, p_agentur_key text)
+RETURNS jsonb LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT CASE WHEN r -> 'agenturSettings' = '{}'::jsonb THEN r - 'agenturSettings' ELSE r END
+  FROM (SELECT pg_catalog.jsonb_delete_path(p_content, ARRAY['agenturSettings', p_agentur_key]) AS r) s
+$$;
+--> statement-breakpoint
+
 -- Appends the project's next override version (5.9). The service validates the content against
 -- every pinned chain first (validateProjectOverride, D2 as amended in round 26); this checks its
--- structure and that the change is what it claims. Optimistic concurrency under the exclusive
+-- structure and that the change is exactly what it claims (round 27): only the named Agentur's
+-- setting differs from the current content, and a set is confirmed by the acting user (R14). Optimistic concurrency under the exclusive
 -- project lock: the expected version must be the current one (0 = no override yet), else
 -- `override_version_stale`; the current content again is `override_unchanged`. The audit event
 -- names the version, the change, the Agentur key, the setting keys (`step.key`, computed here
@@ -23,6 +33,7 @@ CREATE FUNCTION write_project_override(
 ) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   v_current public.project_config_override;
+  v_base jsonb;
   v_version integer;
   v_setting jsonb;
   v_keys jsonb;
@@ -36,6 +47,7 @@ BEGIN
   IF coalesce(p_expected_version < 0 OR p_base_defaults_version < 1
       OR pg_catalog.jsonb_typeof(p_content) <> 'object'
       OR p_content ->> 'kind' IS DISTINCT FROM 'project_override'
+      OR coalesce(pg_catalog.jsonb_typeof(p_content -> 'agenturSettings'), 'object') <> 'object'
       OR p_change NOT IN ('agentur_setting_set', 'agentur_setting_removed')
       OR p_agentur_key !~ '^[a-z0-9]+(-[a-z0-9]+)*$', true) THEN
     RAISE EXCEPTION 'invalid_argument';
@@ -46,15 +58,23 @@ BEGIN
   IF v_version <> p_expected_version THEN
     RAISE EXCEPTION 'override_version_stale';
   END IF;
-  IF p_content = coalesce(v_current.content, '{"kind": "project_override", "schemaVersion": 1}') THEN
+  v_base := coalesce(v_current.content, '{"kind": "project_override", "schemaVersion": 1}');
+  IF p_content = v_base THEN
     RAISE EXCEPTION 'override_unchanged';
   END IF;
-  -- A set names the setting in the new content with a known source; a removal one the current
-  -- content has and the new one hasn't.
+  -- Nothing but the named Agentur's setting changes: no field, rule, relaxation or other Agentur
+  -- slips in under this audit event (round 27).
+  IF public.override_without_agentur(p_content, p_agentur_key)
+     IS DISTINCT FROM public.override_without_agentur(v_base, p_agentur_key) THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  -- A set names the setting in the new content with a known source, confirmed by the acting user;
+  -- a removal one the current content has and the new one hasn't.
   IF p_change = 'agentur_setting_set' THEN
     v_setting := p_content -> 'agenturSettings' -> p_agentur_key;
     IF coalesce(v_setting ->> 'source' NOT IN ('phone_call_agentur', 'email_agentur', 'letter_agentur',
-        'meeting_agentur'), true) THEN
+        'meeting_agentur'), true)
+       OR v_setting ->> 'confirmedBy' IS DISTINCT FROM ((p_context).staff_user_id)::text THEN
       RAISE EXCEPTION 'invalid_argument';
     END IF;
   ELSE
@@ -112,6 +132,6 @@ END $$;
 -- reads them to resolve a project's snapshot (R11).
 GRANT SELECT ON TABLE project_config_override TO transfer_app;
 --> statement-breakpoint
-REVOKE ALL ON FUNCTION write_project_override FROM PUBLIC;
+REVOKE ALL ON FUNCTION override_without_agentur, write_project_override FROM PUBLIC;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION write_project_override TO transfer_app;

@@ -89,19 +89,25 @@ export function projectConfigRoutes(deps: Deps) {
   );
 
   /**
-   * Sets or removes an Agentur-scoped setting (5.9): the PL's `changeOverride` (5.4); a stale
-   * expected version is a 409, a refused rule a 422 (R21). Answers with the configuration.
+   * Sets (`input`) or removes (null) an Agentur-scoped setting (5.9): visibility and the PL's
+   * `changeOverride` (5.4) come first (404/403), then the setting's rules (R14, confirmed by the
+   * acting user; round 27); a stale expected version is a 409, a refused rule a 422 (R21).
+   * Answers with the configuration.
    */
   async function changeSetting(
     c: Context,
     projectId: string,
     agenturKey: string,
-    change: Parameters<typeof changeAgenturSetting>[5],
+    expectedVersion: number,
+    input: Omit<SetAgenturSettingInput, "expectedVersion"> | null,
   ) {
     const user = sessionUser(c);
     const may = await projectOperations(db, user, projectId, operations);
     if (!may) return problem(c, "not-found");
     if (!may.changeOverride) return problem(c, "forbidden");
+    const issues = input ? checkAgenturSetting(input, deps.clock.today()) : [];
+    if (issues.length) return domainProblem(c, issues);
+    const change = { expectedVersion, setting: input && { ...input, confirmedBy: user.id } };
     const actor = { staffUserId: user.id, requestId: c.get("requestId") };
     const outcome: OverrideOutcome = await changeAgenturSetting(
       db,
@@ -149,11 +155,7 @@ export function projectConfigRoutes(deps: Deps) {
     async (c) => {
       const { projectId, agenturKey } = c.req.valid("param");
       const { expectedVersion, ...input } = c.req.valid("json");
-      // Confirmed by the acting user, not after today (R14).
-      const issues = checkAgenturSetting(input, deps.clock.today());
-      if (issues.length) return domainProblem(c, issues);
-      const setting = { ...input, confirmedBy: sessionUser(c).id };
-      return changeSetting(c, projectId, agenturKey, { expectedVersion, setting });
+      return changeSetting(c, projectId, agenturKey, expectedVersion, input);
     },
   );
 
@@ -173,7 +175,7 @@ export function projectConfigRoutes(deps: Deps) {
     async (c) => {
       const { projectId, agenturKey } = c.req.valid("param");
       const { expectedVersion } = c.req.valid("query");
-      return changeSetting(c, projectId, agenturKey, { expectedVersion, setting: null });
+      return changeSetting(c, projectId, agenturKey, expectedVersion, null);
     },
   );
 

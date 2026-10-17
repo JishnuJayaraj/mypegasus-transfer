@@ -111,6 +111,7 @@ const helpers = [
   "project_text_valid",
   "entry_wave_text_valid",
   "refuse_config_change",
+  "override_without_agentur",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

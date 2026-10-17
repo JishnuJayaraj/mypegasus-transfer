@@ -204,6 +204,82 @@ describe("write_project_override (5.9, AC-14)", () => {
   });
 });
 
+/** Version 2 of an override whose version 1 exists: a set, or a removal. */
+const set = (content: object) => write(app, { expectedVersion: 1, content });
+const removal = (content: object) =>
+  write(app, { expectedVersion: 1, content, change: "agentur_setting_removed" });
+
+// Round 27: the function's audit event claims one Agentur's setting changed, so nothing else
+// may change with it, and a set is confirmed by the acting user (R14).
+describe("write_project_override changes exactly the named Agentur's setting", () => {
+  const rule = { id: "o-mobile", kind: "required", field: "mobile", basis: "operational_default" };
+  const current = {
+    ...empty,
+    rules: { data_collection: [rule] },
+    agenturSettings: { "beispielstadt-nord": setting(), "beispielstadt-ost": setting() },
+  };
+  // A version with a rule, only possible as the owner (override rules have no API, R13).
+  beforeEach(() =>
+    owner.query(
+      "insert into project_config_override (project_id, version, content, created_by) values ($1, 1, $2, $3)",
+      [werkNord, current, seedStaffUserIds.projectLead],
+    ),
+  );
+  const ost = (value: object | undefined, extra: object = {}) => {
+    const { "beispielstadt-ost": _, ...others } = current.agenturSettings;
+    const agenturSettings = value ? { ...others, "beispielstadt-ost": value } : others;
+    return { ...current, agenturSettings, ...extra };
+  };
+
+  it("accepts a set and a removal that change only that setting", async () => {
+    expect(await refusal(set(ost(setting(8))))).toBe("ok");
+    expect(
+      await refusal(
+        write(app, {
+          expectedVersion: 2,
+          content: ost(undefined),
+          change: "agentur_setting_removed",
+        }),
+      ),
+    ).toBe("ok");
+  });
+
+  it.each([
+    ["a changed rule", { rules: {} }],
+    ["an added field", { fields: { "custom.x": { type: "string", maxLength: 4 } } }],
+    ["another Agentur's setting", { agenturSettings: { "beispielstadt-nord": setting(9) } }],
+  ])(
+    "refuses a set and a removal that also change %s (invalid_argument)",
+    async (_label, extra) => {
+      const changed = (value: object | undefined) => {
+        const content = ost(value, extra);
+        if ("agenturSettings" in extra) {
+          content.agenturSettings = { ...ost(value).agenturSettings, ...extra.agenturSettings };
+        }
+        return content;
+      };
+      expect(await refusal(set(changed(setting(8))))).toBe("invalid_argument");
+      expect(await refusal(removal(changed(undefined)))).toBe("invalid_argument");
+      expect(await versionsOf(werkNord)).toHaveLength(1);
+    },
+  );
+
+  it("refuses a set confirmed by another user than the actor (invalid_argument)", async () => {
+    const spoofed = { ...setting(8), confirmedBy: seedStaffUserIds.admin };
+    expect(await refusal(set(ost(spoofed)))).toBe("invalid_argument");
+  });
+
+  it("treats an empty Agentur map as none when the last setting goes", async () => {
+    await write(app, {}, lagerSued);
+    const remove = (content: object) =>
+      write(app, { expectedVersion: 1, content, change: "agentur_setting_removed" }, lagerSued);
+    expect(await refusal(remove({ ...empty, agenturSettings: {}, rules: {} }))).toBe(
+      "invalid_argument",
+    );
+    expect(await refusal(remove({ ...empty, agenturSettings: {} }))).toBe("ok");
+  });
+});
+
 describe("override versions are append-only (5.2)", () => {
   beforeEach(() => write(app));
 

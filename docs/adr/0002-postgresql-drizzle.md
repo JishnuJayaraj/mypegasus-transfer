@@ -134,7 +134,9 @@ Decided in the Slice 2 plan (D2 as amended in round 26, D3, 5.2, 5.3, 5.9) and b
   compares the expected version (`override_version_stale`, the API's 409) and refuses the current
   content again (`override_unchanged`). The content is the second `jsonb` payload D2 permits: the
   service validates it against every pinned chain first (`validateProjectOverride`), the function
-  checks its structure and that the claimed change (an Agentur-scoped setting set or removed) is
-  what the content does. It writes `config_override_changed` with the version, the change, the
+  checks its structure and that the claimed change is exactly what the content does (round 27):
+  apart from the named Agentur's setting (an empty `agenturSettings` counting as none) the content
+  equals the current one, so no field, rule, relaxation or other Agentur's setting changes under
+  that audit event, and a set is confirmed by the acting user. It writes `config_override_changed` with the version, the change, the
   Agentur key, the setting keys it computes itself, the source of a set and the base-defaults
   version (R26); `record_audit_event` refuses that type now.
