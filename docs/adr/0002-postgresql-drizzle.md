@@ -183,3 +183,26 @@ Decided in the Slice 2 plan (D2, D3, D9, R1, R26, 5.3, 5.5; Q98) and built in PR
   the participation lock and before the stale check, as defence in depth for the status
   service's own check (D9). Its shared project lock serialises it with `activate_project`.
   Creation and wave assignment stay allowed in draft.
+
+## Amendment 2026-10-17: template version migration (Slice 2, PR 2e-2)
+
+Decided in the Slice 2 plan (D2, D3, D5, R15, R26, 5.3, 5.8; Q36, Q93; rounds 27 and 28) and
+built in PR 2e-2:
+- **`pin_agentur_template` pins an Agentur once per project:** its body moved to the internal
+  `append_template_pin` (no `EXECUTE` for `transfer_app`), and the granted function refuses any
+  version of an Agentur the project has pinned (`template_already_pinned`). So a version changes
+  only through the migration, enforced in SQL.
+- **`migrate_agentur_template(project, agentur_key, from_version, version, content, sha256,
+  expected_version, override_content, base_defaults_version, context)`** (`SECURITY DEFINER`)
+  takes the exclusive project lock first, appends the new pin through `append_template_pin` (the
+  Agentur pinned, the version newer, the pinned one still `from_version`; else
+  `agentur_not_pinned`, `template_already_pinned`, `template_version_not_newer`,
+  `pin_version_stale`; content and hash compared as for every pin), compares the expected
+  override version (`override_version_stale`) and, with `override_content`, appends the next
+  override version with the change `agentur_setting_reviewed`. Its exact delta (round 27): apart
+  from the named Agentur's setting the content is the current one; that setting keeps its source
+  and confirmation; its settings are the current ones with at least one key removed and no value
+  changed or added (or the setting is gone with its last key). The audit event names the removed
+  keys (`settingKeys`) and the kept ones (`keptSettingKeys`), computed in SQL, and the
+  base-defaults version (R26). Only this function writes that change kind, in the call that pins
+  the new version (round 28); `write_project_override` and `append_project_override` refuse it.

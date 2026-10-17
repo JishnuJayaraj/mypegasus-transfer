@@ -10,6 +10,7 @@ import {
   OverrideChange,
 } from "../projects/agentur-settings";
 import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
+import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
 import {
   DsvStatus,
@@ -251,7 +252,9 @@ const entryWaveChanged = event("entry_wave_changed", {
 /**
  * A new override version (5.9): its number, what changed, and either the Agentur key, the setting
  * keys (`step.key`) and, when set, the source, or the relaxed rule's id; never a value or free
- * text (round 8). R26: the base-defaults version it was validated with.
+ * text (round 8). A migration's review (`agentur_setting_reviewed`, 5.8) names the removed keys as
+ * `settingKeys` and the kept ones, if any, as `keptSettingKeys`. R26: the base-defaults version
+ * it was validated with.
  */
 const configOverrideChanged = event("config_override_changed", {
   ...ofProject,
@@ -259,10 +262,8 @@ const configOverrideChanged = event("config_override_changed", {
     version: z.int().min(1),
     change: OverrideChange,
     agenturKey: agenturKey.optional(),
-    settingKeys: z
-      .array(z.string().regex(/^[a-z_]+\.[A-Za-z]+$/))
-      .min(1)
-      .optional(),
+    settingKeys: z.array(SettingKey).min(1).optional(),
+    keptSettingKeys: z.array(SettingKey).min(1).optional(),
     source: AgenturSettingSource.optional(),
     ruleId: RuleId.optional(),
     baseDefaultsVersion,
@@ -275,6 +276,9 @@ const configOverrideChanged = event("config_override_changed", {
   }
   if ((details.change === "agentur_setting_set") !== (details.source !== undefined)) {
     issue(ctx, "source_mismatch");
+  }
+  if (details.keptSettingKeys && details.change !== "agentur_setting_reviewed") {
+    issue(ctx, "change_mismatch");
   }
 });
 /** Every relaxation event names its request and the rule (5.9); the reason code is its column. */

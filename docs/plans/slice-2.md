@@ -691,6 +691,95 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
     `apps/web/src/api.tsx` isn't touched (the relaxations come with the configuration).
 13. **No docs gap found;** Q110 stays unused.
 
+### Built in PR 2e-2, with the readings taken (for confirmation in round 31)
+
+Split before review, like 2d-2, because domain, config, database and API alone are about 590
+non-blank, non-comment production lines: **2e-2a** (domain vocabulary, audit model, operation,
+`migrationPreview`, migration `0023`, database tests, docs; this branch, about 365 lines),
+**2e-2b** (`ProjectConfig` additions, the API service and routes, OpenAPI; the `-api` branch on
+2e-2a, about 225 lines) and **2e-2c** (Einrichtung, its component tests and the Playwright step;
+the `-web` branch on 2e-2b, about 310 lines including the translations). Each is green on its own.
+
+Built in 2e-2a: `MigrationPreviewInput`, `MigrateTemplateInput`, `MigrationDecision`,
+`SettingKey`, `SettingValue`, `TemplateMigrationPreview`, `planTemplateMigration`,
+`migrationTargets`, `checkMigrationDecisions` (`packages/domain/src/projects/migration.ts`, under
+the 100 % threshold); the operation `migrateTemplate` (PL); `OverrideChange` +
+`agentur_setting_reviewed` and `config_override_changed`'s `keptSettingKeys`; `migrationPreview`
+and `withReviewedSetting` (`packages/config/src/migration.ts`, 100 %); migration
+`0023_template_migration_functions` (hand-written: the internal `append_template_pin` and
+`scoped_setting_keys`, `pin_agentur_template` replaced, `migrate_agentur_template`, the grants);
+ADR-0002 and ADR-0004 amendments, `regional-variation.md`. Built in 2e-2b:
+`ProjectConfig.pins[].migrationTargets` and `capabilities.migrateTemplate`; the service
+`apps/api/src/projects/migration.ts`; `POST /projects/{projectId}/config/pins/{agenturKey}/
+migration-preview` and `…/migration`; `projectSnapshot` and `releaseTemplate` in
+`template-pins.ts`. Built in 2e-2c: the migration in Einrichtung
+(`apps/web/src/components/template-migration.tsx`), component tests, the Playwright step.
+
+1. **Only newer versions:** a migration goes to a catalog version newer than the pinned one; the
+   pinned version is `template_already_pinned`, an older one `template_version_not_newer`, one
+   outside the catalog `template_not_in_catalog` (422 at `/version`). Going back means publishing
+   a new version. The list the UI offers (`pins[].migrationTargets`) is the same rule, and the
+   write path enforces it (round 28), in SQL too.
+2. **A plain pin never changes a version** (round 28, enforced in SQL): `pin_agentur_template`
+   now refuses any version of an Agentur the project has pinned (`template_already_pinned`; its
+   body moved to the internal `append_template_pin`). Before `0023` the granted function accepted
+   another version, which would have skipped the review; the database test pinning a second
+   version passed against `0016` and is refused now. `previousVersion` is recorded by the
+   migration.
+3. **The override part has its own change kind** (the question of the session brief):
+   `agentur_setting_reviewed`, written only by the granted `migrate_agentur_template` in the call
+   that appends the new pin, so no review removal exists without its migration;
+   `write_project_override` and `append_project_override` refuse it (it isn't in their lists).
+   Reusing `agentur_setting_set` would have claimed a new confirmation by the acting user and a
+   source (round 27 requires `confirmedBy` = the actor for a set), falsifying the kept keys'
+   provenance; `agentur_setting_removed` removes the whole setting only. The exact delta in SQL:
+   apart from that Agentur's setting the content is the current one; the setting keeps source,
+   confirmer and date; its settings are the current ones with at least one key removed and none
+   added or changed (`@>` containment), or the setting is gone with its last key. The event
+   carries the removed keys as `settingKeys` and the kept ones as `keptSettingKeys`, both computed
+   in SQL, and the base-defaults version (R26). No new event type: `config_template_pinned` and
+   `config_override_changed` already carry `baseDefaultsVersion` (AC-45).
+4. **Two versions are compared:** the confirm names the pinned version (`fromVersion`) and the
+   override version (`expectedVersion`) the preview was made on; either moved is a 409 (the
+   service under the lock, and `pin_version_stale` / `override_version_stale` in SQL), because the
+   review's old and new values depend on both.
+5. **The review lists every key** of the Agentur's scoped setting (`step.key`), whether or not
+   the template changes its value (R15: "every Agentur-scoped setting … key by key"). `remove`
+   drops the key (the whole setting with its last one) and keeps the setting's source and
+   confirmation; `keep` keeps it winning over the new template for that key (Q93). Nothing removed
+   (all kept, or no setting): only the pin is written, no override version.
+6. **The preview** (a `POST` with the target version; read-only, outside the lock) lists the
+   template settings that differ (old and new value, `null` where a version doesn't set one), the
+   rules added, removed **and changed** (id, step, basis) and the custom fields added, removed and
+   changed (key): "changed" is in addition to 5.8's added/removed, so a rule redefined under its id
+   isn't hidden. Labels and help texts aren't listed. `overrideIssues` are the codes of
+   `validateProjectOverride` for the current override with the new version; the preview still
+   answers 200 so the PL sees them, the confirm refuses (`override_invalid` with the codes, AC-16).
+7. **Order (round 28):** project visibility 404 → `migrateTemplate` 403 → an Agentur the project
+   hasn't pinned 404 (the pin named in the path doesn't exist, like a missing scoped setting) →
+   the target 422 → the two versions 409 → `review_incomplete` 422 (at `/decisions`) →
+   `override_invalid` 422 → the write. Strict input: content and hash come from the release
+   (`unrecognized_keys`). The function refusals are allowlisted (R21); anything else is a 500.
+8. **`GET …/config`** adds `capabilities.migrateTemplate` (the operation, in draft and active
+   projects alike: R1 fixes the type and the Project Agentur, not their versions) and per pin
+   `migrationTargets`, empty unless the user may migrate here (the catalog's versions aren't shown
+   to roles that don't read the catalog, Q108).
+9. **Folded in (round 29's non-blocking item):** `projectSnapshot` in `template-pins.ts` loads
+   the project, pins, override and resolution input once for the configuration, the activation
+   and the migration; `releaseTemplate` checks a release file against its manifest for the pin
+   and the migration. Not folded in: a domain-owned union of refusal codes; round 26's page loop
+   in `apps/web/src/api.tsx` (the migration adds no list query).
+10. **Web (2e-2c):** the pins table gets an action column "… migrieren" only with
+    `capabilities.migrateTemplate` and a non-empty `migrationTargets` (round 26); the newest target
+    is preselected; "Änderungen anzeigen" shows the changes and the review (keep or remove per key,
+    with the project value and the old and new template value); "Migration bestätigen" is
+    disabled until every key is decided and while there are override issues (the API's 422 stays
+    authoritative). The result or refusal is kept in Einrichtung, which outlives the migration
+    component, and every outcome rereads the project, the project list and the configuration
+    (round 29). No staff id is shown (Q109).
+11. **No docs gap found;** this PR raises no question (the round 30 docs PR proposes Q110, for
+    Q102).
+
 ### Built in PR 2e-1, with the readings taken (confirmed in round 29)
 
 [Round 29](../decisions/2026-10-17-answers-round-29.md) confirmed items 1–9 and 11–12, and item
@@ -878,7 +967,8 @@ the exclusive lock can still create and lock participations (re-entrant).
 | `activate_project(id, base_defaults_version, context)` | draft → active; re-checks: Project Agentur pinned; `ta_tg` has a wave with `latest_entry_date` | `project_activated` |
 | `create_entry_wave` / `update_entry_wave(… typed dates …, context)` | `ta_tg` only, ordering `CHECK`s, `updated_at` | `entry_wave_created` / `entry_wave_changed` (changed keys, old/new dates) |
 | `set_participation_dates(id, tg_start, tg_end, expected_version, context)` | compare-and-set on `status_version`, bumps it | `participation_dates_changed` (old/new dates) |
-| `pin_agentur_template(project, key, version, content, sha256, context)` | project lock; `INSERT … ON CONFLICT DO NOTHING` into `config_template_version`, then refuses `template_version_changed` unless the stored content **equals the supplied `jsonb`** and the stored hash equals the supplied hash; appends the pin | `config_template_pinned` (key, version, previous version, base-defaults version) |
+| `pin_agentur_template(project, key, version, content, sha256, context)` | project lock; `INSERT … ON CONFLICT DO NOTHING` into `config_template_version`, then refuses `template_version_changed` unless the stored content **equals the supplied `jsonb`** and the stored hash equals the supplied hash; appends the pin; from PR 2e-2 only the **first** pin of an Agentur in the project (the body is the internal `append_template_pin`) | `config_template_pinned` (key, version, previous version, base-defaults version) |
+| `migrate_agentur_template(project, key, from_version, version, content, sha256, expected_version, override_content?, base_defaults_version, context)` (PR 2e-2) | project lock; the new pin through `append_template_pin` (pinned, newer, still `from_version`); the expected override version; with `override_content`, the next override version that only removes keys of that Agentur's scoped setting (round 27's exact delta) | `config_template_pinned` (with `previousVersion`), and `config_override_changed` (`agentur_setting_reviewed`, removed and kept keys) when keys are removed |
 | `write_project_override(project, expected_version, content, change, agentur_key, base_defaults_version, context, rule_id)` | next version or `override_version_stale`; exactly the claimed change (round 27); never adds a relaxation (internal `append_project_override`, only from `decide_rule_relaxation`; round 28) | `config_override_changed` (exists; version, change kind, Agentur key or rule id) |
 | `request_rule_relaxation(project, rule_id, reason_code, requested_on, base_defaults_version, context)` / `decide_rule_relaxation(request, approve, decided_on, context, expected_version?, content?, base_defaults_version?)` / `withdraw_rule_relaxation(request, context)` | four eyes in SQL (decider ≠ requester); an approval writes the next override version | `rule_relaxation_requested` / `…_approved` / `…_rejected` / `…_withdrawn` |
 | `write_participant_data(participation, typed columns…, context)` | upsert both rows; a `null` argument keeps the stored value (nothing in Slice 2 clears one); on update computes the changed keys with `IS DISTINCT FROM` | `participant_data_changed` (keys only, never values) |
@@ -1016,7 +1106,8 @@ participations) and one form for create and edit.
   listed key (missing or extra keys → `review_incomplete`). One transaction under the project
   lock: an override version without the removed keys (if any), the new pin, audit
   (`config_template_pinned` with `previousVersion`, `config_override_changed` with the kept and
-  removed keys). Completeness is derived, so it is recomputed automatically; generated documents
+  removed keys; PR 2e-2: the change `agentur_setting_reviewed`, pin first; the confirm also names
+  the pinned version the preview was made on; only newer versions). Completeness is derived, so it is recomputed automatically; generated documents
   don't exist yet.
 - **Image (S2):** the API build copies the templates and the base defaults to `dist/config/`;
   `CONFIG_DIR` (default: the repo paths) tells `load.ts` where they are; the image smoke test

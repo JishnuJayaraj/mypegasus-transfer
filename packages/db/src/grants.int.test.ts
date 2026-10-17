@@ -106,6 +106,8 @@ const statusFunctions = [
   "withdraw_rule_relaxation",
   // Slice 2 (PR 2e-1): activation
   "activate_project",
+  // Slice 2 (PR 2e-2): template version migration with review
+  "migrate_agentur_template",
 ];
 const helpers = [
   "assert_context",
@@ -123,6 +125,8 @@ const helpers = [
   "append_project_override",
   "lock_relaxation_request",
   "config_relaxation_request_progresses",
+  "append_template_pin",
+  "scoped_setting_keys",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

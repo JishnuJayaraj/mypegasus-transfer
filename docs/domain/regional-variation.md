@@ -189,7 +189,7 @@ Participation
   pins its latest version (or an older one) and sets it as the Project Agentur in one step, while
   the project is a draft. Further Agenturen are pinned the same way, also once the project is
   active. Another version of an Agentur that is already pinned is a migration with review (PR
-  2e-2), never a plain pin. `GET /api/v1/projects/{id}/config` shows the pins and, from the
+  2e-2), never a plain pin (the database refuses it too). `GET /api/v1/projects/{id}/config` shows the pins and, from the
   snapshot, the project's blockers, each pinned Agentur's step-scoped blockers and the activation
   blockers.
 - **Agentur-scoped settings (PR 2d-1):** the PL sets or removes one per Agentur key, also for an
@@ -217,12 +217,28 @@ Participation
   are audited (rule id and reason code, never free text); request and approval record the
   base-defaults version (R26). The configuration response lists the approved relaxations, the
   open requests and the rules a request may name, with what the viewer may do.
+- **Template version migration with review (PR 2e-2; Q36, Q93, R15):** the PL moves a pinned
+  Agentur to a **newer** catalog version, in a draft or an active project. A preview
+  (`POST /api/v1/projects/{id}/config/pins/{key}/migration-preview`, writes nothing) lists the
+  template settings that differ (old and new value), the rules and custom fields added, removed or
+  changed, the issues the current override would have with the new version, and the **review**:
+  every key of that Agentur's scoped setting with its project value and the old and new template
+  value. The confirm (`…/migration`) names **keep or remove for exactly those keys**
+  (`review_incomplete` otherwise) and the pinned and override versions the preview was made on
+  (a 409 when either moved meanwhile). Under the project lock it re-plans and re-validates, then
+  writes in one transaction the new pin (`config_template_pinned` with `previousVersion`) and,
+  when keys are removed, a new override version (`config_override_changed`,
+  `agentur_setting_reviewed`, with the removed and kept keys; the setting keeps its source and
+  confirmation), both with the base-defaults version. A migration that would leave the override
+  invalid is refused with its issues. Afterwards that Agentur resolves from the new version; the
+  others are unchanged. Completeness is derived, so it follows the new version; generated
+  documents don't exist yet.
 - **Cross-chain validation (round 15, R16):** every override write and every pin validates the
   override against the base-only chain and every pinned Agentur chain
   (`validateProjectOverride`): a rule on a custom field only one template declares, an override
   field a template declares too, a relaxation of a locked rule, a relaxation that matches no chain
   or a reason code outside the controlled list is refused (`override_invalid` with the issue
-  codes), never stored.
+  codes), never stored. A migration validates the override with the new version the same way.
 - **Base defaults** are release-managed, not pinned (Q107); configuration-dependent audit events
   record their `version`.
 - **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the

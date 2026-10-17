@@ -162,6 +162,13 @@
       "when": 1792254787899,
       "tag": "0022_project_activation_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792258940749,
+      "tag": "0023_template_migration_functions",
+      "breakpoints": true
     }
   ]
 }
