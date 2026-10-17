@@ -205,7 +205,7 @@
       "letter_agentur": "Schreiben der Agentur",
       "meeting_agentur": "Termin mit der Agentur"
     },
-    "otherStaff": "Andere Person (Kennung {{id}}…)",
+    "otherStaff": "Andere berechtigte Person",
     "add": "Agenturbezogene Einstellung hinzufügen",
     "editTitle": "Einstellung für {{agentur}} ändern",
     "edit": "{{agentur}} bearbeiten",

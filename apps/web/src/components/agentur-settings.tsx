@@ -107,11 +107,8 @@ export function AgenturSettings({ projectId }: { projectId: string }) {
       )
       .join("; "),
     source: t(`overrides.sources.${scoped.source}`),
-    // No staff directory before Slice 3 (Q109): the viewer's own name, else a staff id prefix.
-    confirmedBy:
-      scoped.confirmedBy === me?.id
-        ? me.displayName
-        : t("overrides.otherStaff", { id: scoped.confirmedBy.slice(0, 8) }),
+    // No staff directory before Slice 3 (Q109, round 27): the viewer's own name, else never an id.
+    confirmedBy: scoped.confirmedBy === me?.id ? me.displayName : t("overrides.otherStaff"),
     confirmedOn: formatDate(scoped.confirmedOn),
     actions: may && (
       <ButtonSet>

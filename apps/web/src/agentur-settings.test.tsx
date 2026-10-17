@@ -83,9 +83,10 @@ describe("Konfiguration: Agentur-scoped settings", () => {
     ]) {
       expect(within(nordRow).getByText(text)).toBeInTheDocument();
     }
-    // No staff directory yet (Q109): another confirmer is shown by an id prefix.
+    // No staff directory yet (Q109, round 27): another confirmer is never shown by an id.
     const ostRow = form.getByText(ost).closest("tr")!;
-    expect(within(ostRow).getByText("Andere Person (Kennung 00000000…)")).toBeInTheDocument();
+    expect(within(ostRow).getByText("Andere berechtigte Person")).toBeInTheDocument();
+    expect(within(ostRow).queryByText(/00000000/)).toBeNull();
   });
 
   // Round 26: the server's capability decides, never the role.
