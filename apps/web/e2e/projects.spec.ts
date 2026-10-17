@@ -42,6 +42,28 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   const { items } = await (await page.request.get("/api/v1/projects?limit=1")).json();
   expect(items[0].createdBy).toBe(seedStaffUserIds.projectLead);
   expect((await me(page)).id).toBe(seedStaffUserIds.projectLead);
+
+  // Slice 2 (PR 2b, AC-8): the PL opens the new project and adds an entry wave; a rule the API
+  // refuses is shown at its field.
+  await firstRow.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await expect(page.getByText("Es gibt noch keine Eintrittswellen.")).toBeVisible();
+  await page.getByRole("button", { name: "Welle anlegen" }).click();
+  await page.getByLabel("Kürzel").fill("W1");
+  await page.getByLabel("Bezeichnung").fill("Welle 1");
+  await page.getByLabel("Unterschriftsfrist").fill("15.02.2091");
+  await page.getByLabel("TG-Beginn (Standard)").fill("01.03.2091");
+  await page.getByLabel("TG-Ende (Standard)").fill("29.02.2092");
+  await page.getByLabel("Letztmöglicher Eintritt").fill("15.03.2091");
+  await expectAccessible(page);
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Eintrittswelle gespeichert")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Welle 1/ })).toContainText("15.03.2091");
+  await page.getByRole("button", { name: "W1 bearbeiten" }).click();
+  await page.getByLabel("TG-Ende (Standard)").fill("01.03.2092");
+  await page.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Die TG-Dauer darf zwölf Monate nicht überschreiten.")).toBeVisible();
+  await expectAccessible(page);
+  await page.goto("/projects");
   await chooseDevUser(page, "Erika Musterfrau · Admin");
   await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.admin);
   // Slice 2 (Q106): the admin, a global org role, sees every project's metadata.

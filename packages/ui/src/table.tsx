@@ -18,8 +18,8 @@ export interface TableColumn {
 interface SimpleTableProps {
   title: string;
   columns: TableColumn[];
-  /** Cell values are display text, already formatted. */
-  rows: ({ id: string } & Record<string, string>)[];
+  /** Cell values are display text, already formatted, or an element such as a link. */
+  rows: ({ id: string } & Record<string, ReactNode>)[];
   emptyState: ReactNode;
 }
 

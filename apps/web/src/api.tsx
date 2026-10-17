@@ -36,6 +36,31 @@ export const staffUsersQuery = (api: ApiClient) =>
     staleTime: Infinity,
   });
 
+export const projectQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId],
+    queryFn: () =>
+      unwrap(api.GET("/api/v1/projects/{projectId}", { params: { path: { projectId } } })),
+  });
+
+/** All waves of a project (a handful), page by page. */
+export const entryWavesQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "entry-waves"],
+    queryFn: async () => {
+      const waves = [];
+      let cursor: string | undefined;
+      do {
+        const query = { limit: 100, ...(cursor && { cursor }) };
+        const path = "/api/v1/projects/{projectId}/entry-waves";
+        const page = await unwrap(api.GET(path, { params: { path: { projectId }, query } }));
+        waves.push(...page.items);
+        cursor = page.nextCursor ?? undefined;
+      } while (cursor);
+      return waves;
+    },
+  });
+
 export const projectsQuery = (api: ApiClient) =>
   infiniteQueryOptions({
     queryKey: ["projects"],

@@ -6,6 +6,7 @@ export {
   HeaderGlobalAction,
   HeaderPanel,
   InlineNotification,
+  Link,
   Loading,
   RadioButton,
   RadioButtonGroup,

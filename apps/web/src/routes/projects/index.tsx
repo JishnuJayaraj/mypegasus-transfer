@@ -1,11 +1,12 @@
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink } from "@tanstack/react-router";
-import { Add, Button, formatTimestamp, PageHeader, SimpleTable } from "@transfer/ui";
+import { Add, Button, formatTimestamp, Link, PageHeader, SimpleTable } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { projectsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
 
 const ButtonLink = createLink(Button);
+const RouterLink = createLink(Link);
 
 export const Route = createFileRoute("/projects/")({
   loader: ({ context }) => context.queryClient.ensureInfiniteQueryData(projectsQuery(context.api)),
@@ -22,7 +23,11 @@ function ProjectsPage() {
     .flatMap((page) => page.items)
     .map((project) => ({
       id: project.id,
-      name: project.name,
+      name: (
+        <RouterLink to="/projects/$projectId" params={{ projectId: project.id }}>
+          {project.name}
+        </RouterLink>
+      ),
       customerName: project.customerName,
       type: t(`projects.types.${project.type}`),
       status: t(`projects.statuses.${project.status}`),
