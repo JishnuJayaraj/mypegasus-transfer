@@ -1,9 +1,11 @@
+import { z } from "zod";
 import type { ProjectType } from "../project";
 import type { EntryWave } from "./waves";
 
-export type ProjectActivationBlocker =
-  | "project_activation_blocked"
-  | "no_entry_wave_with_latest_entry_date";
+export const ProjectActivationBlocker = z
+  .enum(["project_activation_blocked", "no_entry_wave_with_latest_entry_date"])
+  .meta({ id: "ProjectActivationBlocker" });
+export type ProjectActivationBlocker = z.infer<typeof ProjectActivationBlocker>;
 
 /**
  * Why a project can't be activated yet; activation itself is Slice 2. The resolved project
