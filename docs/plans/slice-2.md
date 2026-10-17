@@ -492,7 +492,7 @@ ADR-0002, `regional-variation.md`, `data-protection.md`.
 Split like rounds 24 and 26, before review: **2d-1a** (domain, config, database, API, docs; about
 585 non-blank, non-comment production lines, of which about 35 are moved from `model.ts`, item 1)
 and **2d-1b** (the Konfiguration section of the web page, its component tests and the Playwright
-step, on the `-web` branch). One PR would be about 790 lines.
+step, on the `-web` branch; about 360 lines). One PR would be about 945 lines.
 
 Built in 2d-1a: `validateProjectOverride`, `RelaxationReasonCode` and `withAgenturSetting`
 (`packages/config/src/override.ts`, under the 100 % threshold of `packages/config/src/**`);
@@ -574,7 +574,9 @@ under the 100 % threshold); the operation `changeOverride` (PL); `config_overrid
     `capabilities.changeOverride`. The Agentur is chosen among the pinned ones or typed as a key
     (an Agentur without a template); settings left "nicht festlegen" aren't sent; a 409 reloads
     the configuration and says so. The confirmer is shown as the viewer's own name or as a staff
-    id prefix (Q109, assumed): the web has no staff directory before Slice 3.
+    id prefix (Q109, assumed): the web has no staff directory before Slice 3. The six settings are
+    offered with their enum values from the domain; a day count is checked locally (whole number
+    ≥ 0), as is the date (`TT.MM.JJJJ`).
 
 ## 4. Design overview
 
