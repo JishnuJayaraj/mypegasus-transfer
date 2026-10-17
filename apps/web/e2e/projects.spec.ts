@@ -103,6 +103,18 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(setting).toContainText("Petra Projektleitung");
   await expect(configuration.getByText("Stand der Projektkonfiguration: Version 1")).toBeVisible();
   await expectAccessible(page);
+
+  // Slice 2 (PR 2d-2, AC-15): the PL requests the relaxation of Nord's operational default rule
+  // with a controlled reason code; it takes effect only once another person approves it.
+  await configuration.getByLabel("Regel").selectOption("beispielstadt-nord-mobile");
+  await configuration.getByLabel("Begründung").selectOption("collected_outside_platform");
+  await configuration.getByRole("button", { name: "Beantragen" }).click();
+  await expect(page.getByText("Lockerung beantragt")).toBeVisible();
+  const request = configuration.getByRole("row", { name: /beispielstadt-nord-mobile/ });
+  await expect(request).toContainText("Petra Projektleitung");
+  await expect(request.getByRole("button", { name: /genehmigen/ })).toHaveCount(0);
+  await expect(configuration.getByText("Es gibt keine genehmigten Lockerungen.")).toBeVisible();
+  await expectAccessible(page);
   await page.goto("/projects");
   await chooseDevUser(page, "Erika Musterfrau · Admin");
   await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.admin);
@@ -117,4 +129,26 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(
     page.getByRole("button", { name: "Agenturbezogene Einstellung hinzufügen" }),
   ).toHaveCount(0);
+  // … and the open request, without deciding it (only the regional operations manager does).
+  await expect(page.getByRole("button", { name: /genehmigen|ablehnen/ })).toHaveCount(0);
+
+  // AC-15: the regional operations manager, not the requester, approves; the relaxation enters
+  // the next override version.
+  await page.goto("/projects");
+  await chooseDevUser(page, "Rolf Regionalbetrieb · Regionale Betriebsleitung");
+  await expect
+    .poll(async () => (await me(page)).id)
+    .toBe(seedStaffUserIds.regionalOperationsManager);
+  await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
+    "Andere berechtigte Person",
+  );
+  await expectAccessible(page);
+  await page.getByRole("button", { name: "beispielstadt-nord-mobile genehmigen" }).click();
+  await expect(page.getByText("Lockerung genehmigt")).toBeVisible();
+  await expect(page.getByText("Stand der Projektkonfiguration: Version 2")).toBeVisible();
+  await expect(page.getByText("Es gibt keine offenen Anträge.")).toBeVisible();
+  await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
+    "Rolf Regionalbetrieb",
+  );
 });

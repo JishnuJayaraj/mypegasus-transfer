@@ -80,6 +80,13 @@ export const unpinnedConfig = {
   projectBlockers: [{ code: "project_activation_blocked", agenturKey: null }],
   agenturen: [],
   activationBlockers: ["project_activation_blocked"],
-  override: { version: 0, agenturSettings: [] },
-  capabilities: { pinTemplate: true, setProjectAgentur: true, changeOverride: true },
+  override: { version: 0, agenturSettings: [], relaxations: [] },
+  relaxationRequests: [],
+  relaxableRules: [],
+  capabilities: {
+    pinTemplate: true,
+    setProjectAgentur: true,
+    changeOverride: true,
+    requestRelaxation: true,
+  },
 };
