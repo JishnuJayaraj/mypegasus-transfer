@@ -584,7 +584,12 @@ under the 100 % threshold); the operation `changeOverride` (PL); `config_overrid
     offered with their enum values from the domain; a day count is checked locally (whole number
     ≥ 0), as is the date (`TT.MM.JJJJ`).
 
-### Built in PR 2d-2, with the readings taken (for confirmation)
+### Built in PR 2d-2, with the readings taken (confirmed in round 28)
+
+[Round 28](../decisions/2026-10-17-answers-round-28.md) confirmed items 1, 3, 5–8 and 11–13,
+item 2 with the project-type correction, item 4 with deterministic same-transaction enforcement,
+item 10 with the request enforcing the list's eligibility, and replaced item 9's order (all
+below).
 
 Split before review, like rounds 24, 26 and 27, but in three because domain, database and API
 alone are about 880 non-blank, non-comment production lines: **2d-2a** (domain vocabulary, audit
@@ -618,25 +623,27 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
    `RelaxationReasonCode`, so there is one list (Q100) and its test stays where it was.
 2. **The request is checked as the override its approval would make:**
    `validateProjectOverride` on the current override plus `{ ruleId, reasonCode }` (the
-   requester and today as placeholder approval) against the current snapshot. A rule in no chain
-   is `relaxation_unmatched` (AC-13's code) and a locked one `relaxation_locked`, each after
-   `override_invalid`, so 5.9's "`relaxation_locked` otherwise" is read as "the resolver's code
-   for the case". A rule relaxed already is `relaxation_exists` and a second open request
-   `relaxation_request_open` (422; both also refused in SQL, the latter by a partial unique
-   index too).
+   requester and today as placeholder approval) against the current snapshot. A rule that is in
+   no chain, **or applies in no chain to the project's type** (round 28: the resolver never
+   relaxes a rule for another project type), is `relaxation_unmatched` (AC-13's code); an
+   existing locked one is `relaxation_locked`; each after `override_invalid`. A rule relaxed
+   already is `relaxation_exists` and a second open request `relaxation_request_open` (422; both
+   also refused in SQL, the latter by a partial unique index too).
 3. **Rule ids are id-shaped:** `^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$` (`RuleId`, a table `CHECK`
    and the functions), because the id enters the audit trail; a template rule id outside it can't
    be relaxed (fail safe). All rule ids in the base defaults and the sample templates fit.
 4. **Four eyes in SQL, twice:** `decide_rule_relaxation` refuses the requester
    (`same_person_approval`) and the table's `CHECK` refuses `decided_by = requested_by`; the role
    (regional operations manager, global scope until Slice 3, R2) is the service's, as for
-   profiling exceptions. **`write_project_override` adds a relaxation only for an approval the
-   acting user recorded in the same transaction** (an approved request for that rule with
-   `decided_by` = the actor and `decided_at = now()`), with the request's reason code, the
-   approver and the decision date; `decide_rule_relaxation` calls it. So the granted function
-   can't add a relaxation without four eyes. Round 27's exact delta applies to both new kinds:
-   apart from that rule's relaxation (an empty `relax` counting as none) the content equals the
-   current one. A removal needs no approval (tightening).
+   profiling exceptions. **A relaxation is added only by `decide_rule_relaxation`** (round 28):
+   it locks the request, moves it to `approved` and passes the exact entry `{ ruleId,
+   reasonCode, approvedBy, approvedOn }` built from that request, the actor and the decision date
+   to the internal `append_project_override` (no `EXECUTE` for `transfer_app`), which requires the
+   new content to hold exactly that entry for the rule. The granted `write_project_override`
+   refuses `relaxation_added` outright, so nothing is inferred from timestamps and the granted
+   function can't add a relaxation without four eyes. Round 27's exact delta applies to both new
+   kinds: apart from that rule's relaxation (an empty `relax` counting as none) the content
+   equals the current one. A removal needs no approval (tightening).
 5. **Audit:** `rule_relaxation_requested` and `…_approved` carry the reason code in the
    `reason_code` column and `{ relaxationRequestId, ruleId, baseDefaultsVersion }` (the approval
    also the override `version` it created); `…_rejected` and `…_withdrawn` only the request and
@@ -654,11 +661,14 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
    writes); the removal takes `expectedVersion` as a strict query parameter, like the setting's
    `DELETE`. Business dates (`requestedOn`, `decidedOn` = `approvedOn`) are the injected `Clock`'s
    Berlin today; instants are database time.
-9. **Access (5.4, round 27):** a decision or withdrawal reads the request's project first; an
-   unknown request or one of a project the user can't see is a 404, then the operation (403; four
-   eyes is a 403 too), then the domain (422) and the version (409). The request route checks
-   visibility and `requestRelaxation` before the rule. Refusals are allowlisted per operation
-   (R21); anything else is a 500.
+9. **Order of checks (round 28):** (1) visibility, 404 (a decision or withdrawal reads the
+   request's project first; an unknown request or one of a project the user can't see is a 404);
+   (2) the operation and four eyes, 403; (3) the request's state where it has one, 422
+   (`relaxation_not_open`, `relaxation_exists`, `relaxation_request_open`); (4) the expected
+   override version, 409; (5) validation against the current snapshot, 422; (6) the write. So a
+   stale approval of an invalid relaxation is a 409, and a stale removal is a 409 before the
+   current version is checked for the relaxation (then 404). Refusals are allowlisted per
+   operation (R21); anything else is a 500.
 10. **`GET …/config`** adds `override.relaxations` (rule order), `relaxationRequests` (open ones,
     oldest first, each with `capabilities.decide`, `decideRelaxation` with its requester, and
     `capabilities.withdraw`), `relaxableRules` and `capabilities.requestRelaxation`; removing a
@@ -666,7 +676,8 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
     `override.ts`) lists the rules of the base defaults and pinned templates that are
     `operational_default` and apply to the project type in some chain, are locked in none and
     aren't relaxed, minus those with an open request; never the override's own rules. The web
-    offers only these, so a PL doesn't type rule ids. `projectOperations` became
+    offers only these, so a PL doesn't type rule ids; a direct request is held to the same
+    eligibility by item 2's validation (round 28). `projectOperations` became
     `projectPermissions` (a check per operation), because a decision depends on the requester.
 11. **AC-16:** an approval re-validates against the current snapshot and is refused with the
     issues, deciding nothing; the test request names a rule no chain has and is inserted as the
@@ -781,7 +792,7 @@ the exclusive lock can still create and lock participations (re-entrant).
 | `create_entry_wave` / `update_entry_wave(… typed dates …, context)` | `ta_tg` only, ordering `CHECK`s, `updated_at` | `entry_wave_created` / `entry_wave_changed` (changed keys, old/new dates) |
 | `set_participation_dates(id, tg_start, tg_end, expected_version, context)` | compare-and-set on `status_version`, bumps it | `participation_dates_changed` (old/new dates) |
 | `pin_agentur_template(project, key, version, content, sha256, context)` | project lock; `INSERT … ON CONFLICT DO NOTHING` into `config_template_version`, then refuses `template_version_changed` unless the stored content **equals the supplied `jsonb`** and the stored hash equals the supplied hash; appends the pin | `config_template_pinned` (key, version, previous version, base-defaults version) |
-| `write_project_override(project, expected_version, content, change, agentur_key, base_defaults_version, context, rule_id)` | next version or `override_version_stale`; exactly the claimed change (round 27); a relaxation only through an approval in the same transaction (2d-2 item 4) | `config_override_changed` (exists; version, change kind, Agentur key or rule id) |
+| `write_project_override(project, expected_version, content, change, agentur_key, base_defaults_version, context, rule_id)` | next version or `override_version_stale`; exactly the claimed change (round 27); never adds a relaxation (internal `append_project_override`, only from `decide_rule_relaxation`; round 28) | `config_override_changed` (exists; version, change kind, Agentur key or rule id) |
 | `request_rule_relaxation(project, rule_id, reason_code, requested_on, base_defaults_version, context)` / `decide_rule_relaxation(request, approve, decided_on, context, expected_version?, content?, base_defaults_version?)` / `withdraw_rule_relaxation(request, context)` | four eyes in SQL (decider ≠ requester); an approval writes the next override version | `rule_relaxation_requested` / `…_approved` / `…_rejected` / `…_withdrawn` |
 | `write_participant_data(participation, typed columns…, context)` | upsert both rows; a `null` argument keeps the stored value (nothing in Slice 2 clears one); on update computes the changed keys with `IS DISTINCT FROM` | `participant_data_changed` (keys only, never values) |
 

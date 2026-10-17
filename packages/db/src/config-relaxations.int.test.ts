@@ -316,12 +316,34 @@ const write = (args: Record<string, unknown>) =>
   });
 
 describe("write_project_override and relaxations (round 27's exact delta)", () => {
-  it("adds a relaxation only through an approval of this transaction (four eyes)", async () => {
-    await request();
-    const added = { expectedVersion: 0, change: "relaxation_added", context: reviewer };
-    expect(await refusal(write({ ...added, content: { ...empty, relax: [entry()] } }))).toBe(
-      "invalid_argument",
-    );
+  // Round 28: never inferred from a timestamp. A committed approval stamped with this
+  // transaction's now(), by this actor, for this rule, doesn't let the granted function add it.
+  it("never adds a relaxation directly, even with an approval stamped with this transaction's time", async () => {
+    await app.query("begin");
+    try {
+      // As text: a JS Date would drop the microseconds and miss the timestamp.
+      const { rows } = await app.query("select now()::text as now");
+      await owner.query(
+        `insert into config_relaxation_request (project_id, rule_id, reason_code, status,
+           requested_by, requested_on, decided_by, decided_on, decided_at)
+         values ($1, $2, 'source_data_not_provided', 'approved', $3, '2026-10-17', $4,
+           '2026-10-18', $5::timestamptz)`,
+        [werkNord, ruleId, seedStaffUserIds.projectLead, seedStaffUserIds.admin, rows[0].now],
+      );
+      const added = {
+        expectedVersion: 0,
+        change: "relaxation_added",
+        context: reviewer,
+        content: { ...empty, relax: [entry()] },
+      };
+      expect(await refusal(write(added))).toBe("invalid_argument");
+    } finally {
+      await app.query("rollback");
+    }
+    // The internal writer that decide_rule_relaxation uses isn't granted.
+    const internal = `select append_project_override($1, 0, '{"kind":"project_override"}',
+      'relaxation_added', null, 1, $2, $3, '{}')`;
+    expect(await refusal(app.query(internal, [werkNord, reviewer, ruleId]))).toBe("42501");
     expect(await overrides()).toEqual([]);
   });
 

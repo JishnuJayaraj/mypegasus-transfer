@@ -118,6 +118,7 @@ const helpers = [
   "override_without_agentur",
   "override_without_relaxation",
   "override_relaxations_of",
+  "append_project_override",
   "lock_relaxation_request",
   "config_relaxation_request_progresses",
 ];

@@ -158,6 +158,35 @@ describe("validateProjectOverride (AC-13)", () => {
     });
   });
 
+  // Round 28: a rule for another project type is never relaxed, also by a direct request.
+  it.each([
+    ["ta_only", "ta_tg"],
+    ["ta_tg", "ta_only"],
+  ] as const)(
+    "fails a relaxation of a %s-only rule in a %s project (relaxation_unmatched)",
+    (ruleType, projectType) => {
+      const typed = structuredClone(base);
+      typed.rules!.data_collection![0] = {
+        ...typed.rules!.data_collection![0]!,
+        projectTypes: [ruleType],
+      };
+      const override = { ...empty, relax: [relaxation("base-name")] };
+      const run = (type: typeof projectType | typeof ruleType) =>
+        validateProjectOverride({
+          base: typed,
+          templatesByAgentur: both,
+          override,
+          projectType: type,
+        });
+      expect(run(projectType)).toEqual({
+        ok: false,
+        layer: "override",
+        issues: [{ code: "relaxation_unmatched", path: ["relax", 0, "ruleId"], key: "base-name" }],
+      });
+      expect(run(ruleType)).toMatchObject({ ok: true });
+    },
+  );
+
   it("fails a reason code outside the controlled list (reason_code_unknown)", () => {
     expect(RelaxationReasonCode.options).toEqual([
       "source_data_not_provided",

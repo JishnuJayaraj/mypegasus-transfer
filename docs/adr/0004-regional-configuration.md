@@ -187,6 +187,8 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
   There is one list.
 - **A relaxation enters the override only through an approval** by another person (round 8,
   R2): the approved entry `{ ruleId, reasonCode, approvedBy, approvedOn }` is a new override
-  version, validated by `validateProjectOverride` like every other write. `withRelaxation` adds or
+  version, validated by `validateProjectOverride` like every other write. The resolver never
+  relaxes a rule for another project type (Q89), so such a relaxation is `relaxation_unmatched`
+  (round 28). `withRelaxation` adds or
   removes one; `relaxableRules` lists the rules a request may name (`operational_default` and
   applicable in some chain, locked in none, not relaxed yet, never the override's own rules).

@@ -59,20 +59,19 @@ RETURNS SETOF jsonb LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public,
 $$;
 --> statement-breakpoint
 
--- Replaced (signature: + p_rule_id): appends the project's next override version (5.9). As in
--- 0018, the change must be exactly what the audit event claims (round 27): for an Agentur-scoped
--- setting only that Agentur's setting differs, and a set is confirmed by the acting user; for a
--- relaxation only that rule's relaxation differs. A relaxation is added only by an approval this
--- user recorded in this transaction (decide_rule_relaxation; four eyes), with the request's reason
--- code, the approver and the decision date; a removal (tightening) needs no approval. The audit
--- event names the version, the change, the Agentur key, setting keys and source, or the rule id,
--- and the base-defaults version (R26). Returns the new version.
-DROP FUNCTION write_project_override(uuid, integer, jsonb, text, text, integer, audit_context);
---> statement-breakpoint
-CREATE FUNCTION write_project_override(
+-- Internal (no grant): appends the project's next override version (5.9), the body of 0018's
+-- write_project_override extended by relaxations. The change must be exactly what the audit event
+-- claims (round 27): for an Agentur-scoped setting only that Agentur's setting differs, and a set
+-- is confirmed by the acting user; for a relaxation only that rule's relaxation differs. An added
+-- relaxation must be exactly `p_relaxation`, the entry decide_rule_relaxation builds from the
+-- request it has just approved (round 28: bound to that request, never inferred); a removal
+-- (tightening) needs none. The audit event names the version, the change, the Agentur key,
+-- setting keys and source, or the rule id, and the base-defaults version (R26). Returns the new
+-- version.
+CREATE FUNCTION append_project_override(
   p_project_id uuid, p_expected_version integer, p_content jsonb, p_change text, p_agentur_key text,
-  p_base_defaults_version integer, p_context audit_context, p_rule_id text DEFAULT NULL
-) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+  p_base_defaults_version integer, p_context audit_context, p_rule_id text, p_relaxation jsonb
+) RETURNS integer LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   v_current public.project_config_override;
   v_base jsonb;
@@ -80,7 +79,6 @@ DECLARE
   v_setting jsonb;
   v_keys jsonb;
   v_setting_change boolean := p_change IN ('agentur_setting_set', 'agentur_setting_removed');
-  v_request public.config_relaxation_request;
 BEGIN
   -- The exclusive project lock is the first operation (D3, round 23).
   PERFORM public.lock_project_setup(p_project_id);
@@ -146,16 +144,10 @@ BEGIN
       RAISE EXCEPTION 'invalid_argument';
     END IF;
     IF p_change = 'relaxation_added' THEN
-      SELECT * INTO v_request FROM public.config_relaxation_request
-      WHERE project_id = p_project_id AND rule_id = p_rule_id AND status = 'approved'
-        AND decided_by = (p_context).staff_user_id AND decided_at = pg_catalog.now();
-      IF NOT FOUND
+      IF p_relaxation IS NULL
          OR EXISTS (SELECT FROM public.override_relaxations_of(v_base, p_rule_id))
          OR ARRAY(SELECT public.override_relaxations_of(p_content, p_rule_id))
-           IS DISTINCT FROM ARRAY[pg_catalog.jsonb_build_object('ruleId', p_rule_id,
-             'reasonCode', v_request.reason_code::text,
-             'approvedBy', ((p_context).staff_user_id)::text,
-             'approvedOn', v_request.decided_on)] THEN
+           IS DISTINCT FROM ARRAY[p_relaxation] THEN
         RAISE EXCEPTION 'invalid_argument';
       END IF;
     ELSIF NOT EXISTS (SELECT FROM public.override_relaxations_of(v_base, p_rule_id))
@@ -171,6 +163,27 @@ BEGIN
       'source', CASE WHEN p_change = 'agentur_setting_set' THEN v_setting ->> 'source' END,
       'ruleId', p_rule_id, 'baseDefaultsVersion', p_base_defaults_version)), false);
   RETURN v_version + 1;
+END $$;
+--> statement-breakpoint
+
+-- Replaced (signature: + p_rule_id): the granted override write (5.9) for an Agentur-scoped
+-- setting set or removed, or an approved relaxation removed (tightening, no approval). It never
+-- adds a relaxation: only decide_rule_relaxation does, through append_project_override, in the
+-- transaction that approves the request (four eyes; round 28).
+DROP FUNCTION write_project_override(uuid, integer, jsonb, text, text, integer, audit_context);
+--> statement-breakpoint
+CREATE FUNCTION write_project_override(
+  p_project_id uuid, p_expected_version integer, p_content jsonb, p_change text, p_agentur_key text,
+  p_base_defaults_version integer, p_context audit_context, p_rule_id text DEFAULT NULL
+) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+BEGIN
+  -- The exclusive project lock is the first operation (D3, round 23).
+  PERFORM public.lock_project_setup(p_project_id);
+  IF p_change IS NOT DISTINCT FROM 'relaxation_added' THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  RETURN public.append_project_override(p_project_id, p_expected_version, p_content, p_change,
+    p_agentur_key, p_base_defaults_version, p_context, p_rule_id, NULL);
 END $$;
 --> statement-breakpoint
 
@@ -242,8 +255,9 @@ END $$;
 
 -- Another person decides a pending request (5.9 step 3, R2; four eyes in SQL as well as in the
 -- table's CHECK). An approval takes effect only here: in the same transaction the next override
--- version adds { ruleId, reasonCode, approvedBy, approvedOn } (write_project_override with the
--- content the service validated against every chain). A rejection changes no configuration and
+-- version adds exactly { ruleId, reasonCode, approvedBy, approvedOn } of this request, approver
+-- and decision date (append_project_override with the content the service validated against every
+-- chain). A rejection changes no configuration and
 -- takes no override arguments. Returns the decision's audit event.
 CREATE FUNCTION decide_rule_relaxation(
   p_request_id uuid, p_approve boolean, p_decided_on date, p_context audit_context,
@@ -272,8 +286,11 @@ BEGIN
       NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object('relaxationRequestId', p_request_id,
         'ruleId', v_request.rule_id), false);
   END IF;
-  v_version := public.write_project_override(v_request.project_id, p_expected_version, p_content,
-    'relaxation_added', NULL, p_base_defaults_version, p_context, v_request.rule_id);
+  v_version := public.append_project_override(v_request.project_id, p_expected_version, p_content,
+    'relaxation_added', NULL, p_base_defaults_version, p_context, v_request.rule_id,
+    pg_catalog.jsonb_build_object('ruleId', v_request.rule_id,
+      'reasonCode', v_request.reason_code::text,
+      'approvedBy', ((p_context).staff_user_id)::text, 'approvedOn', p_decided_on));
   RETURN public.write_audit_event(v_request.project_id, NULL, 'rule_relaxation_approved', p_context,
     NULL, NULL, NULL, v_request.reason_code::text, NULL, pg_catalog.jsonb_build_object(
       'relaxationRequestId', p_request_id, 'ruleId', v_request.rule_id, 'version', v_version,
@@ -328,8 +345,8 @@ END $$;
 GRANT SELECT ON TABLE config_relaxation_request TO transfer_app;
 --> statement-breakpoint
 REVOKE ALL ON FUNCTION config_relaxation_request_progresses, override_without_relaxation,
-  override_relaxations_of, write_project_override, request_rule_relaxation, lock_relaxation_request,
-  decide_rule_relaxation, withdraw_rule_relaxation FROM PUBLIC;
+  override_relaxations_of, append_project_override, write_project_override, request_rule_relaxation,
+  lock_relaxation_request, decide_rule_relaxation, withdraw_rule_relaxation FROM PUBLIC;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION write_project_override, request_rule_relaxation, decide_rule_relaxation,
   withdraw_rule_relaxation TO transfer_app;

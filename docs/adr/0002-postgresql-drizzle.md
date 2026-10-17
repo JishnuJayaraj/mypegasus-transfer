@@ -155,9 +155,12 @@ Decided in the Slice 2 plan (D2, D3, 5.2, 5.3, 5.9; round 8 four eyes, R2) and b
   reading the request's immutable project id), refuse non-users and assisted mode, and write
   `rule_relaxation_requested` / `…_approved` / `…_rejected` / `…_withdrawn`; request and approval
   carry the base-defaults version (R26). `record_audit_event` refuses the four types.
-- **`write_project_override`** is replaced with a `p_rule_id` parameter and the change kinds
-  `relaxation_added` and `relaxation_removed`, keeping round 27's exact delta: apart from that
-  rule's relaxation the content equals the current one. A relaxation is **added only by an
-  approval** the acting user recorded in the same transaction (`decide_rule_relaxation` calls it),
-  with the request's reason code, the approver and the decision date, so the granted function
-  can't bypass four eyes; a removal needs no approval (tightening).
+- **Override versions** are appended by the internal `append_project_override` (no `EXECUTE`
+  for `transfer_app`), with the change kinds `relaxation_added` and `relaxation_removed` next to
+  the Agentur-scoped ones and round 27's exact delta: apart from that rule's relaxation the
+  content equals the current one. The granted **`write_project_override`** (replaced with a
+  `p_rule_id` parameter) sets or removes Agentur-scoped settings and removes relaxations
+  (tightening, no approval), and refuses `relaxation_added`. A relaxation is **added only by
+  `decide_rule_relaxation`** in the transaction that approves the request: it passes the exact
+  entry built from that locked request, the approver and the decision date, and the new content
+  must hold exactly that entry (round 28; nothing is inferred from timestamps).
