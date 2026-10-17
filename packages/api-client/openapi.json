@@ -624,6 +624,22 @@
             "items": {
               "$ref": "#/components/schemas/ProjectActivationBlocker"
             }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "pinTemplate": {
+                "type": "boolean"
+              },
+              "setProjectAgentur": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "pinTemplate",
+              "setProjectAgentur"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -632,7 +648,8 @@
           "pins",
           "projectBlockers",
           "agenturen",
-          "activationBlockers"
+          "activationBlockers",
+          "capabilities"
         ],
         "additionalProperties": false
       },

@@ -30,9 +30,10 @@ export function projectConfigRoutes(deps: Deps) {
     }),
     async (c) => {
       const { projectId } = c.req.valid("param");
-      // Members and global org roles read the configuration (5.4, R9).
-      if (await projectDenial(db, sessionUser(c), projectId)) return problem(c, "not-found");
-      const config = await projectConfig(db, release, projectId);
+      // Members and global org roles read the configuration (5.4, R9); the PL may also pin.
+      const denied = await projectDenial(db, sessionUser(c), projectId, { kind: "pinTemplate" });
+      if (denied === "not-found") return problem(c, "not-found");
+      const config = await projectConfig(db, release, projectId, { mayPin: denied === undefined });
       return config ? c.json(config, 200) : problem(c, "not-found");
     },
   );
@@ -70,7 +71,7 @@ export function projectConfigRoutes(deps: Deps) {
       const result = await pinTemplate(db, release, actor, projectId, c.req.valid("json"));
       if (result === null) return problem(c, "not-found");
       if (result !== true) return domainProblem(c, result.issues);
-      const config = await projectConfig(db, release, projectId);
+      const config = await projectConfig(db, release, projectId, { mayPin: true });
       return config ? c.json(config, 200) : problem(c, "not-found");
     },
   );

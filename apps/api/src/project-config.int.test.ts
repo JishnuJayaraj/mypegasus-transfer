@@ -14,6 +14,7 @@ import {
   createDb,
   eq,
   project,
+  projectMembership,
   projectTemplatePin,
   seedProjectIds,
   seedStaffUserIds,
@@ -63,16 +64,39 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       projectBlockers: [{ code: "project_activation_blocked", agenturKey: null }],
       agenturen: [],
       activationBlockers: ["project_activation_blocked", "no_entry_wave_with_latest_entry_date"],
+      capabilities: { pinTemplate: true, setProjectAgentur: true },
     });
   });
 
-  // Members and global org roles read the configuration (5.4, R9).
-  it.each(["consultant", "backOffice", "admin", "regionalOperationsManager"])(
-    "is readable by %s",
+  // Members and global org roles read the configuration (5.4, R9), without pinning (round 26).
+  it.each(["consultant", "backOffice", "admin", "regionalAdmin", "regionalOperationsManager"])(
+    "is readable by %s, who may not pin",
     async (user) => {
-      expect((await get(werkNord, user)).status).toBe(200);
+      const res = await get(werkNord, user);
+      expect(res.status).toBe(200);
+      expect((await readJson(res, ProjectConfig)).capabilities).toEqual({
+        pinTemplate: false,
+        setProjectAgentur: false,
+      });
     },
   );
+
+  it("derives the capability from the current project: a PL elsewhere may not pin here", async () => {
+    await owner.insert(projectMembership).values({
+      projectId: werkNord,
+      staffUserId: seedStaffUserIds.consultant,
+      role: "project_lead",
+    });
+    const here = await readJson(await get(werkNord, "consultant"), ProjectConfig);
+    expect(here.capabilities).toEqual({ pinTemplate: true, setProjectAgentur: true });
+    const elsewhere = await readJson(await get(lagerSued, "consultant"), ProjectConfig);
+    expect(elsewhere.capabilities).toEqual({ pinTemplate: false, setProjectAgentur: false });
+    await expectProblem(
+      await pin(lagerSued, { agenturKey: "beispielstadt-sued" }, "consultant"),
+      403,
+      "forbidden",
+    );
+  });
 
   it("is a 404 for a project the user can't see, and needs a session", async () => {
     const created = await app.request(
@@ -189,6 +213,8 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
         activatedBy: seedStaffUserIds.projectLead,
       })
       .where(eq(project.id, lagerSued));
+    const { capabilities } = await readJson(await get(lagerSued), ProjectConfig);
+    expect(capabilities).toEqual({ pinTemplate: true, setProjectAgentur: false });
     expect(
       await codes(await pin(lagerSued, { agenturKey: "beispielstadt-sued", projectAgentur: true })),
     ).toEqual([{ code: "project_not_draft", pointer: "/projectAgentur" }]);

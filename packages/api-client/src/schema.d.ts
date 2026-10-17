@@ -1234,6 +1234,10 @@ export interface components {
                 warnings: components["schemas"]["ConfigBlocker"][];
             }[];
             activationBlockers: components["schemas"]["ProjectActivationBlocker"][];
+            capabilities: {
+                pinTemplate: boolean;
+                setProjectAgentur: boolean;
+            };
         };
         ConfigBlocker: {
             /** @enum {string} */

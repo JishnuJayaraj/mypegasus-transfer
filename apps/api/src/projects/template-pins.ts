@@ -109,15 +109,21 @@ const participantLevel = (blockers: Blocker[]) =>
 /**
  * The project's snapshot and what it blocks (plan 5.12): the pins, the project level resolved
  * against the Project Agentur's pinned template, per pinned Agentur the participant-level
- * blockers and warnings, and the activation blockers (Q76, Q77). Undefined for no project.
+ * blockers and warnings, and the activation blockers (Q76, Q77); and what the user may do here,
+ * from `mayPin` (the route's `pinTemplate` check, round 26). Undefined for no project.
  */
 export async function projectConfig(
   db: Db,
   release: Release,
   projectId: string,
+  { mayPin }: { mayPin: boolean },
 ): Promise<ProjectConfig | undefined> {
   const [found] = await db
-    .select({ type: project.type, projectAgenturKey: project.projectAgenturKey })
+    .select({
+      type: project.type,
+      status: project.status,
+      projectAgenturKey: project.projectAgenturKey,
+    })
     .from(project)
     .where(eq(project.id, projectId));
   if (!found) return undefined;
@@ -157,6 +163,8 @@ export async function projectConfig(
       };
     }),
     activationBlockers: projectActivationBlockers(found, waves, projectLevel),
+    // The Project Agentur is fixed once active (R1, Q98); further Agenturen may still be pinned.
+    capabilities: { pinTemplate: mayPin, setProjectAgentur: mayPin && found.status === "draft" },
   };
 }
 

@@ -121,9 +121,21 @@ describe("ProjectConfig", () => {
         },
       ],
       activationBlockers: ["no_entry_wave_with_latest_entry_date"],
+      capabilities: { pinTemplate: true, setProjectAgentur: false },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);
     const blocked = { ...config, projectBlockers: [{ code: "project_activation_blocked" }] };
     expect(ProjectConfig.safeParse(blocked).success).toBe(false);
+    // The submission steps are the domain's Step values (ADR-0004), and only those two.
+    const otherStep = {
+      ...config,
+      agenturen: [
+        {
+          ...config.agenturen[0]!,
+          blockers: [{ ...config.agenturen[0]!.blockers[0]!, step: "dsv" }],
+        },
+      ],
+    };
+    expect(ProjectConfig.safeParse(otherStep).success).toBe(false);
   });
 });

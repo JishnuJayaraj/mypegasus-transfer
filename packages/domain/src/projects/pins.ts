@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ProjectActivationBlocker } from "../lifecycle/activation";
+import { Step } from "../lifecycle/enums";
 import type { ProjectStatus } from "../project";
 
 /** An Agentur key, as `@transfer/config`'s `AgenturKey` (the database checks it too). */
@@ -76,7 +77,7 @@ export const ConfigBlocker = z
     z.strictObject({ code: z.literal("project_activation_blocked"), ...ofAgentur }),
     z.strictObject({
       code: z.literal("agentur_submission_blocked"),
-      step: z.enum(["asu_registration", "agentur_submission"]),
+      step: Step.extract(["asu_registration", "agentur_submission"]),
       ...ofAgentur,
       missing: z.array(z.string()),
     }),
@@ -111,6 +112,12 @@ export const ProjectConfig = z
       }),
     ),
     activationBlockers: z.array(ProjectActivationBlocker),
+    /**
+     * What the user may do in this project, derived by the server (round 26): pin (the PL,
+     * `pinTemplate`), and make an Agentur the Project Agentur (the PL, while draft). The UI
+     * offers only these; the API's checks stay authoritative.
+     */
+    capabilities: z.strictObject({ pinTemplate: z.boolean(), setProjectAgentur: z.boolean() }),
   })
   .meta({ id: "ProjectConfig" });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;
