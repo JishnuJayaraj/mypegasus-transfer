@@ -160,6 +160,7 @@ const operations: Record<OperationKind, string> = {
   editProject: "PL",
   editEntryWaves: "PL",
   pinTemplate: "PL",
+  changeOverride: "PL",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {

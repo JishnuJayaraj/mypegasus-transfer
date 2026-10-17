@@ -564,6 +564,37 @@ export const projectTemplatePin = pgTable(
 );
 
 /**
+ * A project's configuration override, one row per version (Slice 2 plan 5.2, 5.9): append-only
+ * and written only by `write_project_override`, which takes the next version under the project
+ * lock (`override_version_stale` otherwise). The current override is the highest version; no row
+ * is version 0, the empty override. The content is a validated `project_override` layer.
+ */
+export const projectConfigOverride = pgTable(
+  "project_config_override",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    version: integer("version").notNull(),
+    content: jsonb("content").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => staffUser.id),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "project_config_override_pkey", columns: [t.projectId, t.version] }),
+    check("project_config_override_version_positive", sql`${t.version} >= 1`),
+    check(
+      "project_config_override_is_override",
+      sql`jsonb_typeof(${t.content}) = 'object' and ${t.content} ->> 'kind' = 'project_override'`,
+    ),
+  ],
+);
+
+/**
  * One row per job and Berlin run day, inserted once when that day's run has completed (plan 5.9):
  * the lifecycle sweep's catch-up window starts after the latest, and a same-day reconciliation
  * needs today's row. No personal data. `transfer_app` may select it and insert only `job_name`,
@@ -604,4 +635,5 @@ export const tables = [
   jobRun,
   configTemplateVersion,
   projectTemplatePin,
+  projectConfigOverride,
 ];

@@ -21,6 +21,12 @@ export {
   Tl407SubmissionChannel,
 } from "./model";
 export {
+  RelaxationReasonCode,
+  validateProjectOverride,
+  withAgenturSetting,
+  type OverrideValidation,
+} from "./override";
+export {
   resolveForParticipation,
   resolveForProject,
   type Blocker,

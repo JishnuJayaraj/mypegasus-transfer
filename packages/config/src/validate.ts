@@ -16,6 +16,9 @@ export type ConfigIssueCode =
   | "template_key_mismatch"
   | "rule_redefined"
   | "relaxation_locked"
+  // the override against every chain (override.ts)
+  | "relaxation_unmatched"
+  | "reason_code_unknown"
   | "invalid_reference"
   | "path_mismatch"
   // the field-schema profile

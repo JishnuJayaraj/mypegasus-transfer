@@ -192,6 +192,20 @@ Participation
   2e-2), never a plain pin. `GET /api/v1/projects/{id}/config` shows the pins and, from the
   snapshot, the project's blockers, each pinned Agentur's step-scoped blockers and the activation
   blockers.
+- **Agentur-scoped settings (PR 2d-1):** the PL sets or removes one per Agentur key, also for an
+  Agentur without a template (`PUT`/`DELETE /api/v1/projects/{id}/config/agentur-settings/{key}`),
+  with its settings, a source (`phone_call_agentur`, `email_agentur`, `letter_agentur`,
+  `meeting_agentur`) and the confirmation date (not after today); the confirmer is always the
+  acting user (R14). Every change is a new **override version** (optimistic concurrency: a stale
+  expected version is a 409) with a `config_override_changed` audit event naming the keys and the
+  source, never a value. The project snapshot is its pins plus its current override version
+  (R11), so a setting lifts the step-scoped blockers it supplies, for its own Agentur only.
+- **Cross-chain validation (round 15, R16):** every override write and every pin validates the
+  override against the base-only chain and every pinned Agentur chain
+  (`validateProjectOverride`): a rule on a custom field only one template declares, an override
+  field a template declares too, a relaxation of a locked rule, a relaxation that matches no chain
+  or a reason code outside the controlled list is refused (`override_invalid` with the issue
+  codes), never stored.
 - **Base defaults** are release-managed, not pinned (Q107); configuration-dependent audit events
   record their `version`.
 - **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the

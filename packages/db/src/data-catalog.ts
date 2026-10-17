@@ -80,6 +80,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // Override versions: Agentur-scoped settings (channels, source codes, confirming staff id and
+  // date) and relaxations; project-wide, no participant data.
+  project_config_override: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */

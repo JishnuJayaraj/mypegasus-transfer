@@ -59,6 +59,27 @@ export async function projectAccess(db: Database, user: StaffUser, projectId: st
   return { subject, visible: found !== undefined };
 }
 
+/** Whether `subject` may perform a project-level operation in the project (5.4). */
+const mayIn = (subject: StaffSubject, projectId: string, operation: Operation) =>
+  mayPerformOperation(subject, operation, { projectId, regionId: null, participationId: null }).ok;
+
+/**
+ * Which of `kinds` the user may perform in the project, as the server-derived capabilities the
+ * UI follows (round 26); undefined when they can't see it (a 404).
+ */
+export async function projectOperations<K extends Extract<Operation, { kind: string }>["kind"]>(
+  db: Database,
+  user: StaffUser,
+  projectId: string,
+  kinds: readonly K[],
+): Promise<Record<K, boolean> | undefined> {
+  const { subject, visible } = await projectAccess(db, user, projectId);
+  if (!visible) return undefined;
+  return Object.fromEntries(
+    kinds.map((kind) => [kind, mayIn(subject, projectId, { kind } as Operation)]),
+  ) as Record<K, boolean>;
+}
+
 /**
  * Whether the user may read the project's setup (members and global org roles, R9) or, with an
  * operation, perform it (5.4): undefined, else the problem type. A project the user can't see is
@@ -72,7 +93,6 @@ export async function projectDenial(
 ): Promise<"not-found" | "forbidden" | undefined> {
   const { subject, visible } = await projectAccess(db, user, projectId);
   if (!visible) return "not-found";
-  const target = { projectId, regionId: null, participationId: null };
-  if (operation && !mayPerformOperation(subject, operation, target).ok) return "forbidden";
+  if (operation && !mayIn(subject, projectId, operation)) return "forbidden";
   return undefined;
 }

@@ -121,7 +121,19 @@ describe("ProjectConfig", () => {
         },
       ],
       activationBlockers: ["no_entry_wave_with_latest_entry_date"],
-      capabilities: { pinTemplate: true, setProjectAgentur: false },
+      override: {
+        version: 2,
+        agenturSettings: [
+          {
+            agenturKey: "ost",
+            settings: { agentur_submission: { leadTimeDays: 7 } },
+            source: "email_agentur",
+            confirmedBy: "00000000-0000-4000-8000-000000000003",
+            confirmedOn: "2026-10-16",
+          },
+        ],
+      },
+      capabilities: { pinTemplate: true, setProjectAgentur: false, changeOverride: true },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);
     const blocked = { ...config, projectBlockers: [{ code: "project_activation_blocked" }] };

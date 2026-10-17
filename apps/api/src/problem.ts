@@ -8,6 +8,8 @@ export const problemTypes = {
   unauthenticated: [401, "Not authenticated"],
   forbidden: [403, "Forbidden"],
   "not-found": [404, "Not found"],
+  /** A write based on a stale version (optimistic concurrency, plan 5.9). */
+  conflict: [409, "Conflict"],
   "unsupported-media-type": [415, "Unsupported media type"],
   /** A domain rule refused the request; `errors[].code` names it, never a value. */
   "domain-error": [422, "Refused by a domain rule"],

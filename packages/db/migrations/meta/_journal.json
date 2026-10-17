@@ -120,6 +120,20 @@
       "when": 1792231419593,
       "tag": "0016_template_pin_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792234953821,
+      "tag": "0017_config_overrides",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792234955703,
+      "tag": "0018_config_override_functions",
+      "breakpoints": true
     }
   ]
 }

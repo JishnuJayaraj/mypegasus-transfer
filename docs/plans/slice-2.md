@@ -96,7 +96,7 @@ data exists while retention periods are `unset`.
 
 ### Open
 
-Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25. Still open, each with its fail-safe
+Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25, Q109 in round 27. Still open, each with its fail-safe
 reading in `open-questions.md`:
 - **Q101** (PL): wave edits once in use. PR 2b builds the fail-safe rules; an answer changes a table.
 - **Q102** (PL, legal, BA process owner): individual dates and the twelve-month limit. **Settled
@@ -484,6 +484,105 @@ ADR-0002, `regional-variation.md`, `data-protection.md`.
     directory before Slice 3.
 15. **Size:** about 640 production lines for domain, database and API, plus about 200 for the
     web, so a split is proposed (round 24's cut).
+
+### Built in PR 2d-1, with the readings taken (confirmed in round 27)
+
+[Round 27](../decisions/2026-10-17-answers-round-27.md) confirmed items 1–6 and 8–12, item 7
+with the exact SQL delta and the actor-bound confirmer, item 11 with access checked before the
+setting's rules, and item 13 with Q109's wording; it adapted item 9's fixture (all below).
+
+Split like rounds 24 and 26, before review: **2d-1a** (domain, config, database, API, docs; about
+585 non-blank, non-comment production lines, of which about 35 are moved from `model.ts`, item 1)
+and **2d-1b** (the Konfiguration section of the web page, its component tests and the Playwright
+step, on the `-web` branch; about 360 lines). One PR would be about 945 lines.
+
+Built in 2d-1a: `validateProjectOverride`, `RelaxationReasonCode` and `withAgenturSetting`
+(`packages/config/src/override.ts`, under the 100 % threshold of `packages/config/src/**`);
+`SetAgenturSettingInput`, `RemoveAgenturSettingQuery`, `checkAgenturSetting`, `settingKeys`,
+`OverrideChange` and the moved vocabulary (`packages/domain/src/projects/agentur-settings.ts`,
+under the 100 % threshold); the operation `changeOverride` (PL); `config_override_changed` in
+`setupEventTypes` with its full details schema; `ProjectConfig.override` and
+`capabilities.changeOverride`; migrations `0017_config_overrides` (generated: the table) and
+`0018_config_override_functions` (hand-written: the append-only trigger, `write_project_override`,
+`record_audit_event` refusing the type, the grants); the data catalog; the service
+`apps/api/src/projects/overrides.ts` (`changeAgenturSetting`) and, in `template-pins.ts`,
+`currentOverride`, the override in every resolution and the override check on every pin;
+`PUT/DELETE /projects/{projectId}/config/agentur-settings/{agenturKey}`; the problem type
+`conflict` (409); `projectOperations` in `access.ts`; ADR-0002 and ADR-0004 amendments,
+`regional-variation.md`, `data-protection.md`, Q109.
+
+1. **One Agentur vocabulary in the domain (folds in round 26's non-blocking item 2):** the API's
+   input and response schemas need `RegionalSettings` and the confirmation sources, and the domain
+   can't import `@transfer/config` (which depends on it). So the Agentur key, the channel enums,
+   `RegionalSettings`, `AgenturSettingSource` and `TemporaryAgenturSetting` moved to
+   `packages/domain/src/projects/agentur-settings.ts`; `model.ts` composes from and re-exports
+   them (as it does `Step` and `CompletenessRule`), and the pin input and the audit model use the
+   same `AgenturKey`, so the pattern exists once. The generated JSON Schema is unchanged. Round
+   26's item 3 (the page-exhaustion loop in `apps/web/src/api.tsx`) isn't touched by this PR.
+2. **The reason codes live in `override.ts` now:** `validateProjectOverride` needs the controlled
+   list for AC-13 (`reason_code_unknown`); the request, decision and withdrawal of a relaxation,
+   its table and its routes stay in 2d-2, which reuses the list.
+3. **What `validateProjectOverride` checks:** `parseLayer` on its own first (no inherited
+   fields), then for the base-only chain and each pinned Agentur key `resolveForProject` and
+   `resolveForParticipation` with that key as Project and Placement Agentur, so both levels of
+   every chain run. A relaxation is matched when some chain applies it (it appears in that
+   resolution's `relaxed`); `relaxation_locked` comes from the resolver. The result is `ok` with
+   the parsed override, or the failing `layer` and its `issues`. Since the base-only chain has no
+   custom fields, an override rule may name only catalog fields or the override's own fields
+   (round 15 reading 5: Agentur-specific fields and rules belong in the template).
+4. **The setting's input:** `PUT` takes `expectedVersion`, `settings`, `source` and
+   `confirmedOn` (strict; `confirmedBy` is always the acting user, R14) and **replaces** that
+   Agentur's whole setting; `DELETE` takes `expectedVersion` as a strict query parameter (no body
+   on a `DELETE`). Every key of `RegionalSettings` may be set (the two `asu_registration` and the
+   four `agentur_submission` keys), the ASU `defaultChannel` included.
+5. **The setting's rules** (`checkAgenturSetting`, today from the injected `Clock`): at least one
+   key (`settings_empty`, at `/settings`), `confirmedOn ≤ today` (`confirmed_on_in_future`, at
+   `/confirmedOn`); no lower bound. A key outside the catalog or a pinned template is allowed
+   (the fallback case, round 8).
+6. **Refusals (R21):** a stale `expectedVersion` is a 409 `conflict`, checked by the service under
+   the lock and again by the function (the first route that returns it, 2a reading 8); the
+   current content again is `override_unchanged` (422, like `project_unchanged`); removing a
+   setting the override doesn't have is a 404; an override that fails the cross-chain check is
+   `override_invalid` followed by each issue's code (422; no layer, path or key in the problem
+   body). The route allowlists exactly these and rethrows everything else.
+7. **`write_project_override(project, expected_version, content, change, agentur_key,
+   base_defaults_version, context)`:** the change is `agentur_setting_set` or
+   `agentur_setting_removed` (2d-2 and 2e-2 add theirs by replacing the function); the function
+   checks the content's kind, that a set's setting exists with a known source, supplies a setting
+   and is confirmed by the acting user, and that a removal removes one the current version has;
+   **only the named Agentur's setting may differ** from the current content (an empty
+   `agenturSettings` counting as none; `override_without_agentur`, round 27), so no field, rule,
+   relaxation or other Agentur's setting changes under that event; it computes the setting keys
+   (`step.key`, sorted) from the set or removed setting itself, so the audit can't disagree with
+   the content. It returns the new version.
+8. **`config_override_changed`** is project-level (no participation) with `version`, `change`,
+   `agenturKey`, `settingKeys`, `source` (exactly for a set) and `baseDefaultsVersion`; the Slice 1
+   placeholder's `reasonCode` is gone (`reason_code` stays null).
+9. **Every pin validates the override** (2c-2 reading 3): the current override, or the empty one,
+   with the pinned templates plus the new version; the empty override still checks the new
+   template against the base chain. Nothing in 2d-1 writes override fields, rules or
+   relaxations (R13) and the function changes only one Agentur's setting (item 7), so the API
+   test inserts such an override directly as the owner (round 27).
+10. **The snapshot (R11):** every resolution of `GET …/config` uses the current override, so an
+    Agentur-scoped setting lifts the step-scoped blockers it supplies for its own Agentur only.
+    The response's `override` has the version and the Agentur-scoped settings in key order;
+    `capabilities.changeOverride` is the `changeOverride` operation in this project, in draft and
+    active projects alike. The write routes answer 200 with the configuration.
+11. **Access (5.4):** members and global org roles read; only the project's PL sets or removes
+    (403 otherwise); a project the user can't see is a 404. Both come before the setting's rules,
+    so invalid data from an unauthorised caller is a 403 or 404, never a 422 (round 27).
+    `projectOperations` in `access.ts` derives every capability of the configuration from one subject.
+12. **Retention:** `project_config_override` is `project_master`, data class `internal`: its
+    content holds channels, source codes, staff ids and dates, never participant data.
+13. **Web (2d-1b):** a section **Konfiguration** below Einrichtung lists the Agentur-scoped
+    settings (Agentur, each setting with its label and value, source, confirmer, date) and the
+    override version; the form and the edit and remove actions appear only with
+    `capabilities.changeOverride`. The Agentur is chosen among the pinned ones or typed as a key
+    (an Agentur without a template); settings left "nicht festlegen" aren't sent; a 409 reloads
+    the configuration and says so. The confirmer is shown as the viewer's own name, anyone else
+    as "Andere berechtigte Person", never an id (Q109, confirmed in round 27). The six settings are
+    offered with their enum values from the domain; a day count is checked locally (whole number
+    ≥ 0), as is the date (`TT.MM.JJJJ`).
 
 ## 4. Design overview
 

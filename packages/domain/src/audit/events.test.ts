@@ -77,6 +77,7 @@ describe("audit event types (plan 5.4)", () => {
       "entry_wave_created",
       "entry_wave_changed",
       "config_template_pinned",
+      "config_override_changed",
     ]);
     expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
   });
@@ -325,7 +326,30 @@ describe("the other event types", () => {
     ["export_created", { participationId: null, reasonCode: "monthly_report", details: {} }],
     [
       "config_override_changed",
-      { participationId: null, reasonCode: "relaxed", details: { baseDefaultsVersion: 1 } },
+      {
+        participationId: null,
+        details: {
+          version: 1,
+          change: "agentur_setting_set",
+          agenturKey: "beispielstadt-ost",
+          settingKeys: ["agentur_submission.leadTimeDays"],
+          source: "email_agentur",
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
+    [
+      "config_override_changed",
+      {
+        participationId: null,
+        details: {
+          version: 2,
+          change: "agentur_setting_removed",
+          agenturKey: "beispielstadt-ost",
+          settingKeys: ["agentur_submission.leadTimeDays"],
+          baseDefaultsVersion: 1,
+        },
+      },
     ],
     ["review_recorded", { reasonCode: "no_concern", details: { reviewedEventId: otherId } }],
     ["clarification_requested", { details: { reviewedEventId: otherId } }],
@@ -464,6 +488,35 @@ describe("the other event types", () => {
         },
       },
     ],
+    // An override change names keys and the source, never values; the source only when set.
+    ...(
+      [
+        { source: undefined },
+        { change: "agentur_setting_removed" },
+        { settingKeys: [] },
+        { settingKeys: ["agentur_submission.leadTimeDays=7"] },
+        { baseDefaultsVersion: undefined },
+        { version: 0 },
+        { value: "upload" },
+      ] as object[]
+    ).map(
+      (change) =>
+        [
+          "config_override_changed",
+          {
+            participationId: null,
+            details: {
+              version: 1,
+              change: "agentur_setting_set",
+              agenturKey: "beispielstadt-ost",
+              settingKeys: ["agentur_submission.leadTimeDays"],
+              source: "email_agentur",
+              baseDefaultsVersion: 1,
+              ...change,
+            },
+          },
+        ] as [string, object],
+    ),
     // Free text (the wave name) never enters the trail; dates only with their changed key.
     ["entry_wave_created", { participationId: null, details: { waveId: otherId, name: "W" } }],
     ["entry_wave_created", { details: { waveId: otherId } }],

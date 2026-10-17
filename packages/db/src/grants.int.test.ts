@@ -98,6 +98,8 @@ const statusFunctions = [
   "update_entry_wave",
   // Slice 2 (PR 2c-2): template pins
   "pin_agentur_template",
+  // Slice 2 (PR 2d-1): override versions
+  "write_project_override",
 ];
 const helpers = [
   "assert_context",
@@ -109,6 +111,7 @@ const helpers = [
   "project_text_valid",
   "entry_wave_text_valid",
   "refuse_config_change",
+  "override_without_agentur",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -272,6 +275,27 @@ describe("transfer_app and the template tables", () => {
   ])("may not %s (42501)", async (_label, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
   });
+});
+
+// Plan 5.2, 5.3 (PR 2d-1, AC-40): override versions are read by the app and written only by
+// write_project_override.
+describe("transfer_app and the override table", () => {
+  const insert = `insert into project_config_override (project_id, version, content, created_by)
+    values ('${seedProjectIds.werkNord}', 1, '{"kind":"project_override","schemaVersion":1}', '${staffUserId}')`;
+  beforeEach(() => owner.query(insert));
+
+  it("may select it", async () => {
+    expect((await app.query("select version from project_config_override")).rows).toEqual([
+      { version: 1 },
+    ]);
+  });
+
+  it.each(writes("project_config_override", "version", insert.replace(", 1,", ", 2,")))(
+    "may not %s (42501)",
+    async (_label, sql) => {
+      await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+    },
+  );
 });
 
 /** A past run day: completion is database time, never before the scheduled run (round 19). */

@@ -159,3 +159,21 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
   directory (`templates/`, `base-defaults.json`); unset, `@transfer/config/load` uses the repo
   paths. The image sets it; the API reads the catalog once at start and refuses to start without
   it.
+
+## Amendment 2026-10-17: overrides and Agentur-scoped settings (Slice 2, PR 2d-1)
+
+- **One vocabulary in the domain:** the Agentur key, the channel enums, `RegionalSettings`, the
+  four confirmation sources and `TemporaryAgenturSetting` moved from `model.ts` to
+  `packages/domain/src/projects/agentur-settings.ts`, so the API's schemas and both SPAs share
+  them without depending on `@transfer/config`; the model composes its layers from them as it
+  does from `Step` and `CompletenessRule`, and re-exports them. The generated JSON Schema is
+  unchanged.
+- **`validateProjectOverride`** (`packages/config/src/override.ts`) runs `parseLayer`, then
+  resolves the override for the project and for participations against the base-only chain and
+  every pinned chain; any `ConfigError` fails with its layer and issues. Every relaxation must
+  relax a rule in some chain (`relaxation_unmatched`) and carry a controlled reason code
+  (`reason_code_unknown`; the four codes of Q100). It runs on every override write and on every
+  pin, so pinning a further Agentur can't break the override.
+- **Override versions** are stored per project (ADR-0002 amendment of the same date) and are part
+  of the project snapshot: the configuration a project resolves is its pinned template contents
+  plus its current override version (R11).
