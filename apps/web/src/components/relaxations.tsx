@@ -45,9 +45,9 @@ export function Relaxations({ projectId }: { projectId: string }) {
   // No staff directory before Slice 3 (Q109): the viewer's own name, else never an id.
   const person = (id: string) => (id === me?.id ? me.displayName : t("overrides.otherStaff"));
 
-  const act = useMutation({
-    mutationFn: async ({ run }: { run: Action; done: Done }) => {
-      const { data } = await run(api, config);
+  const relaxationChange = useMutation({
+    mutationFn: async ({ send }: { send: Action; done: Done }) => {
+      const { data } = await send(api, config);
       if (!data) throw new Error("Relaxation was not changed");
       return data;
     },
@@ -64,11 +64,12 @@ export function Relaxations({ projectId }: { projectId: string }) {
       if (status === 409) await queryClient.invalidateQueries({ queryKey: query.queryKey });
     },
   });
-  const run = (done: Done, action: Action) => () => act.mutate({ run: action, done });
+  /** A click handler that sends `send` and toasts `done` when it succeeds. */
+  const handlerFor = (done: Done, send: Action) => () => relaxationChange.mutate({ send, done });
 
   // An approval writes an override version, so it names the one it was shown (409 when stale).
   const decision = (requestId: string, approve: boolean) =>
-    run(approve ? "approved" : "rejected", (client, current) =>
+    handlerFor(approve ? "approved" : "rejected", (client, current) =>
       client.POST("/api/v1/config/relaxations/{requestId}/decision", {
         params: { path: { requestId } },
         body: approve
@@ -81,7 +82,13 @@ export function Relaxations({ projectId }: { projectId: string }) {
     onClick: () => void,
     kind: "ghost" | "danger--ghost" = "ghost",
   ) => (
-    <Button key={label} kind={kind} size="sm" disabled={act.isPending} onClick={onClick}>
+    <Button
+      key={label}
+      kind={kind}
+      size="sm"
+      disabled={relaxationChange.isPending}
+      onClick={onClick}
+    >
       {label}
     </Button>
   );
@@ -96,7 +103,7 @@ export function Relaxations({ projectId }: { projectId: string }) {
       config.capabilities.changeOverride &&
       button(
         t("relaxations.remove", { rule: relaxation.ruleId }),
-        run("removed", (client, current) =>
+        handlerFor("removed", (client, current) =>
           client.DELETE("/api/v1/projects/{projectId}/config/relaxations/{ruleId}", {
             params: {
               path: { projectId, ruleId: relaxation.ruleId },
@@ -126,7 +133,7 @@ export function Relaxations({ projectId }: { projectId: string }) {
         {request.capabilities.withdraw &&
           button(
             t("relaxations.withdraw", { rule: request.ruleId }),
-            run("withdrawn", (client) =>
+            handlerFor("withdrawn", (client) =>
               client.POST("/api/v1/config/relaxations/{requestId}/withdrawal", {
                 params: { path: { requestId: request.id } },
                 body: {},
@@ -154,7 +161,7 @@ export function Relaxations({ projectId }: { projectId: string }) {
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!ruleId || !reasonCode) return setError("choose");
-    run("requested", (client) =>
+    handlerFor("requested", (client) =>
       client.POST("/api/v1/projects/{projectId}/config/relaxations", {
         params: { path: { projectId } },
         body: { ruleId, reasonCode: reasonCode as RelaxationReasonCode },
@@ -218,7 +225,7 @@ export function Relaxations({ projectId }: { projectId: string }) {
                 <SelectItem key={code} value={code} text={t(`relaxations.reasons.${code}`)} />
               ))}
             </Select>
-            <Button type="submit" disabled={act.isPending}>
+            <Button type="submit" disabled={relaxationChange.isPending}>
               {t("relaxations.request")}
             </Button>
           </Stack>
