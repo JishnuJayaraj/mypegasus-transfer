@@ -80,5 +80,6 @@ export const unpinnedConfig = {
   projectBlockers: [{ code: "project_activation_blocked", agenturKey: null }],
   agenturen: [],
   activationBlockers: ["project_activation_blocked"],
-  capabilities: { pinTemplate: true, setProjectAgentur: true },
+  override: { version: 0, agenturSettings: [] },
+  capabilities: { pinTemplate: true, setProjectAgentur: true, changeOverride: true },
 };

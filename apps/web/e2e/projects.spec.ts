@@ -79,6 +79,30 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   ).toBeVisible();
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
   await expectAccessible(page);
+
+  // Slice 2 (PR 2d-1, AC-14): an Agentur-scoped setting for an Agentur without a template, with
+  // its source and confirmation date; the PL is the confirmer.
+  const configuration = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });
+  await configuration
+    .getByRole("button", { name: "Agenturbezogene Einstellung hinzufügen" })
+    .click();
+  await configuration.getByLabel("Agentur der Einstellung").selectOption("");
+  await configuration.getByLabel("Schlüssel der Agentur").fill("beispielstadt-ost");
+  await configuration.getByLabel("Übermittlungsweg TL 407").selectOption("upload");
+  await configuration.getByLabel("Vorlauf in Tagen").fill("7");
+  await configuration.getByLabel("Quelle").selectOption("email_agentur");
+  await configuration.getByLabel("Bestätigt am").fill("01.10.2026");
+  await expectAccessible(page);
+  await configuration.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Einstellung gespeichert")).toBeVisible();
+  const setting = configuration.getByRole("row", { name: /beispielstadt-ost/ });
+  await expect(setting).toContainText("Übermittlungsweg TL 407: Upload; Vorlauf in Tagen: 7");
+  await expect(setting).toContainText("E-Mail der Agentur");
+  await expect(setting).toContainText("Petra Projektleitung");
+  await expect(configuration.getByText("Stand der Projektkonfiguration: Version 1")).toBeVisible();
+  await expectAccessible(page);
   await page.goto("/projects");
   await chooseDevUser(page, "Erika Musterfrau · Admin");
   await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.admin);
@@ -88,4 +112,9 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Als weitere Agentur pinnen" })).toHaveCount(0);
+  // … and sees the Agentur-scoped settings without the actions to change them.
+  await expect(page.getByRole("row", { name: /beispielstadt-ost/ })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Agenturbezogene Einstellung hinzufügen" }),
+  ).toHaveCount(0);
 });
