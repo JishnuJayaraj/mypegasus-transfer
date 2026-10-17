@@ -136,8 +136,6 @@
       "done": "Projekt aktiviert",
       "warnings": "Projekt aktiviert. Noch offen, ohne die Aktivierung zu blockieren:",
       "errors": {
-        "project_activation_blocked": "Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur.",
-        "no_entry_wave_with_latest_entry_date": "Aktivierung blockiert: Keine Eintrittswelle hat einen letztmöglichen Eintritt.",
         "project_not_draft": "Das Projekt ist bereits aktiv.",
         "forbidden": "Nur die Projektleitung kann das Projekt aktivieren.",
         "failed": "Das Projekt konnte nicht aktiviert werden."

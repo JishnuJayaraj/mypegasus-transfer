@@ -39,6 +39,9 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
   const submission = useSubmissionText(config);
   // The non-blocking warnings of an activation in this view (Q91, Q92); empty ones aren't shown.
   const [warnings, setWarnings] = useState<Blocker[]>();
+  // An activation's refusal, kept here because the activation unmounts once the project is
+  // active, e.g. after a concurrent activation (`project_not_draft`, round 29).
+  const [refusal, setRefusal] = useState<string>();
 
   const rows = config.pins.map((pin) => ({
     id: pin.agenturKey,
@@ -73,6 +76,9 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
         emptyState={t("setup.pinsEmpty")}
       />
       <Blockers config={config} />
+      {refusal && (
+        <InlineNotification kind="error" title={refusal} onClose={() => setRefusal(undefined)} />
+      )}
       {warnings && (
         <InlineNotification
           kind="warning"
@@ -85,7 +91,11 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
         <ProjectActivation
           projectId={projectId}
           config={config}
-          onActivated={(found) => setWarnings(found.length ? found : undefined)}
+          onActivated={(found) => {
+            setRefusal(undefined);
+            setWarnings(found.length ? found : undefined);
+          }}
+          onRefused={setRefusal}
         />
       )}
       {capabilities.pinTemplate && catalog.data && (

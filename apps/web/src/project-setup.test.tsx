@@ -282,6 +282,27 @@ describe("project activation", () => {
     ).toHaveLength(3);
   });
 
+  // Round 29: activated concurrently by another request. The refusal outlives the activation,
+  // which unmounts once the reread configuration no longer offers it; the status follows.
+  it("keeps the refusal when another request activated the project meanwhile, and shows it active", async () => {
+    let current = { project: project as object, config: pinnedConfig as object };
+    setup({
+      [`GET ${path}`]: () => json(current.project),
+      [`GET ${path}/config`]: () => json(current.config),
+      [`POST ${path}/activation`]: () => {
+        current = { project: activeProject, config: activeConfig };
+        return problem(422, "domain-error", {
+          errors: [{ pointer: "", code: "project_not_draft", detail: "x" }],
+        });
+      },
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Aktivieren" }));
+    expect(await screen.findByText(/^Status: aktiv seit/)).toBeInTheDocument();
+    expect(screen.getByText("Das Projekt ist bereits aktiv.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Aktivieren" })).toBeNull();
+    expect(screen.queryByText("Projekt aktivieren")).toBeNull();
+  });
+
   // Round 26: only the server's capability offers it (a global org role, another project's PL,
   // an active project); the API's 403 stays authoritative.
   it.each([
