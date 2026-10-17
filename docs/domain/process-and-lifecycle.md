@@ -435,6 +435,17 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
   store "AU confirmed: yes, dates").
 - Visibility: back office sees the type. PL and profiler see only "abwesend" with dates.
 - Transfer-KuG is limited to 12 months per person: remind the PL before `max_duration_reached`.
+- **What `tgStart` and `tgEnd` mean** (Q102, confirmed in [round 30](../decisions/2026-10-17-answers-round-30.md)):
+  the inclusive contractual start and end of the participant's employment in the TG under the
+  DSV, **not** a definitive representation of the BA-funded Transfer-KuG period. With staged entry
+  into an existing beE the individual funding period is limited by that beE's remaining term (a
+  separate later beE may provide its own full period), so the app never claims twelve months of
+  Transfer-KuG from an individual `tgStart` and calculates no entitlement until `bee_unit` and the
+  Transfer-KuG case are modelled. Until then a DSV period longer than twelve months is outside the
+  MVP's supported scope (a conservative restriction, not a benefit calculation) and handled
+  manually. Only the project's PL changes the dates, audited; `tgStart` never in the past and not
+  after TG entry; `tgEnd` never in the past and after entry only for a documented DSV amendment
+  (Q110); past-date corrections go to the correction/reconciliation process (Slice 2 plan 5.7).
 
 ## Phase 1 detail
 
