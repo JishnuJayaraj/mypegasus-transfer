@@ -1,33 +1,22 @@
-import { CompletenessRule, isoDate, Step } from "@transfer/domain";
+import {
+  AgenturKey,
+  CompletenessRule,
+  isoDate,
+  RegionalSettings,
+  Step,
+  TemporaryAgenturSetting,
+} from "@transfer/domain";
 import { z } from "zod";
 import { CustomFieldKey, FieldSchema, LocalizedText } from "./field-schema";
 
-// Allowed channel values (plan 5.7). Base defaults carry the values, never an Agentur's choice.
-export const AsuChannel = z.enum(["kug_200b", "online_self", "in_person"]);
-export const Kug200bBatchChannel = z.enum(["paper_courier", "paper_post", "scan_email", "upload"]);
-export const Tl407SubmissionChannel = z.enum(["email", "upload", "paper_original"]);
-
-/**
- * Regional settings, keyed by step. They come only from an Agentur's template or an
- * Agentur-scoped temporary setting; there is no nationwide default for any of them (round 8).
- */
-export const RegionalSettings = z.strictObject({
-  asu_registration: z
-    .strictObject({
-      defaultChannel: AsuChannel.optional(),
-      batchSubmissionChannel: Kug200bBatchChannel.optional(),
-    })
-    .optional(),
-  agentur_submission: z
-    .strictObject({
-      submissionChannel: Tl407SubmissionChannel.optional(),
-      originalRequired: z.boolean().optional(),
-      leadTimeDays: z.int().min(0).optional(),
-      rejectsOutdatedFormVersions: z.boolean().optional(),
-    })
-    .optional(),
-});
-export type RegionalSettings = z.infer<typeof RegionalSettings>;
+export {
+  AgenturKey,
+  AsuChannel,
+  Kug200bBatchChannel,
+  RegionalSettings,
+  TemporaryAgenturSetting,
+  Tl407SubmissionChannel,
+} from "@transfer/domain";
 
 const positive = z.int().min(1);
 
@@ -41,21 +30,6 @@ export const NationwideSettings = z.strictObject({
   cutoffFinalReminderDays: positive,
 });
 export type NationwideSettings = z.infer<typeof NationwideSettings>;
-
-export const AgenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
-
-/**
- * An Agentur-scoped project setting (round 8, Q93): a fallback while the Agentur has no
- * template, or a confirmed project-specific exception to its pinned template. It wins only for
- * the keys it supplies and keeps its source, confirmer and confirmation date.
- */
-export const TemporaryAgenturSetting = z.strictObject({
-  settings: RegionalSettings,
-  source: z.enum(["phone_call_agentur", "email_agentur", "letter_agentur", "meeting_agentur"]),
-  confirmedBy: z.uuid(),
-  confirmedOn: isoDate,
-});
-export type TemporaryAgenturSetting = z.infer<typeof TemporaryAgenturSetting>;
 
 const code = z.string().regex(/^[a-z][a-z0-9_]{0,63}$/);
 

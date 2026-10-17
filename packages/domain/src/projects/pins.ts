@@ -2,9 +2,7 @@ import { z } from "zod";
 import { ProjectActivationBlocker } from "../lifecycle/activation";
 import { Step } from "../lifecycle/enums";
 import type { ProjectStatus } from "../project";
-
-/** An Agentur key, as `@transfer/config`'s `AgenturKey` (the database checks it too). */
-const agenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+import { AgenturKey, TemporaryAgenturSetting } from "./agentur-settings";
 
 /**
  * Pins an Agentur template from the catalog (Slice 2 plan 5.8, R12): its latest version unless
@@ -13,7 +11,7 @@ const agenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
  */
 export const PinTemplateInput = z
   .strictObject({
-    agenturKey,
+    agenturKey: AgenturKey,
     version: z.int().min(1).optional(),
     projectAgentur: z.boolean().optional(),
   })
@@ -113,11 +111,24 @@ export const ProjectConfig = z
     ),
     activationBlockers: z.array(ProjectActivationBlocker),
     /**
-     * What the user may do in this project, derived by the server (round 26): pin (the PL,
-     * `pinTemplate`), and make an Agentur the Project Agentur (the PL, while draft). The UI
-     * offers only these; the API's checks stay authoritative.
+     * The current override version (5.9; 0 = none), part of the snapshot (R11), with its
+     * Agentur-scoped settings in key order.
      */
-    capabilities: z.strictObject({ pinTemplate: z.boolean(), setProjectAgentur: z.boolean() }),
+    override: z.strictObject({
+      version: z.int().min(0),
+      agenturSettings: z.array(TemporaryAgenturSetting.extend({ agenturKey: AgenturKey })),
+    }),
+    /**
+     * What the user may do in this project, derived by the server (round 26): pin (the PL,
+     * `pinTemplate`), make an Agentur the Project Agentur (the PL, while draft), and change the
+     * override's Agentur-scoped settings (the PL, `changeOverride`). The UI offers only these;
+     * the API's checks stay authoritative.
+     */
+    capabilities: z.strictObject({
+      pinTemplate: z.boolean(),
+      setProjectAgentur: z.boolean(),
+      changeOverride: z.boolean(),
+    }),
   })
   .meta({ id: "ProjectConfig" });
 export type ProjectConfig = z.infer<typeof ProjectConfig>;

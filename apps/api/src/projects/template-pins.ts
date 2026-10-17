@@ -2,8 +2,11 @@ import {
   parseLayer,
   resolveForParticipation,
   resolveForProject,
+  validateProjectOverride,
   type BaseDefaults,
   type Blocker,
+  type OverrideValidation,
+  type ProjectOverride,
   type RegionalTemplate,
   type TemplateManifestEntry,
 } from "@transfer/config";
@@ -20,6 +23,7 @@ import {
   desc,
   eq,
   project,
+  projectConfigOverride,
   projectEntryWave,
   projectTemplatePin as pin,
   sql,
@@ -58,7 +62,7 @@ export function loadRelease(configDir: string | undefined): Release {
 type Db = Pick<Database, "select" | "selectDistinctOn" | "execute">;
 
 /** The project's current pin per Agentur (the highest `seq`), with the stored snapshot. */
-const currentPins = (db: Db, projectId: string) =>
+export const currentPins = (db: Db, projectId: string) =>
   db
     .selectDistinctOn([pin.agenturKey], {
       agenturKey: pin.agenturKey,
@@ -103,20 +107,53 @@ export function snapshotOf({ agenturKey, version, content, sha256 }: StoredPin):
   return layer;
 }
 
+/** The pinned templates by Agentur key, from their snapshots. */
+export const templatesOf = (pins: readonly StoredPin[]) =>
+  Object.fromEntries(pins.map((p) => [p.agenturKey, snapshotOf(p)]));
+
+/**
+ * The project's current override (5.9): the highest version and its stored content, validated as
+ * an override layer (a stored row that isn't one is a 500); version 0 without a row.
+ */
+export async function currentOverride(
+  db: Db,
+  projectId: string,
+): Promise<{ version: number; content: ProjectOverride | undefined }> {
+  const [row] = await db
+    .select({ version: projectConfigOverride.version, content: projectConfigOverride.content })
+    .from(projectConfigOverride)
+    .where(eq(projectConfigOverride.projectId, projectId))
+    .orderBy(desc(projectConfigOverride.version))
+    .limit(1);
+  if (!row) return { version: 0, content: undefined };
+  const result = parseLayer(row.content);
+  if (!result.ok || result.layer.kind !== "project_override") {
+    throw new Error(`The stored override version ${row.version} is not an override`);
+  }
+  return { version: row.version, content: result.layer };
+}
+
+/** A refused override as domain issues (R21): `override_invalid`, then each issue's code. */
+export const overrideIssues = (validation: Extract<OverrideValidation, { ok: false }>) => [
+  "override_invalid",
+  ...validation.issues.map((issue) => issue.code),
+];
+
 const participantLevel = (blockers: Blocker[]) =>
   blockers.filter((blocker) => blocker.code === "agentur_submission_blocked");
 
 /**
  * The project's snapshot and what it blocks (plan 5.12): the pins, the project level resolved
  * against the Project Agentur's pinned template, per pinned Agentur the participant-level
- * blockers and warnings, and the activation blockers (Q76, Q77); and what the user may do here,
- * from `mayPin` (the route's `pinTemplate` check, round 26). Undefined for no project.
+ * blockers and warnings, and the activation blockers (Q76, Q77), all resolved with the current
+ * override (R11), which is shown with its Agentur-scoped settings; and what the user may do here,
+ * from the route's operation checks (round 26). Undefined for no project.
  */
 export async function projectConfig(
   db: Db,
   release: Release,
   projectId: string,
-  { mayPin }: { mayPin: boolean },
+  may: { pinTemplate: boolean; changeOverride: boolean },
 ): Promise<ProjectConfig | undefined> {
   const [found] = await db
     .select({
@@ -128,13 +165,15 @@ export async function projectConfig(
     .where(eq(project.id, projectId));
   if (!found) return undefined;
   const pins = await currentPins(db, projectId);
+  const override = await currentOverride(db, projectId);
   const waves = await db
     .select({ latestEntryDate: projectEntryWave.latestEntryDate })
     .from(projectEntryWave)
     .where(eq(projectEntryWave.projectId, projectId));
   const input = {
     base: release.baseDefaults,
-    templatesByAgentur: Object.fromEntries(pins.map((p) => [p.agenturKey, snapshotOf(p)])),
+    templatesByAgentur: templatesOf(pins),
+    override: override.content,
     projectType: found.type,
     projectAgenturKey: found.projectAgenturKey,
   };
@@ -163,8 +202,18 @@ export async function projectConfig(
       };
     }),
     activationBlockers: projectActivationBlockers(found, waves, projectLevel),
-    // The Project Agentur is fixed once active (R1, Q98); further Agenturen may still be pinned.
-    capabilities: { pinTemplate: mayPin, setProjectAgentur: mayPin && found.status === "draft" },
+    override: {
+      version: override.version,
+      agenturSettings: Object.entries(override.content?.agenturSettings ?? {})
+        .toSorted(([a], [b]) => (a < b ? -1 : 1))
+        .map(([agenturKey, setting]) => ({ agenturKey, ...setting })),
+    },
+    capabilities: {
+      pinTemplate: may.pinTemplate,
+      // The Project Agentur is fixed once active (R1, Q98); further Agenturen may still be pinned.
+      setProjectAgentur: may.pinTemplate && found.status === "draft",
+      changeOverride: may.changeOverride,
+    },
   };
 }
 
@@ -179,7 +228,8 @@ const pinRefusals: ReadonlySet<string> = new Set([
 /**
  * Pins a catalog template and/or makes it the Project Agentur (plan 5.8, R12), in one
  * transaction under the exclusive project lock: decides with `planTemplatePin` on the state read
- * under the lock, reads the file through `loadTemplate`, computes its canonical hash (R22), then
+ * under the lock, reads the file through `loadTemplate`, computes its canonical hash (R22),
+ * refuses a pin that would make the current override invalid (5.9, AC-16), then
  * `pin_agentur_template` and `update_project`. Returns null for no project, or the refusals.
  */
 export async function pinTemplate(
@@ -195,7 +245,11 @@ export async function pinTemplate(
       // The functions take the lock again (re-entrant).
       await tx.execute(sql`select lock_project_setup(${projectId}::uuid)`);
       const [found] = await tx
-        .select({ status: project.status, projectAgenturKey: project.projectAgenturKey })
+        .select({
+          type: project.type,
+          status: project.status,
+          projectAgenturKey: project.projectAgenturKey,
+        })
         .from(project)
         .where(eq(project.id, projectId));
       const pins = await currentPins(tx, projectId);
@@ -210,6 +264,15 @@ export async function pinTemplate(
         );
         // The release's files are its catalog (AC-9); a differing file is a broken image.
         if (entry?.sha256 !== sha256) throw new Error("template file differs from the manifest");
+        // Pinning a further Agentur keeps the override valid across every chain (2c-2 reading 3).
+        const { content } = await currentOverride(tx, projectId);
+        const validation = validateProjectOverride({
+          base: release.baseDefaults,
+          templatesByAgentur: { ...templatesOf(pins), [agenturKey]: template },
+          override: content ?? { schemaVersion: 1, kind: "project_override" },
+          projectType: found!.type,
+        });
+        if (!validation.ok) return { issues: overrideIssues(validation) };
         await callFunction(
           tx,
           sql`pin_agentur_template(p_project_id => ${projectId}::uuid,

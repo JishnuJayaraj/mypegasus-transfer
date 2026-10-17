@@ -64,7 +64,8 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       projectBlockers: [{ code: "project_activation_blocked", agenturKey: null }],
       agenturen: [],
       activationBlockers: ["project_activation_blocked", "no_entry_wave_with_latest_entry_date"],
-      capabilities: { pinTemplate: true, setProjectAgentur: true },
+      override: { version: 0, agenturSettings: [] },
+      capabilities: { pinTemplate: true, setProjectAgentur: true, changeOverride: true },
     });
   });
 
@@ -77,6 +78,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       expect((await readJson(res, ProjectConfig)).capabilities).toEqual({
         pinTemplate: false,
         setProjectAgentur: false,
+        changeOverride: false,
       });
     },
   );
@@ -88,9 +90,17 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       role: "project_lead",
     });
     const here = await readJson(await get(werkNord, "consultant"), ProjectConfig);
-    expect(here.capabilities).toEqual({ pinTemplate: true, setProjectAgentur: true });
+    expect(here.capabilities).toEqual({
+      pinTemplate: true,
+      setProjectAgentur: true,
+      changeOverride: true,
+    });
     const elsewhere = await readJson(await get(lagerSued, "consultant"), ProjectConfig);
-    expect(elsewhere.capabilities).toEqual({ pinTemplate: false, setProjectAgentur: false });
+    expect(elsewhere.capabilities).toEqual({
+      pinTemplate: false,
+      setProjectAgentur: false,
+      changeOverride: false,
+    });
     await expectProblem(
       await pin(lagerSued, { agenturKey: "beispielstadt-sued" }, "consultant"),
       403,
@@ -214,7 +224,11 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
       })
       .where(eq(project.id, lagerSued));
     const { capabilities } = await readJson(await get(lagerSued), ProjectConfig);
-    expect(capabilities).toEqual({ pinTemplate: true, setProjectAgentur: false });
+    expect(capabilities).toEqual({
+      pinTemplate: true,
+      setProjectAgentur: false,
+      changeOverride: true,
+    });
     expect(
       await codes(await pin(lagerSued, { agenturKey: "beispielstadt-sued", projectAgentur: true })),
     ).toEqual([{ code: "project_not_draft", pointer: "/projectAgentur" }]);

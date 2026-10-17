@@ -625,6 +625,114 @@
               "$ref": "#/components/schemas/ProjectActivationBlocker"
             }
           },
+          "override": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "agenturSettings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "type": "object",
+                      "properties": {
+                        "asu_registration": {
+                          "type": "object",
+                          "properties": {
+                            "defaultChannel": {
+                              "type": "string",
+                              "enum": [
+                                "kug_200b",
+                                "online_self",
+                                "in_person"
+                              ]
+                            },
+                            "batchSubmissionChannel": {
+                              "type": "string",
+                              "enum": [
+                                "paper_courier",
+                                "paper_post",
+                                "scan_email",
+                                "upload"
+                              ]
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        "agentur_submission": {
+                          "type": "object",
+                          "properties": {
+                            "submissionChannel": {
+                              "type": "string",
+                              "enum": [
+                                "email",
+                                "upload",
+                                "paper_original"
+                              ]
+                            },
+                            "originalRequired": {
+                              "type": "boolean"
+                            },
+                            "leadTimeDays": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "rejectsOutdatedFormVersions": {
+                              "type": "boolean"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "phone_call_agentur",
+                        "email_agentur",
+                        "letter_agentur",
+                        "meeting_agentur"
+                      ]
+                    },
+                    "confirmedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "confirmedOn": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                      "examples": [
+                        "2027-03-01"
+                      ]
+                    },
+                    "agenturKey": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+                    }
+                  },
+                  "required": [
+                    "settings",
+                    "source",
+                    "confirmedBy",
+                    "confirmedOn",
+                    "agenturKey"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "version",
+              "agenturSettings"
+            ],
+            "additionalProperties": false
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -633,11 +741,15 @@
               },
               "setProjectAgentur": {
                 "type": "boolean"
+              },
+              "changeOverride": {
+                "type": "boolean"
               }
             },
             "required": [
               "pinTemplate",
-              "setProjectAgentur"
+              "setProjectAgentur",
+              "changeOverride"
             ],
             "additionalProperties": false
           }
@@ -649,6 +761,7 @@
           "projectBlockers",
           "agenturen",
           "activationBlockers",
+          "override",
           "capabilities"
         ],
         "additionalProperties": false
@@ -740,6 +853,92 @@
         },
         "required": [
           "agenturKey"
+        ],
+        "additionalProperties": false
+      },
+      "SetAgenturSettingInput": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "settings": {
+            "type": "object",
+            "properties": {
+              "asu_registration": {
+                "type": "object",
+                "properties": {
+                  "defaultChannel": {
+                    "type": "string",
+                    "enum": [
+                      "kug_200b",
+                      "online_self",
+                      "in_person"
+                    ]
+                  },
+                  "batchSubmissionChannel": {
+                    "type": "string",
+                    "enum": [
+                      "paper_courier",
+                      "paper_post",
+                      "scan_email",
+                      "upload"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "agentur_submission": {
+                "type": "object",
+                "properties": {
+                  "submissionChannel": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "upload",
+                      "paper_original"
+                    ]
+                  },
+                  "originalRequired": {
+                    "type": "boolean"
+                  },
+                  "leadTimeDays": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "rejectsOutdatedFormVersions": {
+                    "type": "boolean"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "phone_call_agentur",
+              "email_agentur",
+              "letter_agentur",
+              "meeting_agentur"
+            ]
+          },
+          "confirmedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "settings",
+          "source",
+          "confirmedOn"
         ],
         "additionalProperties": false
       }
@@ -1653,6 +1852,235 @@
           },
           "415": {
             "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/config/agentur-settings/{agenturKey}": {
+      "put": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Set an Agentur-scoped setting with its source and confirmation date, as a new override version (plan 5.9)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+            },
+            "required": true,
+            "name": "agenturKey",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAgenturSettingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The project's configuration with the new override version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "config"
+        ],
+        "summary": "Remove an Agentur-scoped setting, as a new override version (plan 5.9)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+            },
+            "required": true,
+            "name": "agenturKey",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "required": false,
+            "name": "expectedVersion",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The project's configuration with the new override version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {

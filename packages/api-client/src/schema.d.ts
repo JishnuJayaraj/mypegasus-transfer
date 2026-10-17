@@ -872,6 +872,191 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/config/agentur-settings/{agenturKey}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set an Agentur-scoped setting with its source and confirmation date, as a new override version (plan 5.9) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                    agenturKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetAgenturSettingInput"];
+                };
+            };
+            responses: {
+                /** @description The project's configuration with the new override version */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectConfig"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Remove an Agentur-scoped setting, as a new override version (plan 5.9) */
+        delete: {
+            parameters: {
+                query?: {
+                    expectedVersion?: number | null;
+                };
+                header?: never;
+                path: {
+                    projectId: string;
+                    agenturKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The project's configuration with the new override version */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectConfig"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -1234,9 +1419,41 @@ export interface components {
                 warnings: components["schemas"]["ConfigBlocker"][];
             }[];
             activationBlockers: components["schemas"]["ProjectActivationBlocker"][];
+            override: {
+                version: number;
+                agenturSettings: {
+                    settings: {
+                        asu_registration?: {
+                            /** @enum {string} */
+                            defaultChannel?: "kug_200b" | "online_self" | "in_person";
+                            /** @enum {string} */
+                            batchSubmissionChannel?: "paper_courier" | "paper_post" | "scan_email" | "upload";
+                        };
+                        agentur_submission?: {
+                            /** @enum {string} */
+                            submissionChannel?: "email" | "upload" | "paper_original";
+                            originalRequired?: boolean;
+                            leadTimeDays?: number;
+                            rejectsOutdatedFormVersions?: boolean;
+                        };
+                    };
+                    /** @enum {string} */
+                    source: "phone_call_agentur" | "email_agentur" | "letter_agentur" | "meeting_agentur";
+                    /** Format: uuid */
+                    confirmedBy: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    confirmedOn: string;
+                    agenturKey: string;
+                }[];
+            };
             capabilities: {
                 pinTemplate: boolean;
                 setProjectAgentur: boolean;
+                changeOverride: boolean;
             };
         };
         ConfigBlocker: {
@@ -1257,6 +1474,32 @@ export interface components {
             agenturKey: string;
             version?: number;
             projectAgentur?: boolean;
+        };
+        SetAgenturSettingInput: {
+            expectedVersion: number;
+            settings: {
+                asu_registration?: {
+                    /** @enum {string} */
+                    defaultChannel?: "kug_200b" | "online_self" | "in_person";
+                    /** @enum {string} */
+                    batchSubmissionChannel?: "paper_courier" | "paper_post" | "scan_email" | "upload";
+                };
+                agentur_submission?: {
+                    /** @enum {string} */
+                    submissionChannel?: "email" | "upload" | "paper_original";
+                    originalRequired?: boolean;
+                    leadTimeDays?: number;
+                    rejectsOutdatedFormVersions?: boolean;
+                };
+            };
+            /** @enum {string} */
+            source: "phone_call_agentur" | "email_agentur" | "letter_agentur" | "meeting_agentur";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            confirmedOn: string;
         };
     };
     responses: never;

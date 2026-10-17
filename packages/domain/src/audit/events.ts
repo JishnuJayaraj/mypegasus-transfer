@@ -4,6 +4,11 @@ import { AccessCategory, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
 import { ProjectType } from "../project";
+import {
+  AgenturKey as agenturKey,
+  AgenturSettingSource,
+  OverrideChange,
+} from "../projects/agentur-settings";
 import { waveDateFields } from "../projects/waves";
 import {
   DsvStatus,
@@ -33,7 +38,7 @@ export const AuditEventType = z.enum([
   "profiling_exception_revoked",
   "profiling_exception_superseded", // round 10: "all closures are audited"
   "end_reason_corrected",
-  // Slices 3–9, through `record_audit_event`
+  // Slices 3–9, through `record_audit_event` (`config_override_changed`: its function, PR 2d-1)
   "sensitive_read",
   "sensitive_write",
   "break_glass_access",
@@ -64,6 +69,7 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
   "entry_wave_created",
   "entry_wave_changed",
   "config_template_pinned",
+  "config_override_changed",
 ]);
 
 /**
@@ -101,7 +107,6 @@ const correlationId = z.string().regex(/^[A-Za-z0-9_.:-]{1,64}$/);
 const systemJob = z.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/);
 /** The base-defaults version of a configuration-dependent event (R26). */
 const baseDefaultsVersion = z.int().min(1);
-const agenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 /** A field key (`healthRestrictions`, `custom.…`) or document type. */
 const resourceKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_.]{0,99}$/);
 
@@ -229,6 +234,26 @@ const entryWaveChanged = event("entry_wave_changed", {
   const same = withValues.every((field) => changedDates.includes(field as never));
   if (!same || withValues.length !== changedDates.length) issue(ctx, "dates_mismatch");
 });
+/**
+ * A new override version (5.9): its number, what changed, the Agentur key, the setting keys
+ * (`step.key`) and, when set, the source; never a value or free text (round 8). R26: the
+ * base-defaults version it was validated with.
+ */
+const configOverrideChanged = event("config_override_changed", {
+  ...ofProject,
+  details: z.strictObject({
+    version: z.int().min(1),
+    change: OverrideChange,
+    agenturKey,
+    settingKeys: z.array(z.string().regex(/^[a-z_]+\.[A-Za-z]+$/)).min(1),
+    source: AgenturSettingSource.optional(),
+    baseDefaultsVersion,
+  }),
+}).superRefine(({ details }, ctx) => {
+  if ((details.change === "agentur_setting_set") !== (details.source !== undefined)) {
+    issue(ctx, "source_mismatch");
+  }
+});
 /** Every profiling-exception event identifies its request record (Q94). */
 const ofRequest = { profilingExceptionRequestId: z.uuid() };
 const reviewOf = z.strictObject({ reviewedEventId: z.uuid() });
@@ -246,8 +271,8 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
 
 /**
  * Every audit event, discriminated by `type`. The types of Slices 3–9 that the plan gives no
- * shape for (`warning_confirmed`, `export_created`, `config_override_changed`) carry a code and
- * no details until their slices define them, except the base-defaults version (R26).
+ * shape for (`warning_confirmed`, `export_created`) carry a code and no details until their
+ * slices define them.
  */
 export const AuditEvent = z.discriminatedUnion("type", [
   event("participation_created", {
@@ -294,11 +319,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
   }),
   event("warning_confirmed", { ...ofProjectOrParticipation, reasonCode: code, details: noDetails }),
   event("export_created", { ...ofProjectOrParticipation, reasonCode: code, details: noDetails }),
-  event("config_override_changed", {
-    ...ofProjectOrParticipation,
-    reasonCode: code,
-    details: z.strictObject({ baseDefaultsVersion }),
-  }),
+  configOverrideChanged,
   /** Reviews and clarification requests are new events pointing at the reviewed one (5.4). */
   event("review_recorded", { ...ofProjectOrParticipation, reasonCode: code, details: reviewOf }),
   event("clarification_requested", { ...ofProjectOrParticipation, details: reviewOf }),

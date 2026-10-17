@@ -122,3 +122,19 @@ Decided in the Slice 2 plan (D3, D5, R27, R28; round 22) and built in PR 2c-2:
 - **`update_project`** is replaced with a `p_project_agentur_key` parameter: only while draft and
   only to an Agentur the project has pinned (`agentur_not_pinned`), so a Project Agentur always
   has its snapshot.
+
+## Amendment 2026-10-17: project override versions (Slice 2, PR 2d-1)
+
+Decided in the Slice 2 plan (D2 as amended in round 26, D3, 5.2, 5.3, 5.9) and built in PR 2d-1:
+- **`project_config_override`** holds one row per override version, keyed by `(project_id,
+  version)`, with the validated `project_override` content (`jsonb`); the current override is the
+  highest version, no row is version 0. Append-only for every role (the 0016 trigger), `SELECT`
+  only for `transfer_app`; retention class `project_master`.
+- **`write_project_override`** (`SECURITY DEFINER`) takes the exclusive project lock first, then
+  compares the expected version (`override_version_stale`, the API's 409) and refuses the current
+  content again (`override_unchanged`). The content is the second `jsonb` payload D2 permits: the
+  service validates it against every pinned chain first (`validateProjectOverride`), the function
+  checks its structure and that the claimed change (an Agentur-scoped setting set or removed) is
+  what the content does. It writes `config_override_changed` with the version, the change, the
+  Agentur key, the setting keys it computes itself, the source of a set and the base-defaults
+  version (R26); `record_audit_event` refuses that type now.
