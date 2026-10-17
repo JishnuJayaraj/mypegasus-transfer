@@ -644,6 +644,73 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/config/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The template catalog: every Agentur template version of this release (plan 5.8) */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Opaque cursor from `nextCursor`. */
+                    cursor?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of template versions, by key and version */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateCatalogPage"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -962,6 +1029,20 @@ export interface components {
              * @example 2027-03-01
              */
             latestEntryDate?: string | null;
+        };
+        TemplateCatalogPage: {
+            items: components["schemas"]["TemplateCatalogEntry"][];
+            nextCursor: string | null;
+        };
+        TemplateCatalogEntry: {
+            agenturKey: string;
+            version: number;
+            label: {
+                de: string;
+                en?: string;
+            };
+            sample: boolean;
+            sha256: string;
         };
     };
     responses: never;

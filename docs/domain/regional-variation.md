@@ -166,6 +166,28 @@ Participation
 - In the MVP, templates are seed files. A new region therefore needs a deploy until an admin UI
   exists.
 
+## Template versions: identity, immutability, snapshots (Slice 2)
+
+- **Identity:** a template version is `templates/<agenturKey>/<version>.json`; its content
+  identity is the **SHA-256 of its canonical JSON** (keys sorted, no insignificant whitespace,
+  R22), so reformatting a file never counts as a change and any change of content does.
+- **Catalog:** `pnpm generate` writes `packages/config/templates/manifest.json` with every
+  version's key, version, labels, `sample` flag and hash; CI fails when it differs from the files.
+  `GET /api/v1/config/templates` serves it to the flat role `project_lead`, the PL members of any project and the global org
+  roles (Q108).
+- **Immutability:** a merged version never changes and is never deleted.
+  `scripts/check-template-immutability.mjs` (in `pnpm lint` and CI) compares every version
+  present at the base branch by hash. A change of an Agentur's rules is a **new version**, which
+  projects reach only through an explicit migration with review (Q36, Q93).
+- **Snapshot (PR 2c-2):** pinning stores the version's content and hash in the database; the first
+  pin of a version anywhere registers it, every later pin must match it. Resolution of a pinned
+  project reads only the stored content, so a later change of a file can't change a project.
+- **Base defaults** are release-managed, not pinned (Q107); configuration-dependent audit events
+  record their `version`.
+- **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the
+  templates and the base defaults to `apps/api/dist/config/`, and `CONFIG_DIR` points the built
+  API there (the image, `pnpm start`, Playwright).
+
 ## Forms are versioned separately from templates
 
 Official forms have their own versions (`TL 407 08/2025`, `Kug 200b 09/2021`) in the form

@@ -8,6 +8,7 @@
   "include": ["src", "package.json", "vite.config.ts"],
   "references": [
     { "path": "../../packages/domain" },
+    { "path": "../../packages/config" },
     { "path": "../../packages/db" },
     { "path": "../../packages/adapters" }
   ]

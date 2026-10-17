@@ -21,6 +21,7 @@ export const testEnv: Env = {
   jobsEnabled: false,
   jobsLifecycleTime: "04:15",
   clock: "system",
+  configDir: undefined,
 };
 
 export const origin = testEnv.appOrigins[0]!;

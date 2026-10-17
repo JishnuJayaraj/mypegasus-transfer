@@ -23,6 +23,7 @@ export function openApiDocument(): ReturnType<
       jobsEnabled: false,
       jobsLifecycleTime: "04:15",
       clock: "system",
+      configDir: undefined,
     },
     logger: pino({ enabled: false }),
     clock: new SystemClock(),

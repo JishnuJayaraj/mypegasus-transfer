@@ -17,14 +17,18 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm fetch
 COPY . .
 RUN pnpm install --offline --frozen-lockfile
-# Both SPAs and the API bundle (workspace packages inlined, npm dependencies external).
+# Both SPAs and the API bundle (workspace packages inlined, npm dependencies external). The
+# bundle's dist/ also holds the migrations and the configuration: dist/config/templates (with
+# the manifest) and dist/config/base-defaults.json (Slice 2 plan 5.8, spike S2).
 RUN pnpm build
 # Only the API's production npm dependencies; no tsx and no TypeScript at runtime. `--legacy`
 # because the workspace doesn't inject workspace packages; the API has none in production.
 RUN pnpm deploy --legacy --prod --filter @transfer/api /deploy
 
 FROM ${NODE_IMAGE}
-ENV NODE_ENV=production PORT=8080
+# CONFIG_DIR: the API reads the template catalog, the templates and the base defaults from the
+# copy in its bundle, never from the repo paths (which don't exist here).
+ENV NODE_ENV=production PORT=8080 CONFIG_DIR=/app/apps/api/dist/config
 WORKDIR /app
 # The repo's layout, so the bundle finds the SPAs at ../../{web,portal}/dist.
 COPY --from=build /deploy/package.json apps/api/package.json
