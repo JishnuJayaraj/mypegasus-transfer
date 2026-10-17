@@ -22,7 +22,7 @@ CREATE FUNCTION create_entry_wave(
   p_default_tg_end date DEFAULT NULL, p_latest_entry_date date DEFAULT NULL, p_id uuid DEFAULT NULL
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
-  v_id uuid := coalesce(p_id, gen_random_uuid());
+  v_id uuid := coalesce(p_id, pg_catalog.gen_random_uuid());
 BEGIN
   -- The exclusive project lock is the first operation (D3, round 23).
   PERFORM public.lock_project_setup(p_project_id);
@@ -41,7 +41,8 @@ BEGIN
   VALUES (v_id, p_project_id, p_code, p_name, p_signing_deadline, p_default_tg_start, p_default_tg_end,
     p_latest_entry_date);
   PERFORM public.write_audit_event(p_project_id, NULL, 'entry_wave_created', p_context, NULL, NULL, NULL,
-    NULL, NULL, jsonb_strip_nulls(jsonb_build_object('waveId', v_id, 'signingDeadline', p_signing_deadline,
+    NULL, NULL, pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object('waveId', v_id,
+      'signingDeadline', p_signing_deadline,
       'defaultTgStart', p_default_tg_start, 'defaultTgEnd', p_default_tg_end,
       'latestEntryDate', p_latest_entry_date)), false);
   RETURN v_id;
@@ -58,6 +59,7 @@ CREATE FUNCTION update_entry_wave(
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   r public.project_entry_wave;
+  v_type public.project_type;
   v_fields text[];
   v_dates jsonb;
 BEGIN
@@ -71,31 +73,38 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'wave_not_found';
   END IF;
+  -- Defended here too, not only by the service (round 24).
+  SELECT type INTO v_type FROM public.project WHERE id = p_project_id;
+  IF v_type <> 'ta_tg' THEN
+    RAISE EXCEPTION 'not_ta_tg';
+  END IF;
   IF NOT public.entry_wave_text_valid(p_code, p_name) THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
-  SELECT coalesce(array_agg(c.field ORDER BY c.ord), '{}'),
-    jsonb_object_agg(c.field, jsonb_build_object('from', c.old, 'to', c.new)) FILTER (WHERE c.ord > 2)
+  SELECT coalesce(pg_catalog.array_agg(c.field ORDER BY c.ord), '{}'),
+    pg_catalog.jsonb_object_agg(c.field, pg_catalog.jsonb_build_object('from', c.old, 'to', c.new))
+      FILTER (WHERE c.ord > 2)
   INTO v_fields, v_dates
-  FROM (VALUES (1, 'code', to_jsonb(r.code), to_jsonb(p_code)),
-    (2, 'name', to_jsonb(r.name), to_jsonb(p_name)),
-    (3, 'signingDeadline', to_jsonb(r.signing_deadline), to_jsonb(p_signing_deadline)),
-    (4, 'defaultTgStart', to_jsonb(r.default_tg_start), to_jsonb(p_default_tg_start)),
-    (5, 'defaultTgEnd', to_jsonb(r.default_tg_end), to_jsonb(p_default_tg_end)),
-    (6, 'latestEntryDate', to_jsonb(r.latest_entry_date), to_jsonb(p_latest_entry_date))
+  FROM (VALUES (1, 'code', pg_catalog.to_jsonb(r.code), pg_catalog.to_jsonb(p_code)),
+    (2, 'name', pg_catalog.to_jsonb(r.name), pg_catalog.to_jsonb(p_name)),
+    (3, 'signingDeadline', pg_catalog.to_jsonb(r.signing_deadline), pg_catalog.to_jsonb(p_signing_deadline)),
+    (4, 'defaultTgStart', pg_catalog.to_jsonb(r.default_tg_start), pg_catalog.to_jsonb(p_default_tg_start)),
+    (5, 'defaultTgEnd', pg_catalog.to_jsonb(r.default_tg_end), pg_catalog.to_jsonb(p_default_tg_end)),
+    (6, 'latestEntryDate', pg_catalog.to_jsonb(r.latest_entry_date), pg_catalog.to_jsonb(p_latest_entry_date))
   ) AS c(ord, field, old, new)
   WHERE c.old IS DISTINCT FROM c.new;
-  IF cardinality(v_fields) = 0 THEN
+  IF pg_catalog.cardinality(v_fields) = 0 THEN
     RAISE EXCEPTION 'wave_unchanged';
   END IF;
   UPDATE public.project_entry_wave
   SET code = p_code, name = p_name, signing_deadline = p_signing_deadline,
       default_tg_start = p_default_tg_start, default_tg_end = p_default_tg_end,
-      latest_entry_date = p_latest_entry_date, updated_at = now()
+      latest_entry_date = p_latest_entry_date, updated_at = pg_catalog.now()
   WHERE id = p_id;
   RETURN public.write_audit_event(p_project_id, NULL, 'entry_wave_changed', p_context, NULL, NULL, NULL,
-    NULL, NULL, jsonb_build_object('waveId', p_id, 'fields', to_jsonb(v_fields))
-      || CASE WHEN v_dates IS NULL THEN '{}' ELSE jsonb_build_object('dates', v_dates) END, false);
+    NULL, NULL, pg_catalog.jsonb_build_object('waveId', p_id, 'fields', pg_catalog.to_jsonb(v_fields))
+      || CASE WHEN v_dates IS NULL THEN '{}' ELSE pg_catalog.jsonb_build_object('dates', v_dates) END,
+    false);
 END $$;
 --> statement-breakpoint
 

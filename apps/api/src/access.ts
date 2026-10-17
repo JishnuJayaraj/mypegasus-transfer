@@ -1,4 +1,4 @@
-import { eq, projectMembership, type Database } from "@transfer/db";
+import { eq, project, projectMembership, type Database } from "@transfer/db";
 import { OrgRole, type ProjectRole, type StaffUser } from "@transfer/domain";
 import { staffSubject, type StaffSubject } from "./participations/subjects";
 
@@ -25,4 +25,15 @@ export function hasGlobalOrgRole(subject: StaffSubject): boolean {
 
 export function seesProject(subject: StaffSubject, projectId: string): boolean {
   return hasGlobalOrgRole(subject) || (subject.projectRoles[projectId]?.size ?? 0) > 0;
+}
+
+/** The user's subject, and whether the project exists and they may see it (else a 404). */
+export async function projectAccess(db: Database, user: StaffUser, projectId: string) {
+  const subject = await staffSubjectOf(db, user);
+  if (!seesProject(subject, projectId)) return { subject, visible: false };
+  const [found] = await db
+    .select({ id: project.id })
+    .from(project)
+    .where(eq(project.id, projectId));
+  return { subject, visible: found !== undefined };
 }

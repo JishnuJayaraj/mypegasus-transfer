@@ -121,6 +121,7 @@ describe("create_entry_wave (AC-6)", () => {
     ["without a code", { code: null }, "invalid_argument"],
     ["with an untrimmed name", { name: "Welle 3 " }, "invalid_argument"],
     ["with a 101-character name", { name: "x".repeat(101) }, "invalid_argument"],
+    ["with 101 astral characters in the name", { name: "𝔄".repeat(101) }, "invalid_argument"],
     ["with a control character in the name", { name: "Welle\t3" }, "invalid_argument"],
     ["with a taken code", { code: "W1" }, "23505"],
     ["with the signing deadline after the start", { signingDeadline: "2091-09-02" }, "23514"],
@@ -181,6 +182,20 @@ describe("update_entry_wave (AC-6)", () => {
         },
       },
     ]);
+  });
+
+  it("counts the name in code points: 100 astral characters fit (round 24)", async () => {
+    await updateW1({ name: "𝔄".repeat(100) });
+    expect((await waveEvents()).map((e) => e.details)).toEqual([
+      { waveId: w1.id, fields: ["name"] },
+    ]);
+  });
+
+  it("refuses an update when the project is not ta_tg, whatever the service checked (round 24)", async () => {
+    // Only the owner can get a wave into a ta_only project (update_project refuses it).
+    await owner.query("update project set type = 'ta_only' where id = $1", [werkNord]);
+    expect(await refusal(updateW1({ name: "Welle eins" }))).toBe("not_ta_tg");
+    expect(await waveEvents()).toEqual([]);
   });
 
   it("lists a code change without dates", async () => {

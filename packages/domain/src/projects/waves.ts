@@ -124,8 +124,10 @@ export function checkWaveChange(change: WaveChange): WaveIssue[] {
   else if (change.otherWaves.some((other) => other.code === after.code)) {
     refuse("code_taken", "code");
   }
+  // In code points, as PostgreSQL's length() counts (round 24), not in UTF-16 units.
   const name = after.name;
-  if (name !== name.trim() || name.length < 1 || name.length > 100 || controlCharacter.test(name)) {
+  const length = [...name].length;
+  if (name !== name.trim() || length < 1 || length > 100 || controlCharacter.test(name)) {
     refuse("invalid_name", "name");
   }
 

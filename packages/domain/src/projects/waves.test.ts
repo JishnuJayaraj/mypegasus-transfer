@@ -75,6 +75,12 @@ describe("checkWaveChange (plan 5.6)", () => {
     );
   });
 
+  it("counts the name in code points, as PostgreSQL does (round 24)", () => {
+    // U+1D504 is one code point but two UTF-16 units.
+    expect(check({ after: { ...wave, name: "𝔄".repeat(100) } })).toEqual([]);
+    expect(codes({ after: { ...wave, name: "𝔄".repeat(101) } })).toEqual(["invalid_name"]);
+  });
+
   it("refuses a code another wave of the project has, never its own", () => {
     const otherWaves = [{ code: "W2", latestEntryDate: null }];
     expect(check({ after: { ...wave, code: "W2" }, otherWaves })).toEqual([

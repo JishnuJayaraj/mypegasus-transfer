@@ -12,12 +12,13 @@ import {
   type WaveIssue,
   type WaveValues,
 } from "@transfer/domain";
-import { createRouter, type Deps } from "../context";
+import { projectAccess } from "../access";
+import { createRouter, json, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { functionRefusal } from "../database-errors";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
-import { auditContext, callFunction, json, utc, visibleProject } from "./projects";
+import { auditContext, callFunction, utc } from "../sql";
 
 const WavePage = page(EntryWaveRecord).meta({ id: "EntryWavePage" });
 const ProjectParams = z.object({ projectId: z.uuid() });
@@ -133,8 +134,8 @@ export function entryWaveRoutes(deps: Deps) {
 
   /** Members and global org roles see a project's waves; only its PL edits them (5.4). */
   async function access(user: StaffUser, projectId: string, edit: boolean) {
-    const { subject, found } = await visibleProject(deps, user, projectId);
-    if (!found) return "not-found";
+    const { subject, visible } = await projectAccess(db, user, projectId);
+    if (!visible) return "not-found";
     const target = { projectId, regionId: null, participationId: null };
     if (edit && !mayPerformOperation(subject, { kind: "editEntryWaves" }, target).ok) {
       return "forbidden";
