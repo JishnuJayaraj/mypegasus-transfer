@@ -59,6 +59,8 @@ describe("audit event types (plan 5.4)", () => {
       "clarification_requested",
       "project_created",
       "project_changed",
+      "entry_wave_created",
+      "entry_wave_changed",
     ]);
   });
 
@@ -67,7 +69,12 @@ describe("audit event types (plan 5.4)", () => {
   });
 
   it("reserves the setup types too (Slice 2, D2)", () => {
-    expect([...setupEventTypes]).toEqual(["project_created", "project_changed"]);
+    expect([...setupEventTypes]).toEqual([
+      "project_created",
+      "project_changed",
+      "entry_wave_created",
+      "entry_wave_changed",
+    ]);
     expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
   });
 
@@ -290,6 +297,29 @@ describe("the other event types", () => {
     ["project_created", { participationId: null, details: { type: "ta_tg" } }],
     ["project_changed", { participationId: null, details: { fields: ["name", "customerName"] } }],
     ["project_changed", { participationId: null, details: { fields: ["type"], type: "ta_only" } }],
+    ["entry_wave_created", { participationId: null, details: { waveId: otherId } }],
+    [
+      "entry_wave_created",
+      { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
+    ],
+    [
+      "entry_wave_changed",
+      {
+        participationId: null,
+        details: {
+          waveId: otherId,
+          fields: ["name", "signingDeadline", "latestEntryDate"],
+          dates: {
+            signingDeadline: { from: "2027-02-15", to: "2027-02-20" },
+            latestEntryDate: { from: "2027-03-15", to: null },
+          },
+        },
+      },
+    ],
+    [
+      "entry_wave_changed",
+      { participationId: null, details: { waveId: otherId, fields: ["code"] } },
+    ],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -350,6 +380,29 @@ describe("the other event types", () => {
     ["project_created", { participationId: null, details: { type: "ta_tg", name: "Werk Nord" } }],
     ["project_changed", { participationId: null, details: { fields: [] } }],
     ["project_changed", { participationId: null, details: { fields: ["signingDeadline"] } }],
+    // Free text (the wave name) never enters the trail; dates only with their changed key.
+    ["entry_wave_created", { participationId: null, details: { waveId: otherId, name: "W" } }],
+    ["entry_wave_created", { details: { waveId: otherId } }],
+    ["entry_wave_changed", { participationId: null, details: { waveId: otherId, fields: [] } }],
+    [
+      "entry_wave_changed",
+      { participationId: null, details: { waveId: otherId, fields: ["name"], name: "Welle" } },
+    ],
+    [
+      "entry_wave_changed",
+      { participationId: null, details: { waveId: otherId, fields: ["latestEntryDate"] } },
+    ],
+    [
+      "entry_wave_changed",
+      {
+        participationId: null,
+        details: {
+          waveId: otherId,
+          fields: ["code"],
+          dates: { defaultTgEnd: { from: null, to: "2028-02-29" } },
+        },
+      },
+    ],
   ])("reject an invalid %s", (type, fields) => {
     expect(AuditEvent.safeParse({ ...base, type, ...fields }).success).toBe(false);
   });

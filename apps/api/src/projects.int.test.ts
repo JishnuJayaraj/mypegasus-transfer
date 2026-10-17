@@ -1,7 +1,9 @@
 import {
+  and,
   auditEvent,
   createDb,
   eq,
+  inArray,
   project,
   projectMembership,
   seedProjectIds,
@@ -227,11 +229,16 @@ describe("PATCH /api/v1/projects/{projectId} (AC-4)", () => {
   it("changes name and customer and records the changed keys", async () => {
     const res = await patch(seedProjectIds.werkNord, { name: "Werk Nord neu" });
     expect(await readJson(res, Project)).toMatchObject({ name: "Werk Nord neu", type: "ta_tg" });
-    // After the seed's project_created (round 23).
+    // After the seed's project_created (round 23); its waves' events aside.
     const events = await owner
       .select({ type: auditEvent.eventType, details: auditEvent.details })
       .from(auditEvent)
-      .where(eq(auditEvent.projectId, seedProjectIds.werkNord))
+      .where(
+        and(
+          eq(auditEvent.projectId, seedProjectIds.werkNord),
+          inArray(auditEvent.eventType, ["project_created", "project_changed"]),
+        ),
+      )
       .orderBy(auditEvent.seq);
     expect(events).toEqual([
       { type: "project_created", details: { type: "ta_tg" } },

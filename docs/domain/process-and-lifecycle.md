@@ -71,6 +71,17 @@ template a project of either type can't be activated (Q76, Q90).
     admission cutoff** starts the following Berlin calendar day (Q77). It **replaces the former
     "signing deadline + 90 days" grace period**.
   - Deadlines are **inclusive**: expiry happens the following day.
+  - **Creating and editing waves** (Slice 2, PR 2b; fail safe until Q101 is answered): only the
+    PL, through `create_entry_wave` / `update_entry_wave` under the exclusive project lock, each
+    with one audit event (changed keys and old/new dates, never the name). The dates are ordered
+    `signingDeadline ≤ defaultTgStart ≤ latestEntryDate`, `signingDeadline ≤ latestEntryDate`,
+    `defaultTgStart ≤ defaultTgEnd`, and the default period is at most twelve months
+    (`defaultTgEnd ≤ addMonths(defaultTgStart, 12) − 1 day`, R25, pending Q102). Once in use: a
+    `latestEntryDate` is never set before today and never changes once its cutoff has passed; the
+    `signingDeadline` doesn't change while first offers of the wave are open; a default TG start
+    that has been reached (`≤ today`, R29) doesn't change, and a new one isn't before today while
+    participations rely on it; dates are cleared only while the wave has no participation, never
+    the last `latestEntryDate` of an active project. Waves aren't deleted.
 
 ## Project checklist (project-level BA steps) *(provisional, Q16, Q52)*
 

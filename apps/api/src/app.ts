@@ -6,6 +6,7 @@ import { createRouter, type Deps } from "./context";
 import { errorForLog, requestLogger } from "./logger";
 import { problem } from "./problem";
 import { devRoutes } from "./routes/dev";
+import { entryWaveRoutes } from "./routes/entry-waves";
 import { healthRoutes } from "./routes/health";
 import { meRoutes } from "./routes/me";
 import { projectRoutes } from "./routes/projects";
@@ -57,6 +58,7 @@ export function createApp(deps: Deps) {
   api.route("/", healthRoutes(deps));
   api.route("/", meRoutes(deps));
   api.route("/", projectRoutes(deps));
+  api.route("/", entryWaveRoutes(deps));
   if (env.authMode === "dev") api.route("/", devRoutes(deps));
   app.route("/api/v1", api);
 

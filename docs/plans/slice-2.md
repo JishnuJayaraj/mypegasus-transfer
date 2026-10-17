@@ -263,6 +263,74 @@ and the routes, with the project route allowlisting `project_unchanged`, `projec
 and rethrowing everything else; strict create and update inputs, whose unknown fields are listed
 one by one (`unrecognized_keys`).
 
+### Built in PR 2b, with the readings taken (confirmed in round 24)
+
+Split in [round 24](../decisions/2026-10-17-answers-round-24.md): **2b-1** (domain, database, API,
+docs; about 600 lines, accepted as one cohesive domain → database → API unit) and **2b-2** (the
+web page, its component tests and the Playwright step). All readings below are confirmed.
+
+Built in 2b-1: `checkWaveChange`, `CreateEntryWaveInput`, `UpdateEntryWaveInput`, `EntryWaveRecord`
+(`packages/domain/src/projects/waves.ts`, under the 100 % threshold); the operation
+`editEntryWaves` (PL); the audit types `entry_wave_created` and `entry_wave_changed` in
+`setupEventTypes`; migrations `0013_entry_waves` (generated: the two event types,
+`project_entry_wave.updated_at`, three ordering `CHECK`s) and `0014_entry_wave_functions`
+(hand-written: `entry_wave_text_valid`, `create_entry_wave`, `update_entry_wave`,
+`record_audit_event` refusing the wave types, the grants); the seed's waves through the
+functions; `GET/POST /projects/{projectId}/entry-waves` and `PATCH …/entry-waves/{waveId}`;
+domain errors with a field pointer; the shared route helpers in `apps/api/src/sql.ts`,
+`context.ts` (`json`) and `access.ts` (`projectAccess`). Built in 2b-2: the project page
+`/projects/$projectId` (project data, wave list, one create/edit form) linked from the project
+list; the Playwright project spec adds a wave.
+
+Round 24 added: `update_entry_wave` refuses a wave of a project that isn't `ta_tg` itself
+(`not_ta_tg`, with a database test), and `checkWaveChange` counts the name in code points, as
+PostgreSQL's `length()` does (astral characters tested at 100/101). The hand-written migration
+schema-qualifies its built-ins.
+
+1. **R29 — a "passed" default TG start means reached** (`defaultTgStart ≤ today`): on the start
+   day the contractual date has begun, even before the nightly run, so it doesn't change from that
+   day on (`default_start_passed`). The cutoff keeps its own wording (`today > latestEntryDate`).
+   Recorded in Q101.
+2. **Ordering in the table, usage in the domain:** the three new ordering rules are table `CHECK`s
+   next to the existing `start ≤ end` (structure, round 16); the twelve-month rule (pending Q102)
+   and the usage rules (pending Q101) live only in `checkWaveChange`. A legacy wave that breaks
+   the order fails migration 0013 instead of being changed silently (synthetic data only; fixed by
+   hand, like the PL backfill of round 23).
+3. **Audit details:** `entry_wave_created` carries the wave id and the dates that are set;
+   `entry_wave_changed` the wave id, the changed keys (`code`, `name`, dates) and `{ from, to }`
+   for each changed date. **Neither the name nor the code** enters the trail: the code is typed by
+   the PL too, so it is treated like free text; the wave id identifies the wave.
+4. **Usage**, read under the lock: `participations` of the wave; `openFirstOffers` = `dsv_offered`
+   without an own `offerDeadline`; `reliesOnDefaultStart` = no own `tgStart`, not entered
+   (`tg_entry_date` null) and not withdrawn.
+5. **Codes** are compared exactly, like the unique constraint; a code may change (participations
+   reference the wave id). Code and name are trimmed by the input schema; their rules
+   (`invalid_code`, `invalid_name`) are `checkWaveChange`'s, so the form shows them at the field.
+6. **`update_entry_wave` takes the complete new row** (typed dates, `null` clears); `PATCH`
+   merges the given fields into the row read under the lock. A change to the current values is
+   refused without a write (`wave_unchanged`, 422), like `project_unchanged`. The route allowlists
+   `not_ta_tg` and `wave_unchanged` (422), maps `project_not_found` and `wave_not_found` to 404 and
+   rethrows everything else (round 23).
+7. **Access:** members and global org roles read the waves; a project the user can't see is 404;
+   only its PL creates or edits (403 otherwise). As in `update_project`, the functions check the
+   actor (a user, not assisted) and leave the role to the service.
+8. **`today`** comes from the injected `Clock`, as in the status service whose guards the wave
+   rules protect.
+9. **The list** is in creation order, paged by `(created_at, id)` ascending (ADR-0010); the web
+   page reads every page (a project has a handful of waves).
+10. **Domain errors point at their field:** `domainProblem` takes `{ code, field }` and sets
+    `pointer` to `/<field>` (or `""` for the whole wave, e.g. `not_ta_tg`), so the form shows each
+    rule at its field (AC-8).
+11. **AC-7's second half** ("two concurrent imports of one project serialize") is tested with the
+    import confirm in PR 2g-1; it takes the same exclusive lock tested here.
+12. **The seed** creates its waves through `create_entry_wave` by the seeded PL (round 23's
+    standard for projects, applied to waves); a legacy W1 gets the seed's dates through
+    `update_entry_wave`.
+13. **Size:** about 850 non-blank, non-comment production lines together, so split (round 24).
+14. **The web form sends only the changed fields** on an edit (2b-2), so the lock-scoped merge of
+    item 6 can't overwrite another PL's edit of another field; the same field is still last write
+    wins until optimistic versioning comes (round 24).
+
 ## 4. Design overview
 
 ```

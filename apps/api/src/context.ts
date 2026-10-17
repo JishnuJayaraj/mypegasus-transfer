@@ -3,6 +3,7 @@ import type { Clock } from "@transfer/adapters";
 import type { Database } from "@transfer/db";
 import type { StaffUser } from "@transfer/domain";
 import type { Logger } from "pino";
+import type { z } from "zod";
 import type { Env } from "./env";
 import { validationProblem } from "./problem";
 import type { SpaRoots } from "./static";
@@ -31,3 +32,9 @@ export function createRouter() {
 }
 
 export type Router = ReturnType<typeof createRouter>;
+
+/** The OpenAPI entry of a JSON response with `schema`. */
+export const json = <T extends z.ZodType>(schema: T, description: string) => ({
+  description,
+  content: { "application/json": { schema } },
+});

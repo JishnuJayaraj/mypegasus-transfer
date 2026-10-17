@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { createDb } from "./client";
 import { auditEvent, projectEntryWave, projectMembership, staffUser } from "./schema";
 import { seed, seedProjectIds, seedStaffUserIds, seedWaves } from "./seed";
@@ -18,6 +18,18 @@ const waves = () =>
     })
     .from(projectEntryWave)
     .orderBy(projectEntryWave.code);
+
+/** The wave event types written after the first seed, in order. */
+const eventTypes = async () =>
+  (
+    await db
+      .select({ type: auditEvent.eventType })
+      .from(auditEvent)
+      .where(sql`${auditEvent.eventType} in ('entry_wave_created', 'entry_wave_changed')`)
+      .orderBy(auditEvent.seq)
+  )
+    .map((e) => e.type)
+    .slice(2);
 
 describe("the base seed", () => {
   it("adds the synthetic regional operations manager and Werk Nord's waves, idempotently", async () => {
@@ -42,6 +54,19 @@ describe("the base seed", () => {
     });
     await seed(db);
     expect((await waves())[0]).toEqual({ id: migrated, code: "W1", latestEntryDate: "2091-03-15" });
+    expect(await eventTypes()).toEqual(["entry_wave_changed", "entry_wave_created"]);
+  });
+
+  it("creates the waves through create_entry_wave, once each (round 23)", async () => {
+    await seed(db);
+    await seed(db);
+    const created = await db
+      .select({ details: auditEvent.details })
+      .from(auditEvent)
+      .where(eq(auditEvent.eventType, "entry_wave_created"));
+    expect(created.map((e) => (e.details as { waveId: string }).waveId).toSorted()).toEqual(
+      seedWaves.map((w) => w.id),
+    );
   });
 
   it("creates the projects through create_project, once each, with their PL member (round 23)", async () => {
@@ -49,7 +74,8 @@ describe("the base seed", () => {
     await seed(db);
     const created = await db
       .select({ projectId: auditEvent.projectId, actor: auditEvent.actorStaffUserId })
-      .from(auditEvent);
+      .from(auditEvent)
+      .where(eq(auditEvent.eventType, "project_created"));
     expect(created.map((e) => e.projectId).toSorted()).toEqual(
       Object.values(seedProjectIds).toSorted(),
     );

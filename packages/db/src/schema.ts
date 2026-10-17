@@ -149,7 +149,8 @@ const createdAt = () =>
 
 /**
  * An entry wave of a `ta_tg` project (Q79): a timing cohort with its contractual dates, nullable
- * while draft. Created and edited with project setup (Slice 2); `transfer_app` only reads it.
+ * while draft. Written only by `create_entry_wave` and `update_entry_wave` (Slice 2 plan 5.6);
+ * `transfer_app` only reads it. The CHECKs hold the ordering the offer and entry guards need.
  */
 export const projectEntryWave = pgTable(
   "project_entry_wave",
@@ -165,12 +166,27 @@ export const projectEntryWave = pgTable(
     defaultTgEnd: dateColumn("default_tg_end"),
     latestEntryDate: dateColumn("latest_entry_date"),
     createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     unique("project_entry_wave_project_code_unique").on(t.projectId, t.code),
     // Target of participation's composite FK: a participation's wave is of its own project.
     unique("project_entry_wave_id_project_unique").on(t.id, t.projectId),
     check("project_entry_wave_tg_dates_ordered", sql`${t.defaultTgStart} <= ${t.defaultTgEnd}`),
+    check(
+      "project_entry_wave_signing_before_start",
+      sql`${t.signingDeadline} <= ${t.defaultTgStart}`,
+    ),
+    check(
+      "project_entry_wave_signing_before_latest_entry",
+      sql`${t.signingDeadline} <= ${t.latestEntryDate}`,
+    ),
+    check(
+      "project_entry_wave_start_before_latest_entry",
+      sql`${t.defaultTgStart} <= ${t.latestEntryDate}`,
+    ),
   ],
 );
 
