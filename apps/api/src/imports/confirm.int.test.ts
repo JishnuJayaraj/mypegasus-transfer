@@ -522,4 +522,29 @@ describe("access, logs and saved mappings (AC-30, AC-31)", () => {
     // Nothing else is stored by a preview.
     expect(await owner.select().from(importColumnMapping)).toHaveLength(12);
   });
+
+  it("saves a header that two mapped columns share once, for the first column", async () => {
+    // "Mobil" renamed: two "Telefon" columns, mapped to phone and mobile by hand.
+    const sample = bytesOf("teilnehmer-beispiel.csv")
+      .toString("utf8")
+      .replace("Telefon;Mobil", "Telefon;Telefon");
+    const file = Buffer.from(sample).toString("base64");
+    const mapping = [
+      ...(await suggested(werkNord, { file })),
+      { column: 10, target: "mobile" as const },
+    ];
+    const shown = await previewOf(werkNord, { file, mapping });
+    const res = await confirm(werkNord, {
+      file,
+      mapping,
+      decisions: noDecisions,
+      previewToken: shown.previewToken,
+    });
+    expect(res.status).toBe(200);
+    expect(await owner.select().from(importColumnMapping)).toHaveLength(11);
+    const next = await previewOf(werkNord, { file });
+    expect(next.suggestedMapping.filter((s) => s.column >= 9 && s.column <= 10)).toEqual([
+      { column: 9, target: "phone", source: "project" },
+    ]);
+  });
 });
