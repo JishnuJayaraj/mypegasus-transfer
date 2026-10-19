@@ -1182,7 +1182,7 @@ Playwright path (AC-35) and the toast fix of the projects e2e.
     (visible for 6 s) cannot satisfy it.
 21. **No docs gap found** in 2g-2.
 
-### Planned in PR 2h (re-estimated after round 32; for approval)
+### Planned in PR 2h (re-estimated after round 32; approved in round 33)
 
 2h was estimated at ~470 lines before round 32 added the DSV amendment record,
 `ba_review_required` and the BA reporting tasks. Re-estimated below against what comparable code
@@ -1373,6 +1373,37 @@ decisions under the placeholder Legal, PL and BA process-owner roles.
 3. **`import_column_mapping` and data rows picked as header** — decided in `data-protection.md` in
    this PR (R44: confidential, possibly pseudonymised participant data, plus the header-row guard);
    **2h-2** changes the data catalog and adds the guard.
+
+### Built in PR 2h-1, with the readings taken (for confirmation)
+
+Built: `participationListScope`, `mayListField`, `participationDetail` and `entryWaveAssignment` in
+`packages/domain/src/access/participation-view.ts` (under the 100 % threshold);
+`ParticipationDetail`, `ParticipantAddress`, `ParticipationHint`, `AssignEntryWaveRefusal` and
+`AssignEntryWaveInput` in `packages/domain/src/participations.ts`; `individual_dates_set` in
+`assignEntryWave` and, on the locked row, in `assign_entry_wave` (hand-written migration
+`0028_entry_wave_individual_dates`); `GET /participations/{participationId}` and
+`PUT /participations/{participationId}/entry-wave` in `apps/api/src/routes/participations.ts`, whose
+list route now uses the scope; the participant page
+(`routes/projects/$projectId_.participations.$participationId.tsx`), `entry-wave-choice.tsx`, the
+list's links, the `.tp-facts` style; integration, component and e2e tests.
+
+1. **The case data is one gate** (R30): every `case_internal` field must be readable, or the detail
+   is a 403; the person fields are then projected one by one (absent where not readable, `null`
+   where nothing is recorded). In Slice 2 no role reads case data without the confidential person
+   fields, so the projection is all or nothing in practice.
+2. **The detail's 404** covers an unknown id and a participation of a project the viewer can't see
+   (tested with a project only its creator belongs to); a malformed id is 400.
+3. **Why the wave choice is closed** comes from the server (review of #53): `refusals.assignEntryWave`
+   is `forbidden` when the viewer may not assign waves, else the first failing rule of
+   `assignEntryWave` in its order (`not_ta_tg`, `status_not_open`, `dsv_already_offered`,
+   `individual_dates_set`), else `no_other_wave`. The UI shows that reason and never derives one.
+4. **The route ties the participant to the URL's project**: a participant of another project is
+   "not found", and nothing of the URL's project (its waves) is loaded for it.
+5. **The wave's four dates stay visible** next to individual dates, and each choice reads
+   "W1 – Welle 1 (Unterschrift bis …, TG … bis …, Eintritt bis …)".
+6. **The wave route returns the updated detail**; refusals map per R21 (403, 404, 409
+   `stale_status`, 422 with the code; an unknown wave is `wave_of_other_project`, fail safe).
+7. **No docs gap found** in 2h-1.
 
 ## 4. Design overview
 
