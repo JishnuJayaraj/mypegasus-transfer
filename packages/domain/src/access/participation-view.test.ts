@@ -183,6 +183,8 @@ describe("participationDetail (R30, AC-34)", () => {
   });
 });
 
+const refused = (refusal: string) => ({ allowed: false, refusal });
+
 describe("entryWaveAssignment (R31, R33; review of PR 2h-1)", () => {
   const context: OperationContext = {
     projectType: "ta_tg",
@@ -195,7 +197,6 @@ describe("entryWaveAssignment (R31, R33; review of PR 2h-1)", () => {
   };
   const waves = ["wave-1", "wave-2"];
   const ok = { allowed: true, refusal: null };
-  const refused = (refusal: string) => ({ allowed: false, refusal });
 
   it("is open while another wave of the project passes the domain rule", () => {
     expect(entryWaveAssignment(context, projectId, waves, true)).toEqual(ok);
