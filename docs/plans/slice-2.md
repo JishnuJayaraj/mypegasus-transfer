@@ -691,7 +691,12 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
     `apps/web/src/api.tsx` isn't touched (the relaxations come with the configuration).
 13. **No docs gap found;** Q110 stays unused.
 
-### Built in PR 2e-2, with the readings taken (for confirmation in round 31)
+### Built in PR 2e-2, with the readings taken (confirmed in round 31)
+
+[Round 31](../decisions/2026-10-19-answers-round-31.md) confirmed items 1–3, 5, 8 and 11, item 4
+with every moved pin a 409, item 6 with a coherent preview transaction, item 7 with the order
+below, item 9 with a coherent snapshot for the preview, and item 10 after the target-selection race
+was fixed (cache invalidation is enough). It also made the preview's `agenturKey` an `AgenturKey`.
 
 Split before review, like 2d-2, because domain, config, database and API alone are about 590
 non-blank, non-comment production lines: **2e-2a** (domain vocabulary, audit model, operation,
@@ -742,23 +747,30 @@ migration-preview` and `…/migration`; `projectSnapshot` and `releaseTemplate` 
 4. **Two versions are compared:** the confirm names the pinned version (`fromVersion`) and the
    override version (`expectedVersion`) the preview was made on; either moved is a 409 (the
    service under the lock, and `pin_version_stale` / `override_version_stale` in SQL), because the
-   review's old and new values depend on both.
+   review's old and new values depend on both. **Round 31:** the target is checked against the
+   declared `fromVersion`, not the current pin, so a pin another migration moved is always a 409,
+   also when it reached the review's own target or went beyond it (before, those were
+   `template_already_pinned` and `template_version_not_newer`).
 5. **The review lists every key** of the Agentur's scoped setting (`step.key`), whether or not
    the template changes its value (R15: "every Agentur-scoped setting … key by key"). `remove`
    drops the key (the whole setting with its last one) and keeps the setting's source and
    confirmation; `keep` keeps it winning over the new template for that key (Q93). Nothing removed
    (all kept, or no setting): only the pin is written, no override version.
-6. **The preview** (a `POST` with the target version; read-only, outside the lock) lists the
+6. **The preview** (a `POST` with the target version; read-only, outside the lock, in one
+   read-only `REPEATABLE READ` transaction so its pins and override are one coherent state,
+   round 31) lists the
    template settings that differ (old and new value, `null` where a version doesn't set one), the
    rules added, removed **and changed** (id, step, basis) and the custom fields added, removed and
    changed (key): "changed" is in addition to 5.8's added/removed, so a rule redefined under its id
    isn't hidden. Labels and help texts aren't listed. `overrideIssues` are the codes of
    `validateProjectOverride` for the current override with the new version; the preview still
    answers 200 so the PL sees them, the confirm refuses (`override_invalid` with the codes, AC-16).
-7. **Order (round 28):** project visibility 404 → `migrateTemplate` 403 → an Agentur the project
-   hasn't pinned 404 (the pin named in the path doesn't exist, like a missing scoped setting) →
-   the target 422 → the two versions 409 → `review_incomplete` 422 (at `/decisions`) →
-   `override_invalid` 422 → the write. Strict input: content and hash come from the release
+7. **Order (round 31, replacing the first proposal):** (1) project visibility 404; (2)
+   `migrateTemplate` 403; (3) an Agentur the project hasn't pinned 404 (the pin named in the path
+   doesn't exist, like a missing scoped setting); (4) the target absent from the catalog or not
+   newer than the declared `fromVersion` 422; (5) the actual pin differs from `fromVersion` 409;
+   (6) the override differs from `expectedVersion` 409; (7) `review_incomplete` 422 (at
+   `/decisions`); (8) `override_invalid` 422; (9) the write. SQL keeps the same invariant. Strict input: content and hash come from the release
    (`unrecognized_keys`). The function refusals are allowlisted (R21); anything else is a 500.
 8. **`GET …/config`** adds `capabilities.migrateTemplate` (the operation, in draft and active
    projects alike: R1 fixes the type and the Project Agentur, not their versions) and per pin
@@ -766,19 +778,20 @@ migration-preview` and `…/migration`; `projectSnapshot` and `releaseTemplate` 
    to roles that don't read the catalog, Q108).
 9. **Folded in (round 29's non-blocking item):** `projectSnapshot` in `template-pins.ts` loads
    the project, pins, override and resolution input once for the configuration, the activation
-   and the migration; `releaseTemplate` checks a release file against its manifest for the pin
-   and the migration. Not folded in: a domain-owned union of refusal codes; round 26's page loop
+   and the migration (the preview reads it inside its `REPEATABLE READ` transaction, round 31);
+   `releaseTemplate` checks a release file against its manifest for the pin and the migration. Not folded in: a domain-owned union of refusal codes; round 26's page loop
    in `apps/web/src/api.tsx` (the migration adds no list query).
 10. **Web (2e-2c):** the pins table gets an action column "… migrieren" only with
     `capabilities.migrateTemplate` and a non-empty `migrationTargets` (round 26); the newest target
     is preselected; "Änderungen anzeigen" shows the changes and the review (keep or remove per key,
     with the project value and the old and new template value); "Migration bestätigen" is
     disabled until every key is decided and while there are override issues (the API's 422 stays
-    authoritative). The result or refusal is kept in Einrichtung, which outlives the migration
-    component, and every outcome rereads the project, the project list and the configuration
-    (round 29). No staff id is shown (Q109).
-11. **No docs gap found;** this PR raises no question (the round 30 docs PR proposes Q110, for
-    Q102).
+    authoritative). The target selector is disabled while a preview or confirm is pending, so a
+    preview always belongs to the target shown (round 31). The result or refusal is kept in
+    Einrichtung, which outlives the migration component, and every outcome invalidates the
+    project, the project list and the configuration, which refetch when active or next used
+    (rounds 29, 31). No staff id is shown (Q109).
+11. **No docs gap found;** 2e-2 raises no documentation question (round 31).
 
 ### Built in PR 2e-1, with the readings taken (confirmed in round 29)
 

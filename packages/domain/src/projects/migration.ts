@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { RuleBasis } from "../completeness/rules";
 import { Step } from "../lifecycle/enums";
-import { ExpectedOverrideVersion } from "./agentur-settings";
+import { AgenturKey, ExpectedOverrideVersion } from "./agentur-settings";
 
 // Template version migration with review (Slice 2 plan 5.8; Q36, Q93, R15). A pinned Agentur
 // moves to a newer catalog version only through this explicit migration, which shows what the new
@@ -48,7 +48,7 @@ const ruleRef = z.strictObject({ id: z.string(), step: Step, basis: RuleBasis.op
  */
 export const TemplateMigrationPreview = z
   .strictObject({
-    agenturKey: z.string(),
+    agenturKey: AgenturKey,
     fromVersion: z.int().min(1),
     version: z.int().min(1),
     /** The override version the review was made on; the confirm sends it back. */
@@ -92,24 +92,34 @@ export type MigrationIssueCode =
   | "template_version_not_newer";
 
 /**
- * Whether the pinned Agentur may move to `version` (plan 5.8): only to a newer catalog version;
- * the pinned one is `template_already_pinned`, an older one `template_version_not_newer`. No pin
- * (null) is the route's 404. Returns the pinned version, or the issue at `/version`.
+ * Whether the pinned Agentur may move to `version` (plan 5.8; round 31's order): no pin is the
+ * route's 404 (null); then the target must be a catalog version newer than the version the
+ * review was made on (`fromVersion` for a confirm, else the pinned one): that version itself is
+ * `template_already_pinned`, an older one `template_version_not_newer` (422 at `/version`); only
+ * then a pin that moved away from a confirm's `fromVersion` is stale (the 409), whatever version
+ * another migration reached. Returns the pinned version the migration starts from.
  */
 export function planTemplateMigration(state: {
   catalog: readonly TemplateRef[];
   pin: TemplateRef | undefined;
   version: number;
-}): { fromVersion: number } | { issues: { code: MigrationIssueCode; field: "version" }[] } | null {
+  fromVersion?: number;
+}):
+  | { fromVersion: number }
+  | { issues: { code: MigrationIssueCode; field: "version" }[] }
+  | { stale: true }
+  | null {
   const { catalog, pin, version } = state;
   if (!pin) return null;
+  const from = state.fromVersion ?? pin.version;
   const issue = (code: MigrationIssueCode) => ({ issues: [{ code, field: "version" as const }] });
   if (!catalog.some((t) => t.agenturKey === pin.agenturKey && t.version === version)) {
     return issue("template_not_in_catalog");
   }
-  if (version === pin.version) return issue("template_already_pinned");
-  if (version < pin.version) return issue("template_version_not_newer");
-  return { fromVersion: pin.version };
+  if (version === from) return issue("template_already_pinned");
+  if (version < from) return issue("template_version_not_newer");
+  if (pin.version !== from) return { stale: true };
+  return { fromVersion: from };
 }
 
 /**

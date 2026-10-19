@@ -7,6 +7,7 @@ import {
   type Step,
   type TemplateMigrationPreview,
 } from "@transfer/domain";
+import { canonicalJson } from "./canonical.ts";
 import type { BaseDefaults, ProjectOverride, RegionalSettings, RegionalTemplate } from "./model";
 import { validateProjectOverride, withAgenturSetting } from "./override";
 
@@ -138,15 +139,7 @@ function changes(before: ReadonlyMap<string, unknown>, after: ReadonlyMap<string
       (key) =>
         before.has(key) &&
         after.has(key) &&
-        canonical(before.get(key)) !== canonical(after.get(key)),
+        canonicalJson(before.get(key)) !== canonicalJson(after.get(key)),
     ),
   };
 }
-
-/** JSON with object keys sorted at every level, so key order never counts as a change. */
-const canonical = (value: unknown): string =>
-  JSON.stringify(value, (_, child: unknown) =>
-    child && typeof child === "object" && !Array.isArray(child)
-      ? Object.fromEntries(Object.entries(child).toSorted(([a], [b]) => (a < b ? -1 : 1)))
-      : child,
-  );
