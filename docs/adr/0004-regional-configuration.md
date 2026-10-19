@@ -192,3 +192,20 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
   (round 28). `withRelaxation` adds or
   removes one; `relaxableRules` lists the rules a request may name (`operational_default` and
   applicable in some chain, locked in none, not relaxed yet, never the override's own rules).
+
+## Amendment 2026-10-17: template version migration with review (Slice 2, PR 2e-2)
+
+- **Only forward, only explicit:** a pinned Agentur moves to a newer catalog version through the
+  migration (Q36), never through a plain pin, which the database refuses for an Agentur the
+  project has pinned. The configuration response lists per pin the newer versions a PL may
+  migrate to.
+- **The review (Q93, R15):** `migrationPreview` (`packages/config/src/migration.ts`, pure) lists
+  the changed template settings, the rules and custom fields added, removed or changed, the
+  override's issues with the new version (`validateProjectOverride`) and every key of the
+  Agentur's scoped setting with its project value and the old and new template value. The PL
+  decides keep or remove for each; `withReviewedSetting` removes the keys decided remove (the
+  whole setting with its last key), keeping its source and confirmation. Precedence is unchanged:
+  a kept key still wins over the new template, for that key only.
+- **One transaction:** the new pin and, when keys are removed, the reduced override version are
+  written together under the project lock, after the override is validated against every chain
+  with the new version (ADR-0002 amendment of the same date).

@@ -162,6 +162,7 @@ const operations: Record<OperationKind, string> = {
   editEntryWaves: "PL",
   pinTemplate: "PL",
   changeOverride: "PL",
+  migrateTemplate: "PL",
   requestRelaxation: "PL",
   decideRelaxation: "ROM",
   withdrawRelaxation: "PL",

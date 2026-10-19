@@ -92,6 +92,7 @@ their slices (3, 5, 7).
 | `editEntryWaves` | PL | — |
 | `pinTemplate` | PL | — |
 | `changeOverride` | PL | — |
+| `migrateTemplate` | PL | — |
 | `requestRelaxation` | PL | — |
 | `decideRelaxation` | Regional operations manager | — |
 | `withdrawRelaxation` | PL | — |

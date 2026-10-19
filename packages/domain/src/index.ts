@@ -118,6 +118,18 @@ export {
   WithdrawRelaxationInput,
 } from "./projects/relaxations";
 export {
+  checkMigrationDecisions,
+  MigrateTemplateInput,
+  MigrationDecision,
+  MigrationPreviewInput,
+  migrationTargets,
+  planTemplateMigration,
+  SettingKey,
+  SettingValue,
+  TemplateMigrationPreview,
+  type MigrationIssueCode,
+} from "./projects/migration";
+export {
   effectiveOfferDeadline,
   effectiveTgEnd,
   effectiveTgStart,

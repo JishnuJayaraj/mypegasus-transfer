@@ -385,6 +385,21 @@ describe("the other event types", () => {
         },
       },
     ],
+    // A migration's review (5.8, R15): the removed keys, and the kept ones when there are any.
+    [
+      "config_override_changed",
+      {
+        participationId: null,
+        details: {
+          version: 5,
+          change: "agentur_setting_reviewed",
+          agenturKey: "beispielstadt-nord",
+          settingKeys: ["agentur_submission.leadTimeDays"],
+          keptSettingKeys: ["agentur_submission.submissionChannel"],
+          baseDefaultsVersion: 1,
+        },
+      },
+    ],
     [
       "rule_relaxation_requested",
       {
@@ -641,6 +656,32 @@ describe("the other event types", () => {
         },
       },
     ],
+    // Kept keys belong to a review only; a review names no source.
+    ...(
+      [
+        { change: "agentur_setting_set", source: "email_agentur" },
+        { change: "agentur_setting_removed" },
+        { source: "email_agentur" },
+        { keptSettingKeys: [] },
+      ] as object[]
+    ).map(
+      (change) =>
+        [
+          "config_override_changed",
+          {
+            participationId: null,
+            details: {
+              version: 1,
+              change: "agentur_setting_reviewed",
+              agenturKey: "beispielstadt-nord",
+              settingKeys: ["agentur_submission.leadTimeDays"],
+              keptSettingKeys: ["agentur_submission.submissionChannel"],
+              baseDefaultsVersion: 1,
+              ...change,
+            },
+          },
+        ] as [string, object],
+    ),
     // Relaxation events: a controlled reason code where there is one, ids only, R26's version.
     [
       "rule_relaxation_requested",

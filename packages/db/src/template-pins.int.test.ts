@@ -109,18 +109,16 @@ describe("pin_agentur_template (D5, AC-10)", () => {
     expect(await auditOf(lagerSued, "config_template_pinned")).toEqual([]);
   });
 
-  it("records the replaced version, and refuses the version already pinned", async () => {
+  // PR 2e-2 (R15): another version of a pinned Agentur is a migration with review
+  // (migrate_agentur_template), never a plain pin; before 0023 this pin succeeded.
+  it("refuses any version of an Agentur the project has pinned already", async () => {
     await pin(app, werkNord);
-    await pin(app, werkNord, { version: 2, content: template(2), sha256: hash("c") });
-    expect((await auditOf(werkNord, "config_template_pinned")).at(-1)!.details).toEqual({
-      agenturKey: "test-agentur",
-      version: 2,
-      previousVersion: 1,
-      baseDefaultsVersion: 1,
-    });
-    expect(
-      await refusal(pin(app, werkNord, { version: 2, content: template(2), sha256: hash("c") })),
-    ).toBe("template_already_pinned");
+    for (const version of [1, 2]) {
+      const args = { version, content: template(version), sha256: hash(version === 1 ? "a" : "c") };
+      expect(await refusal(pin(app, werkNord, args))).toBe("template_already_pinned");
+    }
+    expect(await pinsOf(werkNord)).toHaveLength(1);
+    expect(await auditOf(werkNord, "config_template_pinned")).toHaveLength(1);
   });
 
   it.each([

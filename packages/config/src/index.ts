@@ -28,6 +28,7 @@ export {
   withRelaxation,
   type OverrideValidation,
 } from "./override";
+export { migrationPreview, withReviewedSetting, type MigrationPreview } from "./migration";
 export {
   resolveForParticipation,
   resolveForProject,
