@@ -2,7 +2,9 @@
 
 - Status: **Approved with amendments** ([round 22](../decisions/2026-10-16-answers-round-22.md),
   2026-10-16). Q101 (PL), Q102 (PL, legal, BA process owner; before PR 2h), Q103 (PL; before PRs
-  2f/2g) and Q105 (DPO; before the pilot) are still open.
+  2f/2g) and Q105 (DPO; before the pilot) are still open. For Q102 and Q103 a proposed answer
+  package is recorded in [round 30](../decisions/2026-10-17-answers-round-30.md), awaiting
+  confirmation; the plan doesn't apply it and every gate stays.
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
@@ -100,9 +102,10 @@ Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25, 
 reading in `open-questions.md`:
 - **Q101** (PL): wave edits once in use. PR 2b builds the fail-safe rules; an answer changes a table.
 - **Q102** (PL, legal, BA process owner): individual dates and the twelve-month limit. **Settled
-  before PR 2h.**
+  before PR 2h.** A proposed answer package (round 30) awaits their confirmation.
 - **Q103** (PL): the import contract, incl. foreign addresses and numeric identifiers. **Settled
-  before PRs 2f/2g**, since it may change the schema and the target catalog.
+  before PRs 2f/2g**, since it may change the schema and the target catalog. A proposed answer
+  package (round 30) awaits the PL's confirmation.
 - **Q105** 🔒 (DPO): retention classes; a pre-pilot gate.
 
 ## 1. Goal
