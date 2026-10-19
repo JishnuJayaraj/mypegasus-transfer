@@ -1748,6 +1748,120 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/imports/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview an Excel/CSV import: sheets, headers, suggested mapping and, for a mapping, the report; writes nothing */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportPreviewInput"];
+                };
+            };
+            responses: {
+                /** @description The preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportPreview"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Payload too large */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -2320,6 +2434,96 @@ export interface components {
             decisions: {
                 [key: string]: "keep" | "remove";
             };
+        };
+        ImportPreview: {
+            /** @enum {string} */
+            format: "xlsx" | "csv";
+            sheets: string[];
+            sheet: string | null;
+            csv: {
+                /** @enum {string} */
+                delimiter: ";" | "," | "\t";
+                /** @enum {string} */
+                encoding: "utf-8" | "windows-1252";
+            } | null;
+            headerRow: number;
+            headers: string[];
+            suggestedMapping: {
+                column: number;
+                /** @enum {string} */
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                /** @enum {string} */
+                source: "project" | "customer" | "builtin";
+            }[];
+            mapping: {
+                column: number;
+                /** @enum {string} */
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+            }[];
+            missingTargets: ("personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address")[];
+            mappingIssues: components["schemas"]["ImportIssue"][];
+            report: {
+                counts: components["schemas"]["ImportCounts"];
+                rows: components["schemas"]["ImportReportRow"][];
+            } | null;
+            previewToken: string | null;
+        };
+        ImportIssue: {
+            row: number | null;
+            /** @enum {string|null} */
+            target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address" | null;
+            /** @enum {string} */
+            code: "required_missing" | "invalid_date" | "date_has_time" | "birth_date_in_future" | "end_before_birth" | "too_long" | "control_characters" | "invalid_cell_type" | "duplicate_in_file" | "identifier_cell_numeric" | "postal_code_invalid" | "foreign_address_unsupported" | "country_required" | "country_source_conflict" | "address_incomplete" | "target_mapped_twice" | "age_implausible" | "value_invalid_dropped" | "identifier_cell_converted" | "possible_duplicate" | "terminal_not_updated" | "kept_existing";
+            /** @enum {string} */
+            severity: "error" | "warning";
+        };
+        ImportCounts: {
+            rows: number;
+            create: number;
+            update: number;
+            unchanged: number;
+            skip: number;
+            error: number;
+            warnings: number;
+            missing: number;
+        };
+        ImportReportRow: {
+            row: number;
+            /** @enum {string} */
+            outcome: "create" | "update" | "unchanged" | "skip" | "error";
+            personnelNumber?: string;
+            issues: components["schemas"]["ImportIssue"][];
+            changes?: {
+                /** @enum {string} */
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                old: string | null;
+                new: string;
+            }[];
+            kept?: {
+                /** @enum {string} */
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address";
+                value: string;
+            }[];
+        };
+        ImportPreviewInput: {
+            file: string;
+            sheet?: string;
+            /** @default 1 */
+            headerRow: number;
+            csv?: {
+                /** @enum {string} */
+                delimiter?: ";" | "," | "\t";
+                /** @enum {string} */
+                encoding?: "utf-8" | "windows-1252";
+            };
+            country?: string | null;
+            /** Format: uuid */
+            waveId?: string;
+            mapping?: {
+                column: number;
+                /** @enum {string} */
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+            }[];
         };
     };
     responses: never;

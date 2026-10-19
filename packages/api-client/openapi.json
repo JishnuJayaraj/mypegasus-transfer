@@ -1543,6 +1543,550 @@
           "decisions"
         ],
         "additionalProperties": false
+      },
+      "ImportPreview": {
+        "type": "object",
+        "properties": {
+          "format": {
+            "type": "string",
+            "enum": [
+              "xlsx",
+              "csv"
+            ]
+          },
+          "sheets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sheet": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "csv": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "delimiter": {
+                "type": "string",
+                "enum": [
+                  ";",
+                  ",",
+                  "\t"
+                ]
+              },
+              "encoding": {
+                "type": "string",
+                "enum": [
+                  "utf-8",
+                  "windows-1252"
+                ]
+              }
+            },
+            "required": [
+              "delimiter",
+              "encoding"
+            ],
+            "additionalProperties": false
+          },
+          "headerRow": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "headers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggestedMapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "target": {
+                  "type": "string",
+                  "enum": [
+                    "personnelNumber",
+                    "lastName",
+                    "firstName",
+                    "birthDate",
+                    "oldEmploymentEndDate",
+                    "addressStreet",
+                    "addressPostalCode",
+                    "addressCity",
+                    "addressCountry",
+                    "phone",
+                    "mobile",
+                    "privateEmail",
+                    "workEmail"
+                  ]
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "project",
+                    "customer",
+                    "builtin"
+                  ]
+                }
+              },
+              "required": [
+                "column",
+                "target",
+                "source"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 49
+                },
+                "target": {
+                  "type": "string",
+                  "enum": [
+                    "personnelNumber",
+                    "lastName",
+                    "firstName",
+                    "birthDate",
+                    "oldEmploymentEndDate",
+                    "addressStreet",
+                    "addressPostalCode",
+                    "addressCity",
+                    "addressCountry",
+                    "phone",
+                    "mobile",
+                    "privateEmail",
+                    "workEmail"
+                  ]
+                }
+              },
+              "required": [
+                "column",
+                "target"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "missingTargets": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "personnelNumber",
+                "lastName",
+                "firstName",
+                "birthDate",
+                "oldEmploymentEndDate",
+                "addressStreet",
+                "addressPostalCode",
+                "addressCity",
+                "addressCountry",
+                "phone",
+                "mobile",
+                "privateEmail",
+                "workEmail",
+                "address"
+              ]
+            }
+          },
+          "mappingIssues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            }
+          },
+          "report": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "counts": {
+                "$ref": "#/components/schemas/ImportCounts"
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ImportReportRow"
+                }
+              }
+            },
+            "required": [
+              "counts",
+              "rows"
+            ],
+            "additionalProperties": false
+          },
+          "previewToken": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "format",
+          "sheets",
+          "sheet",
+          "csv",
+          "headerRow",
+          "headers",
+          "suggestedMapping",
+          "mapping",
+          "missingTargets",
+          "mappingIssues",
+          "report",
+          "previewToken"
+        ],
+        "additionalProperties": false
+      },
+      "ImportIssue": {
+        "type": "object",
+        "properties": {
+          "row": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "personnelNumber",
+              "lastName",
+              "firstName",
+              "birthDate",
+              "oldEmploymentEndDate",
+              "addressStreet",
+              "addressPostalCode",
+              "addressCity",
+              "addressCountry",
+              "phone",
+              "mobile",
+              "privateEmail",
+              "workEmail",
+              "address",
+              null
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "required_missing",
+              "invalid_date",
+              "date_has_time",
+              "birth_date_in_future",
+              "end_before_birth",
+              "too_long",
+              "control_characters",
+              "invalid_cell_type",
+              "duplicate_in_file",
+              "identifier_cell_numeric",
+              "postal_code_invalid",
+              "foreign_address_unsupported",
+              "country_required",
+              "country_source_conflict",
+              "address_incomplete",
+              "target_mapped_twice",
+              "age_implausible",
+              "value_invalid_dropped",
+              "identifier_cell_converted",
+              "possible_duplicate",
+              "terminal_not_updated",
+              "kept_existing"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ]
+          }
+        },
+        "required": [
+          "row",
+          "target",
+          "code",
+          "severity"
+        ],
+        "additionalProperties": false
+      },
+      "ImportCounts": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "create": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "update": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unchanged": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skip": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "error": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "warnings": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "missing": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "rows",
+          "create",
+          "update",
+          "unchanged",
+          "skip",
+          "error",
+          "warnings",
+          "missing"
+        ],
+        "additionalProperties": false
+      },
+      "ImportReportRow": {
+        "type": "object",
+        "properties": {
+          "row": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "unchanged",
+              "skip",
+              "error"
+            ]
+          },
+          "personnelNumber": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ImportIssue"
+            }
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "enum": [
+                    "personnelNumber",
+                    "lastName",
+                    "firstName",
+                    "birthDate",
+                    "oldEmploymentEndDate",
+                    "addressStreet",
+                    "addressPostalCode",
+                    "addressCity",
+                    "addressCountry",
+                    "phone",
+                    "mobile",
+                    "privateEmail",
+                    "workEmail"
+                  ]
+                },
+                "old": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "new": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target",
+                "old",
+                "new"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "kept": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "enum": [
+                    "personnelNumber",
+                    "lastName",
+                    "firstName",
+                    "birthDate",
+                    "oldEmploymentEndDate",
+                    "addressStreet",
+                    "addressPostalCode",
+                    "addressCity",
+                    "addressCountry",
+                    "phone",
+                    "mobile",
+                    "privateEmail",
+                    "workEmail",
+                    "address"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "target",
+                "value"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "row",
+          "outcome",
+          "issues"
+        ],
+        "additionalProperties": false
+      },
+      "ImportPreviewInput": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8388608,
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+          },
+          "sheet": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "headerRow": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 1
+          },
+          "csv": {
+            "type": "object",
+            "properties": {
+              "delimiter": {
+                "type": "string",
+                "enum": [
+                  ";",
+                  ",",
+                  "\t"
+                ]
+              },
+              "encoding": {
+                "type": "string",
+                "enum": [
+                  "utf-8",
+                  "windows-1252"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "waveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 49
+                },
+                "target": {
+                  "type": "string",
+                  "enum": [
+                    "personnelNumber",
+                    "lastName",
+                    "firstName",
+                    "birthDate",
+                    "oldEmploymentEndDate",
+                    "addressStreet",
+                    "addressPostalCode",
+                    "addressCity",
+                    "addressCountry",
+                    "phone",
+                    "mobile",
+                    "privateEmail",
+                    "workEmail"
+                  ]
+                }
+              },
+              "required": [
+                "column",
+                "target"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -3428,6 +3972,127 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/imports/preview": {
+      "post": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Preview an Excel/CSV import: sheets, headers, suggested mapping and, for a mapping, the report; writes nothing",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportPreviewInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload too large",
             "content": {
               "application/problem+json": {
                 "schema": {
