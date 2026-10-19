@@ -444,9 +444,12 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
   DSV periods over twelve months are **not supported by the MVP** (not unlawful: §111 SGB III limits
   Transfer-KuG, not the contract) and are handled outside the app with their records.
 - **Changing them** (Slice 2 plan 5.7; pilot decision, Q102): only the project's PL. A missed start gets a genuinely new
-  start date that needs a fully executed DSV amendment (all original parties by default) and a
-  direct transition from the former employment; with a gap it is `ba_review_required` for a
-  recorded BA/legal determination, never an ordinary late entry. A new start is never in the past,
+  start date. Once the DSV is signed it needs a fully executed DSV amendment (all original parties
+  by default); for an unsigned DSV the later offer carries the new date
+  ([round 33](../decisions/2026-10-19-answers-round-33.md), narrowing round 32 L6). The transition
+  from the former employment must be direct: it ends exactly the day before the new start. With a
+  gap it is `ba_review_required` for a recorded BA/legal determination, never an ordinary late
+  entry; an overlap is refused. A new start is never in the past,
   and not today once today's entry run has completed. `tgEnd` is never set in the past; after
   entry it only **extends**, by an amendment fully executed before the current end; a shortening
   is an early termination through the cancellation/exit workflow (§623 BGB: paper form). Past-date

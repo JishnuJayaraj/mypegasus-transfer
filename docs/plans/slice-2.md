@@ -7,8 +7,10 @@
   implementation. Q110 has accepted fail-safe pilot defaults and does not block 2h. External
   ratification is a future production/real-personal-data readiness activity, not a development or
   sample-data pilot gate. Round 30's proposed package was never applied; round 32 supersedes it.
-- **PR 2h plan (2026-10-19): for approval.** Re-estimated and divided into 2h-1, 2h-2 and 2h-3
-  under CLAUDE.md's PR-size rule ("Planned in PR 2h", section 3); readings R29–R44; Q111 🔒 added.
+- **PR 2h plan (2026-10-19): approved with amendments** ([round 33](../decisions/2026-10-19-answers-round-33.md)).
+  Re-estimated and divided into 2h-1, 2h-2 and 2h-3 under CLAUDE.md's PR-size rule ("Planned in
+  PR 2h", section 3); readings R29–R44 and Q111 🔒 accepted as revisitable pilot decisions; R34
+  narrows round 32 L6 for an unsigned DSV.
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
@@ -31,7 +33,7 @@ corrections are applied throughout; the readings taken while applying them are R
 | # | Topic | Decision |
 |---|---|---|
 | D1 | PR shape | **12 PRs, 2a–2h** (section 3), tests first, each green on its own, each under ~500 hand-written production lines. **Superseded for 2h by CLAUDE.md's PR-size rule (#51):** one PR per planned unit, split only for unrelated concerns or above ~1,500 changed lines (tests and generated code excluded); 2h is 2h-1 to 2h-3. |
-| D2 | Writes with audit | Every write that must be audited goes through a narrowly scoped **`SECURITY DEFINER` function** that writes the change and its audit event in the caller's transaction, as in Slice 1 (D2, round 16): project creation and edits, activation, waves, participation dates, template pins, override versions, relaxation requests and decisions, person data. `transfer_app` gets `SELECT` on the new tables and no direct DML, except on `import_column_mapping` (no personal data, no audit). Typed parameters; the only `jsonb` parameters are versioned configuration payloads validated by the service first (round 26): a template's content for `pin_agentur_template` (5.8) and an override's content for the override function (5.9), each also checked for structure in SQL. |
+| D2 | Writes with audit | Every write that must be audited goes through a narrowly scoped **`SECURITY DEFINER` function** that writes the change and its audit event in the caller's transaction, as in Slice 1 (D2, round 16): project creation and edits, activation, waves, participation dates, template pins, override versions, relaxation requests and decisions, person data. `transfer_app` gets `SELECT` on the new tables and no direct DML, except on `import_column_mapping`: a cache of keyed header hashes with no link to a person or participation and no audit (classed confidential, possibly pseudonymised participant data, R44; the direct-DML exception is accepted for the pilot in round 33). Typed parameters; the only `jsonb` parameters are versioned configuration payloads validated by the service first (round 26): a template's content for `pin_agentur_template` (5.8) and an override's content for the override function (5.9), each also checked for structure in SQL. |
 | D3 | Serialising setup and lifecycle | A transaction-scoped **project advisory lock**, **acquired inside the database functions** (round 22), never left to a service: every setup mutation function takes it exclusively itself; `lock_participation` takes it shared before its row lock; `create_participation` takes it shared. Lock order is always **project → template version → participation row**. A service that must read and decide before writing (activation, migration, the import confirm) also calls `lock_project_setup` first; the functions' own acquisition is re-entrant within the transaction. So a wave edit never interleaves with a status change that reads the wave, and two imports of one project never race. |
 | D4 | Memberships | A minimal **`project_membership`** table now (project, staff user, project role; zero or more roles, D6 of Slice 1), filled by project creation and the seed. Managing members and participant assignments is Slice 3. |
 | D5 | Templates | Template versions are **normalised into `config_template_version`**, keyed by `(agentur_key, version)`, with content and canonical SHA-256; a project's pins reference it, and resolution reads only the stored content (the project snapshot). Cross-project serialisation by the primary key: the first pin of a version registers it, every later pin compares **both the stored `jsonb` content and the hash** (same claimed hash, different content → refused). Existing versions are immutable in the repo too (generated manifest + CI check against the base branch). |
@@ -55,7 +57,7 @@ data exists while retention periods are `unset`.
 | R2 | The **approver of a relaxation** (Q75 "with reason, approval and audit") is the regional operations manager, a different user from the requester, **before** it takes effect, like a profiling exception (Q80). Global scope until Slice 3 (round 18, reading 2). | 5.9 | Q99 ✔ |
 | R3 | The **controlled reason codes** for a relaxation are the four proposed in 5.9; the list is the owner's to set. | 5.9 | Q100 ✔ |
 | R4 | **Wave edits once in use** follow the rules in 5.6 (ordering derived from the offer and entry guards; no retroactive cutoff; no change of a signing deadline open offers depend on; a passed default TG start stays; dates clear only while unused; no deletion). | 5.6 | Q101 (round 32, accepted pilot decision) |
-| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. **Amended by round 32** (5.7): the dates are the contractual employment dates; the twelve-month check is an MVP support limit; a new start and a `tgEnd` change after entry need a fully executed DSV amendment; `tgEnd` only extends (a shortening is the exit workflow); a gap after the former employment is `ba_review_required`; each change creates a BA reporting task. | 5.7 | Q102 (round 32, accepted pilot decision) |
+| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. **Amended by round 32** (5.7): the dates are the contractual employment dates; the twelve-month check is an MVP support limit; a new start and a `tgEnd` change after entry need a fully executed DSV amendment (narrowed by R34, round 33: once the DSV is signed); `tgEnd` only extends (a shortening is the exit workflow); a gap after the former employment is `ba_review_required`; each change creates a BA reporting task. | 5.7 | Q102 (round 32, accepted pilot decision) |
 | R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); **German addresses only until Q103 is answered** (R23); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; **numeric XLSX cells refused for identifiers** (R24); age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. Settled before PRs 2f/2g. **Amended by round 32** (5.11): `addressCountry` is stored (`DE`, `DEU`, `Deutschland`, `Germany` → `DE`); one structured address; a five-digit numeric postcode converts with a warning; the PL picks the header row among the first 20; the phone check and the mapping suggestions are set. | 5.11 | Q103 (round 32, accepted pilot decision) |
 | R7 | **Saved column mappings "per customer"** are keyed by the project's customer name (trimmed, case-folded) until a customer entity exists, and store only a keyed hash of each normalised header, never header text (a file without a header row would otherwise store a person's name). | 5.11 | Q104 ✔ |
 | R8 | **Retention classes of the person data** 🔒: identity (`firstName`, `lastName`, `birthDate`, `personnelNumber`, the evidence-set identity of round 13) → `participation_record`; address, phone, mobile, private and work email, `oldEmploymentEndDate` → `personnel_file` (never in the evidence set, round 13). Periods stay `unset` until the Slice 7 job implements them. | 5.10 | Q105 🔒 (round 32, accepted pilot decision) |
@@ -81,7 +83,7 @@ data exists while retention periods are `unset`.
 | R23 | **Foreign addresses — corrected in round 23:** five digits don't prove a German address. Until Q103 is answered, an import must **establish DE explicitly**, through a country column or a country constant the PL selects for the import; it is never inferred from the postal code. Rows of another country are refused (`foreign_address_unsupported`); without a country source the import can't be confirmed (`country_required`). The five-digit postal-code check applies to DE rows. **Amended by round 32:** the country is the stored field `addressCountry`; `country_required` applies when an address is imported; `DEU`, `Deutschland` and `Germany` also mean DE. | 5.11 | Q103 (round 32, accepted pilot decision) |
 | R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. **Amended by round 32:** a numeric postcode that is an integer of exactly five digits converts to them with a warning; fewer digits stay an error. | 5.11 | Q103 (round 32, accepted pilot decision) |
 | R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). **Confirmed by round 32** as an MVP support limit on DSV periods (longer ones are "unsupported by the MVP", never "unlawful" or "ineligible"), not a Transfer-KuG calculation. | 5.6, 5.7 | Q102 (round 32, accepted pilot decision) |
-| R26 | **Configuration-dependent audited operations — confirmed with this exact list (round 23):** `project_activated`, `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`, `import_confirmed`. Rejection and withdrawal carry none unless they resolve configuration; a later operation that resolves configuration joins the list (a test keeps it). | 5.3 | Q107 ✔ |
+| R26 | **Configuration-dependent audited operations — confirmed with this exact list (round 23):** `project_activated`, `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`, `import_confirmed`; **plus `participation_created_manually`** (2h-2, R32; added in round 33). Rejection and withdrawal carry none unless they resolve configuration; a later operation that resolves configuration joins the list (a test keeps it). | 5.3 | Q107 ✔ |
 | R27 | `config_template_version` is global reference data (no participant data), so it has **no `project_id`**: the owner chose this normalisation in round 22. Retention class `reference_data`, never touched by the retention job; the pins that use it carry `project_id`. | 5.2 | ✔ |
 | R28 | **Lock keys:** `pg_advisory_xact_lock(hashtextextended('project:' || id, 0))` (exclusive) and its `_shared` form; a hash collision only serialises two projects more than needed. The template-version identity is serialised by its primary key (the insert of a new version waits for a concurrent one to commit, then compares). | 5.3 | ✔ |
 
@@ -101,7 +103,8 @@ revised later. Where they differ from the readings above:
   possible duplicates by exact birth date and trimmed, case-insensitive names.
 - **Q102 (5.7; PR 2h):** the dates are the contractual employment dates (an earlier departure is
   `exitDate`); the twelve-month check is an MVP support limit; a new start needs a fully executed
-  DSV amendment and a direct transition from the former employment (else `ba_review_required`), and
+  DSV amendment (once the DSV is signed: R34, round 33) and a direct transition from the former
+  employment (else `ba_review_required`), and
   isn't today once today's entry run has completed; `tgEnd` never in the past, after entry only an
   extension by a fully executed amendment, a shortening is the cancellation/exit workflow; the
   amendment record and the BA reporting tasks are new (5.2, 5.7).
@@ -136,10 +139,11 @@ not block development. Still revisitable in `open-questions.md`:
 - **Q110** 🔒 (Legal, PL roles): two details of 2h: whether a date change after the DSV is signed
   but before entry needs an amendment (pilot default: yes), and the controlled original-location
   values (pilot default: `paper_personnel_file`). It does not block 2h.
-- **Q111** 🔒 (Legal, PL, BA process-owner roles; 2h plan): six details of the date rules round 32
-  doesn't name, each taken fail safe (R34–R39): when an amendment is needed, changes during an
-  open offer, shortening before entry, an unknown former-employment end, tasks for changes before
-  signature, and what `exitDate` means for an early exit. It does not block 2h.
+- **Q111** 🔒 (Legal, PL, BA process-owner roles; 2h plan): six details of the date rules (R34–R39):
+  when an amendment is needed (R34 narrows round 32 L6 for an unsigned DSV), changes during an open
+  offer, shortening before entry, an unknown former-employment end, tasks for changes before
+  signature, and what `exitDate` means for an early exit. **Accepted pilot decision in round 33**;
+  revisitable, it does not block 2h.
 
 ## 1. Goal
 
@@ -250,7 +254,7 @@ hand-written production lines (SQL included, tests excluded).
 | **2g-1** `feat(api): Excel/CSV import` | Spike S1; the parse worker (`read-excel-file`, `csv-parse`, encoding and delimiter detection, limits); preview and confirm routes; the atomic confirm through the creation edge; saved mappings (`import_column_mapping`); body limits; synthetic fixtures. | ~480 | 2d-1, 2f | the API imports |
 | **2g-2** `feat(web): import wizard` | Upload → sheet → mapping → report (errors, warnings, duplicates, updates) → confirm; the participant list (first version); Playwright happy path. | ~420 | 2g-1 | **demo path works** |
 | **2h-1** `feat: participant detail and wave assignment` | `participationListScope` and the detail projection (R29, R30); `GET /participations/{id}` with capabilities; `PUT /participations/{id}/entry-wave` (R33); the detail page with the wave choice; list rows link to it. | ~1,000 | 2g-2 | a participant can be opened; the PL assigns waves |
-| **2h-2** `feat: manual participant creation and the import follow-ups` | `POST /projects/{id}/participations` through the import rules (R32) and its form; the parse-worker cap (R43); the mapping classification and the header-row guard (R44). | ~720 | 2g-2 | a PL adds one person by hand |
+| **2h-2** `feat: manual participant creation and the import follow-ups` | `POST /projects/{id}/participations` through the import rules (R32) and its form; the parse-worker cap (R43); the mapping classification and the header-row guard (R44). | ~720 | 2h-1 (merged first: it links to the detail page; round 33) | a PL adds one person by hand |
 | **2h-3** `feat: individual TG dates, DSV amendments and BA reporting tasks` | `checkParticipationDates` (5.7, 100 %); `participation_dsv_amendment`, `ba_reporting_task`, `set_participation_dates`, the early-exit trigger (R38); `PUT /participations/{id}/dates`; the dates form with the amendment block; amendments and tasks on the detail page (R41, R42). | ~1,500 | 2h-1 | **slice done** |
 
 **Gates** (round 22, amended by round 32): the accepted pilot decisions unblock PRs 2f, 2g and
@@ -1191,7 +1195,7 @@ PRs**:
 | PR | Content | Est. | Based on | Ends with |
 |---|---|---|---|---|
 | **2h-1** `feat: participant detail and wave assignment` | `participationListScope` (the list fix, open point 2) and the detail projection in the domain; `GET /participations/{id}`; `PUT /participations/{id}/entry-wave`; the participant detail page with the wave choice; list rows link to it | ~1,000 | `main` | a PL and back office open a participant; the PL assigns a wave |
-| **2h-2** `feat: manual participant creation and the import follow-ups` | `POST /projects/{id}/participations` (one row through the import rules) and its form; the parse-worker cap (open point 1); the mapping classification and the header-row guard (open point 3) | ~720 | `main` (parallel to 2h-1) | a PL adds one person by hand |
+| **2h-2** `feat: manual participant creation and the import follow-ups` | `POST /projects/{id}/participations` (one row through the import rules) and its form; the parse-worker cap (open point 1); the mapping classification and the header-row guard (open point 3) | ~720 | `main` once 2h-1 is merged (its duplicate refusal and success link to the detail page of 2h-1; round 33) | a PL adds one person by hand |
 | **2h-3** `feat: individual TG dates, DSV amendments and BA reporting tasks` | `checkParticipationDates` (5.7, 100 %); `participation_dsv_amendment`, `ba_reporting_task`, `set_participation_dates`, the early-exit trigger; `PUT /participations/{id}/dates`; the dates form with the amendment block, amendments and tasks on the detail page | ~1,500 | 2h-1 (it needs the detail page and its API; stacked only while 2h-1 is unmerged) | **slice done** |
 
 Why not fewer: 2h-1 and 2h-2 together are ~1,720, and 2h-3 can't join either. Why not more: 2h-3
@@ -1290,12 +1294,14 @@ refuses with a German message per rule (5.7):
   **extended**; a shortening is refused with the hint that an earlier end is an exit through the
   cancellation/exit workflow (R36, L3).
 - *A new start after a missed start* (`tg_start_missed`): today at the earliest, tomorrow once
-  today's entry run has completed; never after the wave's latest entry date; the amendment must be
-  fully executed before the new start; and the former employment must run until at least the day
-  before the new start. If it ended earlier, the change is refused as `ba_review_required`
-  ("kein gewöhnlicher späterer Eintritt: BA-/Rechtsprüfung nötig"); nothing is stored, and the
-  recorded determination is Slice 7 (R40). Without a recorded Austrittsdatum the check can't run
-  and the change is refused (R37).
+  today's entry run has completed; never after the wave's latest entry date; once the DSV is
+  signed, the amendment must be fully executed before the new start (R34; for an unsigned DSV the
+  later offer carries the new date); and the transition must be **direct**: the former employment
+  ends exactly the day before the new start (round 33). If it ended earlier (a gap), the change is
+  refused as `ba_review_required` ("kein gewöhnlicher späterer Eintritt: BA-/Rechtsprüfung nötig");
+  nothing is stored, and the recorded determination is Slice 7 (R40). If it ends on or after the
+  new start (an overlap), the change is refused as `employment_overlap`. Without a recorded
+  Austrittsdatum the check can't run and the change is refused (R37).
 - *After TG entry*: the start is fixed; the end only extends, by an amendment fully executed on or
   before the current end.
 - On success the dates update, the hint "TG-Beginn verpasst" disappears with a future start, the
@@ -1316,16 +1322,16 @@ refuses with a German message per rule (5.7):
 | R31 | **Capabilities** on the detail (`assignEntryWave`, `setParticipationDates`) are server-derived like the project's (round 26) from the permission and the domain preconditions; the routes decide again. | 2h-1 | — |
 | R32 | **Manual creation is one import row**: the same targets, normalisation, required targets (base chain plus relaxations, 2g reading 11) and duplicate rule; the creation edge's permission (PL, Q60); under the exclusive project lock like the confirm. Differences: an existing Personalnummer is refused (`personnel_number_taken`), never updated; a value the import would drop (`value_invalid_dropped`) is a field error `value_invalid`; warnings need `confirmWarnings` and a possible duplicate `createDespiteDuplicate`, audited as `warning_confirmed` and `possible_duplicate`; a new audit type `participation_created_manually` carries `baseDefaultsVersion` (it resolves configuration, so it joins R26's list). | 2h-2 | — |
 | R33 | **Wave assignment** uses Slice 1's `assignEntryWave` unchanged, plus `individual_dates_set`: a participation with its own `tgStart` or `tgEnd` keeps its wave until the dates return to the wave default. A wave change creates no amendment and no BA task. | 2h-1 | — |
-| R34 | **An amendment is required exactly when the DSV track is `dsv_signed`** (covers L3 after entry, L6 for a missed start with a signed DSV, and Q110 a). Before signature there is no contract to amend: the DSV offered later carries the new dates. 5.7's "a new start needs an amendment" is read this way. | 2h-3 | Q111 a |
+| R34 | **An amendment is required exactly when the DSV track is `dsv_signed`** (covers L3 after entry, L6 for a missed start with a signed DSV, and Q110 a). Before signature there is no contract to amend: the DSV offered later carries the new dates. **This amends round 32 L6** ("a new start after a missed start requires a documented DSV amendment"), which applies only once the DSV is signed; for an unsigned DSV (expired, declined, not offered) the later offer carries the new date (accepted pilot decision, round 33). | 2h-3 | Q111 a |
 | R35 | **No date change while a DSV offer is open** (`dsv_offered`; `dsv_offer_open`): the paper offer carries the old dates. The PL waits for signature (then amends), decline or expiry (then re-offers). | 2h-3 | Q111 b |
 | R36 | **Once the DSV is signed, `tgEnd` only extends, before entry too** (`end_not_extension`): L3 excludes shortening by amendment, and Q110 a requires an amendment for every change after signature, so a shortening has no ordinary path; it is the cancellation/exit workflow. | 2h-3 | Q111 c |
 | R37 | **The direct-transition check needs a recorded `oldEmploymentEndDate`**; without one a new start is refused (`old_employment_end_unknown`), never presumed. The Austrittsdatum is required in the import unless relaxed, so this only hits a relaxed project or a seeded participation. The amendment doesn't change `oldEmploymentEndDate`; a re-import does. | 2h-3 | Q111 d |
 | R38 | **BA reporting tasks are created by the database** in the change's transaction: `set_participation_dates` derives the kinds from which *effective* dates changed (start → `later_entry`, end → `planned_end_changed`, both → both, each with the new date); an `AFTER UPDATE` trigger on `participation` creates `early_exit` with the exit date when the status becomes `exited` before the effective `tgEnd` (or with no effective end). Every successful change creates its tasks whatever the DSV state; all are `pending` in 2h, since whether the initial participant information was submitted (B3 case 1: `not_required`) is unknown before the Agentur-submission slice. | 2h-3 | Q111 e |
 | R39 | **`exitDate` is the last day of employment in the TG**, inclusive like `tgEnd` (an exit on the entry day is possible, round 18): an exit on the effective `tgEnd` is the regular end and creates no task. | 2h-3 | Q111 f |
-| R40 | **`ba_review_required` in 2h** is a refusal code plus a derived hint on the detail page (an `informed` participation flagged `tg_start_missed` whose `oldEmploymentEndDate` is before the day before the earliest allowed new start); nothing is stored. The recorded BA/legal determination is Slice 7. | 2h-3 | — |
+| R40 | **`ba_review_required` in 2h** is a refusal code plus a derived hint on the detail page (an `informed` participation flagged `tg_start_missed` whose `oldEmploymentEndDate` + 1 day is before the earliest allowed new start, so every direct transition is already in the past); nothing is stored. The recorded BA/legal determination is Slice 7. | 2h-3 | — |
 | R41 | **The amendment record**: one per successful change that needs one; `kind` `new_start` when the effective start changes, else `extension`; the three confirmations are three booleans that must all be `true` (`amendment_unconfirmed`), stored as the confirming PL and instant; `original_location` only `paper_personnel_file` (Q110 b); `document_reference` `^[A-Za-z0-9_./-]{1,40}$` or null; immutable (a trigger refuses `UPDATE`/`DELETE`). | 2h-3 | — |
 | R42 | **Access to amendments and BA tasks**: field catalog entries `dsvAmendment` and `baReportingTask`, confidential, access category `confidential`, not listable, `participation_record` (round 32 D3): read by the PL, back office and an assigned consultant; never in lists or customer exports. A task's status only moves forward (`pending` → `reported` or `not_required`); 2h has no function that moves it, a trigger refuses deletion and any other update. | 2h-3 | — |
-| R43 | **Parse-worker cap** (open point 1): at most **2** parse workers per API process; up to 8 further preview/confirm requests wait in order for at most 20 s; beyond that 503 `service-unavailable` with code `import_busy` and `Retry-After: 10`, which the wizard shows as "Gerade laufen mehrere Importe, bitte gleich erneut versuchen". Budget: 2 × ~300 MB plus the waiting requests (8 × ~13 MB, body and decoded file) and the API itself stay under 1 GiB per pod; the pod limit is set with the cluster deployment (ADR-0005). | 2h-2 | — |
+| R43 | **Parse-worker cap** (open point 1): at most **2** parse workers per API process; up to 8 further preview/confirm requests wait in order for at most 20 s; a request that finds the queue full **or whose 20 s wait expires** gets 503 `service-unavailable` with code `import_busy` and `Retry-After: 10` (round 33), which the wizard shows as "Gerade laufen mehrere Importe, bitte gleich erneut versuchen". Budget: 2 × ~300 MB plus the waiting requests (8 × ~13 MB, body and decoded file) and the API itself stay under 1 GiB per pod; the pod limit is set with the cluster deployment (ADR-0005). | 2h-2 | — |
 | R44 | **`import_column_mapping` classification** (open point 3), recorded in `data-protection.md`: a keyed hash of a value is pseudonymised, not anonymised data (Art. 4(5) GDPR), so if a data row was picked as the header row, the table holds pseudonymised values of a person. It is classed **`confidential`, possibly pseudonymised participant data**; retention stays `project_master` (it can't be linked to a person or participation). Mitigations: the confirm saves **no** mapping when the chosen header row looks like a data row (a cell that is a date or date cell, contains `@`, or has five or more digits), and the wizard says so; hashes are never served, logged or exported (suggestions return targets only); rotating the derived key makes every stored hash unlinkable. | 2h-2 | — |
 
 #### Tests first, and what each PR proves
@@ -1339,11 +1345,13 @@ refuses with a German message per rule (5.7):
 - **2h-2:** unit tests for the manual input's mapping onto one import row and its differences
   (R32), 100 %; integration tests for creation (every refusal, warnings, the duplicate decision,
   audit with `baseDefaultsVersion`, concurrent creation of one Personalnummer), for the worker cap
-  (a third parse waits, a queue overflow is 503 `import_busy`) and for the header-row guard (no
+  (a third parse waits; a queue overflow and an expired wait are each 503 `import_busy` with `Retry-After`) and for the header-row guard (no
   mapping saved); the data-catalog test with the new class; component tests for the form.
 - **2h-3:** `checkParticipationDates` first, one expected result per rule of 5.7 at its boundaries
-  (AC-36, AC-47), 100 %; integration tests for `set_participation_dates` (compare-and-set, audit,
-  amendment and task rows in one transaction, SQL refusing a missing amendment after signature),
+  (AC-36, AC-47; the direct transition at gap, exact adjacency and overlap), 100 %; integration
+  tests for `set_participation_dates` (compare-and-set, audit, amendment and task rows in one
+  transaction and all rolled back on a refusal, SQL refusing a missing amendment after signature
+  and one before it),
   the early-exit trigger (exit before, on and without a contractual end), the immutability
   triggers, grants and the reserved event type (AC-37, AC-40, AC-48); component tests for the dates
   form; the Playwright path changes an imported participant's end date before any offer.
@@ -1352,7 +1360,8 @@ refuses with a German message per rule (5.7):
 #### Domain gaps
 
 None blocks 2h. Six details the round 32 answers don't name are taken fail safe (R34–R39) and
-recorded as **Q111** 🔒 in `open-questions.md` for the Legal, PL and BA process-owner roles.
+recorded as **Q111** 🔒 in `open-questions.md`; round 33 accepts them as revisitable pilot
+decisions under the placeholder Legal, PL and BA process-owner roles.
 
 #### Open points from the 2g review
 
@@ -1423,7 +1432,7 @@ fixtures/imports/  synthetic sample files
 | `participant_details` (new) | same keys; `address_street`, `address_postal_code`, `address_city`, `address_country` (`^[A-Z]{2}$`, only `DE` in the MVP; round 32), `phone`, `mobile`, `private_email`, `work_email` (text null), `old_employment_end_date date null`, `created_at`, `updated_at`; the four address columns all set or all null (round 32) | `personnel_file` (new class in the data catalog, `unset`; R8) | `confidential` | yes |
 | `participation_dsv_amendment` (new, PR 2h-3, round 32; append-only) | `id`, `participation_id`, `project_id`, `kind` (`extension`, `new_start`), `fully_executed_on date`, `old_tg_start`/`new_tg_start`/`old_tg_end`/`new_tg_end` (effective dates, null where unknown), `confirmed_by` FK, `confirmed_at`, `original_location` (controlled, Q110), `document_reference` (`^[A-Za-z0-9_./-]{1,40}$`, null); composite FK to `participation`; no free text (R41) | `participation_record` (in the evidence set; D3) | `confidential` | yes |
 | `ba_reporting_task` (new, PR 2h-3, round 32; status moves forward only) | `id`, `participation_id`, `project_id`, `reporting_kind` (`later_entry`, `planned_end_changed`, `early_exit`), `subject_date date` (the new start, the new end or the exit date the report is about), `amendment_id` FK null, `status` (`pending`, `reported`, `not_required`), `created_at`, `reported_on date null`, `channel`/`reference` (controlled, null until reported; their values come with the Agentur-submission slice) (R38, R42) | `participation_record` | `confidential` | yes |
-| `import_column_mapping` (new) | `project_id` FK, `header_hmac text`, `target import_target`, `updated_by`, `updated_at`; pk `(project_id, header_hmac)`; the customer comes from the project | `project_master` | `internal` | no |
+| `import_column_mapping` (new) | `project_id` FK, `header_hmac text`, `target import_target`, `updated_by`, `updated_at`; pk `(project_id, header_hmac)`; the customer comes from the project | `project_master` (no person link, so no per-person class; R44, round 33) | `confidential` (R44; `internal` until 2h-2) | possibly, pseudonymised: keyed hashes of a data row picked as the header (R44) |
 
 - Every new table has a data-catalog entry and, except the global `config_template_version`
   (R27), a `project_id` FK; the catalog test enforces both.
@@ -1467,7 +1476,7 @@ the exclusive lock can still create and lock participations (re-entrant).
 | `update_project(id, name?, customer?, type?, agentur_key?, context)` | type only while draft without participations or waves; Agentur key only while draft | `project_changed` (changed keys) |
 | `activate_project(id, base_defaults_version, context)` | draft → active; re-checks: Project Agentur pinned; `ta_tg` has a wave with `latest_entry_date` | `project_activated` |
 | `create_entry_wave` / `update_entry_wave(… typed dates …, context)` | `ta_tg` only, ordering `CHECK`s, `updated_at` | `entry_wave_created` / `entry_wave_changed` (changed keys, old/new dates) |
-| `set_participation_dates(id, tg_start, tg_end, expected_version, context)` | compare-and-set on `status_version`, bumps it | `participation_dates_changed` (old/new dates) |
+| `set_participation_dates(id, tg_start, tg_end, expected_version, amendment_kind, amendment_fully_executed_on, amendment_original_location, amendment_document_reference, amendment_confirmed, context)` (PR 2h-3; round 33) | typed parameters only (the amendment ones all null or all set, `amendment_confirmed` true); takes the shared project lock and the row lock, compare-and-set on `status_version` (bumps it); refuses `dsv_amendment_required` when the DSV track is `dsv_signed` without an amendment and `amendment_not_allowed` with one before signature; refuses `dates_unchanged`; then, **in this one call**, updates the dates, inserts the immutable amendment row, inserts one `ba_reporting_task` per changed effective date (R38) and writes the audit event. Any refusal or error raises, so the date change, the amendment, the tasks and the audit event commit together or not at all. `transfer_app` has `SELECT` only on the amendment and task tables, never DML | `participation_dates_changed` (old/new dates, amendment id, task kinds) |
 | `pin_agentur_template(project, key, version, content, sha256, context)` | project lock; `INSERT … ON CONFLICT DO NOTHING` into `config_template_version`, then refuses `template_version_changed` unless the stored content **equals the supplied `jsonb`** and the stored hash equals the supplied hash; appends the pin; from PR 2e-2 only the **first** pin of an Agentur in the project (the body is the internal `append_template_pin`) | `config_template_pinned` (key, version, previous version, base-defaults version) |
 | `migrate_agentur_template(project, key, from_version, version, content, sha256, expected_version, override_content?, base_defaults_version, context)` (PR 2e-2) | project lock; the new pin through `append_template_pin` (pinned, newer, still `from_version`); the expected override version; with `override_content`, the next override version that only removes keys of that Agentur's scoped setting (round 27's exact delta) | `config_template_pinned` (with `previousVersion`), and `config_override_changed` (`agentur_setting_reviewed`, removed and kept keys) when keys are removed |
 | `write_project_override(project, expected_version, content, change, agentur_key, base_defaults_version, context, rule_id)` | next version or `override_version_stale`; exactly the claimed change (round 27); never adds a relaxation (internal `append_project_override`, only from `decide_rule_relaxation`; round 28) | `config_override_changed` (exists; version, change kind, Agentur key or rule id) |
@@ -1481,12 +1490,16 @@ the exclusive lock can still create and lock participations (re-entrant).
   events by `request_id`.
 - Grants: `transfer_app` loses `INSERT` on `project`; gets `SELECT` on the new tables and
   `SELECT, INSERT, UPDATE` on `import_column_mapping`; `EXECUTE` on the new functions. Tested like
-  Slice 1 AC-15.
+  Slice 1 AC-15. The direct DML on `import_column_mapping` is the one exception to D2: a cache of
+  keyed header hashes, never served, with no link to a person or participation and nothing to
+  audit; it is classed confidential because a hash may come from a data row picked as the header
+  (R44), and the exception is accepted for the pilot (round 33).
 - `audit_event` stays without an app `SELECT`: Slice 2 shows no history UI.
 - **Base-defaults version (R26, round 23):** exactly `project_activated`,
   `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`,
-  `rule_relaxation_approved` and `import_confirmed` carry `baseDefaultsVersion` in their details; the functions require the parameter, and an audit-model
-  test keeps the list of configuration-dependent event types.
+  `rule_relaxation_approved`, `import_confirmed` and, from 2h-2, `participation_created_manually`
+  (round 33) carry `baseDefaultsVersion` in their details; the functions require the parameter,
+  and an audit-model test keeps the list of configuration-dependent event types.
 
 ### 5.4 Access (R9, R17)
 
@@ -1576,11 +1589,12 @@ projectType })`:
 | … and not today once today's entry run has completed (until automatic same-day reconciliation exists; round 32 PL 4) | `start_today_after_entry_run` |
 | … not after the wave's `latestEntryDate` | `start_after_latest_entry` |
 | … not before an open `offerDeadline` (existing table check, as a domain error) | `start_before_offer_deadline` |
-| a new start keeps the direct transition from the former employment (`oldEmploymentEndDate` is the day before the new `tgStart` or later); otherwise it isn't an ordinary late entry: refused and marked for review (L6, B4) | `ba_review_required` |
+| a new start keeps the **direct** transition from the former employment: `oldEmploymentEndDate` equals the new `tgStart` − 1 day (round 33). A gap (it ended earlier) isn't an ordinary late entry: refused and marked for review (L6, B4) | `ba_review_required` |
+| … an overlap (the former employment ends on or after the new `tgStart`) is refused too (round 33) | `employment_overlap` |
 | a new effective `tgEnd` is not in the past | `end_in_past` |
 | after TG entry `tgEnd` only extends (new end later than the current one); a shortening is the cancellation/exit workflow (§623 BGB), never this operation (L3) | `end_not_extension` |
 | no change while a DSV offer is open (2h plan, R35) | `dsv_offer_open` |
-| a change that needs an amendment has one: any change once the DSV is signed (R34: covers a new start after a missed start, L6; a `tgEnd` change after entry, L3; Q110 a) | `dsv_amendment_required` |
+| a change that needs an amendment has one: any change once the DSV is signed (R34: covers a new start after a missed start, L6, which R34 narrows to a signed DSV; a `tgEnd` change after entry, L3; Q110 a); an amendment before signature is refused | `dsv_amendment_required`, `amendment_not_allowed` |
 | once the DSV is signed, `tgEnd` only extends, before entry too (R36) | `end_not_extension` |
 | the direct-transition check needs a recorded `oldEmploymentEndDate` (R37) | `old_employment_end_unknown` |
 | a change that changes no effective date is refused without a write | `dates_unchanged` |
@@ -1829,6 +1843,8 @@ All under `/api/v1`, `@hono/zod-openapi`, RFC 9457, cursor pagination for lists.
 
 - New problem types: `conflict` (409), `domain-error` (422, `errors[].code`, plus `failedGuards`
   where a guard failed), `payload-too-large` (413). Service refusals map per R21.
+  From 2h-2: `service-unavailable` (503) with code `import_busy` and `Retry-After`, when the
+  parse-worker queue is full or a request's wait expires (R43).
 - Lists page by `(created_at, id)` (R19). Participant list items: id, statuses, wave id,
   Personalnummer, last and first name (only fields allowed for `list`).
 - `GET /projects/{projectId}/config` returns pins (key, version, hash prefix, pinned at/by),
@@ -2017,7 +2033,8 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       `packages/config/src/{override,migration,hash}.ts`. (CI)
 - [ ] **AC-44** The generated transitions/permissions table shows the new operations; OpenAPI and
       the client have no drift. (U, CI)
-- [ ] **AC-45** Every configuration-dependent audit event (R26) carries `baseDefaultsVersion`; a
+- [ ] **AC-45** Every configuration-dependent audit event (R26, with `participation_created_manually`
+      from 2h-2) carries `baseDefaultsVersion`; a
       test fails for a listed type without it. (U, I)
 - [ ] **AC-46** Import identifiers and addresses: a numeric XLSX cell for Personalnummer is
       `identifier_cell_numeric`; for a postal code a five-digit integer converts with
@@ -2026,11 +2043,14 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       `addressCountry` from a column or the import's selection, `DE`/`DEU`/`Deutschland`/`Germany`
       → `DE`, another value `foreign_address_unsupported`, an address without a country source
       `country_required`, a partial address `address_incomplete` (round 32). (U)
-- [ ] **AC-47** Dates after the DSV (2h, round 32): a new start or a `tgEnd` change after entry
+- [ ] **AC-47** Dates after the DSV (2h, rounds 32 and 33): once the DSV is signed, every change
       needs a fully executed, confirmed amendment (`dsv_amendment_required`,
-      `amendment_not_executed_in_time`, `amendment_unconfirmed`); a shortening is refused
-      (`end_not_extension`); a gap after the former employment is `ba_review_required`; a new start
-      of today after today's entry run is refused. (U, I)
+      `amendment_not_executed_in_time`, `amendment_unconfirmed`), and one before signature is
+      refused (`amendment_not_allowed`); a shortening is refused (`end_not_extension`); a new start
+      is direct only when `oldEmploymentEndDate` is exactly the day before it: a gap is
+      `ba_review_required`, an overlap `employment_overlap`, exact adjacency passes (boundary
+      cases); the date change, amendment, tasks and audit commit together or not at all; a new
+      start of today after today's entry run is refused. (U, I)
 - [ ] **AC-48** Every contractual date change and every exit before the effective `tgEnd` creates
       exactly one immutable BA reporting task of the right kind, `pending` (2h, round 32). (I)
 - [ ] **AC-49** The list and the detail follow `participationListScope` (R29): a consultant with
@@ -2054,7 +2074,9 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - No hard-coded regional rules: regional values only in templates and Agentur-scoped settings;
   the import's required targets come from the base rules and approved relaxations.
 - No vendor calls outside adapters: the parsers are libraries in one module, not services.
-- New personal data: two tables with class, access category and retention class (5.10, Q105).
+- New personal data: two tables with class, access category and retention class (5.10, Q105);
+  in 2h the amendment and BA-task tables (`participation_record`, R42) and the reclassified
+  `import_column_mapping` (confidential, possibly pseudonymised, `project_master`; R44, round 33).
 
 ## 8. Deliberately left out
 
