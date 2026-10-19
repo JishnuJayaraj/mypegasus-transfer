@@ -41,6 +41,14 @@
 - **Additions (round 7, assumed, Q66):**
   - Familienstand, gender, Personalnummer, end of the old employment, knowledge date, work
     email, language skills, driving licence: **confidential**.
+  - **Address country** (`addressCountry`, Q103/Q105, [round 32](../decisions/2026-10-19-answers-round-32.md)): personal data,
+    **confidential**, part of the structured address (street, postal code, city, country), retention
+    class `personnel_file`. It is not nationality or citizenship and not a special category (Art. 9
+    GDPR). Only `DE` in the MVP; never inferred from the postal code.
+  - **DSV amendment metadata** (PR 2h, Q102/Q105, round 32): **confidential**, retention class
+    `participation_record`, part of the evidence set, never in ordinary participant lists or
+    customer exports; no free text. The signed amendment itself is an `employment_contract`
+    document: highly confidential, encrypted when uploaded, immutable, separately access-controlled.
   - End reason `long_term_illness_reduced_earning_capacity`: **special category**, never in
     ordinary lists. End reason `deceased`: confidential.
   - Profiling-exception reasons: **structured reason codes** where possible (Q81); a free-text
@@ -264,15 +272,19 @@ Transfer-KuG): identity, measure, dates and times of participation, signed parti
   when a project ended more than 12 months ago without them.
 - Access is break-glass only.
 
-**Retention classes of the tables so far** (`packages/db/src/data-catalog.ts`; periods `unset`
-until the DPO confirms them, so no deletion job may touch them):
+**Retention classes of the tables so far** (`packages/db/src/data-catalog.ts`). The data catalog
+keeps every period `unset` until the retention job (Slice 7) encodes the DPO's rules below, so no
+deletion job touches any class before then. Round 32 recorded the rules for `project_master`,
+`participation_record` and `personnel_file`; a legal hold suspends only the affected records, never
+the whole participant profile:
 
 | Class | Tables | Rule |
 |---|---|---|
-| `project_master` | `project`, `project_membership` (staff ids and project roles, Slice 2), `project_entry_wave`, `project_template_pin` (which template versions a project pinned, by which staff user, Slice 2), `project_config_override` (override versions: Agentur-scoped settings with source codes, the confirming staff id and date, approved relaxations with rule id, reason code, approving staff id and date; project-wide, no participant data; append-only, PR 2d-1), `config_relaxation_request` (relaxation requests: rule id, controlled reason code, status, requesting and deciding staff ids and dates; project-wide, no participant data, PR 2d-2) | Q58 (open) |
+| `project_master` | `project`, `project_membership` (staff ids and project roles, Slice 2), `project_entry_wave`, `project_template_pin` (which template versions a project pinned, by which staff user, Slice 2), `project_config_override` (override versions: Agentur-scoped settings with source codes, the confirming staff id and date, approved relaxations with rule id, reason code, approving staff id and date; project-wide, no participant data; append-only, PR 2d-1), `config_relaxation_request` (relaxation requests: rule id, controlled reason code, status, requesting and deciding staff ids and dates; project-wide, no participant data, PR 2d-2) | DPO, [round 32](../decisions/2026-10-19-answers-round-32.md) (Q58): retained while active or unsettled; after closure until the later of the end of the 3rd calendar year after closure and the end of the 4th calendar year after the later BA/§110 final settlement date; a never-activated draft without participants, never submitted externally: 1 year after its last activity. At expiry membership links and actor references are deleted or pseudonymised per the audit policy and identifying free text deleted; accounting, payroll, contract and tax records keep their own classes |
 | `staff_account` | `staff_user` | deactivate and pseudonymise, never delete (Q59, assumed) |
-| `participation_record` | `participation`, `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or client responses, round 17; evidence records get their own class in Slice 4b) | per the table above: non-signers 90 days after `withdrawnOn` (Q77, assumed), otherwise with the personnel file and the evidence set |
+| `participation_record` | `participation`, `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or client responses, round 17; evidence records get their own class in Slice 4b) | per the table above: non-signers 90 days after `withdrawnOn` (Q77, assumed), otherwise with the personnel file and the evidence set; DPO, [round 32](../decisions/2026-10-19-answers-round-32.md) (Q105): non-signer without a fully executed DSV or funded §110 participation 90 calendar days after `withdrawnOn` (unless a legal hold or documented dispute); fully executed DSV without TG entry, end of the 3rd calendar year after cancellation or contractual end; TG participant, end of the 3rd calendar year after exit; BA-funded, the minimum evidence set until the end of the 4th calendar year after the later of `kugFinalSettlementDate`/`measure110SettlementDate`, never while one is missing |
 | `audit_log` | `audit_event` | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
+| `personnel_file` (Slice 2, PR 2f) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate` | DPO, [round 32](../decisions/2026-10-19-answers-round-32.md) (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
 | `reference_data` | `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`, R27) | no personal data; never touched by the retention job |
 
 Implementation:
