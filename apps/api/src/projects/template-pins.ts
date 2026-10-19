@@ -290,6 +290,8 @@ export async function projectConfig(
       activateProject: may({ kind: "activateProject" }) && found.status === "draft",
       // A pinned template migrates in draft and active projects alike (5.8).
       migrateTemplate: may({ kind: "migrateTemplate" }),
+      // The import works in draft and active projects alike (R1).
+      importParticipations: may({ kind: "importParticipations" }),
     },
   };
 }

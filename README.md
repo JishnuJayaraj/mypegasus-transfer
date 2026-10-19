@@ -9,7 +9,8 @@ end (Postgres, Hono API, staff SPA), a thin participant portal shell (de/en), an
 image that serves the API and both SPAs. Slice 1 (domain core, [plan](docs/plans/slice-1.md)) is
 complete: the lifecycle, Transfer-KuG eligibility, the access matrix, completeness, regional
 configuration, the status functions and service with the seed, and pg-boss in the API with the
-nightly lifecycle sweep. Next: Slice 2 ([roadmap](docs/roadmap.md)).
+nightly lifecycle sweep. Slice 2 ([plan](docs/plans/slice-2.md)) is under way: project setup,
+configuration and the Excel/CSV import API are in; the wizard and participations (detail, dates) follow.
 
 ```
 pnpm install && pnpm db:setup && pnpm db:seed && pnpm dev   # web :5173, portal :5174/portal/
