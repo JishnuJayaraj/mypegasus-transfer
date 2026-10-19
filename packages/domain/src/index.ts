@@ -130,6 +130,32 @@ export {
   type MigrationIssueCode,
 } from "./projects/migration";
 export {
+  addressParts,
+  checkMapping,
+  ImportIssueCode,
+  ImportTarget,
+  isRequired,
+  normaliseCountry,
+  normaliseHeader,
+  suggestTargets,
+  type ImportIssue,
+} from "./import/targets";
+export {
+  parseGermanDate,
+  validateRow,
+  type ImportCell,
+  type ImportValues,
+  type RowInput,
+  type ValidatedRow,
+} from "./import/rows";
+export {
+  ImportRowOutcome,
+  planImport,
+  type ExistingParticipant,
+  type ImportPlan,
+  type PlannedRow,
+} from "./import/plan";
+export {
   effectiveOfferDeadline,
   effectiveTgEnd,
   effectiveTgStart,
