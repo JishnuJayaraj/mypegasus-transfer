@@ -82,4 +82,12 @@ Non-blocking:
   `pin_version_stale`, nothing written; both failed against the previous order); the canonical
   form moved to `packages/config/src/canonical.ts` (no imports), used by `hash.ts` and
   `migration.ts` (non-blocking item 1); this record, the plan's readings, ADR-0002.
-- 2e-2b (#41) and 2e-2c (#42): see their commits.
+- 2e-2b (#41): the confirm in the order above (`planMigrationTarget`, renamed from `plan`:
+  non-blocking item 2); API tests for a concurrent migration that reached the target and one
+  beyond it (both 409, nothing written); the preview in one read-only `REPEATABLE READ`
+  transaction, with a test that pauses it between the pins and the override while a migration
+  commits (it saw the mixed state under `READ COMMITTED`); OpenAPI regenerated for `AgenturKey`.
+- 2e-2c (#42): the target selector is disabled while a preview or confirm is pending, with a
+  delayed-response test for targets [2, 3] (it failed without the fix); `useSettingText` shares
+  the setting and value labels between the settings table and the review, and the exported
+  `Value` type is gone (non-blocking item 3).
