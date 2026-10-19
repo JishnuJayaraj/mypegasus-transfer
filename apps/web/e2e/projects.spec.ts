@@ -1,6 +1,11 @@
+import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { seedStaffUserIds } from "@transfer/db";
 import { expect, expectAccessible, test } from "./helpers";
+
+/** A synthetic import fixture (fixtures/imports/README.md). */
+const fixture = (name: string) =>
+  fileURLToPath(new URL(`../../../fixtures/imports/${name}`, import.meta.url));
 
 async function chooseDevUser(page: Page, label: string) {
   await page.getByRole("button", { name: "Entwicklungsbenutzer wechseln" }).click();
@@ -10,6 +15,8 @@ async function chooseDevUser(page: Page, label: string) {
 const me = async (page: Page) => (await page.request.get("/api/v1/me")).json();
 
 test("choose a dev user, see the seeded projects, create a project", async ({ page }) => {
+  // One long walk through the whole PL path of Slice 2 (setup, configuration, import).
+  test.slow();
   await page.goto("/");
   await expect(page).toHaveURL(/\/projects$/);
   await expect(page.getByText("Bitte Entwicklungsbenutzer wählen").first()).toBeVisible();
@@ -97,6 +104,53 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("button", { name: "Als Projekt-Agentur festlegen" })).toHaveCount(0);
   await expectAccessible(page);
 
+  // Slice 2 (PR 2g-2, AC-35): the PL imports the sample CSV, confirms the suggested mapping, sees
+  // the report and the participants; a second file updates them instead of duplicating.
+  const importSection = page.getByRole("region", { name: "Import" });
+  await importSection
+    .getByLabel("Datei auswählen")
+    .setInputFiles(fixture("teilnehmer-beispiel.csv"));
+  await expect(importSection.getByLabel("Trennzeichen")).toHaveValue(";");
+  await expect(importSection.getByLabel("Zeichencodierung")).toHaveValue("utf-8");
+  await expect(importSection.getByLabel("Zuordnung für Spalte 1: Personalnummer")).toHaveValue(
+    "personnelNumber",
+  );
+  await expectAccessible(page);
+  await importSection.getByRole("button", { name: "Prüfen" }).click();
+  await expect(importSection.getByText(/^12 Zeilen: 12 neu, 0 Aktualisierungen/)).toBeVisible();
+  await expect(importSection.getByText("Keine Fehler.")).toBeVisible();
+  await expectAccessible(page);
+  await importSection.getByRole("button", { name: "Import durchführen" }).click();
+  await expect(
+    importSection.getByText("12 angelegt, 0 aktualisiert, 0 unverändert, 0 übersprungen."),
+  ).toBeVisible();
+  const participants = page.getByRole("region", { name: "Teilnehmende" });
+  await expect(participants.getByRole("row")).toHaveCount(13);
+  await expect(participants.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
+  await expect(participants.getByRole("cell", { name: "Importiert" }).first()).toBeVisible();
+  await expectAccessible(page);
+
+  await importSection.getByRole("button", { name: "Weitere Datei importieren" }).click();
+  await importSection
+    .getByLabel("Datei auswählen")
+    .setInputFiles(fixture("teilnehmer-aktualisiert.csv"));
+  await importSection.getByRole("button", { name: "Prüfen" }).click();
+  await expect(
+    importSection.getByText(/^12 Zeilen: 1 neu, 2 Aktualisierungen, 9 unverändert/),
+  ).toBeVisible();
+  await expect(
+    importSection.getByText(
+      "Zeile 2 (BSP-0001): Straße und Hausnummer: bisher Musterstraße 1, neu Neue Musterstraße 100",
+    ),
+  ).toBeVisible();
+  await expectAccessible(page);
+  await importSection.getByRole("button", { name: "Import durchführen" }).click();
+  await expect(
+    importSection.getByText("1 angelegt, 2 aktualisiert, 9 unverändert, 0 übersprungen."),
+  ).toBeVisible();
+  await expect(participants.getByRole("row")).toHaveCount(14);
+  await expectAccessible(page);
+
   const configuration = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });
@@ -159,7 +213,13 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await configuration.getByLabel("Bestätigt am").fill("01.10.2026");
   await expectAccessible(page);
   await configuration.getByRole("button", { name: "Speichern" }).click();
-  await expect(page.getByText("Einstellung gespeichert")).toBeVisible();
+  // The first setting's toast can still be visible (they stay 6 s): wait for this Agentur's.
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Einstellung gespeichert" })
+      .filter({ hasText: "beispielstadt-ost" }),
+  ).toBeVisible();
   const setting = configuration.getByRole("row", { name: /beispielstadt-ost/ });
   await expect(setting).toContainText("Übermittlungsweg TL 407: Upload; Vorlauf in Tagen: 7");
   await expect(setting).toContainText("E-Mail der Agentur");

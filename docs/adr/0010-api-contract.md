@@ -35,3 +35,14 @@ declares `typescript: ^5.x` as a peer; the root `package.json` allows TS 6 for e
 `packages/api-client` depends on the generator, and the apps only use `openapi-fetch` and the
 committed types. If it doesn't support TS 6 by the end of the MVP, evaluate a replacement
 generator then. No action now.
+
+## Note 2026-10-19 (Slice 2, PR 2g): uploads, body limits, new problem types
+
+- **Uploads are JSON.** The API keeps refusing non-JSON bodies, so the import sends the file as
+  base64 inside the JSON body (`POST /projects/{id}/imports/preview` and `…/imports`). The
+  decoded file is at most 5 MB; the base64 body of the two import routes at most 8 MB.
+- **Body limits:** 8 MB on the two import routes, 100 kB on every other `/api` route; above it the
+  answer is `413` `payload-too-large`.
+- **Problem types added in Slice 2:** `conflict` (409), `domain-error` (422, `errors[].code`, and
+  `failedGuards` where a guard failed) and `payload-too-large` (413). Codes only, never a value of
+  the request; a file the import can't read is a 422 at `/file`.

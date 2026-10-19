@@ -2,6 +2,8 @@
 export {
   Button,
   ButtonSet,
+  Checkbox,
+  FileUploaderButton,
   Form,
   HeaderGlobalAction,
   HeaderPanel,
