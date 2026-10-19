@@ -214,3 +214,18 @@ export function suggestTargets(headers: readonly string[]): (ImportTarget | null
     return target;
   });
 }
+
+const digits = /\d/g;
+const textDate = /\d{1,2}\.\d{1,2}\.\d{4}/;
+
+/**
+ * Whether the chosen header row looks like a person's data row (R44, round 33): a cell with a
+ * date, an `@` or five or more digits. A real header row has none; a confirm with such a row
+ * saves no column mapping, because its keyed hashes would be pseudonymised values of a person.
+ * A date cell arrives as an ISO date, which has eight digits.
+ */
+export const headerLooksLikeData = (headers: readonly string[]) =>
+  headers.some(
+    (header) =>
+      textDate.test(header) || header.includes("@") || (header.match(digits) ?? []).length >= 5,
+  );

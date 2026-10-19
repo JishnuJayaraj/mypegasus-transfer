@@ -9,6 +9,7 @@ import {
 import { projectAccess } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { createImportService, ImportRefusal } from "../imports/service";
+import { ImportBusyError } from "../imports/slots";
 import { StatusServiceError } from "../participations/status-service";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
@@ -26,6 +27,7 @@ const problems = problemResponses(
   "payload-too-large",
   "unsupported-media-type",
   "domain-error",
+  "service-unavailable",
 );
 
 /** A refusal as its problem (R21): codes only, never a value of the file. */
@@ -42,6 +44,13 @@ function refusal(c: Context, error: unknown) {
       });
     }
     return domainProblem(c, error.issues);
+  }
+  if (error instanceof ImportBusyError) {
+    // R43: no parse worker became free in time; the wizard asks the PL to try again shortly.
+    c.header("Retry-After", "10");
+    return problem(c, "service-unavailable", {
+      errors: [{ pointer: "", code: "import_busy", detail: "Too many imports at once" }],
+    });
   }
   if (error instanceof StatusServiceError && error.kind === "forbidden") {
     return problem(c, "forbidden");

@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import { ImportFileError } from "./errors";
 import type { ParsedSheet, ParseRequest } from "./parse-core";
+import { parseSlots } from "./slots";
 import { checkZipDirectory, hasZipSignature } from "./zip-check";
 
 export type { ParsedSheet, ParseRequest } from "./parse-core";
@@ -43,11 +44,22 @@ function workerEntry(): { entry: string | URL; eval: boolean } {
 
 /**
  * Parses an uploaded `.xlsx` or CSV file into cells. Throws `ImportFileError` with a stable code
- * for a file that can't be read; any other error is a bug.
+ * for a file that can't be read, and `ImportBusyError` when no worker slot became free in time
+ * (R43); any other error is a bug.
  */
 export async function parseSpreadsheet(request: ParseRequest): Promise<ParsedSheet> {
   // Always, before anything is expanded (D6).
   if (hasZipSignature(request.bytes)) checkZipDirectory(request.bytes);
+  const release = await parseSlots.acquire();
+  try {
+    return await runWorker(request);
+  } finally {
+    release();
+  }
+}
+
+/** One worker with its limits and timeout; settled exactly once, then terminated. */
+function runWorker(request: ParseRequest): Promise<ParsedSheet> {
   const { entry, eval: evaluate } = workerEntry();
   return new Promise<ParsedSheet>((resolve, reject) => {
     const worker = new Worker(entry, { eval: evaluate, workerData: request, resourceLimits });

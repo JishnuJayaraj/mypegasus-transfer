@@ -1405,6 +1405,45 @@ list's links, the `.tp-facts` style; integration, component and e2e tests.
    `stale_status`, 422 with the code; an unknown wave is `wave_of_other_project`, fail safe).
 7. **No docs gap found** in 2h-1.
 
+### Built in PR 2h-2, with the readings taken (for confirmation)
+
+Built: `checkManualCreation`, `ManualParticipationInput` and `manualTargets`
+(`packages/domain/src/import/manual.ts`) and `headerLooksLikeData` (`targets.ts`), under the 100 %
+threshold; the audit type `participation_created_manually` (details: `baseDefaultsVersion`, in
+`configurationDependentEventTypes`, R26) and migration `0029_manual_creation_event`;
+`POST /projects/{projectId}/participations` with `createManually`
+(`apps/api/src/participations/manual-creation.ts`); `writeParticipantData` shared by the confirm and
+manual creation; the parse-worker slots (`apps/api/src/imports/slots.ts`) and the 503
+`import_busy`; `headerLooksLikeData` in the preview and `mappingSaved` in the import result; the data
+catalog's `import_column_mapping` as confidential, possibly pseudonymised participant data;
+`participationId` in `ProblemDetails`; the manual-creation form in the Teilnehmende section and the
+wizard's notices; ADR-0010 note; integration, component and e2e tests.
+
+1. **Manual creation follows the import's capability** (`importParticipations`, the PL; R32): the
+   form is one more way to write import rows, so no separate capability. The route checks
+   visibility (404) and the operation (403) first, then the creation edge decides again.
+2. **The form sends text as typed** (dates `TT.MM.JJJJ`); the API runs the import's row rules on
+   it with Germany as the country, so the stored values are exactly what an import would store.
+   Refusals come at `/values/<target>` (`/values/address` for the address as a unit) or at the
+   whole body (`warnings_unconfirmed`, `possible_duplicate`), the warnings themselves at their
+   fields, so the PL sees what they confirm.
+3. **The order of refusals:** an existing Personalnummer first (with `participationId`, terminal
+   participations included: manual creation never updates anyone), then the row's errors with
+   `value_invalid` for what the import would drop, then an undecided duplicate and unconfirmed
+   warnings together. A confirmed warning is audited as `warning_confirmed` and a duplicate created
+   anyway as `warning_confirmed` with `possible_duplicate`, as in the import.
+4. **Under the exclusive project lock**, like the confirm: of two concurrent creations of one
+   Personalnummer exactly one succeeds, the other is `personnel_number_taken` (tested).
+5. **The answer is the new participation's detail (201)**; the Teilnehmende section then links to
+   its page (2h-1).
+6. **The worker cap** is per API process (2 running, 8 waiting, 20 s); the ZIP directory check runs
+   before a slot is taken, so a refused archive never waits. Both the overflow and the expired wait
+   are `import_busy` (unit-tested with fake timers; the route's 503 with all slots held).
+7. **The header-row guard** (R44) is checked on the header cells as the grid gives them (a date
+   cell arrives as an ISO date, eight digits): the preview reports `headerLooksLikeData`, the
+   confirm imports the rows but saves no mapping, and its result says `mappingSaved: false`.
+8. **No docs gap found** in 2h-2.
+
 ## 4. Design overview
 
 ```

@@ -1854,6 +1854,15 @@ export interface paths {
                         "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -1968,6 +1977,15 @@ export interface paths {
                         "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -2047,7 +2065,78 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Create one participation by hand, through the import's rules (the PL); returns the participation */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ManualParticipationInput"];
+                };
+            };
+            responses: {
+                /** @description The new participation */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationDetail"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2374,6 +2463,8 @@ export interface components {
             status: number;
             detail?: string;
             instance?: string;
+            /** Format: uuid */
+            participationId?: string;
             errors?: {
                 /** @description JSON pointer into the body */
                 pointer?: string;
@@ -2811,6 +2902,7 @@ export interface components {
             } | null;
             headerRow: number;
             headers: string[];
+            headerLooksLikeData: boolean;
             suggestedMapping: {
                 column: number;
                 /** @enum {string} */
@@ -2893,6 +2985,7 @@ export interface components {
             updated: number;
             unchanged: number;
             skipped: number;
+            mappingSaved: boolean;
         };
         ImportConfirmInput: {
             file: string;
@@ -3076,6 +3169,28 @@ export interface components {
             city: string;
             country: string;
         } | null;
+        ManualParticipationInput: {
+            values: {
+                personnelNumber?: string;
+                lastName?: string;
+                firstName?: string;
+                birthDate?: string;
+                oldEmploymentEndDate?: string;
+                addressStreet?: string;
+                addressPostalCode?: string;
+                addressCity?: string;
+                phone?: string;
+                mobile?: string;
+                privateEmail?: string;
+                workEmail?: string;
+            };
+            /** Format: uuid */
+            waveId?: string;
+            /** @default false */
+            confirmWarnings: boolean;
+            /** @default false */
+            createDespiteDuplicate: boolean;
+        };
         AssignEntryWaveInput: {
             /** Format: uuid */
             waveId: string;

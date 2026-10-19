@@ -46,3 +46,14 @@ generator then. No action now.
 - **Problem types added in Slice 2:** `conflict` (409), `domain-error` (422, `errors[].code`, and
   `failedGuards` where a guard failed) and `payload-too-large` (413). Codes only, never a value of
   the request; a file the import can't read is a 422 at `/file`.
+
+## Note 2026-10-19 (Slice 2, PR 2h-2): a busy import, the participation of a refusal
+
+- **`503` `service-unavailable` with `import_busy`:** an API process runs at most two parse
+  workers; up to eight further preview or confirm requests wait for at most 20 s. A request that
+  finds the queue full or whose wait expires is answered `503` with `errors[].code`
+  `import_busy` and `Retry-After: 10` (Slice 2 plan R43, round 33). The client retries later;
+  nothing was read or written.
+- **`participationId` in a problem:** a refusal that refers to a participation the caller may
+  open names its id (an extension member of RFC 9457), never a value: a manual creation whose
+  Personalnummer exists already (`personnel_number_taken`, R32) links to that participation.

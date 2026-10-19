@@ -149,6 +149,7 @@ export {
 export {
   addressParts,
   checkMapping,
+  headerLooksLikeData,
   ImportIssueCode,
   ImportTarget,
   isRequired,
@@ -157,6 +158,15 @@ export {
   suggestTargets,
   type ImportIssue,
 } from "./import/targets";
+export {
+  checkManualCreation,
+  ManualParticipationInput,
+  manualTargets,
+  type ManualCheck,
+  type ManualIssue,
+  type ManualTarget,
+  type ManualValues,
+} from "./import/manual";
 export {
   checkRecord,
   parseGermanDate,

@@ -39,6 +39,7 @@ import type { StaffSubject } from "../participations/subjects";
 import { projectSnapshot, type Release } from "../projects/template-pins";
 import { ImportFileError } from "./errors";
 import { decodeFile, toGrid, type Grid } from "./grid";
+import { auditContext, callFunction } from "../sql";
 import { headerHmac } from "./keys";
 import { parseSpreadsheet } from "./parse";
 
@@ -405,3 +406,32 @@ export const binding = (
   waveId: input.waveId ?? null,
   planDigest: digest,
 });
+
+/**
+ * Writes a participation's person data through `write_participant_data` (5.3): a missing value is
+ * `null`, which keeps the stored one (Q103: an empty cell never clears data).
+ */
+export function writeParticipantData(
+  tx: Tx,
+  context: ReturnType<typeof auditContext>,
+  participationId: string,
+  v: ImportValues,
+) {
+  return callFunction(
+    tx,
+    sql`write_participant_data(p_participation_id => ${participationId}::uuid,
+      p_context => ${context},
+      p_personnel_number => ${v.personnelNumber ?? null}::text,
+      p_last_name => ${v.lastName ?? null}::text,
+      p_first_name => ${v.firstName ?? null}::text,
+      p_birth_date => ${v.birthDate ?? null}::date,
+      p_old_employment_end_date => ${v.oldEmploymentEndDate ?? null}::date,
+      p_address_street => ${v.addressStreet ?? null}::text,
+      p_address_postal_code => ${v.addressPostalCode ?? null}::text,
+      p_address_city => ${v.addressCity ?? null}::text,
+      p_address_country => ${v.addressCountry ?? null}::text,
+      p_phone => ${v.phone ?? null}::text, p_mobile => ${v.mobile ?? null}::text,
+      p_private_email => ${v.privateEmail ?? null}::text,
+      p_work_email => ${v.workEmail ?? null}::text)`,
+  );
+}

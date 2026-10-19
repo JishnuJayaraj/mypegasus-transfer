@@ -14,6 +14,7 @@ import {
 import {
   AssignEntryWaveInput,
   entryWaveAssignment,
+  ManualParticipationInput,
   mayListField,
   mayPerformOperation,
   PageQuery,
@@ -28,7 +29,10 @@ import type { Context } from "hono";
 import { projectAccess } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
+import { ImportRefusal } from "../imports/analysis";
+import { createManually, ManualCreationRefusal } from "../participations/manual-creation";
 import { createStatusService, StatusServiceError } from "../participations/status-service";
+import { loadRelease } from "../projects/template-pins";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
 import { utc } from "../sql";
@@ -65,6 +69,7 @@ export function participationRoutes(deps: Deps) {
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const statusService = createStatusService({ db, clock });
+  const release = loadRelease(deps.env.configDir);
 
   /**
    * One participation for the user (R29–R31): undefined when it doesn't exist or its project is
@@ -241,6 +246,75 @@ export function participationRoutes(deps: Deps) {
           ? encodeCursor({ createdAt: last.createdAt, id: last.id })
           : null;
       return c.json({ items, nextCursor }, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/projects/{projectId}/participations",
+      tags: ["participations"],
+      summary:
+        "Create one participation by hand, through the import's rules (the PL); returns the participation",
+      middleware,
+      request: {
+        params: ProjectParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: ManualParticipationInput } },
+        },
+      },
+      responses: {
+        201: json(ParticipationDetail, "The new participation"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { projectId } = c.req.valid("param");
+      // Visibility (404) and the PL's permission (403) first, like the import (R32).
+      const { subject, visible } = await projectAccess(db, user, projectId);
+      if (!visible) return problem(c, "not-found");
+      const target = { projectId, regionId: null, participationId: null };
+      if (!mayPerformOperation(subject, { kind: "importParticipations" }, target).ok) {
+        return problem(c, "forbidden");
+      }
+      const actor = { staffUserId: user.id, requestId: c.get("requestId") as string, subject };
+      let participationId: string;
+      try {
+        participationId = await createManually(
+          { db, release, clock },
+          actor,
+          projectId,
+          c.req.valid("json"),
+        );
+      } catch (error) {
+        if (error instanceof ManualCreationRefusal) {
+          return problem(c, "domain-error", {
+            errors: error.issues.map((issue) => ({
+              pointer: issue.target ? `/values/${issue.target}` : "",
+              code: issue.code,
+              detail: "Refused by a domain rule",
+            })),
+            ...(error.participationId && { participationId: error.participationId }),
+          });
+        }
+        if (error instanceof ImportRefusal) {
+          if (error.kind === "not_found") return problem(c, "not-found");
+          return domainProblem(c, error.issues);
+        }
+        if (error instanceof StatusServiceError && error.kind === "forbidden") {
+          return problem(c, "forbidden");
+        }
+        throw error;
+      }
+      return c.json((await detailOf(user, participationId))!, 201);
     },
   );
 

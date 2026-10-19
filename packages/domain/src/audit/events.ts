@@ -63,8 +63,9 @@ export const AuditEventType = z.enum([
   "project_activated",
   // Slice 2, written only by `write_participant_data` (PR 2f)
   "participant_data_changed",
-  // Slice 2, through `record_audit_event` (PR 2g, plan 5.11)
+  // Slice 2, through `record_audit_event` (PR 2g, plan 5.11; PR 2h-2, R32)
   "import_confirmed",
+  "participation_created_manually",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -92,7 +93,8 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
  * The events whose result depends on the release's base defaults carry their `version` as
  * `baseDefaultsVersion` (R26, round 23: `project_activated`, `config_template_pinned`,
  * `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`,
- * `import_confirmed`); each joins this list with the PR that adds its type.
+ * `import_confirmed`; round 33: `participation_created_manually`); each joins this list with the
+ * PR that adds its type.
  */
 export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new Set([
   "config_override_changed",
@@ -101,6 +103,7 @@ export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new
   "rule_relaxation_approved",
   "project_activated",
   "import_confirmed",
+  "participation_created_manually",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -427,6 +430,15 @@ export const AuditEvent = z.discriminatedUnion("type", [
       skipped: z.int().min(0),
       baseDefaultsVersion,
     }),
+  }),
+  /**
+   * A participation the PL created by hand (R32, PR 2h-2): one import row, so its required targets
+   * were resolved with this base-defaults version (R26, round 33). The creation and the person
+   * data have their own events; correlated by the request id.
+   */
+  event("participation_created_manually", {
+    ...ofParticipation,
+    details: z.strictObject({ baseDefaultsVersion }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

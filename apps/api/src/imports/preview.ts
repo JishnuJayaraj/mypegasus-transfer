@@ -1,4 +1,4 @@
-import type { ImportPreview, ImportPreviewInput } from "@transfer/domain";
+import { headerLooksLikeData, type ImportPreview, type ImportPreviewInput } from "@transfer/domain";
 import {
   analyse,
   checkColumns,
@@ -97,6 +97,7 @@ export async function previewImport(
     csv: read.parsed.csv,
     headerRow: read.grid.headerRow,
     headers: read.grid.headers,
+    headerLooksLikeData: headerLooksLikeData(read.grid.headers),
     suggestedMapping: answer.suggestedMapping,
     mapping: answer.sent,
     missingTargets: answer.mappingIssues

@@ -375,7 +375,8 @@
         "windows-1252": "Windows-1252"
       },
       "encodingHint": "Prüfen Sie, ob Umlaute richtig angezeigt werden.",
-      "change": "Andere Datei wählen"
+      "change": "Andere Datei wählen",
+      "headerLooksLikeData": "Die gewählte Zeile sieht wie eine Datenzeile aus (Datum, @ oder lange Ziffernfolge). Prüfen Sie die Zeile der Spaltenüberschriften. Die Zuordnung wird für diese Datei nicht für künftige Importe gespeichert."
     },
     "mapping": {
       "title": "Spalten zuordnen",
@@ -462,7 +463,8 @@
       "identifier_cell_converted": "Die Postleitzahl war eine Zahl und wurde in fünf Ziffern umgewandelt",
       "possible_duplicate": "Mögliche Dublette: gleiches Geburtsdatum und gleicher Name",
       "terminal_not_updated": "Die Teilnahme ist beendet und wird nicht aktualisiert",
-      "kept_existing": "Leere Zelle: der gespeicherte Wert bleibt"
+      "kept_existing": "Leere Zelle: der gespeicherte Wert bleibt",
+      "import_busy": "Gerade laufen mehrere Importe. Bitte versuchen Sie es in einigen Sekunden erneut."
     },
     "report": {
       "title": "Prüfergebnis",
@@ -491,7 +493,8 @@
       "title": "Import abgeschlossen",
       "text": "{{created}} angelegt, {{updated}} aktualisiert, {{unchanged}} unverändert, {{skipped}} übersprungen.",
       "toast": "Import abgeschlossen",
-      "again": "Weitere Datei importieren"
+      "again": "Weitere Datei importieren",
+      "mappingNotSaved": "Die Spaltenzuordnung wurde nicht für künftige Importe gespeichert, weil die Überschriftenzeile wie eine Datenzeile aussah."
     },
     "refused": "Import abgelehnt"
   },
@@ -602,6 +605,86 @@
       "dsv_already_offered": "Nach dem ersten DSV-Angebot ändert sich die Welle nicht mehr.",
       "individual_dates_set": "Die Person hat individuelle Vertragsdaten. Setzen Sie die Daten zuerst auf die Welle zurück, um die Welle zu ändern.",
       "no_other_wave": "Es gibt keine andere Welle in diesem Projekt."
+    }
+  },
+  "manual": {
+    "add": "Teilnehmende Person anlegen",
+    "title": "Teilnehmende Person anlegen",
+    "intro": "Es gelten dieselben Regeln wie beim Import. Eine vorhandene Personalnummer wird nicht überschrieben; Änderungen kommen über einen erneuten Import.",
+    "dateHint": "TT.MM.JJJJ",
+    "country": "Land der Anschrift: Deutschland (andere Länder werden noch nicht unterstützt).",
+    "wave": "Eintrittswelle",
+    "waveNone": "Keine Welle",
+    "confirmWarnings": "Hinweise geprüft, trotzdem anlegen",
+    "createDespiteDuplicate": "Mögliche Dublette geprüft, trotzdem anlegen",
+    "cancel": "Abbrechen",
+    "submit": "Anlegen",
+    "created": "Teilnehmende Person angelegt",
+    "openCreated": "Seite der Person öffnen",
+    "openExisting": "Person mit dieser Personalnummer öffnen",
+    "fields": {
+      "personnelNumber": "Personalnummer",
+      "lastName": "Nachname",
+      "firstName": "Vorname",
+      "birthDate": "Geburtsdatum",
+      "oldEmploymentEndDate": "Austrittsdatum (bisheriges Arbeitsverhältnis)",
+      "addressStreet": "Straße und Hausnummer",
+      "addressPostalCode": "Postleitzahl",
+      "addressCity": "Ort",
+      "phone": "Telefon",
+      "mobile": "Mobil",
+      "privateEmail": "E-Mail privat",
+      "workEmail": "E-Mail dienstlich (nie für die Anmeldung)"
+    },
+    "issues": {
+      "file_too_large": "Die Datei ist größer als 5 MB.",
+      "unsupported_file": "Die Datei konnte nicht gelesen werden. Erlaubt sind .xlsx- und CSV-Dateien.",
+      "file_too_complex": "Die Datei ist zu komplex und wurde aus Sicherheitsgründen abgelehnt.",
+      "file_empty": "Die Datei enthält keine Daten.",
+      "too_many_rows": "Die Datei hat mehr als 5.000 Datenzeilen. Bitte teilen Sie sie auf.",
+      "too_many_columns": "Die Datei hat mehr als 50 Spalten.",
+      "cell_too_long": "Eine Zelle enthält mehr als 500 Zeichen.",
+      "sheet_not_found": "Das Tabellenblatt gibt es in der Datei nicht.",
+      "header_row_invalid": "In dieser Zeile stehen keine Spaltenüberschriften.",
+      "encoding_invalid": "Die Datei ist nicht in der gewählten Zeichencodierung gespeichert.",
+      "csv_malformed": "Die CSV-Datei ist fehlerhaft aufgebaut (zum Beispiel nicht geschlossene Anführungszeichen).",
+      "mapping_column_unknown": "Die Zuordnung nennt eine Spalte, die es in der Datei nicht gibt.",
+      "not_ta_tg": "Eintrittswellen gibt es nur in Projekten mit Transfergesellschaft.",
+      "wave_of_other_project": "Die Eintrittswelle gehört nicht zu diesem Projekt.",
+      "mapping_invalid": "Die Spaltenzuordnung ist nicht vollständig oder widersprüchlich.",
+      "import_has_errors": "Die Datei enthält Fehler. Bitte korrigieren Sie sie und laden Sie sie erneut hoch.",
+      "decisions_invalid": "Ihre Entscheidungen passen nicht zur Prüfung. Bitte prüfen Sie erneut.",
+      "duplicate_undecided": "Für eine mögliche Dublette fehlt die Entscheidung.",
+      "decision_without_duplicate": "Es gibt eine Entscheidung für eine Zeile, die keine mögliche Dublette ist.",
+      "warnings_unconfirmed": "Bitte prüfen Sie die Hinweise und bestätigen Sie sie.",
+      "import_preview_stale": "Die Datei, die Zuordnung oder der Stand des Projekts hat sich seit der Prüfung geändert. Die Prüfung wurde erneuert; bitte kontrollieren Sie das Ergebnis.",
+      "forbidden": "Sie dürfen in diesem Projekt keine Teilnehmenden anlegen.",
+      "failed": "Die Person konnte nicht angelegt werden. Es wurde nichts gespeichert.",
+      "required_missing": "Pflichtangabe fehlt",
+      "invalid_date": "Kein gültiges Datum (erwartet TT.MM.JJJJ)",
+      "date_has_time": "Das Datum enthält eine Uhrzeit",
+      "birth_date_in_future": "Geburtsdatum liegt in der Zukunft",
+      "end_before_birth": "Austrittsdatum liegt vor dem Geburtsdatum",
+      "too_long": "Der Wert ist zu lang",
+      "control_characters": "Der Wert enthält Steuerzeichen",
+      "invalid_cell_type": "Der Zelltyp passt nicht zum Feld",
+      "duplicate_in_file": "Die Personalnummer kommt mehrfach in der Datei vor",
+      "identifier_cell_numeric": "Zahlenzelle statt Text; bitte als Text formatieren",
+      "postal_code_invalid": "Die Postleitzahl muss fünf Ziffern haben",
+      "foreign_address_unsupported": "Nur Anschriften in Deutschland werden unterstützt",
+      "country_required": "Für die Anschrift fehlt das Land (Spalte oder Auswahl für alle Zeilen)",
+      "country_source_conflict": "Das Land kommt aus einer Spalte und aus der Auswahl für alle Zeilen; bitte nur eines",
+      "address_incomplete": "Die Anschrift ist unvollständig (Straße, Postleitzahl, Ort und Land gehören zusammen)",
+      "target_mapped_twice": "Ein Feld ist mehr als einer Spalte zugeordnet",
+      "age_implausible": "Das Alter am Austrittsdatum liegt außerhalb von 15 bis 67 Jahren",
+      "value_invalid_dropped": "Ungültiger Wert wurde nicht übernommen",
+      "identifier_cell_converted": "Die Postleitzahl war eine Zahl und wurde in fünf Ziffern umgewandelt",
+      "possible_duplicate": "Mögliche Dublette: Es gibt bereits eine Person mit gleichem Geburtsdatum und Namen. Bitte prüfen Sie, ob es dieselbe Person ist.",
+      "terminal_not_updated": "Die Teilnahme ist beendet und wird nicht aktualisiert",
+      "kept_existing": "Leere Zelle: der gespeicherte Wert bleibt",
+      "import_busy": "Gerade laufen mehrere Importe. Bitte versuchen Sie es in einigen Sekunden erneut.",
+      "personnel_number_taken": "Diese Personalnummer gibt es in diesem Projekt bereits.",
+      "value_invalid": "Ungültiger Wert; bitte korrigieren oder leer lassen"
     }
   }
 }

@@ -24,6 +24,10 @@
           "instance": {
             "type": "string"
           },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "errors": {
             "type": "array",
             "items": {
@@ -1608,6 +1612,9 @@
               "type": "string"
             }
           },
+          "headerLooksLikeData": {
+            "type": "boolean"
+          },
           "suggestedMapping": {
             "type": "array",
             "items": {
@@ -1753,6 +1760,7 @@
           "csv",
           "headerRow",
           "headers",
+          "headerLooksLikeData",
           "suggestedMapping",
           "mapping",
           "missingTargets",
@@ -2110,13 +2118,17 @@
           "skipped": {
             "type": "integer",
             "minimum": 0
+          },
+          "mappingSaved": {
+            "type": "boolean"
           }
         },
         "required": [
           "created",
           "updated",
           "unchanged",
-          "skipped"
+          "skipped",
+          "mappingSaved"
         ],
         "additionalProperties": false
       },
@@ -2736,6 +2748,81 @@
           "postalCode",
           "city",
           "country"
+        ],
+        "additionalProperties": false
+      },
+      "ManualParticipationInput": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "properties": {
+              "personnelNumber": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "lastName": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "firstName": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "birthDate": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "oldEmploymentEndDate": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "addressStreet": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "addressPostalCode": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "addressCity": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "phone": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "mobile": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "privateEmail": {
+                "type": "string",
+                "maxLength": 500
+              },
+              "workEmail": {
+                "type": "string",
+                "maxLength": 500
+              }
+            },
+            "additionalProperties": false
+          },
+          "waveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmWarnings": {
+            "type": "boolean",
+            "default": false
+          },
+          "createDespiteDuplicate": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "values"
         ],
         "additionalProperties": false
       },
@@ -4784,6 +4871,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -4905,6 +5002,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -4990,6 +5097,95 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Create one participation by hand, through the import's rules (the PL); returns the participation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualParticipationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new participation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

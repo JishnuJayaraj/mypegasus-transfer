@@ -111,11 +111,14 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     holdsParticipantData: false,
   },
   // Saved import column mappings: the keyed hash of a normalised header and its target, never
-  // header text (R7); the application writes them without an audit (D2).
+  // header text (R7); the application writes them without an audit (D2). Confidential, possibly
+  // pseudonymised participant data (R44, round 33): a data row picked as the header would make the
+  // hashes keyed hashes of a person's values, which the confirm avoids for a header row that
+  // looks like data. No link to a person or participation, so it stays with the project.
   import_column_mapping: {
     retentionClass: "project_master",
-    dataClass: "internal",
-    holdsParticipantData: false,
+    dataClass: "confidential",
+    holdsParticipantData: true,
   },
 };
 

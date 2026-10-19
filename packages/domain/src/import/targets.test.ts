@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkMapping,
+  headerLooksLikeData,
   ImportTarget,
   isRequired,
   normaliseCountry,
@@ -130,5 +131,26 @@ describe("suggestTargets (round 32)", () => {
     expect(
       suggestTargets(["Austrittsdatum", "Ländercode", "Telefon", "E-Mail privat", "Firmen-E-Mail"]),
     ).toEqual(["oldEmploymentEndDate", "addressCountry", "phone", "privateEmail", "workEmail"]);
+  });
+});
+
+describe("headerLooksLikeData (R44, round 33)", () => {
+  it("passes real header rows, synonyms and free headings alike", () => {
+    expect(headerLooksLikeData(["Personalnummer", "Nachname", "Vorname", "Geb.-Datum"])).toBe(
+      false,
+    );
+    expect(headerLooksLikeData(["Pers.-Nr.", "PLZ", "E-Mail privat", "Kostenstelle 4711"])).toBe(
+      false,
+    );
+    expect(headerLooksLikeData([])).toBe(false);
+  });
+
+  it("flags a row with a date, an @ or five or more digits in a cell", () => {
+    expect(headerLooksLikeData(["BSP-0001", "Mustermann", "01.01.1970"])).toBe(true);
+    expect(headerLooksLikeData(["Mustermann", "1970-01-01"])).toBe(true);
+    expect(headerLooksLikeData(["Erika", "erika@example.org"])).toBe(true);
+    expect(headerLooksLikeData(["Musterstraße 1", "99999"])).toBe(true);
+    expect(headerLooksLikeData(["Telefon", "030 23125 000"])).toBe(true);
+    expect(headerLooksLikeData(["Spalte 1234"])).toBe(false);
   });
 });

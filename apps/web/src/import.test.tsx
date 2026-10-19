@@ -43,6 +43,7 @@ const first = {
   csv: { delimiter: ";", encoding: "utf-8" },
   headerRow: 1,
   headers,
+  headerLooksLikeData: false,
   suggestedMapping: suggested,
   mapping: [],
   missingTargets: [],
@@ -115,7 +116,8 @@ describe("the import wizard", () => {
     const calls = setup({
       [`POST ${path}/imports/preview`]: ({ body }) =>
         json((body as { mapping?: unknown }).mapping ? withReport([]) : first),
-      [`POST ${path}/imports`]: () => json({ created: 4, updated: 0, unchanged: 0, skipped: 0 }),
+      [`POST ${path}/imports`]: () =>
+        json({ created: 4, updated: 0, unchanged: 0, skipped: 0, mappingSaved: true }),
     });
     await upload();
     // Sheet, header row and the CSV facts the PL checks (umlauts).
@@ -232,7 +234,8 @@ describe("the import wizard", () => {
               ])
             : first,
         ),
-      [`POST ${path}/imports`]: () => json({ created: 3, updated: 0, unchanged: 0, skipped: 0 }),
+      [`POST ${path}/imports`]: () =>
+        json({ created: 3, updated: 0, unchanged: 0, skipped: 0, mappingSaved: true }),
     });
     await upload();
     await userEvent.click(await screen.findByRole("button", { name: "Prüfen" }));
@@ -348,6 +351,39 @@ describe("the import wizard", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Datei auswählen")).toBeInTheDocument();
+  });
+
+  it("asks to try again shortly when the API is busy with other imports (R43)", async () => {
+    setup({
+      [`POST ${path}/imports/preview`]: () =>
+        problem(503, "service-unavailable", {
+          errors: [{ pointer: "", code: "import_busy", detail: "x" }],
+        }),
+    });
+    await upload();
+    expect(await screen.findByText(/Gerade laufen mehrere Importe/)).toBeInTheDocument();
+  });
+
+  it("warns about a data-like header row and says the mapping wasn't saved (R44)", async () => {
+    setup({
+      [`POST ${path}/imports/preview`]: ({ body }) =>
+        json(
+          (body as { mapping?: unknown }).mapping
+            ? withReport([], { headerLooksLikeData: true })
+            : { ...first, headerLooksLikeData: true },
+        ),
+      [`POST ${path}/imports`]: () =>
+        json({ created: 4, updated: 0, unchanged: 0, skipped: 0, mappingSaved: false }),
+    });
+    await upload();
+    expect(await screen.findByText(/sieht wie eine Datenzeile aus/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Prüfen" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Import durchführen" }));
+    expect(
+      await screen.findByText(
+        /nicht für künftige Importe gespeichert, weil die Überschriftenzeile/,
+      ),
+    ).toBeInTheDocument();
   });
 });
 
