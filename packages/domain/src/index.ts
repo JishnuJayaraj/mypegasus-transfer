@@ -176,6 +176,7 @@ export {
   fieldCatalog,
   fieldEntry,
   isListable,
+  ParticipantDataField,
   valueDataClass,
   type FieldEntry,
 } from "./fields/catalog";

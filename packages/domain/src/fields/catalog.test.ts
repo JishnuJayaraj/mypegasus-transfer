@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { EndReason, ProfilingExceptionReason } from "../lifecycle/enums";
-import { AccessCategory, fieldCatalog, fieldEntry, isListable, valueDataClass } from "./catalog";
+import {
+  AccessCategory,
+  fieldCatalog,
+  fieldEntry,
+  isListable,
+  ParticipantDataField,
+  valueDataClass,
+} from "./catalog";
 
 const sensitive = new Set(["special_category", "highly_confidential"]);
+const retention = (key: string) => fieldEntry(key).retentionClass;
 
 // Which data classes a field of each access category may hold (plan 5.6, data-protection.md).
 // Signed documents, audit metadata and aggregates are not participant fields.
@@ -64,6 +72,18 @@ describe("field catalog (AC-29)", () => {
     ["unemploymentPeriod", "highly_confidential"],
   ])("classifies %s as %s (Q29, Q43, Q66)", (key, dataClass) => {
     expect(fieldEntry(key).dataClass).toBe(dataClass);
+  });
+
+  it("keeps identity in the participation record and the rest in the personnel file (Q105)", () => {
+    const identity = ["personnelNumber", "lastName", "firstName", "birthDate"];
+    for (const key of ParticipantDataField.options) {
+      expect(retention(key)).toBe(
+        identity.includes(key) ? "participation_record" : "personnel_file",
+      );
+      expect(fieldEntry(key)).toMatchObject({ dataClass: "confidential", storage: "column" });
+    }
+    expect(retention("tgEnd")).toBe("participation_record");
+    expect(retention("healthRestrictions")).toBeUndefined();
   });
 
   it("rejects an unknown field key", () => {

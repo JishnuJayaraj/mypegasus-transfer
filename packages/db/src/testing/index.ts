@@ -72,7 +72,7 @@ export async function resetTestDatabase(
   try {
     // lifecycle_edge is reference data from the migrations, never truncated.
     await db.$client.query(
-      "truncate audit_event, config_relaxation_request, profiling_exception_request, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_user, job_run",
+      "truncate audit_event, config_relaxation_request, profiling_exception_request, participant_details, participant_identity, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_user, job_run",
     );
     if (options.seed) await seed(db);
     if (options.active) await activateAsOwner(db.$client);

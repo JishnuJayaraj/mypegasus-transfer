@@ -380,6 +380,102 @@ export const profilingExceptionRequest = pgTable(
   ],
 );
 
+/** Trimmed text of 1 to `max` characters without control characters (plan 5.11). */
+const personText = (name: string, column: SQL, max: number) =>
+  check(
+    name,
+    sql`${column} = btrim(${column}) and length(${column}) between 1 and ${sql.raw(String(max))} and ${column} !~ '[[:cntrl:]]'`,
+  );
+
+/** The person-data tables' keys: one row per participation, of its own project. */
+const personKeys = () => ({
+  participationId: uuid("participation_id").primaryKey(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => project.id),
+});
+const personTimes = () => ({
+  createdAt: createdAt(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+});
+
+/**
+ * Who a participation is (Slice 2 plan 5.2, 5.10; R8): the import's match key and the minimal
+ * identity, class `participation_record`. Written only by `write_participant_data` (D2); the
+ * Personalnummer never changes and is unique in the project.
+ */
+export const participantIdentity = pgTable(
+  "participant_identity",
+  {
+    ...personKeys(),
+    personnelNumber: text("personnel_number").notNull(),
+    lastName: text("last_name").notNull(),
+    firstName: text("first_name").notNull(),
+    birthDate: dateColumn("birth_date"),
+    ...personTimes(),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_identity_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    unique("participant_identity_project_personnel_number_unique").on(
+      t.projectId,
+      t.personnelNumber,
+    ),
+    personText("participant_identity_personnel_number_text", sql`${t.personnelNumber}`, 50),
+    personText("participant_identity_last_name_text", sql`${t.lastName}`, 100),
+    personText("participant_identity_first_name_text", sql`${t.firstName}`, 100),
+  ],
+);
+
+/**
+ * The personnel-file data of a participation (plan 5.2, 5.10; R8, round 32): the structured
+ * address with its country (ISO 3166-1 alpha-2, only `DE` in the MVP; all four parts or none),
+ * phone, mobile, emails and the Austrittsdatum; class `personnel_file`. Written only by
+ * `write_participant_data` (D2).
+ */
+export const participantDetails = pgTable(
+  "participant_details",
+  {
+    ...personKeys(),
+    addressStreet: text("address_street"),
+    addressPostalCode: text("address_postal_code"),
+    addressCity: text("address_city"),
+    addressCountry: text("address_country"),
+    phone: text("phone"),
+    mobile: text("mobile"),
+    privateEmail: text("private_email"),
+    workEmail: text("work_email"),
+    oldEmploymentEndDate: dateColumn("old_employment_end_date"),
+    ...personTimes(),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_details_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check(
+      "participant_details_address_whole",
+      sql`num_nulls(${t.addressStreet}, ${t.addressPostalCode}, ${t.addressCity}, ${t.addressCountry}) in (0, 4)`,
+    ),
+    personText("participant_details_address_street_text", sql`${t.addressStreet}`, 200),
+    personText("participant_details_address_city_text", sql`${t.addressCity}`, 200),
+    check("participant_details_address_country_code", sql`${t.addressCountry} ~ '^[A-Z]{2}$'`),
+    check("participant_details_address_country_de", sql`${t.addressCountry} = 'DE'`),
+    check(
+      "participant_details_postal_code_de",
+      sql`${t.addressCountry} <> 'DE' or ${t.addressPostalCode} ~ '^[0-9]{5}$'`,
+    ),
+    personText("participant_details_phone_text", sql`${t.phone}`, 30),
+    personText("participant_details_mobile_text", sql`${t.mobile}`, 30),
+    personText("participant_details_private_email_text", sql`${t.privateEmail}`, 254),
+    personText("participant_details_work_email_text", sql`${t.workEmail}`, 254),
+  ],
+);
+
 /**
  * The lifecycle edges (plan 5.3) as reference data for the status functions; a drift test keeps
  * them equal to the domain's `edges`. Creation edges have no `from_value`.
@@ -468,7 +564,7 @@ export const auditEvent = pgTable(
     ),
     check(
       "audit_event_lifecycle_has_participation",
-      sql`${t.participationId} is not null or ${t.eventType} not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
+      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
     ),
     // `field`, `from_value` and `to_value` only on a status change (creation: to `imported`) and,
     // as end reasons, on a correction; their values come from the matching enum.
@@ -688,6 +784,8 @@ export const tables = [
   projectEntryWave,
   participation,
   profilingExceptionRequest,
+  participantIdentity,
+  participantDetails,
   lifecycleEdge,
   auditEvent,
   jobRun,

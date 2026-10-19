@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { DataClass } from "../enums";
+import type { DataClass, ParticipantRetentionClass } from "../enums";
 
 /**
  * Categories of participant fields and documents (plan 5.6, data-protection.md). Audit
@@ -33,9 +33,13 @@ export type FieldEntry = {
   storage: "column" | "encrypted_column";
   /** Values more sensitive than the field itself (Q66). */
   valueClasses?: Readonly<Record<string, DataClass>>;
+  /** Set for every field a table stores (Slice 2 plan 5.2, ADR-0008). */
+  retentionClass?: ParticipantRetentionClass;
 };
 
-type Options = Partial<Pick<FieldEntry, "listable" | "customerVisible" | "valueClasses">>;
+type Options = Partial<
+  Pick<FieldEntry, "listable" | "customerVisible" | "valueClasses" | "retentionClass">
+>;
 
 const sensitive = (c: DataClass) => c === "special_category" || c === "highly_confidential";
 
@@ -55,6 +59,7 @@ function field(
     selfService,
     storage: sensitive(dataClass) ? "encrypted_column" : "column",
     ...(options.valueClasses && { valueClasses: options.valueClasses }),
+    ...(options.retentionClass && { retentionClass: options.retentionClass }),
   };
 }
 
@@ -67,29 +72,29 @@ function fields(
 }
 
 const C = "confidential";
-const customer = { customerVisible: true };
+const record = { retentionClass: "participation_record" } as const;
+const personnelFile = { retentionClass: "personnel_file" } as const;
+const customer = { customerVisible: true, ...record };
 
 /**
  * Every participant field the docs name, classified by data-protection.md (Q29, Q43, Q66) and
  * ba-forms.md (TL 407 / Kug 200b sections). Documents get their own types (PR 1e).
  */
 export const fieldCatalog: readonly FieldEntry[] = [
-  // statuses and dates (internal)
-  ...fields(["status", "profilingStatus", "dsvStatus"], "internal", "case_internal", false),
-  ...fields(["offerDeadline", "tgStart", "tgEnd"], "internal", "case_internal", false),
-  ...fields(
-    ["dsvSignedOn", "tgEntryDate", "exitDate"],
-    "internal",
-    "case_internal",
-    false,
-    customer,
-  ),
-  ...fields(["withdrawnOn", "profilingDoneOn"], "internal", "case_internal", false),
-  // identity and case data (confidential); identity fields come from the import
+  // statuses and dates (internal), on `participation`
+  ...fields(["status", "profilingStatus", "dsvStatus"], "internal", "case_internal", false, record),
+  ...fields(["offerDeadline", "tgStart", "tgEnd"], "internal", "case_internal", false, record),
+  field("dsvSignedOn", "internal", "case_internal", false, { customerVisible: true }),
+  ...fields(["tgEntryDate", "exitDate"], "internal", "case_internal", false, customer),
+  ...fields(["withdrawnOn", "profilingDoneOn"], "internal", "case_internal", false, record),
+  // identity and case data (confidential); identity fields come from the import, on
+  // `participant_identity` (participation record) and `participant_details` (personnel file,
+  // Q105); `address` is street, postal code, city and country as one unit (round 32)
   ...fields(["firstName", "lastName", "personnelNumber"], C, "confidential", false, customer),
-  ...fields(["birthDate", "workEmail", "oldEmploymentEndDate"], C, "confidential", false),
+  field("birthDate", C, "confidential", false, record),
+  ...fields(["workEmail", "oldEmploymentEndDate"], C, "confidential", false, personnelFile),
   field("knowledgeDate", C, "confidential", false),
-  ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true),
+  ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true, personnelFile),
   ...fields(
     ["maritalStatus", "gender", "educationHistory", "workHistory"],
     C,
@@ -128,6 +133,21 @@ export const fieldCatalog: readonly FieldEntry[] = [
   // payroll records, type and dates only (Q51); not listed until Q85 is answered
   field("absencePeriods", C, "absence", false, { listable: false }),
 ];
+
+/** The person-data fields `write_participant_data` writes, as its audit event names them. */
+export const ParticipantDataField = z.enum([
+  "personnelNumber",
+  "lastName",
+  "firstName",
+  "birthDate",
+  "oldEmploymentEndDate",
+  "address",
+  "phone",
+  "mobile",
+  "privateEmail",
+  "workEmail",
+]);
+export type ParticipantDataField = z.infer<typeof ParticipantDataField>;
 
 const byKey = new Map(fieldCatalog.map((entry) => [entry.key, entry]));
 

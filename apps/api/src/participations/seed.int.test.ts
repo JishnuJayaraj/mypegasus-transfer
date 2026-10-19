@@ -16,6 +16,7 @@ import { seedActivations, seedTemplatePins } from "../projects/seed";
 import { loadRelease } from "../projects/template-pins";
 import { failClosedFacts } from "./guard-facts";
 import { seedFacts, seedParticipationIds, seedParticipations, seedTgStartRun } from "./seed";
+import { seedIdentities, seedParticipantData } from "./seed-identities";
 
 // AC-43: seeded participations exist only through the service and its functions, each with its
 // audit trail; synthetic only (fixed UUIDs, no names).
@@ -25,6 +26,7 @@ const ids = Object.values(seedParticipationIds);
 
 let firstRun = 0;
 let secondRun = 0;
+let identityRuns: number[] = [];
 beforeAll(async () => {
   await resetTestDatabase({ seed: true });
   // As `pnpm db:seed` does: pins and activations through their services first (plan 5.5).
@@ -33,6 +35,7 @@ beforeAll(async () => {
   await seedActivations(db, release);
   firstRun = await seedParticipations(db);
   secondRun = await seedParticipations(db);
+  identityRuns = [await seedParticipantData(db), await seedParticipantData(db)];
 });
 afterAll(() => Promise.all([db.$client.end(), owner.end()]));
 
@@ -62,6 +65,32 @@ async function rows(): Promise<Row[]> {
   );
   return result.rows;
 }
+
+describe("the seeded identities (Slice 2 plan 5.14, PR 2f)", () => {
+  it("are synthetic, one per participation, written once through write_participant_data", async () => {
+    expect(identityRuns).toEqual([ids.length, 0]);
+    const { rows: identities } = await owner.query(
+      `select i.personnel_number, i.last_name, d.address_postal_code, d.address_city,
+         d.address_country, d.private_email
+       from participant_identity i join participant_details d using (participation_id)`,
+    );
+    expect(identities).toHaveLength(ids.length);
+    for (const row of identities) {
+      expect(row.personnel_number).toMatch(/^BSP-\d{4}$/);
+      expect([row.address_postal_code, row.address_city, row.address_country]).toEqual([
+        "99999",
+        "Beispielstadt",
+        "DE",
+      ]);
+      expect(row.private_email).toMatch(/@example\.org$/);
+    }
+    expect(new Set(seedIdentities.map((i) => i.lastName)).size).toBeGreaterThan(1);
+    const { rows: events } = await owner.query(
+      `select count(*)::int as n from audit_event where event_type = 'participant_data_changed'`,
+    );
+    expect(events).toEqual([{ n: ids.length }]);
+  });
+});
 
 describe("the participation seed (AC-43)", () => {
   it("creates every scenario once and is idempotent", async () => {

@@ -1,6 +1,14 @@
 import { getTableConfig, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { checkDataCatalog, dataCatalog, retentionPeriods, type CatalogEntry } from "./data-catalog";
+import { fieldCatalog } from "@transfer/domain";
+import {
+  checkDataCatalog,
+  checkPersonDataColumns,
+  dataCatalog,
+  personDataColumns,
+  retentionPeriods,
+  type CatalogEntry,
+} from "./data-catalog";
 import { project, tables } from "./schema";
 
 const participantEntry: CatalogEntry = {
@@ -56,6 +64,8 @@ describe("data catalog", () => {
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),
       profiling_exception_request: entry("participation_record", "confidential", true),
+      participant_identity: entry("participation_record", "confidential", true),
+      participant_details: entry("personnel_file", "confidential", true),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),
@@ -78,6 +88,7 @@ describe("data catalog", () => {
       project_master: "unset",
       staff_account: "unset",
       participation_record: "unset",
+      personnel_file: "unset",
       audit_log: "unset",
       reference_data: "never",
     });
@@ -122,5 +133,62 @@ describe("data catalog", () => {
   it("accepts participant data scoped by a project_id FK", () => {
     const catalog = { ...dataCatalog, fixture_scoped: participantEntry };
     expect(checkDataCatalog([...tables, fixtureScoped], catalog)).toEqual([]);
+  });
+});
+
+const withField = (key: string, change: object) =>
+  fieldCatalog.map((f) => (f.key === key ? { ...f, ...change } : f));
+
+// Plan 5.2 (D8, R8; AC-21): each person-data column is a field of the catalog, stored as a plain
+// column, of its table's data class and retention class.
+describe("person-data columns", () => {
+  it("map to catalogued plain fields of the table's classes", () => {
+    expect(checkPersonDataColumns()).toEqual([]);
+    expect(Object.keys(personDataColumns.participant_details!)).toContain("address_country");
+  });
+
+  it("fails for a special-category or highly confidential field", () => {
+    const columns = {
+      ...personDataColumns,
+      participant_details: {
+        ...personDataColumns.participant_details!,
+        phone: "healthRestrictions",
+      },
+    };
+    expect(checkPersonDataColumns(tables, columns)).toEqual([
+      "participant_details.phone: needs encrypted storage",
+    ]);
+  });
+
+  it("fails for a missing or different retention class (no mixed table)", () => {
+    expect(
+      checkPersonDataColumns(
+        tables,
+        personDataColumns,
+        dataCatalog,
+        withField("phone", { retentionClass: undefined }),
+      ),
+    ).toEqual(["participant_details.phone: retention class differs"]);
+    const mixed = withField("birthDate", { retentionClass: "personnel_file" });
+    expect(checkPersonDataColumns(tables, personDataColumns, dataCatalog, mixed)).toEqual([
+      "participant_identity.birth_date: retention class differs",
+    ]);
+  });
+
+  it("fails for a different data class, an unmapped column and a column not in the table", () => {
+    const internal = withField("lastName", { dataClass: "internal" });
+    expect(checkPersonDataColumns(tables, personDataColumns, dataCatalog, internal)).toEqual([
+      "participant_identity.last_name: data class differs",
+    ]);
+    const { phone: _phone, ...rest } = personDataColumns.participant_details!;
+    const columns = {
+      participant_details: { ...rest, fax: "phone" },
+      fixture_scoped: {},
+    };
+    expect(checkPersonDataColumns(tables, columns)).toEqual([
+      "participant_details.fax: not in the table",
+      "participant_details.phone: not a field of the catalog",
+      "fixture_scoped: not a catalogued table",
+    ]);
   });
 });

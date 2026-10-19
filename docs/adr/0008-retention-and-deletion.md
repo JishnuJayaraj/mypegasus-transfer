@@ -35,6 +35,11 @@ duty.
   (`audit_event`) and **`reference_data`** (`lifecycle_edge` and, from PR 1h-1, `job_run`, never
   touched by the retention job); entry waves are `project_master`. Periods stay `unset` until the DPO confirms them
   (Q3, Q77); the data-catalog test refuses a table without a known class.
+- *Note 2026-10-19 (Slice 2, PR 2f):* person data arrives in two tables of different classes:
+  `participant_identity` (`participation_record`) and `participant_details` (`personnel_file`,
+  Q105). The field catalog names each stored field's class, and a test maps every person-data
+  column to its field and refuses a table whose fields don't share its class, so "per data item"
+  holds at table level.
 - The values are in `docs/domain/data-protection.md` and must be confirmed by the DPO and tax
   advisor before the pilot.
 

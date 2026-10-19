@@ -68,6 +68,7 @@ describe("audit event types (plan 5.4)", () => {
       "rule_relaxation_rejected",
       "rule_relaxation_withdrawn",
       "project_activated",
+      "participant_data_changed",
     ]);
   });
 
@@ -89,7 +90,12 @@ describe("audit event types (plan 5.4)", () => {
       "rule_relaxation_withdrawn",
       "project_activated",
     ]);
-    expect([...reservedEventTypes]).toEqual([...lifecycleEventTypes, ...setupEventTypes]);
+    // Person data too (PR 2f): only `write_participant_data` writes it.
+    expect([...reservedEventTypes]).toEqual([
+      ...lifecycleEventTypes,
+      ...setupEventTypes,
+      "participant_data_changed",
+    ]);
   });
 
   it("names the status columns of the three tracks", () => {
@@ -475,6 +481,7 @@ describe("the other event types", () => {
       "entry_wave_created",
       { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
     ],
+    ["participant_data_changed", { details: { fields: ["lastName", "address", "phone"] } }],
     [
       "project_activated",
       {
@@ -754,6 +761,11 @@ describe("the other event types", () => {
         },
       },
     ],
+    // Person data: the changed fields of a participation, never a value (PR 2f).
+    ["participant_data_changed", { details: { fields: [] } }],
+    ["participant_data_changed", { details: { fields: ["addressStreet"] } }],
+    ["participant_data_changed", { details: { fields: ["phone"], phone: "030 1234567" } }],
+    ["participant_data_changed", { participationId: null, details: { fields: ["phone"] } }],
     // Free text (the wave name) never enters the trail; dates only with their changed key.
     ["entry_wave_created", { participationId: null, details: { waveId: otherId, name: "W" } }],
     ["entry_wave_created", { details: { waveId: otherId } }],
