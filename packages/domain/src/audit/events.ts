@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DocumentType } from "../documents/catalog";
-import { AccessCategory, valueDataClass } from "../fields/catalog";
+import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
 import { ProjectType } from "../project";
@@ -61,6 +61,8 @@ export const AuditEventType = z.enum([
   "rule_relaxation_rejected",
   "rule_relaxation_withdrawn",
   "project_activated",
+  // Slice 2, written only by `write_participant_data` (PR 2f)
+  "participant_data_changed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -102,6 +104,7 @@ export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new
 export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   ...lifecycleEventTypes,
   ...setupEventTypes,
+  "participant_data_changed",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -402,6 +405,11 @@ export const AuditEvent = z.discriminatedUnion("type", [
       projectAgenturVersion: z.int().min(1),
       baseDefaultsVersion,
     }),
+  }),
+  /** Person data written (plan 5.3, 5.10): the changed fields, never a value (Q66). */
+  event("participant_data_changed", {
+    ...ofParticipation,
+    details: z.strictObject({ fields: z.array(ParticipantDataField).min(1) }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

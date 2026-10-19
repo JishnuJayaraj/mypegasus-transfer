@@ -108,6 +108,8 @@ const statusFunctions = [
   "activate_project",
   // Slice 2 (PR 2e-2): template version migration with review
   "migrate_agentur_template",
+  // Slice 2 (PR 2f): person data
+  "write_participant_data",
 ];
 const helpers = [
   "assert_context",

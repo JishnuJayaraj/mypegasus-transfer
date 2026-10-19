@@ -169,6 +169,20 @@
       "when": 1792258940749,
       "tag": "0023_template_migration_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792403502841,
+      "tag": "0024_person_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792403526411,
+      "tag": "0025_person_data_functions",
+      "breakpoints": true
     }
   ]
 }

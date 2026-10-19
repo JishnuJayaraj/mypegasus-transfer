@@ -983,6 +983,56 @@ Built in 2f-1: `packages/domain/src/import/` under the 100 % threshold: `targets
     composition of row validation and plan, terminal precedence, trimmed duplicate names, the
     country-only mapping, sparse cells); the corrected items are again for confirmation.
 
+Built in 2f-2: `participant_identity` and `participant_details` (migration `0024_person_data`,
+generated) and `write_participant_data` with `record_audit_event` replaced and the grants
+(`0025_person_data_functions`, hand-written); the audit type `participant_data_changed` and
+`ParticipantDataField`; `retentionClass` in the field catalog; the data-catalog entries, the class
+`personnel_file` (`unset`) and `checkFieldColumns` with `fieldColumns` (AC-21); the
+synthetic identities of the seeded participations (`apps/api/src/participations/seed-identities.ts`).
+
+12. **Every write that changes something is audited**, the first one too: `participant_data_changed`
+    names the fields it set or changed (`ParticipantDataField`; the address as `address`), never a
+    value, with the acting staff user and the request id. A write that changes nothing writes no
+    row and no event and returns null (so the seed is idempotent). The fields are computed in SQL
+    with `IS DISTINCT FROM`.
+13. **Refusals** (P0001): `identity_required` (the first write needs the Personalnummer and both
+    names), `personnel_number_immutable` (a different Personalnummer for a participation that has
+    one), `address_incomplete` (some but not all of the four address arguments),
+    `personnel_number_taken` (unique per project), `invalid_argument` (a table `CHECK`), plus
+    `participation_not_found`, `actor_not_allowed` and `invalid_actor`. Actors are staff users and
+    system jobs, never assisted mode or a participant: self-service writes come with Slice 3.
+14. **The tables hold the structure** (`CHECK`s, so the owner can't store a malformed value
+    either): text trimmed of spaces, without control characters, 1 to its limit (Personalnummer
+    50, names 100, address parts 200, phone and mobile 30, emails 254); the four address columns
+    all set or all null; the country `^[A-Z]{2}$` and, in the MVP, only `DE`; a German postal code
+    five digits. The email and phone formats stay domain rules (round 32 calls them pragmatic),
+    so a later relaxation needs no migration.
+15. **Locks:** the function takes the shared project lock and the participation row lock
+    (`lock_participation`), so writers of one participation serialise and an import holding the
+    exclusive project lock (2g) can still write (re-entrant).
+16. **Retention in the field catalog (corrected in the review of PR #45):** every field a table
+    stores has its class: the statuses, dates and end reasons on `participation`, the exception
+    reason code on `profiling_exception_request` and the identity in `participation_record`, the
+    rest of the person data in `personnel_file` (Q105, accepted pilot decision); `dsvSignedOn` and the fields of
+    later slices have none until a table stores them. `fieldColumns` classifies **every column** of
+    the four tables with participant fields (a field key, or null for keys, references, versions
+    and workflow metadata), and `checkFieldColumns` fails for a participant-data table whose
+    columns aren't classified (the audit log, ids and codes only, is exempt), an unclassified
+    column, a field that needs encryption, a field above the table's data class (the `participation`
+    table is confidential and also stores internal statuses, so "not above" replaces 5.2's
+    "equal"), a different retention class, or a field with a retention class that no column
+    stores. So a table holds one retention class only (ADR-0008), and the claim above stays true as
+    tables are added.
+17. **`audit_event_lifecycle_has_participation`** now compares `event_type::text`: a value added to
+    the enum by `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the migrator
+    runs pending migrations in one.
+18. **The seed** writes, as the PL, Personalnummern `BSP-0001…`, placeholder names, `Musterstraße
+    n`, `99999 Beispielstadt`, `DE` and an `example.org` email for each of the 18 participations;
+    no birth date, Austrittsdatum or phone number: the seed's fictional timeline lies in 2091, where
+    real-looking birth dates would be implausible, and the fictional phone ranges are checked with
+    the import fixtures in 2g.
+19. **No docs gap found** in 2f-2.
+
 
 ## 4. Design overview
 
