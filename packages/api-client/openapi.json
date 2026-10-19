@@ -2087,6 +2087,164 @@
           "file"
         ],
         "additionalProperties": false
+      },
+      "ImportResult": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unchanged": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "unchanged",
+          "skipped"
+        ],
+        "additionalProperties": false
+      },
+      "ImportConfirmInput": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8388608,
+            "pattern": "^[A-Za-z0-9+/]+={0,2}$"
+          },
+          "sheet": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "headerRow": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 1
+          },
+          "csv": {
+            "type": "object",
+            "properties": {
+              "delimiter": {
+                "type": "string",
+                "enum": [
+                  ";",
+                  ",",
+                  "\t"
+                ]
+              },
+              "encoding": {
+                "type": "string",
+                "enum": [
+                  "utf-8",
+                  "windows-1252"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "waveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mapping": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 49
+                },
+                "target": {
+                  "type": "string",
+                  "enum": [
+                    "personnelNumber",
+                    "lastName",
+                    "firstName",
+                    "birthDate",
+                    "oldEmploymentEndDate",
+                    "addressStreet",
+                    "addressPostalCode",
+                    "addressCity",
+                    "addressCountry",
+                    "phone",
+                    "mobile",
+                    "privateEmail",
+                    "workEmail"
+                  ]
+                }
+              },
+              "required": [
+                "column",
+                "target"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 50
+          },
+          "decisions": {
+            "$ref": "#/components/schemas/ImportDecisions"
+          },
+          "previewToken": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "file",
+          "mapping",
+          "decisions",
+          "previewToken"
+        ],
+        "additionalProperties": false
+      },
+      "ImportDecisions": {
+        "type": "object",
+        "properties": {
+          "confirmWarnings": {
+            "type": "boolean"
+          },
+          "possibleDuplicates": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "create",
+                "skip"
+              ]
+            }
+          }
+        },
+        "required": [
+          "confirmWarnings",
+          "possibleDuplicates"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -4037,6 +4195,127 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload too large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/imports": {
+      "post": {
+        "tags": [
+          "imports"
+        ],
+        "summary": "Confirm an import: the same file again with the mapping, the PL's decisions and the preview token; atomic",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportConfirmInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What the import did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
                 }
               }
             }

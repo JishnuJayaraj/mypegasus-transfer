@@ -1,9 +1,10 @@
 import type { Clock } from "@transfer/adapters";
 import type { Database } from "@transfer/db";
-import type { ImportPreviewInput } from "@transfer/domain";
+import type { ImportConfirmInput, ImportPreviewInput } from "@transfer/domain";
 import type { Logger } from "pino";
 import type { Release } from "../projects/template-pins";
 import type { ImportActor, ImportContext } from "./analysis";
+import { confirmImport } from "./confirm";
 import { mappingKey, tokenKey } from "./keys";
 import { previewImport } from "./preview";
 
@@ -32,6 +33,8 @@ export function createImportService(deps: Deps) {
   return {
     preview: (actor: ImportActor, projectId: string, input: ImportPreviewInput) =>
       previewImport(ctx, actor, projectId, input),
+    confirm: (actor: ImportActor, projectId: string, input: ImportConfirmInput) =>
+      confirmImport(ctx, actor, projectId, input),
   };
 }
 

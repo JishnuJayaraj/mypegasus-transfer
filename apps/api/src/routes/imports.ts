@@ -1,5 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { ImportPreview, ImportPreviewInput, mayPerformOperation } from "@transfer/domain";
+import {
+  ImportConfirmInput,
+  ImportPreview,
+  ImportPreviewInput,
+  ImportResult,
+  mayPerformOperation,
+} from "@transfer/domain";
 import { projectAccess } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { createImportService, ImportRefusal } from "../imports/service";
@@ -89,6 +95,32 @@ export function importRoutes(deps: Deps) {
       if (!actor) return denied;
       try {
         return c.json(await service.preview(actor, projectId, c.req.valid("json")), 200);
+      } catch (error) {
+        return refusal(c, error);
+      }
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/projects/{projectId}/imports",
+      tags: ["imports"],
+      summary:
+        "Confirm an import: the same file again with the mapping, the PL's decisions and the preview token; atomic",
+      middleware,
+      request: {
+        params: ProjectParams,
+        body: { required: true, content: { "application/json": { schema: ImportConfirmInput } } },
+      },
+      responses: { 200: json(ImportResult, "What the import did"), ...problems },
+    }),
+    async (c) => {
+      const { projectId } = c.req.valid("param");
+      const { denied, actor } = await access(c, projectId);
+      if (!actor) return denied;
+      try {
+        return c.json(await service.confirm(actor, projectId, c.req.valid("json")), 200);
       } catch (error) {
         return refusal(c, error);
       }
