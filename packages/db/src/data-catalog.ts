@@ -20,9 +20,9 @@ export const retentionPeriods = {
   // ADR-0008 per item; non-signers from `withdrawn_on` (90 days assumed, Q77), the rest with
   // the personnel file and the evidence set (Slice 7).
   participation_record: "unset",
-  // Q105 (assumed; round 32 proposed, DPO confirmation pending): non-signers 90 days after
-  // `withdrawnOn`; otherwise the end of the 3rd calendar year after exit, cancellation or
-  // contractual end; never in the BA evidence set (Slice 7).
+  // Q105 (accepted pilot decision, round 32): non-signers 90 days after `withdrawnOn`; otherwise
+  // the end of the 3rd calendar year after exit, cancellation or contractual end; never in the BA
+  // evidence set. The Slice 7 retention job will encode the period.
   personnel_file: "unset",
   // 3 years; pseudonymised when the subject's data is deleted; evidence-set entries follow the
   // evidence set (verify, Q3).
