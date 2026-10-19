@@ -204,13 +204,18 @@ describe("change_participation_status (AC-16)", () => {
       await app.query("begin");
       await second.query("begin");
       await changeStatus(app, id, { field: "status", from: "imported", to: "contacted" });
+      // Caught at once: the refusal can arrive before `commit` resolves here, and a rejection
+      // without a handler fails the run as unhandled.
       const blocked = changeStatus(second, id, {
         field: "status",
         from: "imported",
         to: "contacted",
-      });
+      }).then(
+        () => "committed",
+        (error: unknown) => error,
+      );
       await app.query("commit");
-      await expect(blocked).rejects.toMatchObject(failsWith("stale_status"));
+      expect(await blocked).toMatchObject(failsWith("stale_status"));
       await second.query("rollback");
     } finally {
       await second.end();
