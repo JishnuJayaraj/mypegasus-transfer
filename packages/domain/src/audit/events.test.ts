@@ -70,6 +70,7 @@ describe("audit event types (plan 5.4)", () => {
       "project_activated",
       "participant_data_changed",
       "import_confirmed",
+      "participation_created_manually",
     ]);
   });
 
@@ -122,6 +123,8 @@ const r26 = [
   "rule_relaxation_requested",
   "rule_relaxation_approved",
   "import_confirmed",
+  // round 33: manual creation resolves the import's required targets (R32, PR 2h-2)
+  "participation_created_manually",
 ];
 
 describe("configuration-dependent events (R26, AC-45)", () => {
@@ -483,6 +486,8 @@ describe("the other event types", () => {
       { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
     ],
     ["participant_data_changed", { details: { fields: ["lastName", "address", "phone"] } }],
+    // A participation created by hand: the base-defaults version (R26, round 33; PR 2h-2).
+    ["participation_created_manually", { details: { baseDefaultsVersion: 1 } }],
     // A confirmed import: counts and the base-defaults version (R26), project-level.
     [
       "import_confirmed",
@@ -801,6 +806,16 @@ describe("the other event types", () => {
       {
         details: { created: 1, updated: 0, unchanged: 0, skipped: 0, baseDefaultsVersion: 1 },
       },
+    ],
+    // Manual creation belongs to a participation and names nothing but the version.
+    ["participation_created_manually", { details: {} }],
+    [
+      "participation_created_manually",
+      { participationId: null, details: { baseDefaultsVersion: 1 } },
+    ],
+    [
+      "participation_created_manually",
+      { details: { baseDefaultsVersion: 1, personnelNumber: "BSP-0001" } },
     ],
     // Person data: the changed fields of a participation, never a value (PR 2f).
     ["participant_data_changed", { details: { fields: [] } }],

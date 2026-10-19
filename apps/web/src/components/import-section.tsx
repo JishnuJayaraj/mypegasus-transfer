@@ -64,6 +64,7 @@ export function ImportSection({ projectId }: { projectId: string }) {
             subtitle={t("import.done.text", { ...done })}
             hideCloseButton
           />
+          {!done.mappingSaved && <p>{t("import.done.mappingNotSaved")}</p>}
           <Button
             kind="tertiary"
             onClick={() => {

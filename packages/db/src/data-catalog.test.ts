@@ -73,7 +73,8 @@ describe("data catalog", () => {
       project_template_pin: entry("project_master", "internal"),
       project_config_override: entry("project_master", "internal"),
       config_relaxation_request: entry("project_master", "internal"),
-      import_column_mapping: entry("project_master", "internal"),
+      // R44, round 33: possibly pseudonymised participant data, still kept with the project.
+      import_column_mapping: entry("project_master", "confidential", true),
     });
   });
 

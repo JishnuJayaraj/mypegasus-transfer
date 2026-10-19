@@ -166,6 +166,22 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("link", { name: /^Zurück zu / }).click();
   await expect(participants.getByRole("row")).toHaveCount(14);
 
+  // Slice 2 (PR 2h-2, AC-51): the PL adds one person by hand, through the import's rules.
+  await participants.getByRole("button", { name: "Teilnehmende Person anlegen" }).click();
+  await page.getByLabel("Personalnummer").fill("BSP-0100");
+  await page.getByLabel("Nachname").fill("Beispiel");
+  await page.getByLabel("Vorname").fill("Bernd");
+  await page.getByLabel("Geburtsdatum").fill("01.01.1970");
+  await page.getByLabel("Austrittsdatum (bisheriges Arbeitsverhältnis)").fill("31.12.2026");
+  await page.getByLabel("Straße und Hausnummer").fill("Musterstraße 100");
+  await page.getByLabel("Postleitzahl").fill("99999");
+  await page.getByLabel("Ort", { exact: true }).fill("Beispielstadt");
+  await expectAccessible(page);
+  await page.getByRole("button", { name: "Anlegen", exact: true }).click();
+  await expect(participants.getByText("Teilnehmende Person angelegt")).toBeVisible();
+  await expect(participants.getByRole("row")).toHaveCount(15);
+  await expectAccessible(page);
+
   const configuration = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });

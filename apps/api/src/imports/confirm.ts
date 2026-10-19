@@ -1,6 +1,7 @@
 import { importColumnMapping, sql } from "@transfer/db";
 import {
   checkImportDecisions,
+  headerLooksLikeData,
   warningsToAudit,
   type ImportConfirmInput,
   type ImportDecisions,
@@ -21,6 +22,7 @@ import {
   loadState,
   planDigest,
   readFile,
+  writeParticipantData,
   type ImportActor,
   type ImportContext,
 } from "./analysis";
@@ -42,7 +44,7 @@ export async function confirmImport(
 ): Promise<ImportResult> {
   const { db, release, clock, logger, mapKey, tokKey } = ctx;
   const started = Date.now();
-  const read = await readFile(input);
+  const read = await readFile(input, ctx.slots);
   checkColumns(read.grid, input.mapping);
   const country = cleanCountry(input.country);
   const staff: ServiceActor = actor.subject;
@@ -90,23 +92,7 @@ export async function confirmImport(
       const idOfRow = new Map<number, string>();
       const counts = { created: 0, updated: 0, unchanged: 0, skipped: 0 };
       const write = (participationId: string, v: ImportValues) =>
-        callFunction(
-          tx,
-          sql`write_participant_data(p_participation_id => ${participationId}::uuid,
-            p_context => ${context},
-            p_personnel_number => ${v.personnelNumber ?? null}::text,
-            p_last_name => ${v.lastName ?? null}::text,
-            p_first_name => ${v.firstName ?? null}::text,
-            p_birth_date => ${v.birthDate ?? null}::date,
-            p_old_employment_end_date => ${v.oldEmploymentEndDate ?? null}::date,
-            p_address_street => ${v.addressStreet ?? null}::text,
-            p_address_postal_code => ${v.addressPostalCode ?? null}::text,
-            p_address_city => ${v.addressCity ?? null}::text,
-            p_address_country => ${v.addressCountry ?? null}::text,
-            p_phone => ${v.phone ?? null}::text, p_mobile => ${v.mobile ?? null}::text,
-            p_private_email => ${v.privateEmail ?? null}::text,
-            p_work_email => ${v.workEmail ?? null}::text)`,
-        );
+        writeParticipantData(tx, context, participationId, v);
 
       for (const planned of plan.rows) {
         const rowValues = values.get(planned.row)!;
@@ -158,9 +144,13 @@ export async function confirmImport(
 
       // Saved last, keyed by the hash of each normalised header, never the header text (R7).
       // Columns whose headers normalise alike keep the first one's target (as `suggest` reads
-      // it back); one upsert may not touch a key twice.
+      // it back); one upsert may not touch a key twice. A header row that looks like a person's
+      // data saves nothing: its hashes would be pseudonymised values of that person (R44).
       const byHmac = new Map<string, (typeof input.mapping)[number]["target"]>();
-      for (const { column, target } of input.mapping.toSorted((a, b) => a.column - b.column)) {
+      const dataLike = headerLooksLikeData(read.grid.headers);
+      for (const { column, target } of dataLike
+        ? []
+        : input.mapping.toSorted((a, b) => a.column - b.column)) {
         const hmac = headerHmac(mapKey, read.grid.headers[column]!);
         if (hmac !== null && !byHmac.has(hmac)) byHmac.set(hmac, target);
       }
@@ -185,7 +175,8 @@ export async function confirmImport(
             },
           });
       }
-      return counts;
+      // True only when a mapping row was written (a header that normalises to nothing isn't).
+      return { ...counts, mappingSaved: saved.length > 0 };
     })
     .catch((error: unknown) => {
       const code = functionRefusal(error);

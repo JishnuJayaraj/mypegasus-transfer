@@ -28,6 +28,11 @@ export const ProblemDetails = z
     status: z.number().int(),
     detail: z.string().optional(),
     instance: z.string().optional(),
+    /**
+     * The participation a refusal refers to, where the viewer may open it (a manual creation's
+     * existing Personalnummer, R32); an id, never a value.
+     */
+    participationId: z.uuid().optional(),
     errors: z
       .array(
         z.object({

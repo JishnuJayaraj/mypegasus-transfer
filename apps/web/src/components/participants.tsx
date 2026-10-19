@@ -1,9 +1,11 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ApiProblemError } from "@transfer/api-client";
 import { createLink } from "@tanstack/react-router";
-import { Button, Link, SimpleTable } from "@transfer/ui";
+import { Add, Button, InlineNotification, Link, SimpleTable, useToast } from "@transfer/ui";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { participantsQuery, useApi } from "../api";
+import { entryWavesQuery, participantsQuery, projectConfigQuery, useApi } from "../api";
+import { ManualParticipationForm } from "./manual-participation-form";
 
 const RouterLink = createLink(Link);
 
@@ -23,7 +25,14 @@ const columns = [
  */
 export function Participants({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
-  const query = useInfiniteQuery(participantsQuery(useApi(), projectId));
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const showToast = useToast();
+  const query = useInfiniteQuery(participantsQuery(api, projectId));
+  // Manual creation is one import row (R32): offered with the import's capability.
+  const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
+  const [adding, setAdding] = useState(false);
+  const [created, setCreated] = useState<string | null>(null);
   const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
   const rows = (query.data?.pages ?? []).flatMap((page) =>
     page.items.map((item) => ({
@@ -47,6 +56,53 @@ export function Participants({ projectId }: { projectId: string }) {
   return (
     <section aria-labelledby="project-participants" className="tp-section">
       <h2 id="project-participants">{t("participants.title")}</h2>
+      {created && (
+        <>
+          <InlineNotification
+            kind="success"
+            title={t("manual.created")}
+            onClose={() => setCreated(null)}
+          />
+          <p>
+            <RouterLink
+              to="/projects/$projectId/participations/$participationId"
+              params={{ projectId, participationId: created }}
+            >
+              {t("manual.openCreated")}
+            </RouterLink>
+          </p>
+        </>
+      )}
+      {adding ? (
+        <ManualParticipationForm
+          projectId={projectId}
+          onCancel={() => setAdding(false)}
+          onCreated={async (detail) => {
+            setAdding(false);
+            setCreated(detail.id);
+            showToast({ title: t("manual.created") });
+            await Promise.all([
+              queryClient.invalidateQueries({
+                queryKey: participantsQuery(api, projectId).queryKey,
+              }),
+              queryClient.invalidateQueries({ queryKey: entryWavesQuery(api, projectId).queryKey }),
+            ]);
+          }}
+        />
+      ) : (
+        config.capabilities.importParticipations && (
+          <Button
+            className="tp-load-more"
+            renderIcon={Add}
+            onClick={() => {
+              setCreated(null);
+              setAdding(true);
+            }}
+          >
+            {t("manual.add")}
+          </Button>
+        )
+      )}
       {forbidden ? (
         <p role="alert">{t("participants.forbidden")}</p>
       ) : query.isError ? (

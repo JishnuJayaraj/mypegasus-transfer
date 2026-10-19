@@ -9,6 +9,7 @@ import {
 import { projectAccess } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { createImportService, ImportRefusal } from "../imports/service";
+import { ImportBusyError } from "../imports/slots";
 import { StatusServiceError } from "../participations/status-service";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
@@ -17,16 +18,25 @@ import type { Context } from "hono";
 
 const ProjectParams = z.object({ projectId: z.uuid() });
 
-const problems = problemResponses(
-  "validation-error",
-  "unauthenticated",
-  "forbidden",
-  "not-found",
-  "conflict",
-  "payload-too-large",
-  "unsupported-media-type",
-  "domain-error",
-);
+const problems = {
+  ...problemResponses(
+    "validation-error",
+    "unauthenticated",
+    "forbidden",
+    "not-found",
+    "conflict",
+    "payload-too-large",
+    "unsupported-media-type",
+    "domain-error",
+  ),
+  // R43: no parse worker became free in time (`import_busy`); the header says when to retry.
+  503: {
+    ...problemResponses("service-unavailable")[503],
+    headers: z.object({
+      "Retry-After": z.string().meta({ description: "Seconds after which a retry may succeed" }),
+    }),
+  },
+};
 
 /** A refusal as its problem (R21): codes only, never a value of the file. */
 function refusal(c: Context, error: unknown) {
@@ -42,6 +52,13 @@ function refusal(c: Context, error: unknown) {
       });
     }
     return domainProblem(c, error.issues);
+  }
+  if (error instanceof ImportBusyError) {
+    // R43: no parse worker became free in time; the wizard asks the PL to try again shortly.
+    c.header("Retry-After", "10");
+    return problem(c, "service-unavailable", {
+      errors: [{ pointer: "", code: "import_busy", detail: "Too many imports at once" }],
+    });
   }
   if (error instanceof StatusServiceError && error.kind === "forbidden") {
     return problem(c, "forbidden");
@@ -59,6 +76,7 @@ export function importRoutes(deps: Deps) {
     clock: deps.clock,
     logger: deps.logger,
     sessionSecret: deps.env.sessionSecret,
+    slots: deps.importSlots,
   });
 
   /** Visibility (404) and the PL's `importParticipations` (403) come before anything else. */

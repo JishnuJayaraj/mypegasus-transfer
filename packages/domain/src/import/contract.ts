@@ -188,6 +188,11 @@ export const ImportPreview = z
     headerRow: z.int().min(1),
     /** The header cells as written in the file. */
     headers: z.array(z.string()),
+    /**
+     * The chosen header row looks like a person's data row (a date, an `@` or five or more digits
+     * in a cell; R44): the confirm will save no column mapping for later imports.
+     */
+    headerLooksLikeData: z.boolean(),
     suggestedMapping: z.array(SuggestedColumn),
     /** The mapping this answer was made for (empty when none was sent). */
     mapping: z.array(ColumnMapping),
@@ -208,6 +213,8 @@ export const ImportResult = z
     updated: z.int().min(0),
     unchanged: z.int().min(0),
     skipped: z.int().min(0),
+    /** Whether the column mapping was saved for later imports (not for a data-like header, R44). */
+    mappingSaved: z.boolean(),
   })
   .meta({ id: "ImportResult" });
 export type ImportResult = z.infer<typeof ImportResult>;

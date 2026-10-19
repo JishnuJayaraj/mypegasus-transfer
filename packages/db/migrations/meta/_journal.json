@@ -204,6 +204,20 @@
       "when": 1792437914559,
       "tag": "0028_entry_wave_individual_dates",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1792439254910,
+      "tag": "0029_manual_creation_event",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792441064132,
+      "tag": "0030_manual_creation_has_participation",
+      "breakpoints": true
     }
   ]
 }

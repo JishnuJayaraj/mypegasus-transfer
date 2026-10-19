@@ -6,6 +6,7 @@ import type { Logger } from "pino";
 import type { z } from "zod";
 import type { Env } from "./env";
 import { validationProblem } from "./problem";
+import type { Slots } from "./imports/slots";
 import type { SpaRoots } from "./static";
 
 export interface Deps {
@@ -16,6 +17,8 @@ export interface Deps {
   clock: Clock;
   /** The built SPAs to serve (production image, `pnpm start`); Vite serves them in dev. */
   spa?: SpaRoots | undefined;
+  /** The parse-worker slots of the import (R43); the process's own by default, a test's own. */
+  importSlots?: Slots | undefined;
 }
 
 export interface AppEnv {

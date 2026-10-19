@@ -11,6 +11,7 @@ import {
   Button,
   Checkbox,
   FileUploaderButton,
+  InlineNotification,
   RadioButton,
   RadioButtonGroup,
   Select,
@@ -258,6 +259,14 @@ export function ImportWizard(props: {
           />
         ))}
       </Select>
+      {preview.headerLooksLikeData && (
+        <InlineNotification
+          kind="warning"
+          title={t("import.file.headerLooksLikeData")}
+          hideCloseButton
+          lowContrast
+        />
+      )}
       {csv && (
         <>
           <Select

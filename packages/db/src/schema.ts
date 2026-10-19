@@ -566,7 +566,7 @@ export const auditEvent = pgTable(
     ),
     check(
       "audit_event_lifecycle_has_participation",
-      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
+      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'participation_created_manually', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
     ),
     // `field`, `from_value` and `to_value` only on a status change (creation: to `imported`) and,
     // as end reasons, on a correction; their values come from the matching enum.
