@@ -1200,7 +1200,8 @@
         "type": "object",
         "properties": {
           "agenturKey": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
           },
           "fromVersion": {
             "type": "integer",

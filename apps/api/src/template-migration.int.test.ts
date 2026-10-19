@@ -1,11 +1,13 @@
 import { ManualClock } from "@transfer/adapters";
 import { resolveForParticipation } from "@transfer/config";
-import { loadBaseDefaults } from "@transfer/config/load";
+import { canonicalHash, loadBaseDefaults, loadTemplate } from "@transfer/config/load";
 import {
   auditEvent,
+  configTemplateVersion,
   createDb,
   eq,
   projectConfigOverride,
+  projectTemplatePin,
   seedProjectIds,
   seedStaffUserIds,
   sql,
@@ -267,18 +269,104 @@ describe("POST …/pins/{agenturKey}/migration (AC-20, AC-45)", () => {
     expect((await config(werkNord)).pins[0]!.version).toBe(1);
   });
 
-  it("is a 409 when the pinned or the override version moved since the preview", async () => {
+  it("is a 409 when the override version moved since the preview", async () => {
     await setNordSetting();
     await expectProblem(
       await migrate(werkNord, nord, confirm({ expectedVersion: 0 })),
       409,
       "conflict",
     );
-    await expectProblem(
-      await migrate(werkNord, nord, confirm({ fromVersion: 2 })),
-      409,
-      "conflict",
-    );
+  });
+
+  // Round 31: the target is checked against the declared fromVersion (422 first), and a pin that
+  // moved since the review is a 409, also when it reached the review's target or went beyond it.
+  it("checks the target against the declared version before the pin (422, then 409)", async () => {
+    const declared = confirm({ fromVersion: 2, expectedVersion: 0, decisions: {} });
+    expect(await codes(await migrate(werkNord, nord, declared))).toEqual([
+      { code: "template_already_pinned", pointer: "/version" },
+    ]);
+  });
+
+  const review = confirm({ expectedVersion: 0, decisions: {} });
+  /** The review made on version 1 once the pin moved: its status, and whether anything changed. */
+  async function staleReview() {
+    const before = await eventsOf(werkNord);
+    const res = await migrate(werkNord, nord, review);
+    return {
+      status: res.status,
+      written: (await eventsOf(werkNord)).length !== before.length,
+      pinned: (await config(werkNord)).pins[0]!.version,
+    };
+  }
+
+  it("is a 409 when another migration reached the review's target, writing nothing", async () => {
+    expect((await migrate(werkNord, nord, review)).status).toBe(200);
+    expect(await staleReview()).toEqual({ status: 409, written: false, pinned: 2 });
+  });
+
+  it("is a 409 when another migration went beyond the review's target, writing nothing", async () => {
+    // A version beyond the catalog's, pinned directly as the owner (a synthetic state).
+    const content = { ...loadTemplate(nord, 2), version: 3 };
+    await owner.insert(configTemplateVersion).values({
+      agenturKey: nord,
+      version: 3,
+      content,
+      contentSha256: canonicalHash(content),
+    });
+    await owner.insert(projectTemplatePin).values({
+      projectId: werkNord,
+      agenturKey: nord,
+      version: 3,
+      pinnedBy: seedStaffUserIds.projectLead,
+    });
+    expect(await staleReview()).toEqual({ status: 409, written: false, pinned: 3 });
+  });
+
+  // Round 31: the preview reads one coherent snapshot. A migration that commits while the preview
+  // runs (here: after it read the pins, before it reads the override) is either entirely before
+  // or entirely after it, never an old pin with a new override.
+  it("previews one coherent state while a migration commits", async () => {
+    await setNordSetting();
+    let commit!: () => void;
+    const gate = new Promise<void>((resolve) => (commit = resolve));
+    let locked!: () => void;
+    const lockTaken = new Promise<void>((resolve) => (locked = resolve));
+    // The owner blocks reads of the override table, then migrates with the review removing the
+    // setting (override version 2) and commits.
+    const concurrent = owner.transaction(async (tx) => {
+      await tx.execute(sql`lock table project_config_override in access exclusive mode`);
+      locked();
+      await gate;
+      const template = loadTemplate(nord, 2);
+      await tx.execute(sql`select migrate_agentur_template(p_project_id => ${werkNord}::uuid,
+        p_agentur_key => ${nord}, p_from_version => 1, p_version => 2,
+        p_content => ${JSON.stringify(template)}::jsonb, p_sha256 => ${canonicalHash(template)},
+        p_expected_version => 1,
+        p_override_content => ${JSON.stringify({ schemaVersion: 1, kind: "project_override" })}::jsonb,
+        p_base_defaults_version => 1,
+        p_context => ${auditContext(seedStaffUserIds.projectLead, null)})`);
+    });
+    await lockTaken;
+    const pending = preview(werkNord, nord, { version: 2 });
+    // The preview has read the project and the pins and waits to read the override …
+    await expect
+      .poll(async () => {
+        const { rows } = await holder.execute<{ n: number }>(
+          sql`select count(*)::int as n from pg_locks where locktype = 'relation' and not granted`,
+        );
+        return rows[0]!.n;
+      })
+      .toBe(1);
+    commit();
+    await concurrent;
+    // … and still sees the state before the migration: version 1 pinned, override version 1 with
+    // the setting under review (under READ COMMITTED it saw override version 2 without it).
+    const shown = await readJson(await pending, TemplateMigrationPreview);
+    expect(shown).toMatchObject({ fromVersion: 1, expectedVersion: 1 });
+    expect(shown.review.map(({ key }) => key)).toEqual([
+      "agentur_submission.leadTimeDays",
+      "agentur_submission.submissionChannel",
+    ]);
   });
 
   it("waits for a concurrent override change on the project lock, then refuses the stale review (409)", async () => {
