@@ -110,6 +110,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // Saved import column mappings: the keyed hash of a normalised header and its target, never
+  // header text (R7); the application writes them without an audit (D2).
+  import_column_mapping: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */

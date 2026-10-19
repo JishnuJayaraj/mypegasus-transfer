@@ -32,6 +32,7 @@ export {
   type WaveUsage,
   type WaveValues,
 } from "./projects/waves";
+export { ParticipationListItem, ParticipationPage } from "./participations";
 export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole, StaffRole } from "./enums";
 export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
@@ -149,6 +150,33 @@ export {
   type RowInput,
   type ValidatedRow,
 } from "./import/rows";
+export {
+  ColumnMapping,
+  CsvDelimiter,
+  CsvEncoding,
+  ImportChange,
+  ImportConfirmInput,
+  ImportCounts,
+  ImportDecisionsInput,
+  ImportFileErrorCode,
+  ImportIssueView,
+  ImportKept,
+  importLimits,
+  ImportPreview,
+  ImportPreviewInput,
+  ImportReportRow,
+  ImportReportTarget,
+  ImportResult,
+  PreviewToken,
+  SuggestedColumn,
+} from "./import/contract";
+export {
+  checkImportDecisions,
+  warningsToAudit,
+  type ImportDecisionIssue,
+  type ImportDecisionIssueCode,
+  type ImportDecisions,
+} from "./import/decisions";
 export {
   ImportRowOutcome,
   planImport,

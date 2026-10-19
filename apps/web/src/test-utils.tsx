@@ -90,5 +90,6 @@ export const unpinnedConfig = {
     requestRelaxation: true,
     activateProject: true,
     migrateTemplate: true,
+    importParticipations: true,
   },
 };

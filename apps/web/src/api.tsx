@@ -99,3 +99,21 @@ export const projectsQuery = (api: ApiClient) =>
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
+
+/** The project's participations, page by page (Slice 2 plan 5.12); 403 for those who may not list them. */
+export const participantsQuery = (api: ApiClient, projectId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["projects", projectId, "participations"],
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/projects/{projectId}/participations", {
+          params: {
+            path: { projectId },
+            query: { limit: 50, ...(pageParam && { cursor: pageParam }) },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });

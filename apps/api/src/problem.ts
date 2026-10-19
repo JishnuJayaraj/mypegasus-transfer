@@ -10,6 +10,8 @@ export const problemTypes = {
   "not-found": [404, "Not found"],
   /** A write based on a stale version (optimistic concurrency, plan 5.9). */
   conflict: [409, "Conflict"],
+  /** The body exceeds the route's limit: 100 kB, or 8 MB on the import routes (plan 5.11). */
+  "payload-too-large": [413, "Payload too large"],
   "unsupported-media-type": [415, "Unsupported media type"],
   /** A domain rule refused the request; `errors[].code` names it, never a value. */
   "domain-error": [422, "Refused by a domain rule"],

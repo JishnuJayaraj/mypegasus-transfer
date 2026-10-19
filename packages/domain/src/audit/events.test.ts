@@ -69,6 +69,7 @@ describe("audit event types (plan 5.4)", () => {
       "rule_relaxation_withdrawn",
       "project_activated",
       "participant_data_changed",
+      "import_confirmed",
     ]);
   });
 
@@ -482,6 +483,14 @@ describe("the other event types", () => {
       { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
     ],
     ["participant_data_changed", { details: { fields: ["lastName", "address", "phone"] } }],
+    // A confirmed import: counts and the base-defaults version (R26), project-level.
+    [
+      "import_confirmed",
+      {
+        participationId: null,
+        details: { created: 3, updated: 2, unchanged: 0, skipped: 1, baseDefaultsVersion: 1 },
+      },
+    ],
     [
       "project_activated",
       {
@@ -759,6 +768,38 @@ describe("the other event types", () => {
           projectAgenturVersion: 1,
           baseDefaultsVersion: 1,
         },
+      },
+    ],
+    // An import's counts need the base-defaults version, are numbers and carry no file facts.
+    [
+      "import_confirmed",
+      { participationId: null, details: { created: 1, updated: 0, unchanged: 0, skipped: 0 } },
+    ],
+    [
+      "import_confirmed",
+      {
+        participationId: null,
+        details: { created: -1, updated: 0, unchanged: 0, skipped: 0, baseDefaultsVersion: 1 },
+      },
+    ],
+    [
+      "import_confirmed",
+      {
+        participationId: null,
+        details: {
+          created: 1,
+          updated: 0,
+          unchanged: 0,
+          skipped: 0,
+          baseDefaultsVersion: 1,
+          fileName: "teilnehmer.csv",
+        },
+      },
+    ],
+    [
+      "import_confirmed",
+      {
+        details: { created: 1, updated: 0, unchanged: 0, skipped: 0, baseDefaultsVersion: 1 },
       },
     ],
     // Person data: the changed fields of a participation, never a value (PR 2f).

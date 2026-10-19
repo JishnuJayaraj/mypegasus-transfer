@@ -1,0 +1,13 @@
+Personalnummer;Nachname;Vorname;Geburtsdatum;Austrittsdatum;Straße;PLZ;Ort;Land;Telefon;Mobil;E-Mail privat
+BSP-0001;Mustermann;Erika;01.01.1965;31.12.2026;Neue Musterstraße 100;99999;Beispielstadt;Deutschland;030 23125 001;0171 3920 001;teilnehmer-0001@example.org
+BSP-0002;Musterfrau;Max;03.02.1967;31.12.2026;Musterstraße 2;99999;Beispielstadt;Deutschland;030 23125 900;0171 3920 002;teilnehmer-0002@example.org
+BSP-0003;Beispiel;Anna;05.03.1969;31.12.2026;Musterstraße 3;99999;Beispielstadt;Deutschland;030 23125 003;0171 3920 003;teilnehmer-0003@example.org
+BSP-0004;Normalverbraucher;Paul;07.04.1971;31.12.2026;Musterstraße 4;99999;Beispielstadt;Deutschland;030 23125 004;0171 3920 004;teilnehmer-0004@example.org
+BSP-0005;Muster;Lena;09.05.1973;31.12.2026;Musterstraße 5;99999;Beispielstadt;Deutschland;030 23125 005;0171 3920 005;teilnehmer-0005@example.org
+BSP-0006;Probe;Jonas;11.06.1975;31.12.2026;Musterstraße 6;99999;Beispielstadt;Deutschland;030 23125 006;0171 3920 006;teilnehmer-0006@example.org
+BSP-0007;Mustermann;Paula;13.07.1977;31.12.2026;Musterstraße 7;99999;Beispielstadt;Deutschland;030 23125 007;0171 3920 007;teilnehmer-0007@example.org
+BSP-0008;Musterfrau;Felix;15.08.1979;31.12.2026;Musterstraße 8;99999;Beispielstadt;Deutschland;030 23125 008;0171 3920 008;teilnehmer-0008@example.org
+BSP-0009;Beispiel;Mia;17.09.1981;31.12.2026;Musterstraße 9;99999;Beispielstadt;Deutschland;030 23125 009;0171 3920 009;teilnehmer-0009@example.org
+BSP-0010;Normalverbraucher;Leon;19.10.1983;31.12.2026;Musterstraße 10;99999;Beispielstadt;Deutschland;030 23125 010;0171 3920 010;teilnehmer-0010@example.org
+BSP-0011;Muster;Emma;21.11.1985;31.12.2026;Musterstraße 11;99999;Beispielstadt;Deutschland;030 23125 011;0171 3920 011;teilnehmer-0011@example.org
+BSP-0013;Neumann;Nora;25.01.1989;31.12.2026;Musterstraße 13;99999;Beispielstadt;Deutschland;030 23125 013;0171 3920 013;teilnehmer-0013@example.org

@@ -405,3 +405,50 @@ describe("transfer_app and job_run (PR 1h-1)", () => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
   });
 });
+
+// Plan 5.2, 5.11 (PR 2g, AC-31, AC-40): saved import mappings hold no personal data and no audit
+// is needed (D2): the app reads, adds and replaces them, but never deletes or truncates them.
+const hmac = (digit: string) => digit.repeat(64);
+const insert = (header: string, target = "lastName") =>
+  `insert into import_column_mapping (project_id, header_hmac, target, updated_by)
+   values ('${seedProjectIds.werkNord}', '${header}', '${target}', '${staffUserId}')`;
+
+describe("transfer_app and the saved import mappings", () => {
+  it("may insert, update and select them", async () => {
+    await app.query(insert(hmac("a")));
+    await app.query(
+      "update import_column_mapping set target = 'firstName' where header_hmac = $1",
+      [hmac("a")],
+    );
+    expect((await app.query("select header_hmac, target from import_column_mapping")).rows).toEqual(
+      [{ header_hmac: hmac("a"), target: "firstName" }],
+    );
+  });
+
+  it("keeps one target per header and project", async () => {
+    await app.query(insert(hmac("a")));
+    await expect(app.query(insert(hmac("a"), "firstName"))).rejects.toMatchObject({
+      code: "23505",
+    });
+  });
+
+  it.each([
+    ["header text", insert("Nachname")],
+    ["upper-case hex", insert(hmac("A"))],
+    ["a short digest", insert("a".repeat(63))],
+  ])("stores no %s (23514)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject({ code: "23514" });
+  });
+
+  it("refuses a target that is not an import target (22P02)", async () => {
+    await expect(app.query(insert(hmac("b"), "iban"))).rejects.toMatchObject({ code: "22P02" });
+  });
+
+  it.each([
+    ["delete from import_column_mapping", "delete from import_column_mapping"],
+    ["truncate import_column_mapping", "truncate import_column_mapping"],
+  ])("may not %s (42501)", async (_label, sql) => {
+    await owner.query(insert(hmac("c")));
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});
