@@ -3,6 +3,7 @@ import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   Button,
   Form,
+  formatDate,
   InlineNotification,
   Select,
   SelectItem,
@@ -19,8 +20,8 @@ type ErrorCode = keyof typeof de.participant.waveErrors;
 
 /**
  * The PL's wave choice on a participant's page (Slice 2 plan, "Planned in PR 2h", R33): offered
- * while the API's capability says so; otherwise the reason it is closed, where one applies. The
- * API decides again on submit; a refusal shows its code's message.
+ * while the API's capability says so; otherwise the API's reason it is closed. The API decides
+ * again on submit; a refusal shows its code's message.
  */
 export function EntryWaveChoice({ detail, projectId }: { detail: Detail; projectId: string }) {
   const { t } = useTranslation();
@@ -70,17 +71,14 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
     },
   });
 
+  // The server says why the choice is closed, the missing permission first (R31).
+  const refusal = detail.refusals.assignEntryWave;
   if (!detail.capabilities.assignEntryWave) {
-    const reason =
-      detail.dsvStatus !== "not_offered"
-        ? "dsv_already_offered"
-        : detail.dates.tgStart !== null || detail.dates.tgEnd !== null
-          ? "individual_dates_set"
-          : undefined;
-    return reason ? (
-      <p>{t(`participant.waveErrors.${reason}`)}</p>
-    ) : (
-      error && <InlineNotification kind="error" title={message(error)} hideCloseButton />
+    return (
+      <>
+        {error && <InlineNotification kind="error" title={message(error)} hideCloseButton />}
+        {refusal && <p>{t(`participant.waveRefusals.${refusal}`)}</p>}
+      </>
     );
   }
 
@@ -96,6 +94,16 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
   }
 
   const choices = (waves.data ?? []).filter((wave) => wave.id !== detail.entryWave?.id);
+  // Code, name and the four dates, so the PL can compare before assigning (round 33 review).
+  const waveLabel = (wave: (typeof choices)[number]) =>
+    t("participant.waveOption", {
+      code: wave.code,
+      name: wave.name,
+      signingDeadline: formatDate(wave.signingDeadline) || "—",
+      start: formatDate(wave.defaultTgStart) || "—",
+      end: formatDate(wave.defaultTgEnd) || "—",
+      latestEntry: formatDate(wave.latestEntryDate) || "—",
+    });
   return (
     <Form className="tp-form" onSubmit={submit} noValidate>
       <Stack gap={5}>
@@ -108,7 +116,7 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
         >
           <SelectItem value="" text={t("participant.noWaveChosen")} />
           {choices.map((wave) => (
-            <SelectItem key={wave.id} value={wave.id} text={`${wave.code} – ${wave.name}`} />
+            <SelectItem key={wave.id} value={wave.id} text={waveLabel(wave)} />
           ))}
         </Select>
         <Button type="submit" disabled={!waveId || assign.isPending}>

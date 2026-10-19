@@ -937,6 +937,33 @@ describe("assign_entry_wave", () => {
     ).rejects.toMatchObject(failsWith("dsv_already_offered"));
   });
 
+  it("keeps the wave of a participation with individual dates (R33)", async () => {
+    const [w2, w3] = [
+      await createWave(owner),
+      await createWave(owner, seedProjectIds.werkNord, "T2"),
+    ];
+    const id = await informedParticipation(app);
+    await call(app, "assign_entry_wave", { id, waveId: w2, context: pl });
+    for (const [tgStart, tgEnd] of [
+      [null, "2092-01-31"],
+      ["2091-03-02", null],
+    ]) {
+      await owner.query("update participation set tg_start = $2, tg_end = $3 where id = $1", [
+        id,
+        tgStart,
+        tgEnd,
+      ]);
+      const before = await row(id);
+      const trail = await events(id);
+      await expect(
+        call(app, "assign_entry_wave", { id, waveId: w3, context: pl }),
+      ).rejects.toMatchObject(failsWith("individual_dates_set"));
+      // Refused on the locked row: no version bump, no audit event.
+      expect(await row(id)).toEqual(before);
+      expect(await events(id)).toEqual(trail);
+    }
+  });
+
   it.each([
     ["in a ta_only project", seedProjectIds.verwaltung, false, "not_ta_tg"],
     ["of another project", seedProjectIds.lagerSued, false, "wave_of_other_project"],

@@ -3065,6 +3065,10 @@ export interface components {
             capabilities: {
                 assignEntryWave: boolean;
             };
+            refusals: {
+                /** @enum {string|null} */
+                assignEntryWave: "forbidden" | "not_ta_tg" | "status_not_open" | "dsv_already_offered" | "individual_dates_set" | "no_other_wave" | null;
+            };
         };
         ParticipantAddress: {
             street: string;

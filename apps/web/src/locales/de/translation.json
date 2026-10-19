@@ -571,6 +571,8 @@
       "withdrawnOn": "Ausgeschieden am",
       "wave": "Welle",
       "signingDeadline": "Unterschriftsfrist",
+      "defaultTgStart": "TG-Beginn der Welle",
+      "defaultTgEnd": "TG-Ende der Welle",
       "latestEntryDate": "Spätester Eintritt",
       "offerDeadline": "Angebotsfrist (erneutes Angebot)",
       "tgStart": "TG-Beginn",
@@ -591,6 +593,15 @@
       "forbidden": "Sie dürfen die Welle nicht zuordnen.",
       "stale": "Die Person wurde inzwischen geändert. Die aktuellen Daten werden angezeigt.",
       "failed": "Die Welle konnte nicht zugeordnet werden."
+    },
+    "waveOption": "{{code}} – {{name}} (Unterschrift bis {{signingDeadline}}, TG {{start}} bis {{end}}, Eintritt bis {{latestEntry}})",
+    "waveRefusals": {
+      "forbidden": "Nur die Projektleitung ordnet Wellen zu.",
+      "not_ta_tg": "Nur Projekte mit Transfergesellschaft haben Wellen.",
+      "status_not_open": "In diesem Status ändert sich die Welle nicht mehr.",
+      "dsv_already_offered": "Nach dem ersten DSV-Angebot ändert sich die Welle nicht mehr.",
+      "individual_dates_set": "Die Person hat individuelle Vertragsdaten. Setzen Sie die Daten zuerst auf die Welle zurück, um die Welle zu ändern.",
+      "no_other_wave": "Es gibt keine andere Welle in diesem Projekt."
     }
   }
 }

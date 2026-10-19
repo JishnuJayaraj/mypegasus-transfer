@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { OrgRole, ProjectRole } from "../enums";
 import type { Subject } from "./decide";
+import type { OperationContext } from "../lifecycle/operations";
 import {
+  entryWaveAssignment,
   participationDetail,
   participationListScope,
   type ParticipationRecord,
@@ -117,7 +119,11 @@ const record: ParticipationRecord = {
     workEmail: null,
   },
 };
-const options = { today: "2027-03-01", capabilities: { assignEntryWave: true } } as const;
+const options = {
+  today: "2027-03-01",
+  capabilities: { assignEntryWave: true },
+  refusals: { assignEntryWave: null },
+} as const;
 
 describe("participationDetail (R30, AC-34)", () => {
   it("shows the PL the case data, the effective dates and every person field", () => {
@@ -138,6 +144,7 @@ describe("participationDetail (R30, AC-34)", () => {
       hints: [],
       person: record.person,
       capabilities: { assignEntryWave: true },
+      refusals: { assignEntryWave: null },
     });
   });
 
@@ -173,5 +180,70 @@ describe("participationDetail (R30, AC-34)", () => {
       hints: [],
       dates: { effectiveTgStart: null, effectiveTgEnd: "2028-02-29" },
     });
+  });
+});
+
+describe("entryWaveAssignment (R31, R33; review of PR 2h-1)", () => {
+  const context: OperationContext = {
+    projectType: "ta_tg",
+    current: { status: "imported", profilingStatus: "not_started", dsvStatus: "not_offered" },
+    actor: { type: "user", staffUserId: "staff-a" },
+    today: "2027-03-01",
+    now: new Date("2027-03-01T09:00:00Z"),
+    wave: null,
+    participation: { tgStart: null, tgEnd: null, offerDeadline: null },
+  };
+  const waves = ["wave-1", "wave-2"];
+  const ok = { allowed: true, refusal: null };
+  const refused = (refusal: string) => ({ allowed: false, refusal });
+
+  it("is open while another wave of the project passes the domain rule", () => {
+    expect(entryWaveAssignment(context, projectId, waves, true)).toEqual(ok);
+    const onWave1 = { ...context, wave: { ...record.wave!, id: "wave-1" } };
+    expect(entryWaveAssignment(onWave1, projectId, waves, true)).toEqual(ok);
+  });
+
+  it("names the missing permission first, whatever the participation's state", () => {
+    const closed = { ...context, current: { ...context.current, status: "withdrawn" as const } };
+    expect(entryWaveAssignment(closed, projectId, waves, false)).toEqual(refused("forbidden"));
+  });
+
+  it("names the first failing domain rule, in the domain's order", () => {
+    const withdrawn = {
+      ...context,
+      current: {
+        ...context.current,
+        status: "withdrawn" as const,
+        dsvStatus: "dsv_offered" as const,
+      },
+    };
+    expect(entryWaveAssignment(withdrawn, projectId, waves, true)).toEqual(
+      refused("status_not_open"),
+    );
+    const offered = {
+      ...context,
+      current: { ...context.current, dsvStatus: "dsv_offered" as const },
+    };
+    expect(entryWaveAssignment(offered, projectId, waves, true)).toEqual(
+      refused("dsv_already_offered"),
+    );
+    const individual = {
+      ...context,
+      participation: { tgStart: null, tgEnd: "2028-02-29", offerDeadline: null },
+    };
+    expect(entryWaveAssignment(individual, projectId, waves, true)).toEqual(
+      refused("individual_dates_set"),
+    );
+    expect(
+      entryWaveAssignment({ ...context, projectType: "ta_only" }, projectId, [], true),
+    ).toEqual(refused("not_ta_tg"));
+  });
+
+  it("says when there is no other wave to choose", () => {
+    expect(entryWaveAssignment(context, projectId, [], true)).toEqual(refused("no_other_wave"));
+    const onWave1 = { ...context, wave: { ...record.wave!, id: "wave-1" } };
+    expect(entryWaveAssignment(onWave1, projectId, ["wave-1"], true)).toEqual(
+      refused("no_other_wave"),
+    );
   });
 });

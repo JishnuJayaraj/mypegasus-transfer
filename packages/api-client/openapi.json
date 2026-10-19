@@ -2670,6 +2670,30 @@
               "assignEntryWave"
             ],
             "additionalProperties": false
+          },
+          "refusals": {
+            "type": "object",
+            "properties": {
+              "assignEntryWave": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "forbidden",
+                  "not_ta_tg",
+                  "status_not_open",
+                  "dsv_already_offered",
+                  "individual_dates_set",
+                  "no_other_wave",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "assignEntryWave"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -2683,7 +2707,8 @@
           "dates",
           "hints",
           "person",
-          "capabilities"
+          "capabilities",
+          "refusals"
         ],
         "additionalProperties": false
       },

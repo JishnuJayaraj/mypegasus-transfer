@@ -1,8 +1,14 @@
 import { ParticipantDataField } from "../fields/catalog";
 import type { IsoDate } from "../iso-date";
 import type { DsvStatus, MainStatus, ProfilingStatus } from "../lifecycle/enums";
+import { assignEntryWave, type OperationContext } from "../lifecycle/operations";
 import { effectiveTgEnd, effectiveTgStart, type EntryWave } from "../lifecycle/waves";
-import type { ParticipantAddress, ParticipationDetail, ParticipationHint } from "../participations";
+import type {
+  AssignEntryWaveRefusal,
+  ParticipantAddress,
+  ParticipationDetail,
+  ParticipationHint,
+} from "../participations";
 import { decideAccess, type AccessAction, type Subject } from "./decide";
 
 // Who lists which participations of a project, and what the detail of one shows (Slice 2 plan,
@@ -95,7 +101,11 @@ export type ParticipationRecord = {
 export function participationDetail(
   subject: Subject,
   record: ParticipationRecord,
-  options: { today: IsoDate; capabilities: ParticipationDetail["capabilities"] },
+  options: {
+    today: IsoDate;
+    capabilities: ParticipationDetail["capabilities"];
+    refusals: ParticipationDetail["refusals"];
+  },
 ): ParticipationDetail | null {
   const readable = (field: string) => allowed(subject, record.projectId, record.id, field, "read");
   if (!caseFields.every(readable)) return null;
@@ -123,5 +133,27 @@ export function participationDetail(
       ParticipantDataField.options.filter(readable).map((field) => [field, record.person[field]]),
     ),
     capabilities: options.capabilities,
+    refusals: options.refusals,
   };
+}
+
+/**
+ * Whether the viewer may assign another wave now (R31, R33): the permission first, then
+ * `assignEntryWave`'s rules in their order, against the project's other waves (they all share the
+ * participation's state, so the first decides); none left is `no_other_wave`.
+ */
+export function entryWaveAssignment(
+  context: OperationContext,
+  projectId: string,
+  waveIds: readonly string[],
+  permitted: boolean,
+): { allowed: boolean; refusal: AssignEntryWaveRefusal | null } {
+  if (!permitted) return { allowed: false, refusal: "forbidden" };
+  const others = waveIds.filter((id) => id !== context.wave?.id);
+  // Without another wave, a stand-in that isn't the current one still runs the earlier rules.
+  const result = assignEntryWave(context, { projectId, wave: { id: others[0] ?? "", projectId } });
+  if (!result.ok) return { allowed: false, refusal: result.code as AssignEntryWaveRefusal };
+  return others.length > 0
+    ? { allowed: true, refusal: null }
+    : { allowed: false, refusal: "no_other_wave" };
 }

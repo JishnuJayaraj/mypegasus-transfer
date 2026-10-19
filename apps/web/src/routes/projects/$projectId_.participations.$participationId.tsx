@@ -15,10 +15,19 @@ const RouterLink = createLink(Link);
 
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
   loader: async ({ context: { api, queryClient }, params: { projectId, participationId } }) => {
-    const [project] = await Promise.all([
+    const [project, detail] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
       queryClient.ensureQueryData(participationQuery(api, participationId)),
     ]);
+    // The participant must belong to the project in the URL; anything else is not found, and
+    // nothing of the other project (its waves) is loaded (review of PR 2h-1).
+    if (detail.projectId !== projectId) {
+      throw new ApiProblemError({
+        type: "urn:transfer:problem:not-found",
+        title: "Not found",
+        status: 404,
+      });
+    }
     // The wave choice lists the project's waves (visible to every member).
     if (project.type === "ta_tg")
       await queryClient.ensureQueryData(entryWavesQuery(api, projectId));
@@ -49,6 +58,10 @@ function ParticipationPage() {
   const api = useApi();
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
   const { data: detail } = useSuspenseQuery(participationQuery(api, participationId));
+  // The loader refuses a participant of another project; the cache can't change that later.
+  if (detail.projectId !== projectId) {
+    return <InlineNotification kind="error" title={t("participant.notFound")} hideCloseButton />;
+  }
   const { person, dates } = detail;
   const name = [person.lastName, person.firstName].filter(Boolean).join(", ");
   return (
@@ -121,7 +134,10 @@ function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string
         title={t("participant.waveAndDates")}
         rows={[
           ["wave", wave ? `${wave.code} – ${wave.name}` : null],
+          // The wave's own four dates, also where individual dates override them (5.13).
           ["signingDeadline", wave && formatDate(wave.signingDeadline)],
+          ["defaultTgStart", wave && formatDate(wave.defaultTgStart)],
+          ["defaultTgEnd", wave && formatDate(wave.defaultTgEnd)],
           ["latestEntryDate", wave && formatDate(wave.latestEntryDate)],
           ["offerDeadline", date(dates.offerDeadline)],
           ["tgStart", source(dates.tgStart, dates.effectiveTgStart)],

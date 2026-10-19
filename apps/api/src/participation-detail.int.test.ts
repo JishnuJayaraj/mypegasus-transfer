@@ -1,7 +1,26 @@
-import { auditEvent, eq, participation, participantIdentity, seedWaves } from "@transfer/db";
+import { SystemClock } from "@transfer/adapters";
+import {
+  auditEvent,
+  eq,
+  participation,
+  participantIdentity,
+  seedStaffUserIds,
+  seedWaves,
+} from "@transfer/db";
 import { ParticipationDetail } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
-import { app, auth, codes, fixture, importFile, owner, werkNord } from "./imports/import-testing";
+import {
+  app,
+  auth,
+  codes,
+  db,
+  fixture,
+  importFile,
+  owner,
+  werkNord,
+} from "./imports/import-testing";
+import { createStatusService } from "./participations/status-service";
+import { staffSubject } from "./participations/subjects";
 import { expectProblem, jsonRequest, readJson } from "./testing";
 
 // Slice 2 plan, "Planned in PR 2h" (PR 2h-1; R29–R31, R33; AC-34, AC-38, AC-50): the detail of
@@ -40,6 +59,7 @@ describe("GET /api/v1/participations/{participationId} (AC-34)", () => {
       dates: { tgStart: null, tgEnd: null, effectiveTgStart: null, effectiveTgEnd: null },
       hints: [],
       capabilities: { assignEntryWave: true },
+      refusals: { assignEntryWave: null },
     });
     expect(body.person).toMatchObject({
       personnelNumber: "BSP-0001",
@@ -63,18 +83,57 @@ describe("GET /api/v1/participations/{participationId} (AC-34)", () => {
     );
   });
 
-  it("shows back office the same data without the wave choice", async () => {
+  it("shows back office the same data without the wave choice, for want of permission", async () => {
     const id = await imported();
     const body = await readJson(await detail(id, "backOffice"), ParticipationDetail);
     expect(body.person.personnelNumber).toBe("BSP-0001");
     expect(body.capabilities).toEqual({ assignEntryWave: false });
+    expect(body.refusals).toEqual({ assignEntryWave: "forbidden" });
+  });
+
+  it("tells the PL why the wave choice is closed for a terminal participation", async () => {
+    const id = await imported();
+    await owner
+      .update(participation)
+      .set({
+        status: "withdrawn",
+        withdrawnOn: "2026-10-01",
+        endReason: "other",
+        endReasonSource: "user",
+      })
+      .where(eq(participation.id, id));
+    const body = await readJson(await detail(id), ParticipationDetail);
+    expect(body.capabilities).toEqual({ assignEntryWave: false });
+    expect(body.refusals).toEqual({ assignEntryWave: "status_not_open" });
   });
 
   it("refuses the consultant without assignments and the org roles (403)", async () => {
     const id = await imported();
-    for (const user of ["consultant", "admin", "regionalOperationsManager"]) {
+    for (const user of ["consultant", "admin", "regionalAdmin", "regionalOperationsManager"]) {
       await expectProblem(await detail(id, user), 403, "forbidden");
     }
+  });
+
+  it("is a 404 for a participation of a project the viewer can't see (R29)", async () => {
+    // A project only its creator (the PL) is a member of; back office sees nothing of it.
+    const created = await app.request(
+      "/api/v1/projects",
+      jsonRequest(
+        "POST",
+        { name: "Nur PL", customerName: "Beispiel GmbH", type: "ta_tg" },
+        auth.projectLead,
+      ),
+    );
+    const { id: projectId } = (await created.json()) as { id: string };
+    const pl = staffSubject(seedStaffUserIds.projectLead, { [projectId]: ["project_lead"] });
+    const { participationId } = await createStatusService({
+      db,
+      clock: new SystemClock(),
+    }).createParticipation(pl, { projectId });
+    expect((await detail(participationId)).status).toBe(200);
+    await expectProblem(await detail(participationId, "backOffice"), 404, "not-found");
+    await expectProblem(await detail(participationId, "consultant"), 404, "not-found");
+    await expectProblem(await assign(participationId, w1.id, "backOffice"), 404, "not-found");
   });
 
   it("is a 404 for an unknown id and a 400 for a malformed one", async () => {
@@ -116,6 +175,7 @@ describe("PUT /api/v1/participations/{participationId}/entry-wave (AC-38, AC-50)
     await owner.update(participation).set({ tgEnd: "2092-01-31" }).where(eq(participation.id, id));
     const body = await readJson(await detail(id), ParticipationDetail);
     expect(body.capabilities.assignEntryWave).toBe(false);
+    expect(body.refusals.assignEntryWave).toBe("individual_dates_set");
     expect(await codes(await assign(id, w2.id))).toEqual(["individual_dates_set"]);
   });
 });

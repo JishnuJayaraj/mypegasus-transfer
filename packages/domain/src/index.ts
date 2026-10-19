@@ -34,6 +34,7 @@ export {
 } from "./projects/waves";
 export {
   AssignEntryWaveInput,
+  AssignEntryWaveRefusal,
   ParticipantAddress,
   ParticipationDetail,
   ParticipationHint,
@@ -41,6 +42,7 @@ export {
   ParticipationPage,
 } from "./participations";
 export {
+  entryWaveAssignment,
   mayListField,
   participationDetail,
   participationListScope,

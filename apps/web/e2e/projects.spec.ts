@@ -157,7 +157,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("heading", { name: "Mustermann, Erika" })).toBeVisible();
   await expect(page.getByText(/^Neue Musterstraße 100, /)).toBeVisible();
   await expectAccessible(page);
-  await page.getByLabel("Welle zuordnen").selectOption({ label: "W1 – Welle 1" });
+  // The only other choice: W1, labelled with its code, name and dates.
+  await page.getByLabel("Welle zuordnen").selectOption({ index: 1 });
   await page.getByRole("button", { name: "Welle zuordnen" }).click();
   await expect(page.getByText("Welle zugeordnet", { exact: true })).toBeVisible();
   await expect(page.getByText(/ \(aus der Welle\)$/).first()).toBeVisible();

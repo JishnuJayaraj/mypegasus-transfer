@@ -12,8 +12,8 @@ import {
   sql,
 } from "@transfer/db";
 import {
-  assignEntryWave,
   AssignEntryWaveInput,
+  entryWaveAssignment,
   mayListField,
   mayPerformOperation,
   PageQuery,
@@ -94,27 +94,26 @@ export function participationRoutes(deps: Deps) {
     const dates = { tgStart: p.tgStart, tgEnd: p.tgEnd, offerDeadline: p.offerDeadline };
     const today = clock.today();
     // The wave choice is offered when the PL may assign one and some other wave of the project
-    // passes the domain rule (round 26: capabilities are derived by the server).
+    // passes the domain rule; otherwise the reason, permission first (R31, round 26).
     const target = { projectId: p.projectId, regionId: null, participationId };
-    let assignable = false;
-    if (mayPerformOperation(subject, { kind: "assignEntryWave" }, target).ok) {
-      const waves = await db
-        .select({ id: projectEntryWave.id, projectId: projectEntryWave.projectId })
-        .from(projectEntryWave)
-        .where(eq(projectEntryWave.projectId, p.projectId));
-      const context = {
+    const waves = await db
+      .select({ id: projectEntryWave.id })
+      .from(projectEntryWave)
+      .where(eq(projectEntryWave.projectId, p.projectId));
+    const assignment = entryWaveAssignment(
+      {
         projectType: row.projectType,
         current: { status: p.status, profilingStatus: p.profilingStatus, dsvStatus: p.dsvStatus },
-        actor: { type: "user" as const, staffUserId: user.id },
+        actor: { type: "user", staffUserId: user.id },
         today,
         now: clock.now(),
         wave,
         participation: dates,
-      };
-      assignable = waves.some(
-        (candidate) => assignEntryWave(context, { projectId: p.projectId, wave: candidate }).ok,
-      );
-    }
+      },
+      p.projectId,
+      waves.map(({ id }) => id),
+      mayPerformOperation(subject, { kind: "assignEntryWave" }, target).ok,
+    );
     return participationDetail(
       subject,
       {
@@ -154,7 +153,11 @@ export function participationRoutes(deps: Deps) {
           workEmail: details?.workEmail ?? null,
         },
       },
-      { today, capabilities: { assignEntryWave: assignable } },
+      {
+        today,
+        capabilities: { assignEntryWave: assignment.allowed },
+        refusals: { assignEntryWave: assignment.refusal },
+      },
     );
   }
 

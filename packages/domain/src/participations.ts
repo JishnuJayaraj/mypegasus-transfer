@@ -40,6 +40,20 @@ export const ParticipantAddress = z
   .meta({ id: "ParticipantAddress" });
 export type ParticipantAddress = z.infer<typeof ParticipantAddress>;
 
+/**
+ * Why the wave choice is closed (review of PR 2h-1): no permission, the first failing rule of
+ * `assignEntryWave` in its order, or no other wave of the project to choose.
+ */
+export const AssignEntryWaveRefusal = z.enum([
+  "forbidden",
+  "not_ta_tg",
+  "status_not_open",
+  "dsv_already_offered",
+  "individual_dates_set",
+  "no_other_wave",
+]);
+export type AssignEntryWaveRefusal = z.infer<typeof AssignEntryWaveRefusal>;
+
 const recorded = <T extends z.ZodType>(schema: T) => schema.nullable().optional();
 
 /**
@@ -94,6 +108,8 @@ export const ParticipationDetail = z
       workEmail: recorded(z.string()),
     }),
     capabilities: z.strictObject({ assignEntryWave: z.boolean() }),
+    /** Why a capability is closed: the missing permission first, then the domain's first rule. */
+    refusals: z.strictObject({ assignEntryWave: AssignEntryWaveRefusal.nullable() }),
   })
   .meta({ id: "ParticipationDetail" });
 export type ParticipationDetail = z.infer<typeof ParticipationDetail>;
