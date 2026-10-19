@@ -907,6 +907,63 @@ its wave).
     activation blockers (Q77). Round 26's page-exhaustion loop in `apps/web/src/api.tsx` isn't
     touched (the activation adds no list query).
 
+### Built in PR 2f, with the readings taken (for confirmation)
+
+Split before review like 2d-2 and 2e-2, because the domain import rules and the person data are
+about 810 non-blank, non-comment production lines together: **2f-1** (the domain import module;
+this branch, about 470 lines, of which about 60 are vocabulary and the header-synonym table) and
+**2f-2** (the person-data tables, `write_participant_data`, the catalogs, the seed; the
+`-person-data` branch on 2f-1, about 350 lines plus the generated migration). Each is green on its
+own; nothing calls the import module before 2g.
+
+Built in 2f-1: `packages/domain/src/import/` under the 100 % threshold: `targets.ts`
+(`ImportTarget`, `ImportIssueCode`, `ImportIssue`, `isRequired`, `normaliseCountry`,
+`checkMapping`, `normaliseHeader`, `suggestTargets`), `rows.ts` (`ImportCell`, `parseGermanDate`,
+`validateRow`) and `plan.ts` (`ImportRowOutcome`, `planImport`).
+
+1. **Cells** are what 5.11's worker returns: text, `{ number }` (the stored value as text) or
+   `{ date, time? }` (an ISO date; `time` for a time other than 00:00). Empty and whitespace-only
+   text is an absent value, so it never clears anything.
+2. **Text rules** apply to the trimmed value: control characters (`\p{Cc}`, so a tab or a line
+   break inside a cell too) are `control_characters`; the limits are 5.11's (Personalnummer 50,
+   names 100, address parts 200); a number or date cell in a text target is `invalid_cell_type`.
+3. **Optional contact values never refuse a row** (round 32): any problem with `phone`, `mobile`,
+   `privateEmail` or `workEmail` (control characters, a wrong cell type, the format) drops the value
+   with the warning `value_invalid_dropped`, except a numeric phone or mobile cell, which is the
+   warning `identifier_cell_numeric` (5.1). The email check is `local@domain.tld` without whitespace,
+   at most 254 characters; the phone check is round 32's (6–30 characters, digits, spaces, `+`,
+   `/`, `-`, `(`, `)`, at least five digits, `+` only first).
+4. **Dates:** text only as `TT.MM.JJJJ` with two-digit day and month; an invalid date is an error
+   for a relaxed date target too (only its absence is allowed). Age plausibility is the full years
+   from the birth date to the Austrittsdatum; 15 and 67 are plausible, 14 and 68 are the warning
+   `age_implausible`. No age check without either date.
+5. **The address as one unit** (round 32): a country cell without street, postal code and city
+   is `address_incomplete` as well; the country comes from the row's cell, else the import's
+   selected country; an address with any error is dropped as a whole (no partial address
+   reaches the plan). Unit issues have the target `address`; country issues `addressCountry`;
+   a postal code issue `addressPostalCode`.
+6. **The mapping check** (`checkMapping`) reports issues without a row: a target mapped twice, the
+   required targets (relaxation-aware), the address parts all or none, and the country source:
+   a mapped country column and a selected country together are `country_source_conflict`, an
+   address without either `country_required`, a selected country other than Germany
+   `foreign_address_unsupported`.
+7. **Header suggestions** are round 32's synonyms, compared after NFC, lower case and removing
+   everything but letters and digits; a target is suggested for the first matching column only;
+   `Anschrift` and unknown headers get none. The saved mappings come first (2g).
+8. **The plan:** a row with any error is `error`; the same Personalnummer in several rows is
+   `duplicate_in_file` on each; a match is exact and case-sensitive. A matched terminal
+   participation is `skip` with `terminal_not_updated`; otherwise `update` with the targets whose
+   value differs, or `unchanged`. A mapped target whose cell is empty while a value is stored is
+   the warning `kept_existing` (the address as `address`); unmapped targets are not mentioned.
+9. **Possible duplicates** compare birth date and the NFC-normalised, lower-cased last and first
+   name of the rows that would be created (no error, a Personalnummer unique in the file and new to
+   the project) and of the project's existing participations; without a birth date nothing is
+   compared. Both new rows of a pair are flagged; the outcome stays `create` until the PL decides
+   (the decision check comes with the confirm in 2g).
+10. **Participations missing from the file** are counted as `missing` when their Personalnummer is
+    in no row at all, an error row included.
+11. **No docs gap found** in 2f-1.
+
 
 ## 4. Design overview
 
