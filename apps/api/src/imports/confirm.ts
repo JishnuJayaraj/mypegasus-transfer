@@ -55,7 +55,7 @@ export async function confirmImport(
       const state = await loadState(tx, release, projectId);
       if (!state) throw new ImportRefusal("not_found");
       await checkWave(tx, state, projectId, input.waveId);
-      // Database time decides "today" for the date rules, like the status service.
+      // The injected clock's Berlin date decides "today" for the date rules, like the status service.
       const analysis = analyse({
         grid: read.grid,
         mapping: input.mapping,
@@ -157,10 +157,14 @@ export async function confirmImport(
       );
 
       // Saved last, keyed by the hash of each normalised header, never the header text (R7).
-      const saved = input.mapping.flatMap(({ column, target }) => {
+      // Columns whose headers normalise alike keep the first one's target (as `suggest` reads
+      // it back); one upsert may not touch a key twice.
+      const byHmac = new Map<string, (typeof input.mapping)[number]["target"]>();
+      for (const { column, target } of input.mapping.toSorted((a, b) => a.column - b.column)) {
         const hmac = headerHmac(mapKey, read.grid.headers[column]!);
-        return hmac === null ? [] : [{ hmac, target }];
-      });
+        if (hmac !== null && !byHmac.has(hmac)) byHmac.set(hmac, target);
+      }
+      const saved = [...byHmac].map(([hmac, target]) => ({ hmac, target }));
       if (saved.length > 0) {
         await tx
           .insert(importColumnMapping)

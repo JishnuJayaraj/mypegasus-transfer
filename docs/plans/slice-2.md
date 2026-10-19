@@ -1103,8 +1103,10 @@ R26; through `record_audit_event`, like `warning_confirmed`); migrations `0026_i
    customer name (trimmed, case-folded, newest first), then the built-in synonyms; one target once,
    one column once. Saved only on a confirm, as `HMAC-SHA256(key, normaliseHeader(header))` with
    the key from `SESSION_SECRET` by HKDF (`import-header-mapping:v1`); a header that normalises to
-   nothing is not saved. In dev `SESSION_SECRET` is random per start, so suggestions do not survive
-   a restart (R7).
+   nothing is not saved, and a header that several mapped columns share (after normalising) is
+   saved once, with the first column's target (review of 2g-1d: the upsert touched one key twice
+   and the confirm failed). In dev `SESSION_SECRET` is random per start, so suggestions do not
+   survive a restart (R7).
 9. **The token** is an HMAC (HKDF info `import-preview-token:v1`) over the canonical hash of the
    project, the file hash, sheet, the CSV options actually used, the header row, the mapping, the
    selected country, the wave and a digest of the plan with the values it would write, the stored
