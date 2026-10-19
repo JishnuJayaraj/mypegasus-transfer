@@ -159,7 +159,13 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await configuration.getByLabel("Bestätigt am").fill("01.10.2026");
   await expectAccessible(page);
   await configuration.getByRole("button", { name: "Speichern" }).click();
-  await expect(page.getByText("Einstellung gespeichert")).toBeVisible();
+  // The first setting's toast can still be visible (they stay 6 s): wait for this Agentur's.
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Einstellung gespeichert" })
+      .filter({ hasText: "beispielstadt-ost" }),
+  ).toBeVisible();
   const setting = configuration.getByRole("row", { name: /beispielstadt-ost/ });
   await expect(setting).toContainText("Übermittlungsweg TL 407: Upload; Vorlauf in Tagen: 7");
   await expect(setting).toContainText("E-Mail der Agentur");
