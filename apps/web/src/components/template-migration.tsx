@@ -14,7 +14,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { projectConfigQuery, projectQuery, useApi } from "../api";
-import type { SettingPath, Value } from "./agentur-settings";
+import { useSettingText } from "./agentur-settings";
 
 type ProjectConfig = components["schemas"]["ProjectConfig"];
 type Pin = ProjectConfig["pins"][number];
@@ -26,9 +26,11 @@ type Step = Preview["rules"]["added"][number]["step"];
  * Migrates a pinned template to a newer catalog version (Slice 2 plan 5.8, 5.13; Q36, Q93, R15):
  * the PL chooses the version, sees what it changes and decides keep or remove for every key of the
  * Agentur's scoped setting, then confirms. Shown only with `capabilities.migrateTemplate` and the
- * pin's `migrationTargets` (round 26); the API's checks stay the enforcement. The outcome goes to
- * the parent, which outlives this component (round 29), and every outcome rereads the project,
- * the project list and the configuration.
+ * pin's `migrationTargets` (round 26); the API's checks stay the enforcement. The target can't
+ * change while a preview or confirm is pending, so a preview always belongs to the target shown
+ * (round 31). The outcome goes to the parent, which outlives this component (round 29), and every
+ * outcome invalidates the project, the project list and the configuration, which refetch when
+ * active or next used.
  */
 export function TemplateMigration(props: {
   projectId: string;
@@ -48,13 +50,10 @@ export function TemplateMigration(props: {
   const agentur = pin.label.de;
   const path = { projectId, agenturKey: pin.agenturKey };
 
-  const settingText = (key: string) => t(`overrides.settings.${key as SettingPath}`);
+  const settingLabels = useSettingText();
+  const settingText = settingLabels.setting;
   const valueText = (value: Preview["review"][number]["value"]) =>
-    value === null
-      ? t("migration.notSet")
-      : typeof value === "number"
-        ? String(value)
-        : t(`overrides.values.${String(value) as Value}`);
+    value === null ? t("migration.notSet") : settingLabels.value(value);
   const stepText = (step: Step) => t(`relaxations.steps.${step}`);
   const refresh = () =>
     Promise.all([
@@ -158,6 +157,7 @@ export function TemplateMigration(props: {
         id="migration-version"
         labelText={t("migration.version")}
         value={String(version)}
+        disabled={busy}
         onChange={(event) => {
           setVersion(Number(event.target.value));
           setPreview(undefined);

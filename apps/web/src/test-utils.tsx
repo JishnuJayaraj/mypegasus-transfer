@@ -4,7 +4,7 @@ import { createApiClient } from "@transfer/api-client";
 import { createQueryClient } from "./api";
 import { createAppRouter } from "./router";
 
-type Handler = (request: { query: URLSearchParams; body: unknown }) => Response;
+type Handler = (request: { query: URLSearchParams; body: unknown }) => Response | Promise<Response>;
 
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });

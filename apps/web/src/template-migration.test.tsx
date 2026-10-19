@@ -211,6 +211,36 @@ describe("template migration with review", () => {
     expect(reads()).toBeGreaterThanOrEqual(readsBefore + 2);
   });
 
+  // Round 31: the target can't change while its preview loads, so a preview (and a confirm) never
+  // belongs to another target than the one shown.
+  it("locks the target while its preview loads", async () => {
+    let answer!: (response: Response) => void;
+    const calls = setup(
+      {
+        [`POST ${path}/config/pins/${nord}/migration-preview`]: () =>
+          new Promise<Response>((resolve) => (answer = resolve)),
+      },
+      config(1, [2, 3]),
+    );
+    await userEvent.click(await screen.findByRole("button", { name: action }));
+    const target = screen.getByLabelText("Neue Version");
+    expect(target).toHaveValue("3");
+    await userEvent.selectOptions(target, "2");
+    await userEvent.click(screen.getByRole("button", { name: "Änderungen anzeigen" }));
+    expect(target).toBeDisabled();
+    await userEvent.selectOptions(target, "3").catch(() => undefined);
+    expect(target).toHaveValue("2");
+    answer(json(preview));
+    expect(await screen.findByText("Was Version 2 ändert")).toBeInTheDocument();
+    expect(target).toBeEnabled();
+    expect(target).toHaveValue("2");
+    expect(
+      calls.filter((c) => c.key === `POST ${path}/config/pins/${nord}/migration-preview`),
+    ).toEqual([
+      { key: `POST ${path}/config/pins/${nord}/migration-preview`, body: { version: 2 } },
+    ]);
+  });
+
   // Round 26: only the server's capability and the pin's targets offer it.
   it.each([
     [
