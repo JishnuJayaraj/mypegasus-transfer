@@ -196,6 +196,35 @@ async function applicableLatestEntryDate(
   return projectFinalEntryDate(waves);
 }
 
+/**
+ * Creation along the creation edge (`imported`, by the PL, Q60) inside the caller's transaction,
+ * so an import creates all its participations atomically (Slice 2 plan 5.11). The permission is
+ * checked first; the function takes the shared project lock itself (re-entrant under an exclusive
+ * hold).
+ */
+export async function createParticipationIn(
+  tx: Transaction,
+  actor: ServiceActor,
+  input: { projectId: string; entryWaveId?: string; id?: string },
+  correlation: Correlation = {},
+): Promise<{ participationId: string }> {
+  const edge = edges.find((e) => e.from === null && e.to === "imported")!;
+  const permission = mayPerformTransition(actor, edge, {
+    projectId: input.projectId,
+    regionId: null,
+    participationId: null,
+  });
+  if (!permission.ok) fail("forbidden", permission.because);
+  return {
+    participationId: await call(
+      tx,
+      sql`create_participation(p_project_id => ${input.projectId}::uuid,
+        p_context => ${audit(actor, correlation)},
+        p_entry_wave_id => ${input.entryWaveId ?? null}::uuid, p_id => ${input.id ?? null}::uuid)`,
+    ),
+  };
+}
+
 export function createStatusService({ db, clock, facts = failClosedFacts }: Deps) {
   /** One transaction; a function's refusal becomes a service error. */
   async function transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<T> {
@@ -324,21 +353,7 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
       input: { projectId: string; entryWaveId?: string; id?: string },
       correlation: Correlation = {},
     ): Promise<{ participationId: string }> {
-      const edge = edges.find((e) => e.from === null && e.to === "imported")!;
-      const permission = mayPerformTransition(actor, edge, {
-        projectId: input.projectId,
-        regionId: null,
-        participationId: null,
-      });
-      if (!permission.ok) fail("forbidden", permission.because);
-      return transaction(async (tx) => ({
-        participationId: await call(
-          tx,
-          sql`create_participation(p_project_id => ${input.projectId}::uuid,
-            p_context => ${audit(actor, correlation)},
-            p_entry_wave_id => ${input.entryWaveId ?? null}::uuid, p_id => ${input.id ?? null}::uuid)`,
-        ),
-      }));
+      return transaction((tx) => createParticipationIn(tx, actor, input, correlation));
     },
 
     /** One track moves one step; a pending exception request it makes stale is superseded. */

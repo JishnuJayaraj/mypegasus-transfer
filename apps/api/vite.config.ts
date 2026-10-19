@@ -2,7 +2,7 @@ import { cpSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-// The image bundle (plan section 5.7): `dist/server.js` and `dist/migrate.js`. Workspace
+// The image bundle (plan section 5.7): `dist/server.js`, `dist/migrate.js` and `dist/parse-worker.js`. Workspace
 // packages (`@transfer/*`, devDependencies) are inlined. npm dependencies stay external and
 // come from `pnpm deploy --prod`, so whatever the bundle imports at runtime must be a
 // dependency of this package (e.g. `drizzle-orm` and `pg` for `@transfer/db`).
@@ -19,7 +19,12 @@ export default defineConfig({
     outDir: "dist",
     target: "node22",
     rolldownOptions: {
-      input: { server: "src/server.ts", migrate: "src/migrate.ts" },
+      input: {
+        server: "src/server.ts",
+        migrate: "src/migrate.ts",
+        // The import parse worker (Slice 2 plan 5.11, spike S1), started by parse.ts.
+        "parse-worker": "src/imports/parse-worker.ts",
+      },
       // Shared chunks next to the entries, not in dist/assets: modules resolve paths relative
       // to `import.meta.url` (e.g. `.env`), which must be one level below apps/api like src/.
       output: { chunkFileNames: "[name]-[hash].js" },

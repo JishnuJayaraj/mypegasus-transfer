@@ -1,0 +1,5 @@
+Personalnummer;Nachname;Vorname;Geburtsdatum;Austrittsdatum;Straße;PLZ;Ort;Land;Telefon;Mobil;E-Mail privat
+BSP-0001;Müstermann;Erika;01.01.1965;31.12.2026;Musterstraße 1;99999;Beispielstadt;Deutschland;030 23125 001;0171 3920 001;teilnehmer-0001@example.org
+BSP-0002;Musterfrau;Max;03.02.1967;31.12.2026;Musterstraße 2;99999;Beispielstadt;Deutschland;030 23125 002;0171 3920 002;teilnehmer-0002@example.org
+BSP-0003;Beispiel;Anna;05.03.1969;31.12.2026;Musterstraße 3;99999;Beispielstadt;Deutschland;030 23125 003;0171 3920 003;teilnehmer-0003@example.org
+BSP-0099;Größe;Jürgen;01.02.1970;31.12.2026;Heinrichstraße 5;99999;Beispielstadt;DE;;;

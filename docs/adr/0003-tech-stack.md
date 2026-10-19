@@ -128,3 +128,18 @@ allow one only with a reason (`pnpm.onlyBuiltDependencies`).
 - **Empty variables are unset.** `.env` copied from `.env.example` has `SESSION_SECRET=`; the
   API treated the empty string as a too-short secret and `pnpm dev` failed in a fresh session.
   `parseEnv` now ignores empty values.
+
+### Notes from Slice 2, PR 2g (import dependencies, spike S1)
+
+- **Two dependencies, exact pins, `@transfer/api` only** (round 22): `read-excel-file@9.3.12`
+  (workbooks) and `csv-parse@7.0.3` (CSV, no dependencies). Both are used in one module,
+  `apps/api/src/imports/parse-core.ts`, behind `parseSpreadsheet()`; replacing a parser touches
+  that file only.
+- **Spike S1 passed.** A workbook is never parsed in the API process. After the ZIP
+  central-directory check (declared sizes, ratio, entry count; in the API process), a worker thread
+  with `resourceLimits` and a 15 s timeout inflates each entry up to its declared size (a zip that
+  lies is refused) and reads the sheet. It runs from `tsx` and Vitest (the `.ts` worker is started
+  through a bootstrap that registers tsx's loader; `--import` in `execArgv` does not reach a
+  worker's module resolution) and from the Vite build (`dist/parse-worker.js`, a build entry
+  besides `server` and `migrate`). Heap limits do not bound `ArrayBuffer` memory, which is why the
+  declared size is the cap of the real expansion. No fallback (child process, CSV only) was needed.

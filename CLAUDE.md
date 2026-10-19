@@ -132,7 +132,7 @@ packages/
                   (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus
                   scan and export come with the slices that need them (D9)
   forms/          (Slice 4b) official BA form templates (blank PDF, field map, manifest) — ADR-0009
-fixtures/         synthetic test files only (e.g. filled test forms)
+fixtures/         synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV import)
 docs/             product + domain + architecture docs (source of truth)
 scripts/          session start, tsconfig guard, image smoke test
 Dockerfile        the production image (Node 24): API bundle + both SPAs
