@@ -7,6 +7,8 @@
   implementation. Q110 has accepted fail-safe pilot defaults and does not block 2h. External
   ratification is a future production/real-personal-data readiness activity, not a development or
   sample-data pilot gate. Round 30's proposed package was never applied; round 32 supersedes it.
+- **PR 2h plan (2026-10-19): for approval.** Re-estimated and divided into 2h-1, 2h-2 and 2h-3
+  under CLAUDE.md's PR-size rule ("Planned in PR 2h", section 3); readings R29–R44; Q111 🔒 added.
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
@@ -28,7 +30,7 @@ corrections are applied throughout; the readings taken while applying them are R
 
 | # | Topic | Decision |
 |---|---|---|
-| D1 | PR shape | **12 PRs, 2a–2h** (section 3), tests first, each green on its own, each under ~500 hand-written production lines. |
+| D1 | PR shape | **12 PRs, 2a–2h** (section 3), tests first, each green on its own, each under ~500 hand-written production lines. **Superseded for 2h by CLAUDE.md's PR-size rule (#51):** one PR per planned unit, split only for unrelated concerns or above ~1,500 changed lines (tests and generated code excluded); 2h is 2h-1 to 2h-3. |
 | D2 | Writes with audit | Every write that must be audited goes through a narrowly scoped **`SECURITY DEFINER` function** that writes the change and its audit event in the caller's transaction, as in Slice 1 (D2, round 16): project creation and edits, activation, waves, participation dates, template pins, override versions, relaxation requests and decisions, person data. `transfer_app` gets `SELECT` on the new tables and no direct DML, except on `import_column_mapping` (no personal data, no audit). Typed parameters; the only `jsonb` parameters are versioned configuration payloads validated by the service first (round 26): a template's content for `pin_agentur_template` (5.8) and an override's content for the override function (5.9), each also checked for structure in SQL. |
 | D3 | Serialising setup and lifecycle | A transaction-scoped **project advisory lock**, **acquired inside the database functions** (round 22), never left to a service: every setup mutation function takes it exclusively itself; `lock_participation` takes it shared before its row lock; `create_participation` takes it shared. Lock order is always **project → template version → participation row**. A service that must read and decide before writing (activation, migration, the import confirm) also calls `lock_project_setup` first; the functions' own acquisition is re-entrant within the transaction. So a wave edit never interleaves with a status change that reads the wave, and two imports of one project never race. |
 | D4 | Memberships | A minimal **`project_membership`** table now (project, staff user, project role; zero or more roles, D6 of Slice 1), filled by project creation and the seed. Managing members and participant assignments is Slice 3. |
@@ -134,6 +136,10 @@ not block development. Still revisitable in `open-questions.md`:
 - **Q110** 🔒 (Legal, PL roles): two details of 2h: whether a date change after the DSV is signed
   but before entry needs an amendment (pilot default: yes), and the controlled original-location
   values (pilot default: `paper_personnel_file`). It does not block 2h.
+- **Q111** 🔒 (Legal, PL, BA process-owner roles; 2h plan): six details of the date rules round 32
+  doesn't name, each taken fail safe (R34–R39): when an amendment is needed, changes during an
+  open offer, shortening before entry, an unknown former-employment end, tasks for changes before
+  signature, and what `exitDate` means for an early exit. It does not block 2h.
 
 ## 1. Goal
 
@@ -243,7 +249,9 @@ hand-written production lines (SQL included, tests excluded).
 | **2f** `feat: participant person data and the import rules` | `participant_identity`, `participant_details`, `write_participant_data` (audit with changed keys computed in SQL); `retentionClass` in the field catalog and the column-to-field test; data catalog; domain `import/` (mapping, row validation, duplicate and update plan; 100 %); synthetic identities for the seeded participations. | ~480 | 2a | person data exists with its classes |
 | **2g-1** `feat(api): Excel/CSV import` | Spike S1; the parse worker (`read-excel-file`, `csv-parse`, encoding and delimiter detection, limits); preview and confirm routes; the atomic confirm through the creation edge; saved mappings (`import_column_mapping`); body limits; synthetic fixtures. | ~480 | 2d-1, 2f | the API imports |
 | **2g-2** `feat(web): import wizard` | Upload → sheet → mapping → report (errors, warnings, duplicates, updates) → confirm; the participant list (first version); Playwright happy path. | ~420 | 2g-1 | **demo path works** |
-| **2h** `feat: participations — detail, manual creation, waves and dates` | Participant list/detail with field projection by `decideAccess`; manual creation (one row through the import rules); wave assignment route; `checkParticipationDates` (5.7, 100 %), `set_participation_dates`, the dates route and UI (new start date); **round 32:** the DSV amendment record, `ba_review_required`, the BA reporting tasks (5.7). | ~470 (more with round 32: re-estimated and split when planned) | 2g-2 | **slice done** |
+| **2h-1** `feat: participant detail and wave assignment` | `participationListScope` and the detail projection (R29, R30); `GET /participations/{id}` with capabilities; `PUT /participations/{id}/entry-wave` (R33); the detail page with the wave choice; list rows link to it. | ~1,000 | 2g-2 | a participant can be opened; the PL assigns waves |
+| **2h-2** `feat: manual participant creation and the import follow-ups` | `POST /projects/{id}/participations` through the import rules (R32) and its form; the parse-worker cap (R43); the mapping classification and the header-row guard (R44). | ~720 | 2g-2 | a PL adds one person by hand |
+| **2h-3** `feat: individual TG dates, DSV amendments and BA reporting tasks` | `checkParticipationDates` (5.7, 100 %); `participation_dsv_amendment`, `ba_reporting_task`, `set_participation_dates`, the early-exit trigger (R38); `PUT /participations/{id}/dates`; the dates form with the amendment block; amendments and tasks on the detail page (R41, R42). | ~1,500 | 2h-1 | **slice done** |
 
 **Gates** (round 22, amended by round 32): the accepted pilot decisions unblock PRs 2f, 2g and
 **2h**. Q110's two fail-safe pilot defaults also do not block 2h. External role review is deferred
@@ -1170,6 +1178,193 @@ Playwright path (AC-35) and the toast fix of the projects e2e.
     (visible for 6 s) cannot satisfy it.
 21. **No docs gap found** in 2g-2.
 
+### Planned in PR 2h (re-estimated after round 32; for approval)
+
+2h was estimated at ~470 lines before round 32 added the DSV amendment record,
+`ba_review_required` and the BA reporting tasks. Re-estimated below against what comparable code
+measured in 2g (the import wizard alone is ~600 lines, a status route with its service ~300, a
+hand-written SQL function with audit ~150), it is **about 3,200 hand-written production lines**
+(SQL included; tests, generated files and fixtures excluded). Under CLAUDE.md's PR-size rule (#51:
+one PR per planned unit, split only for unrelated concerns or above ~1,500 lines) that is **three
+PRs**:
+
+| PR | Content | Est. | Based on | Ends with |
+|---|---|---|---|---|
+| **2h-1** `feat: participant detail and wave assignment` | `participationListScope` (the list fix, open point 2) and the detail projection in the domain; `GET /participations/{id}`; `PUT /participations/{id}/entry-wave`; the participant detail page with the wave choice; list rows link to it | ~1,000 | `main` | a PL and back office open a participant; the PL assigns a wave |
+| **2h-2** `feat: manual participant creation and the import follow-ups` | `POST /projects/{id}/participations` (one row through the import rules) and its form; the parse-worker cap (open point 1); the mapping classification and the header-row guard (open point 3) | ~720 | `main` (parallel to 2h-1) | a PL adds one person by hand |
+| **2h-3** `feat: individual TG dates, DSV amendments and BA reporting tasks` | `checkParticipationDates` (5.7, 100 %); `participation_dsv_amendment`, `ba_reporting_task`, `set_participation_dates`, the early-exit trigger; `PUT /participations/{id}/dates`; the dates form with the amendment block, amendments and tasks on the detail page | ~1,500 | 2h-1 (it needs the detail page and its API; stacked only while 2h-1 is unmerged) | **slice done** |
+
+Why not fewer: 2h-1 and 2h-2 together are ~1,720, and 2h-3 can't join either. Why not more: 2h-3
+is at the limit, but the amendment record and the BA tasks are part of the same rule set as the
+date change (a date change without them would break round 32), so it is one concern and one PR.
+The two import follow-ups ride 2h-2 because both change `apps/api/src/imports` and the import
+rules that manual creation reuses; they can become their own small PR if you prefer.
+
+**Estimates per part** (hand-written production lines):
+
+| Part | Domain | DB | API | Web (incl. i18n) | Sum |
+|---|---|---|---|---|---|
+| 2h-1 detail, list fix | 165 | — | 235 | 380 | 780 |
+| 2h-1 wave assignment | 20 | — | 100 | 105 | 225 |
+| 2h-2 manual creation | 80 | 10 | 200 | 330 | 620 |
+| 2h-2 import follow-ups | — | 5 | 80 | 15 | 100 |
+| 2h-3 dates, amendments, BA tasks | 385 | 365 | 270 | 490 | 1,510 |
+
+#### What people see and do (the flows for review)
+
+Only the dev login exists until Slice 3; the flat roles and project memberships decide. "PL" is a
+`project_lead` member of the project, "back office" a `back_office` member, "consultant" a
+`consultant` member. Org roles (admin, regional admin, regional operations manager) see project
+setup but never participant data (Slice 1 matrix).
+
+**Participant list (project page, Teilnehmende).** Unchanged for the PL and back office: every
+participant with Personalnummer, names and the three statuses; each row now opens the
+participant's page (the URL carries only the id, R19). A consultant sees "not allowed" while they
+have no assigned participants (none exist before Slice 3); once Slice 3 assigns them, the list
+shows exactly their assigned participants instead of failing (open point 2). Org roles see "not
+allowed".
+
+**Participant detail page** (`/projects/$projectId/participations/$participationId`). Sections:
+1. *Person*: Personalnummer, last and first name, date of birth, Austrittsdatum (end of the former
+   employment).
+2. *Contact*: address (street, postcode, city, country as one line), phone, mobile, private and
+   work email (with the hint that the work email is never used for login).
+3. *Status*: the main status, profiling and DSV tracks with German labels; TG entry, exit or
+   withdrawal date where set; derived hints, never stored: "TG-Beginn verpasst" (`tg_start_missed`)
+   and, when the former employment has already ended so that every allowed new start would leave
+   a gap, "Neuer Beginn nur nach BA-/Rechtsprüfung" (R40).
+4. *Welle und Vertragsdaten*: the wave (code, name) and its four dates; the contractual TG start
+   and end with their source ("aus der Welle" or "individuell"). Nothing says "twelve months from
+   start" or anything about entitlement (round 32 B1).
+5. From 2h-3: *DSV-Nachträge* (each amendment: kind, date fully executed, original location,
+   document number, confirmed by staff id and when) and *Meldungen an die Agentur* (each BA
+   reporting task: kind, the date it is about, created on, status "ausstehend"). Nothing can be
+   done with a task in Slice 2; recording "gemeldet" comes with the Agentur-submission slice.
+
+Who sees what: the **PL** and **back office** see all of it (the Slice 1 matrix gives both full
+read of confidential and case data); a **consultant** sees it only for an assigned participant
+(none before Slice 3; until then 403 "not allowed"); org roles and non-members get 403 or 404 (a
+project the viewer can't see, or an unknown id, is the same 404). Only the PL gets action buttons;
+the API derives them as `capabilities` and decides again on every submit. Back office sees no
+buttons (DSV and payroll actions come in later slices).
+
+**Manual creation** (2h-2; button "Teilnehmende anlegen" in the Teilnehmende section, PL only, draft
+and active projects). A form with the import's targets: Personalnummer, last and first name, date
+of birth, Austrittsdatum, address (street with house number, postcode, city; country fixed to
+Deutschland, the only accepted value), phone, mobile, private and work email, and in a `ta_tg`
+project an optional wave. The same rules as one import row (R32):
+- Required fields are the import's: Personalnummer and names always; birth date, Austrittsdatum and
+  the address unless the project relaxed their rule. An address is all four parts or none.
+- A Personalnummer that already exists in the project is refused ("existiert bereits") with a link
+  to that participant; manual creation never updates anyone (the re-import does).
+- A value the import would drop with a warning (an invalid phone or email) is a field error here:
+  the PL corrects or clears it.
+- Plausibility warnings (age 15–67 at the Austrittsdatum) show before saving; the PL ticks
+  "Hinweise geprüft" to save. A possible duplicate (same birth date and names, another
+  Personalnummer) shows as such; the PL chooses "trotzdem anlegen" or cancels. Both are audited as
+  in the import.
+- On success the person is in the list in `imported` and the form offers to open their page.
+
+**Wave assignment** (2h-1; on the detail page, PL only, `ta_tg` projects). A choice of the project's
+waves (code, name, dates) and "Welle zuordnen". Allowed while the participant is `imported`,
+`contacted`, `unreachable` or `informed` and no DSV has been offered (Slice 1, Q79); afterwards the
+choice is read-only with the reason. Choosing the current wave is refused as unchanged. A
+participant with individual TG dates keeps their wave until the PL returns the dates to the wave
+default (R33), so a wave change never silently invalidates contractual dates. A wave change is not a
+contractual date change (nothing is signed before the first offer): no amendment, no BA task.
+
+**Date changes** (2h-3; "Vertragsdaten ändern" on the detail page, PL only, `ta_tg`, the
+participant has a wave with a latest entry date and is not terminal). The PL sets a new start, a
+new end, or returns either to the wave default. The form explains the rules up front and the API
+refuses with a German message per rule (5.7):
+- *Before the DSV is signed* (and no offer is open): dates may move, within the wave's latest entry
+  date, never into the past, never longer than twelve months ("Verträge über zwölf Monate werden
+  von der Anwendung nicht unterstützt", never "unzulässig"). No amendment: the DSV offered later
+  carries the new dates (R34). While a DSV offer is open the dates can't change ("Angebot offen";
+  R35).
+- *Once the DSV is signed* (before or after TG entry): every change needs a **fully executed DSV
+  amendment**. The form then asks for the date the last party signed, the original location
+  (only "Papier-Personalakte") and an optional document number, and three confirmations the PL must
+  tick: the original was inspected or received, all required parties signed (all original DSV
+  parties by default), the original stays retrievable. No free text. The end can only be
+  **extended**; a shortening is refused with the hint that an earlier end is an exit through the
+  cancellation/exit workflow (R36, L3).
+- *A new start after a missed start* (`tg_start_missed`): today at the earliest, tomorrow once
+  today's entry run has completed; never after the wave's latest entry date; the amendment must be
+  fully executed before the new start; and the former employment must run until at least the day
+  before the new start. If it ended earlier, the change is refused as `ba_review_required`
+  ("kein gewöhnlicher späterer Eintritt: BA-/Rechtsprüfung nötig"); nothing is stored, and the
+  recorded determination is Slice 7 (R40). Without a recorded Austrittsdatum the check can't run
+  and the change is refused (R37).
+- *After TG entry*: the start is fixed; the end only extends, by an amendment fully executed on or
+  before the current end.
+- On success the dates update, the hint "TG-Beginn verpasst" disappears with a future start, the
+  amendment appears under DSV-Nachträge, and one BA reporting task per changed date appears as
+  "ausstehend" (a new start → "späterer Eintritt", a new end → "geplantes Ende geändert"). An exit
+  before the contractual end (any route, now or later) creates "vorzeitiger Austritt" (R38).
+- A change that would change nothing is refused as unchanged; two PLs editing at once get "inzwischen
+  geändert" (409) and see the current dates.
+- Past dates are never edited here (L7: Slice 7 correction process); back office has no date
+  permission.
+
+#### Readings taken for 2h (for confirmation)
+
+| # | Reading | PR | Question |
+|---|---|---|---|
+| R29 | **List and detail scope** (open point 2). A pure `participationListScope(subject, projectId)` → `all` when the viewer's project roles may list person fields of any participation of the project (PL, back office), `assigned` (exactly their assigned participations of that project) for a consultant with assignments, else `none` (403). The per-row field decisions stay. The detail: 404 for a project the viewer can't see and for an unknown id alike, 403 when `decideAccess` allows no field of that participation. Replaces the random-id check of 2g-2. | 2h-1 | — |
+| R30 | **The detail projection** returns each field only where `decideAccess(read)` allows it; statuses, dates and the wave are `case_internal` and decided too. Slice 2 serves no field whose decision demands a logged read (none exists yet); such a field stays unserved until the separate logged endpoints exist (rule 9). | 2h-1 | — |
+| R31 | **Capabilities** on the detail (`assignEntryWave`, `setParticipationDates`) are server-derived like the project's (round 26) from the permission and the domain preconditions; the routes decide again. | 2h-1 | — |
+| R32 | **Manual creation is one import row**: the same targets, normalisation, required targets (base chain plus relaxations, 2g reading 11) and duplicate rule; the creation edge's permission (PL, Q60); under the exclusive project lock like the confirm. Differences: an existing Personalnummer is refused (`personnel_number_taken`), never updated; a value the import would drop (`value_invalid_dropped`) is a field error `value_invalid`; warnings need `confirmWarnings` and a possible duplicate `createDespiteDuplicate`, audited as `warning_confirmed` and `possible_duplicate`; a new audit type `participation_created_manually` carries `baseDefaultsVersion` (it resolves configuration, so it joins R26's list). | 2h-2 | — |
+| R33 | **Wave assignment** uses Slice 1's `assignEntryWave` unchanged, plus `individual_dates_set`: a participation with its own `tgStart` or `tgEnd` keeps its wave until the dates return to the wave default. A wave change creates no amendment and no BA task. | 2h-1 | — |
+| R34 | **An amendment is required exactly when the DSV track is `dsv_signed`** (covers L3 after entry, L6 for a missed start with a signed DSV, and Q110 a). Before signature there is no contract to amend: the DSV offered later carries the new dates. 5.7's "a new start needs an amendment" is read this way. | 2h-3 | Q111 a |
+| R35 | **No date change while a DSV offer is open** (`dsv_offered`; `dsv_offer_open`): the paper offer carries the old dates. The PL waits for signature (then amends), decline or expiry (then re-offers). | 2h-3 | Q111 b |
+| R36 | **Once the DSV is signed, `tgEnd` only extends, before entry too** (`end_not_extension`): L3 excludes shortening by amendment, and Q110 a requires an amendment for every change after signature, so a shortening has no ordinary path; it is the cancellation/exit workflow. | 2h-3 | Q111 c |
+| R37 | **The direct-transition check needs a recorded `oldEmploymentEndDate`**; without one a new start is refused (`old_employment_end_unknown`), never presumed. The Austrittsdatum is required in the import unless relaxed, so this only hits a relaxed project or a seeded participation. The amendment doesn't change `oldEmploymentEndDate`; a re-import does. | 2h-3 | Q111 d |
+| R38 | **BA reporting tasks are created by the database** in the change's transaction: `set_participation_dates` derives the kinds from which *effective* dates changed (start → `later_entry`, end → `planned_end_changed`, both → both, each with the new date); an `AFTER UPDATE` trigger on `participation` creates `early_exit` with the exit date when the status becomes `exited` before the effective `tgEnd` (or with no effective end). Every successful change creates its tasks whatever the DSV state; all are `pending` in 2h, since whether the initial participant information was submitted (B3 case 1: `not_required`) is unknown before the Agentur-submission slice. | 2h-3 | Q111 e |
+| R39 | **`exitDate` is the last day of employment in the TG**, inclusive like `tgEnd` (an exit on the entry day is possible, round 18): an exit on the effective `tgEnd` is the regular end and creates no task. | 2h-3 | Q111 f |
+| R40 | **`ba_review_required` in 2h** is a refusal code plus a derived hint on the detail page (an `informed` participation flagged `tg_start_missed` whose `oldEmploymentEndDate` is before the day before the earliest allowed new start); nothing is stored. The recorded BA/legal determination is Slice 7. | 2h-3 | — |
+| R41 | **The amendment record**: one per successful change that needs one; `kind` `new_start` when the effective start changes, else `extension`; the three confirmations are three booleans that must all be `true` (`amendment_unconfirmed`), stored as the confirming PL and instant; `original_location` only `paper_personnel_file` (Q110 b); `document_reference` `^[A-Za-z0-9_./-]{1,40}$` or null; immutable (a trigger refuses `UPDATE`/`DELETE`). | 2h-3 | — |
+| R42 | **Access to amendments and BA tasks**: field catalog entries `dsvAmendment` and `baReportingTask`, confidential, access category `confidential`, not listable, `participation_record` (round 32 D3): read by the PL, back office and an assigned consultant; never in lists or customer exports. A task's status only moves forward (`pending` → `reported` or `not_required`); 2h has no function that moves it, a trigger refuses deletion and any other update. | 2h-3 | — |
+| R43 | **Parse-worker cap** (open point 1): at most **2** parse workers per API process; up to 8 further preview/confirm requests wait in order for at most 20 s; beyond that 503 `service-unavailable` with code `import_busy` and `Retry-After: 10`, which the wizard shows as "Gerade laufen mehrere Importe, bitte gleich erneut versuchen". Budget: 2 × ~300 MB plus the waiting requests (8 × ~13 MB, body and decoded file) and the API itself stay under 1 GiB per pod; the pod limit is set with the cluster deployment (ADR-0005). | 2h-2 | — |
+| R44 | **`import_column_mapping` classification** (open point 3), recorded in `data-protection.md`: a keyed hash of a value is pseudonymised, not anonymised data (Art. 4(5) GDPR), so if a data row was picked as the header row, the table holds pseudonymised values of a person. It is classed **`confidential`, possibly pseudonymised participant data**; retention stays `project_master` (it can't be linked to a person or participation). Mitigations: the confirm saves **no** mapping when the chosen header row looks like a data row (a cell that is a date or date cell, contains `@`, or has five or more digits), and the wizard says so; hashes are never served, logged or exported (suggestions return targets only); rotating the derived key makes every stored hash unlinkable. | 2h-2 | — |
+
+#### Tests first, and what each PR proves
+
+- **2h-1:** unit tests for `participationListScope` (PL, back office, consultant with and without
+  assignments in this and another project, org roles, several roles at once) and the detail
+  projection, both under the 100 % threshold; integration tests for the detail route per role (PL,
+  back office, consultant, org role, non-member, unknown id) and for the wave route (AC-38's
+  refusals per R21, `individual_dates_set`, `stale_status`); component tests for the detail page and
+  the wave choice; the Playwright path opens an imported participant's page.
+- **2h-2:** unit tests for the manual input's mapping onto one import row and its differences
+  (R32), 100 %; integration tests for creation (every refusal, warnings, the duplicate decision,
+  audit with `baseDefaultsVersion`, concurrent creation of one Personalnummer), for the worker cap
+  (a third parse waits, a queue overflow is 503 `import_busy`) and for the header-row guard (no
+  mapping saved); the data-catalog test with the new class; component tests for the form.
+- **2h-3:** `checkParticipationDates` first, one expected result per rule of 5.7 at its boundaries
+  (AC-36, AC-47), 100 %; integration tests for `set_participation_dates` (compare-and-set, audit,
+  amendment and task rows in one transaction, SQL refusing a missing amendment after signature),
+  the early-exit trigger (exit before, on and without a contractual end), the immutability
+  triggers, grants and the reserved event type (AC-37, AC-40, AC-48); component tests for the dates
+  form; the Playwright path changes an imported participant's end date before any offer.
+- Every PR: `pnpm verify` before pushing; tests on Node 22 and 24 in CI.
+
+#### Domain gaps
+
+None blocks 2h. Six details the round 32 answers don't name are taken fail safe (R34–R39) and
+recorded as **Q111** 🔒 in `open-questions.md` for the Legal, PL and BA process-owner roles.
+
+#### Open points from the 2g review
+
+1. **Parse-worker concurrency** — yes, a small cap is worth it: each worker may use ~300 MB, and
+   nothing stops several PLs (or one PL's double click and a re-preview) from starting several at
+   once. **2h-2** adds it (R43).
+2. **The list's permission check with a random participation id** — **2h-1** fixes it with
+   `participationListScope` (R29), which the detail route uses too.
+3. **`import_column_mapping` and data rows picked as header** — decided in `data-protection.md` in
+   this PR (R44: confidential, possibly pseudonymised participant data, plus the header-row guard);
+   **2h-2** changes the data catalog and adds the guard.
+
 ## 4. Design overview
 
 ```
@@ -1226,8 +1421,8 @@ fixtures/imports/  synthetic sample files
 | `config_relaxation_request` (new) | `id`, `project_id` FK, `rule_id`, `reason_code`, `status`, `requested_by`, `requested_on`, `requested_at`, `decided_by`, `decided_on`, `decided_at`; four-eyes and decision `CHECK`s like `profiling_exception_request`; one open (`requested`) request per project and rule | `project_master` | `internal` | no |
 | `participant_identity` (new) | `participation_id` pk, `project_id` FK; composite FK `(participation_id, project_id)` → `participation`; `personnel_number`, `last_name`, `first_name` (text, not null), `birth_date date null`, `created_at`, `updated_at`; unique `(project_id, personnel_number)` | `participation_record` (R8) | `confidential` | yes |
 | `participant_details` (new) | same keys; `address_street`, `address_postal_code`, `address_city`, `address_country` (`^[A-Z]{2}$`, only `DE` in the MVP; round 32), `phone`, `mobile`, `private_email`, `work_email` (text null), `old_employment_end_date date null`, `created_at`, `updated_at`; the four address columns all set or all null (round 32) | `personnel_file` (new class in the data catalog, `unset`; R8) | `confidential` | yes |
-| `participation_dsv_amendment` (new, PR 2h, round 32; append-only) | `id`, `participation_id`, `project_id`, `kind` (`extension`, `new_start`), `fully_executed_on date`, `old_tg_start`/`new_tg_start`/`old_tg_end`/`new_tg_end` (date null), `confirmed_by` FK, `confirmed_at`, `original_location` (controlled, Q110), `document_reference` (id pattern, null); no free text | `participation_record` (in the evidence set; D3) | `confidential` | yes |
-| `ba_reporting_task` (new, PR 2h, round 32; status moves forward only) | `id`, `participation_id`, `project_id`, `reporting_kind` (`later_entry`, `planned_end_changed`, `early_exit`), `status` (`pending`, `reported`, `not_required`), `created_at`, `reported_on date null`, `channel`/`reference` (controlled, null until reported) | `participation_record` | `confidential` | yes |
+| `participation_dsv_amendment` (new, PR 2h-3, round 32; append-only) | `id`, `participation_id`, `project_id`, `kind` (`extension`, `new_start`), `fully_executed_on date`, `old_tg_start`/`new_tg_start`/`old_tg_end`/`new_tg_end` (effective dates, null where unknown), `confirmed_by` FK, `confirmed_at`, `original_location` (controlled, Q110), `document_reference` (`^[A-Za-z0-9_./-]{1,40}$`, null); composite FK to `participation`; no free text (R41) | `participation_record` (in the evidence set; D3) | `confidential` | yes |
+| `ba_reporting_task` (new, PR 2h-3, round 32; status moves forward only) | `id`, `participation_id`, `project_id`, `reporting_kind` (`later_entry`, `planned_end_changed`, `early_exit`), `subject_date date` (the new start, the new end or the exit date the report is about), `amendment_id` FK null, `status` (`pending`, `reported`, `not_required`), `created_at`, `reported_on date null`, `channel`/`reference` (controlled, null until reported; their values come with the Agentur-submission slice) (R38, R42) | `participation_record` | `confidential` | yes |
 | `import_column_mapping` (new) | `project_id` FK, `header_hmac text`, `target import_target`, `updated_by`, `updated_at`; pk `(project_id, header_hmac)`; the customer comes from the project | `project_master` | `internal` | no |
 
 - Every new table has a data-catalog entry and, except the global `config_template_version`
@@ -1384,7 +1579,11 @@ projectType })`:
 | a new start keeps the direct transition from the former employment (`oldEmploymentEndDate` is the day before the new `tgStart` or later); otherwise it isn't an ordinary late entry: refused and marked for review (L6, B4) | `ba_review_required` |
 | a new effective `tgEnd` is not in the past | `end_in_past` |
 | after TG entry `tgEnd` only extends (new end later than the current one); a shortening is the cancellation/exit workflow (§623 BGB), never this operation (L3) | `end_not_extension` |
-| a change that needs an amendment has one: a new start (L6), a `tgEnd` change after entry (L3) and, until Q110 says otherwise, any change once the DSV is signed | `dsv_amendment_required` |
+| no change while a DSV offer is open (2h plan, R35) | `dsv_offer_open` |
+| a change that needs an amendment has one: any change once the DSV is signed (R34: covers a new start after a missed start, L6; a `tgEnd` change after entry, L3; Q110 a) | `dsv_amendment_required` |
+| once the DSV is signed, `tgEnd` only extends, before entry too (R36) | `end_not_extension` |
+| the direct-transition check needs a recorded `oldEmploymentEndDate` (R37) | `old_employment_end_unknown` |
+| a change that changes no effective date is refused without a write | `dates_unchanged` |
 | the amendment is fully executed: `fullyExecutedOn ≤ today`; for an extension `fullyExecutedOn ≤` the current `tgEnd`; for a new start `fullyExecutedOn <` the new `tgStart` (L5, L6) | `amendment_not_executed_in_time` |
 | the PL confirms the original was inspected or received, all required parties signed (all original DSV parties by default) and it stays retrievable; the original location is a controlled value (Q110: `paper_personnel_file`) | `amendment_unconfirmed` |
 | effective `tgEnd` is not before the effective `tgStart` | `end_before_start` |
@@ -1623,7 +1822,10 @@ All under `/api/v1`, `@hono/zod-openapi`, RFC 9457, cursor pagination for lists.
 | `POST /projects/{projectId}/activation` | 2e-1 |
 | `POST /projects/{projectId}/config/pins/{agenturKey}/migration-preview`, `…/migration` | 2e-2 |
 | `POST /projects/{projectId}/imports/preview`, `POST /projects/{projectId}/imports` | 2g-1 |
-| `GET/POST /projects/{projectId}/participations`, `GET /participations/{participationId}`, `PUT /participations/{participationId}/entry-wave`, `PUT /participations/{participationId}/dates` | 2g-2, 2h |
+| `GET /projects/{projectId}/participations` | 2g-2 (scope fixed in 2h-1) |
+| `GET /participations/{participationId}`, `PUT /participations/{participationId}/entry-wave` | 2h-1 |
+| `POST /projects/{projectId}/participations` | 2h-2 |
+| `PUT /participations/{participationId}/dates` | 2h-3 |
 
 - New problem types: `conflict` (409), `domain-error` (422, `errors[].code`, plus `failedGuards`
   where a guard failed), `payload-too-large` (413). Service refusals map per R21.
@@ -1831,6 +2033,21 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       of today after today's entry run is refused. (U, I)
 - [ ] **AC-48** Every contractual date change and every exit before the effective `tgEnd` creates
       exactly one immutable BA reporting task of the right kind, `pending` (2h, round 32). (I)
+- [ ] **AC-49** The list and the detail follow `participationListScope` (R29): a consultant with
+      assignments lists exactly their assigned participations of the project; without any, 403;
+      the detail is 404 for an unknown id and an invisible project alike, 403 without any readable
+      field. (U, I)
+- [ ] **AC-50** Wave assignment refuses a participation with individual dates
+      (`individual_dates_set`) and creates no amendment or BA task (R33). (I)
+- [ ] **AC-51** Manual creation (R32): an existing Personalnummer is refused, never updated; an
+      invalid optional value is a field error; warnings and a possible duplicate need their explicit
+      confirmation and are audited; `participation_created_manually` carries `baseDefaultsVersion`.
+      (U, I)
+- [ ] **AC-52** At most two parse workers run per API process; a full queue answers 503
+      `import_busy` with `Retry-After` (R43). (I)
+- [ ] **AC-53** `import_column_mapping` is catalogued `confidential` as possibly pseudonymised
+      participant data, and a confirm whose header row looks like a data row saves no mapping (R44).
+      (U, I)
 
 ### Definition of done (CLAUDE.md) applied to this slice
 - Status changes through the audit helper: unchanged; setup writes get the same treatment (D2).
@@ -1891,7 +2108,12 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - **2f:** data-protection.md (person-data tables, `personnel_file`); ADR-0008 note.
 - **2g:** ADR-0003 note (the two dependencies, spike S1); ADR-0010 note (base64 upload, body
   limits, new problem types); CLAUDE.md (`fixtures/imports`, commands); README status.
-- **2h:** process-and-lifecycle.md (new start date in Q68 case 3).
+- **2h (plan PR):** this plan (the 2h section, R29–R44); `open-questions.md` Q111;
+  `data-protection.md` (the `import_column_mapping` classification, R44).
+- **2h-1:** none beyond the generated tables.
+- **2h-2:** ADR-0010 note (`import_busy`); `data-protection.md` only if the guard differs from R44.
+- **2h-3:** process-and-lifecycle.md (new start date in Q68 case 3, when an amendment is needed,
+  the BA tasks as built); data-protection.md (the two new tables in the retention-class table).
 - **Round 32 (docs-only PR):** the decision record; Q101, Q102, Q103, Q105 and Q58 recorded as
   accepted pilot decisions and Q110 in `open-questions.md`; this plan; `data-protection.md` (classes and periods) and
   `process-and-lifecycle.md` (what the TG dates mean, amendments, BA reporting).
@@ -1914,7 +2136,8 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Two sources of truth for project dates during the change | One migration copies then drops; the domain already reads waves only (AC-3). |
 | Breaking `/api/v1` changes | Only the repo's own clients; the generated client and the drift check catch every use (R20). |
 | More SQL functions to keep correct | Same hardening and grant tests as Slice 1; structure in SQL, rules in TypeScript (round 16). |
-| Large PRs | 12 PRs with estimates; any PR over ~500 hand-written lines is split before review. |
+| Large PRs | One PR per planned unit (CLAUDE.md, #51); a split only for unrelated concerns or above ~1,500 changed lines, decided in the plan. 2h-3 is planned at the limit (~1,500); its parts are one concern. |
+| A date change that misses its amendment or BA task | The SQL function refuses a change of a signed DSV without an amendment and writes the tasks itself; the early-exit task is a trigger no caller can skip (R38). |
 
 ## 11. Approval
 
