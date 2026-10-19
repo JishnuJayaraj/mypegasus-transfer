@@ -70,12 +70,17 @@ confirmed before the pilot.
 
 ## How we work (workflow)
 
-- Work in **vertical slices** from `docs/roadmap.md`. One slice = one branch = one PR.
+- Work in **vertical slices** from `docs/roadmap.md`. A slice's plan divides it into PRs (e.g.
+  2g-1, 2g-2); one planned PR = one branch = one PR.
 - For each slice: **plan first** (write the plan to `docs/plans/<slice>.md`, wait for approval
   unless told otherwise) → implement with tests → self-review → open PR.
 - Write tests first for domain logic (lifecycle transitions, completeness rules, config
   resolution). UI gets component tests for critical flows and Playwright e2e for the happy path.
-- Keep PRs small (aim < 400 lines changed excluding generated code).
+- **PR size:** one PR per unit the plan names. Don't split a planned PR further just for size:
+  the product owner reviews at the planning stage and accepts the PRs, so extra stacked PRs only
+  add merge overhead. Split only when a PR would mix unrelated concerns or exceed about 1,500
+  changed lines excluding generated code and tests, and then say so in the plan. Prefer PRs based
+  on `main`; stack one on another only when it needs the unmerged work.
 - If the docs are missing domain knowledge you need, **ask** — do not invent BA rules. Add an
   entry to `docs/open-questions.md` instead of guessing.
 - When a correction from the human reveals missing knowledge, update the relevant doc in the
