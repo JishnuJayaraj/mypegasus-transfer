@@ -1,9 +1,10 @@
 # Slice 2 — Projects & import (F1, F2): plan
 
 - Status: **Approved with amendments** ([round 22](../decisions/2026-10-16-answers-round-22.md),
-  2026-10-16). Q102 (PL, legal, BA process owner) and Q103 (PL) are confirmed in [round 30](../decisions/2026-10-17-answers-round-30.md)
-  (2026-10-17), which lifts the gates of PRs 2f/2g and 2h. Q101 (PL), Q105 (DPO; before the pilot)
-  and Q110 (PL, legal, BA process owner; one rule of 5.7) are still open.
+  2026-10-16). Q101 (PL), Q102 (PL, legal, BA process owner; before PR 2h), Q103 (PL; before PRs
+  2f/2g) and Q105 (DPO; before the pilot) are still open. For Q102 and Q103 a proposed answer
+  package is recorded in [round 30](../decisions/2026-10-17-answers-round-30.md), awaiting
+  confirmation; the plan doesn't apply it and every gate stays.
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
@@ -50,8 +51,8 @@ data exists while retention periods are `unset`.
 | R2 | The **approver of a relaxation** (Q75 "with reason, approval and audit") is the regional operations manager, a different user from the requester, **before** it takes effect, like a profiling exception (Q80). Global scope until Slice 3 (round 18, reading 2). | 5.9 | Q99 ✔ |
 | R3 | The **controlled reason codes** for a relaxation are the four proposed in 5.9; the list is the owner's to set. | 5.9 | Q100 ✔ |
 | R4 | **Wave edits once in use** follow the rules in 5.6 (ordering derived from the offer and entry guards; no retroactive cutoff; no change of a signing deadline open offers depend on; a passed default TG start stays; dates clear only while unused; no deletion). | 5.6 | Q101 |
-| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. **Amended by round 30** (A1–A7): the dates are the contractual employment dates, the twelve-month check is an MVP scope restriction, `tgEnd` is never in the past and changes after entry only for a documented DSV amendment (Q110). | 5.7 | Q102 ✔ (round 30, amended) |
-| R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); **German addresses only until Q103 is answered** (R23); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; **numeric XLSX cells refused for identifiers** (R24); age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. Settled before PRs 2f/2g. **Amended by round 30** (A8–A15): `addressCountry` is stored; one structured address; no age warning when the Austrittsdatum is legitimately absent. | 5.11 | Q103 ✔ (round 30, amended) |
+| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. | 5.7 | Q102 (open) |
+| R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); **German addresses only until Q103 is answered** (R23); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; **numeric XLSX cells refused for identifiers** (R24); age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. Settled before PRs 2f/2g. | 5.11 | Q103 (open) |
 | R7 | **Saved column mappings "per customer"** are keyed by the project's customer name (trimmed, case-folded) until a customer entity exists, and store only a keyed hash of each normalised header, never header text (a file without a header row would otherwise store a person's name). | 5.11 | Q104 ✔ |
 | R8 | **Retention classes of the person data** 🔒: identity (`firstName`, `lastName`, `birthDate`, `personnelNumber`, the evidence-set identity of round 13) → `participation_record`; address, phone, mobile, private and work email, `oldEmploymentEndDate` → `personnel_file` (never in the evidence set, round 13). Periods stay `unset`. | 5.10 | Q105 |
 | R9 | **Project creation and project visibility until Slice 3**: staff with the flat role `project_lead` may create a project and become its PL member; project metadata (not participant data) is visible to the project's members and to global-scope org roles; nobody else. | 5.4 | Q106 ✔ |
@@ -73,38 +74,12 @@ data exists while retention periods are `unset`.
 
 | # | Reading | Where | Question |
 |---|---|---|---|
-| R23 | **Foreign addresses — corrected in round 23:** five digits don't prove a German address. Until Q103 is answered, an import must **establish DE explicitly**, through a country column or a country constant the PL selects for the import; it is never inferred from the postal code. Rows of another country are refused (`foreign_address_unsupported`); without a country source the import can't be confirmed (`country_required`). The five-digit postal-code check applies to DE rows. **Amended by round 30** (A8): the country is the stored field `addressCountry`; `country_required` applies when an address is imported. | 5.11 | Q103 ✔ (round 30, amended) |
-| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. **Confirmed by round 30** (A12). | 5.11 | Q103 ✔ (round 30) |
-| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). **Confirmed by round 30** (A1) as a conservative MVP scope restriction on supported DSV periods, not a benefit calculation. | 5.6, 5.7 | Q102 ✔ (round 30) |
+| R23 | **Foreign addresses — corrected in round 23:** five digits don't prove a German address. Until Q103 is answered, an import must **establish DE explicitly**, through a country column or a country constant the PL selects for the import; it is never inferred from the postal code. Rows of another country are refused (`foreign_address_unsupported`); without a country source the import can't be confirmed (`country_required`). The five-digit postal-code check applies to DE rows. | 5.11 | Q103 |
+| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. | 5.11 | Q103 ✔ |
+| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). | 5.6, 5.7 | Q102 ✔ (conservative, pending Q102) |
 | R26 | **Configuration-dependent audited operations — confirmed with this exact list (round 23):** `project_activated`, `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`, `import_confirmed`. Rejection and withdrawal carry none unless they resolve configuration; a later operation that resolves configuration joins the list (a test keeps it). | 5.3 | Q107 ✔ |
 | R27 | `config_template_version` is global reference data (no participant data), so it has **no `project_id`**: the owner chose this normalisation in round 22. Retention class `reference_data`, never touched by the retention job; the pins that use it carry `project_id`. | 5.2 | ✔ |
 | R28 | **Lock keys:** `pg_advisory_xact_lock(hashtextextended('project:' || id, 0))` (exclusive) and its `_shared` form; a hash collision only serialises two projects more than needed. The template-version identity is serialised by its primary key (the insert of a new version waits for a concurrent one to commit, then compares). | 5.3 | ✔ |
-
-### Amended by round 30 (Q102 and Q103 confirmed)
-
-[Round 30](../decisions/2026-10-17-answers-round-30.md) confirms Q102 (PL, legal, BA process
-owner) and Q103 (PL). Where the answers differ from the fail-safe readings above, the plan
-carries them as amendments A1–A15 (the decision record lists each, before and after):
-
-- **Q102 (5.7):** `tgStart`/`tgEnd` are the inclusive contractual employment dates under the DSV,
-  not the Transfer-KuG period, and nothing in Slice 2 calculates or promises entitlement (A1); the
-  twelve-month check stays as an MVP scope restriction (A1); after TG entry `tgEnd` changes only
-  for a documented DSV amendment (A2, how is **Q110**; refused until answered); a new `tgEnd` is
-  never in the past (A3, `end_in_past`); past-date corrections go to the correction/reconciliation
-  process (A4); a new start of today after today's completed run doesn't trigger automatic entry
-  (A5, as written); clearing returns to the wave default under the same validation (A6, as
-  written); back office has no date permission (A7).
-- **Q103 (5.11):** `addressCountry` (ISO 3166-1 alpha-2, confidential, `personnel_file`) is a
-  stored field and an import target; only `DE`, case normalised; `country_required` when an
-  address is imported (A8); one structured address, partial ones refused (A9, `address_incomplete`
-  proposed); non-DE rows refused (A10); no age warning when the Austrittsdatum is legitimately
-  absent (A11); numeric XLSX postal code an error, phone/mobile dropped with
-  `identifier_cell_numeric` as a warning (A12); Personalnummer trimmed of leading and trailing
-  whitespace only, case-sensitive (A13); `phone` and `mobile` never inferred or copied (A14);
-  invalid required values stay errors (A15).
-
-The proposed codes `end_in_past`, `address_incomplete` and (Q110's fail safe)
-`dsv_amendment_required` are named here for PRs 2f and 2h, which confirm them with their tests.
 
 ### What the decisions and the Slice 1 plan already settle (not re-decided)
 
@@ -123,14 +98,15 @@ The proposed codes `end_in_past`, `address_incomplete` and (Q110's fail safe)
 
 ### Open
 
-Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25, Q109 in round 27,
-**Q102 and Q103 in round 30** (their gates are lifted: PRs 2f/2g and 2h may start). Still open,
-each with its fail-safe reading in `open-questions.md`:
+Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25, Q109 in round 27. Still open, each with its fail-safe
+reading in `open-questions.md`:
 - **Q101** (PL): wave edits once in use. PR 2b builds the fail-safe rules; an answer changes a table.
+- **Q102** (PL, legal, BA process owner): individual dates and the twelve-month limit. **Settled
+  before PR 2h.** A proposed answer package (round 30) awaits their confirmation.
+- **Q103** (PL): the import contract, incl. foreign addresses and numeric identifiers. **Settled
+  before PRs 2f/2g**, since it may change the schema and the target catalog. A proposed answer
+  package (round 30) awaits the PL's confirmation.
 - **Q105** 🔒 (DPO): retention classes; a pre-pilot gate.
-- **Q110** 🔒 (PL, legal, BA process owner): how a `tgEnd` change after TG entry shows the
-  documented DSV amendment (round 30, A2). PR 2h builds the fail-safe rule (refused after entry);
-  an answer changes that one rule.
 
 ## 1. Goal
 
@@ -242,8 +218,7 @@ hand-written production lines (SQL included, tests excluded).
 | **2g-2** `feat(web): import wizard` | Upload → sheet → mapping → report (errors, warnings, duplicates, updates) → confirm; the participant list (first version); Playwright happy path. | ~420 | 2g-1 | **demo path works** |
 | **2h** `feat: participations — detail, manual creation, waves and dates` | Participant list/detail with field projection by `decideAccess`; manual creation (one row through the import rules); wave assignment route; `checkParticipationDates` (5.7, 100 %), `set_participation_dates`, the dates route and UI (new start date). | ~470 | 2g-2 | **slice done** |
 
-**Gates** (round 22): PRs 2f and 2g wait for Q103; PR 2h waits for Q102. **Both lifted in round
-30** (Q102 and Q103 confirmed); Q110 leaves one rule of 2h fail safe. 2b and 2c-1 can run in
+**Gates** (round 22): PRs 2f and 2g wait for Q103; PR 2h waits for Q102. 2b and 2c-1 can run in
 parallel after 2a; 2d-1 and 2e-1 in parallel after 2c-2. Between 2a
 and 2b the web app has no way to enter contractual dates; nothing depends on them in that gap.
 
@@ -320,7 +295,7 @@ schema-qualifies its built-ins.
    day on (`default_start_passed`). The cutoff keeps its own wording (`today > latestEntryDate`).
    Recorded in Q101.
 2. **Ordering in the table, usage in the domain:** the three new ordering rules are table `CHECK`s
-   next to the existing `start ≤ end` (structure, round 16); the twelve-month rule (an MVP scope restriction, round 30)
+   next to the existing `start ≤ end` (structure, round 16); the twelve-month rule (pending Q102)
    and the usage rules (pending Q101) live only in `checkWaveChange`. A legacy wave that breaks
    the order fails migration 0013 instead of being changed silently (synthetic data only; fixed by
    hand, like the PL backfill of round 23).
@@ -846,9 +821,9 @@ fixtures/imports/  synthetic sample files
 | `ProjectStatus` | `draft`, `active` (R1; closing a project is later) |
 | `RelaxationReasonCode` (Q100, proposal) | see 5.9 |
 | `RelaxationRequestStatus` | `requested`, `approved`, `rejected`, `withdrawn` |
-| `ImportTarget` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `addressStreet`, `addressPostalCode`, `addressCity`, `addressCountry` (round 30), `phone`, `mobile`, `privateEmail`, `workEmail` |
+| `ImportTarget` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `addressStreet`, `addressPostalCode`, `addressCity`, `phone`, `mobile`, `privateEmail`, `workEmail` |
 | `ImportRowOutcome` | `create`, `update`, `unchanged`, `skip`, `error` |
-| `ImportIssueCode` | errors: `required_missing`, `invalid_date`, `date_has_time`, `birth_date_in_future`, `end_before_birth`, `too_long`, `control_characters`, `duplicate_in_file`, `identifier_cell_numeric`, `postal_code_invalid`, `foreign_address_unsupported`, `country_required`, `address_incomplete` (round 30, proposed); warnings: `age_implausible`, `value_invalid_dropped`, `identifier_cell_numeric` (phone, mobile: the value is dropped, round 30), `possible_duplicate`, `terminal_not_updated`, `kept_existing` |
+| `ImportIssueCode` | errors: `required_missing`, `invalid_date`, `date_has_time`, `birth_date_in_future`, `end_before_birth`, `too_long`, `control_characters`, `duplicate_in_file`, `identifier_cell_numeric`, `postal_code_invalid`, `foreign_address_unsupported`, `country_required`; warnings: `age_implausible`, `value_invalid_dropped`, `possible_duplicate`, `terminal_not_updated`, `kept_existing` |
 
 ### 5.2 Data model
 
@@ -861,7 +836,7 @@ fixtures/imports/  synthetic sample files
 | `project_config_override` (new, append-only) | `project_id` FK, `version int` (pk with project), `content jsonb` (a `ProjectOverride` layer), `created_by` FK, `created_at` | `project_master` | `internal` | no |
 | `config_relaxation_request` (new) | `id`, `project_id` FK, `rule_id`, `reason_code`, `status`, `requested_by`, `requested_on`, `requested_at`, `decided_by`, `decided_on`, `decided_at`; four-eyes and decision `CHECK`s like `profiling_exception_request`; one open (`requested`) request per project and rule | `project_master` | `internal` | no |
 | `participant_identity` (new) | `participation_id` pk, `project_id` FK; composite FK `(participation_id, project_id)` → `participation`; `personnel_number`, `last_name`, `first_name` (text, not null), `birth_date date null`, `created_at`, `updated_at`; unique `(project_id, personnel_number)` | `participation_record` (R8) | `confidential` | yes |
-| `participant_details` (new) | same keys; `address_street`, `address_postal_code`, `address_city`, `address_country` (ISO 3166-1 alpha-2, only `DE` in the MVP; round 30), `phone`, `mobile`, `private_email`, `work_email` (text null), `old_employment_end_date date null`, `created_at`, `updated_at`; the four address columns are one structured address, all set or all null (round 30) | `personnel_file` (new class in the data catalog, `unset`; R8) | `confidential` | yes |
+| `participant_details` (new) | same keys; `address_street`, `address_postal_code`, `address_city`, `phone`, `mobile`, `private_email`, `work_email` (text null), `old_employment_end_date date null`, `created_at`, `updated_at` | `personnel_file` (new class in the data catalog, `unset`; R8) | `confidential` | yes |
 | `import_column_mapping` (new) | `project_id` FK, `header_hmac text`, `target import_target`, `updated_by`, `updated_at`; pk `(project_id, header_hmac)`; the customer comes from the project | `project_master` | `internal` | no |
 
 - Every new table has a data-catalog entry and, except the global `config_template_version`
@@ -877,8 +852,7 @@ fixtures/imports/  synthetic sample files
 
 **Field catalog → columns (D8, R8).** `FieldEntry` gains `retentionClass?:
 ParticipantRetentionClass`, set for every field a table stores. A test maps each person-data
-column to its field key (`address_*` → `address`, `address_country` included: round 30 makes the
-country part of the confidential `personnel_file` address) and requires: the field exists; its
+column to its field key (`address_*` → `address`) and requires: the field exists; its
 `storage` is `column` (no special/highly confidential field without encryption); the table's
 catalog `dataClass` is the field's class; the table's `retentionClass` equals the field's. So a
 table can only hold fields of one retention class, which is how "per data item" (ADR-0008) is
@@ -940,7 +914,7 @@ stub stays the only login (ADR-0007).
 | Operation | Who |
 |---|---|
 | `createProject` (no project yet) | flat role `project_lead` (R9) |
-| `editProject`, `activateProject`, `editEntryWaves`, `pinTemplate`, `migrateTemplate`, `changeOverride` (Agentur-scoped settings, removing a relaxation), `requestRelaxation`, `withdrawRelaxation`, `importParticipations`, `setParticipationDates` | PL of the project (`setParticipationDates`: back office none in Slice 2, round 30) |
+| `editProject`, `activateProject`, `editEntryWaves`, `pinTemplate`, `migrateTemplate`, `changeOverride` (Agentur-scoped settings, removing a relaxation), `requestRelaxation`, `withdrawRelaxation`, `importParticipations`, `setParticipationDates` | PL of the project |
 | `decideRelaxation` | regional operations manager in scope, never the requester (R2) |
 
 **Reads.** Project metadata, waves and configuration: members of the project and global org
@@ -982,7 +956,7 @@ participation of the wave relies on the default TG start (no own `tgStart`, not 
 | code `^[A-Za-z0-9_-]{1,20}$`, unique per project; name 1–100 characters, no control characters (it is UI text: no personal data, a hint in the form) | `invalid_code`, `code_taken`, `invalid_name` |
 | `signingDeadline ≤ defaultTgStart`, `signingDeadline ≤ latestEntryDate` (the offer guard needs both, Q69) | `signing_after_start`, `signing_after_latest_entry` |
 | `defaultTgStart ≤ latestEntryDate` (an entry after the last possible entry can't happen) and `defaultTgStart ≤ defaultTgEnd` (existing check) | `start_after_latest_entry`, `end_before_start` |
-| the default period is at most twelve months (R25; an MVP scope restriction on supported DSV periods, round 30) | `period_exceeds_twelve_months` |
+| the default period is at most twelve months (R25, Q102) | `period_exceeds_twelve_months` |
 | no retroactive cutoff: a new or changed `latestEntryDate` is not before today; once the cutoff has passed (`today > latestEntryDate`) it doesn't change | `latest_entry_in_past`, `cutoff_passed` |
 | `signingDeadline` doesn't change while first offers of the wave are open | `signing_deadline_in_use` |
 | a `defaultTgStart` that has passed doesn't change (individual new start dates instead, 5.7); a new one is not before today while participations rely on it | `default_start_passed`, `default_start_in_past` |
@@ -993,15 +967,7 @@ Dates are inclusive. Impossible combinations are errors (ADR-0009 style); nothin
 confirmable warning. The UI shows the wave list (code, name, four dates, number of
 participations) and one form for create and edit.
 
-### 5.7 Individual TG dates and the new start date (R5, Q102 confirmed in round 30)
-
-**Meaning (round 30, A1):** `tgStart` and `tgEnd` are the inclusive contractual start and end
-dates of the participant's employment in the TG under the DSV. They are **not** a definitive
-representation of the BA-funded Transfer-KuG period (with staged entry into an existing beE the
-individual funding period is limited by that beE's remaining term; a separate later beE may
-provide its own full period). Slice 2 calculates, displays and promises **no** Transfer-KuG
-entitlement: no UI text, response or audit detail says a participant gets twelve months of
-Transfer-KuG from their `tgStart`.
+### 5.7 Individual TG dates and the new start date (R5, Q102)
 
 `checkParticipationDates({ current, wave, change, today, projectType })`:
 
@@ -1011,25 +977,17 @@ Transfer-KuG from their `tgStart`.
 | the participation has a wave with a `latestEntryDate` (round 22) | `wave_required`, `latest_entry_date_missing` |
 | no change on a terminal participation | `participation_closed` |
 | `tgStart` doesn't change after TG entry (`active_in_tg`: the entry date is recorded) | `entered` |
-| a new `tgStart` is not before today (Q68: never backdated; today is allowed) | `start_in_past` |
+| a new `tgStart` is not before today (Q68: never backdated) | `start_in_past` |
 | … not after the wave's `latestEntryDate` | `start_after_latest_entry` |
 | … not before an open `offerDeadline` (existing table check, as a domain error) | `start_before_offer_deadline` |
-| `tgEnd` changes after TG entry only for a documented DSV amendment (round 30, A2); how Slice 2 knows is **Q110**, so until answered it is refused after entry | `dsv_amendment_required` (proposed) |
-| a new effective `tgEnd` is not in the past (round 30, A3; today is allowed) | `end_in_past` (proposed) |
 | effective `tgEnd` is not before the effective `tgStart` | `end_before_start` |
-| the effective period is at most twelve months (R25): a **conservative MVP scope restriction on supported DSV periods**, not a benefit calculation (round 30, A1); a longer contract is handled manually outside the MVP, which the refusal's UI text says | `period_exceeds_twelve_months` |
-| setting a date to `null` returns to the wave default and must satisfy the same rules (round 30, A6) | — |
+| the effective period is at most twelve months (R25; blocked until Q102 says what `tgEnd` means) | `period_exceeds_twelve_months` |
+| setting a date to `null` returns to the wave default and must satisfy the same rules | — |
 
-- **Who:** only the project's PL (`setParticipationDates`); every change is audited; back office
-  has no date permission in Slice 2 (round 30, A7).
 - **New start date (Q68 case 3):** an `informed` participation flagged `tg_start_missed` gets a
-  genuinely new `tgStart ≥ today`, never a backdated one; the flag clears and the next due run may
-  enter it with valid facts. A new start equal to today after today's entry run has completed does
-  **not** trigger automatic entry; it can only be entered by the later reconciliation (Slice 7,
-  D10), which the UI says (round 30, A5).
-- **Past dates (round 30, A4):** a correction of a date in the past (either date) is not ordinary
-  editing; it belongs to the audited correction/reconciliation process (Slice 7, D10; evidence
-  corrections, round 12).
+  new `tgStart ≥ today`; the flag clears and the next due run may enter it with valid facts. A new
+  start equal to today after today's run has completed can only be entered by reconciliation
+  (Slice 7, D10), which the UI says.
 - Through the status service (participation lock, project lock shared), then
   `set_participation_dates`; audit with old and new dates.
 
@@ -1103,10 +1061,8 @@ Transfer-KuG from their `tgStart`.
 - **Tables** in 5.2; one row each per participation, both optional (a participation created
   before Slice 2 has none: the seed adds synthetic identities).
 - **Classification:** every stored field is `confidential` (field catalog: `firstName`,
-  `lastName`, `personnelNumber`, `birthDate`, `oldEmploymentEndDate`, `workEmail`, `address`
-  (street, postal code, city and, from round 30, the country `addressCountry`: ISO 3166-1
-  alpha-2, retention class `personnel_file`), `phone`, `mobile`, `privateEmail`), category
-  `confidential`, `listable` true. So **no encrypted
+  `lastName`, `personnelNumber`, `birthDate`, `oldEmploymentEndDate`, `workEmail`, `address`,
+  `phone`, `mobile`, `privateEmail`), category `confidential`, `listable` true. So **no encrypted
   storage is needed** for Slice 2. Special-category and highly confidential fields can't be
   stored until encrypted columns and their separate logged endpoints exist (rule 9, ADR-0010);
   the column-to-field test fails for any such column, and the import has no such target, so an
@@ -1148,10 +1104,7 @@ POST /projects/{id}/imports           { same input, mapping, decisions: { confir
   `firstName` always required (the match key and the minimal identity, R6); `birthDate`,
   `oldEmploymentEndDate` and the address targets required unless the matching `base-import-*`
   rule is relaxed by an approved relaxation of the project (the resolution's `relaxed` list);
-  unmapped columns are dropped. The address targets are `addressStreet`, `addressPostalCode`,
-  `addressCity` and the country, which comes from a mapped `addressCountry` column **or** a
-  country constant the PL selects for the import (round 30; the input field is named in PR 2g-1),
-  never both and never from the postal code. Suggestions: the project's saved mappings, then those of other
+  unmapped columns are dropped. Suggestions: the project's saved mappings, then those of other
   projects with the same customer name (trimmed, case-folded), then built-in header synonyms (`Personalnummer`, `Pers.-Nr.`,
   `Nachname`, `Name`, `Vorname`, `Geburtsdatum`, `Geb.-Datum`, `Austrittsdatum`, `Straße`, `PLZ`,
   `Ort`, `Telefon`, `Mobil`, `E-Mail privat`, `E-Mail dienstlich`, …). Saved on confirm as
@@ -1160,40 +1113,25 @@ POST /projects/{id}/imports           { same input, mapping, decisions: { confir
 - **Row validation** (`packages/domain/src/import`, pure, 100 %; `today` from the Clock):
   - text: trimmed, no control characters, names ≤ 100, Personalnummer ≤ 50, address parts ≤ 200;
   - dates: real date cells, or text `TT.MM.JJJJ` only, strictly (`31.02.2027`, `03.14.1998`,
-    `29.02.2027` are errors; `29.02.2028` is valid); a date cell containing a time is
-    `date_has_time`; `birthDate` not after today (`birth_date_in_future`); `oldEmploymentEndDate`
-    not before `birthDate` (`end_before_birth`); age at the Austrittsdatum
-    (`oldEmploymentEndDate`) outside 15–67 → warning `age_implausible`; when that date is
-    legitimately absent because `base-import-oldEmploymentEndDate` is relaxed, **no** age
-    warning is made up (round 30, A11);
-  - identifiers (R24, confirmed in round 30, A12): a numeric XLSX cell in `personnelNumber` or
-    `addressPostalCode` → `identifier_cell_numeric` (error, the row is blocked); in `phone` or
-    `mobile` → the value is dropped with `identifier_cell_numeric` as a warning (formatting or
-    leading zeros may be lost); numeric-looking text cells and CSV text are taken as written;
-  - Personalnummer (round 30, A13): required in every row; only leading and trailing whitespace
-    is trimmed; matched case-sensitively and exactly, punctuation and leading zeros kept;
-  - address (R23, round 23; round 30, A8–A10): street, postal code, city and country are **one
-    structured address**: a row with some but not all of them is refused (`address_incomplete`,
-    proposed); the country (`addressCountry`, ISO 3166-1 alpha-2) is trimmed and upper-cased and
-    only `DE` is accepted in the MVP: any other value, one that isn't a code included, is
-    `foreign_address_unsupported`; importing an address without a country source (no mapped
-    country column, no constant) can't be confirmed (`country_required`); a DE postal code is
-    exactly five digits (`postal_code_invalid`); a row without street, postal code and city has
-    no address (the constant doesn't make one);
-  - `phone` and `mobile` stay separate targets: neither is inferred from nor copied to the other
-    (round 30, A14);
+    `29.02.2027` are errors; `29.02.2028` is valid); `birthDate` not after today
+    (`birth_date_in_future`); `oldEmploymentEndDate` not before `birthDate`
+    (`end_before_birth`); age at the Austrittsdatum outside 15–67 → warning `age_implausible`;
+  - identifiers (R24): a numeric XLSX cell in `personnelNumber` or `addressPostalCode` →
+    `identifier_cell_numeric` (error); in `phone` or `mobile` → dropped with that warning;
+  - address (R23, round 23): the country comes from a mapped country column or a constant the
+    PL selects, never from the postal code; a row of another country is refused
+    (`foreign_address_unsupported`) and an import without a country source can't be confirmed
+    (`country_required`); a DE postal code is exactly five digits (`postal_code_invalid`);
   - optional contact values: an invalid email (Zod's email check) or phone (digits, spaces, `+`,
-    `/`, `-`, `(`, `)`, 6–30 characters) is dropped with `value_invalid_dropped` and the rest of
-    the row proceeds; an invalid **required** value stays an error (round 30, A15);
+    `/`, `-`, `(`, `)`, 6–30 characters) is dropped with `value_invalid_dropped`;
   - issues carry the row number (as in the file, header = row 1), the target and the code,
     **never the value**.
 - **Plan** (pure): per row `create`, `update` (with the changed targets), `unchanged`, `skip` or
   `error`:
   - the same Personalnummer twice in the file → `duplicate_in_file` on both rows;
-  - matched by Personalnummer (exact after trimming leading and trailing whitespace) in the
-    project → `update`/`unchanged`; an empty cell never clears a stored value (`kept_existing`;
-    clearing needs a later explicit editing operation, not in Slice 2); a terminal participation
-    is not updated (`terminal_not_updated`, outcome `skip`);
+  - matched by Personalnummer (exact after trim) in the project → `update`/`unchanged`; an empty
+    cell never clears a stored value (`kept_existing`); a terminal participation is not updated
+    (`terminal_not_updated`, outcome `skip`);
   - no match, but the same last name, first name (case-folded) and birth date as another row or
     an existing participation → `possible_duplicate`, and the PL decides `create` or `skip`;
   - participations of the project missing from the file are counted, never changed.
@@ -1431,10 +1369,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
       test fails for a listed type without it. (U, I)
 - [ ] **AC-46** Import identifiers and addresses: a numeric XLSX cell for Personalnummer or postal
       code is `identifier_cell_numeric`, for a phone it is dropped with that warning; a postal code
-      that isn't five digits is `postal_code_invalid`; `addressCountry` from a column or a
-      constant, only `DE` (case normalised), another value `foreign_address_unsupported`, an
-      address without a country source `country_required`, a partial address refused (round
-      30). (U)
+      that isn't five digits is `postal_code_invalid`. (U)
 
 ### Definition of done (CLAUDE.md) applied to this slice
 - Status changes through the audit helper: unchanged; setup writes get the same treatment (D2).
@@ -1454,7 +1389,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Generic editing of person data (Q65 `undecided` for the PL), self-service | Slices 3/4a; does an HR re-import overwrite participant-maintained contact data? — to raise in Slice 4a |
 | Special-category and highly confidential fields, encryption, separate logged endpoints | with the first such field (Slices 4a/6) |
 | Deleting waves, closing projects, returning to draft, changing the type of a project with participations or waves (and round 10's supersession on a change to `ta_only`) | Q98, Q101 |
-| Foreign addresses: `addressCountry` is stored, but only `DE` is accepted; **non-DE rows are refused** (`foreign_address_unsupported`) | Q103, round 30 (A10); later on demand |
+| Foreign addresses (a country target) | Q103 (R23) |
 | A customer entity | Q104 |
 | Wave assignment in bulk, filters, "what's missing" and dashboards | Slice 5 |
 | Audit history UI (`audit_event` stays unreadable for the app) | Slice 5 |
@@ -1472,13 +1407,12 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Q99 | Who approves a relaxation | confirmed (R2) |
 | Q100 | The controlled relaxation reason codes | confirmed (R3) |
 | Q101 | Editing entry waves once in use | open, PL (R4) |
-| Q102 | Individual TG dates, the new start date, twelve months | confirmed in round 30 by the PL, legal and the BA process owner (R5, R25; amendments A1–A7); gate of PR 2h lifted |
-| Q103 | The import contract | confirmed in round 30 by the PL (R6, R23, R24; amendments A8–A15); gate of PRs 2f/2g lifted |
+| Q102 | Individual TG dates, the new start date, twelve months | open, PL/legal/BA; before PR 2h (R5, R25) |
+| Q103 | The import contract | open, PL; before PRs 2f/2g (R6, R23, R24) |
 | Q104 | Saved column mappings without a customer entity | confirmed (R7) |
 | Q105 🔒 | Retention classes of the person data | open, DPO; pre-pilot gate (R8) |
 | Q106 | Project creation and visibility until Slice 3 | confirmed (R9) |
 | Q107 | Pinning the base defaults | confirmed with audit provenance (R10, R26) |
-| Q110 🔒 | How a `tgEnd` change after TG entry shows the documented DSV amendment | open, PL/legal/BA (round 30, A2); fail safe in PR 2h |
 
 **In the implementing PRs:**
 - **2a:** ADR-0002 amendment (setup functions, project lock, memberships); data-protection.md
@@ -1493,10 +1427,6 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - **2g:** ADR-0003 note (the two dependencies, spike S1); ADR-0010 note (base64 upload, body
   limits, new problem types); CLAUDE.md (`fixtures/imports`, commands); README status.
 - **2h:** process-and-lifecycle.md (new start date in Q68 case 3).
-- **Round 30 (docs-only PR):** the decision record, Q102/Q103 confirmed and Q110 in
-  `open-questions.md`, this plan, `data-protection.md` (`addressCountry`) and
-  `process-and-lifecycle.md` (what `tgStart`/`tgEnd` mean). The schema, the field catalog and the
-  code follow in PRs 2f, 2g and 2h.
 
 ## 10. Risks
 
@@ -1506,7 +1436,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Zip bombs and pathological files exhaust the API | 5 MB cap, the central-directory check (always), row/column/cell limits, worker resource limits and timeout (S1); never in-process XLSX parsing (child process or CSV only). |
 | Personal data leaks through the import (logs, problem bodies, stored previews, saved headers) | Stateless preview; issues carry codes and row numbers only; HMAC'd headers; log fields fixed; tests (AC-26, AC-30, AC-31). |
 | A re-import silently overwrites or deletes data | Empty cells never clear; terminal participations untouched; missing people only counted; updates listed with old/new values before confirm; audit with changed keys. |
-| Duplicates through concurrent imports or case/zero differences in Personalnummer | Project lock and unique index; exact matching is confirmed (Q103, round 30), so a PL sees "new" rather than a wrong merge. |
+| Duplicates through concurrent imports or case/zero differences in Personalnummer | Project lock and unique index; exact matching is a stated reading (Q103), so a PL sees "new" rather than a wrong merge. |
 | A template file changes after projects pinned it, or two projects pin different contents for one version | One registry row per version (primary key), content and hash compared on every pin, CI immutability check (AC-9, AC-10). |
 | A service forgets a lock | The locks are acquired inside the functions (D3, AC-4a). |
 | An import confirmed against stale state | Reload, re-plan, token comparison and writes in one transaction under the exclusive project lock (AC-26). |
@@ -1523,4 +1453,4 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 Approved in [round 22](../decisions/2026-10-16-answers-round-22.md) with the amendments applied
 above. R23–R28 are readings taken while applying it, for confirmation in the PR 2a review.
 Implementation starts with PR 2a after this PR is merged; PRs 2f/2g wait for Q103 and PR 2h for
-Q102 (both confirmed in round 30, so neither waits any more).
+Q102.

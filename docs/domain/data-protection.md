@@ -41,11 +41,6 @@
 - **Additions (round 7, assumed, Q66):**
   - Familienstand, gender, Personalnummer, end of the old employment, knowledge date, work
     email, language skills, driving licence: **confidential**.
-  - **Address country** (`addressCountry`, Q103 confirmed in [round 30](../decisions/2026-10-17-answers-round-30.md)):
-    ISO 3166-1 alpha-2, **confidential**, part of the structured address (street, postal code,
-    city, country; partial addresses are refused). Only `DE` is accepted in the MVP; a foreign
-    address is refused at import, never stored, and the country is never inferred from the postal
-    code.
   - End reason `long_term_illness_reduced_earning_capacity`: **special category**, never in
     ordinary lists. End reason `deceased`: confidential.
   - Profiling-exception reasons: **structured reason codes** where possible (Q81); a free-text
@@ -279,13 +274,6 @@ until the DPO confirms them, so no deletion job may touch them):
 | `participation_record` | `participation`, `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or client responses, round 17; evidence records get their own class in Slice 4b) | per the table above: non-signers 90 days after `withdrawnOn` (Q77, assumed), otherwise with the personnel file and the evidence set |
 | `audit_log` | `audit_event` | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
 | `reference_data` | `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`, R27) | no personal data; never touched by the retention job |
-
-**Person data of the import (planned, Slice 2 PR 2f; Q103 confirmed in round 30, Q105 🔒 open):**
-`participant_identity` (`firstName`, `lastName`, `birthDate`, `personnelNumber`) →
-`participation_record`; `participant_details` (the address: street, postal code, city and
-`addressCountry`; `phone`, `mobile`, private and work email, `oldEmploymentEndDate`) → the new
-class `personnel_file`. All confidential; periods `unset` until the DPO confirms them (Q105), so no
-deletion job touches them. The tables join the list above with PR 2f.
 
 Implementation:
 - `retentionClass` per data category and document type, configured as data.
