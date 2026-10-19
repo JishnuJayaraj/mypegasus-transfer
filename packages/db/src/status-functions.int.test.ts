@@ -204,13 +204,13 @@ describe("change_participation_status (AC-16)", () => {
       await app.query("begin");
       await second.query("begin");
       await changeStatus(app, id, { field: "status", from: "imported", to: "contacted" });
-      const blocked = changeStatus(second, id, {
-        field: "status",
-        from: "imported",
-        to: "contacted",
-      });
+      // The expectation is attached before the commit: the refusal can arrive before `commit`
+      // resolves here, and a rejection without a handler fails the run as unhandled.
+      const blocked = expect(
+        changeStatus(second, id, { field: "status", from: "imported", to: "contacted" }),
+      ).rejects.toMatchObject(failsWith("stale_status"));
       await app.query("commit");
-      await expect(blocked).rejects.toMatchObject(failsWith("stale_status"));
+      await blocked;
       await second.query("rollback");
     } finally {
       await second.end();
