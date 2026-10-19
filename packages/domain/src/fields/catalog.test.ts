@@ -82,7 +82,9 @@ describe("field catalog (AC-29)", () => {
       );
       expect(fieldEntry(key)).toMatchObject({ dataClass: "confidential", storage: "column" });
     }
-    expect(retention("tgEnd")).toBe("participation_record");
+    for (const key of ["tgEnd", "endReason", "profilingExceptionReasonCode"]) {
+      expect(retention(key)).toBe("participation_record");
+    }
     expect(retention("healthRestrictions")).toBeUndefined();
   });
 

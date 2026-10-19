@@ -991,7 +991,7 @@ Built in 2f-2: `participant_identity` and `participant_details` (migration `0024
 generated) and `write_participant_data` with `record_audit_event` replaced and the grants
 (`0025_person_data_functions`, hand-written); the audit type `participant_data_changed` and
 `ParticipantDataField`; `retentionClass` in the field catalog; the data-catalog entries, the class
-`personnel_file` (`unset`) and `checkPersonDataColumns` with `personDataColumns` (AC-21); the
+`personnel_file` (`unset`) and `checkFieldColumns` with `fieldColumns` (AC-21); the
 synthetic identities of the seeded participations (`apps/api/src/participations/seed-identities.ts`).
 
 12. **Every write that changes something is audited**, the first one too: `participant_data_changed`
@@ -1014,12 +1014,19 @@ synthetic identities of the seeded participations (`apps/api/src/participations/
 15. **Locks:** the function takes the shared project lock and the participation row lock
     (`lock_participation`), so writers of one participation serialise and an import holding the
     exclusive project lock (2g) can still write (re-entrant).
-16. **Retention in the field catalog:** every field a table stores now has its class: the
-    statuses and dates on `participation` and the identity in `participation_record`, the rest of
-    the person data in `personnel_file` (Q105); `dsvSignedOn` and the fields of later slices have
-    none until a table stores them. `checkPersonDataColumns` fails for an unmapped column, a field
-    that needs encryption, a different data class or a different retention class, so a table holds
-    one class only (ADR-0008).
+16. **Retention in the field catalog (corrected in the review of PR #45):** every field a table
+    stores has its class: the statuses, dates and end reasons on `participation`, the exception
+    reason code on `profiling_exception_request` and the identity in `participation_record`, the
+    rest of the person data in `personnel_file` (Q105, assumed); `dsvSignedOn` and the fields of
+    later slices have none until a table stores them. `fieldColumns` classifies **every column** of
+    the four tables with participant fields (a field key, or null for keys, references, versions
+    and workflow metadata), and `checkFieldColumns` fails for a participant-data table whose
+    columns aren't classified (the audit log, ids and codes only, is exempt), an unclassified
+    column, a field that needs encryption, a field above the table's data class (the `participation`
+    table is confidential and also stores internal statuses, so "not above" replaces 5.2's
+    "equal"), a different retention class, or a field with a retention class that no column
+    stores. So a table holds one retention class only (ADR-0008), and the claim above stays true as
+    tables are added.
 17. **`audit_event_lifecycle_has_participation`** now compares `event_type::text`: a value added to
     the enum by `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the migrator
     runs pending migrations in one.

@@ -109,9 +109,10 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["profilingSessions", "jobboerseChoice", "baContactConsent"], C, "confidential", false),
   field("endReason", C, "confidential", false, {
     valueClasses: { long_term_illness_reduced_earning_capacity: "special_category" },
+    ...record,
   }),
   // codes only; `participant_prevented_documented` deliberately reveals no illness (Q81)
-  field("profilingExceptionReasonCode", C, "confidential", false),
+  field("profilingExceptionReasonCode", C, "confidential", false, record),
   // special category
   field("healthRestrictions", "special_category", "health", true),
   ...fields(["severeDisability", "disabilityDegree"], "special_category", "disability", true),

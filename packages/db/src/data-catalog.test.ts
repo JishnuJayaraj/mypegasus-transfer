@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { fieldCatalog } from "@transfer/domain";
 import {
   checkDataCatalog,
-  checkPersonDataColumns,
+  checkFieldColumns,
   dataCatalog,
-  personDataColumns,
+  fieldColumns,
   retentionPeriods,
   type CatalogEntry,
 } from "./data-catalog";
@@ -139,56 +139,82 @@ describe("data catalog", () => {
 const withField = (key: string, change: object) =>
   fieldCatalog.map((f) => (f.key === key ? { ...f, ...change } : f));
 
-// Plan 5.2 (D8, R8; AC-21): each person-data column is a field of the catalog, stored as a plain
-// column, of its table's data class and retention class.
-describe("person-data columns", () => {
-  it("map to catalogued plain fields of the table's classes", () => {
-    expect(checkPersonDataColumns()).toEqual([]);
-    expect(Object.keys(personDataColumns.participant_details!)).toContain("address_country");
+const check = (
+  columns: Record<string, Record<string, string | null>> = fieldColumns,
+  fields = fieldCatalog,
+) => checkFieldColumns(tables, columns, dataCatalog, fields);
+const withColumn = (table: string, column: string, key: string | null | undefined) => {
+  const mapping: Record<string, string | null> = { ...fieldColumns[table]! };
+  if (key === undefined) delete mapping[column];
+  else mapping[column] = key;
+  return { ...fieldColumns, [table]: mapping };
+};
+
+// Plan 5.2 (D8, R8; AC-21; review of PR #45): every column of a table with participant fields is
+// classified; each stored field is catalogued, a plain column, not above the table's data class and
+// of its retention class; and every field with a retention class is stored by some column.
+describe("field columns", () => {
+  it("classify every column of the tables with participant fields", () => {
+    expect(check()).toEqual([]);
+    expect(fieldColumns.participant_details!.address_country).toBe("address");
+    expect(fieldColumns.participation!.end_reason).toBe("endReason");
+    expect(fieldColumns.profiling_exception_request!.reason_code).toBe(
+      "profilingExceptionReasonCode",
+    );
   });
 
-  it("fails for a special-category or highly confidential field", () => {
-    const columns = {
-      ...personDataColumns,
-      participant_details: {
-        ...personDataColumns.participant_details!,
-        phone: "healthRestrictions",
-      },
-    };
-    expect(checkPersonDataColumns(tables, columns)).toEqual([
-      "participant_details.phone: needs encrypted storage",
+  it("fails for a stored field without its table's retention class", () => {
+    expect(check(fieldColumns, withField("endReason", { retentionClass: undefined }))).toEqual([
+      "participation.end_reason: retention class differs",
+      "participation.end_reason_secondary: retention class differs",
     ]);
-  });
-
-  it("fails for a missing or different retention class (no mixed table)", () => {
-    expect(
-      checkPersonDataColumns(
-        tables,
-        personDataColumns,
-        dataCatalog,
-        withField("phone", { retentionClass: undefined }),
-      ),
-    ).toEqual(["participant_details.phone: retention class differs"]);
     const mixed = withField("birthDate", { retentionClass: "personnel_file" });
-    expect(checkPersonDataColumns(tables, personDataColumns, dataCatalog, mixed)).toEqual([
+    expect(check(fieldColumns, mixed)).toEqual([
       "participant_identity.birth_date: retention class differs",
+      "birthDate: has a retention class but no column stores it",
     ]);
   });
 
-  it("fails for a different data class, an unmapped column and a column not in the table", () => {
-    const internal = withField("lastName", { dataClass: "internal" });
-    expect(checkPersonDataColumns(tables, personDataColumns, dataCatalog, internal)).toEqual([
-      "participant_identity.last_name: data class differs",
+  it("fails for a special-category or highly confidential field, or one above the table's class", () => {
+    expect(check(withColumn("participant_details", "phone", "healthRestrictions"))).toEqual([
+      "participant_details.phone: needs encrypted storage",
+      "phone: has a retention class but no column stores it",
     ]);
-    const { phone: _phone, ...rest } = personDataColumns.participant_details!;
-    const columns = {
-      participant_details: { ...rest, fax: "phone" },
-      fixture_scoped: {},
-    };
-    expect(checkPersonDataColumns(tables, columns)).toEqual([
+    const above = withField("lastName", { dataClass: "highly_confidential" });
+    expect(check(fieldColumns, above)).toEqual([
+      "participant_identity.last_name: data class above the table's",
+      "lastName: has a retention class but no column stores it",
+    ]);
+  });
+
+  it("fails for an unclassified column, a column not in the table and an unknown field", () => {
+    expect(check(withColumn("participation", "end_reason_source", undefined))).toEqual([
+      "participation.end_reason_source: not classified",
+    ]);
+    expect(check(withColumn("participant_details", "fax", "phone"))).toEqual([
       "participant_details.fax: not in the table",
-      "participant_details.phone: not a field of the catalog",
+    ]);
+    expect(check(withColumn("participant_details", "mobile", "pager"))).toEqual([
+      "participant_details.mobile: not a field of the catalog",
+      "mobile: has a retention class but no column stores it",
+    ]);
+    expect(check({ ...fieldColumns, fixture_scoped: {} })).toEqual([
       "fixture_scoped: not a catalogued table",
+    ]);
+  });
+
+  it("fails for a participant-data table whose columns aren't classified", () => {
+    const { profiling_exception_request: _, ...rest } = fieldColumns;
+    expect(check(rest)).toEqual([
+      "profiling_exception_request: holds participant data but its columns aren't classified",
+      "profilingExceptionReasonCode: has a retention class but no column stores it",
+    ]);
+  });
+
+  it("fails for a retention class on a field no column stores", () => {
+    const unstored = withField("knowledgeDate", { retentionClass: "personnel_file" });
+    expect(check(fieldColumns, unstored)).toEqual([
+      "knowledgeDate: has a retention class but no column stores it",
     ]);
   });
 });
