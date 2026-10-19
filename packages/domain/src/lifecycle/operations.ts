@@ -28,6 +28,7 @@ export const operationFailures = {
     "not_ta_tg",
     "status_not_open",
     "dsv_already_offered",
+    "individual_dates_set",
     "wave_of_other_project",
     "wave_unchanged",
   ],
@@ -85,6 +86,10 @@ export function assignEntryWave(
   if (ctx.projectType !== "ta_tg") return fail("not_ta_tg");
   if (!waveStatuses.has(ctx.current.status)) return fail("status_not_open");
   if (ctx.current.dsvStatus !== "not_offered") return fail("dsv_already_offered");
+  // Individual dates keep their wave, so a wave change never silently invalidates them (R33).
+  if (ctx.participation.tgStart !== null || (ctx.participation.tgEnd ?? null) !== null) {
+    return fail("individual_dates_set");
+  }
   if (target.wave.projectId !== target.projectId) return fail("wave_of_other_project");
   // Assigning the current wave again is a no-op, refused without a write (round 16).
   if (ctx.wave?.id === target.wave.id) return fail("wave_unchanged");

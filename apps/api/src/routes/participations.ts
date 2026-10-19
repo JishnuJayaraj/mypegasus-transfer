@@ -1,25 +1,162 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { and, asc, eq, participantIdentity, participation, sql } from "@transfer/db";
 import {
-  decideAccess,
+  and,
+  asc,
+  eq,
+  inArray,
+  participantDetails,
+  participantIdentity,
+  participation,
+  project,
+  projectEntryWave,
+  sql,
+} from "@transfer/db";
+import {
+  assignEntryWave,
+  AssignEntryWaveInput,
+  mayListField,
+  mayPerformOperation,
   PageQuery,
+  participationDetail,
+  ParticipationDetail,
+  participationListScope,
   ParticipationPage,
   type ParticipationListItem,
+  type StaffUser,
 } from "@transfer/domain";
+import type { Context } from "hono";
 import { projectAccess } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
-import { problem, problemResponses } from "../problem";
+import { createStatusService, StatusServiceError } from "../participations/status-service";
+import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
 import { utc } from "../sql";
 
 const ProjectParams = z.object({ projectId: z.uuid() });
+const ParticipationParams = z.object({ participationId: z.uuid() });
 const personFields = ["personnelNumber", "lastName", "firstName"] as const;
 
+const waveColumns = {
+  id: projectEntryWave.id,
+  code: projectEntryWave.code,
+  name: projectEntryWave.name,
+  signingDeadline: projectEntryWave.signingDeadline,
+  defaultTgStart: projectEntryWave.defaultTgStart,
+  defaultTgEnd: projectEntryWave.defaultTgEnd,
+  latestEntryDate: projectEntryWave.latestEntryDate,
+};
+
+/** A status service refusal as its problem (R21): codes only, never a value. */
+function refusal(c: Context, error: unknown) {
+  if (!(error instanceof StatusServiceError)) throw error;
+  if (error.kind === "not_found") return problem(c, "not-found");
+  if (error.kind === "forbidden") return problem(c, "forbidden");
+  if (error.kind === "stale") {
+    return problem(c, "conflict", {
+      errors: [{ pointer: "", code: error.code, detail: "The participation changed meanwhile" }],
+    });
+  }
+  return domainProblem(c, [error.code]);
+}
+
 export function participationRoutes(deps: Deps) {
-  const { db } = deps;
+  const { db, clock } = deps;
   const router = createRouter();
   const middleware = [requireSession(deps)];
+  const statusService = createStatusService({ db, clock });
+
+  /**
+   * One participation for the user (R29–R31): undefined when it doesn't exist or its project is
+   * hidden from them (both a 404, so its existence isn't revealed), null when they may read none
+   * of its case data (a 403).
+   */
+  async function detailOf(user: StaffUser, participationId: string) {
+    const [row] = await db
+      .select({
+        p: participation,
+        projectType: project.type,
+        wave: waveColumns,
+        identity: participantIdentity,
+        details: participantDetails,
+      })
+      .from(participation)
+      .innerJoin(project, eq(project.id, participation.projectId))
+      .leftJoin(projectEntryWave, eq(projectEntryWave.id, participation.entryWaveId))
+      .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
+      .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
+      .where(eq(participation.id, participationId));
+    if (!row) return undefined;
+    const { p, identity, details } = row;
+    const { subject, visible } = await projectAccess(db, user, p.projectId);
+    if (!visible) return undefined;
+    const wave = row.wave?.id ? row.wave : null;
+    const dates = { tgStart: p.tgStart, tgEnd: p.tgEnd, offerDeadline: p.offerDeadline };
+    const today = clock.today();
+    // The wave choice is offered when the PL may assign one and some other wave of the project
+    // passes the domain rule (round 26: capabilities are derived by the server).
+    const target = { projectId: p.projectId, regionId: null, participationId };
+    let assignable = false;
+    if (mayPerformOperation(subject, { kind: "assignEntryWave" }, target).ok) {
+      const waves = await db
+        .select({ id: projectEntryWave.id, projectId: projectEntryWave.projectId })
+        .from(projectEntryWave)
+        .where(eq(projectEntryWave.projectId, p.projectId));
+      const context = {
+        projectType: row.projectType,
+        current: { status: p.status, profilingStatus: p.profilingStatus, dsvStatus: p.dsvStatus },
+        actor: { type: "user" as const, staffUserId: user.id },
+        today,
+        now: clock.now(),
+        wave,
+        participation: dates,
+      };
+      assignable = waves.some(
+        (candidate) => assignEntryWave(context, { projectId: p.projectId, wave: candidate }).ok,
+      );
+    }
+    return participationDetail(
+      subject,
+      {
+        id: p.id,
+        projectId: p.projectId,
+        status: p.status,
+        profilingStatus: p.profilingStatus,
+        dsvStatus: p.dsvStatus,
+        statusVersion: p.statusVersion,
+        wave,
+        dates: {
+          ...dates,
+          tgEntryDate: p.tgEntryDate,
+          exitDate: p.exitDate,
+          withdrawnOn: p.withdrawnOn,
+          profilingDoneOn: p.profilingDoneOn,
+        },
+        person: {
+          personnelNumber: identity?.personnelNumber ?? null,
+          lastName: identity?.lastName ?? null,
+          firstName: identity?.firstName ?? null,
+          birthDate: identity?.birthDate ?? null,
+          oldEmploymentEndDate: details?.oldEmploymentEndDate ?? null,
+          // All four parts or none (round 32, a table CHECK).
+          address:
+            details?.addressStreet != null
+              ? {
+                  street: details.addressStreet,
+                  postalCode: details.addressPostalCode!,
+                  city: details.addressCity!,
+                  country: details.addressCountry!,
+                }
+              : null,
+          phone: details?.phone ?? null,
+          mobile: details?.mobile ?? null,
+          privateEmail: details?.privateEmail ?? null,
+          workEmail: details?.workEmail ?? null,
+        },
+      },
+      { today, capabilities: { assignEntryWave: assignable } },
+    );
+  }
 
   router.openapi(
     createRoute({
@@ -46,19 +183,11 @@ export function participationRoutes(deps: Deps) {
       }
       const { subject, visible } = await projectAccess(db, sessionUser(c), projectId);
       if (!visible) return problem(c, "not-found");
-      // A participation may be listed by those who may list its person fields (decideAccess): the
-      // PL and back office. A viewer who may list none, like an unassigned consultant or an org
-      // role, gets no participation at all (AC-33); the decision is made per row below too.
-      const mayList = (participationId: string, field: (typeof personFields)[number]) =>
-        decideAccess(
-          subject,
-          { kind: "field", projectId, regionId: null, participationId, phase: "active", field },
-          "list",
-          { kind: "normal" },
-        ).effect === "allow";
-      if (!personFields.some((field) => mayList(crypto.randomUUID(), field))) {
-        return problem(c, "forbidden");
-      }
+      // R29: the PL and back office list every participation, an assigned consultant exactly
+      // theirs; a viewer who may list none (an unassigned consultant, an org role) gets a 403.
+      // The per-row decision below stays.
+      const scope = participationListScope(subject, projectId);
+      if (scope.kind === "none") return problem(c, "forbidden");
       const rows = await db
         .select({
           id: participation.id,
@@ -76,6 +205,9 @@ export function participationRoutes(deps: Deps) {
         .where(
           and(
             eq(participation.projectId, projectId),
+            scope.kind === "assigned"
+              ? inArray(participation.id, [...scope.participationIds])
+              : undefined,
             cursor &&
               sql`(${participation.createdAt}, ${participation.id}) > (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`,
           ),
@@ -95,7 +227,9 @@ export function participationRoutes(deps: Deps) {
           };
           for (const field of personFields) {
             const value = row[field];
-            if (value !== null && mayList(row.id, field)) item[field] = value;
+            if (value !== null && mayListField(subject, projectId, row.id, field)) {
+              item[field] = value;
+            }
           }
           return item;
         });
@@ -104,6 +238,77 @@ export function participationRoutes(deps: Deps) {
           ? encodeCursor({ createdAt: last.createdAt, id: last.id })
           : null;
       return c.json({ items, nextCursor }, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "get",
+      path: "/participations/{participationId}",
+      tags: ["participations"],
+      summary:
+        "One participation: statuses, wave, contractual dates and the person fields the viewer may read",
+      middleware,
+      request: { params: ParticipationParams },
+      responses: {
+        200: json(ParticipationDetail, "The participation"),
+        ...problemResponses("validation-error", "unauthenticated", "forbidden", "not-found"),
+      },
+    }),
+    async (c) => {
+      const detail = await detailOf(sessionUser(c), c.req.valid("param").participationId);
+      if (detail === undefined) return problem(c, "not-found");
+      if (detail === null) return problem(c, "forbidden");
+      return c.json(detail, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "put",
+      path: "/participations/{participationId}/entry-wave",
+      tags: ["participations"],
+      summary:
+        "Assign the participation's entry wave (the PL, before the first offer); returns the participation",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: AssignEntryWaveInput } } },
+      },
+      responses: {
+        200: json(ParticipationDetail, "The participation with its new wave"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { participationId } = c.req.valid("param");
+      // Visibility first, so a hidden participation is a 404 whatever the body says.
+      const [found] = await db
+        .select({ projectId: participation.projectId })
+        .from(participation)
+        .where(eq(participation.id, participationId));
+      const access = found && (await projectAccess(db, user, found.projectId));
+      if (!access?.visible) return problem(c, "not-found");
+      const { subject } = access;
+      try {
+        await statusService.assignEntryWave(
+          subject,
+          { participationId, waveId: c.req.valid("json").waveId },
+          { requestId: c.get("requestId") },
+        );
+      } catch (error) {
+        return refusal(c, error);
+      }
+      const detail = await detailOf(user, participationId);
+      return detail ? c.json(detail, 200) : problem(c, "forbidden");
     },
   );
 

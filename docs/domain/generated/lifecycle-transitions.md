@@ -76,7 +76,7 @@ their slices (3, 5, 7).
 
 | Operation | Who | Failure codes |
 |---|---|---|
-| `assignEntryWave` | PL | `actor_not_allowed`, `not_ta_tg`, `status_not_open`, `dsv_already_offered`, `wave_of_other_project`, `wave_unchanged` |
+| `assignEntryWave` | PL | `actor_not_allowed`, `not_ta_tg`, `status_not_open`, `dsv_already_offered`, `individual_dates_set`, `wave_of_other_project`, `wave_unchanged` |
 | `requestProfilingException` | PL | `actor_not_allowed`, `not_ta_tg`, `not_informed`, `profiling_closed`, `no_future_start`, `exception_open`, `reason_invalid`, `evidence_missing`, `evidence_unchanged`, `ba_confirmation_missing` |
 | `decideProfilingException` | Regional operations manager | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed`, `no_future_start` |
 | `revokeProfilingException` | PL | `actor_not_allowed`, `not_revocable`, `no_longer_applicable`, `not_informed` |

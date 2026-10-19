@@ -534,6 +534,63 @@
       "dsv_signed": "Unterschrieben",
       "dsv_declined": "Abgelehnt",
       "dsv_expired": "Abgelaufen"
+    },
+    "open": "Öffnen"
+  },
+  "participant": {
+    "title": "Teilnehmende Person",
+    "back": "Zurück zu {{project}}",
+    "forbidden": "Sie dürfen diese teilnehmende Person nicht sehen.",
+    "notFound": "Diese teilnehmende Person wurde nicht gefunden.",
+    "person": "Person",
+    "contact": "Kontakt",
+    "status": "Status",
+    "waveAndDates": "Welle und Vertragsdaten",
+    "workEmailHint": "Die dienstliche E-Mail-Adresse wird nie für die Anmeldung verwendet.",
+    "fromWave": "aus der Welle",
+    "individual": "individuell",
+    "hints": {
+      "tg_start_missed": "TG-Beginn verpasst: Der vertragliche Beginn liegt in der Vergangenheit, der Eintritt ist nicht erfolgt."
+    },
+    "fields": {
+      "personnelNumber": "Personalnummer",
+      "lastName": "Nachname",
+      "firstName": "Vorname",
+      "birthDate": "Geburtsdatum",
+      "oldEmploymentEndDate": "Austrittsdatum (bisheriges Arbeitsverhältnis)",
+      "address": "Anschrift",
+      "phone": "Telefon",
+      "mobile": "Mobil",
+      "privateEmail": "E-Mail privat",
+      "workEmail": "E-Mail dienstlich",
+      "status": "Status",
+      "profilingStatus": "Profiling",
+      "dsvStatus": "DSV",
+      "tgEntryDate": "TG-Eintritt",
+      "exitDate": "Austritt aus der TG",
+      "withdrawnOn": "Ausgeschieden am",
+      "wave": "Welle",
+      "signingDeadline": "Unterschriftsfrist",
+      "latestEntryDate": "Spätester Eintritt",
+      "offerDeadline": "Angebotsfrist (erneutes Angebot)",
+      "tgStart": "TG-Beginn",
+      "tgEnd": "TG-Ende"
+    },
+    "chooseWave": "Welle zuordnen",
+    "changeWave": "Andere Welle zuordnen",
+    "noWaveChosen": "Welle auswählen",
+    "assignWave": "Welle zuordnen",
+    "waveAssigned": "Welle zugeordnet",
+    "waveErrors": {
+      "dsv_already_offered": "Nach dem ersten DSV-Angebot ändert sich die Welle nicht mehr.",
+      "individual_dates_set": "Die Person hat individuelle Vertragsdaten. Setzen Sie die Daten zuerst auf die Welle zurück, um die Welle zu ändern.",
+      "status_not_open": "In diesem Status ändert sich die Welle nicht mehr.",
+      "wave_unchanged": "Die Person ist dieser Welle bereits zugeordnet.",
+      "wave_of_other_project": "Diese Welle gehört nicht zu diesem Projekt.",
+      "not_ta_tg": "Nur Projekte mit Transfergesellschaft haben Wellen.",
+      "forbidden": "Sie dürfen die Welle nicht zuordnen.",
+      "stale": "Die Person wurde inzwischen geändert. Die aktuellen Daten werden angezeigt.",
+      "failed": "Die Welle konnte nicht zugeordnet werden."
     }
   }
 }

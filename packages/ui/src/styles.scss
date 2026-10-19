@@ -99,6 +99,21 @@ body {
   }
 }
 
+// Label/value pairs, such as a participant's data (Slice 2, PR 2h-1).
+.tp-facts {
+  display: grid;
+  grid-template-columns: minmax(10rem, max-content) 1fr;
+  gap: $spacing-03 $spacing-06;
+
+  div {
+    display: contents;
+  }
+
+  dt {
+    font-weight: 600;
+  }
+}
+
 .tp-list {
   list-style: disc;
   padding-inline-start: $spacing-06;

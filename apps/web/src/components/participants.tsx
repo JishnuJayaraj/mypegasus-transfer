@@ -1,8 +1,11 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ApiProblemError } from "@transfer/api-client";
-import { Button, SimpleTable } from "@transfer/ui";
+import { createLink } from "@tanstack/react-router";
+import { Button, Link, SimpleTable } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { participantsQuery, useApi } from "../api";
+
+const RouterLink = createLink(Link);
 
 const columns = [
   "personnelNumber",
@@ -16,7 +19,7 @@ const columns = [
 /**
  * The project's participations (Slice 2 plan 5.13, AC-33): the person fields the API lists for
  * this viewer and the three statuses, page by page. The API decides who sees them; a 403 reads as
- * "not allowed", never as an empty list.
+ * "not allowed", never as an empty list. Each row opens the participant's page.
  */
 export function Participants({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -25,7 +28,15 @@ export function Participants({ projectId }: { projectId: string }) {
   const rows = (query.data?.pages ?? []).flatMap((page) =>
     page.items.map((item) => ({
       id: item.id,
-      personnelNumber: item.personnelNumber ?? "",
+      // The URL carries only the id, never a person's value (R19).
+      personnelNumber: (
+        <RouterLink
+          to="/projects/$projectId/participations/$participationId"
+          params={{ projectId, participationId: item.id }}
+        >
+          {item.personnelNumber ?? t("participants.open")}
+        </RouterLink>
+      ),
       lastName: item.lastName ?? "",
       firstName: item.firstName ?? "",
       status: t(`participants.statuses.${item.status}`),
