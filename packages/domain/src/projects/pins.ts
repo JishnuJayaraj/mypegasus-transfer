@@ -145,6 +145,8 @@ export const ProjectConfig = z
       requestRelaxation: z.boolean(),
       activateProject: z.boolean(),
       migrateTemplate: z.boolean(),
+      /** Preview and confirm an import (the PL, in draft and active projects alike). */
+      importParticipations: z.boolean(),
     }),
   })
   .meta({ id: "ProjectConfig" });

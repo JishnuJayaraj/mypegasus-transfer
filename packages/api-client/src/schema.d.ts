@@ -1862,6 +1862,198 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm an import: the same file again with the mapping, the PL's decisions and the preview token; atomic */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ImportConfirmInput"];
+                };
+            };
+            responses: {
+                /** @description What the import did */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ImportResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Payload too large */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/participations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's participations in creation order (cursor pagination), with the person fields the viewer may list */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    /** @description Opaque cursor from `nextCursor`. */
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of participations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationPage"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -2306,6 +2498,7 @@ export interface components {
                 requestRelaxation: boolean;
                 activateProject: boolean;
                 migrateTemplate: boolean;
+                importParticipations: boolean;
             };
         };
         ConfigBlocker: {
@@ -2524,6 +2717,59 @@ export interface components {
                 /** @enum {string} */
                 target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
             }[];
+        };
+        ImportResult: {
+            created: number;
+            updated: number;
+            unchanged: number;
+            skipped: number;
+        };
+        ImportConfirmInput: {
+            file: string;
+            sheet?: string;
+            /** @default 1 */
+            headerRow: number;
+            csv?: {
+                /** @enum {string} */
+                delimiter?: ";" | "," | "\t";
+                /** @enum {string} */
+                encoding?: "utf-8" | "windows-1252";
+            };
+            country?: string | null;
+            /** Format: uuid */
+            waveId?: string;
+            mapping: {
+                column: number;
+                /** @enum {string} */
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+            }[];
+            decisions: components["schemas"]["ImportDecisions"];
+            previewToken: string;
+        };
+        ImportDecisions: {
+            confirmWarnings: boolean;
+            possibleDuplicates: {
+                [key: string]: "create" | "skip";
+            };
+        };
+        ParticipationPage: {
+            items: components["schemas"]["ParticipationListItem"][];
+            nextCursor: string | null;
+        };
+        ParticipationListItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "self_registered" | "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "rejected" | "ta_completed" | "exited";
+            /** @enum {string} */
+            profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
+            /** @enum {string} */
+            dsvStatus: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
+            /** Format: uuid */
+            entryWaveId: string | null;
+            personnelNumber?: string;
+            lastName?: string;
+            firstName?: string;
         };
     };
     responses: never;

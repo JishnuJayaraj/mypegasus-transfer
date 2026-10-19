@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { entryWavesQuery, projectConfigQuery, projectQuery, useApi } from "../../api";
 import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
+import { ImportSection } from "../../components/import-section";
+import { Participants } from "../../components/participants";
 import { ProjectSetup } from "../../components/project-setup";
 import { RouteError } from "../../components/route-error";
 
@@ -43,6 +45,8 @@ function ProjectPage() {
       ) : (
         <p>{t("waveForm.errors.not_ta_tg")}</p>
       )}
+      <ImportSection projectId={projectId} />
+      <Participants projectId={projectId} />
     </>
   );
 }
