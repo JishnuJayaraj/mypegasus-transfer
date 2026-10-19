@@ -12,6 +12,7 @@ import { entryWaveRoutes } from "./routes/entry-waves";
 import { healthRoutes } from "./routes/health";
 import { importRoutes } from "./routes/imports";
 import { meRoutes } from "./routes/me";
+import { participationRoutes } from "./routes/participations";
 import { projectConfigRoutes } from "./routes/project-config";
 import { projectRoutes } from "./routes/projects";
 import { mountSpas } from "./static";
@@ -79,6 +80,7 @@ export function createApp(deps: Deps) {
   api.route("/", configRoutes(deps));
   api.route("/", projectConfigRoutes(deps));
   api.route("/", importRoutes(deps));
+  api.route("/", participationRoutes(deps));
   if (env.authMode === "dev") api.route("/", devRoutes(deps));
   app.route("/api/v1", api);
 

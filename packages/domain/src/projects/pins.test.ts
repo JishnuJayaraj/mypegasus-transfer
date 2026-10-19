@@ -166,6 +166,7 @@ describe("ProjectConfig", () => {
         requestRelaxation: true,
         activateProject: false,
         migrateTemplate: true,
+        importParticipations: true,
       },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);
