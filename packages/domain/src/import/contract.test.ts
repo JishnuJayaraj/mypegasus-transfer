@@ -124,6 +124,7 @@ describe("the import answers", () => {
       csv: { delimiter: ";", encoding: "utf-8" },
       headerRow: 1,
       headers: ["Personalnummer"],
+      headerLooksLikeData: false,
       suggestedMapping: [{ column: 0, target: "personnelNumber", source: "builtin" }],
       mapping: [],
       missingTargets: ["lastName", "address"],
@@ -150,14 +151,12 @@ describe("the import answers", () => {
   });
 
   it("counts the four results", () => {
-    expect(ImportResult.parse({ created: 1, updated: 2, unchanged: 3, skipped: 4 })).toEqual({
-      created: 1,
-      updated: 2,
-      unchanged: 3,
-      skipped: 4,
-    });
+    const result = { created: 1, updated: 2, unchanged: 3, skipped: 4, mappingSaved: false };
+    expect(ImportResult.parse(result)).toEqual(result);
+    expect(ImportResult.safeParse({ ...result, created: -1 }).success).toBe(false);
+    // Whether the mapping was saved is always said (R44).
     expect(
-      ImportResult.safeParse({ created: -1, updated: 0, unchanged: 0, skipped: 0 }).success,
+      ImportResult.safeParse({ created: 1, updated: 2, unchanged: 3, skipped: 4 }).success,
     ).toBe(false);
   });
 });

@@ -221,8 +221,12 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
   },
 };
 
-/** Participant-data tables without participant fields: the audit log holds ids and codes only. */
-const withoutFields = new Set(["audit_event"]);
+/**
+ * Participant-data tables without participant fields: the audit log holds ids and codes only; the
+ * saved column mappings hold keyed hashes of header cells, which only a data row picked as the
+ * header would make pseudonymised values of a person (R44), never a field of a participation.
+ */
+const withoutFields = new Set(["audit_event", "import_column_mapping"]);
 
 const dataClassRank: Record<DataClass, number> = {
   aggregated: 0,

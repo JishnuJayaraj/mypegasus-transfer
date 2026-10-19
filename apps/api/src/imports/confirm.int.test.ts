@@ -48,6 +48,7 @@ describe("the confirm (AC-26, AC-27)", () => {
       updated: 0,
       unchanged: 0,
       skipped: 0,
+      mappingSaved: true,
     });
     const people = await identities();
     expect(people).toHaveLength(12);
@@ -133,6 +134,7 @@ describe("the confirm (AC-26, AC-27)", () => {
       updated: 2,
       unchanged: 9,
       skipped: 0,
+      mappingSaved: true,
     });
     expect(await identities()).toHaveLength(13);
     const [moved] = await owner
