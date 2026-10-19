@@ -228,6 +228,28 @@ describe("migrate_agentur_template (5.8, AC-20)", () => {
     expect(await pinsOf()).toEqual([1, 2]);
   });
 
+  // Round 31: a review made on version 1 is stale once another migration moved the pin, to the
+  // review's own target or beyond it; nothing is written.
+  it.each([
+    ["reached the review's target", [2]],
+    ["went beyond it", [2, 3]],
+  ])("refuses a review when another migration %s (pin_version_stale)", async (_label, steps) => {
+    let from = 1;
+    for (const version of steps) {
+      await migrate({
+        fromVersion: from,
+        version,
+        content: template(version),
+        sha256: hash(version),
+      });
+      from = version;
+    }
+    const before = await auditOf("config_template_pinned");
+    expect(await refusal(migrate())).toBe("pin_version_stale");
+    expect(await pinsOf()).toEqual([1, ...steps]);
+    expect(await auditOf("config_template_pinned")).toEqual(before);
+  });
+
   it("takes the project lock first (D3)", async () => {
     await other.query("begin");
     try {

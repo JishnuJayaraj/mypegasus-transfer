@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it } from "vitest";
 
 // scripts/check-template-immutability.mjs (plan 5.8, AC-9), run in a scratch git repository with
-// the repo's layout: the script and the hash module it imports, and a templates directory.
+// the repo's layout: the script, the hash module it imports and its canonical form, and a
+// templates directory.
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 const template = { kind: "regional_template", version: 1, label: { de: "A" }, sample: true };
 
@@ -40,7 +41,11 @@ function check(args: string[] = [], env: Record<string, string> = {}) {
 
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), "immutability-"));
-  for (const path of ["scripts/check-template-immutability.mjs", "packages/config/src/hash.ts"]) {
+  for (const path of [
+    "scripts/check-template-immutability.mjs",
+    "packages/config/src/hash.ts",
+    "packages/config/src/canonical.ts",
+  ]) {
     cpSync(join(repoRoot, path), join(dir, path), { recursive: true });
   }
   write("a/1.json", JSON.stringify(template, null, 2));
