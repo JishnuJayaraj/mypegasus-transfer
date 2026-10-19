@@ -65,18 +65,20 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
 
   // Slice 2 (PR 2c-2, plan 5.8): without a Project Agentur the project is blocked; the PL pins the
-  // sample Agentur's latest version from the catalog and the blocker clears.
+  // sample Agentur from the catalog (the latest version is preselected; the PL takes version 1
+  // here and migrates it later, PR 2e-2) and the blocker clears.
   // Listed with the blockers and again at the activation it blocks (PR 2e-1).
   await expect(
     page.getByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
   ).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Aktivieren" })).toBeDisabled();
   await expect(page.getByLabel("Version")).toHaveValue("2");
+  await page.getByLabel("Version").selectOption("1");
   await page.getByRole("button", { name: "Als Projekt-Agentur festlegen" }).click();
   await expect(page.getByText("Vorlage gepinnt")).toBeVisible();
   await expect(
     page.getByText(
-      "Projekt-Agentur: Agentur für Arbeit Beispielstadt Nord (Beispiel), Vorlage Version 2",
+      "Projekt-Agentur: Agentur für Arbeit Beispielstadt Nord (Beispiel), Vorlage Version 1",
     ),
   ).toBeVisible();
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
@@ -95,11 +97,57 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("button", { name: "Als Projekt-Agentur festlegen" })).toHaveCount(0);
   await expectAccessible(page);
 
-  // Slice 2 (PR 2d-1, AC-14): an Agentur-scoped setting for an Agentur without a template, with
-  // its source and confirmation date; the PL is the confirmer.
   const configuration = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });
+
+  // Slice 2 (PR 2e-2, AC-19, AC-20): a project-specific exception to the Project Agentur's
+  // template (Q93), then the migration to version 2 with its review: the PL removes the setting,
+  // so the new template's value applies.
+  await configuration
+    .getByRole("button", { name: "Agenturbezogene Einstellung hinzufügen" })
+    .click();
+  await configuration.getByLabel("Agentur der Einstellung").selectOption("beispielstadt-nord");
+  await configuration.getByLabel("Vorlauf in Tagen").fill("12");
+  await configuration.getByLabel("Quelle").selectOption("phone_call_agentur");
+  await configuration.getByLabel("Bestätigt am").fill("01.10.2026");
+  await configuration.getByRole("button", { name: "Speichern" }).click();
+  await expect(page.getByText("Einstellung gespeichert")).toBeVisible();
+  const setupSection = page.getByRole("region", { name: "Einrichtung" });
+  await setupSection
+    .getByRole("button", { name: "Agentur für Arbeit Beispielstadt Nord (Beispiel) migrieren" })
+    .click();
+  await expect(setupSection.getByLabel("Neue Version")).toHaveValue("2");
+  await setupSection.getByRole("button", { name: "Änderungen anzeigen" }).click();
+  await expect(
+    setupSection.getByText("Einstellung Vorlauf in Tagen: bisher 10, neu 14"),
+  ).toBeVisible();
+  await expect(
+    setupSection.getByText("Neue Regel beispielstadt-nord-mobile (Datenerfassung)"),
+  ).toBeVisible();
+  const review = setupSection.getByRole("group", {
+    name: "Vorlauf in Tagen: im Projekt 12; Vorlage bisher 10, neu 14",
+  });
+  await expectAccessible(page);
+  await review.getByText("Entfernen (dann gilt die Vorlage)").click();
+  await setupSection.getByRole("button", { name: "Migration bestätigen" }).click();
+  await expect(
+    setupSection.getByText(
+      "Agentur für Arbeit Beispielstadt Nord (Beispiel) nutzt jetzt Version 2. Entfernte Einstellungen: Vorlauf in Tagen.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "Projekt-Agentur: Agentur für Arbeit Beispielstadt Nord (Beispiel), Vorlage Version 2",
+    ),
+  ).toBeVisible();
+  await expect(setupSection.getByRole("button", { name: /migrieren$/ })).toHaveCount(0);
+  await expect(configuration.getByText("Stand der Projektkonfiguration: Version 2")).toBeVisible();
+  await expect(configuration.getByRole("row", { name: /beispielstadt-nord/ })).toHaveCount(0);
+  await expectAccessible(page);
+
+  // Slice 2 (PR 2d-1, AC-14): an Agentur-scoped setting for an Agentur without a template, with
+  // its source and confirmation date; the PL is the confirmer.
   await configuration
     .getByRole("button", { name: "Agenturbezogene Einstellung hinzufügen" })
     .click();
@@ -116,7 +164,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(setting).toContainText("Übermittlungsweg TL 407: Upload; Vorlauf in Tagen: 7");
   await expect(setting).toContainText("E-Mail der Agentur");
   await expect(setting).toContainText("Petra Projektleitung");
-  await expect(configuration.getByText("Stand der Projektkonfiguration: Version 1")).toBeVisible();
+  await expect(configuration.getByText("Stand der Projektkonfiguration: Version 3")).toBeVisible();
   await expectAccessible(page);
 
   // Slice 2 (PR 2d-2, AC-15): the PL requests the relaxation of Nord's operational default rule
@@ -161,7 +209,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   await page.getByRole("button", { name: "beispielstadt-nord-mobile genehmigen" }).click();
   await expect(page.getByText("Lockerung genehmigt")).toBeVisible();
-  await expect(page.getByText("Stand der Projektkonfiguration: Version 2")).toBeVisible();
+  await expect(page.getByText("Stand der Projektkonfiguration: Version 4")).toBeVisible();
   await expect(page.getByText("Es gibt keine offenen Anträge.")).toBeVisible();
   await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
     "Rolf Regionalbetrieb",

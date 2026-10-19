@@ -42,13 +42,28 @@ const choices = {
 } as const;
 type SettingPath = keyof typeof choices;
 const paths = Object.keys(choices) as SettingPath[];
-type Value = Exclude<(typeof choices)[SettingPath], "number">[number];
+type SettingChoice = Exclude<(typeof choices)[SettingPath], "number">[number];
 const FIELDS: readonly string[] = ["agenturKey", "settings", "source", "confirmedOn"];
 
 const valueAt = (settings: Scoped["settings"], path: string) => {
   const [step, key] = path.split(".") as [string, string];
   return (settings as Record<string, Record<string, unknown> | undefined>)[step]?.[key];
 };
+
+/**
+ * The labels of an Agentur-scoped setting's keys (`step.key`) and of their values (a day count as
+ * the number), shared by the settings table and the migration review.
+ */
+export function useSettingText() {
+  const { t } = useTranslation();
+  return {
+    setting: (path: string) => t(`overrides.settings.${path as SettingPath}`),
+    value: (value: unknown) =>
+      typeof value === "number"
+        ? String(value)
+        : t(`overrides.values.${String(value) as SettingChoice}`),
+  };
+}
 
 /**
  * The Konfiguration section (Slice 2 plan 5.9, 5.13): the override's Agentur-scoped settings with
@@ -69,8 +84,7 @@ export function AgenturSettings({ projectId }: { projectId: string }) {
   const may = config.capabilities.changeOverride;
   const labelOf = (key: string) =>
     config.pins.find((pin) => pin.agenturKey === key)?.label.de ?? key;
-  const display = (value: unknown) =>
-    typeof value === "number" ? String(value) : t(`overrides.values.${String(value) as Value}`);
+  const text = useSettingText();
 
   const remove = useMutation({
     mutationFn: async (agenturKey: string) => {
@@ -103,9 +117,7 @@ export function AgenturSettings({ projectId }: { projectId: string }) {
     agentur: labelOf(scoped.agenturKey),
     settings: paths
       .filter((path) => valueAt(scoped.settings, path) !== undefined)
-      .map(
-        (path) => `${t(`overrides.settings.${path}`)}: ${display(valueAt(scoped.settings, path))}`,
-      )
+      .map((path) => `${text.setting(path)}: ${text.value(valueAt(scoped.settings, path))}`)
       .join("; "),
     source: t(`overrides.sources.${scoped.source}`),
     // No staff directory before Slice 3 (Q109, round 27): the viewer's own name, else never an id.
