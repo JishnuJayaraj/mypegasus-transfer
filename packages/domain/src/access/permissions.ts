@@ -54,6 +54,8 @@ export const OperationKind = z.enum([
   "requestRelaxation",
   "decideRelaxation",
   "withdrawRelaxation",
+  // Slice 2: the import (plan 5.4, 5.11)
+  "importParticipations",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -118,6 +120,8 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   requestRelaxation: ["project_lead"],
   decideRelaxation: ["regional_operations_manager"],
   withdrawRelaxation: ["project_lead"],
+  // The import is a domain operation of the PL (R17, Q60); preview and confirm alike.
+  importParticipations: ["project_lead"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

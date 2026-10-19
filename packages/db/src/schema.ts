@@ -3,6 +3,7 @@ import {
   AuditEventType,
   DsvStatus,
   EndReason,
+  ImportTarget,
   MainStatus,
   ProfilingExceptionReason,
   ProfilingExceptionStatus,
@@ -145,6 +146,7 @@ export const profilingExceptionSupersededReason = pgEnum(
 );
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
 export const relaxationReasonCode = pgEnum("relaxation_reason_code", values(RelaxationReasonCode));
+export const importTarget = pgEnum("import_target", values(ImportTarget));
 export const relaxationRequestStatus = pgEnum(
   "relaxation_request_status",
   values(RelaxationRequestStatus),
@@ -777,6 +779,35 @@ export const jobRun = pgTable(
   ],
 );
 
+/**
+ * A saved import column mapping (Slice 2 plan 5.2, 5.11; R7): the keyed hash of a normalised
+ * header and the target it was mapped to in a confirmed import of the project. Never header text
+ * (a file without a header row would store a person's name). No personal data and no audit
+ * (D2): the application writes it directly (`SELECT, INSERT, UPDATE`). Suggestions for another
+ * project of the same customer read it by the customer name.
+ */
+export const importColumnMapping = pgTable(
+  "import_column_mapping",
+  {
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    /** HMAC-SHA256 as 64 lowercase hex digits. */
+    headerHmac: text("header_hmac").notNull(),
+    target: importTarget("target").notNull(),
+    updatedBy: uuid("updated_by")
+      .notNull()
+      .references(() => staffUser.id),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "import_column_mapping_pkey", columns: [t.projectId, t.headerHmac] }),
+    check("import_column_mapping_header_hmac", sql`${t.headerHmac} ~ '^[0-9a-f]{64}$'`),
+  ],
+);
+
 export const tables = [
   staffUser,
   project,
@@ -793,4 +824,5 @@ export const tables = [
   projectTemplatePin,
   projectConfigOverride,
   configRelaxationRequest,
+  importColumnMapping,
 ];

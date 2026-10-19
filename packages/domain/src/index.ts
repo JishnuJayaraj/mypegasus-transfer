@@ -150,6 +150,33 @@ export {
   type ValidatedRow,
 } from "./import/rows";
 export {
+  ColumnMapping,
+  CsvDelimiter,
+  CsvEncoding,
+  ImportChange,
+  ImportConfirmInput,
+  ImportCounts,
+  ImportDecisionsInput,
+  ImportFileErrorCode,
+  ImportIssueView,
+  ImportKept,
+  importLimits,
+  ImportPreview,
+  ImportPreviewInput,
+  ImportReportRow,
+  ImportReportTarget,
+  ImportResult,
+  PreviewToken,
+  SuggestedColumn,
+} from "./import/contract";
+export {
+  checkImportDecisions,
+  warningsToAudit,
+  type ImportDecisionIssue,
+  type ImportDecisionIssueCode,
+  type ImportDecisions,
+} from "./import/decisions";
+export {
   ImportRowOutcome,
   planImport,
   type ExistingParticipant,

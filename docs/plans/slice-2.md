@@ -1034,6 +1034,140 @@ synthetic identities of the seeded participations (`apps/api/src/participations/
 19. **No docs gap found** in 2f-2.
 
 
+### Built in PR 2g, with the readings taken (for confirmation)
+
+Split like 2d-2 and 2e-2, because 2g-1 alone is about 1,450 production lines: **2g-1a** (this
+branch: the domain contract and decision check, the audit type, the operation, the mapping table
+and its grants), **2g-1b** (`-parse`: the parse module, the dependencies, the build entry, the
+fixtures), **2g-1c** (`-preview`: the preview route and what it shares with the confirm) and
+**2g-1d** (`-confirm`: the confirm route, `createParticipationIn`, the decisions in the
+service); **2g-2** (`-web`: the participant list API, the wizard, the Playwright path and the
+toast fix). Each is green on its own; the line counts are in the PR descriptions.
+
+Built in 2g-1: `packages/domain/src/import/contract.ts` (`importLimits`, the preview and confirm
+inputs, the preview, report and result schemas, `ImportFileErrorCode`) and `decisions.ts`
+(`checkImportDecisions`, `warningsToAudit`), both under the 100 % threshold; the operation
+`importParticipations` (PL); the audit type `import_confirmed` (counts and `baseDefaultsVersion`,
+R26; through `record_audit_event`, like `warning_confirmed`); migrations `0026_import_mapping`
+(generated: the enum `import_target`, the event type, `import_column_mapping`) and
+`0027_import_mapping_grants` (hand-written: `SELECT, INSERT, UPDATE` for `transfer_app`, no
+`DELETE`); the data catalog; `apps/api/src/imports/` (`zip-check.ts`, `parse-core.ts`,
+`parse-worker.ts`, `parse.ts` with `parseSpreadsheet()`, `grid.ts`, `keys.ts`, `service.ts`);
+`createParticipationIn(tx, …)` in the status service; `POST /projects/{id}/imports/preview` and
+`POST /projects/{id}/imports`; the 8 MB / 100 kB body limits and the problem type
+`payload-too-large`; `fixtures/imports/` with its README; ADR-0003 and ADR-0010 notes.
+
+1. **Spike S1 passed, no fallback.** A worker thread with `resourceLimits` (old generation 256 MB)
+   and a 15 s timeout parses in `tsx` and Vitest (a `.ts` worker started through a small bootstrap
+   that registers tsx's loader; `--import` in `execArgv` does not reach a worker's module
+   resolution) and in the Vite-built `dist/parse-worker.js` (a fourth build entry, smoke-tested by
+   loading the bundle). Heap limits do not cover `ArrayBuffer` memory, so the zip bomb is stopped
+   earlier: the central-directory check refuses declared sizes (50 MB total, ratio 100, 1,000
+   entries, ZIP64, encryption, duplicate names, other methods) in the API process without
+   expanding anything, and `verifyZipSizes` in the worker inflates every entry with its **declared
+   size as the hard cap** (`maxOutputLength`) and requires that exact size, so a directory that
+   lies is refused after at most the checked total is allocated. A worker that runs out of memory,
+   time or answers nothing is stopped and the request is `file_too_complex`; the API keeps serving
+   (tested with a 40 MB bomb that lies about its size).
+2. **CSV goes through the same worker**: one path to reason about; the cost is a worker start.
+   Strict UTF-8 (BOM dropped) else Windows-1252, the delimiter from the first 50 records as the one
+   that gives the most columns (`;` for a single column), both overridable; NUL bytes in the first
+   8 kB are `unsupported_file`; a CSV row is a record (a cell with a line break is a
+   `control_characters` error anyway).
+3. **File refusals are 422 `domain-error` at `/file`** with the codes of `ImportFileErrorCode`
+   (`file_too_large` above 5 MB decoded, `unsupported_file`, `file_too_complex`, `file_empty`,
+   `too_many_rows`, `too_many_columns`, `cell_too_long`, `sheet_not_found`, `header_row_invalid`,
+   `encoding_invalid`, `csv_malformed`), never a message from the file. A body above 8 MB (a file
+   of about 6 MB) is 413. `fileName` from the plan's flow sketch is **not** an input: the
+   content decides the format (a ZIP signature is a workbook), so no file name can reach a log or
+   an error.
+4. **Limits**: 5,000 data rows below the chosen header row (the worker reads at most 5,020 rows),
+   50 columns, 500 characters per cell (code points) in every cell it returns; empty data rows are
+   skipped and rows keep their number in the file (the first data row is the header row + 1).
+5. **A file with an error row cannot be confirmed** (`import_has_errors`, 422), and the preview
+   issues no token for it: R18's "every row or none" is read as no partial import; the PL fixes the
+   file and imports again, which is idempotent (unchanged rows). A mapping with issues is
+   `mapping_invalid` followed by its codes.
+6. **Decisions** (`checkImportDecisions`): every `possible_duplicate` row decided, none for any other
+   row, and `confirmWarnings: true` whenever a row that is not skipped by decision still has a
+   warning other than the duplicate warning (a notice on a terminal participation and `kept_existing`
+   included). `warning_confirmed` is audited per participation and code for those rows, and
+   `possible_duplicate` for a duplicate the PL created anyway; rows the PL skipped have none.
+   Skipped duplicates count as `skipped` with the terminal participations.
+7. **The preview's answer**: `rows` of the report lists only rows needing attention (updates,
+   skips, errors and any row with an issue); a clean create or unchanged row is only counted. It
+   carries the Personalnummer (the PL's key) and, for an update, old and new value per target and,
+   for `kept_existing`, the stored value (the address as one line) — the PL may read both (round
+   32). Without a mapping it suggests one and reports the targets missing from the suggestion.
+8. **Suggestions**: this project's saved mappings, then those of other projects with the same
+   customer name (trimmed, case-folded, newest first), then the built-in synonyms; one target once,
+   one column once. Saved only on a confirm, as `HMAC-SHA256(key, normaliseHeader(header))` with
+   the key from `SESSION_SECRET` by HKDF (`import-header-mapping:v1`); a header that normalises to
+   nothing is not saved. In dev `SESSION_SECRET` is random per start, so suggestions do not survive
+   a restart (R7).
+9. **The token** is an HMAC (HKDF info `import-preview-token:v1`) over the canonical hash of the
+   project, the file hash, sheet, the CSV options actually used, the header row, the mapping, the
+   selected country, the wave and a digest of the plan with the values it would write, the stored
+   values of the matched participations and the relaxed rule ids. A confirm for different input is
+   indistinguishable from a stale one: 409 `import_preview_stale` for both, and a confirm whose
+   digest differs after another change of the project (another import, a relaxation, a re-pin, a
+   status change) re-plans first.
+10. **Order in the confirm**: visibility 404, `importParticipations` 403 (also for the preview),
+    body validation, the file (422), then under the exclusive lock: reload, wave (`not_ta_tg`,
+    `wave_of_other_project`), the mapping (422), error rows (422), the token (409), the decisions
+    (422). A refusal writes nothing.
+11. **Required targets use the base-only participant chain** (`resolveForParticipation` with no
+    placement Agentur, R12) plus the project level, so an approved `base-import-*` relaxation lifts
+    exactly its target (tested with an owner-inserted override, round 27's fixture rule).
+12. **Writes**: per row, in file order, `createParticipationIn` then `write_participant_data`
+    (an update passes only the row's values; `null` keeps the rest), the request id on every event,
+    `import_confirmed` last with the counts. A 5,000-row confirm took about 17 s on the cloud
+    session's database under the exclusive lock; setup writes of that project wait meanwhile.
+    Acceptable for the MVP; a batch function is the optimisation if pilot files need it.
+13. **Fixtures** are synthetic (README); phone numbers only from the Bundesnetzagentur's "Drama
+    Numbers" ranges (`030 23125 000–999`, `0171 39200 00–99`). The Bundesnetzagentur page itself
+    could not be opened from the sandbox (the host does not resolve); the ranges are from the
+    agency's page as quoted by search results, and must be re-checked before other ranges are added.
+14. **Not in 2g-1**: the participant list, the wizard (2g-2), manual creation (2h).
+15. **No docs gap found** in 2g-1.
+
+Built in 2g-2: `GET /projects/{projectId}/participations` (`ParticipationListItem`,
+`ParticipationPage` in `packages/domain/src/participations.ts`, `apps/api/src/routes/participations.ts`);
+`ProjectConfig.capabilities.importParticipations`; the Import and Teilnehmende sections of the
+project page (`import-section.tsx`, `import-wizard.tsx`, `participants.tsx`), the `Checkbox` and
+`FileUploaderButton` wrappers in `packages/ui`, component tests (`import.test.tsx`), the
+Playwright path (AC-35) and the toast fix of the projects e2e.
+
+16. **The list** is paged by `(created_at, id)` ascending (R19). One import is one transaction, so
+    its participations share `created_at` and follow in id order: stable across pages, not the
+    file's order. Each person field (`personnelNumber`, `lastName`, `firstName`) is included only
+    where `decideAccess` allows `list` for the row; a viewer who may list none of them (an
+    unassigned consultant, any org role) gets 403, a project the viewer can't see 404 (AC-33).
+    Statuses and the wave id are case state, not person data. No date of birth, address or contact
+    value is in a list (they are not served until the detail view, PR 2h).
+17. **The wizard follows `capabilities.importParticipations`** (the PL, draft and active alike), a
+    server-derived capability like the others (round 26). The Import section outlives the wizard:
+    a refusal stays visible when the capability is gone, and every refusal and success reads the
+    configuration, the project, the waves and the participations again (rounds 29, 31). A 409
+    `import_preview_stale` also makes the wizard preview again with the same mapping and shows the
+    new report, so the PL decides on current facts.
+18. **What the wizard does**: upload (the file is read in the browser and sent as base64; its name
+    is neither sent nor shown), then sheet, header row 1–20 and the detected CSV delimiter and
+    encoding (changeable, with the hint to check the umlauts); the mapping with the suggestions
+    preselected and labelled as such, the whole-import country and, in a `ta_tg` project, the wave;
+    the report (errors, possible duplicates with a create/skip choice, updates with old and new
+    value, warnings and the values an empty cell kept, skipped terminal participations); the
+    confirm is enabled only with a token, no errors and decisions that satisfy the domain's own
+    `checkImportDecisions` (the same rule the API applies). Nothing renders a value the API did
+    not return, and no staff id.
+19. **The participants section** is shown to every project member; the API decides (403 reads as
+    "not allowed", never as an empty list). Statuses are shown with German labels.
+20. **The e2e** extends the existing long projects path (the PL imports the sample CSV and the
+    updated file); `test.slow()` triples its timeout, which the added steps needed. The toast
+    assertion at the second Agentur-scoped setting names its Agentur, so the first setting's toast
+    (visible for 6 s) cannot satisfy it.
+21. **No docs gap found** in 2g-2.
+
 ## 4. Design overview
 
 ```

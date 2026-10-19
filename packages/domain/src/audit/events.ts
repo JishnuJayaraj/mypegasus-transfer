@@ -63,6 +63,8 @@ export const AuditEventType = z.enum([
   "project_activated",
   // Slice 2, written only by `write_participant_data` (PR 2f)
   "participant_data_changed",
+  // Slice 2, through `record_audit_event` (PR 2g, plan 5.11)
+  "import_confirmed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -98,6 +100,7 @@ export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new
   "rule_relaxation_requested",
   "rule_relaxation_approved",
   "project_activated",
+  "import_confirmed",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -410,6 +413,20 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("participant_data_changed", {
     ...ofParticipation,
     details: z.strictObject({ fields: z.array(ParticipantDataField).min(1) }),
+  }),
+  /**
+   * A confirmed import (plan 5.11): the counts and the base-defaults version its required targets
+   * were resolved with (R26). Correlated with the rows' own events by the request id.
+   */
+  event("import_confirmed", {
+    ...ofProject,
+    details: z.strictObject({
+      created: z.int().min(0),
+      updated: z.int().min(0),
+      unchanged: z.int().min(0),
+      skipped: z.int().min(0),
+      baseDefaultsVersion,
+    }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;
