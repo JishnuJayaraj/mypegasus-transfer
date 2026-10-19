@@ -435,14 +435,15 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
   store "AU confirmed: yes, dates").
 - Visibility: back office sees the type. PL and profiler see only "abwesend" with dates.
 - Transfer-KuG is limited to 12 months per person: remind the PL before `max_duration_reached`.
-- **What `tgStart` and `tgEnd` mean** (Q102, confirmed in [round 32](../decisions/2026-10-19-answers-round-32.md)):
+- **What `tgStart` and `tgEnd` mean** (Q102, **assumed**: [round 32](../decisions/2026-10-19-answers-round-32.md)'s
+  conservative design recommendation; legal and BA confirmation pending, PR 2h blocked until then):
   the inclusive contractual dates of employment with the Transfergesellschaft under the DSV. An
   earlier actual departure is `exitDate`. They are **not** the Transfer-KuG entitlement or funding
   period: with staged entry into an existing beE only its remaining term is funded, and the app
   never derives, shows or promises entitlement ("twelve months from `tgStart`" is never shown).
   DSV periods over twelve months are **not supported by the MVP** (not unlawful: §111 SGB III limits
   Transfer-KuG, not the contract) and are handled outside the app with their records.
-- **Changing them** (Slice 2 plan 5.7): only the project's PL. A missed start gets a genuinely new
+- **Changing them** (Slice 2 plan 5.7; assumed, Q102): only the project's PL. A missed start gets a genuinely new
   start date that needs a fully executed DSV amendment (all original parties by default) and a
   direct transition from the former employment; with a gap it is `ba_review_required` for a
   recorded BA/legal determination, never an ordinary late entry. A new start is never in the past,
@@ -450,7 +451,7 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
   entry it only **extends**, by an amendment fully executed before the current end; a shortening
   is an early termination through the cancellation/exit workflow (§623 BGB: paper form). Past-date
   corrections only through the audited Slice 7 correction/reconciliation process.
-- **BA reporting** (round 32, B3): every contractual date change creates a durable reporting task
+- **BA reporting** (round 32, B3; assumed, Q102): every contractual date change creates a durable reporting task
   (`later_entry`, `planned_end_changed`, or `early_exit` for an exit before the contractual end),
   `pending` until reported through the Agentur's channel (Kug 208 for later entries and early
   exits; a changed planned residence before any newly affected month is claimed). Project closure
