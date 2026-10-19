@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import { ImportFileError } from "./errors";
 import type { ParsedSheet, ParseRequest } from "./parse-core";
-import { parseSlots } from "./slots";
+import { parseSlots, type Slots } from "./slots";
 import { checkZipDirectory, hasZipSignature } from "./zip-check";
 
 export type { ParsedSheet, ParseRequest } from "./parse-core";
@@ -42,38 +42,59 @@ function workerEntry(): { entry: string | URL; eval: boolean } {
   };
 }
 
+/** What `parseSpreadsheet` runs on; the defaults are the process's slots and the real worker. */
+export type ParseDeps = {
+  slots: Slots;
+  spawn: (request: ParseRequest) => Pick<Worker, "once" | "terminate">;
+  timeoutMs: number;
+};
+
+export const defaultParseDeps: ParseDeps = {
+  slots: parseSlots,
+  spawn: (request) => {
+    const { entry, eval: evaluate } = workerEntry();
+    return new Worker(entry, { eval: evaluate, workerData: request, resourceLimits });
+  },
+  timeoutMs,
+};
+
 /**
  * Parses an uploaded `.xlsx` or CSV file into cells. Throws `ImportFileError` with a stable code
  * for a file that can't be read, and `ImportBusyError` when no worker slot became free in time
  * (R43); any other error is a bug.
  */
-export async function parseSpreadsheet(request: ParseRequest): Promise<ParsedSheet> {
+export async function parseSpreadsheet(
+  request: ParseRequest,
+  deps: ParseDeps = defaultParseDeps,
+): Promise<ParsedSheet> {
   // Always, before anything is expanded (D6).
   if (hasZipSignature(request.bytes)) checkZipDirectory(request.bytes);
-  const release = await parseSlots.acquire();
+  const release = await deps.slots.acquire();
   try {
-    return await runWorker(request);
+    return await runWorker(request, deps);
   } finally {
     release();
   }
 }
 
-/** One worker with its limits and timeout; settled exactly once, then terminated. */
-function runWorker(request: ParseRequest): Promise<ParsedSheet> {
-  const { entry, eval: evaluate } = workerEntry();
+/**
+ * One worker with its limits and timeout, settled exactly once and only after the worker has
+ * stopped: a timed-out or failed worker still holds its memory until it exits, so its slot is not
+ * handed on before (R43; review of PR 2h-2).
+ */
+function runWorker(request: ParseRequest, deps: ParseDeps): Promise<ParsedSheet> {
   return new Promise<ParsedSheet>((resolve, reject) => {
-    const worker = new Worker(entry, { eval: evaluate, workerData: request, resourceLimits });
+    const worker = deps.spawn(request);
     let settled = false;
     const finish = (settle: () => void) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      void worker.terminate();
-      settle();
+      worker.terminate().then(settle, settle);
     };
     const timer = setTimeout(
       () => finish(() => reject(new ImportFileError("file_too_complex"))),
-      timeoutMs,
+      deps.timeoutMs,
     );
     worker.once("message", (message: { ok: boolean; result?: ParsedSheet; code?: string }) =>
       finish(() =>

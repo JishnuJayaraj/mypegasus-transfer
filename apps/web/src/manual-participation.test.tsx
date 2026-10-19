@@ -61,6 +61,12 @@ async function open() {
 }
 const fill = async (label: string, value: string) =>
   userEvent.type(screen.getByLabelText(label), value);
+/** The fields every project requires; the form refuses to send without them. */
+const fillRequired = async () => {
+  await fill("Personalnummer", "BSP-0100");
+  await fill("Nachname", "Beispiel");
+  await fill("Vorname", "Bernd");
+};
 
 describe("manual creation", () => {
   it("is offered only with the import's capability", async () => {
@@ -77,8 +83,7 @@ describe("manual creation", () => {
   it("sends the entered values and the wave, then offers the new person's page", async () => {
     const calls = setup(() => json(created, 201));
     await open();
-    await fill("Personalnummer", "BSP-0100");
-    await fill("Nachname", "Beispiel");
+    await fillRequired();
     await fill("Geburtsdatum", "01.01.1970");
     await userEvent.selectOptions(screen.getByLabelText("Eintrittswelle"), "W1 – Welle 1");
     expect(screen.getByText(/Land der Anschrift: Deutschland/)).toBeInTheDocument();
@@ -89,7 +94,12 @@ describe("manual creation", () => {
     );
     expect(posted(calls)).toEqual([
       {
-        values: { personnelNumber: "BSP-0100", lastName: "Beispiel", birthDate: "01.01.1970" },
+        values: {
+          personnelNumber: "BSP-0100",
+          lastName: "Beispiel",
+          firstName: "Bernd",
+          birthDate: "01.01.1970",
+        },
         waveId: wave.id,
         confirmWarnings: false,
         createDespiteDuplicate: false,
@@ -106,6 +116,7 @@ describe("manual creation", () => {
       ),
     );
     await open();
+    await fillRequired();
     await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
     expect(await screen.findByText("Pflichtangabe fehlt")).toBeInTheDocument();
     expect(screen.getByText(/Die Anschrift ist unvollständig/)).toBeInTheDocument();
@@ -126,6 +137,7 @@ describe("manual creation", () => {
       );
     });
     await open();
+    await fillRequired();
     await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
     await userEvent.click(await screen.findByLabelText("Hinweise geprüft, trotzdem anlegen"));
     await userEvent.click(screen.getByLabelText("Mögliche Dublette geprüft, trotzdem anlegen"));
@@ -135,6 +147,45 @@ describe("manual creation", () => {
     expect(posted(calls).at(-1)).toMatchObject({
       confirmWarnings: true,
       createDespiteDuplicate: true,
+    });
+  });
+
+  it("requires the Personalnummer and the names and sends nothing without them", async () => {
+    const calls = setup(() => json(created, 201));
+    await open();
+    expect(screen.getByText(/Die Personalnummer ist Pflicht/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Personalnummer")).toBeRequired();
+    expect(screen.getByLabelText("Vorname")).toBeRequired();
+    expect(screen.getByLabelText("Geburtsdatum")).not.toBeRequired();
+    await fill("Nachname", "Beispiel");
+    await fill("Vorname", "Bernd");
+    await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+    expect(await screen.findByText("Pflichtangabe fehlt")).toBeInTheDocument();
+    expect(screen.getByLabelText("Personalnummer")).toHaveAttribute("aria-invalid", "true");
+    expect(posted(calls)).toEqual([]);
+  });
+
+  it("forgets the confirmations when the entered person changes", async () => {
+    let answer = 0;
+    const calls = setup(() =>
+      answer++ === 0
+        ? refused(["", "possible_duplicate"], ["", "warnings_unconfirmed"])
+        : refused(["", "warnings_unconfirmed"]),
+    );
+    await open();
+    await fillRequired();
+    await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+    await userEvent.click(await screen.findByLabelText("Hinweise geprüft, trotzdem anlegen"));
+    await userEvent.click(screen.getByLabelText("Mögliche Dublette geprüft, trotzdem anlegen"));
+    // Another birth date is another person to check: both ticks and the old answer are gone.
+    await fill("Geburtsdatum", "01.01.1940");
+    expect(screen.queryByLabelText("Hinweise geprüft, trotzdem anlegen")).toBeNull();
+    expect(screen.queryByLabelText("Mögliche Dublette geprüft, trotzdem anlegen")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
+    expect(await screen.findByLabelText("Hinweise geprüft, trotzdem anlegen")).not.toBeChecked();
+    expect(posted(calls).at(-1)).toMatchObject({
+      confirmWarnings: false,
+      createDespiteDuplicate: false,
     });
   });
 
@@ -148,6 +199,7 @@ describe("manual creation", () => {
       }),
     );
     await open();
+    await fillRequired();
     await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
     expect(
       await screen.findByText("Diese Personalnummer gibt es in diesem Projekt bereits."),
@@ -160,6 +212,7 @@ describe("manual creation", () => {
   it("says when the API refuses the PL, and can be cancelled", async () => {
     setup(() => problem(403, "forbidden"));
     const section = await open();
+    await fillRequired();
     await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
     expect(
       await screen.findByText("Sie dürfen in diesem Projekt keine Teilnehmenden anlegen."),

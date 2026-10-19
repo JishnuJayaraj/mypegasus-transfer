@@ -1857,6 +1857,8 @@ export interface paths {
                 /** @description Service unavailable */
                 503: {
                     headers: {
+                        /** @description Seconds after which a retry may succeed */
+                        "Retry-After": string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -1980,6 +1982,8 @@ export interface paths {
                 /** @description Service unavailable */
                 503: {
                     headers: {
+                        /** @description Seconds after which a retry may succeed */
+                        "Retry-After": string;
                         [name: string]: unknown;
                     };
                     content: {

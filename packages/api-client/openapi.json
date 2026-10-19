@@ -4874,6 +4874,16 @@
           },
           "503": {
             "description": "Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "description": "Seconds after which a retry may succeed"
+                },
+                "required": true,
+                "description": "Seconds after which a retry may succeed"
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5005,6 +5015,16 @@
           },
           "503": {
             "description": "Service unavailable",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "string",
+                  "description": "Seconds after which a retry may succeed"
+                },
+                "required": true,
+                "description": "Seconds after which a retry may succeed"
+              }
+            },
             "content": {
               "application/problem+json": {
                 "schema": {

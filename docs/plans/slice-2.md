@@ -1438,11 +1438,20 @@ wizard's notices; ADR-0010 note; integration, component and e2e tests.
    its page (2h-1).
 6. **The worker cap** is per API process (2 running, 8 waiting, 20 s); the ZIP directory check runs
    before a slot is taken, so a refused archive never waits. Both the overflow and the expired wait
-   are `import_busy` (unit-tested with fake timers; the route's 503 with all slots held).
+   are `import_busy`, documented with `Retry-After` on both import routes. A slot is handed on only
+   once its worker has stopped (round 34). Tested with fake timers (the slots, the worker
+   boundary) and over HTTP with a test app's own slots (a waiting request, an expired wait on
+   preview and confirm, a full queue).
 7. **The header-row guard** (R44) is checked on the header cells as the grid gives them (a date
-   cell arrives as an ISO date, eight digits): the preview reports `headerLooksLikeData`, the
-   confirm imports the rows but saves no mapping, and its result says `mappingSaved: false`.
-8. **No docs gap found** in 2h-2.
+   cell arrives as an ISO date, eight digits): the preview reports `headerLooksLikeData` and the
+   confirm imports the rows but saves no mapping. `mappingSaved` is true only when a mapping row
+   was written, so headers that normalise to nothing also give `false` (round 34).
+8. **The Personalnummer** is mandatory, unique within the project, the only automatic match key
+   and never generated (round 34): the form marks it and the names as required and sends nothing
+   without them; the API refuses it again. A changed value clears the PL's confirmations.
+9. **`participation_created_manually` needs its participation** in the database too (the
+   `audit_event_lifecycle_has_participation` CHECK, migration `0030`; round 34).
+10. **No docs gap found** in 2h-2.
 
 ## 4. Design overview
 

@@ -211,6 +211,13 @@
       "when": 1792439254910,
       "tag": "0029_manual_creation_event",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792441064132,
+      "tag": "0030_manual_creation_has_participation",
+      "breakpoints": true
     }
   ]
 }

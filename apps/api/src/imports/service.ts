@@ -7,6 +7,7 @@ import type { ImportActor, ImportContext } from "./analysis";
 import { confirmImport } from "./confirm";
 import { mappingKey, tokenKey } from "./keys";
 import { previewImport } from "./preview";
+import { parseSlots, type Slots } from "./slots";
 
 export { ImportRefusal, type ImportActor } from "./analysis";
 
@@ -21,12 +22,15 @@ type Deps = {
   clock: Clock;
   logger: Logger;
   sessionSecret: string;
+  /** The parse-worker slots (R43); the process's own unless a test brings its own. */
+  slots?: Slots | undefined;
 };
 
 export function createImportService(deps: Deps) {
-  const { sessionSecret, ...rest } = deps;
+  const { sessionSecret, slots, ...rest } = deps;
   const ctx: ImportContext = {
     ...rest,
+    slots: slots ?? parseSlots,
     mapKey: mappingKey(sessionSecret),
     tokKey: tokenKey(sessionSecret),
   };

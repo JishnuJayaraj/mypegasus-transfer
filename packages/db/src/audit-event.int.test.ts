@@ -191,6 +191,18 @@ describe("audit_event shape (AC-18)", () => {
       "audit_event_lifecycle_has_participation",
     ],
     [
+      "a manual creation without its participation",
+      {
+        event_type: "participation_created_manually",
+        participation_id: null,
+        field: null,
+        from_value: null,
+        to_value: null,
+        details: { baseDefaultsVersion: 1 },
+      },
+      "audit_event_lifecycle_has_participation",
+    ],
+    [
       "a correction to a value that isn't an end reason",
       {
         event_type: "end_reason_corrected",

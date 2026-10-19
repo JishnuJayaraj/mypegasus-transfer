@@ -103,6 +103,8 @@ const personLevel = new Set([
   "sensitive_write",
   "break_glass_access",
   "document_opened",
+  // A manual creation names the participation it created (R32; review of PR 2h-2).
+  "participation_created_manually",
 ]);
 
 describe("record_audit_event (AC-16)", () => {

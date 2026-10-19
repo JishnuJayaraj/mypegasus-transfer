@@ -37,6 +37,12 @@ const fields = [
   "workEmail",
 ] as const satisfies readonly Field[];
 const dateFields = new Set<Field>(["birthDate", "oldEmploymentEndDate"]);
+/**
+ * Required in every project (R6): the Personalnummer is the unique key a re-import matches by and
+ * is never generated (round 34); the names. The others depend on the project's relaxations, so
+ * the API decides them.
+ */
+const alwaysRequired = new Set<Field>(["personnelNumber", "lastName", "firstName"]);
 
 type Refusal = {
   /** Codes by field; the address as a unit is shown at the street. */
@@ -110,7 +116,27 @@ export function ManualParticipationForm(props: {
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    // An empty required field is refused here already; the API refuses it again (R32).
+    const missing = fields.filter((field) => alwaysRequired.has(field) && !values[field]?.trim());
+    if (missing.length > 0) {
+      setRefusal({
+        fields: Object.fromEntries(missing.map((field) => [field, ["required_missing"]])),
+        form: [],
+      });
+      return;
+    }
     create.mutate();
+  }
+
+  /**
+   * A changed value is another person to check: the confirmations given for the last answer and
+   * that answer itself no longer apply (review of PR 2h-2).
+   */
+  function change(field: Field, value: string) {
+    setValues({ ...values, [field]: value });
+    setConfirmWarnings(false);
+    setCreateDespiteDuplicate(false);
+    setRefusal(null);
   }
 
   const asked = (code: string) => refusal?.form.includes(code) ?? false;
@@ -149,9 +175,18 @@ export function ManualParticipationForm(props: {
             key={field}
             id={`manual-${field}`}
             labelText={t(`manual.fields.${field}`)}
-            helperText={dateFields.has(field) ? t("manual.dateHint") : undefined}
+            required={alwaysRequired.has(field)}
+            helperText={
+              field === "personnelNumber"
+                ? t("manual.personnelNumberHint")
+                : alwaysRequired.has(field)
+                  ? t("manual.required")
+                  : dateFields.has(field)
+                    ? t("manual.dateHint")
+                    : undefined
+            }
             value={values[field] ?? ""}
-            onChange={(event) => setValues({ ...values, [field]: event.target.value })}
+            onChange={(event) => change(field, event.target.value)}
             {...invalid(field)}
           />
         ))}

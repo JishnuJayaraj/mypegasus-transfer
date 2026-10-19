@@ -1,0 +1,4 @@
+-- Generated (review of PR 2h-2): a manual creation names its participation, like the lifecycle
+-- and person-level events; the generic record_audit_event can otherwise be called without one.
+ALTER TABLE "audit_event" DROP CONSTRAINT "audit_event_lifecycle_has_participation";--> statement-breakpoint
+ALTER TABLE "audit_event" ADD CONSTRAINT "audit_event_lifecycle_has_participation" CHECK ("audit_event"."participation_id" is not null or "audit_event"."event_type"::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'participation_created_manually', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened'));

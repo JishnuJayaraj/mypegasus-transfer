@@ -494,7 +494,7 @@
       "text": "{{created}} angelegt, {{updated}} aktualisiert, {{unchanged}} unverändert, {{skipped}} übersprungen.",
       "toast": "Import abgeschlossen",
       "again": "Weitere Datei importieren",
-      "mappingNotSaved": "Die Spaltenzuordnung wurde nicht für künftige Importe gespeichert, weil die Überschriftenzeile wie eine Datenzeile aussah."
+      "mappingNotSaved": "Die Spaltenzuordnung wurde nicht für künftige Importe gespeichert (etwa weil die Überschriftenzeile wie eine Datenzeile aussah oder die zugeordneten Überschriften leer sind)."
     },
     "refused": "Import abgelehnt"
   },
@@ -610,8 +610,10 @@
   "manual": {
     "add": "Teilnehmende Person anlegen",
     "title": "Teilnehmende Person anlegen",
-    "intro": "Es gelten dieselben Regeln wie beim Import. Eine vorhandene Personalnummer wird nicht überschrieben; Änderungen kommen über einen erneuten Import.",
+    "intro": "Es gelten dieselben Regeln wie beim Import. Die Personalnummer ist Pflicht: Sie ist der eindeutige Schlüssel, über den spätere Importe die Person finden, und wird nie automatisch vergeben. Eine vorhandene Personalnummer wird nicht überschrieben; Änderungen kommen über einen erneuten Import.",
     "dateHint": "TT.MM.JJJJ",
+    "required": "Pflichtangabe",
+    "personnelNumberHint": "Pflichtangabe; eindeutig im Projekt, wird nie automatisch vergeben",
     "country": "Land der Anschrift: Deutschland (andere Länder werden noch nicht unterstützt).",
     "wave": "Eintrittswelle",
     "waveNone": "Keine Welle",

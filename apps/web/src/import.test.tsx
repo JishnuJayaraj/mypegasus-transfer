@@ -381,7 +381,7 @@ describe("the import wizard", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Import durchführen" }));
     expect(
       await screen.findByText(
-        /nicht für künftige Importe gespeichert, weil die Überschriftenzeile/,
+        /nicht für künftige Importe gespeichert \(etwa weil die Überschriftenzeile/,
       ),
     ).toBeInTheDocument();
   });

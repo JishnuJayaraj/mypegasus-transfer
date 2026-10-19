@@ -7,7 +7,7 @@ import {
   seedWaves,
 } from "@transfer/db";
 import { ImportPreview, ImportResult, ParticipationDetail } from "@transfer/domain";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import {
   app,
   auth,
@@ -22,8 +22,8 @@ import {
   verwaltung,
   werkNord,
 } from "./imports/import-testing";
-import { parseSlots } from "./imports/slots";
-import { expectProblem, jsonRequest, readJson } from "./testing";
+import { Slots } from "./imports/slots";
+import { expectProblem, jsonRequest, readJson, testApp } from "./testing";
 
 // Slice 2 plan, "Planned in PR 2h" (PR 2h-2): manual creation through the import's rules (R32,
 // AC-51), the parse-worker cap (R43, AC-52) and the header-row guard of saved mappings (R44,
@@ -190,23 +190,70 @@ describe("POST /api/v1/projects/{projectId}/participations (R32, AC-51)", () => 
   });
 });
 
+/** A 503 `import_busy` with `Retry-After` (R43). */
+const expectBusy = async (res: Response) => {
+  const problem = await expectProblem(res, 503, "service-unavailable");
+  expect(res.headers.get("retry-after")).toBe("10");
+  expect(problem.errors?.map((e) => e.code)).toEqual(["import_busy"]);
+};
+
 describe("the parse-worker cap (R43, AC-52)", () => {
-  it("answers 503 import_busy with Retry-After when no worker slot is free", async () => {
-    const held = [await parseSlots.acquire(), await parseSlots.acquire()];
-    const waiting = Array.from({ length: 8 }, () => parseSlots.acquire());
+  // A test app with its own slots: one worker, one waiting request, a 300 ms wait.
+  const slots = new Slots({ running: 1, waiting: 1, waitMs: 300 });
+  const busy = testApp({ importSlots: slots });
+  afterAll(() => busy.db.$client.end());
+  const csv = fixture("teilnehmer-beispiel.csv");
+  const previewBusy = () =>
+    busy.app.request(
+      `/api/v1/projects/${werkNord}/imports/preview`,
+      jsonRequest("POST", { file: csv }, auth.projectLead),
+    );
+  const confirmBusy = () =>
+    busy.app.request(
+      `/api/v1/projects/${werkNord}/imports`,
+      jsonRequest(
+        "POST",
+        {
+          file: csv,
+          mapping: [{ column: 0, target: "personnelNumber" }],
+          decisions: noDecisions,
+          previewToken: "0".repeat(64),
+        },
+        auth.projectLead,
+      ),
+    );
+
+  it("lets a waiting request through once the worker is free", async () => {
+    const release = await slots.acquire();
+    const pending = previewBusy();
+    await vi.waitFor(() => expect(slots.stats()).toEqual({ running: 1, waiting: 1 }));
+    release();
+    expect((await pending).status).toBe(200);
+    expect(slots.stats()).toEqual({ running: 0, waiting: 0 });
+  });
+
+  it("answers 503 import_busy with Retry-After when the wait expires, on preview and confirm", async () => {
+    const release = await slots.acquire();
     try {
-      const res = await app.request(
-        `/api/v1/projects/${werkNord}/imports/preview`,
-        jsonRequest("POST", { file: fixture("teilnehmer-beispiel.csv") }, auth.projectLead),
-      );
-      const problem = await expectProblem(res, 503, "service-unavailable");
-      expect(res.headers.get("retry-after")).toBe("10");
-      expect(problem.errors?.map((e) => e.code)).toEqual(["import_busy"]);
+      await expectBusy(await previewBusy());
+      await expectBusy(await confirmBusy());
     } finally {
-      for (const release of held) release();
-      for (const slot of waiting) (await slot)();
+      release();
     }
-    expect(parseSlots.stats()).toEqual({ running: 0, waiting: 0 });
+    expect(slots.stats()).toEqual({ running: 0, waiting: 0 });
+  });
+
+  it("answers 503 at once when the queue is full", async () => {
+    const release = await slots.acquire();
+    const waiter = slots.acquire().catch((error: unknown) => error);
+    try {
+      const started = Date.now();
+      await expectBusy(await previewBusy());
+      expect(Date.now() - started).toBeLessThan(300);
+    } finally {
+      release();
+      await waiter;
+    }
   });
 });
 
@@ -238,6 +285,28 @@ describe("the header-row guard of saved mappings (R44, AC-53)", () => {
       await confirm(werkNord, {
         file,
         headerRow: 2,
+        mapping,
+        decisions: noDecisions,
+        previewToken: shown.previewToken,
+      }),
+      ImportResult,
+    );
+    expect(result).toMatchObject({ created: 1, mappingSaved: false });
+    expect(await owner.select().from(importColumnMapping)).toHaveLength(0);
+  });
+
+  it("says so when no header could be saved because every mapped one is blank or punctuation", async () => {
+    const blank = b64(
+      [
+        "-;--;;...;/;();+;*;#",
+        "BSP-0001;Mustermann;Erika;01.01.1965;31.12.2026;Musterstraße 1;99999;Beispielstadt;Deutschland",
+      ].join("\n"),
+    );
+    const shown = await previewOf(werkNord, { file: blank, mapping });
+    expect(shown.headerLooksLikeData).toBe(false);
+    const result = await readJson(
+      await confirm(werkNord, {
+        file: blank,
         mapping,
         decisions: noDecisions,
         previewToken: shown.previewToken,

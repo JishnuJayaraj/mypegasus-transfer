@@ -44,7 +44,7 @@ export async function confirmImport(
 ): Promise<ImportResult> {
   const { db, release, clock, logger, mapKey, tokKey } = ctx;
   const started = Date.now();
-  const read = await readFile(input);
+  const read = await readFile(input, ctx.slots);
   checkColumns(read.grid, input.mapping);
   const country = cleanCountry(input.country);
   const staff: ServiceActor = actor.subject;
@@ -147,10 +147,10 @@ export async function confirmImport(
       // it back); one upsert may not touch a key twice. A header row that looks like a person's
       // data saves nothing: its hashes would be pseudonymised values of that person (R44).
       const byHmac = new Map<string, (typeof input.mapping)[number]["target"]>();
-      const mappingSaved = !headerLooksLikeData(read.grid.headers);
-      for (const { column, target } of mappingSaved
-        ? input.mapping.toSorted((a, b) => a.column - b.column)
-        : []) {
+      const dataLike = headerLooksLikeData(read.grid.headers);
+      for (const { column, target } of dataLike
+        ? []
+        : input.mapping.toSorted((a, b) => a.column - b.column)) {
         const hmac = headerHmac(mapKey, read.grid.headers[column]!);
         if (hmac !== null && !byHmac.has(hmac)) byHmac.set(hmac, target);
       }
@@ -175,7 +175,8 @@ export async function confirmImport(
             },
           });
       }
-      return { ...counts, mappingSaved };
+      // True only when a mapping row was written (a header that normalises to nothing isn't).
+      return { ...counts, mappingSaved: saved.length > 0 };
     })
     .catch((error: unknown) => {
       const code = functionRefusal(error);

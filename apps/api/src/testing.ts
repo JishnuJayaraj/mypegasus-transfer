@@ -28,7 +28,13 @@ export const origin = testEnv.appOrigins[0]!;
 
 /** An app on `transfer_test` whose log lines are captured as strings. */
 export function testApp(
-  options: { env?: Partial<Env>; db?: Database; spa?: Deps["spa"]; clock?: Clock } = {},
+  options: {
+    env?: Partial<Env>;
+    db?: Database;
+    spa?: Deps["spa"];
+    clock?: Clock;
+    importSlots?: Deps["importSlots"];
+  } = {},
 ) {
   const logs: string[] = [];
   const logger = pino({ level: "info" }, { write: (line: string) => logs.push(line) });
@@ -39,6 +45,7 @@ export function testApp(
     logger,
     clock: options.clock ?? new SystemClock(),
     spa: options.spa,
+    importSlots: options.importSlots,
   });
   return { app, db, logs };
 }
