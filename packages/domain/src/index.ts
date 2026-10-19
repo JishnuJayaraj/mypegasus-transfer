@@ -32,7 +32,23 @@ export {
   type WaveUsage,
   type WaveValues,
 } from "./projects/waves";
-export { ParticipationListItem, ParticipationPage } from "./participations";
+export {
+  AssignEntryWaveInput,
+  AssignEntryWaveRefusal,
+  ParticipantAddress,
+  ParticipationDetail,
+  ParticipationHint,
+  ParticipationListItem,
+  ParticipationPage,
+} from "./participations";
+export {
+  entryWaveAssignment,
+  mayListField,
+  participationDetail,
+  participationListScope,
+  type ParticipationListScope,
+  type ParticipationRecord,
+} from "./access/participation-view";
 export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole, StaffRole } from "./enums";
 export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";

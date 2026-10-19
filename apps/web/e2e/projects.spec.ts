@@ -151,6 +151,21 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(participants.getByRole("row")).toHaveCount(14);
   await expectAccessible(page);
 
+  // Slice 2 (PR 2h-1, AC-34): the PL opens a participant's page, sees the updated address and
+  // assigns the wave, then goes back to the project.
+  await participants.getByRole("link", { name: "BSP-0001", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Mustermann, Erika" })).toBeVisible();
+  await expect(page.getByText(/^Neue Musterstraße 100, /)).toBeVisible();
+  await expectAccessible(page);
+  // The only other choice: W1, labelled with its code, name and dates.
+  await page.getByLabel("Welle zuordnen").selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Welle zuordnen" }).click();
+  await expect(page.getByText("Welle zugeordnet", { exact: true })).toBeVisible();
+  await expect(page.getByText(/ \(aus der Welle\)$/).first()).toBeVisible();
+  await expectAccessible(page);
+  await page.getByRole("link", { name: /^Zurück zu / }).click();
+  await expect(participants.getByRole("row")).toHaveCount(14);
+
   const configuration = page
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });

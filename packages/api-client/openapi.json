@@ -2338,6 +2338,419 @@
           "entryWaveId"
         ],
         "additionalProperties": false
+      },
+      "ParticipationDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "self_registered",
+              "imported",
+              "contacted",
+              "unreachable",
+              "informed",
+              "active_in_tg",
+              "withdrawn",
+              "rejected",
+              "ta_completed",
+              "exited"
+            ]
+          },
+          "profilingStatus": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "profiling_accepted",
+              "profiling_in_progress",
+              "profiling_done",
+              "profiling_declined"
+            ]
+          },
+          "dsvStatus": {
+            "type": "string",
+            "enum": [
+              "not_offered",
+              "dsv_offered",
+              "dsv_signed",
+              "dsv_declined",
+              "dsv_expired"
+            ]
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "entryWave": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "signingDeadline": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "defaultTgStart": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "defaultTgEnd": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "latestEntryDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name",
+              "signingDeadline",
+              "defaultTgStart",
+              "defaultTgEnd",
+              "latestEntryDate"
+            ],
+            "additionalProperties": false
+          },
+          "dates": {
+            "type": "object",
+            "properties": {
+              "tgStart": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "tgEnd": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "effectiveTgStart": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "effectiveTgEnd": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "offerDeadline": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "tgEntryDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "exitDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "withdrawnOn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "profilingDoneOn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "tgStart",
+              "tgEnd",
+              "effectiveTgStart",
+              "effectiveTgEnd",
+              "offerDeadline",
+              "tgEntryDate",
+              "exitDate",
+              "withdrawnOn",
+              "profilingDoneOn"
+            ],
+            "additionalProperties": false
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tg_start_missed"
+              ]
+            }
+          },
+          "person": {
+            "type": "object",
+            "properties": {
+              "personnelNumber": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "lastName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "firstName": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "birthDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "oldEmploymentEndDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "address": {
+                "$ref": "#/components/schemas/ParticipantAddress"
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mobile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "privateEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "workEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "assignEntryWave": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "assignEntryWave"
+            ],
+            "additionalProperties": false
+          },
+          "refusals": {
+            "type": "object",
+            "properties": {
+              "assignEntryWave": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "forbidden",
+                  "not_ta_tg",
+                  "status_not_open",
+                  "dsv_already_offered",
+                  "individual_dates_set",
+                  "no_other_wave",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "assignEntryWave"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "status",
+          "profilingStatus",
+          "dsvStatus",
+          "statusVersion",
+          "entryWave",
+          "dates",
+          "hints",
+          "person",
+          "capabilities",
+          "refusals"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipantAddress": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "street": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "street",
+          "postalCode",
+          "city",
+          "country"
+        ],
+        "additionalProperties": false
+      },
+      "AssignEntryWaveInput": {
+        "type": "object",
+        "properties": {
+          "waveId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "waveId"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -4577,6 +4990,178 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "One participation: statuses, wave, contractual dates and the person fields the viewer may read",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The participation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/entry-wave": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Assign the participation's entry wave (the PL, before the first offer); returns the participation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignEntryWaveInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The participation with its new wave",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

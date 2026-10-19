@@ -57,6 +57,17 @@ describe("assigning the entry wave (AC-7, Q79)", () => {
     });
   });
 
+  it("keeps the wave of a participation with individual dates (R33)", () => {
+    for (const participation of [
+      { tgStart: "2027-04-15", offerDeadline: null },
+      { tgStart: null, tgEnd: "2028-02-29", offerDeadline: null },
+    ]) {
+      expect(assignEntryWave(op({ participation }), target)).toEqual(fail("individual_dates_set"));
+    }
+    const unset = { tgStart: null, tgEnd: null, offerDeadline: null };
+    expect(assignEntryWave(op({ participation: unset }), target)).toMatchObject({ ok: true });
+  });
+
   it("is refused for another project's wave, in ta_only and for the system", () => {
     const other = { ...target, wave: { id: "wave-9", projectId: "project-2" } };
     expect(assignEntryWave(op(), other)).toEqual(fail("wave_of_other_project"));

@@ -117,3 +117,15 @@ export const participantsQuery = (api: ApiClient, projectId: string) =>
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
   });
+
+/** One participation with the fields the viewer may read (Slice 2 plan, "Planned in PR 2h"). */
+export const participationQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
