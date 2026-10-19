@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { parseGermanDate, validateRow, type ImportCell, type RowInput } from "./rows";
+import {
+  checkRecord,
+  parseGermanDate,
+  validateRow,
+  type ImportCell,
+  type ImportValues,
+  type RowInput,
+} from "./rows";
 import type { ImportTarget } from "./targets";
 
 // Slice 2 plan 5.11 (AC-24; R6, R23, R24; round 32): row validation truth tables. Synthetic
@@ -23,7 +30,7 @@ const base: Partial<Record<ImportTarget, ImportCell | null>> = {
 };
 
 const validate = (cells: RowInput["cells"], options: Partial<RowInput> = {}) =>
-  validateRow({ row: 2, cells, relaxedRuleIds: none, country: "DE", today, ...options });
+  validateRow({ row: 2, cells, country: "DE", today, ...options });
 /** The issues of a row as `target:code:severity`. */
 const issues = (cells: RowInput["cells"], options: Partial<RowInput> = {}) =>
   validate({ ...base, ...cells }, options).issues.map(
@@ -64,12 +71,14 @@ describe("validateRow (5.11, AC-24)", () => {
     expect(validate(cells).values.personnelNumber).toBe("0042 a/7");
   });
 
-  it("treats empty and whitespace cells as absent", () => {
-    expect(issues({ lastName: "   ", firstName: null })).toEqual([
-      "lastName:required_missing",
-      "firstName:required_missing",
-    ]);
+  it("treats empty, whitespace and sparse cells as absent; only the key is required here", () => {
+    // Whether the names are present is checkRecord's question (an update keeps stored ones).
+    const blank = validate({ ...base, lastName: "   ", firstName: null, phone: undefined });
+    expect(blank.issues).toEqual([]);
+    expect(blank.values).not.toHaveProperty("lastName");
+    expect(blank.values).not.toHaveProperty("phone");
     expect(issues({ personnelNumber: "" })).toEqual(["personnelNumber:required_missing"]);
+    expect(issues({ personnelNumber: undefined })).toEqual(["personnelNumber:required_missing"]);
   });
 
   it("refuses control characters and values over the length limits", () => {
@@ -112,40 +121,13 @@ describe("validateRow (5.11, AC-24)", () => {
       expect(issues({ birthDate: { number: "25600" } })).toEqual(["birthDate:invalid_cell_type"]);
     });
 
-    it("refuses a birth date after today and an Austrittsdatum before the birth date", () => {
-      expect(
-        issues(
-          { birthDate: "19.10.2026", oldEmploymentEndDate: null },
-          { relaxedRuleIds: relaxed },
-        ),
-      ).toEqual([]);
+    it("refuses a birth date after today", () => {
+      expect(issues({ birthDate: "19.10.2026", oldEmploymentEndDate: null })).toEqual([]);
       expect(issues({ birthDate: "20.10.2026" })).toEqual(["birthDate:birth_date_in_future"]);
-      expect(issues({ oldEmploymentEndDate: "31.01.1970" })).toEqual([
-        "oldEmploymentEndDate:end_before_birth",
-      ]);
     });
 
-    it("warns when the age at the Austrittsdatum is outside 15 to 67, never blocking", () => {
-      const at = (birthDate: string) => issues({ birthDate, oldEmploymentEndDate: "31.03.2027" });
-      expect(at("31.03.2012")).toEqual([]); // 15 on the day
-      expect(at("01.04.2012")).toEqual(["birthDate:age_implausible:warning"]); // 14
-      expect(at("01.04.1959")).toEqual([]); // 67
-      expect(at("31.03.1959")).toEqual(["birthDate:age_implausible:warning"]); // 68
-      // No Austrittsdatum (its rule relaxed): no age check.
-      const cells = { birthDate: "01.01.2020", oldEmploymentEndDate: null };
-      expect(issues(cells, { relaxedRuleIds: relaxed })).toEqual([]);
-    });
-
-    it("requires both dates unless relaxed; an invalid relaxed date is still an error", () => {
-      const cells = { birthDate: null, oldEmploymentEndDate: null };
-      expect(issues(cells)).toEqual([
-        "birthDate:required_missing",
-        "oldEmploymentEndDate:required_missing",
-      ]);
-      expect(issues(cells, { relaxedRuleIds: relaxed })).toEqual([]);
-      expect(issues({ birthDate: "x" }, { relaxedRuleIds: relaxed })).toEqual([
-        "birthDate:invalid_date",
-      ]);
+    it("refuses an invalid date whether or not the date is required", () => {
+      expect(issues({ birthDate: "x" })).toEqual(["birthDate:invalid_date"]);
     });
   });
 
@@ -199,19 +181,14 @@ describe("validateRow (5.11, AC-24)", () => {
     it("refuses some but not all parts, and a country cell alone", () => {
       expect(issues({ addressCity: null })).toEqual(["address:address_incomplete"]);
       const cells = { addressStreet: null, addressPostalCode: null, addressCity: null };
-      expect(issues({ ...cells, addressCountry: "DE" }, { relaxedRuleIds: relaxed })).toEqual([
-        "address:address_incomplete",
-      ]);
+      expect(issues({ ...cells, addressCountry: "DE" })).toEqual(["address:address_incomplete"]);
       expect(validate({ ...base, addressCity: null }).values.addressStreet).toBeUndefined();
     });
 
-    it("needs an address unless relaxed", () => {
+    it("leaves an empty address absent (requiredness is checkRecord's)", () => {
       const cells = { addressStreet: null, addressPostalCode: " ", addressCity: null };
-      expect(issues(cells)).toEqual(["address:required_missing"]);
-      expect(issues(cells, { relaxedRuleIds: relaxed })).toEqual([]);
-      expect(
-        validate({ ...base, ...cells }, { relaxedRuleIds: relaxed }).values,
-      ).not.toHaveProperty("addressCountry");
+      expect(issues(cells)).toEqual([]);
+      expect(validate({ ...base, ...cells }).values).not.toHaveProperty("addressCountry");
     });
 
     it("takes the country from the cell, else the import's, stored as DE", () => {
@@ -297,5 +274,74 @@ describe("validateRow (5.11, AC-24)", () => {
     const secret = "Geheim-4711";
     const result = validate({ ...base, lastName: `${secret}\u0007`, phone: secret });
     expect(JSON.stringify(result.issues)).not.toContain("Geheim");
+  });
+});
+
+/** The issues of `checkRecord` as `target:code:severity`. */
+const record = (values: ImportValues, relaxedRuleIds = none, fromRow = values) =>
+  checkRecord({ row: 2, values, fromRow, relaxedRuleIds }).map(
+    (i) => `${i.target}:${i.code}${i.severity === "warning" ? ":warning" : ""}`,
+  );
+
+// The record a confirm would leave (review of PR #44): requiredness and the date pair are checked on
+// the row's values for a new participation and on the merged values for an update.
+describe("checkRecord (5.11, AC-24)", () => {
+  const full: ImportValues = validate(base).values;
+  const without = (...targets: (keyof ImportValues)[]) =>
+    Object.fromEntries(Object.entries(full).filter(([k]) => !targets.includes(k as never)));
+
+  it("accepts a complete record", () => {
+    expect(record(full)).toEqual([]);
+  });
+
+  it("requires the names always, and the dates and the address unless relaxed", () => {
+    const bare = without(
+      "lastName",
+      "firstName",
+      "birthDate",
+      "oldEmploymentEndDate",
+      "addressStreet",
+      "addressPostalCode",
+      "addressCity",
+      "addressCountry",
+    );
+    expect(record(bare)).toEqual([
+      "lastName:required_missing",
+      "firstName:required_missing",
+      "birthDate:required_missing",
+      "oldEmploymentEndDate:required_missing",
+      "address:required_missing",
+    ]);
+    expect(record(bare, relaxed)).toEqual([
+      "lastName:required_missing",
+      "firstName:required_missing",
+    ]);
+  });
+
+  it("refuses an Austrittsdatum before the birth date", () => {
+    expect(record({ ...full, oldEmploymentEndDate: "1970-01-31" })).toEqual([
+      "oldEmploymentEndDate:end_before_birth",
+    ]);
+  });
+
+  it("warns when the age at the Austrittsdatum is outside 15 to 67, never blocking", () => {
+    const at = (birthDate: string) =>
+      record({ ...full, birthDate, oldEmploymentEndDate: "2027-03-31" });
+    expect(at("2012-03-31")).toEqual([]); // 15 on the day
+    expect(at("2012-04-01")).toEqual(["birthDate:age_implausible:warning"]); // 14
+    expect(at("1959-04-01")).toEqual([]); // 67
+    expect(at("1959-03-31")).toEqual(["birthDate:age_implausible:warning"]); // 68
+    // No Austrittsdatum (its rule relaxed): no age check.
+    expect(
+      record({ ...without("oldEmploymentEndDate"), birthDate: "2020-01-01" }, relaxed),
+    ).toEqual([]);
+  });
+
+  it("checks the date pair only when the row supplies one of the dates", () => {
+    const stored = { ...full, birthDate: "2020-01-01" };
+    expect(record(stored, none, { personnelNumber: "BSP-0001" })).toEqual([]);
+    expect(record(stored, none, { oldEmploymentEndDate: "2027-03-31" })).toEqual([
+      "birthDate:age_implausible:warning",
+    ]);
   });
 });

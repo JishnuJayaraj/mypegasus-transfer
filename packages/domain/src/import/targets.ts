@@ -97,7 +97,7 @@ export const normaliseCountry = (value: string): "DE" | null =>
 
 /**
  * Checks a column mapping (5.11): a target at most once; every required target mapped; the
- * address parts all or none; a country source (a mapped column or the import's selected country,
+ * address parts and a country column all or none; a country source (a mapped column or the import's selected country,
  * never both) whenever an address is mapped, and a selected country Germany. Issues have no row.
  */
 export function checkMapping(input: {
@@ -128,12 +128,13 @@ export function checkMapping(input: {
     }
   }
   const parts = addressParts.filter((part) => mapped.has(part)).length;
-  if (parts === 0 && isRequired("address", input.relaxedRuleIds)) {
+  const column = mapped.has("addressCountry");
+  // The country belongs to the address unit: mapped without the other parts it is incomplete.
+  if (parts === 0 && !column && isRequired("address", input.relaxedRuleIds)) {
     issues.push(at("address", "required_missing"));
-  } else if (parts > 0 && parts < addressParts.length) {
+  } else if (parts < addressParts.length && (parts > 0 || column)) {
     issues.push(at("address", "address_incomplete"));
   }
-  const column = mapped.has("addressCountry");
   if (column && input.country !== null)
     issues.push(at("addressCountry", "country_source_conflict"));
   else if (parts > 0 && !column && input.country === null) {

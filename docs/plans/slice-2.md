@@ -1,10 +1,13 @@
 # Slice 2 — Projects & import (F1, F2): plan
 
 - Status: **Approved with amendments** ([round 22](../decisions/2026-10-16-answers-round-22.md),
-  2026-10-16). Q101 (PL), Q102 (PL, legal, BA process owner), Q103 (PL) and Q105 (DPO) are
-  confirmed in [round 32](../decisions/2026-10-19-answers-round-32.md) (2026-10-19), with Q58; the gates of PRs 2f/2g and 2h are lifted.
-  Q110 (two details of 2h) is open with a fail-safe reading. Round 30's proposed package was never
-  applied; round 32 supersedes it.
+  2026-10-16). [Round 32](../decisions/2026-10-19-answers-round-32.md) (2026-10-19) recorded answers
+  and proposals on Q101, Q102, Q103, Q105 and Q58; **all five stay `assumed`** (status correction in
+  the review of PR #43): Q101 and Q103 close once recorded under the responsible PL's name, and PRs
+  2f/2g build on them as the working contract; Q102's legal and BA parts and Q105/Q58 were an
+  informed role-play, so **PR 2h stays blocked** on legal and BA confirmation of Q102, and Q105/Q58
+  keep the pre-pilot DPO gate. Q110 (two details of 2h) is open with a fail-safe reading. Round 30's
+  proposed package was never applied; round 32 supersedes it.
 - Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
 - PRD: [F1 Project setup, F2 Import](../prd.md)
@@ -50,11 +53,11 @@ data exists while retention periods are `unset`.
 | R1 | A **draft** project permits setup (project data, Project Agentur, pins, overrides, waves), import, manual creation (the creation edge), wave assignment and date overrides; **no post-creation lifecycle transition**, manual or system. The project job plans nothing for a draft project (like `ta_only` in round 21, reading 3). Activation is one-way in Slice 2; type and Project Agentur are fixed once active; the type changes only while draft and **without participations or entry waves** (Slice 2 can't delete waves), so round 10's "project becomes `ta_only`" supersession can't arise yet. | 5.5 | Q98 ✔ |
 | R2 | The **approver of a relaxation** (Q75 "with reason, approval and audit") is the regional operations manager, a different user from the requester, **before** it takes effect, like a profiling exception (Q80). Global scope until Slice 3 (round 18, reading 2). | 5.9 | Q99 ✔ |
 | R3 | The **controlled reason codes** for a relaxation are the four proposed in 5.9; the list is the owner's to set. | 5.9 | Q100 ✔ |
-| R4 | **Wave edits once in use** follow the rules in 5.6 (ordering derived from the offer and entry guards; no retroactive cutoff; no change of a signing deadline open offers depend on; a passed default TG start stays; dates clear only while unused; no deletion). | 5.6 | Q101 ✔ (round 32) |
-| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. **Amended by round 32** (5.7): the dates are the contractual employment dates; the twelve-month check is an MVP support limit; a new start and a `tgEnd` change after entry need a fully executed DSV amendment; `tgEnd` only extends (a shortening is the exit workflow); a gap after the former employment is `ba_review_required`; each change creates a BA reporting task. | 5.7 | Q102 ✔ (round 32, amended) |
-| R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); **German addresses only until Q103 is answered** (R23); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; **numeric XLSX cells refused for identifiers** (R24); age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. Settled before PRs 2f/2g. **Amended by round 32** (5.11): `addressCountry` is stored (`DE`, `DEU`, `Deutschland`, `Germany` → `DE`); one structured address; a five-digit numeric postcode converts with a warning; the PL picks the header row among the first 20; the phone check and the mapping suggestions are set. | 5.11 | Q103 ✔ (round 32, amended) |
+| R4 | **Wave edits once in use** follow the rules in 5.6 (ordering derived from the offer and entry guards; no retroactive cutoff; no change of a signing deadline open offers depend on; a passed default TG start stays; dates clear only while unused; no deletion). | 5.6 | Q101 (round 32, assumed: PL name pending) |
+| R5 | **Individual TG dates and the new start date** follow 5.7: PL only; the participation's wave must have a `latestEntryDate` (otherwise every override fails); a new `tgStart` is never before today (Q68: no backdating), never after that `latestEntryDate`, never before an open `offerDeadline`, and can't change after TG entry; `tgEnd` may change while not terminal and never precedes the effective start. **Periods longer than twelve months are blocked** (§111 SGB III limits Transfer-KuG to twelve months; whether `tgEnd` is the end of employment or of the funded period is open). Settled before PR 2h. **Amended by round 32** (5.7): the dates are the contractual employment dates; the twelve-month check is an MVP support limit; a new start and a `tgEnd` change after entry need a fully executed DSV amendment; `tgEnd` only extends (a shortening is the exit workflow); a gap after the former employment is `ba_review_required`; each change creates a BA reporting task. | 5.7 | Q102 (round 32, amended; assumed: legal/BA pending) |
+| R6 | **The import contract** (5.11): address as street with house number, postal code and city (no parsing of a combined column); **German addresses only until Q103 is answered** (R23); `phone` and `mobile` both selectable targets; text dates only `TT.MM.JJJJ`, plus real date cells; **numeric XLSX cells refused for identifiers** (R24); age plausibility (15–67) against the Austrittsdatum; empty cells never clear stored data; terminal participations are not updated; invalid optional contact values are dropped with a warning; Personalnummer is always required (it is the match key) and matched exactly after trimming. Settled before PRs 2f/2g. **Amended by round 32** (5.11): `addressCountry` is stored (`DE`, `DEU`, `Deutschland`, `Germany` → `DE`); one structured address; a five-digit numeric postcode converts with a warning; the PL picks the header row among the first 20; the phone check and the mapping suggestions are set. | 5.11 | Q103 (round 32, amended; assumed: PL name pending) |
 | R7 | **Saved column mappings "per customer"** are keyed by the project's customer name (trimmed, case-folded) until a customer entity exists, and store only a keyed hash of each normalised header, never header text (a file without a header row would otherwise store a person's name). | 5.11 | Q104 ✔ |
-| R8 | **Retention classes of the person data** 🔒: identity (`firstName`, `lastName`, `birthDate`, `personnelNumber`, the evidence-set identity of round 13) → `participation_record`; address, phone, mobile, private and work email, `oldEmploymentEndDate` → `personnel_file` (never in the evidence set, round 13). Periods stay `unset`. | 5.10 | Q105 ✔ (round 32, with periods) |
+| R8 | **Retention classes of the person data** 🔒: identity (`firstName`, `lastName`, `birthDate`, `personnelNumber`, the evidence-set identity of round 13) → `participation_record`; address, phone, mobile, private and work email, `oldEmploymentEndDate` → `personnel_file` (never in the evidence set, round 13). Periods stay `unset`. | 5.10 | Q105 🔒 (round 32, proposed periods; assumed: DPO pending) |
 | R9 | **Project creation and project visibility until Slice 3**: staff with the flat role `project_lead` may create a project and become its PL member; project metadata (not participant data) is visible to the project's members and to global-scope org roles; nobody else. | 5.4 | Q106 ✔ |
 | R10 | **Base defaults are not pinned** per project (a nationwide release changes them for every project). **Every audited operation whose result depends on them records the base-defaults version** (R26). Only Agentur templates are pinned (Q36). | 5.8 | Q107 ✔ |
 | R11 | The **project snapshot** is the set of pinned template contents per Agentur plus the current override version, not a stored resolved configuration: resolution depends on each participation's placement Agentur and is deterministic from the snapshot (Slice 1 AC-35). | 5.8 | — |
@@ -74,17 +77,19 @@ data exists while retention periods are `unset`.
 
 | # | Reading | Where | Question |
 |---|---|---|---|
-| R23 | **Foreign addresses — corrected in round 23:** five digits don't prove a German address. Until Q103 is answered, an import must **establish DE explicitly**, through a country column or a country constant the PL selects for the import; it is never inferred from the postal code. Rows of another country are refused (`foreign_address_unsupported`); without a country source the import can't be confirmed (`country_required`). The five-digit postal-code check applies to DE rows. **Amended by round 32:** the country is the stored field `addressCountry`; `country_required` applies when an address is imported; `DEU`, `Deutschland` and `Germany` also mean DE. | 5.11 | Q103 ✔ (round 32, amended) |
-| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. **Amended by round 32:** a numeric postcode that is an integer of exactly five digits converts to them with a warning; fewer digits stay an error. | 5.11 | Q103 ✔ (round 32, amended) |
-| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). **Confirmed by round 32** as an MVP support limit on DSV periods (longer ones are "unsupported by the MVP", never "unlawful" or "ineligible"), not a Transfer-KuG calculation. | 5.6, 5.7 | Q102 ✔ (round 32) |
+| R23 | **Foreign addresses — corrected in round 23:** five digits don't prove a German address. Until Q103 is answered, an import must **establish DE explicitly**, through a country column or a country constant the PL selects for the import; it is never inferred from the postal code. Rows of another country are refused (`foreign_address_unsupported`); without a country source the import can't be confirmed (`country_required`). The five-digit postal-code check applies to DE rows. **Amended by round 32:** the country is the stored field `addressCountry`; `country_required` applies when an address is imported; `DEU`, `Deutschland` and `Germany` also mean DE. | 5.11 | Q103 (round 32, amended; assumed: PL name pending) |
+| R24 | **Numeric identifier cells:** `read-excel-file` returns a numeric cell's stored value, not its displayed text, so a format such as `00000` can't be proven preserved. A numeric XLSX cell is refused for `personnelNumber` and `addressPostalCode` (row error `identifier_cell_numeric`) and dropped with that warning for `phone` and `mobile`. Text cells and CSV values are taken as written. **Amended by round 32:** a numeric postcode that is an integer of exactly five digits converts to them with a warning; fewer digits stay an error. | 5.11 | Q103 (round 32, amended; assumed: PL name pending) |
+| R25 | **Twelve months** means: the effective `tgEnd` is not after `addMonths(effective tgStart, 12) − 1 day` (month-end clamped, the Slice 1 helper); otherwise `period_exceeds_twelve_months`. It applies to individual dates and, because they feed every effective period, to a wave's default TG start and end. A participation without a wave can't take individual dates (`wave_required`). **Confirmed by round 32** as an MVP support limit on DSV periods (longer ones are "unsupported by the MVP", never "unlawful" or "ineligible"), not a Transfer-KuG calculation. | 5.6, 5.7 | Q102 (round 32; assumed: legal/BA pending) |
 | R26 | **Configuration-dependent audited operations — confirmed with this exact list (round 23):** `project_activated`, `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`, `import_confirmed`. Rejection and withdrawal carry none unless they resolve configuration; a later operation that resolves configuration joins the list (a test keeps it). | 5.3 | Q107 ✔ |
 | R27 | `config_template_version` is global reference data (no participant data), so it has **no `project_id`**: the owner chose this normalisation in round 22. Retention class `reference_data`, never touched by the retention job; the pins that use it carry `project_id`. | 5.2 | ✔ |
 | R28 | **Lock keys:** `pg_advisory_xact_lock(hashtextextended('project:' || id, 0))` (exclusive) and its `_shared` form; a hash collision only serialises two projects more than needed. The template-version identity is serialised by its primary key (the insert of a new version waits for a concurrent one to commit, then compares). | 5.3 | ✔ |
 
-### Amended by round 32 (Q101, Q102, Q103, Q105 confirmed)
+### Amended by round 32 (Q101, Q102, Q103, Q105 and Q58; all `assumed`)
 
-[Round 32](../decisions/2026-10-19-answers-round-32.md) answers Q101, Q102 and Q103 (PL; for Q102 also legal and the BA
-process owner) and Q105 and Q58 (DPO). Where the answers differ from the readings above:
+[Round 32](../decisions/2026-10-19-answers-round-32.md) records the PL's answers to Q101, Q102 and
+Q103 and, as an informed role-play by the product owner, legal's and the BA process owner's
+answers to Q102 and the DPO's to Q105 and Q58. They are the working design, not confirmations (the
+status correction in the record). Where they differ from the readings above:
 - **Q103 (5.1, 5.2, 5.10, 5.11; PRs 2f, 2g):** a stored `addressCountry` (ISO 3166-1 alpha-2,
   confidential, `personnel_file`) from a mapped column or a whole-import selection; `DE`, `DEU`,
   `Deutschland`, `Germany` → `DE`, anything else `foreign_address_unsupported`; `country_required`
@@ -100,10 +105,10 @@ process owner) and Q105 and Q58 (DPO). Where the answers differ from the reading
   isn't today once today's entry run has completed; `tgEnd` never in the past, after entry only an
   extension by a fully executed amendment, a shortening is the cancellation/exit workflow; the
   amendment record and the BA reporting tasks are new (5.2, 5.7).
-- **Q101 (5.6):** the fail-safe rules are confirmed as built in 2b; no deletion (an audited archive
+- **Q101 (5.6):** the PL's answers keep the fail-safe rules as built in 2b; no deletion (an audited archive
   later, if ever).
-- **Q105 (5.10):** both classes confirmed, with periods (`data-protection.md`); the code keeps
-  `unset` until the retention job (Slice 7).
+- **Q105 (5.10):** both classes proposed, with proposed periods (`data-protection.md`, assumed);
+  the code keeps `unset` until the retention job (Slice 7) encodes rules the DPO has confirmed.
 
 The new codes (`address_incomplete`, `identifier_cell_converted`, and 2h's) are named here for the
 PRs that build them, which confirm them with their tests. Q110 holds two details of 2h.
@@ -125,9 +130,10 @@ PRs that build them, which confirm them with their tests. Q110 holds two details
 
 ### Open
 
-Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25, Q109 in round 27,
-**Q101, Q102, Q103 and Q105 (with Q58) in round 32**; the gates of 2f/2g and 2h are lifted. Still
-open, with its fail-safe reading in `open-questions.md`:
+Q98, Q99, Q100, Q104, Q106 and Q107 are confirmed (round 22), Q108 in round 25, Q109 in round 27.
+**Assumed after round 32** (status correction, review of PR #43): Q101 and Q103 (close under the
+responsible PL's name), Q102 (legal and BA confirmation pending; blocks 2h), Q105 🔒 and Q58 🔒
+(DPO confirmation before the pilot). Still open, with its fail-safe reading in `open-questions.md`:
 - **Q110** 🔒 (legal, PLs): two details of 2h: whether a date change after the DSV is signed but
   before entry needs an amendment (fail safe: yes), and the controlled original-location values
   (fail safe: `paper_personnel_file`). Doesn't block 2f or 2g.
@@ -242,8 +248,10 @@ hand-written production lines (SQL included, tests excluded).
 | **2g-2** `feat(web): import wizard` | Upload → sheet → mapping → report (errors, warnings, duplicates, updates) → confirm; the participant list (first version); Playwright happy path. | ~420 | 2g-1 | **demo path works** |
 | **2h** `feat: participations — detail, manual creation, waves and dates` | Participant list/detail with field projection by `decideAccess`; manual creation (one row through the import rules); wave assignment route; `checkParticipationDates` (5.7, 100 %), `set_participation_dates`, the dates route and UI (new start date); **round 32:** the DSV amendment record, `ba_review_required`, the BA reporting tasks (5.7). | ~470 (more with round 32: re-estimated and split when planned) | 2g-2 | **slice done** |
 
-**Gates** (round 22): PRs 2f and 2g wait for Q103; PR 2h waits for Q102. **Both lifted in round
-32**; Q110 leaves two details of 2h fail safe. 2b and 2c-1 can run in
+**Gates** (round 22, corrected in the review of PR #43): PRs 2f and 2g build on the PL's round 32
+answers to Q103, which close as confirmed once recorded under the responsible PL's name; **PR 2h
+stays blocked** until legal and the responsible BA process owner confirm Q102; Q110 leaves two
+details of 2h fail safe; Q105/Q58 keep the pre-pilot DPO gate. 2b and 2c-1 can run in
 parallel after 2a; 2d-1 and 2e-1 in parallel after 2c-2. Between 2a
 and 2b the web app has no way to enter contractual dates; nothing depends on them in that gap.
 
@@ -907,7 +915,7 @@ its wave).
     activation blockers (Q77). Round 26's page-exhaustion loop in `apps/web/src/api.tsx` isn't
     touched (the activation adds no list query).
 
-### Built in PR 2f, with the readings taken (for confirmation)
+### Built in PR 2f, with the readings taken (for confirmation; corrected in the review of PR #44)
 
 Split before review like 2d-2 and 2e-2, because the domain import rules and the person data are
 about 810 non-blank, non-comment production lines together: **2f-1** (the domain import module;
@@ -919,11 +927,17 @@ own; nothing calls the import module before 2g.
 Built in 2f-1: `packages/domain/src/import/` under the 100 % threshold: `targets.ts`
 (`ImportTarget`, `ImportIssueCode`, `ImportIssue`, `isRequired`, `normaliseCountry`,
 `checkMapping`, `normaliseHeader`, `suggestTargets`), `rows.ts` (`ImportCell`, `parseGermanDate`,
-`validateRow`) and `plan.ts` (`ImportRowOutcome`, `planImport`).
+`validateRow`, `checkRecord`) and `plan.ts` (`ImportRowOutcome`, `planImport`).
 
 1. **Cells** are what 5.11's worker returns: text, `{ number }` (the stored value as text) or
    `{ date, time? }` (an ISO date; `time` for a time other than 00:00). Empty and whitespace-only
-   text is an absent value, so it never clears anything.
+   text, `null` and a sparse row's `undefined` are an absent value, so it never clears anything.
+   **Review of PR #44:** requiredness is no longer a cell rule. `validateRow` checks each cell, the
+   Personalnummer (the key), the birth date against today and the address unit; `checkRecord`
+   checks the record a confirm would leave: the row's values for a new participation, the row's
+   merged over the stored ones for an update. So a blank required cell of a matched participant
+   keeps the stored value (`kept_existing`, Q103 item 11), and a new row without it is still
+   `required_missing`; a matched row whose merged record lacks a required value is refused too.
 2. **Text rules** apply to the trimmed value: control characters (`\p{Cc}`, so a tab or a line
    break inside a cell too) are `control_characters`; the limits are 5.11's (Personalnummer 50,
    names 100, address parts 200); a number or date cell in a text target is `invalid_cell_type`.
@@ -934,7 +948,9 @@ Built in 2f-1: `packages/domain/src/import/` under the 100 % threshold: `targets
    at most 254 characters; the phone check is round 32's (6–30 characters, digits, spaces, `+`,
    `/`, `-`, `(`, `)`, at least five digits, `+` only first).
 4. **Dates:** text only as `TT.MM.JJJJ` with two-digit day and month; an invalid date is an error
-   for a relaxed date target too (only its absence is allowed). Age plausibility is the full years
+   for a relaxed date target too (only its absence is allowed). `end_before_birth` and age
+   plausibility are checked on the merged record whenever the row supplies one of the two dates
+   (so a new Austrittsdatum is checked against a stored birth date); the age is the full years
    from the birth date to the Austrittsdatum; 15 and 67 are plausible, 14 and 68 are the warning
    `age_implausible`. No age check without either date.
 5. **The address as one unit** (round 32): a country cell without street, postal code and city
@@ -944,25 +960,32 @@ Built in 2f-1: `packages/domain/src/import/` under the 100 % threshold: `targets
    a postal code issue `addressPostalCode`.
 6. **The mapping check** (`checkMapping`) reports issues without a row: a target mapped twice, the
    required targets (relaxation-aware), the address parts all or none, and the country source:
+   a country column without street, postal code and city is `address_incomplete` too, also with
+   the address rule relaxed (review of PR #44);
    a mapped country column and a selected country together are `country_source_conflict`, an
    address without either `country_required`, a selected country other than Germany
    `foreign_address_unsupported`.
 7. **Header suggestions** are round 32's synonyms, compared after NFC, lower case and removing
    everything but letters and digits; a target is suggested for the first matching column only;
    `Anschrift` and unknown headers get none. The saved mappings come first (2g).
-8. **The plan:** a row with any error is `error`; the same Personalnummer in several rows is
-   `duplicate_in_file` on each; a match is exact and case-sensitive. A matched terminal
-   participation is `skip` with `terminal_not_updated`; otherwise `update` with the targets whose
-   value differs, or `unchanged`. A mapped target whose cell is empty while a value is stored is
-   the warning `kept_existing` (the address as `address`); unmapped targets are not mentioned.
-9. **Possible duplicates** compare birth date and the NFC-normalised, lower-cased last and first
-   name of the rows that would be created (no error, a Personalnummer unique in the file and new to
-   the project) and of the project's existing participations; without a birth date nothing is
-   compared. Both new rows of a pair are flagged; the outcome stays `create` until the PL decides
+8. **The plan, in this order (corrected in the review of PR #44):** (1) the key: a missing or
+   invalid Personalnummer, or one in several rows (`duplicate_in_file` on each), is `error`, fail
+   closed; a match is exact and case-sensitive; (2) a match with a terminal participation is
+   `skip` with only `terminal_not_updated`, whatever else the row holds; (3) the row's own errors
+   make it `error`; (4) `checkRecord` on the record a confirm would leave; (5) `create`, `update`
+   with the targets whose value differs, or `unchanged`. A mapped target whose cell is empty while
+   a value is stored is the warning `kept_existing` (the address as `address`); unmapped targets
+   are not mentioned.
+9. **Possible duplicates** compare birth date and the trimmed, NFC-normalised, lower-cased last and
+   first name (trimmed inside the comparison, so padded stored data matches; review of PR #44) of
+   the rows whose outcome is `create` and of the project's existing participations; without a
+   birth date nothing is compared. Both new rows of a pair are flagged; the outcome stays `create` until the PL decides
    (the decision check comes with the confirm in 2g).
 10. **Participations missing from the file** are counted as `missing` when their Personalnummer is
     in no row at all, an error row included.
-11. **No docs gap found** in 2f-1.
+11. **No docs gap found** in 2f-1. The review of PR #44 corrected items 1, 4, 6, 8 and 9 (the
+    composition of row validation and plan, terminal precedence, trimmed duplicate names, the
+    country-only mapping, sparse cells); the corrected items are again for confirmation.
 
 Built in 2f-2: `participant_identity` and `participant_details` (migration `0024_person_data`,
 generated) and `write_participant_data` with `record_audit_event` replaced and the grants
@@ -1198,7 +1221,7 @@ Dates are inclusive. Impossible combinations are errors (ADR-0009 style); nothin
 confirmable warning. The UI shows the wave list (code, name, four dates, number of
 participations) and one form for create and edit.
 
-### 5.7 Individual TG dates and the new start date (R5, Q102 confirmed in round 32)
+### 5.7 Individual TG dates and the new start date (R5; Q102 assumed after round 32, legal/BA pending)
 
 **Meaning (round 32, L1/B1):** `tgStart` and `tgEnd` are the inclusive contractual dates of
 employment with the Transfergesellschaft under the DSV; an earlier actual departure is `exitDate`.
@@ -1328,8 +1351,8 @@ projectType })`:
   `lastName`, `personnelNumber`, `birthDate`, `oldEmploymentEndDate`, `workEmail`, `address`
   (street, postal code, city and, from round 32, `addressCountry`: ISO 3166-1 alpha-2, not
   nationality), `phone`, `mobile`, `privateEmail`), category `confidential`, `listable` true.
-  Retention (Q105, round 32): identity in `participation_record`, the rest in `personnel_file`, with
-  the periods of `data-protection.md`. So **no encrypted
+  Retention (Q105, round 32, assumed): identity in `participation_record`, the rest in
+  `personnel_file`, with the proposed periods of `data-protection.md` (DPO confirmation pending). So **no encrypted
   storage is needed** for Slice 2. Special-category and highly confidential fields can't be
   stored until encrypted columns and their separate logged endpoints exist (rule 9, ADR-0010);
   the column-to-field test fails for any such column, and the import has no such target, so an
@@ -1695,7 +1718,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | A customer entity | Q104 |
 | Wave assignment in bulk, filters, "what's missing" and dashboards | Slice 5 |
 | Audit history UI (`audit_event` stays unreadable for the app) | Slice 5 |
-| `.xls` (binary Excel), multi-row headers, header row selection | not needed so far; added on demand |
+| `.xls` (binary Excel), multi-row headers | not needed so far; added on demand |
 | Retention job and periods | Slice 7 (Q3, Q58, Q77, Q105) |
 
 ## 9. Doc changes
@@ -1708,11 +1731,11 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Q98 | What a draft project permits; changes after activation | confirmed (R1, round 22) |
 | Q99 | Who approves a relaxation | confirmed (R2) |
 | Q100 | The controlled relaxation reason codes | confirmed (R3) |
-| Q101 | Editing entry waves once in use | confirmed in round 32 (PL; R4) |
-| Q102 | Individual TG dates, the new start date, twelve months | confirmed in round 32 (PL, legal, BA process owner; R5, R25, amended) |
-| Q103 | The import contract | confirmed in round 32 (PL; R6, R23, R24, amended) |
+| Q101 | Editing entry waves once in use | assumed after round 32 (PL's answers; closes under the PL's name; R4) |
+| Q102 | Individual TG dates, the new start date, twelve months | assumed after round 32 (PL's answers; legal/BA role-play, confirmation pending; blocks 2h; R5, R25, amended) |
+| Q103 | The import contract | assumed after round 32 (PL's answers; closes under the PL's name; R6, R23, R24, amended) |
 | Q104 | Saved column mappings without a customer entity | confirmed (R7) |
-| Q105 🔒 | Retention classes of the person data | confirmed in round 32 with periods (DPO; R8) |
+| Q105 🔒 | Retention classes of the person data | assumed after round 32 (DPO role-play, proposed periods; pre-pilot DPO gate; R8) |
 | Q106 | Project creation and visibility until Slice 3 | confirmed (R9) |
 | Q107 | Pinning the base defaults | confirmed with audit provenance (R10, R26) |
 | Q110 🔒 | Two details of 2h (an amendment between DSV signature and entry; the original-location values) | open, legal/PLs (round 32); fail safe in 2h |
@@ -1730,8 +1753,8 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 - **2g:** ADR-0003 note (the two dependencies, spike S1); ADR-0010 note (base64 upload, body
   limits, new problem types); CLAUDE.md (`fixtures/imports`, commands); README status.
 - **2h:** process-and-lifecycle.md (new start date in Q68 case 3).
-- **Round 32 (docs-only PR):** the decision record; Q101, Q102, Q103, Q105, Q58 confirmed and Q110
-  in `open-questions.md`; this plan; `data-protection.md` (classes and periods) and
+- **Round 32 (docs-only PR):** the decision record; Q101, Q102, Q103, Q105, Q58 recorded as
+  `assumed` (status correction) and Q110 in `open-questions.md`; this plan; `data-protection.md` (classes and periods) and
   `process-and-lifecycle.md` (what the TG dates mean, amendments, BA reporting).
 
 ## 10. Risks
@@ -1742,7 +1765,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 | Zip bombs and pathological files exhaust the API | 5 MB cap, the central-directory check (always), row/column/cell limits, worker resource limits and timeout (S1); never in-process XLSX parsing (child process or CSV only). |
 | Personal data leaks through the import (logs, problem bodies, stored previews, saved headers) | Stateless preview; issues carry codes and row numbers only; HMAC'd headers; log fields fixed; tests (AC-26, AC-30, AC-31). |
 | A re-import silently overwrites or deletes data | Empty cells never clear; terminal participations untouched; missing people only counted; updates listed with old/new values before confirm; audit with changed keys. |
-| Duplicates through concurrent imports or case/zero differences in Personalnummer | Project lock and unique index; exact matching is confirmed (Q103, round 32), so a PL sees "new" rather than a wrong merge. |
+| Duplicates through concurrent imports or case/zero differences in Personalnummer | Project lock and unique index; exact matching is the PL's answer (Q103, round 32), so a PL sees "new" rather than a wrong merge. |
 | A template file changes after projects pinned it, or two projects pin different contents for one version | One registry row per version (primary key), content and hash compared on every pin, CI immutability check (AC-9, AC-10). |
 | A service forgets a lock | The locks are acquired inside the functions (D3, AC-4a). |
 | An import confirmed against stale state | Reload, re-plan, token comparison and writes in one transaction under the exclusive project lock (AC-26). |
@@ -1758,5 +1781,6 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 
 Approved in [round 22](../decisions/2026-10-16-answers-round-22.md) with the amendments applied
 above. R23–R28 are readings taken while applying it, for confirmation in the PR 2a review.
-Implementation starts with PR 2a after this PR is merged; PRs 2f/2g wait for Q103 and PR 2h for
-Q102 (both answered in round 32).
+Implementation starts with PR 2a after this PR is merged; PRs 2f/2g build on the PL's round 32
+answers to Q103 (to be closed under the PL's name); PR 2h waits for legal and BA confirmation of
+Q102.

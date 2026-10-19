@@ -141,6 +141,7 @@ export {
   type ImportIssue,
 } from "./import/targets";
 export {
+  checkRecord,
   parseGermanDate,
   validateRow,
   type ImportCell,

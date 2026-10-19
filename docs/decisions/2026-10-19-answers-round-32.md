@@ -1,20 +1,35 @@
-# Decisions — 2026-10-19, round 32 (Q101, Q102, Q103, Q105 and Q58 answered)
+# Decisions — 2026-10-19, round 32 (answers and proposals on Q101, Q102, Q103, Q105 and Q58)
 
-Answers given on 2026-10-19 in a working session with the product owner:
+Answers and proposals recorded on 2026-10-19 in a working session with the product owner,
+**corrected in the review of PR #43** (see "Status correction" below):
 
-| Question | Answered by | Status |
+| Question | Source | Status |
 |---|---|---|
-| Q103 — the import contract | the PL, in person in the session | confirmed |
-| Q101 — editing entry waves in use | the PL, in person in the session | confirmed |
-| Q102 — individual TG dates | the PL (in person), legal and the BA process owner (provided by the product owner as their answers) | confirmed by all three |
-| Q105 🔒 — retention classes of the person data | the DPO (provided by the product owner as the DPO's answer) | confirmed, with periods |
-| Q58 🔒 — retention of project master data | the DPO (provided by the product owner as the DPO's answer) | confirmed |
+| Q103 — the import contract | the PL's answers in the session | `assumed`: closes as confirmed once recorded under the responsible PL's name |
+| Q101 — editing entry waves in use | the PL's answers in the session | `assumed`: closes as confirmed once recorded under the responsible PL's name |
+| Q102 — individual TG dates | the PL's answers; the legal and BA parts are an informed role-play by the product owner | `assumed`: conservative design recommendation; **legal and BA confirmation required, PR 2h stays blocked** |
+| Q105 🔒 — retention classes of the person data | an informed role-play of the DPO by the product owner | `assumed`: conservative design recommendation; **DPO confirmation before the pilot** |
+| Q58 🔒 — retention of project master data | an informed role-play of the DPO by the product owner | `assumed`: conservative design recommendation; **DPO confirmation before the pilot** |
 
-The answers are recorded as given; where they differ from earlier rounds, round 32 wins. They
-supersede the proposed package of [round 30](2026-10-17-answers-round-30.md), which was never
-applied. Gates: PRs 2f and 2g may start (Q103); PR 2h may start (Q102), with the additions under
-"What changes for PR 2h". Two follow-up points the answers leave open are Q110 (below); neither
-blocks 2f or 2g.
+The answers are recorded as given; where they differ from earlier rounds, round 32's rules are the
+working design. They supersede the proposed package of [round 30](2026-10-17-answers-round-30.md),
+which was never applied. Two follow-up points are Q110 (below).
+
+### Status correction (review of PR #43)
+
+The legal, BA process owner and DPO answers below were produced by the product owner as an
+informed role-play of those roles, not by the named accountable people, and the source response
+said expressly that they don't replace counsel, the responsible BA process owner or the appointed
+DPO. They are therefore kept as **conservative design recommendations**, not confirmations:
+- **Q102** stays `assumed` behind its legal/BA gate: **PR 2h stays blocked** until legal and the
+  responsible BA process owner confirm (or correct) the rules under "Legal" and "BA process
+  owner".
+- **Q105 and Q58** stay `assumed` 🔒 behind the pre-pilot DPO gate. The classes are the working
+  design (the code keeps every period `unset`); no period may be treated as confirmed.
+- **Q101 and Q103** close as confirmed only under the responsible human PL's name, not as "in
+  person in the session". Until that name is recorded they are `assumed`; PRs 2f and 2g build on
+  them as the working contract.
+- **Real personal data stays prohibited** (CLAUDE.md rule 1).
 
 ## Q103 — Import contract (PL)
 
@@ -92,7 +107,7 @@ blocks 2f or 2g.
 
 ## Q102 — Individual TG dates
 
-### PL
+### PL (answers in the session; Q102 stays `assumed` until legal and BA confirm)
 
 1. `tgStart` and `tgEnd` are contractual employment dates under the DSV, not the Transfer-KuG
    funding period; the application makes no entitlement calculation or promise.
@@ -118,7 +133,7 @@ blocks 2f or 2g.
    resulting effective dates; after TG entry it stays subject to the same entry and amendment
    restrictions.
 
-### Legal
+### Legal (role-play by the product owner; a design recommendation, not counsel's confirmation)
 
 - **L1.** `tgStart` and `tgEnd` are the inclusive contractual dates of employment with the
   Transfergesellschaft under the DSV, not the individual Transfer-KuG entitlement or funding
@@ -171,7 +186,7 @@ blocks 2f or 2g.
   Transfer-KuG eligibility, claims or payments, and needs separate reconciliation where a BA
   submission or payroll period was affected.
 
-### BA process owner
+### BA process owner (role-play by the product owner; a design recommendation, not the BA owner's confirmation)
 
 - **B1.** For staged entry into an existing beE, the participant has only the remaining duration of
   that beE; an independently established later beE can have its own full duration. The
@@ -224,9 +239,9 @@ blocks 2f or 2g.
    a need, introduce an audited archive operation later, never physical deletion. A wave that ever
    had participants or offers is never deleted.
 
-## Q105 and Q58 — Retention (DPO)
+## Q105 and Q58 — Retention (role-play of the DPO; recommendations, not the DPO's confirmation)
 
-- **D1. Classes and periods.** Both classes are confirmed.
+- **D1. Classes and periods.** Both classes are proposed.
   - `participation_record`: first name, last name, date of birth, Personalnummer, lifecycle and
     contractual dates, the minimum identity retained in the evidence set. Retention: (1) a
     non-signer with no fully executed DSV and no funded §110 participation: deleted 90 calendar
@@ -268,12 +283,14 @@ blocks 2f or 2g.
   social-security retention classes and never extend every `project_master` item merely because
   they relate to the same project.
 
-The periods are recorded in `data-protection.md`; the data catalog keeps `unset` in code until the
-retention job (Slice 7) encodes them, so no deletion runs before then.
+The proposed periods are recorded in `data-protection.md` as `assumed`; the data catalog keeps
+`unset` in code until the retention job (Slice 7) encodes rules the DPO has confirmed, so no
+deletion runs before then.
 
 ## Implementation consequences (as stated with the answers)
 
-These decisions are conservative enough to unblock PR 2h, with these changes:
+As stated with the answers, these rules were meant to unblock PR 2h; after the status correction
+they are the design 2h will follow **once legal and BA confirm Q102**:
 1. New starts require a fully executed DSV amendment.
 2. A gap after the former employment produces `ba_review_required`.
 3. Ordinary `tgEnd` editing supports extension only.
@@ -294,9 +311,10 @@ The answers leave two details of 2h open; each gets a fail-safe reading:
 
 ## Applied
 
-This docs-only PR: this record; Q101, Q102, Q103, Q105 and Q58 confirmed and Q110 added in
-`open-questions.md`; the plan's readings (R4, R5, R6, R8, R23–R25), the gates, sections 5.1, 5.2,
+This docs-only PR: this record; Q101, Q102, Q103, Q105 and Q58 recorded as `assumed` (see the
+status correction) and Q110 added in `open-questions.md`; the plan's readings (R4, R5, R6, R8, R23–R25), the gates, sections 5.1, 5.2,
 5.6, 5.7, 5.10, 5.11, 8, 9 and the PR series (2h grows: the amendment record, `ba_review_required`,
 the BA reporting tasks); `data-protection.md` (the person-data classes and the retention periods)
-and `process-and-lifecycle.md` (what the TG dates mean, the amendment and reporting rules). The
+and `process-and-lifecycle.md` (what the TG dates mean, the amendment and reporting rules), each
+marked as assumed. The
 schema, field catalog and code change in PRs 2f, 2g and 2h.
