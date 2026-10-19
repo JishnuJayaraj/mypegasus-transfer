@@ -19,7 +19,6 @@ import {
 } from "./overrides";
 import { overrideIssues, projectSnapshot, releaseTemplate, type Release } from "./template-pins";
 
-type Db = Pick<Database, "select" | "selectDistinctOn" | "execute">;
 type Snapshot = NonNullable<Awaited<ReturnType<typeof projectSnapshot>>>;
 
 // The function refusals a migration allowlists (R21, round 23); anything else is a 500.
@@ -34,24 +33,32 @@ const migrationRefusals: Refusals<"not-found" | "conflict"> = {
 };
 
 /**
- * The migration of `agenturKey`'s pin to `version` planned on a snapshot (plan 5.8): null when
- * the Agentur isn't pinned (a 404), the refusal at `/version`, or the pinned version and the
- * release's target template.
+ * The migration of `agenturKey`'s pin to `version` planned on a snapshot (plan 5.8; round 31's
+ * order): null when the Agentur isn't pinned (a 404), the refusal of the target at `/version`,
+ * `stale` when the pin moved away from a confirm's `fromVersion`, or the version the migration
+ * starts from with the release's target template.
  */
-function plan(release: Release, snapshot: Snapshot, agenturKey: string, version: number) {
+function planMigrationTarget(
+  release: Release,
+  snapshot: Snapshot,
+  agenturKey: string,
+  target: { version: number; fromVersion?: number },
+) {
   const pin = snapshot.pins.find((p) => p.agenturKey === agenturKey);
-  const planned = planTemplateMigration({ catalog: release.catalog, pin, version });
-  if (planned === null || "issues" in planned) return planned;
-  return { ...planned, ...releaseTemplate(release, agenturKey, version) };
+  const planned = planTemplateMigration({ catalog: release.catalog, pin, ...target });
+  if (planned === null || !("fromVersion" in planned)) return planned;
+  return { ...planned, ...releaseTemplate(release, agenturKey, target.version) };
 }
 
 /**
  * What migrating the pin would change, with the review of the Agentur's scoped setting (5.8,
- * AC-19; R15): read-only, on the current snapshot. Null for no project or no pin of the Agentur
- * (404), the refusal of the target (422), or the preview with the versions a confirm sends back.
+ * AC-19; R15): read-only, on one coherent snapshot (a read-only `REPEATABLE READ` transaction,
+ * round 31), so its pins and override are never from both sides of a concurrent migration. Null
+ * for no project or no pin of the Agentur (404), the refusal of the target (422), or the preview
+ * with the versions a confirm sends back.
  */
-export async function previewMigration(
-  db: Db,
+export function previewMigration(
+  db: Database,
   release: Release,
   projectId: string,
   agenturKey: string,
@@ -59,22 +66,32 @@ export async function previewMigration(
 ): Promise<
   TemplateMigrationPreview | { issues: readonly { code: string; field: string }[] } | null
 > {
-  const snapshot = await projectSnapshot(db, release, projectId);
-  const planned = snapshot && plan(release, snapshot, agenturKey, input.version);
-  if (!planned || "issues" in planned) return planned ?? null;
-  return {
-    agenturKey,
-    fromVersion: planned.fromVersion,
-    version: input.version,
-    expectedVersion: snapshot.override.version,
-    ...migrationPreview({ ...snapshot.input, agenturKey, target: planned.template }),
-  };
+  return db.transaction(
+    async (tx) => {
+      const snapshot = await projectSnapshot(tx, release, projectId);
+      const planned =
+        snapshot && planMigrationTarget(release, snapshot, agenturKey, { version: input.version });
+      if (!planned) return null;
+      if ("issues" in planned) return planned;
+      // Without a declared `fromVersion` the pin can't be stale.
+      if (!("fromVersion" in planned)) return null;
+      return {
+        agenturKey,
+        fromVersion: planned.fromVersion,
+        version: input.version,
+        expectedVersion: snapshot.override.version,
+        ...migrationPreview({ ...snapshot.input, agenturKey, target: planned.template }),
+      };
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
 }
 
 /**
  * The confirmed migration (5.8, AC-20; R15), in one transaction under the exclusive project lock:
- * reloads the snapshot and re-plans (404 without the pin, 422 for the target), compares the
- * pinned and the override version the review was made on (409), requires keep or remove for
+ * reloads the snapshot and re-plans in round 31's order: 404 without the pin, 422 for a target
+ * absent from the catalog or not newer than the declared `fromVersion`, 409 when the pin moved
+ * away from it (to the target or beyond) or the override from `expectedVersion`; then keep or remove for
  * exactly the review's keys (`review_incomplete`), validates the override that results against
  * every chain with the new version (`override_invalid`, AC-16), then `migrate_agentur_template`
  * writes the pin and, when keys are removed, the override version with their audit events and
@@ -93,11 +110,11 @@ export function migrateTemplate(
     migrationRefusals,
     async (tx) => {
       const snapshot = (await projectSnapshot(tx, release, projectId))!;
-      const planned = plan(release, snapshot, agenturKey, input.version);
+      const planned = planMigrationTarget(release, snapshot, agenturKey, input);
       if (!planned) return { problem: "not-found" };
       if ("issues" in planned) return planned;
       const { override, input: chain } = snapshot;
-      if (planned.fromVersion !== input.fromVersion || override.version !== input.expectedVersion) {
+      if ("stale" in planned || override.version !== input.expectedVersion) {
         return { problem: "conflict" };
       }
       const scoped = override.content?.agenturSettings?.[agenturKey]?.settings ?? {};

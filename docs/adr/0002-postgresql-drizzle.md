@@ -195,9 +195,10 @@ built in PR 2e-2:
 - **`migrate_agentur_template(project, agentur_key, from_version, version, content, sha256,
   expected_version, override_content, base_defaults_version, context)`** (`SECURITY DEFINER`)
   takes the exclusive project lock first, appends the new pin through `append_template_pin` (the
-  Agentur pinned, the version newer, the pinned one still `from_version`; else
-  `agentur_not_pinned`, `template_already_pinned`, `template_version_not_newer`,
-  `pin_version_stale`; content and hash compared as for every pin), compares the expected
+  Agentur pinned, the version newer than `from_version`, then the pinned one still `from_version`;
+  else `agentur_not_pinned`, `template_already_pinned`, `template_version_not_newer`,
+  `pin_version_stale`, so a pin another migration moved is always stale, round 31; content and
+  hash compared as for every pin), compares the expected
   override version (`override_version_stale`) and, with `override_content`, appends the next
   override version with the change `agentur_setting_reviewed`. Its exact delta (round 27): apart
   from the named Agentur's setting the content is the current one; that setting keeps its source

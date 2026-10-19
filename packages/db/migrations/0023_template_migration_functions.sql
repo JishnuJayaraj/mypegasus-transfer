@@ -9,8 +9,9 @@
 -- pin_agentur_template. Without p_from_version it is a first pin of the Agentur in the project
 -- (an Agentur pinned already is template_already_pinned, whatever the version): a pinned Agentur
 -- changes its version only through migrate_agentur_template, with its review (R15). With
--- p_from_version it is that migration: the Agentur is pinned, the version is newer than the pinned
--- one, and the pinned one is still p_from_version (pin_version_stale otherwise). The audit event
+-- p_from_version it is that migration: the Agentur is pinned, the version is newer than
+-- p_from_version, and the pinned one is still p_from_version (pin_version_stale otherwise, also
+-- when another migration reached the target or went beyond it; round 31). The audit event
 -- carries key, version, the replaced version and the base-defaults version (R26). Returns the
 -- pin's id.
 CREATE FUNCTION append_template_pin(
@@ -47,9 +48,11 @@ BEGIN
     END IF;
   ELSIF v_previous IS NULL THEN
     RAISE EXCEPTION 'agentur_not_pinned';
-  ELSIF p_version = v_previous THEN
+  -- The target against the version the review was made on, then whether the pin moved since
+  -- (round 31): a pin another migration moved, to the target or beyond it, is always stale.
+  ELSIF p_version = p_from_version THEN
     RAISE EXCEPTION 'template_already_pinned';
-  ELSIF p_version < v_previous THEN
+  ELSIF p_version < p_from_version THEN
     RAISE EXCEPTION 'template_version_not_newer';
   ELSIF v_previous <> p_from_version THEN
     RAISE EXCEPTION 'pin_version_stale';

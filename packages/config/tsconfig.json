@@ -3,8 +3,13 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": ".tsbuild",
-    "types": ["node"]
+    "types": ["node"],
+    "allowImportingTsExtensions": true
   },
   "include": ["src"],
-  "references": [{ "path": "../domain" }]
+  "references": [
+    {
+      "path": "../domain"
+    }
+  ]
 }

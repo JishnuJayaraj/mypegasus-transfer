@@ -27,6 +27,15 @@ describe("migrationTargets (5.8)", () => {
   });
 });
 
+/** A confirm whose review was made on version 1, with the Agentur pinned at `pinned` now. */
+const confirm = (version: number, pinned: number) =>
+  planTemplateMigration({
+    catalog,
+    pin: { agenturKey: "nord", version: pinned },
+    version,
+    fromVersion: 1,
+  });
+
 describe("planTemplateMigration (5.8)", () => {
   const pin = { agenturKey: "nord", version: 2 };
   const plan = (version: number) => planTemplateMigration({ catalog, pin, version });
@@ -44,6 +53,35 @@ describe("planTemplateMigration (5.8)", () => {
     expect(plan(2)).toEqual({ issues: [{ code: "template_already_pinned", field: "version" }] });
     expect(plan(1)).toEqual({
       issues: [{ code: "template_version_not_newer", field: "version" }],
+    });
+  });
+
+  // Round 31: a confirm is checked against the version its review was made on; a pin that moved
+  // since is stale (409), whether another migration reached the target or went beyond it.
+  describe("a confirm with the version its review was made on", () => {
+    it("moves on when the pin is still that version", () => {
+      expect(confirm(2, 1)).toEqual({ fromVersion: 1 });
+    });
+
+    it("is stale when another migration reached the target or went beyond it", () => {
+      expect(confirm(2, 2)).toEqual({ stale: true });
+      expect(confirm(2, 3)).toEqual({ stale: true });
+    });
+
+    it("checks the target against the declared version first (422 before 409)", () => {
+      expect(confirm(1, 3)).toEqual({
+        issues: [{ code: "template_already_pinned", field: "version" }],
+      });
+      expect(confirm(4, 3)).toEqual({
+        issues: [{ code: "template_not_in_catalog", field: "version" }],
+      });
+      const older = planTemplateMigration({
+        catalog,
+        pin: { agenturKey: "nord", version: 3 },
+        version: 1,
+        fromVersion: 2,
+      });
+      expect(older).toEqual({ issues: [{ code: "template_version_not_newer", field: "version" }] });
     });
   });
 });
@@ -114,5 +152,8 @@ describe("the migration's inputs and preview", () => {
     expect(TemplateMigrationPreview.parse(preview)).toEqual(preview);
     const step = { ...preview, rules: { ...preview.rules, removed: [{ id: "x", step: "x" }] } };
     expect(TemplateMigrationPreview.safeParse(step).success).toBe(false);
+    // The Agentur is a key, as everywhere else (round 31).
+    const key = { ...preview, agenturKey: "Agentur Nord" };
+    expect(TemplateMigrationPreview.safeParse(key).success).toBe(false);
   });
 });
