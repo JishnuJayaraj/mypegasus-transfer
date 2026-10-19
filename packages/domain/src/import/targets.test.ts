@@ -80,6 +80,14 @@ describe("checkMapping (5.11, AC-23)", () => {
     const partial = full.filter((t) => t !== "addressCity");
     expect(codes(partial, "DE")).toEqual(["address:address_incomplete"]);
     expect(codes(partial, "DE", relaxed)).toEqual(["address:address_incomplete"]);
+    // The country is part of the unit (review of PR #44): mapped alone it is incomplete too.
+    const key = ["personnelNumber", "lastName", "firstName"] as ImportTarget[];
+    expect(codes([...key, "addressCountry"], null, relaxed)).toEqual([
+      "address:address_incomplete",
+    ]);
+    expect(codes([...full.slice(0, 5), "addressCountry"], null)).toEqual([
+      "address:address_incomplete",
+    ]);
   });
 
   it("needs exactly one country source, and a selected country must be Germany", () => {

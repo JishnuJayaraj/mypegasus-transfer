@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ImportValues, ValidatedRow } from "./rows";
+import { checkRecord, type ImportValues, type ValidatedRow } from "./rows";
 import { addressParts, type ImportIssue, type ImportTarget } from "./targets";
 
 // The import plan (Slice 2 plan 5.11; R6; round 32): what confirming would do with each row.
@@ -34,19 +34,32 @@ export type ImportPlan = {
 
 const address = [...addressParts, "addressCountry"] as const;
 
-/** Names compared trimmed and case-insensitively (no fuzzy matching). */
+/** Names compared trimmed and case-insensitively (no fuzzy matching; Q103). */
 const identityKey = (values: ImportValues) =>
   values.birthDate === undefined || values.lastName === undefined || values.firstName === undefined
     ? undefined
     : [values.birthDate, values.lastName, values.firstName]
-        .map((part) => part.normalize("NFC").toLowerCase())
+        .map((part) => part.trim().normalize("NFC").toLowerCase())
         .join("\u0000");
 
+const hasError = (issues: readonly ImportIssue[]) =>
+  issues.some((issue) => issue.severity === "error");
+
+/**
+ * The plan (5.11): the key first (a missing or invalid Personalnummer, or one in several rows, is
+ * an error); a match with a terminal participation is skipped whatever else the row holds; then the
+ * row's own errors; then the record a confirm would leave (`checkRecord`: the row's values for a
+ * new participation, merged over the stored ones for an update, so an empty cell keeps a stored
+ * required value); then create, update or unchanged. Possible duplicates are the new rows whose
+ * birth date and names match another new row or an existing participation.
+ */
 export function planImport(input: {
   rows: readonly ValidatedRow[];
   /** The targets the mapping has, so an empty cell keeps the stored value (`kept_existing`). */
   mapped: ReadonlySet<ImportTarget>;
   existing: readonly ExistingParticipant[];
+  /** The rules the project relaxed (Q75). */
+  relaxedRuleIds: ReadonlySet<string>;
 }): ImportPlan {
   const byNumber = new Map(input.existing.map((p) => [p.values.personnelNumber, p]));
   const inFile = new Map<string, number>();
@@ -54,61 +67,74 @@ export function planImport(input: {
     const number = values.personnelNumber;
     if (number !== undefined) inFile.set(number, (inFile.get(number) ?? 0) + 1);
   }
-  // Identities of existing participations and of the file's new rows, for possible duplicates.
-  const identities = new Map<string, number>();
-  const countIdentity = (values: ImportValues) => {
-    const key = identityKey(values);
-    if (key !== undefined) identities.set(key, (identities.get(key) ?? 0) + 1);
-  };
-  for (const p of input.existing) countIdentity(p.values);
-  const creatable = (r: ValidatedRow) => {
-    const number = r.values.personnelNumber;
-    return (
-      number !== undefined &&
-      !byNumber.has(number) &&
-      inFile.get(number) === 1 &&
-      !r.issues.some((issue) => issue.severity === "error")
-    );
-  };
-  for (const r of input.rows) if (creatable(r)) countIdentity(r.values);
 
   const rows = input.rows.map((r): PlannedRow => {
-    const issues = [...r.issues];
-    const number = r.values.personnelNumber;
-    if (number !== undefined && (inFile.get(number) as number) > 1) {
-      issues.push({
-        row: r.row,
+    const { row, values } = r;
+    const number = values.personnelNumber;
+    if (number === undefined) return { row, outcome: "error", issues: [...r.issues] };
+    if ((inFile.get(number) as number) > 1) {
+      const duplicate: ImportIssue = {
+        row,
         target: "personnelNumber",
         code: "duplicate_in_file",
         severity: "error",
-      });
-    }
-    if (number === undefined || issues.some((issue) => issue.severity === "error")) {
-      return { row: r.row, outcome: "error", issues };
+      };
+      return { row, outcome: "error", issues: [...r.issues, duplicate] };
     }
     const match = byNumber.get(number);
-    if (!match) {
-      const key = identityKey(r.values);
-      if (key !== undefined && (identities.get(key) as number) > 1) {
-        issues.push({ row: r.row, target: null, code: "possible_duplicate", severity: "warning" });
-      }
-      return { row: r.row, outcome: "create", issues };
+    if (match?.terminal) {
+      const notice: ImportIssue = {
+        row,
+        target: null,
+        code: "terminal_not_updated",
+        severity: "warning",
+      };
+      return { row, outcome: "skip", participationId: match.participationId, issues: [notice] };
     }
+    if (hasError(r.issues)) return { row, outcome: "error", issues: [...r.issues] };
+    const record = checkRecord({
+      row,
+      values: { ...match?.values, ...values },
+      fromRow: values,
+      relaxedRuleIds: input.relaxedRuleIds,
+    });
+    const issues = [...r.issues, ...record];
+    if (hasError(record)) return { row, outcome: "error", issues };
+    if (!match) return { row, outcome: "create", issues };
     const participationId = match.participationId;
-    if (match.terminal) {
-      issues.push({ row: r.row, target: null, code: "terminal_not_updated", severity: "warning" });
-      return { row: r.row, outcome: "skip", participationId, issues };
-    }
-    const changed = (Object.keys(r.values) as ImportTarget[]).filter(
-      (target) => r.values[target] !== match.values[target],
+    const changed = (Object.keys(values) as ImportTarget[]).filter(
+      (target) => values[target] !== match.values[target],
     );
-    for (const target of keptTargets(input.mapped, r.values, match.values)) {
-      issues.push({ row: r.row, target, code: "kept_existing", severity: "warning" });
+    for (const target of keptTargets(input.mapped, values, match.values)) {
+      issues.push({ row, target, code: "kept_existing", severity: "warning" });
     }
     return changed.length === 0
-      ? { row: r.row, outcome: "unchanged", participationId, issues }
-      : { row: r.row, outcome: "update", participationId, changed, issues };
+      ? { row, outcome: "unchanged", participationId, issues }
+      : { row, outcome: "update", participationId, changed, issues };
   });
+
+  // Possible duplicates: the identities of existing participations and of the rows to create.
+  const identities = new Map<string, number>();
+  const count = (values: ImportValues) => {
+    const key = identityKey(values);
+    if (key !== undefined) identities.set(key, (identities.get(key) ?? 0) + 1);
+  };
+  for (const p of input.existing) count(p.values);
+  const creates = rows.flatMap((planned, i) =>
+    planned.outcome === "create" ? [[planned, input.rows[i]!.values] as const] : [],
+  );
+  for (const [, values] of creates) count(values);
+  for (const [planned, values] of creates) {
+    const key = identityKey(values);
+    if (key !== undefined && (identities.get(key) as number) > 1) {
+      planned.issues.push({
+        row: planned.row,
+        target: null,
+        code: "possible_duplicate",
+        severity: "warning",
+      });
+    }
+  }
 
   const counts = { create: 0, update: 0, unchanged: 0, skip: 0, error: 0 };
   for (const r of rows) counts[r.outcome] += 1;

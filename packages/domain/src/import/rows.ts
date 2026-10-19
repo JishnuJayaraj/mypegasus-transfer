@@ -10,7 +10,9 @@ import {
 } from "./targets";
 
 // Row validation (Slice 2 plan 5.11; R6, R23, R24; round 32). Pure: `today` comes from the
-// Clock. Issues name the row, the target and the code, never the value.
+// Clock. Issues name the row, the target and the code, never the value. `validateRow` checks the
+// cells; `checkRecord` checks the values a confirm would leave stored (the row's merged over the
+// stored ones for an update), because an empty cell keeps a stored value (Q103).
 
 /**
  * A cell as the parser returns it: text, a numeric XLSX cell with its stored value, or a date
@@ -25,8 +27,7 @@ export type RowInput = {
   /** The row number in the file (the header row is row 1). */
   row: number;
   /** The cell of each mapped target; an unmapped target is absent. */
-  cells: Partial<Record<ImportTarget, ImportCell | null>>;
-  relaxedRuleIds: ReadonlySet<string>;
+  cells: Partial<Record<ImportTarget, ImportCell | null | undefined>>;
   /** The whole-import country the PL selected, if any. */
   country: string | null;
   today: IsoDate;
@@ -76,8 +77,13 @@ function age(birth: IsoDate, on: IsoDate): number {
 const dateTargets = new Set<ImportTarget>(["birthDate", "oldEmploymentEndDate"]);
 const droppable = new Set<ImportTarget>(["phone", "mobile", "privateEmail", "workEmail"]);
 
+/**
+ * The cells of one row: each value read and checked on its own, the Personalnummer required (it
+ * is the match key), the birth date not after today and the address as one unit. Whether the
+ * other targets are present is `checkRecord`'s question.
+ */
 export function validateRow(input: RowInput): ValidatedRow {
-  const { row, relaxedRuleIds } = input;
+  const { row } = input;
   const issues: ImportIssue[] = [];
   const values: ImportValues = {};
   const error = (target: ImportIssue["target"], code: ImportIssueCode) =>
@@ -85,7 +91,10 @@ export function validateRow(input: RowInput): ValidatedRow {
   const warning = (target: ImportTarget, code: ImportIssueCode) =>
     issues.push({ row, target, code, severity: "warning" });
 
-  for (const [target, cell] of Object.entries(input.cells) as [ImportTarget, ImportCell | null][]) {
+  for (const [target, cell] of Object.entries(input.cells) as [
+    ImportTarget,
+    ImportCell | null | undefined,
+  ][]) {
     const value = readCell(target, cell);
     if (value === null) continue;
     if ("code" in value) {
@@ -99,33 +108,60 @@ export function validateRow(input: RowInput): ValidatedRow {
     }
   }
 
-  for (const target of ["personnelNumber", "lastName", "firstName"] as const) {
-    if (values[target] === undefined && !failed(issues, target)) error(target, "required_missing");
+  if (values.personnelNumber === undefined && !failed(issues, "personnelNumber")) {
+    error("personnelNumber", "required_missing");
   }
-  for (const target of ["birthDate", "oldEmploymentEndDate"] as const) {
-    if (
-      values[target] === undefined &&
-      !failed(issues, target) &&
-      isRequired(target, relaxedRuleIds)
-    ) {
-      error(target, "required_missing");
-    }
-  }
-
-  const { birthDate, oldEmploymentEndDate } = values;
-  if (birthDate !== undefined && compareIsoDates(birthDate, input.today) > 0) {
+  if (values.birthDate !== undefined && compareIsoDates(values.birthDate, input.today) > 0) {
     error("birthDate", "birth_date_in_future");
-  } else if (birthDate !== undefined && oldEmploymentEndDate !== undefined) {
-    if (compareIsoDates(oldEmploymentEndDate, birthDate) < 0) {
-      error("oldEmploymentEndDate", "end_before_birth");
-    } else {
-      const years = age(birthDate, oldEmploymentEndDate);
-      if (years < 15 || years > 67) warning("birthDate", "age_implausible");
-    }
   }
-
   checkAddress(input, values, issues, error);
   return { row, values, issues };
+}
+
+/**
+ * The values a confirm would leave stored (`values`: the row's own for a new participation, the
+ * row's merged over the stored ones for an update): the names always, the dates and the address
+ * unless their rule is relaxed (R6), and the Austrittsdatum not before the birth date with the age
+ * at it plausible, checked when the row supplies at least one of the two dates.
+ */
+export function checkRecord(input: {
+  row: number;
+  values: ImportValues;
+  /** The row's own values. */
+  fromRow: ImportValues;
+  relaxedRuleIds: ReadonlySet<string>;
+}): ImportIssue[] {
+  const { row, values, fromRow, relaxedRuleIds } = input;
+  const issues: ImportIssue[] = [];
+  const missing = (target: ImportIssue["target"]) =>
+    issues.push({ row, target, code: "required_missing", severity: "error" });
+  for (const target of ["lastName", "firstName"] as const) {
+    if (values[target] === undefined) missing(target);
+  }
+  for (const target of ["birthDate", "oldEmploymentEndDate"] as const) {
+    if (values[target] === undefined && isRequired(target, relaxedRuleIds)) missing(target);
+  }
+  if (values.addressStreet === undefined && isRequired("address", relaxedRuleIds)) {
+    missing("address");
+  }
+  const { birthDate, oldEmploymentEndDate } = values;
+  const supplied = fromRow.birthDate !== undefined || fromRow.oldEmploymentEndDate !== undefined;
+  if (birthDate !== undefined && oldEmploymentEndDate !== undefined && supplied) {
+    if (compareIsoDates(oldEmploymentEndDate, birthDate) < 0) {
+      issues.push({
+        row,
+        target: "oldEmploymentEndDate",
+        code: "end_before_birth",
+        severity: "error",
+      });
+    } else {
+      const years = age(birthDate, oldEmploymentEndDate);
+      if (years < 15 || years > 67) {
+        issues.push({ row, target: "birthDate", code: "age_implausible", severity: "warning" });
+      }
+    }
+  }
+  return issues;
 }
 
 /** Whether a target already has an error (so `required_missing` isn't added on top). */
@@ -135,8 +171,9 @@ const failed = (issues: readonly ImportIssue[], target: ImportTarget) =>
 type CellResult = { text: string; converted?: boolean } | { code: ImportIssueCode } | null;
 
 /** One cell: its text, an issue or null (empty). */
-function readCell(target: ImportTarget, cell: ImportCell | null): CellResult {
-  if (cell === null) return null;
+function readCell(target: ImportTarget, cell: ImportCell | null | undefined): CellResult {
+  // A sparse row may name a target with `undefined`: absent, like an empty cell.
+  if (cell === null || cell === undefined) return null;
   if (typeof cell === "object" && "number" in cell) return readNumber(target, cell.number);
   if (typeof cell === "object") {
     if (!dateTargets.has(target)) return { code: "invalid_cell_type" };
@@ -173,8 +210,9 @@ function readNumber(target: ImportTarget, stored: string): CellResult {
 
 /**
  * The address as one unit (R23, round 32): street, postal code and city all or none (a country
- * cell alone is incomplete too); none only with `base-import-address` relaxed; the country from the
- * cell, else the import's selected one, stored as `DE`; a German postal code is five digits.
+ * cell alone is incomplete too); the country from the cell, else the import's selected one, stored
+ * as `DE`; a German postal code is five digits. An address with any error is dropped as a whole.
+ * Whether an address is required is `checkRecord`'s question.
  */
 function checkAddress(
   input: RowInput,
@@ -189,10 +227,7 @@ function checkAddress(
   }
   const parts = addressParts.filter((part) => values[part] !== undefined).length;
   const country = values.addressCountry ?? input.country ?? undefined;
-  if (parts === 0 && values.addressCountry === undefined) {
-    if (isRequired("address", input.relaxedRuleIds)) error("address", "required_missing");
-    return;
-  }
+  if (parts === 0 && values.addressCountry === undefined) return;
   if (parts < addressParts.length) error("address", "address_incomplete");
   else if (country === undefined) error("addressCountry", "country_required");
   else if (normaliseCountry(country) === null)
