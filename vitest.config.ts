@@ -23,6 +23,7 @@ export default defineConfig({
           "packages/domain/src/dates.ts",
           "packages/domain/src/project.ts",
           "packages/domain/src/projects/**",
+          "packages/domain/src/import/**",
           "packages/config/src/**",
         ].map((glob) => [glob, { lines: 100, functions: 100, branches: 100, statements: 100 }]),
       ),
