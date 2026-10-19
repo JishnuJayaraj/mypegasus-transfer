@@ -1545,6 +1545,209 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/config/pins/{agenturKey}/migration-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** What migrating a pinned template to a newer catalog version would change, with the review of the Agentur's scoped setting (plan 5.8); writes nothing */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                    agenturKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MigrationPreviewInput"];
+                };
+            };
+            responses: {
+                /** @description The changes and the review */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateMigrationPreview"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/config/pins/{agenturKey}/migration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Migrate a pinned template to a newer catalog version with keep or remove for every key of the Agentur's scoped setting (plan 5.8, R15) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                    agenturKey: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MigrateTemplateInput"];
+                };
+            };
+            responses: {
+                /** @description The project's configuration after the change */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectConfig"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -1899,6 +2102,7 @@ export interface components {
                  * @description Staff user id
                  */
                 pinnedBy: string;
+                migrationTargets: number[];
             }[];
             projectBlockers: components["schemas"]["ConfigBlocker"][];
             agenturen: {
@@ -1987,6 +2191,7 @@ export interface components {
                 changeOverride: boolean;
                 requestRelaxation: boolean;
                 activateProject: boolean;
+                migrateTemplate: boolean;
             };
         };
         ConfigBlocker: {
@@ -2059,6 +2264,63 @@ export interface components {
             warnings: components["schemas"]["ConfigBlocker"][];
         };
         ActivateProjectInput: Record<string, never>;
+        TemplateMigrationPreview: {
+            agenturKey: string;
+            fromVersion: number;
+            version: number;
+            expectedVersion: number;
+            settings: {
+                key: string;
+                from: string | number | boolean | null;
+                to: string | number | boolean | null;
+            }[];
+            rules: {
+                added: {
+                    id: string;
+                    /** @enum {string} */
+                    step: "asu_registration" | "data_collection" | "profiling" | "agentur_submission" | "dsv" | "project_checklist";
+                    /** @enum {string} */
+                    basis?: "statutory" | "ba_form" | "operational_default";
+                }[];
+                removed: {
+                    id: string;
+                    /** @enum {string} */
+                    step: "asu_registration" | "data_collection" | "profiling" | "agentur_submission" | "dsv" | "project_checklist";
+                    /** @enum {string} */
+                    basis?: "statutory" | "ba_form" | "operational_default";
+                }[];
+                changed: {
+                    id: string;
+                    /** @enum {string} */
+                    step: "asu_registration" | "data_collection" | "profiling" | "agentur_submission" | "dsv" | "project_checklist";
+                    /** @enum {string} */
+                    basis?: "statutory" | "ba_form" | "operational_default";
+                }[];
+            };
+            fields: {
+                added: string[];
+                removed: string[];
+                changed: string[];
+            };
+            overrideIssues: string[];
+            review: {
+                key: string;
+                value: string | number | boolean | null;
+                from: string | number | boolean | null;
+                to: string | number | boolean | null;
+            }[];
+        };
+        MigrationPreviewInput: {
+            version: number;
+        };
+        MigrateTemplateInput: {
+            fromVersion: number;
+            version: number;
+            expectedVersion: number;
+            decisions: {
+                [key: string]: "keep" | "remove";
+            };
+        };
     };
     responses: never;
     parameters: never;

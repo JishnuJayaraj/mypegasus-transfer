@@ -4,6 +4,8 @@ import {
   AgenturKey,
   checkAgenturSetting,
   DecideRelaxationInput,
+  MigrateTemplateInput,
+  MigrationPreviewInput,
   PinTemplateInput,
   ProjectActivation,
   ProjectConfig,
@@ -12,6 +14,7 @@ import {
   RequestRelaxationInput,
   RuleId,
   SetAgenturSettingInput,
+  TemplateMigrationPreview,
   WithdrawRelaxationInput,
   type Operation,
 } from "@transfer/domain";
@@ -19,6 +22,7 @@ import type { Context } from "hono";
 import { projectPermissions } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { activateProject } from "../projects/activation";
+import { migrateTemplate, previewMigration } from "../projects/migration";
 import { domainProblem, problem, problemResponses } from "../problem";
 import {
   changeAgenturSetting,
@@ -376,6 +380,81 @@ export function projectConfigRoutes(deps: Deps) {
       if (result === null) return problem(c, "not-found");
       if ("issues" in result) return domainProblem(c, result.issues);
       return c.json(result, 200);
+    },
+  );
+
+  const migrationProblems = [
+    "validation-error",
+    "unauthenticated",
+    "forbidden",
+    "not-found",
+    "unsupported-media-type",
+    "domain-error",
+  ] as const;
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/projects/{projectId}/config/pins/{agenturKey}/migration-preview",
+      tags: ["config"],
+      summary:
+        "What migrating a pinned template to a newer catalog version would change, with the review of the Agentur's scoped setting (plan 5.8); writes nothing",
+      middleware,
+      request: {
+        params: AgenturSettingParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: MigrationPreviewInput } },
+        },
+      },
+      responses: {
+        200: json(TemplateMigrationPreview, "The changes and the review"),
+        ...problemResponses(...migrationProblems),
+      },
+    }),
+    async (c) => {
+      const { projectId, agenturKey } = c.req.valid("param");
+      // Visibility and the PL's operation first (404/403), then the target (422; round 28).
+      const may = await projectPermissions(db, sessionUser(c), projectId);
+      if (!may) return problem(c, "not-found");
+      if (!may({ kind: "migrateTemplate" })) return problem(c, "forbidden");
+      const input = c.req.valid("json");
+      const result = await previewMigration(db, release, projectId, agenturKey, input);
+      if (result === null) return problem(c, "not-found");
+      if ("issues" in result) return domainProblem(c, result.issues);
+      return c.json(result, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/projects/{projectId}/config/pins/{agenturKey}/migration",
+      tags: ["config"],
+      summary:
+        "Migrate a pinned template to a newer catalog version with keep or remove for every key of the Agentur's scoped setting (plan 5.8, R15)",
+      middleware,
+      request: {
+        params: AgenturSettingParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: MigrateTemplateInput } },
+        },
+      },
+      responses: {
+        200: configAfter,
+        ...problemResponses(...migrationProblems, "conflict"),
+      },
+    }),
+    async (c) => {
+      const { projectId, agenturKey } = c.req.valid("param");
+      // 404 → 403 → the target 422 → the versions 409 → the review and the override 422 → the
+      // write (round 28).
+      const may = await projectPermissions(db, sessionUser(c), projectId);
+      if (!may) return problem(c, "not-found");
+      if (!may({ kind: "migrateTemplate" })) return problem(c, "forbidden");
+      const outcome = await migrateTemplate(writer(c), projectId, agenturKey, c.req.valid("json"));
+      return respond(c, outcome, projectId, may);
     },
   );
 

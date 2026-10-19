@@ -3,13 +3,7 @@ import { eq, project, projectEntryWave, sql, type Database } from "@transfer/db"
 import { projectActivationBlockers, type ProjectActivation } from "@transfer/domain";
 import { functionRefusal } from "../database-errors";
 import { auditContext, callFunction, utc } from "../sql";
-import {
-  currentOverride,
-  currentPins,
-  submissionBlockers,
-  templatesOf,
-  type Release,
-} from "./template-pins";
+import { projectSnapshot, submissionBlockers, type Release } from "./template-pins";
 
 /** The activation refusals that are a 422 (R21); `project_not_found` is a 404. */
 const activationRefusals: ReadonlySet<string> = new Set([
@@ -36,28 +30,13 @@ export async function activateProject(
     .transaction(async (tx) => {
       // The function takes the lock again (re-entrant).
       await tx.execute(sql`select lock_project_setup(${projectId}::uuid)`);
-      const [found] = await tx
-        .select({
-          type: project.type,
-          status: project.status,
-          projectAgenturKey: project.projectAgenturKey,
-        })
-        .from(project)
-        .where(eq(project.id, projectId));
-      if (found!.status !== "draft") return { issues: ["project_not_draft"] };
-      const pins = await currentPins(tx, projectId);
+      const { project: found, pins, input } = (await projectSnapshot(tx, release, projectId))!;
+      if (found.status !== "draft") return { issues: ["project_not_draft"] };
       const waves = await tx
         .select({ latestEntryDate: projectEntryWave.latestEntryDate })
         .from(projectEntryWave)
         .where(eq(projectEntryWave.projectId, projectId));
-      const input = {
-        base: release.baseDefaults,
-        templatesByAgentur: templatesOf(pins),
-        override: (await currentOverride(tx, projectId)).content,
-        projectType: found!.type,
-        projectAgenturKey: found!.projectAgenturKey,
-      };
-      const blockers = projectActivationBlockers(found!, waves, resolveForProject(input));
+      const blockers = projectActivationBlockers(found, waves, resolveForProject(input));
       if (blockers.length) return { issues: blockers };
       await callFunction(
         tx,

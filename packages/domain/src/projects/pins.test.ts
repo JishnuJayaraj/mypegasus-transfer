@@ -109,6 +109,7 @@ describe("ProjectConfig", () => {
           sha256Prefix: "e5a0727e979a",
           pinnedAt: "2026-10-17T09:00:00.000000Z",
           pinnedBy: "00000000-0000-4000-8000-000000000003",
+          migrationTargets: [2],
         },
       ],
       projectBlockers: [],
@@ -164,6 +165,7 @@ describe("ProjectConfig", () => {
         changeOverride: true,
         requestRelaxation: true,
         activateProject: false,
+        migrateTemplate: true,
       },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);
