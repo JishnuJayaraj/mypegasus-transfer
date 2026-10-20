@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PageQuery, ProblemDetails, Project, StaffUser, page } from "./index";
+import { CurrentStaffUser, PageQuery, ProblemDetails, Project, StaffUser, page } from "./index";
 
 const project = {
   id: "00000000-0000-4000-9000-000000000001",
@@ -41,6 +41,19 @@ describe("StaffUser", () => {
       role: "project_lead",
     };
     expect(StaffUser.parse(user)).toEqual(user);
+  });
+
+  it("carries the session's end for /me as UTC (D2)", () => {
+    const me = {
+      id: project.createdBy,
+      displayName: "Petra Projektleitung",
+      role: "project_lead",
+      sessionExpiresAt: "2026-10-20T16:30:00.123456Z",
+    };
+    expect(CurrentStaffUser.parse(me)).toEqual(me);
+    expect(
+      CurrentStaffUser.safeParse({ ...me, sessionExpiresAt: "2026-10-20T18:30:00+02:00" }).success,
+    ).toBe(false);
   });
 });
 

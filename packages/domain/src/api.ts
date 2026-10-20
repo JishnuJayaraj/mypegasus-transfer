@@ -1,12 +1,19 @@
 import { z } from "zod";
 import { StaffRole } from "./enums";
 
-/** The current staff user (`GET /api/v1/me`) and the dev user switcher. */
+/** A staff user: `GET /api/v1/me` and the dev user switcher. */
 export const StaffUser = z
   .object({ id: z.uuid(), displayName: z.string(), role: StaffRole })
   .meta({ id: "StaffUser" });
 
 export type StaffUser = z.infer<typeof StaffUser>;
+
+/** `GET /api/v1/me`: the staff user and when the session ends (8 hours absolute, D2). */
+export const CurrentStaffUser = StaffUser.extend({
+  sessionExpiresAt: z.iso.datetime().meta({ description: "ISO 8601 UTC; no sliding window" }),
+}).meta({ id: "CurrentStaffUser" });
+
+export type CurrentStaffUser = z.infer<typeof CurrentStaffUser>;
 
 /** Cursor pagination (ADR-0010). The cursor is opaque to clients. */
 export const PageQuery = z.object({
