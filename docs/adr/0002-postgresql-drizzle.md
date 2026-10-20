@@ -307,7 +307,7 @@ Functions:
     is the actor's own), codes, ids and the details pattern of `audit_event`. `staff_user` keeps
     `(oidc_issuer, oidc_subject)` unique and complete, and one account per `lower(email)`.
 
-- **Org model (0036, 0037; Slice 3, PR 3c, Q62, Q126):** the flat `staff_user.role` is gone.
+- **Org model (0036–0038; Slice 3, PR 3c, Q62, Q126, Q131):** the flat `staff_user.role` is gone.
   0036 maps `project_lead` to `staff_user.may_create_projects` and `admin` to a global
   `staff_org_role` row (`granted_by` null only for these); flat regional roles get none (no region
   is known). `staff_org_role` holds `admin` without a region and `regional_admin` /
@@ -324,18 +324,22 @@ Functions:
     `create_staff_user` / `update_staff_user` (`staff_account_created`, `staff_account_changed`
     with the changed keys and the flag's value; `email_taken` from the case-insensitive unique
     index, `staff_user_unchanged`, `account_deactivated`, `unknown_account`), `grant_org_role` /
-    `revoke_org_role` (`org_role_granted` / `org_role_revoked` with role and region;
+    `revoke_org_role` and the atomic complete-set `set_org_roles` (`org_role_granted` /
+    `org_role_revoked` with role and region;
     `org_role_exists`, `org_role_not_found`, `region_not_found`, `own_account` for the admin's own
     admin role). Their parameters are typed values, the actor's staff id and the request id.
   - `deactivate_staff_user(id, actor, request_id)`: never the actor's own account
-    (`own_account`). It takes the exclusive lock of every project the account is a member of or
-    assigned in (id order), then locks the account `FOR UPDATE` (`start_staff_session` holds it
+    (`own_account`). It and org-role revocation/set take one stable transaction advisory lock
+    before re-checking the acting admin, so concurrent mutual operations leave an active admin
+    (Q131). Deactivation then takes the exclusive lock of every project the account is a member of
+    or assigned in (id order), then locks the account `FOR UPDATE` (`start_staff_session` holds it
     `FOR SHARE`, the team functions too), takes the locks of anything added before that, and
     refuses `last_project_lead` while the account is a project's only active PL. In the same
     transaction it ends the live sessions (`deactivated`), closes the open assignments
     (`participant_unassigned`, `account_deactivated`), deletes the memberships
-    (`project_member_removed`, `account_deactivated`), sets `deactivated_at` and writes
-    `staff_account_deactivated` with the counts.
+    (`project_member_removed`, `account_deactivated`), deletes every org-role grant
+    (`org_role_revoked` with role, region and `account_deactivated`), sets `deactivated_at` and
+    writes `staff_account_deactivated` with the counts, including removed org roles.
   - Teams, under the exclusive project lock, with `audit_context` (a staff user, never assisted
     mode): `add_project_member` (the project's PL any role; a global admin only `project_lead` for
     someone else, `own_account`; an active account, `membership_exists`), `remove_project_member`

@@ -4,7 +4,6 @@ import {
   CreateRegionInput,
   CreateStaffUserInput,
   isGlobalAdmin,
-  orgRoleChanges,
   PageQuery,
   readsStaffDirectory,
   Region,
@@ -321,7 +320,7 @@ export function adminRoutes(deps: Deps) {
       path: "/staff-users/{staffUserId}/deactivation",
       tags: ["admin"],
       summary:
-        "Deactivate an account (the global admin, never their own): ends its sessions, memberships and assignments; refused for a project's last active PL",
+        "Deactivate an account (the global admin, never their own): removes org roles, ends sessions, memberships and assignments; refused for a project's last active PL",
       middleware,
       request: {
         params: StaffUserParams,
@@ -370,7 +369,7 @@ export function adminRoutes(deps: Deps) {
       path: "/staff-users/{staffUserId}/org-roles",
       tags: ["admin"],
       summary:
-        "Set an account's org roles (the global admin): admin globally, the regional roles per region",
+        "Atomically set an account's complete org-role set (the global admin): admin globally, the regional roles per region",
       middleware,
       request: {
         params: StaffUserParams,
@@ -392,26 +391,19 @@ export function adminRoutes(deps: Deps) {
       const user = sessionUser(c);
       if (!(await isAdmin(user))) return problem(c, "forbidden");
       const { staffUserId } = c.req.valid("param");
-      const account = await accountOf(staffUserId);
-      if (!account) return problem(c, "not-found");
-      const { grant, revoke } = orgRoleChanges(account.orgRoles, c.req.valid("json").orgRoles);
+      const { orgRoles } = c.req.valid("json");
+      const roles = `{${orgRoles.map(({ role }) => role).join(",")}}`;
+      const regionIds = `{${orgRoles.map(({ regionId }) => regionId ?? "NULL").join(",")}}`;
       const refused = await db
-        .transaction(async (tx) => {
-          const call = (
-            fn: "grant_org_role" | "revoke_org_role",
-            { role, regionId }: OrgRoleGrant,
-          ) =>
-            tx.execute(
-              sql`select ${sql.raw(fn)}(p_staff_user_id => ${staffUserId}::uuid,
-                p_role => ${role}::org_role, p_region_id => ${regionId}::uuid,
-                p_actor => ${user.id}::uuid, p_request_id => ${c.get("requestId")})`,
-            );
-          for (const role of revoke) await call("revoke_org_role", role);
-          for (const role of grant) await call("grant_org_role", role);
-          return null;
-        })
+        .execute(
+          sql`select set_org_roles(p_staff_user_id => ${staffUserId}::uuid,
+            p_roles => ${roles}::org_role[], p_region_ids => ${regionIds}::uuid[],
+            p_actor => ${user.id}::uuid, p_request_id => ${c.get("requestId")})`,
+        )
+        .then(() => null)
         .catch((error: unknown) =>
           refusalIn(error, [
+            "unknown_account",
             "account_deactivated",
             "own_account",
             "region_not_found",
@@ -419,6 +411,7 @@ export function adminRoutes(deps: Deps) {
             "org_role_not_found",
           ]),
         );
+      if (refused === "unknown_account") return problem(c, "not-found");
       if (refused) return asProblem(c, refused);
       return c.json((await accountOf(staffUserId))!, 200);
     },

@@ -94,6 +94,7 @@ describe("staff administration events (Q126)", () => {
       endedSessions: 1,
       removedMemberships: 3,
       endedAssignments: 0,
+      removedOrgRoles: 2,
     };
     expect(ok(deactivated)).toBe(true);
     expect(ok({ ...deactivated, endedSessions: -1 })).toBe(false);
@@ -107,6 +108,24 @@ describe("staff administration events (Q126)", () => {
       expect(ok({ ...of, type, role: "admin", regionId })).toBe(false);
       expect(ok({ ...of, type, role: "project_lead", regionId })).toBe(false);
     }
+    expect(
+      ok({
+        ...of,
+        type: "org_role_revoked",
+        role: "regional_admin",
+        regionId,
+        reasonCode: "account_deactivated",
+      }),
+    ).toBe(true);
+    expect(
+      ok({
+        ...of,
+        type: "org_role_granted",
+        role: "regional_admin",
+        regionId,
+        reasonCode: "account_deactivated",
+      }),
+    ).toBe(false);
   });
 
   it("records region events with the region's id and changed keys, never its name", () => {

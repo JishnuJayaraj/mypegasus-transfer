@@ -81,9 +81,10 @@ generator then. No action now.
 
 - **New routes:** `GET/POST /regions`, `PATCH /regions/{id}`; `GET/POST /staff-users` (cursor
   pagination), `PATCH /staff-users/{id}`, `POST /staff-users/{id}/deactivation` (an empty strict
-  body), `PUT /staff-users/{id}/org-roles` (the complete set; the server grants and revokes the
-  difference in one transaction); `GET /staff-directory?search=` (id and name of active staff,
-  at most 20); `GET/POST /projects/{id}/members`, `DELETE /projects/{id}/members/{staffUserId}/{role}`;
+  body), `PUT /staff-users/{id}/org-roles` (an atomic complete set; the database locks and re-reads
+  the target before granting and revoking the difference); `GET /staff-directory?search=` (id and
+  name of active staff, at most 20); `GET/POST /projects/{id}/members`,
+  `DELETE /projects/{id}/members/{staffUserId}/{role}`;
   `POST /projects/{id}/assignments` (1–500 distinct participations, all or nothing),
   `DELETE /participations/{id}/assignments/{staffUserId}`. `regionId` on project create, update
   and the `Project` schema; `consultants` in participant list items; `assignments` and

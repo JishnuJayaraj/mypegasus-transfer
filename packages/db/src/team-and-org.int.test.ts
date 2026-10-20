@@ -266,6 +266,20 @@ const rolesOf = async (staffUserId: string) =>
     )
   ).rows;
 
+const setRoles = (
+  client: Client,
+  staffUserId: string,
+  roles: { role: string; regionId: string | null }[],
+  actor: string = admin,
+) =>
+  call(client, "set_org_roles", {
+    staffUserId,
+    roles: roles.map(({ role }) => role),
+    regionIds: roles.map(({ regionId }) => regionId),
+    actor,
+    requestId,
+  });
+
 describe("org roles (Q80, Q126)", () => {
   const revoke = (args: Record<string, unknown> = {}) =>
     call(app, "revoke_org_role", {
@@ -332,6 +346,88 @@ describe("org roles (Q80, Q126)", () => {
       "own_account",
     );
     expect(await refusal(revoke({ actor: projectLead }))).toBe("actor_not_allowed");
+  });
+
+  it("serialize complete-set operations so a retry ends as exactly one requested set", async () => {
+    await setRoles(app, consultant, [{ role: "regional_admin", regionId: seedRegionIds.nord }]);
+    const first = [{ role: "regional_operations_manager", regionId: seedRegionIds.sued }];
+    const second = [
+      { role: "regional_admin", regionId: seedRegionIds.nord },
+      { role: "regional_admin", regionId: seedRegionIds.sued },
+    ];
+
+    await app.query("begin");
+    try {
+      await setRoles(app, consultant, first);
+      expect(
+        await tryWithin(other, "select set_org_roles($1, $2::org_role[], $3::uuid[], $4, $5)", [
+          consultant,
+          second.map(({ role }) => role),
+          second.map(({ regionId }) => regionId),
+          admin,
+          requestId,
+        ]),
+      ).toBe("55P03");
+      await app.query("commit");
+      await setRoles(other, consultant, second);
+    } catch (error) {
+      await app.query("rollback");
+      throw error;
+    }
+
+    expect(
+      (await rolesOf(consultant))
+        .map(({ role, region_id }) => ({ role, regionId: region_id }))
+        .toSorted((a, b) => `${a.role}:${a.regionId}`.localeCompare(`${b.role}:${b.regionId}`)),
+    ).toEqual(second);
+  });
+
+  it("preserve an active admin when two admins concurrently revoke each other", async () => {
+    const secondAdmin = await createStaffUser({
+      displayName: "Anton Administration",
+      email: "anton.admin@example.org",
+    });
+    await grant({ staffUserId: secondAdmin, role: "admin", regionId: null });
+
+    await app.query("begin");
+    try {
+      await call(app, "revoke_org_role", {
+        staffUserId: secondAdmin,
+        role: "admin",
+        regionId: null,
+        actor: admin,
+        requestId,
+      });
+      expect(
+        await tryWithin(other, "select revoke_org_role($1, 'admin', null, $2, $3)", [
+          admin,
+          secondAdmin,
+          requestId,
+        ]),
+      ).toBe("55P03");
+      await app.query("commit");
+      expect(
+        await refusal(
+          call(other, "revoke_org_role", {
+            staffUserId: admin,
+            role: "admin",
+            regionId: null,
+            actor: secondAdmin,
+            requestId,
+          }),
+        ),
+      ).toBe("actor_not_allowed");
+    } catch (error) {
+      await app.query("rollback");
+      throw error;
+    }
+
+    const { rows } = await owner.query(
+      `select count(*)::int as n
+       from staff_org_role r join staff_user u on u.id = r.staff_user_id
+       where r.role = 'admin' and u.deactivated_at is null`,
+    );
+    expect(rows).toEqual([{ n: 1 }]);
   });
 });
 
@@ -542,6 +638,8 @@ describe("deactivate_staff_user (Q59, Q126)", () => {
   it("ends sessions, memberships and assignments in one transaction, with the counts", async () => {
     const a = await participation();
     await assign([a]);
+    await grant();
+    await grant({ role: "regional_operations_manager", regionId: seedRegionIds.nord });
     await startSession(consultant);
     await startSession(projectLead);
     await deactivate(consultant);
@@ -556,6 +654,7 @@ describe("deactivate_staff_user (Q59, Q126)", () => {
       expect((await members(projectId)).map((m) => m.staff_user_id)).not.toContain(consultant);
     }
     expect(await openAssignments()).toEqual([]);
+    expect(await rolesOf(consultant)).toEqual([]);
     expect(
       (await projectEvents(["participant_unassigned", "project_member_removed"])).map((e) => [
         e.event_type,
@@ -570,9 +669,31 @@ describe("deactivate_staff_user (Q59, Q126)", () => {
       event_type: "staff_account_deactivated",
       actor_staff_user_id: admin,
       subject_staff_user_id: consultant,
-      details: { endedSessions: 1, removedMemberships: 3, endedAssignments: 1 },
+      details: {
+        endedSessions: 1,
+        removedMemberships: 3,
+        endedAssignments: 1,
+        removedOrgRoles: 2,
+      },
       request_id: requestId,
     });
+    const { rows: removedRoles } = await owner.query(
+      `select reason_code, details
+       from staff_audit_event
+       where event_type = 'org_role_revoked' and subject_staff_user_id = $1
+       order by details->>'role', details->>'regionId'`,
+      [consultant],
+    );
+    expect(removedRoles).toEqual([
+      {
+        reason_code: "account_deactivated",
+        details: { role: "regional_admin", regionId: seedRegionIds.sued },
+      },
+      {
+        reason_code: "account_deactivated",
+        details: { role: "regional_operations_manager", regionId: seedRegionIds.nord },
+      },
+    ]);
     const { rows } = await owner.query(
       "select deactivated_at is not null as deactivated from staff_user where id = $1",
       [consultant],

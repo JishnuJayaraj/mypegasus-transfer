@@ -48,7 +48,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
-  // Staff logins, logouts, refusals and identity bindings (D6): staff ids and codes only.
+  // Staff authentication and administration history (data-protection.md): staff ids, counts and
+  // codes only, including removed roles and their region; never names or emails.
   staff_audit_event: {
     retentionClass: "audit_log",
     dataClass: "internal",
@@ -56,7 +57,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   },
   // Regions (Niederlassungen, Q35, Q126): codes and names, no personal data.
   region: { retentionClass: "reference_data", dataClass: "internal", holdsParticipantData: false },
-  // Org roles (Q126): staff ids, the role, the region and who granted it when.
+  // Current org roles (data-protection.md): staff ids, role, region and who granted it when.
+  // Revocation or deactivation deletes the grant; the staff audit trail preserves its history.
   staff_org_role: {
     retentionClass: "staff_account",
     dataClass: "internal",

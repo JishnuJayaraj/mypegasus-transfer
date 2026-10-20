@@ -69,6 +69,21 @@ const accountChanged = z
   });
 
 const count = z.int().min(0);
+const hasValidOrgRoleScope = (event: OrgRoleGrant) =>
+  OrgRoleGrant.safeParse({ role: event.role, regionId: event.regionId }).success;
+
+const orgRoleGranted = z
+  .strictObject({ type: z.literal("org_role_granted"), ...ofAccount, ...OrgRoleGrant.shape })
+  .refine(hasValidOrgRoleScope, { params: { code: "region_scope" } });
+
+const orgRoleRevoked = z
+  .strictObject({
+    type: z.literal("org_role_revoked"),
+    ...ofAccount,
+    ...OrgRoleGrant.shape,
+    reasonCode: z.literal("account_deactivated").optional(),
+  })
+  .refine(hasValidOrgRoleScope, { params: { code: "region_scope" } });
 
 export const StaffAuditEvent = z.union([
   z.strictObject({ type: z.literal("staff_login"), ...ofUser, method: StaffLoginMethod }),
@@ -92,23 +107,17 @@ export const StaffAuditEvent = z.union([
     mayCreateProjects: z.boolean(),
   }),
   accountChanged,
-  /** What the deactivation ended in its transaction (Q126). */
+  /** What deactivation ended or removed (data-protection.md, regions and org roles). */
   z.strictObject({
     type: z.literal("staff_account_deactivated"),
     ...ofAccount,
     endedSessions: count,
     removedMemberships: count,
     endedAssignments: count,
+    removedOrgRoles: count,
   }),
-  z
-    .strictObject({
-      type: z.enum(["org_role_granted", "org_role_revoked"]),
-      ...ofAccount,
-      ...OrgRoleGrant.shape,
-    })
-    .refine((e) => OrgRoleGrant.safeParse({ role: e.role, regionId: e.regionId }).success, {
-      params: { code: "region_scope" },
-    }),
+  orgRoleGranted,
+  orgRoleRevoked,
   z.strictObject({ type: z.literal("region_created"), ...ofRegion }),
   z.strictObject({
     type: z.literal("region_changed"),
