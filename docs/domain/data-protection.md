@@ -315,9 +315,10 @@ them, a legal hold suspends only the affected records, never the whole participa
 | Class | Tables | Rule |
 |---|---|---|
 | `project_master` | `project`, `project_membership` (staff ids and project roles, Slice 2), `project_entry_wave`, `import_column_mapping` (the keyed hash of a normalised column header and its target, saved by a confirmed import, never header text; Slice 2, PR 2g. **Classed `confidential`, possibly pseudonymised participant data**: if a PL picks a data row as the header row, the hashes are keyed hashes of a person's values, which are pseudonymised, not anonymised (Art. 4(5) GDPR). The confirm saves no mapping when the chosen header row looks like a data row (a date, an `@` or five or more digits in a cell); hashes are never served, logged or exported; rotating the derived key makes every stored hash unlinkable. It stays in this class because it can't be linked to a person or participation. The runtime role writes it directly (SELECT, INSERT, UPDATE; no DELETE; not audited, a cache of hashes): the one project-data table written outside a database function), `project_template_pin` (which template versions a project pinned, by which staff user, Slice 2), `project_config_override` (override versions: Agentur-scoped settings with source codes, the confirming staff id and date, approved relaxations with rule id, reason code, approving staff id and date; project-wide, no participant data; append-only, PR 2d-1), `config_relaxation_request` (relaxation requests: rule id, controlled reason code, status, requesting and deciding staff ids and dates; project-wide, no participant data, PR 2d-2) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q58): retained while active or unsettled; after closure until the later of the end of the 3rd calendar year after closure and the end of the 4th calendar year after the later BA/§110 final settlement date; a never-activated draft without participants, never submitted externally: 1 year after its last activity. At expiry membership links and actor references are deleted or pseudonymised per the audit policy and identifying free text deleted; accounting, payroll, contract and tax records keep their own classes |
-| `staff_account` | `staff_user` | deactivate and pseudonymise, never delete (Q59, assumed) |
+| `staff_account` | `staff_user` (name, email, the flat role; from Slice 3 the bound OIDC identity `oidc_issuer`/`oidc_subject` and `deactivated_at`) | deactivate and pseudonymise, never delete (Q59, assumed) |
+| `access_credential` (Slice 3, PR 3b) | `staff_session` (the SHA-256 of a session token, never the token; the staff user, start, expiry, end and end reason; `internal`) | deleted, or stripped of the hash, 30 days after the session's end or expiry; a legal hold never keeps a secret usable (Q122, assumed). Activation codes, one-time challenges and participant sessions join from PR 3d/3e |
 | `participation_record` | `participation`, `participant_identity` (Personalnummer, last and first name, birth date; Slice 2, PR 2f), `participation_dsv_amendment` (DSV amendment metadata: kind, date fully executed, old and new effective dates, the confirming staff id and instant, the controlled original location, an optional document number; no free text; immutable; part of the evidence set, round 32 D3; Slice 2, PR 2h-3), `ba_reporting_task` (BA reporting tasks: kind, the date reported on, status; Slice 2, PR 2h-3), `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or responses, round 17; evidence records get their own class in Slice 4b) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q77/Q105): non-signer without a fully executed DSV or funded §110 participation 90 calendar days after `withdrawnOn` (unless a legal hold or documented dispute); fully executed DSV without TG entry, end of the 3rd calendar year after cancellation or contractual end; TG participant, end of the 3rd calendar year after exit; BA-funded, the minimum evidence set until the end of the 4th calendar year after the later of `kugFinalSettlementDate`/`measure110SettlementDate`, never while one is missing |
-| `audit_log` | `audit_event` | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
+| `audit_log` | `audit_event`, `staff_audit_event` (staff logins, logouts, refused logins and identity bindings: staff ids, codes and the login method; never a claimed email, token or claim; no `project_id`, `internal`; Slice 3, PR 3b) | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
 | `personnel_file` (Slice 2, PR 2f) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate` | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
 | `reference_data` | `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`) | no personal data; never touched by the retention job |
 
@@ -333,6 +334,26 @@ Implementation:
 
 - **Staff**: Entra ID via OIDC, MFA enforced by Conditional Access. Roles and assignments are
   managed in the app. Sessions last 8 hours, server-side, in httpOnly SameSite cookies.
+  - **As built (Slice 3, PR 3b):**
+    - **Sessions:** both login modes (OIDC, and the dev stub, never in production) start a
+      `staff_session` row. The cookie `__Host-tp_staff` (`Secure`, `HttpOnly`, `SameSite=Lax`,
+      `Path=/`; `tp_staff` over http in development) carries 32 random bytes. The table keeps only
+      their SHA-256, so a database read gives no live session. Every login issues a new token and
+      ends the one the browser carried (`superseded`). 8 hours absolute, no sliding window,
+      checked in SQL against database time; logout ends the row.
+    - **Binding (D5):** staff accounts are created in the app. The first OIDC login of an active,
+      unbound account binds the token's `(iss, sub)` to the account whose email equals the `email`
+      claim (else `preferred_username`), compared case-insensitively; later logins match
+      `(iss, sub)` only. Unknown, deactivated and differently bound accounts are refused
+      (`unknown_account`, `account_deactivated`, `identity_mismatch`). The app doesn't check `amr`:
+      MFA is the identity provider's. Use the tenant-specific issuer: the `email` claim is only
+      trusted for the first binding of an account an admin created.
+    - **Staff audit (D6):** `staff_audit_event` records `staff_login` (with the method),
+      `staff_logout`, `staff_login_refused` (the code, and the matched account where there is one;
+      never the claimed email) and `staff_identity_bound` (the claim matched). The runtime role has
+      no privilege on it.
+    - **No secrets in logs:** request lines carry the route pattern and the staff user id; no
+      token, cookie, authorization code, claim or email reaches a log line, an error or a URL.
 - **Participants**:
   - First access: a personal activation code, generated when the PL issues it: a printed
     letter to the imported address, a sheet at the info event (both with a QR of the personal

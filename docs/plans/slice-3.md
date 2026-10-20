@@ -205,8 +205,9 @@ staff):
 | `one_time_code_challenge` | 3e | `id`, `project_id`, `participation_id`, `purpose` (`login`, `channel_verification`), `kind`, `address` (normalised), `code_hash`, `delivery_status`, `created_at`, `expires_at`, `failed_attempts`, `consumed_at` | confidential | never served | `access_credential` |
 | `participant_session` | 3e | `token_hash` PK, `project_id`, `participation_id`, `state` (`activating`, `active`), `activation_code_id`, `created_at`, `last_seen_at`, `ended_at`, `end_reason`, `step_up_method`, `step_up_at` | internal | never served to staff | `access_credential` |
 
-Changed: `staff_user` (3b: `oidc_issuer`, `oidc_subject`, unique together; 3c:
-`may_create_projects`, `deactivated_at`, drop `role`); `project` (3c: `region_id`); the
+Changed: `staff_user` (3b: `oidc_issuer`, `oidc_subject`, unique together, and `deactivated_at`,
+which the 3b login refuses and 3c's `deactivate_staff_user` sets; a unique index on `lower(email)`;
+3c: `may_create_projects`, drop `role`); `project` (3c: `region_id`); the
 `main_status` and `edge_kind` enums (3a: values removed; 3e: `activation` added). The new class
 `access_credential` (Q122: deleted or stripped of hashes and addresses 30 days after use, expiry,
 lock, revocation or end; a legal hold never keeps a secret usable) is `unset` in

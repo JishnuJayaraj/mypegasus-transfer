@@ -230,6 +230,10 @@ Roles and grants:
   holds keyed hashes of normalised headers and their targets, a suggestion cache the API writes
   itself (`0027_import_mapping_grants.sql`).
 
+- Slice 3 (PR 3b): `transfer_app` has `SELECT` on `staff_session` and no privilege on
+  `staff_audit_event`; staff sessions, identity bindings and refused logins are written only by
+  their functions (`0035_staff_session_functions.sql`, below).
+
 Schema:
 - **Data catalog** (`packages/db/src/data-catalog.ts`): every table has a `dataClass`, a
   `retentionClass` and `holdsParticipantData`. A table with participant data needs
@@ -276,6 +280,29 @@ Functions:
   `participation_created_manually` and `participation_dates_changed` too (0030, 0031).
   `import_confirmed`, `warning_confirmed` and `participation_created_manually` are written through
   `record_audit_event`.
+
+- **Staff sessions (0034, 0035; Slice 3, PR 3b):** four `SECURITY DEFINER` functions, each writing
+  its `staff_audit_event` in the caller's transaction, with plain typed parameters and the request
+  id (staff events have no project, so no `audit_context`):
+  - `start_staff_session(staff_user_id, token_hash, method, oidc_issuer, oidc_subject,
+    superseded_token_hash, request_id)` → `expires_at`: locks the account `FOR SHARE`, refuses
+    `unknown_account`, `account_deactivated`, and for method `oidc` an identity other than the bound
+    one (`identity_mismatch`); ends the superseded live session (`superseded`), inserts the row with
+    database time + 8 hours and writes `staff_login` (method). `invalid_argument` for a hash that
+    isn't 64 lowercase hex digits, an unknown method, an OIDC login without its identity or a dev
+    login with one.
+  - `end_staff_session(token_hash, request_id)` → boolean: ends the live session (`logout`) and
+    writes `staff_logout`; false and no event when none is live.
+  - `bind_staff_identity(staff_user_id, oidc_issuer, oidc_subject, matched_by, request_id)`: locks
+    the account `FOR UPDATE`; refuses `unknown_account`, `account_deactivated`, an account already
+    bound and an identity bound elsewhere (`identity_mismatch`, also from the unique constraint);
+    writes `staff_identity_bound` (`matchedBy`).
+  - `record_staff_login_refused(reason_code, subject_staff_user_id, method, request_id)`: the code
+    and the matched account (none for `unknown_account`); it takes no email.
+  - Table `CHECK`s: `staff_session` holds a SHA-256 key, exactly 8 hours, and an end reason with
+    every end; `staff_audit_event` holds the event shape (a refusal has no actor; every other event
+    is the actor's own), codes, ids and the details pattern of `audit_event`. `staff_user` keeps
+    `(oidc_issuer, oidc_subject)` unique and complete, and one account per `lower(email)`.
 
 Migrations:
 - A value added with `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the
