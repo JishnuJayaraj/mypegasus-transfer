@@ -143,3 +143,29 @@ allow one only with a reason (`pnpm.onlyBuiltDependencies`).
   worker's module resolution) and from the Vite build (`dist/parse-worker.js`, a build entry
   besides `server` and `migrate`). Heap limits do not bound `ArrayBuffer` memory, which is why the
   declared size is the cap of the real expansion. No fallback (child process, CSV only) was needed.
+
+## Conventions as built (Slices 0–2)
+
+- **Import parsing limits** (`apps/api/src/imports/zip-check.ts`, `parse.ts`, `parse-core.ts`,
+  `slots.ts`). The ZIP check runs in the API process before a worker slot is taken and refuses
+  (`file_too_complex`) a declared expanded total over 50 MB, an entry with a ratio over 100, more
+  than 1,000 entries, ZIP64, encrypted entries, duplicate names and methods other than stored and
+  deflate. The worker runs with a 256 MB old-generation heap (young 32 MB, stack 4 MB) and the
+  15 s timeout; CSV goes through the same worker, and a CSV with a NUL byte in its first 8 kB is
+  `unsupported_file`. Slots: 2 workers running, 8 requests waiting for at most 20 s (ADR-0010); a
+  slot is passed on only after its worker has stopped.
+- **Coverage:** 100 % lines, functions, branches and statements on the paths listed in
+  `vitest.config.ts` (the domain rule folders, `dates.ts`, `project.ts`, `packages/config/src`); a
+  new domain-rule path joins the list in its PR. CI's Node 24 leg runs `test:coverage` and
+  enforces them.
+- **Database tests:** `transfer_test` is emptied (`drop owned by transfer_owner`) and migrated
+  once per run (Vitest global setup). The integration projects (`db`, `api`) run serially, one
+  file at a time, and truncate every table before each test except `lifecycle_edge` (reference
+  data from the migrations); a new table joins the truncate list in
+  `packages/db/src/testing/index.ts`. Playwright recreates `transfer_e2e` with the base seed.
+- **Test fixtures:** the base seed (`packages/db/src/seed.ts`), used by integration tests and
+  Playwright, pins no template, so tests make projects active as the owner (`activateAsOwner`).
+  Rows written directly as the owner are only for test states the functions refuse.
+- **e2e** fails on any axe violation of impact serious or critical (and on any CSP violation, see
+  PR 0d). The portal's `locales.test.ts` checks that `de` and `en` have identical key sets and that
+  every key the code uses exists.

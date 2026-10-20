@@ -55,9 +55,14 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   catalog, Zod schemas (incl. the audit event model), completeness rules. No I/O, no system time.
   Base defaults live in `packages/domain/config/base-defaults.json`.
 - `packages/db`: Drizzle schema, migrations (the SECURITY DEFINER status functions and grants
-  are hand-written), seed (synthetic only: a base seed, then participations through the status
-  service), data catalog. `pnpm db:migrate` also creates pg-boss's `pgboss` schema and its
-  `transfer_app` grants.
+  are hand-written), seed, data catalog. `pnpm db:migrate` also creates pg-boss's `pgboss` schema
+  and its `transfer_app` grants. The seed is synthetic only: idempotent by fixed UUIDs, fictional
+  names, `example.org` emails; `db:seed` and `db:reset` refuse `NODE_ENV=production`. After the
+  base seed, the API seed pins and activates through the services and creates and moves
+  participations only through the status service: each staff step by the seeded user the Q60
+  matrix allows, system steps as `system` with job `seed`, no bypass actor (Q95). It runs on a
+  manual clock on a fictional 2091–2092 timeline, so a persisted lifecycle-job demo needs a
+  separate past-dated fixture (Q96).
 - `packages/api-client`: the generated OpenAPI document + types and the typed client both SPAs
   use.
 - `packages/ui`: thin wrappers around Carbon components, layout, tokens, i18n helpers.

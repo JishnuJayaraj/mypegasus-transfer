@@ -131,8 +131,8 @@ Built in PR 2d-1:
   only for `transfer_app`; retention class `project_master`.
 - **`write_project_override`** (`SECURITY DEFINER`) takes the exclusive project lock first, then
   compares the expected version (`override_version_stale`, the API's 409) and refuses the current
-  content again (`override_unchanged`). The content is one of the two permitted `jsonb` payloads (see "Conventions as built"): the
-  service validates it against every pinned chain first (`validateProjectOverride`), the function
+  content again (`override_unchanged`). The content is a permitted `jsonb` payload (see
+  "Conventions as built" below): the service validates it against every pinned chain first (`validateProjectOverride`), the function
   checks its structure and that the claimed change is exactly what the content does (round 27):
   apart from the named Agentur's setting (an empty `agenturSettings` counting as none) the content
   equals the current one, so no field, rule, relaxation or other Agentur's setting changes under
@@ -205,3 +205,68 @@ Built in PR 2e-2 (Q36, Q93):
   keys (`settingKeys`) and the kept ones (`keptSettingKeys`), computed in SQL, and the
   base-defaults version. Only this function writes that change kind, in the call that pins
   the new version (round 28); `write_project_override` and `append_project_override` refuse it.
+
+## Conventions as built (Slices 0–2)
+
+Roles and grants:
+- **Two roles, the same names on the cluster** (`packages/db/sql/setup.sql`; CloudNativePG manages
+  them there). `transfer_owner` owns the databases and tables and runs migrations and seeds.
+  `transfer_app` is the runtime role: `CONNECT`, `USAGE` on `public` and only the per-table grants
+  the hand-written migrations give it (`0001_grants.sql` onwards). No default privileges; no
+  `UPDATE`/`DELETE` unless a feature needs it.
+- On every table added in Slice 2 `transfer_app` has `SELECT` only; the functions write. The one
+  exception is `import_column_mapping`: `SELECT, INSERT, UPDATE`, no `DELETE`, no audit event. It
+  holds keyed hashes of normalised headers and their targets, a suggestion cache the API writes
+  itself (`0027_import_mapping_grants.sql`).
+
+Schema:
+- **Data catalog** (`packages/db/src/data-catalog.ts`): every table has a `dataClass`, a
+  `retentionClass` and `holdsParticipantData`. A table with participant data needs
+  `project_id uuid not null` with an FK to `project`; `data-catalog.test.ts` fails for a table
+  missing from the catalog, an unknown class or an unscoped participant table.
+- `date` columns use Drizzle `mode: "string"`.
+
+Functions:
+- **Typed parameters** (enums, `date`, `uuid`, `audit_context`). The only `jsonb` parameters of
+  granted functions are template and override content, whose structure the functions check in SQL,
+  and `record_audit_event`'s `details`, held by the audit table's `CHECK`s.
+- **Read, decide, write under the project lock.** A service that reads state, decides in
+  TypeScript and then calls a function takes `lock_project_setup` first in the same transaction;
+  the functions take it again (transaction-scoped advisory locks are re-entrant). So do project and
+  entry-wave edits, pins, the template migration, override and relaxation writes, activation, the
+  import confirm and the manual creation (`apps/api/src/imports/confirm.ts`,
+  `participations/manual-creation.ts`).
+- **`write_participant_data`** (0024, 0025) is the only writer of `participant_identity` and
+  `participant_details`. A null argument keeps the stored value. Refusals: `identity_required` (a
+  first write without the Personalnummer and both names), `personnel_number_immutable`,
+  `personnel_number_taken` (unique per project), `address_incomplete`, and `invalid_argument` for a
+  `CHECK` violation. Actors `user` and `system` only: no assisted mode (`invalid_actor`), never a
+  participant. It writes `participant_data_changed` with the changed keys only (`IS DISTINCT
+  FROM`), never values, and no event when nothing changes. Table `CHECK`s: text trimmed, without
+  control characters, length 1–50 (Personalnummer), 1–100 (names), 1–200 (street, city), 1–30
+  (phone, mobile), 1–254 (emails); the four address columns all set or all null; country
+  `^[A-Z]{2}$` and only `DE`; a `DE` postal code has five digits. Nothing deletes these rows; that
+  is the retention job's (ADR-0008).
+- **`set_participation_dates`** (0031, 0032): user actor only; the amendment parameters all set or
+  all null (`invalid_argument`); compare-and-set on `status_version` (`stale_status`). One call
+  writes the dates, the amendment of a signed DSV, one `ba_reporting_task` per changed effective
+  date (`later_entry`, `planned_end_changed`) and `participation_dates_changed`. Refusals:
+  `not_ta_tg`, `wave_required`, `participation_closed`, `dsv_offer_open`,
+  `dsv_amendment_required`, `amendment_not_allowed`, `dates_unchanged`, `entered`,
+  `amendment_kind_mismatch`. `record_audit_event` refuses the event type.
+- `participation_dsv_amendment` is append-only by trigger, for every role. A `ba_reporting_task`
+  is never deleted; only its status moves, once, from `pending` to `reported` or `not_required`,
+  and what it reports never changes (`task_immutable`). The `early_exit` task comes from an
+  `AFTER UPDATE OF status` trigger on `participation` (an exit before the effective contractual
+  end, or without one). The trigger is not `SECURITY DEFINER`: status changes run only inside the
+  status function, as the owner, so the trigger does too.
+- `assign_entry_wave` refuses `individual_dates_set` on the locked row (0028).
+  `audit_event_lifecycle_has_participation` requires a participation for
+  `participation_created_manually` and `participation_dates_changed` too (0030, 0031).
+  `import_confirmed`, `warning_confirmed` and `participation_created_manually` are written through
+  `record_audit_event`.
+
+Migrations:
+- A value added with `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the
+  Drizzle migrator runs all pending migrations in one transaction (`packages/db/src/migrate.ts`).
+  So `CHECK`s and functions compare `event_type::text` with the new value's string (0024, 0030).

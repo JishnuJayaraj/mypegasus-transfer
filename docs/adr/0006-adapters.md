@@ -31,3 +31,11 @@ Not adapters:
 + Easy to test.
 - Each real adapter needs contract tests against its interface. For `PdfRenderer`, that means
   tests that fill the real blank TL 407 / Kug 200b and read the values back.
+
+## Conventions as built (Slices 0–2)
+
+- **No direct time** in `packages/domain`, `packages/config` and `apps/api/src/jobs`: no
+  `Date.now()` and no `new Date(…)` outside tests and `testing/`, enforced by a source scan
+  (`packages/adapters/src/clock/no-direct-time.test.ts`). Business dates (Berlin today, run times)
+  come from the injected `Clock`; recorded instants (`occurred_at`, `activated_at`,
+  `completed_at`) are the database's `now()`.

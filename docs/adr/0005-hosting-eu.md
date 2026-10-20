@@ -52,3 +52,16 @@ operates a Hetzner cluster in German data centres.
 + Data stays in German infrastructure under company control.
 - We own backups, upgrades and monitoring of Postgres (no managed Postgres at Hetzner).
 - The pilot depends on the AVV chain being signed (owned by the product owner, Q32).
+
+## Conventions as built (Slices 0–2)
+
+- **CI supply chain** (`.github/workflows/ci.yml`): third-party actions pinned by commit SHA,
+  workflow `permissions: contents: read`, checkout without persisted credentials; the Postgres
+  service image and the Node base image of the `Dockerfile` pinned by digest (tag and digest
+  updated together).
+- **The image runs as the non-root `node` user**; `scripts/image-smoke.sh` fails if it runs as
+  root.
+- **Memory per API pod:** each import parse worker may use about 300 MB, so an API process runs at
+  most two, with up to eight requests waiting (ADR-0003, ADR-0010), each holding about 13 MB (the
+  8 MB body and the 5 MB decoded file). Two workers, the waiting requests and the API itself are
+  budgeted under 1 GiB per pod; the pod's memory limit is set with the cluster deployment.
