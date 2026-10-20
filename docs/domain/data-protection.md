@@ -335,12 +335,17 @@ Implementation:
 - **Staff**: Entra ID via OIDC, MFA enforced by Conditional Access. Roles and assignments are
   managed in the app. Sessions last 8 hours, server-side, in httpOnly SameSite cookies.
 - **Participants**:
-  - First access: a personal activation code (letter to the imported address or printed
-    sheet, with a QR of the personal link; the code in the link's fragment, never in a URL the
-    server logs). It is single-use and stored only as a keyed hash; a reissue revokes the old
-    one ([round 35](../decisions/2026-10-20-answers-round-35.md); values Q118).
-  - The participant then registers a private email or mobile (their choice, Q119) and logs in
-    with one-time codes to it. **Imported work emails are never used for login.** An email
+  - First access: a personal activation code, generated when the PL issues it (a printed
+    letter to the imported address or a sheet at the info event, with a QR of the personal
+    link; the code in the link's fragment, never in a URL the server logs). It is single-use,
+    stored only as a keyed hash, valid 30 days from issuance, locked after 5 failed attempts;
+    a new issuance revokes the old one. The PL or assigned back office issue it after verifying
+    the person; no anonymous or self-service reissue; every issuance is audited
+    ([round 35](../decisions/2026-10-20-answers-round-35.md), Q118). The letter or sheet is the
+    Art. 14 GDPR notice, versioned (Q114).
+  - The participant then registers at least one private email or mobile (their choice, Q117,
+    Q119) and logs in with one-time codes to it. Contact data the participant maintains is never
+    overwritten by an HR re-import (Q112). **Imported work emails are never used for login.** An email
     login never takes effect on a bare GET (mail scanners open links).
   - After an activation, a notice goes to the newly registered channel.
   - Links/codes are single-use and expire after 15 minutes, with at most 5 requests per hour

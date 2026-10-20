@@ -122,7 +122,7 @@ with profiling** (round 4). So a participation has:
 
 | Part | Field | Values |
 |---|---|---|
-| **Main status** | `status` | `self_registered`, `imported`, `contacted`, `unreachable`, `informed`, `active_in_tg`; terminal: `withdrawn`, `rejected`, `ta_completed`, `exited` |
+| **Main status** | `status` | `imported`, `contacted`, `unreachable`, `informed`, `active_in_tg`; terminal: `withdrawn`, `ta_completed`, `exited` |
 | **Profiling track** | `profilingStatus` | `not_started`, `profiling_accepted`, `profiling_in_progress`, `profiling_done`, `profiling_declined` |
 | **DSV track** | `dsvStatus` | `not_offered`, `dsv_offered`, `dsv_signed`, `dsv_declined`, `dsv_expired` (only in `ta_tg` projects) |
 | **ASU record** | `asu` | not a state machine: `submittedOn`, `channel`, optional `confirmedOn` |
@@ -154,14 +154,11 @@ with profiling** (round 4). So a participation has:
 ```mermaid
 stateDiagram-v2
   [*] --> imported : Excel import / manual
-  [*] --> self_registered : QR registration (to be removed, round 35)
-  self_registered --> imported : matched by PL
-  self_registered --> rejected : not in scope / unmatched after 30 days
 
-  imported --> contacted
+  imported --> contacted : PL, or activation
   contacted --> informed : attended info event / consultation
   contacted --> unreachable
-  unreachable --> contacted
+  unreachable --> contacted : PL, or activation
 
   informed --> active_in_tg : on the TG start date, or catch-up of a missed run (system) / audited reconciliation (PL, Q68)
   informed --> ta_completed : ta_only project, taMeasuresComplete + evidence + PL confirmation (Q73, Q83)
@@ -173,14 +170,17 @@ stateDiagram-v2
   informed --> withdrawn : cutoff passed, derived from tracks (system) / manual
 
   withdrawn --> [*]
-  rejected --> [*]
   ta_completed --> [*]
   exited --> [*]
 ```
 
 **Manual withdrawal** (`→ withdrawn`, reason chosen by the PL) is allowed from `imported`,
 `contacted`, `unreachable` and `informed`. If `dsvStatus = dsv_signed`, it additionally needs
-the cancellation document (see DSV track). `self_registered` uses `rejected` instead.
+the cancellation document (see DSV track).
+
+The code still has `self_registered` and `rejected` (its only path) until their removal PR in
+Slice 3; the generated transitions table shows them until then
+([round 35](../decisions/2026-10-20-answers-round-35.md)).
 
 ### Profiling track
 
@@ -551,11 +551,11 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 |---|---|---|
 | Project setup | PL | name, customer, type, Project Agentur (KuG-Agentur for `ta_tg`), pinned Agentur templates, overrides; in `ta_tg` entry waves with their dates; activation |
 | Import / manual creation | PL | participations in `imported`; import report with row errors, warnings and possible duplicates (see below) |
-| Portal activation | PL → participants | a personal activation code per participation (letter or printed sheet); the participant activates and registers a private email or mobile ([round 35](../decisions/2026-10-20-answers-round-35.md), Q113–Q119) |
+| Portal activation | PL → participants | a personal activation code per participation (letter or printed sheet); the participant activates and registers a private email or mobile ([round 35](../decisions/2026-10-20-answers-round-35.md), Q112–Q120); activation moves `imported`/`unreachable` to `contacted` (Q116) |
 | Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |
-| Arbeitsuchendmeldung | participant / TG | ASU record with channel and proof; Kug 200b signed, collected and submitted in batches per placement Agentur (also offered to self-registered people for the profile-access consent) |
+| Arbeitsuchendmeldung | participant / TG | ASU record with channel and proof; Kug 200b signed, collected and submitted in batches per placement Agentur (also offered to people who registered as job-seeking themselves, for the profile-access consent) |
 | Profiling | profiler + participant | profiling track, TL 407 (incl. "Anlage" for overflow), signatures |
 | Submission to Agentur | assigned PL | TL 407 submission status and channel per participant |
 | DSV | PL / back office | DSV track, signatures of all three parties, scan, original location |

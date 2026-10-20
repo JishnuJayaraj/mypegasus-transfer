@@ -56,14 +56,17 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - Rules: process-and-lifecycle.md, "Import and manual creation" (Q103, Q104).
 
 ### F3 Activation codes ([round 35](decisions/2026-10-20-answers-round-35.md))
-- Every participation gets a personal, single-use activation code when it is created. It goes
-  out by activation letter to the imported address and as a printed sheet at the info event,
-  each with a QR of the personal link. The participant activates with the code and the knowledge
-  check, then registers a private email or mobile.
+- Every participation can be issued a personal, single-use activation code: the PL batch-prints
+  activation letters to the imported address (posted on normal project postage) or prints a
+  sheet for the info event, each with a QR of the personal link and the Art. 14 notice. The
+  code is generated at printing, valid 30 days. The participant activates with the code and the
+  knowledge check (birth date; without one the PL hands it over after an ID check), then
+  registers at least one private email or mobile (email and SMS from Slice 3). Activation moves
+  the participation to `contacted`.
 - No anonymous self-registration and no matching. People missing from the employer's list are
   created by the PL and get a code too.
 - The PL sees who has activated and can reissue codes.
-- Open: Q113–Q119.
+- Decided in round 35 (Q112–Q119); open: Q120 (in-person issuance to email/mobile).
 
 ### F4 Communication & appointments
 - Invitations and reminders via email/SMS (adapter; mock in MVP dev).
@@ -101,8 +104,8 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - Deadline warnings (signing deadline, TG start, ASU due date, profiling-exception deadline).
 - Lists: DSVs signed by the participant but not fully executed; Kug 200b submitted without
   Agentur confirmation after 14 days; TL 407 not submitted by TG start (escalated to PL and
-  regional admin 14 days after TG start); self-registered ASU without Kug 200b profile-access
-  consent; conflicts (DSV signed but profiling declined); TG entry
+  regional admin 14 days after TG start); ASU made by the participant themselves without
+  Kug 200b profile-access consent; conflicts (DSV signed but profiling declined); TG entry
   guards failing.
 
 ### F8 DSV tracking

@@ -34,7 +34,7 @@ Connect login and identity to the Slice 1 access model: staff OIDC (dev stub fir
 `apps/web`; in `apps/portal` personal activation codes, the activation flow (knowledge check,
 private email or mobile with consent), one-time-code login (mail/SMS mock adapters), sessions,
 audit of logins; the PL's activation status, reissue and printable letter/sheet (round 35,
-Q113–Q119). Removal of `self_registered` from the lifecycle core (its own PR).
+Q112–Q120). Removal of `self_registered` and `rejected` from the lifecycle core (its own PR).
 Deferred here from Slice 2: membership management, participant assignments (Q62) and
 regions on projects (until then the org roles have global scope).
 
