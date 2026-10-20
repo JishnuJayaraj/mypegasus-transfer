@@ -42,7 +42,8 @@ for run in first second; do
 done
 
 # The server. NODE_ENV=development and AUTH_MODE=dev because the image refuses to start in
-# production with the dev auth stub, and OIDC only comes in Slice 3 (plan section 5.4). Jobs are
+# production with the dev auth stub, and OIDC needs an identity provider (the API tests run OIDC
+# against a local test issuer). The dev login starts a session in the store like OIDC does. Jobs are
 # on by default: pg-boss starts as transfer_app before the server listens, or the start fails.
 docker run -d --name "$name" --network host -e PORT="$port" -e NODE_ENV=development \
   -e AUTH_MODE=dev -e APP_ORIGINS="$base" -e DATABASE_URL -e LOG_LEVEL=info "$image" >/dev/null

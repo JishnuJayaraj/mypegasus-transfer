@@ -21,6 +21,7 @@
     "csv-parse": "7.0.3",
     "drizzle-orm": "0.45.4",
     "hono": "4.13.13",
+    "openid-client": "6.8.8",
     "pg": "8.23.1",
     "pg-boss": "12.38.0",
     "pino": "10.4.0",
@@ -32,6 +33,7 @@
     "@transfer/config": "workspace:*",
     "@transfer/db": "workspace:*",
     "@transfer/domain": "workspace:*",
+    "jose": "6.2.12",
     "tsx": "4.23.15"
   }
 }

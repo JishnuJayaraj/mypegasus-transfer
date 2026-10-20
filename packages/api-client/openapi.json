@@ -61,7 +61,7 @@
           "status"
         ]
       },
-      "StaffUser": {
+      "CurrentStaffUser": {
         "type": "object",
         "properties": {
           "id": {
@@ -73,12 +73,18 @@
           },
           "role": {
             "$ref": "#/components/schemas/StaffRole"
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 UTC; no sliding window"
           }
         },
         "required": [
           "id",
           "displayName",
-          "role"
+          "role",
+          "sessionExpiresAt"
         ]
       },
       "StaffRole": {
@@ -3105,6 +3111,26 @@
           "expectedVersion"
         ],
         "additionalProperties": false
+      },
+      "StaffUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/StaffRole"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "role"
+        ]
       }
     },
     "parameters": {}
@@ -3195,20 +3221,75 @@
         "tags": [
           "session"
         ],
-        "summary": "The current staff user",
+        "summary": "The current staff user and when their session ends",
         "responses": {
           "200": {
             "description": "The current staff user",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/StaffUser"
+                  "$ref": "#/components/schemas/CurrentStaffUser"
                 }
               }
             }
           },
           "401": {
             "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "session"
+        ],
+        "summary": "End the staff session (clears the cookie); 204 with or without one",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Logged out"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -5787,7 +5868,7 @@
           "dev"
         ],
         "x-dev-only": true,
-        "summary": "Log in as a staff user (sets the session cookie)",
+        "summary": "Log in as a staff user: a session in the store, as an OIDC login starts one",
         "requestBody": {
           "required": true,
           "content": {
@@ -5850,6 +5931,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       },
@@ -5858,7 +5949,7 @@
           "dev"
         ],
         "x-dev-only": true,
-        "summary": "Log out (clears the session cookie)",
+        "summary": "Log out: ends the session, as `POST /auth/logout` does",
         "responses": {
           "204": {
             "description": "Logged out"

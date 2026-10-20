@@ -19,7 +19,15 @@ const schema = z.object({
   CLOCK: z.string().default("system"),
   // Slice 2 plan 5.8 (S2): templates/ and base-defaults.json; unset, the repo paths.
   CONFIG_DIR: z.string().optional(),
+  // Staff login with AUTH_MODE=oidc (ADR-0007, Slice 3 D1): all four or none.
+  OIDC_ISSUER: z.url().optional(),
+  OIDC_CLIENT_ID: z.string().optional(),
+  OIDC_CLIENT_SECRET: z.string().optional(),
+  OIDC_REDIRECT_URL: z.url().optional(),
 });
+
+/** The route the identity provider returns to (routes/auth.ts). */
+export const OIDC_CALLBACK_PATH = "/api/v1/auth/callback";
 
 /** Loads the repo's `.env` when present (not in the image); variables already set win. */
 export function loadDotEnv(): void {
@@ -45,6 +53,16 @@ export interface Env {
   clock: string;
   /** The configuration directory (`CONFIG_DIR`); undefined: the repo paths. */
   configDir: string | undefined;
+  /** Set exactly when `authMode` is `oidc`. */
+  oidc?: OidcEnv | undefined;
+}
+
+export interface OidcEnv {
+  issuer: string;
+  clientId: string;
+  /** From the secret store; never logged or returned. */
+  clientSecret: string;
+  redirectUrl: string;
 }
 
 /**
@@ -67,9 +85,7 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     throw new Error(`JOBS_LIFECYCLE_TIME: ${(error as Error).message}`, { cause: error });
   }
   createClock({ CLOCK: env.CLOCK, NODE_ENV: env.NODE_ENV });
-  if (env.AUTH_MODE === "oidc") {
-    throw new Error("AUTH_MODE=oidc is not implemented until Slice 3; use AUTH_MODE=dev");
-  }
+  const oidc = env.AUTH_MODE === "oidc" ? oidcEnv(env) : undefined;
   if (env.NODE_ENV === "production" && env.AUTH_MODE === "dev") {
     throw new Error("AUTH_MODE=dev is not allowed with NODE_ENV=production");
   }
@@ -89,5 +105,46 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     jobsLifecycleTime: env.JOBS_LIFECYCLE_TIME,
     clock: env.CLOCK,
     configDir: env.CONFIG_DIR,
+    oidc,
+  };
+}
+
+/**
+ * AUTH_MODE=oidc refuses to start without its four variables. Outside development the issuer
+ * and the redirect URL are https; the redirect URL is the callback route on an origin in
+ * APP_ORIGINS.
+ */
+function oidcEnv(env: z.output<typeof schema>): OidcEnv {
+  const missing = (
+    ["OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_REDIRECT_URL"] as const
+  ).filter((name) => env[name] === undefined);
+  if (missing.length > 0) {
+    throw new Error(`AUTH_MODE=oidc needs ${missing.join(", ")} (see .env.example)`);
+  }
+  const issuer = new URL(env.OIDC_ISSUER!);
+  const redirect = new URL(env.OIDC_REDIRECT_URL!);
+  if (env.NODE_ENV !== "development") {
+    for (const [name, url] of [
+      ["OIDC_ISSUER", issuer],
+      ["OIDC_REDIRECT_URL", redirect],
+    ] as const) {
+      if (url.protocol !== "https:") throw new Error(`${name} must be https outside development`);
+    }
+  }
+  if (
+    !env.APP_ORIGINS.includes(redirect.origin) ||
+    redirect.pathname !== OIDC_CALLBACK_PATH ||
+    redirect.search !== "" ||
+    redirect.hash !== ""
+  ) {
+    throw new Error(
+      `OIDC_REDIRECT_URL must be ${OIDC_CALLBACK_PATH} on an origin in APP_ORIGINS, without a query`,
+    );
+  }
+  return {
+    issuer: env.OIDC_ISSUER!,
+    clientId: env.OIDC_CLIENT_ID!,
+    clientSecret: env.OIDC_CLIENT_SECRET!,
+    redirectUrl: redirect.href,
   };
 }

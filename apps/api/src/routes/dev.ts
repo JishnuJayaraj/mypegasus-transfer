@@ -3,8 +3,9 @@ import { eq, staffUser } from "@transfer/db";
 import { StaffUser } from "@transfer/domain";
 
 import { createRouter, type Deps } from "../context";
-import { problem, problemResponses } from "../problem";
-import { clearSession, setSession } from "../session";
+import { domainProblem, problem, problemResponses } from "../problem";
+import { endSession } from "../session";
+import { loginAsDevUser } from "../staff-login";
 
 // Dev only: mounted when AUTH_MODE=dev, which the API refuses in production (env.ts).
 const devOnly = { tags: ["dev"], "x-dev-only": true };
@@ -40,7 +41,7 @@ export function devRoutes(deps: Deps) {
       ...devOnly,
       method: "post",
       path: "/dev/session",
-      summary: "Log in as a staff user (sets the session cookie)",
+      summary: "Log in as a staff user: a session in the store, as an OIDC login starts one",
       request: {
         body: {
           required: true,
@@ -49,7 +50,13 @@ export function devRoutes(deps: Deps) {
       },
       responses: {
         204: { description: "Logged in" },
-        ...problemResponses("validation-error", "not-found", "forbidden", "unsupported-media-type"),
+        ...problemResponses(
+          "validation-error",
+          "not-found",
+          "forbidden",
+          "unsupported-media-type",
+          "domain-error",
+        ),
       },
     }),
     async (c) => {
@@ -59,8 +66,8 @@ export function devRoutes(deps: Deps) {
         .from(staffUser)
         .where(eq(staffUser.id, staffUserId));
       if (!user) return problem(c, "not-found");
-      await setSession(c, deps, user.id);
-      return c.body(null, 204);
+      const result = await loginAsDevUser(c, deps, user.id);
+      return result.ok ? c.body(null, 204) : domainProblem(c, [result.code]);
     },
   );
 
@@ -69,11 +76,11 @@ export function devRoutes(deps: Deps) {
       ...devOnly,
       method: "delete",
       path: "/dev/session",
-      summary: "Log out (clears the session cookie)",
+      summary: "Log out: ends the session, as `POST /auth/logout` does",
       responses: { 204: { description: "Logged out" }, ...problemResponses("forbidden") },
     }),
-    (c) => {
-      clearSession(c);
+    async (c) => {
+      await endSession(c, deps);
       return c.body(null, 204);
     },
   );
