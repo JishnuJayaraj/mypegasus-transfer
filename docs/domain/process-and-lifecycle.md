@@ -178,6 +178,13 @@ stateDiagram-v2
 `contacted`, `unreachable` and `informed`. If `dsvStatus = dsv_signed`, it additionally needs
 the cancellation document (see DSV track).
 
+**Activation** (Q116, Q121, [round 36](../decisions/2026-10-20-answers-round-36.md)): a
+participant's first activation moves `imported` or `unreachable` to `contacted` in the same
+transaction (actor `participant`, the only edges a participant takes). Before `informed` it needs
+the participation's cutoff not to have passed, checked with database time at completion; in
+`informed` or `active_in_tg` it changes no status. A terminal status revokes open activation codes
+and ends the participant's sessions.
+
 The code still has `self_registered` and `rejected` (its only path) until their removal PR in
 Slice 3; the generated transitions table shows them until then
 ([round 35](../decisions/2026-10-20-answers-round-35.md)).
