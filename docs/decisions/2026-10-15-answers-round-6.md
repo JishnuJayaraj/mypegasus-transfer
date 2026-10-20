@@ -1,6 +1,6 @@
 # Decisions — 2026-10-15, round 6 (Slice 0 planning)
 
-Answers given by the product owner while [the Slice 0 plan](../plans/slice-0.md) was written.
+Answers given by the product owner while [the Slice 0 plan](../plans/archive/slice-0.md) was written.
 D12–D16 revised the toolchain before PR 0a: **build speed doesn't matter yet; avoiding
 toolchain risk does.**
 

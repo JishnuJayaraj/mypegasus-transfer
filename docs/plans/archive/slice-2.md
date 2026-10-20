@@ -1,20 +1,20 @@
 # Slice 2 — Projects & import (F1, F2): plan
 
-- Status: **Approved with amendments** ([round 22](../decisions/2026-10-16-answers-round-22.md),
-  2026-10-16). [Round 32](../decisions/2026-10-19-answers-round-32.md) (2026-10-19) records accepted
+- Status: **Approved with amendments** ([round 22](../../decisions/2026-10-16-answers-round-22.md),
+  2026-10-16). [Round 32](../../decisions/2026-10-19-answers-round-32.md) (2026-10-19) records accepted
   pilot decisions for Q101, Q102, Q103, Q105 and Q58 under placeholder PL, Legal, BA process-owner
   and DPO roles. They unblock PRs 2f, 2g and **2h** and may be revised later with their
   implementation. Q110 has accepted fail-safe pilot defaults and does not block 2h. External
   ratification is a future production/real-personal-data readiness activity, not a development or
   sample-data pilot gate. Round 30's proposed package was never applied; round 32 supersedes it.
-- **PR 2h plan (2026-10-19): approved with amendments** ([round 33](../decisions/2026-10-19-answers-round-33.md)).
+- **PR 2h plan (2026-10-19): approved with amendments** ([round 33](../../decisions/2026-10-19-answers-round-33.md)).
   Re-estimated and divided into 2h-1, 2h-2 and 2h-3 under CLAUDE.md's PR-size rule ("Planned in
   PR 2h", section 3); readings R29–R44 and Q111 🔒 accepted as revisitable pilot decisions; R34
   narrows round 32 L6 for an unsigned DSV.
-- Roadmap: [Slice 2](../roadmap.md#slice-2--projects--import-f1-f2)
+- Roadmap: [Slice 2](../../roadmap.md#slice-2--projects--import-f1-f2)
 - Builds on: [Slice 1](slice-1.md) (merged, PRs #9–#23)
-- PRD: [F1 Project setup, F2 Import](../prd.md)
-- Decisions it rests on: rounds 1–23 in [`decisions/`](../decisions/), in particular round 8
+- PRD: [F1 Project setup, F2 Import](../../prd.md)
+- Decisions it rests on: rounds 1–23 in [`decisions/`](../../decisions/), in particular round 8
   (Agentur-scoped settings), round 10 (waves vs. beE), round 14 (controlled reason codes), round 15
   (Project Agentur, cross-chain invariants, immutable versions, migration review), round 16
   (functions, typed parameters), round 19 (`scheduledRunCompleted`), round 20 (database time)
@@ -76,7 +76,7 @@ data exists while retention periods are `unset`.
 | R21 | **Problem mapping** of service refusals: `not_found` 404, `forbidden` 403, `stale` 409 (`conflict`), `domain` and `integrity` 422 (`domain-error`, the code and failed guards, never a value). | 5.12 | — |
 | R22 | Template content identity is the **SHA-256 of canonical JSON** (sorted keys, no insignificant whitespace), so formatting never counts as a change and any content change does. | 5.8 | — |
 
-### Readings taken while applying round 22 (answered in [round 23](../decisions/2026-10-16-answers-round-23.md))
+### Readings taken while applying round 22 (answered in [round 23](../../decisions/2026-10-16-answers-round-23.md))
 
 | # | Reading | Where | Question |
 |---|---|---|---|
@@ -89,7 +89,7 @@ data exists while retention periods are `unset`.
 
 ### Amended by round 32 (Q101, Q102, Q103, Q105 and Q58; accepted pilot decisions)
 
-[Round 32](../decisions/2026-10-19-answers-round-32.md) records accepted pilot decisions under the
+[Round 32](../../decisions/2026-10-19-answers-round-32.md) records accepted pilot decisions under the
 placeholder PL, Legal, BA process-owner and DPO roles. They unblock implementation and may be
 revised later. Where they differ from the readings above:
 - **Q103 (5.1, 5.2, 5.10, 5.11; PRs 2f, 2g):** a stored `addressCountry` (ISO 3166-1 alpha-2,
@@ -298,7 +298,7 @@ two event types), `0011_project_setup_functions` (hand-written: the W1 copy, `pr
 9. **No behaviour change for lifecycle work yet:** every project is `draft`, and the draft gate
    comes with activation (PR 2e-1).
 
-Round 23 ([review of PR 2a](../decisions/2026-10-16-answers-round-23.md)) added: the PL backfill
+Round 23 ([review of PR 2a](../../decisions/2026-10-16-answers-round-23.md)) added: the PL backfill
 for existing projects with a failing check (no silent elevation); the new project's exclusive lock
 first in `create_project` and the project lock first in `update_project`; the seed through
 `create_project`; one `P0001` decoder (`apps/api/src/database-errors.ts`) for the status service
@@ -309,7 +309,7 @@ one by one (`unrecognized_keys`).
 
 ### Built in PR 2b, with the readings taken (confirmed in round 24)
 
-Split in [round 24](../decisions/2026-10-17-answers-round-24.md): **2b-1** (domain, database, API,
+Split in [round 24](../../decisions/2026-10-17-answers-round-24.md): **2b-1** (domain, database, API,
 docs; about 600 lines, accepted as one cohesive domain → database → API unit) and **2b-2** (the
 web page, its component tests and the Playwright step). All readings below are confirmed.
 
@@ -377,7 +377,7 @@ schema-qualifies its built-ins.
 
 ### Built in PR 2c-1, with the readings taken (for confirmation)
 
-Round 25 ([review of PR 2c-1](../decisions/2026-10-17-answers-round-25.md)) added: the manifest
+Round 25 ([review of PR 2c-1](../../decisions/2026-10-17-answers-round-25.md)) added: the manifest
 schema requires strictly ordered entries, startup refuses duplicates and reordering (item 3); the
 cursor wording (item 8); Q108 confirmed (item 7).
 
@@ -442,7 +442,7 @@ smoke-tested by CI's `image` job (the cloud session's Docker daemon isn't runnin
 
 ### Built in PR 2c-2, with the readings taken (confirmed in round 26)
 
-Split in [round 26](../decisions/2026-10-17-answers-round-26.md): **2c-2a** (domain, database,
+Split in [round 26](../../decisions/2026-10-17-answers-round-26.md): **2c-2a** (domain, database,
 API, seed, docs; about 630 lines, accepted as one domain → database → API invariant) and **2c-2b**
 (the web section, its component tests and the Playwright step). Items 1–13 and 15 are confirmed,
 item 14 in part (corrected below). Round 26 added: the submission steps of `ConfigBlocker` are
@@ -531,7 +531,7 @@ ADR-0002, `regional-variation.md`, `data-protection.md`.
 
 ### Built in PR 2d-1, with the readings taken (confirmed in round 27)
 
-[Round 27](../decisions/2026-10-17-answers-round-27.md) confirmed items 1–6 and 8–12, item 7
+[Round 27](../../decisions/2026-10-17-answers-round-27.md) confirmed items 1–6 and 8–12, item 7
 with the exact SQL delta and the actor-bound confirmer, item 11 with access checked before the
 setting's rules, and item 13 with Q109's wording; it adapted item 9's fixture (all below).
 
@@ -630,7 +630,7 @@ under the 100 % threshold); the operation `changeOverride` (PL); `config_overrid
 
 ### Built in PR 2d-2, with the readings taken (confirmed in round 28)
 
-[Round 28](../decisions/2026-10-17-answers-round-28.md) confirmed items 1, 3, 5–8 and 11–13,
+[Round 28](../../decisions/2026-10-17-answers-round-28.md) confirmed items 1, 3, 5–8 and 11–13,
 item 2 with the project-type correction, item 4 with deterministic same-transaction enforcement,
 item 10 with the request enforcing the list's eligibility, and replaced item 9's order (all
 below).
@@ -737,7 +737,7 @@ the relaxations in the Konfiguration section, component tests, the Playwright st
 
 ### Built in PR 2e-2, with the readings taken (confirmed in round 31)
 
-[Round 31](../decisions/2026-10-19-answers-round-31.md) confirmed items 1–3, 5, 8 and 11, item 4
+[Round 31](../../decisions/2026-10-19-answers-round-31.md) confirmed items 1–3, 5, 8 and 11, item 4
 with every moved pin a 409, item 6 with a coherent preview transaction, item 7 with the order
 below, item 9 with a coherent snapshot for the preview, and item 10 after the target-selection race
 was fixed (cache invalidation is enough). It also made the preview's `agenturKey` an `AgenturKey`.
@@ -839,7 +839,7 @@ migration-preview` and `…/migration`; `projectSnapshot` and `releaseTemplate` 
 
 ### Built in PR 2e-1, with the readings taken (confirmed in round 29)
 
-[Round 29](../decisions/2026-10-17-answers-round-29.md) confirmed items 1–9 and 11–12, and item
+[Round 29](../../decisions/2026-10-17-answers-round-29.md) confirmed items 1–9 and 11–12, and item
 10 with the correction that a refusal outlives the activation component (2e-1-web, below).
 
 Split before review, like rounds 24, 26 and 27: **2e-1** (domain, database, API, seed, docs; this
@@ -2285,7 +2285,7 @@ U = unit, I = DB/API integration, C = component, E = Playwright, CI = workflow, 
 
 ## 11. Approval
 
-Approved in [round 22](../decisions/2026-10-16-answers-round-22.md) with the amendments applied
+Approved in [round 22](../../decisions/2026-10-16-answers-round-22.md) with the amendments applied
 above. R23–R28 are readings taken while applying it, for confirmation in the PR 2a review.
 Implementation starts with PR 2a after this PR is merged. Round 32's accepted pilot decisions
 unblock PRs 2f, 2g and 2h; later external review may amend the decisions and implementation before

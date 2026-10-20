@@ -52,8 +52,76 @@ generator then. No action now.
 - **`503` `service-unavailable` with `import_busy`:** an API process runs at most two parse
   workers; up to eight further preview or confirm requests wait for at most 20 s. A request that
   finds the queue full or whose wait expires is answered `503` with `errors[].code`
-  `import_busy` and `Retry-After: 10` (Slice 2 plan R43, round 33). The client retries later;
+  `import_busy` and `Retry-After: 10` (round 33). The client retries later;
   nothing was read or written.
 - **`participationId` in a problem:** a refusal that refers to a participation the caller may
   open names its id (an extension member of RFC 9457), never a value: a manual creation whose
-  Personalnummer exists already (`personnel_number_taken`, R32) links to that participation.
+  Personalnummer exists already (`personnel_number_taken`) links to that participation.
+
+## Conventions as built (Slices 0–2)
+
+Status service (`apps/api/src/participations/status-service.ts`):
+- The only TypeScript caller of the status functions. One transaction per call, in this order:
+  lock and load (participation, project, wave, current exception request, dated facts) →
+  permission (`mayPerformTransition` / `mayPerformOperation`) → the draft gate → stale check → the
+  domain's check → the function. A refusal is a `StatusServiceError` of kind `not_found`,
+  `forbidden`, `stale`, `domain` or `integrity` with a code (and the failed guards), never a value;
+  it writes nothing.
+- Every function that changes the participation row (status, tracks, wave, dates) increments
+  `status_version`, the optimistic-concurrency token clients send as `expectedVersion`.
+
+Errors (`apps/api/src/problem.ts`, `app.ts`, `database-errors.ts`, `packages/domain/src/api.ts`):
+- `type` is `urn:transfer:problem:<kind>`: `validation-error` 400, `unauthenticated` 401,
+  `forbidden` 403, `not-found` 404, `conflict` 409, `payload-too-large` 413,
+  `unsupported-media-type` 415, `domain-error` 422, `internal-error` 500, `service-unavailable` 503.
+- `errors[]` items are `{ pointer | parameter, code, detail }` (a JSON pointer into the body, or a
+  query or path parameter), never the submitted value. A domain error's pointer is `/<field>` when
+  its code belongs to a field, else empty. Malformed JSON is a 400 `malformed_json`.
+- A 500 has no message or stack, only `instance: urn:request:<id>`; the log keeps the error's
+  name, code and stack frames, never its message.
+- Status-service kinds: `not_found` → 404, `forbidden` → 403, `stale` → 409 `conflict`,
+  `domain` and `integrity` → 422. Each route allowlists the `P0001` codes it maps
+  (`functionRefusal`) and rethrows the rest (a 500). A release template file that differs from the
+  manifest, or an invalid stored template snapshot, is a 500 too.
+
+Requests:
+- `POST`, `PUT` and `PATCH` need `application/json` (415). CSRF: Hono's origin check against
+  `APP_ORIGINS` on `/api/*`.
+- Bodies are strict: an unknown field is a 400 `unrecognized_keys` at its pointer, so
+  server-owned values (creator, approver, confirmer, hashes, a new project's Project Agentur) never
+  come from the client. Action routes (activation, withdrawal) take an empty strict object.
+  `DELETE` has no body; its `expectedVersion` is a strict query parameter. The template catalog's
+  query is strict too; the other paged lists' `PageQuery` is not.
+- A write that changes nothing is refused 422 (`project_unchanged`, `wave_unchanged`,
+  `override_unchanged`, `dates_unchanged`).
+- Order: the request schema (400, a malformed id included) → visibility (404: an unknown id and a
+  resource the user may not see are the same 404, as is a nested resource such as a wave of
+  another project) → operation permission 403 → state 422 → version 409 → value rules 422 → write.
+  Exceptions: the date change checks the version (409) before its rules; the import confirm
+  refuses mapping issues and error rows (422) before a stale preview token (409
+  `import_preview_stale`).
+
+Pagination (`apps/api/src/cursor.ts`):
+- `limit` 1–100, default 50. The cursor is base64url JSON of the keyset position, opaque but not
+  signed; one that doesn't decode is a 400 `invalid_cursor`. Keyset `(created_at, id)`:
+  participations and entry waves ascending, projects newest first; the template catalog by
+  `(agenturKey, version)`. No personal data in cursors or URLs.
+- Participant list items carry only the id, the three statuses, the wave id and, where the viewer
+  may list them, Personalnummer and names. Which rows: `participationListScope` (all, the assigned
+  ones, or none → 403).
+
+Capabilities:
+- The API derives per viewer what they may do now (`capabilities`, with a refusal code where not):
+  permission first, then the domain preconditions (`packages/domain/src/access/participation-view.ts`,
+  `projects/pins.ts`). The UI shows an action only when its capability allows it, never inferred
+  from role or status; the API decides again on submit.
+
+Logging and environment (`apps/api/src/logger.ts`, `env.ts`):
+- One JSON line per request: `requestId`, `method`, `route` (the pattern), `status`, `durationMs`,
+  `staffUserId`; never bodies, query strings, cookies or headers. Every response carries
+  `X-Request-Id`. Environment errors name the variable, never its value.
+
+Import keys (`apps/api/src/imports/keys.ts`):
+- Saved column mappings and preview tokens are HMACs under two keys derived from `SESSION_SECRET`
+  with HKDF-SHA256 (`import-header-mapping:v1`, `import-preview-token:v1`), so one never gives the
+  other.

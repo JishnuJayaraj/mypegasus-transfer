@@ -49,6 +49,12 @@
     `participation_record`, part of the evidence set, never in ordinary participant lists or
     customer exports; no free text. The signed amendment itself is an `employment_contract`
     document: highly confidential, encrypted when uploaded, immutable, separately access-controlled.
+  - **BA reporting tasks** (`baReportingTask`, PR 2h-3): **confidential**, not listable, never in
+    customer exports, retention class `participation_record`; read like other confidential case
+    data (assigned consultant, PL, back office; `packages/domain/src/fields/catalog.ts`).
+  - **Entry-wave code and name** are text the PL types: they stay on the wave row and never enter
+    audit details; a wave change records only the changed key names (and a changed date's old and
+    new value).
   - End reason `long_term_illness_reduced_earning_capacity`: **special category**, never in
     ordinary lists. End reason `deceased`: confidential.
   - Profiling-exception reasons: **structured reason codes** where possible (Q81); a free-text
@@ -88,7 +94,8 @@
   Break-glass and reconciliations of a TG entry are **reviewed after the fact** (next business
   day). A profiling exception needs **approval before** it can satisfy the TG entry guard.
 - **Regional operations manager** *(assumed, Q80)*: an org role scoped to a region, with **no
-  ordinary participant access**. It approves profiling exceptions, reviews reconciliations and
+  ordinary participant access**. Until Slice 3 gives projects a region, the org roles, this one
+  included, have **global scope** (`apps/api/src/access.ts`). It approves profiling exceptions, reviews reconciliations and
   break-glass, sees audit metadata, structured reason codes and the necessary dates, and can ask
   the PL for clarification. It never sees case files, section C, health fields or signed
   documents through this role.
@@ -115,6 +122,11 @@ Access is decided per **resource kind**: a participant **field** (its category f
 catalog), a **document** (its type from the document-type catalog), **audit metadata** (a
 filtered projection) or an **aggregate**. An action a kind doesn't have (opening a field,
 aggregate or audit entry as a document, writing an aggregate) is `not_applicable`.
+
+**Participation detail** (`participationDetail`, `packages/domain/src/access/participation-view.ts`):
+the case data is one gate, every `case_internal` field (statuses, dates) readable or a 403; the
+person fields are then projected one by one through `decideAccess`. The detail serves no field
+whose read must be logged; such fields come with their separate logged endpoints.
 
 | Category | Fields / documents | Class |
 |---|---|---|
@@ -192,7 +204,9 @@ who may open a document; requesting grants no read access.
   BA/legal determination.
 
 **Sensitive writes** are audited as `sensitive_write` with the field or document key, actor,
-subject and timestamp, **never the old or new value**.
+subject and timestamp, **never the old or new value**. `sensitive_write` covers special-category
+and highly confidential data only; ordinary person-data writes are `participant_data_changed`
+(below).
 
 ### Write permissions *(assumed until DPO and PL review, Q65)*
 
@@ -208,6 +222,27 @@ subject and timestamp, **never the old or new value**.
 - **Signed or submitted documents are immutable**; corrections create a new version or a
   correction record.
 - Sensitive writes and corrections are audited.
+
+### Person-data writes and the HR import
+
+- **Write paths:** identity and personnel-file data are written only by the HR import, manual
+  creation and the seed, all through `write_participant_data`; there is no generic edit. The
+  function computes the changed fields and audits them as `participant_data_changed` with the
+  field names, never values. The matrix cell for ordinary PL edits stays `undecided` (Q65).
+- **No target for sensitive data:** the import maps only identity, Austrittsdatum, address and
+  contact (`packages/domain/src/import/targets.ts`); there is no target for special-category or
+  highly confidential data. Columns such as Steuer-ID, IBAN, RV-Nummer, GdB or nationality can't
+  be mapped, so their values are dropped: never stored or echoed. The preview report is a 200
+  response (`packages/domain/src/import/contract.ts`); its issues carry row, target and code,
+  never a value.
+- **Logs:** preview and confirm log the project id, request id, counts and duration only; never
+  file names, headers or values. The base64 file body never reaches a log or an error
+  (validation problems carry the code and location, never the submitted value).
+- **Keys** (`apps/api/src/imports/keys.ts`): the saved mappings' header hashes and the preview
+  token are HMACs with keys HKDF-derived from `SESSION_SECRET` (`import-header-mapping:v1`,
+  `import-preview-token:v1`), so one key never gives the other. Rotating the secret unlinks every
+  saved mapping (only suggestions are lost) and invalidates open previews; in development the
+  secret is random per start.
 
 ## Customer reporting *(assumed, Q5, Q13, Q47)*
 
@@ -280,12 +315,12 @@ them, a legal hold suspends only the affected records, never the whole participa
 
 | Class | Tables | Rule |
 |---|---|---|
-| `project_master` | `project`, `project_membership` (staff ids and project roles, Slice 2), `project_entry_wave`, `import_column_mapping` (the keyed hash of a normalised column header and its target, saved by a confirmed import, never header text; Slice 2, PR 2g. **Classed `confidential`, possibly pseudonymised participant data** (Slice 2 plan R44, decided with the 2h plan): if a PL picks a data row as the header row, the hashes are keyed hashes of a person's values, which are pseudonymised, not anonymised (Art. 4(5) GDPR). The confirm saves no mapping when the chosen header row looks like a data row (a date, an `@` or five or more digits in a cell); hashes are never served, logged or exported; rotating the derived key makes every stored hash unlinkable. It stays in this class because it can't be linked to a person or participation), `project_template_pin` (which template versions a project pinned, by which staff user, Slice 2), `project_config_override` (override versions: Agentur-scoped settings with source codes, the confirming staff id and date, approved relaxations with rule id, reason code, approving staff id and date; project-wide, no participant data; append-only, PR 2d-1), `config_relaxation_request` (relaxation requests: rule id, controlled reason code, status, requesting and deciding staff ids and dates; project-wide, no participant data, PR 2d-2) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q58): retained while active or unsettled; after closure until the later of the end of the 3rd calendar year after closure and the end of the 4th calendar year after the later BA/§110 final settlement date; a never-activated draft without participants, never submitted externally: 1 year after its last activity. At expiry membership links and actor references are deleted or pseudonymised per the audit policy and identifying free text deleted; accounting, payroll, contract and tax records keep their own classes |
+| `project_master` | `project`, `project_membership` (staff ids and project roles, Slice 2), `project_entry_wave`, `import_column_mapping` (the keyed hash of a normalised column header and its target, saved by a confirmed import, never header text; Slice 2, PR 2g. **Classed `confidential`, possibly pseudonymised participant data**: if a PL picks a data row as the header row, the hashes are keyed hashes of a person's values, which are pseudonymised, not anonymised (Art. 4(5) GDPR). The confirm saves no mapping when the chosen header row looks like a data row (a date, an `@` or five or more digits in a cell); hashes are never served, logged or exported; rotating the derived key makes every stored hash unlinkable. It stays in this class because it can't be linked to a person or participation. The runtime role writes it directly (SELECT, INSERT, UPDATE; no DELETE; not audited, a cache of hashes): the one project-data table written outside a database function), `project_template_pin` (which template versions a project pinned, by which staff user, Slice 2), `project_config_override` (override versions: Agentur-scoped settings with source codes, the confirming staff id and date, approved relaxations with rule id, reason code, approving staff id and date; project-wide, no participant data; append-only, PR 2d-1), `config_relaxation_request` (relaxation requests: rule id, controlled reason code, status, requesting and deciding staff ids and dates; project-wide, no participant data, PR 2d-2) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q58): retained while active or unsettled; after closure until the later of the end of the 3rd calendar year after closure and the end of the 4th calendar year after the later BA/§110 final settlement date; a never-activated draft without participants, never submitted externally: 1 year after its last activity. At expiry membership links and actor references are deleted or pseudonymised per the audit policy and identifying free text deleted; accounting, payroll, contract and tax records keep their own classes |
 | `staff_account` | `staff_user` | deactivate and pseudonymise, never delete (Q59, assumed) |
 | `participation_record` | `participation`, `participant_identity` (Personalnummer, last and first name, birth date; Slice 2, PR 2f), `participation_dsv_amendment` (DSV amendment metadata: kind, date fully executed, old and new effective dates, the confirming staff id and instant, the controlled original location, an optional document number; no free text; immutable; part of the evidence set, round 32 D3; Slice 2, PR 2h-3), `ba_reporting_task` (BA reporting tasks: kind, the date reported on, status; Slice 2, PR 2h-3), `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or responses, round 17; evidence records get their own class in Slice 4b) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q77/Q105): non-signer without a fully executed DSV or funded §110 participation 90 calendar days after `withdrawnOn` (unless a legal hold or documented dispute); fully executed DSV without TG entry, end of the 3rd calendar year after cancellation or contractual end; TG participant, end of the 3rd calendar year after exit; BA-funded, the minimum evidence set until the end of the 4th calendar year after the later of `kugFinalSettlementDate`/`measure110SettlementDate`, never while one is missing |
 | `audit_log` | `audit_event` | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
 | `personnel_file` (Slice 2, PR 2f) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate` | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
-| `reference_data` | `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`, R27) | no personal data; never touched by the retention job |
+| `reference_data` | `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`) | no personal data; never touched by the retention job |
 
 Implementation:
 - `retentionClass` per data category and document type, configured as data.

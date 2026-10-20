@@ -43,7 +43,7 @@ earlier rounds, round 29 wins.
     2h.
 - If both are approved together, that confirmation is **round 30**. If Q103 is confirmed first,
   round 30 is Q103 and a later round is Q102.
-- That PR updates `docs/open-questions.md`, the decision record, `docs/plans/slice-2.md` and the
+- That PR updates `docs/open-questions.md`, the decision record, `docs/plans/archive/slice-2.md` and the
   relevant data-catalog and address requirements.
 
 ## Applied

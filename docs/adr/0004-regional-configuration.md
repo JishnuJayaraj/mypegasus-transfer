@@ -50,13 +50,13 @@ Accepted in the PR #1 review:
   default channels, deadlines (ASU formula, signing-deadline offset, reminder intervals) and
   default completeness rules. Regional templates override only what differs.
 
-## Note 2026-10-16: spike S1 (`z.fromJSONSchema`, Slice 1 plan section 3)
+## Note 2026-10-16: spike S1 (`z.fromJSONSchema`)
 
 **Passed; no fallback, `ajv` is not added.** Checked with `zod@4.6.7` in a cloud session
 (Node 22.22.0, Chromium via Playwright):
 
-- **Same behaviour as hand-written Zod** for every keyword of the field-schema profile (plan
-  5.7): `type` (`string`, `integer`, `number`, `boolean`), `enum` (typed and untyped), `const`,
+- **Same behaviour as hand-written Zod** for every keyword of the field-schema profile
+  (`docs/domain/regional-variation.md`): `type` (`string`, `integer`, `number`, `boolean`), `enum` (typed and untyped), `const`,
   `minLength`/`maxLength`, `pattern`, `minimum`/`maximum`, `title`/`description`; 63 values
   compared, no difference. `x-dataClass`, `x-retentionClass` and `x-label` compile and are
   ignored for validation.
@@ -128,7 +128,7 @@ Two details for PR 1f (`field-schema.ts`):
 - **Pinned versions** *(provisional, Q36)*: the resolver takes the project's template objects;
   `@transfer/config/load` (Node only) reads `templates/<agenturKey>/<version>.json` and checks
   that the file is the template its path names. Compiled custom-field validators are cached per
-  (template id, version). Two fictional samples (D8): `beispielstadt-nord` (versions 1 and 2)
+  (template id, version). Two fictional samples: `beispielstadt-nord` (versions 1 and 2)
   and `beispielstadt-sued`.
 - **Slice 2 invariants** (round 15): an override is validated against every pinned Agentur
   template, and each relaxation must match a rule in at least one pinned chain; an existing
@@ -137,7 +137,7 @@ Two details for PR 1f (`field-schema.ts`):
 
 ## Amendment 2026-10-17: snapshots, manifest, immutability and `CONFIG_DIR` (Slice 2, PR 2c-1)
 
-Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
+Decided for Slice 2 (round 22):
 - **Content identity:** a template version's identity is the SHA-256 of its canonical JSON
   (object keys sorted, no insignificant whitespace; `packages/config/src/hash.ts`), so formatting
   never changes it and any content change does.
@@ -176,7 +176,7 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
   pin, so pinning a further Agentur can't break the override.
 - **Override versions** are stored per project (ADR-0002 amendment of the same date) and are part
   of the project snapshot: the configuration a project resolves is its pinned template contents
-  plus its current override version (R11).
+  plus its current override version.
 
 ## Amendment 2026-10-17: rule relaxations with approval (Slice 2, PR 2d-2)
 
@@ -185,8 +185,7 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
   the audit model and the database enum need it and the domain can't import `@transfer/config`;
   `packages/config/src/override.ts` re-exports it, as `model.ts` does the Agentur vocabulary.
   There is one list.
-- **A relaxation enters the override only through an approval** by another person (round 8,
-  R2): the approved entry `{ ruleId, reasonCode, approvedBy, approvedOn }` is a new override
+- **A relaxation enters the override only through an approval** by another person (round 8): the approved entry `{ ruleId, reasonCode, approvedBy, approvedOn }` is a new override
   version, validated by `validateProjectOverride` like every other write. The resolver never
   relaxes a rule for another project type (Q89), so such a relaxation is `relaxation_unmatched`
   (round 28). `withRelaxation` adds or
@@ -199,7 +198,7 @@ Decided in the Slice 2 plan (D5, R10–R12, R22, 5.8; round 22):
   migration (Q36), never through a plain pin, which the database refuses for an Agentur the
   project has pinned. The configuration response lists per pin the newer versions a PL may
   migrate to.
-- **The review (Q93, R15):** `migrationPreview` (`packages/config/src/migration.ts`, pure) lists
+- **The review (Q93):** `migrationPreview` (`packages/config/src/migration.ts`, pure) lists
   the changed template settings, the rules and custom fields added, removed or changed, the
   override's issues with the new version (`validateProjectOverride`) and every key of the
   Agentur's scoped setting with its project value and the old and new template value. The PL

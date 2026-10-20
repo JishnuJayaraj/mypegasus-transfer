@@ -46,7 +46,7 @@ Accepted in the PR #1 review:
 
 ## Amendment 2026-10-16: status functions and the lifecycle tables (Slice 1, PR 1g-1)
 
-Decided in the Slice 1 plan (D2, sections 5.4 and 5.10) and built in PR 1g-1:
+Built in PR 1g-1:
 - **Only `SECURITY DEFINER` functions write statuses and audit events.** Nine functions
   (`lock_participation`, `create_participation`, `change_participation_status`,
   `assign_entry_wave`, `request_profiling_exception`, `decide_profiling_exception`,
@@ -82,7 +82,7 @@ Decided in the Slice 1 plan (D2, sections 5.4 and 5.10) and built in PR 1g-1:
 
 ## Amendment 2026-10-16: project setup, memberships and the project lock (Slice 2, PR 2a)
 
-Decided in the Slice 2 plan (D2–D4, round 22) and built in PR 2a:
+Built in PR 2a:
 - **Project setup writes go through `SECURITY DEFINER` functions** too, with their audit event
   in the same transaction: `create_project` (the project, the creator's PL membership,
   `project_created`) and `update_project` (`project_changed` with the changed keys, never the free
@@ -94,8 +94,7 @@ Decided in the Slice 2 plan (D2–D4, round 22) and built in PR 2a:
   function locks through `lock_participation`, so none interleaves with a setup mutation of its
   project, whatever a service remembers. Lock order everywhere: project → template version →
   participation row.
-- **`project_membership`** holds zero or more project roles per staff user and project (D6 of
-  Slice 1); the API builds the access subject from it. Managing members is Slice 3. The migration
+- **`project_membership`** holds zero or more project roles per staff user and project; the API builds the access subject from it. Managing members is Slice 3. The migration
   makes each existing project's creator its PL member when their flat role is `project_lead`, and
   fails if a project would be left without a PL; nobody is elevated silently (round 23).
 - `create_project` takes the new project's exclusive lock first, `update_project` the project's
@@ -106,17 +105,17 @@ Decided in the Slice 2 plan (D2–D4, round 22) and built in PR 2a:
 
 ## Amendment 2026-10-17: template versions and pins (Slice 2, PR 2c-2)
 
-Decided in the Slice 2 plan (D3, D5, R27, R28; round 22) and built in PR 2c-2:
+Built in PR 2c-2:
 - **`config_template_version`** holds each template version once, keyed by `(agentur_key,
   version)`, with its content (`jsonb`) and canonical SHA-256; global reference data without
-  `project_id` (R27). **`project_template_pin`** is append-only (the current pin per Agentur is
+  `project_id`. **`project_template_pin`** is append-only (the current pin per Agentur is
   the highest `seq`) and carries `project_id`.
 - **`pin_agentur_template`** (`SECURITY DEFINER`) takes the exclusive project lock first, then
   registers the version with `INSERT … ON CONFLICT DO NOTHING`: two concurrent first pins of one
   version serialise on the primary key, and every pin compares the stored content (`jsonb`
   equality) and hash with the supplied ones (`template_version_changed`). Lock order stays
   project → template version → participation row. It writes `config_template_pinned` with the
-  base-defaults version (R26).
+  base-defaults version.
 - **Append-only for every role:** a trigger refuses `UPDATE` and `DELETE` on both tables, for the
   owner too; `transfer_app` has `SELECT` only. `record_audit_event` refuses the new type.
 - **`update_project`** is replaced with a `p_project_agentur_key` parameter: only while draft and
@@ -125,25 +124,25 @@ Decided in the Slice 2 plan (D3, D5, R27, R28; round 22) and built in PR 2c-2:
 
 ## Amendment 2026-10-17: project override versions (Slice 2, PR 2d-1)
 
-Decided in the Slice 2 plan (D2 as amended in round 26, D3, 5.2, 5.3, 5.9) and built in PR 2d-1:
+Built in PR 2d-1:
 - **`project_config_override`** holds one row per override version, keyed by `(project_id,
   version)`, with the validated `project_override` content (`jsonb`); the current override is the
   highest version, no row is version 0. Append-only for every role (the 0016 trigger), `SELECT`
   only for `transfer_app`; retention class `project_master`.
 - **`write_project_override`** (`SECURITY DEFINER`) takes the exclusive project lock first, then
   compares the expected version (`override_version_stale`, the API's 409) and refuses the current
-  content again (`override_unchanged`). The content is the second `jsonb` payload D2 permits: the
-  service validates it against every pinned chain first (`validateProjectOverride`), the function
+  content again (`override_unchanged`). The content is a permitted `jsonb` payload (see
+  "Conventions as built" below): the service validates it against every pinned chain first (`validateProjectOverride`), the function
   checks its structure and that the claimed change is exactly what the content does (round 27):
   apart from the named Agentur's setting (an empty `agenturSettings` counting as none) the content
   equals the current one, so no field, rule, relaxation or other Agentur's setting changes under
   that audit event, and a set is confirmed by the acting user. It writes `config_override_changed` with the version, the change, the
   Agentur key, the setting keys it computes itself, the source of a set and the base-defaults
-  version (R26); `record_audit_event` refuses that type now.
+  version; `record_audit_event` refuses that type now.
 
 ## Amendment 2026-10-17: rule relaxation requests (Slice 2, PR 2d-2)
 
-Decided in the Slice 2 plan (D2, D3, 5.2, 5.3, 5.9; round 8 four eyes, R2) and built in PR 2d-2:
+Built in PR 2d-2:
 - **`config_relaxation_request`** holds one row per request (`project_id`, rule id, controlled
   reason code, status `requested` → `approved` / `rejected` / `withdrawn`, requester and decider
   with dates and instants). Like `profiling_exception_request`: decision and four-eyes `CHECK`s
@@ -154,7 +153,7 @@ Decided in the Slice 2 plan (D2, D3, 5.2, 5.3, 5.9; round 8 four eyes, R2) and b
   (`SECURITY DEFINER`) take the exclusive project lock first (for a decision or withdrawal after
   reading the request's immutable project id), refuse non-users and assisted mode, and write
   `rule_relaxation_requested` / `…_approved` / `…_rejected` / `…_withdrawn`; request and approval
-  carry the base-defaults version (R26). `record_audit_event` refuses the four types.
+  carry the base-defaults version. `record_audit_event` refuses the four types.
 - **Override versions** are appended by the internal `append_project_override` (no `EXECUTE`
   for `transfer_app`), with the change kinds `relaxation_added` and `relaxation_removed` next to
   the Agentur-scoped ones and round 27's exact delta: apart from that rule's relaxation the
@@ -167,7 +166,7 @@ Decided in the Slice 2 plan (D2, D3, 5.2, 5.3, 5.9; round 8 four eyes, R2) and b
 
 ## Amendment 2026-10-17: project activation and the draft gate (Slice 2, PR 2e-1)
 
-Decided in the Slice 2 plan (D2, D3, D9, R1, R26, 5.3, 5.5; Q98) and built in PR 2e-1:
+Built in PR 2e-1 (Q98):
 - **`activate_project(id, base_defaults_version, context)`** (`SECURITY DEFINER`) takes the
   exclusive project lock first, refuses non-users and assisted mode, and re-checks under the lock
   what the service decided with `projectActivationBlockers`: the project is `draft`
@@ -176,18 +175,17 @@ Decided in the Slice 2 plan (D2, D3, D9, R1, R26, 5.3, 5.5; Q98) and built in PR
   `latest_entry_date` (`no_entry_wave_with_latest_entry_date`, Q77). It sets `status = 'active'`,
   `activated_at` (database time) and `activated_by` (the context's staff user) and writes
   `project_activated` with the Project Agentur, the version of its pinned template and the
-  base-defaults version (R26), all computed in SQL. `record_audit_event` refuses the type.
+  base-defaults version, all computed in SQL. `record_audit_event` refuses the type.
   `transfer_app` still has no `UPDATE` on `project`.
 - **The draft gate in the database:** `change_participation_status` (replaced, same signature)
   refuses every transition of a project that isn't `active` (`project_not_active`), right after
   the participation lock and before the stale check, as defence in depth for the status
-  service's own check (D9). Its shared project lock serialises it with `activate_project`.
+  service's own check. Its shared project lock serialises it with `activate_project`.
   Creation and wave assignment stay allowed in draft.
 
 ## Amendment 2026-10-17: template version migration (Slice 2, PR 2e-2)
 
-Decided in the Slice 2 plan (D2, D3, D5, R15, R26, 5.3, 5.8; Q36, Q93; rounds 27 and 28) and
-built in PR 2e-2:
+Built in PR 2e-2 (Q36, Q93):
 - **`pin_agentur_template` pins an Agentur once per project:** its body moved to the internal
   `append_template_pin` (no `EXECUTE` for `transfer_app`), and the granted function refuses any
   version of an Agentur the project has pinned (`template_already_pinned`). So a version changes
@@ -205,5 +203,70 @@ built in PR 2e-2:
   and confirmation; its settings are the current ones with at least one key removed and no value
   changed or added (or the setting is gone with its last key). The audit event names the removed
   keys (`settingKeys`) and the kept ones (`keptSettingKeys`), computed in SQL, and the
-  base-defaults version (R26). Only this function writes that change kind, in the call that pins
+  base-defaults version. Only this function writes that change kind, in the call that pins
   the new version (round 28); `write_project_override` and `append_project_override` refuse it.
+
+## Conventions as built (Slices 0–2)
+
+Roles and grants:
+- **Two roles, the same names on the cluster** (`packages/db/sql/setup.sql`; CloudNativePG manages
+  them there). `transfer_owner` owns the databases and tables and runs migrations and seeds.
+  `transfer_app` is the runtime role: `CONNECT`, `USAGE` on `public` and only the per-table grants
+  the hand-written migrations give it (`0001_grants.sql` onwards). No default privileges; no
+  `UPDATE`/`DELETE` unless a feature needs it.
+- On every table added in Slice 2 `transfer_app` has `SELECT` only; the functions write. The one
+  exception is `import_column_mapping`: `SELECT, INSERT, UPDATE`, no `DELETE`, no audit event. It
+  holds keyed hashes of normalised headers and their targets, a suggestion cache the API writes
+  itself (`0027_import_mapping_grants.sql`).
+
+Schema:
+- **Data catalog** (`packages/db/src/data-catalog.ts`): every table has a `dataClass`, a
+  `retentionClass` and `holdsParticipantData`. A table with participant data needs
+  `project_id uuid not null` with an FK to `project`; `data-catalog.test.ts` fails for a table
+  missing from the catalog, an unknown class or an unscoped participant table.
+- `date` columns use Drizzle `mode: "string"`.
+
+Functions:
+- **Typed parameters** (enums, `date`, `uuid`, `audit_context`). The only `jsonb` parameters of
+  granted functions are template and override content, whose structure the functions check in SQL,
+  and `record_audit_event`'s `details`, held by the audit table's `CHECK`s.
+- **Read, decide, write under the project lock.** A service that reads state, decides in
+  TypeScript and then calls a function takes `lock_project_setup` first in the same transaction;
+  the functions take it again (transaction-scoped advisory locks are re-entrant). So do project and
+  entry-wave edits, pins, the template migration, override and relaxation writes, activation, the
+  import confirm and the manual creation (`apps/api/src/imports/confirm.ts`,
+  `participations/manual-creation.ts`).
+- **`write_participant_data`** (0024, 0025) is the only writer of `participant_identity` and
+  `participant_details`. A null argument keeps the stored value. Refusals: `identity_required` (a
+  first write without the Personalnummer and both names), `personnel_number_immutable`,
+  `personnel_number_taken` (unique per project), `address_incomplete`, and `invalid_argument` for a
+  `CHECK` violation. Actors `user` and `system` only: no assisted mode (`invalid_actor`), never a
+  participant. It writes `participant_data_changed` with the changed keys only (`IS DISTINCT
+  FROM`), never values, and no event when nothing changes. Table `CHECK`s: text trimmed, without
+  control characters, length 1–50 (Personalnummer), 1–100 (names), 1–200 (street, city), 1–30
+  (phone, mobile), 1–254 (emails); the four address columns all set or all null; country
+  `^[A-Z]{2}$` and only `DE`; a `DE` postal code has five digits. Nothing deletes these rows; that
+  is the retention job's (ADR-0008).
+- **`set_participation_dates`** (0031, 0032): user actor only; the amendment parameters all set or
+  all null (`invalid_argument`); compare-and-set on `status_version` (`stale_status`). One call
+  writes the dates, the amendment of a signed DSV, one `ba_reporting_task` per changed effective
+  date (`later_entry`, `planned_end_changed`) and `participation_dates_changed`. Refusals:
+  `not_ta_tg`, `wave_required`, `participation_closed`, `dsv_offer_open`,
+  `dsv_amendment_required`, `amendment_not_allowed`, `dates_unchanged`, `entered`,
+  `amendment_kind_mismatch`. `record_audit_event` refuses the event type.
+- `participation_dsv_amendment` is append-only by trigger, for every role. A `ba_reporting_task`
+  is never deleted; only its status moves, once, from `pending` to `reported` or `not_required`,
+  and what it reports never changes (`task_immutable`). The `early_exit` task comes from an
+  `AFTER UPDATE OF status` trigger on `participation` (an exit before the effective contractual
+  end, or without one). The trigger is not `SECURITY DEFINER`: status changes run only inside the
+  status function, as the owner, so the trigger does too.
+- `assign_entry_wave` refuses `individual_dates_set` on the locked row (0028).
+  `audit_event_lifecycle_has_participation` requires a participation for
+  `participation_created_manually` and `participation_dates_changed` too (0030, 0031).
+  `import_confirmed`, `warning_confirmed` and `participation_created_manually` are written through
+  `record_audit_event`.
+
+Migrations:
+- A value added with `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the
+  Drizzle migrator runs all pending migrations in one transaction (`packages/db/src/migrate.ts`).
+  So `CHECK`s and functions compare `event_type::text` with the new value's string (0024, 0030).

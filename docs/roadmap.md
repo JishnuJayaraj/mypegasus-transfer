@@ -1,7 +1,8 @@
 # Roadmap — vertical slices
 
 Each slice is one branch and one PR (or a short series). Each ends with something a PL could
-click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing.
+click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing; a finished slice's plan moves to
+`docs/plans/archive/`. Slices 0–2 are done.
 
 ## Slice 0 — Walking skeleton
 Monorepo (pnpm), Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell
@@ -31,10 +32,14 @@ review.
 ## Slice 3 — Auth & roles
 Connect login and identity to the Slice 1 access model: staff OIDC (dev stub first) in
 `apps/web`, participant SMS/email link (mock adapters) in `apps/portal`, sessions, audit of
-logins.
+logins. Deferred here from Slice 2: membership management, participant assignments (Q62) and
+regions on projects (until then the org roles have global scope).
 
 ## Slice 4a — Self-service wizard + consent (F5)
 Config-driven wizard in `apps/portal`, consent records, assisted mode (from `apps/web`).
+Deferred here from Slice 2: the placement Agentur on participations and its automatic pin (Q36).
+Special-category and highly confidential storage (encryption, separate logged endpoints) comes
+with the first such field (here or Slice 6).
 
 ## Slice 4b — Uploads and documents (F5)
 Uploads (storage + virus-scan adapters, mock), file-type allowlist, signed URLs, document
@@ -46,16 +51,22 @@ Project QR (14 days, rate limit, captcha), `self_registered`, manual matching by
 
 ## Slice 5 — PL dashboard (F7) + reminders (F4 basics)
 Funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines.
+Deferred here from Slice 2: bulk entry-wave assignment; the audit history UI (until then the
+runtime role can't read `audit_event`).
 
 ## Slice 6 — Profiling & forms (F6)
 Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` registry with TL 407 + Kug 200b (ADR-0009), PDF adapter (pdf-lib +
 Gotenberg), overflow attachment, scan upload, Agentur submission status.
+Deferred here from Slice 2: sending BA reports (marking reporting tasks `reported` or
+`not_required`); the affected monthly claim and project closure stay blocked while a required
+report is pending (process-and-lifecycle.md, BA reporting).
 
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of
 "participant signed, not fully executed", admission cutoff and system withdrawal (incl. conflict
 flags), TG entry guard, two-stage retention job (ADR-0008).
+Deferred here from Slice 2: the reconciliation route (Q68) and its review.
 
 ## Slice 8 — TG module basic (F9)
 Participant file, coaching notes, goals/tasks, qualification plan, applications, exit.
@@ -70,6 +81,9 @@ checklist in ADR-0005 — DPIA, AVV chain (Q32), no `assumed` items in data prot
 or legal deadlines, tested backup/restore, security review.
 
 ## Later
+Deferred from Slice 2: override additions of rules, custom fields and help texts through the
+API; template publication and the admin UI; project closure. Excluded (Q98): return to draft
+(activation is one-way) and a type change once the project has participations or waves.
 v1.1: more portal languages (tr, ar, pl, ru, uk, ro), appointments self-booking polish.
 v2: customer/works-council portal with login.
 v1.x: AI document extraction, CV generation, note summaries (behind AI adapter, EU-hosted model).

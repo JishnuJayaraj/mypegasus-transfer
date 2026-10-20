@@ -31,23 +31,29 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 ## User flows (MVP)
 
 ### F1 Project setup
-- Create project: customer, location, type (`ta_only` / `ta_tg`), Project Agentur
-  (the KuG-Agentur for `ta_tg`, Q90), dates (TA start,
-  signing deadline, default TG start/end), regional templates.
+- Create project: name, customer, type (`ta_only` / `ta_tg`); then the Project Agentur (the
+  KuG-Agentur for `ta_tg`, Q90), pinned Agentur templates and overrides. The project carries no
+  contractual dates: in `ta_tg` they live on its entry waves (signing deadline, default TG
+  start/end, `latestEntryDate`).
 - Project checklist: Agentur consultation of the Betriebsparteien, Anzeige über Arbeitsausfall,
   later the settlement dates (`kugFinalSettlementDate`, `measure110SettlementDate`).
-- Acceptance: project cannot be activated without dates and a regional template.
+- Acceptance: a project stays `draft` until activated; activation needs a pinned Project-Agentur
+  template and, in `ta_tg`, a wave with a `latestEntryDate` (Q98). Rules:
+  process-and-lifecycle.md, "Dates".
 
 ### F2 Import participants from Excel/CSV
-- Upload → column mapping (saved per customer for reuse) → validation → preview with errors
-  and duplicates → confirm.
-- Required columns: Personalnummer, Nachname, Vorname, Geburtsdatum, Austrittsdatum, Anschrift.
-  Optional: phone, private email. Work email is imported but never used for login.
-  *(provisional)*
-- Parsed on the server with a maintained library; dates validated strictly.
-- Acceptance: invalid rows are reported with row number and reason; nothing is imported until
-  confirmed; re-import updates matched people (by Personalnummer within the project) instead
-  of duplicating. No matching across projects.
+- Upload (`.xlsx` or CSV) → column mapping (suggested from saved mappings of the project and of
+  projects with the same customer, then synonyms; confirmed by the PL) → validation → preview
+  with errors, warnings and possible duplicates → confirm. Manual creation of one person follows
+  the same rules.
+- Required: Personalnummer, Nachname, Vorname; Geburtsdatum, Austrittsdatum and Anschrift unless
+  the project relaxed their rule. Optional: phone, mobile, private and work email (work email is
+  never used for login).
+- Acceptance: invalid rows are reported with row number and code; nothing is imported until
+  confirmed, and a confirm is all or nothing; re-import updates matched people (exact
+  Personalnummer within the project) instead of duplicating; terminal participations are
+  skipped. No matching across projects.
+- Rules: process-and-lifecycle.md, "Import and manual creation" (Q103, Q104).
 
 ### F3 Registration link & QR code
 - Per project QR for info events, valid 14 days, rate-limited, captcha; self-registration

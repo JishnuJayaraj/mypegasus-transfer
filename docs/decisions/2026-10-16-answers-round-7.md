@@ -1,6 +1,6 @@
 # Decisions — 2026-10-16, round 7 (Slice 1 planning)
 
-The product owner's answers in the review of [the Slice 1 plan](../plans/slice-1.md)
+The product owner's answers in the review of [the Slice 1 plan](../plans/archive/slice-1.md)
 (PR #8). They are carried into the plan, the domain docs and `open-questions.md` in the same PR.
 Where they differ from earlier rounds, round 7 wins.
 

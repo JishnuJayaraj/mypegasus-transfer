@@ -3,18 +3,18 @@
 - Status: **Approved** (rounds 7–9, 2026-10-16). No domain question is open; the remaining DPO
   and legal confirmations are pre-pilot gates.
 - Date: 2026-10-15, revised 2026-10-16
-- Roadmap: [Slice 1](../roadmap.md#slice-1--domain-core)
+- Roadmap: [Slice 1](../../roadmap.md#slice-1--domain-core)
 - Builds on: [Slice 0](slice-0.md) (merged, PRs 0a–0d)
-- Decisions: [round 7](../decisions/2026-10-16-answers-round-7.md),
-  [round 8](../decisions/2026-10-16-answers-round-8.md),
-  [round 9](../decisions/2026-10-16-answers-round-9.md)
+- Decisions: [round 7](../../decisions/2026-10-16-answers-round-7.md),
+  [round 8](../../decisions/2026-10-16-answers-round-8.md),
+  [round 9](../../decisions/2026-10-16-answers-round-9.md)
 - Relevant ADRs: 0002 (status writes enforced in the DB, append-only audit, `project_id`), 0004
   (fixed lifecycle core, regional templates, base defaults, completeness rules), 0006 (adapters,
   `Clock`), 0007 (access model in Slice 1), 0008 (retention per item), 0011 (pg-boss, `system`
   actor, injected `Clock`)
-- Domain docs: [process-and-lifecycle.md](../domain/process-and-lifecycle.md),
-  [data-protection.md](../domain/data-protection.md) (access matrix, write permissions),
-  [regional-variation.md](../domain/regional-variation.md), [glossary.md](../domain/glossary.md)
+- Domain docs: [process-and-lifecycle.md](../../domain/process-and-lifecycle.md),
+  [data-protection.md](../../domain/data-protection.md) (access matrix, write permissions),
+  [regional-variation.md](../../domain/regional-variation.md), [glossary.md](../../domain/glossary.md)
 
 ## 0. Decisions and open items
 
@@ -419,7 +419,7 @@ Readings taken in PR 1b-1 (fail safe, D10; correct them if wrong):
 | **Correct end reason** (Q72) | PL | on `withdrawn`/`exited`; same phase; not the same reason; a system-derived previous reason moves to the secondary list, a previous PL reason only when the PL confirms it still applies (round 10); the terminal status is not reopened |
 
 The readings taken in PR 1b-2 were answered in
-[round 10](../decisions/2026-10-16-answers-round-10.md) and are reflected in the table above.
+[round 10](../../decisions/2026-10-16-answers-round-10.md) and are reflected in the table above.
 Two readings of its wording remain (fail safe, D10; correct them if wrong):
 - "An applicable future start date" means an effective TG start exists and lies after today; it
   is checked on every request (the first included) and on approval and rejection.
@@ -608,7 +608,7 @@ wave, project and dated guard facts (`GuardFactsProvider`; fail closed in Slice 
 the function → commit. Later slices that write facts (DSV, ASU) take the same lock. The nightly
 job uses the same service as `system`.
 
-Readings taken in PR 1g-2, answered in [round 18](../decisions/2026-10-16-answers-round-18.md)
+Readings taken in PR 1g-2, answered in [round 18](../../decisions/2026-10-16-answers-round-18.md)
 and applied:
 
 1. **Order of checks** (confirmed): lock → load → **permission** (`mayPerformTransition` for the
@@ -686,7 +686,7 @@ the grants); `packages/domain/src/audit` (`AuditEvent`, `AuditEventType`, `Audit
 entries.
 
 The eighteen readings of the first draft were answered in
-[round 16](../decisions/2026-10-16-answers-round-16.md) (Q94 and Q95 confirmed); the answers are
+[round 16](../../decisions/2026-10-16-answers-round-16.md) (Q94 and Q95 confirmed); the answers are
 applied:
 - **Confirmed:** the split with the data catalog in 1g-1 (1); the W1 migration, projects created
   before Slice 2's wave UI staying without a wave (2); `profiling_exception_superseded` as a second
@@ -705,7 +705,7 @@ applied:
   again is refused with `wave_unchanged`, without a write (17).
 
 The nine readings taken while applying round 16 were answered in
-[round 17](../decisions/2026-10-16-answers-round-17.md) and are applied:
+[round 17](../../decisions/2026-10-16-answers-round-17.md) and are applied:
 
 1. **The fingerprint** is `sha256:v1:` plus 64 lowercase hex digits (`EvidenceFingerprint`): the
    version names the canonicalisation, so a later `v2` never looks like changed evidence
@@ -945,8 +945,8 @@ new version). Assisted writes carry actor + `onBehalfOf`. The `undecided` cells 
 DPO/PL review of Q65 with the generated table.
 
 The 14 readings taken in PR 1d-1 were answered in
-[round 11](../decisions/2026-10-16-answers-round-11.md) (Q87 *assumed*), the ten taken while
-applying it in [round 12](../decisions/2026-10-16-answers-round-12.md); both are reflected
+[round 11](../../decisions/2026-10-16-answers-round-11.md) (Q87 *assumed*), the ten taken while
+applying it in [round 12](../../decisions/2026-10-16-answers-round-12.md); both are reflected
 above. Round 12 corrected two: evidence-set access is the intersection of the active
 entitlement and break-glass (the PL's ASU proof file or exception evidence →
 `needs_break_glass`, not `never`), and the operational audit projections depend on the phase.
@@ -982,9 +982,9 @@ creation edge has the kind `anonymous_self_registration` and is refused for ever
 (Slice 4c's anonymous QR flow brings its own check).
 
 The eight readings taken in PR 1d-2 were answered in
-[round 12](../decisions/2026-10-16-answers-round-12.md) (the evidence-correction requester was
+[round 12](../../decisions/2026-10-16-answers-round-12.md) (the evidence-correction requester was
 corrected), the three taken while applying it in
-[round 13](../decisions/2026-10-16-answers-round-13.md); both are reflected above and in
+[round 13](../../decisions/2026-10-16-answers-round-13.md); both are reflected above and in
 data-protection.md. Round 13 narrowed the field-correction authority to fields retained in the
 evidence set (PL: identity without the address, `profilingSessions`, operational dates; back
 office: `pensionInsuranceNumber`, `baCustomerNumber`; either: DSV/TG dates). A correction of a
@@ -1110,7 +1110,7 @@ validators per (template id, version). `projectActivationBlockers` in
 `upload`, one more `operational_default` rule; proves AC-35) and
 `templates/beispielstadt-sued/1.json`.
 
-Readings taken in PR 1f-2, **all confirmed in [round 15](../decisions/2026-10-16-answers-round-15.md)**
+Readings taken in PR 1f-2, **all confirmed in [round 15](../../decisions/2026-10-16-answers-round-15.md)**
 (with `projectAgenturKey` instead of `kugAgenturKey`; Q90–Q93 confirmed):
 1. **Two levels in one participation resolution.** `resolveForParticipation` takes the
    participant steps from base → placement template → override and `project_checklist` from
@@ -1188,7 +1188,7 @@ neither. `base-defaults.json` holds:
 | `base-import-<field>` | `data_collection` | `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | `operational_default` (PRD F2) | all |
 | `base-dsv-signed-scan` | `dsv` | `dsv_signed_scan`, accepted | `statutory` (§623 BGB) | `ta_tg` |
 
-**Project types** (Q89, [round 14](../decisions/2026-10-16-answers-round-14.md)): every
+**Project types** (Q89, [round 14](../../decisions/2026-10-16-answers-round-14.md)): every
 `CompletenessRule` may carry `projectTypes` (non-empty, no duplicates; absent = every type).
 `evaluateCompleteness` takes the `projectType` in its facts (required) and skips a rule for
 another type: no missing item, no reminder, the step can be complete. `ruleAppliesTo` gives
@@ -1203,7 +1203,7 @@ an outcome, never a missing scan. A scan counts as accepted for fields 16 and 17
 review checked both declarations and the handwritten signature.
 
 The nine readings taken in PR 1f-1 were answered in
-[round 14](../decisions/2026-10-16-answers-round-14.md) and are reflected here:
+[round 14](../../decisions/2026-10-16-answers-round-14.md) and are reflected here:
 - **No regional value in the base defaults**, the ASU `defaultChannel` included; an unset
   default channel blocks nothing (any channel with proof counts, Q55), while Q76's Project-Agentur
   blocker stands. The base defaults declare no custom fields.
@@ -1283,7 +1283,7 @@ Built in PR 1h-1 (section 4): `job_run` (migrations `0008_job_run`, generated, a
 `0009_job_run_grants`), `packages/db/src/jobs-schema.ts` (the `pgboss` install in
 `runMigrations`), `apps/api/src/jobs/` (`startJobs`, the job names), `apps/api/src/shutdown.ts`,
 the environment and the `Clock` in `createApp`. The twelve readings were answered in
-[round 19](../decisions/2026-10-16-answers-round-19.md); the answers are applied:
+[round 19](../../decisions/2026-10-16-answers-round-19.md); the answers are applied:
 
 1. **The split** (section 4) — confirmed.
 2. **Schema install from pg-boss's exported SQL** — confirmed: the construction plan on a fresh
@@ -1320,7 +1320,7 @@ the environment and the `Clock` in `createApp`. The twelve readings were answere
    `now()` (tested: an explicit `completed_at` is `42501`, a completion before the scheduled run
    `23514`, the owner included). Both timestamps in Drizzle's `date` mode, so jobs code never
    needs `new Date`. Kept indefinitely as `reference_data` — confirmed. Consequence, decided in
-   Q96 ([round 20](../decisions/2026-10-16-answers-round-20.md)): a run whose clock is ahead of
+   Q96 ([round 20](../../decisions/2026-10-16-answers-round-20.md)): a run whose clock is ahead of
    database time is refused before any change (`run_not_due`, section 5.9), never applied without
    its `job_run` row.
 9. **The clock** — confirmed: `CLOCK` is validated before the auth checks; `createApp` gets the
@@ -1343,7 +1343,7 @@ Built in PR 1h-2: `apps/api/src/jobs/` `lifecycle-sweep.ts` (the sweep and the i
 `run-window.ts` (the due check and the window), `evaluate-project.ts`, `dispatch.ts` (the queue
 dispatch), `payloads.ts`, `errors.ts`, the workers in `jobs.ts`, `cli.ts` and
 `scripts/jobs-lifecycle.ts`. The twelve readings and Q97 were answered in
-[round 21](../decisions/2026-10-16-answers-round-21.md); the answers are applied:
+[round 21](../../decisions/2026-10-16-answers-round-21.md); the answers are applied:
 
 1. **Due by database time — confirmed, and applied to the project job too:** the run date is the
    `Clock`'s Berlin today; whether its scheduled time has passed is asked of the database, by the

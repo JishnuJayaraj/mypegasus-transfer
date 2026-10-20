@@ -6,7 +6,7 @@
 PostgreSQL database.
 Modules are separated by package boundaries, not by network calls.
 
-**One image** (Slice 0, D4): a Node 24 container runs the API bundle, which serves `/api/v1`,
+**One image** (Slice 0): a Node 24 container runs the API bundle, which serves `/api/v1`,
 the built staff SPA at `/` and the built portal at `/portal/` (SPA fallback to each
 `index.html`; hashed assets `immutable`, `index.html` `no-cache`; unknown `/api/*` paths stay a
 404 problem). Migrations are a separate command in the same image (`node dist/migrate.js`).
@@ -49,6 +49,44 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 | API contract | OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1` | 0010 |
 | Background jobs | pg-boss, idempotent, `system` actor, injected `Clock`, ID-only payloads | 0011 |
 
+## Packages
+
+- `packages/domain`: entities, lifecycle vocabulary and state machine, date helpers, field
+  catalog, Zod schemas (incl. the audit event model), completeness rules. No I/O, no system time.
+  Base defaults live in `packages/domain/config/base-defaults.json`.
+- `packages/db`: Drizzle schema, migrations (the SECURITY DEFINER status functions and grants
+  are hand-written), seed, data catalog. `pnpm db:migrate` also creates pg-boss's `pgboss` schema
+  and its `transfer_app` grants. The seed is synthetic only: idempotent by fixed UUIDs, fictional
+  names, `example.org` emails; `db:seed` and `db:reset` refuse `NODE_ENV=production`. After the
+  base seed, the API seed pins and activates through the services and creates and moves
+  participations only through the status service: each staff step by the seeded user the Q60
+  matrix allows, system steps as `system` with job `seed`, no bypass actor (Q95). It runs on a
+  manual clock on a fictional 2091–2092 timeline, so a persisted lifecycle-job demo needs a
+  separate past-dated fixture (Q96).
+- `packages/api-client`: the generated OpenAPI document + types and the typed client both SPAs
+  use.
+- `packages/ui`: thin wrappers around Carbon components, layout, tokens, i18n helpers.
+- `packages/config`: regional configuration: the Zod-authored layer model (base defaults,
+  Agentur templates, project overrides) exported as JSON Schema, the custom-field profile, the
+  two-level resolver with provenance and blockers, pinned template loading
+  (`@transfer/config/load`, Node only, from `CONFIG_DIR` in the image), the canonical template
+  hash, the fictional sample templates in `templates/<agenturKey>/<version>.json` (immutable once
+  merged; `pnpm lint` checks against `origin/main`, in CI the PR's base) and their generated
+  `manifest.json`.
+- `packages/adapters`: interfaces + implementations behind them (ADR-0006). Only `Clock` so far
+  (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus scan and export
+  come with the slices that need them.
+- `packages/forms` (Slice 4b): official BA form templates (blank PDF, field map, manifest),
+  ADR-0009.
+- `fixtures/`: synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV
+  import).
+
+Commands in more detail: `pnpm test:e2e` runs on the `transfer_e2e` database;
+`pnpm jobs:lifecycle` exits 1 with `run_not_due` when the run is not due by database time (Q96), and is refused
+with `NODE_ENV=production`; `scripts/image-smoke.sh` runs the migration and checks
+`/api/v1/health/ready`, `/`, `/portal/` and the template catalog. Image builds in cloud sessions
+need the proxy CA (`/root/.ccr/README.md`).
+
 ## Module boundaries
 
 - `packages/domain` has **no I/O**: no DB, no HTTP. Pure functions + types: lifecycle (main
@@ -67,7 +105,7 @@ admission cutoff, `active_in_tg`), two-stage retention/deletion, PDF batch gener
 idempotent, run with the `system` actor, take time from the `Clock` adapter, and carry only IDs
 in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
-- **Where:** in the API process (D7), started before the server listens when `JOBS_ENABLED=true`
+- **Where:** in the API process, started before the server listens when `JOBS_ENABLED=true`
   (default); a separate worker is a Slice 9 scaling decision.
 - **Schema and roles:** `db:migrate` / `node dist/migrate.js` install or upgrade the `pgboss`
   schema as `transfer_owner` and re-apply `transfer_app`'s DML grants; the API runs pg-boss as

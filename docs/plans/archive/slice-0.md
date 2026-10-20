@@ -3,7 +3,7 @@
 - Status: **Approved**; PRs 0a–0d implemented (spike results and PR notes in the ADR-0003
   amendment)
 - Date: 2026-10-15
-- Roadmap: [Slice 0](../roadmap.md#slice-0--walking-skeleton)
+- Roadmap: [Slice 0](../../roadmap.md#slice-0--walking-skeleton)
 - Relevant ADRs: 0001 (two SPAs), 0002 (Postgres, `project_id`, DB-enforced writes), 0003 (stack,
   Node 24; TS 7 and Vite+ deferred), 0005 (container image, health endpoints, logs without personal
   data, Postgres major version), 0007 (stub auth), 0010 (API contract)

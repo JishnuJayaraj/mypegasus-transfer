@@ -1,4 +1,4 @@
--- Roles and databases for dev, CI and Compose (docs/plans/slice-0.md, section 5.3).
+-- Roles and databases for dev, CI and Compose (ADR-0002).
 -- Idempotent. Run as a superuser through psql (`pnpm db:setup`); \gexec and \connect are psql.
 -- The passwords only protect local databases with synthetic data. They are not secrets.
 -- On the cluster, CloudNativePG manages roles with the same names (Slice 9).

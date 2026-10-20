@@ -8,7 +8,7 @@ review, not a Legal, BA or DPO gate. Everything here stays revisitable.
 | Topic | Status |
 |---|---|
 | The three-PR split (2h-1, 2h-2, 2h-3); no fourth PR: the two 2g follow-ups ride 2h-2 | **approved** |
-| Readings R29–R44 of the [Slice 2 plan](../plans/slice-2.md) | **accepted pilot decisions** |
+| Readings R29–R44 of the [Slice 2 plan](../plans/archive/slice-2.md) | **accepted pilot decisions** |
 | Q111 (a)–(f) | **accepted pilot decision** (`open-questions.md`) |
 
 ## Amendment of round 32 L6 (R34, Q111 a)
