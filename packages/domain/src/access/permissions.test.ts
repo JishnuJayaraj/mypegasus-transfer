@@ -299,9 +299,9 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
   });
 });
 
-describe("team and region operations (D7, D9, Q126)", () => {
-  const addLead = (staffUserId: string): Operation => ({ kind: "addReplacementLead", staffUserId });
+const addLead = (staffUserId: string): Operation => ({ kind: "addReplacementLead", staffUserId });
 
+describe("team and region operations (Q126)", () => {
   it("lets a global admin add a replacement PL, never themselves; regional admins can't", () => {
     const admin = staff([], { org: "admin", regions: "all", id: "staff-admin" });
     expect(result(mayPerformOperation(admin, addLead("staff-other"), target))).toBe("ok");

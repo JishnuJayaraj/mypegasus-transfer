@@ -16,6 +16,12 @@ export {
   SelectItem,
   SideNavLink,
   Stack,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  Tag,
   TextInput,
 } from "@carbon/react";
 export { Add, UserAvatar } from "@carbon/icons-react";

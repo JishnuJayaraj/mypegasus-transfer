@@ -340,7 +340,6 @@ export {
   hasGlobalOrgRole,
   isGlobalAdmin,
   mayAddMember,
-  mayAdminister,
   readsStaffDirectory,
   regionChangeRefusal,
   seesProject,

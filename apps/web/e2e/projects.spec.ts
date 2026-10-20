@@ -41,6 +41,10 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   await page.getByLabel("Projektname").fill("E2E Projekt Ost");
   await page.getByLabel("Kunde").fill("Beispiel Anlagenbau GmbH");
+  // Slice 3 (Q126): the creator chooses the region.
+  await page
+    .getByLabel("Region (Niederlassung)")
+    .selectOption({ label: "Niederlassung Nord (NORD)" });
   await expect(page.getByLabel("TG-Beginn")).toHaveCount(0);
   await page.getByRole("button", { name: "Projekt anlegen" }).click();
 
@@ -324,6 +328,35 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
     "Rolf Regionalbetrieb",
   );
+
+  // Slice 3 (Q62, Q126; flow 12): the PL adds a consultant in the Team tab and assigns a
+  // participation; the consultant then sees exactly that one.
+  await page.goto("/projects");
+  await chooseDevUser(page, "Petra Projektleitung · Projektleitung");
+  await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.projectLead);
+  await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await page.getByRole("tab", { name: "Team" }).click();
+  const team = page.getByRole("region", { name: "Team" });
+  await team.getByLabel("Name suchen").fill("Bernd");
+  await team.getByLabel("Person").selectOption({ label: "Bernd Beratung" });
+  await team.getByLabel("Rolle").selectOption({ label: "Beratung" });
+  await team.getByRole("button", { name: "Hinzufügen" }).click();
+  await expect(team.getByRole("row", { name: /Bernd Beratung/ })).toContainText("Beratung");
+  await expectAccessible(page);
+  await page.getByRole("tab", { name: "Projekt" }).click();
+  const list = page.getByRole("region", { name: "Teilnehmende" });
+  await list.getByLabel("BSP-0001 auswählen").check({ force: true });
+  await list.getByLabel("Beraterin oder Berater").selectOption({ label: "Bernd Beratung" });
+  await list.getByRole("button", { name: "Zuweisen (1)" }).click();
+  await expect(page.getByText("1 Teilnehmende zugewiesen")).toBeVisible();
+  await expect(list.getByRole("row", { name: /BSP-0001/ })).toContainText("Bernd Beratung");
+  await page.goto("/projects");
+  await chooseDevUser(page, "Bernd Beratung · Beratung");
+  await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.consultant);
+  await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  const assigned = page.getByRole("region", { name: "Teilnehmende" });
+  await expect(assigned.getByRole("row")).toHaveCount(2);
+  await expect(assigned.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
 });
 
 test("log out, log in again, and return to the login page when the session ends", async ({

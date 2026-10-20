@@ -1,4 +1,4 @@
--- Hand-written (Slice 3 plan, org model; PR 3c): regions, staff accounts, org roles, project
+-- Hand-written (Slice 3, PR 3c; Q62, Q126): regions, staff accounts, org roles, project
 -- memberships and participant assignments, and their grants. Same hardening as 0004: SECURITY
 -- DEFINER owned by transfer_owner, a fixed search_path with pg_temp last, schema-qualified names,
 -- no dynamic SQL, EXECUTE only for transfer_app, refusals as P0001 with a stable code, never a

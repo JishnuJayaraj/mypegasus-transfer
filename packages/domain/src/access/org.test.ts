@@ -5,7 +5,6 @@ import {
   hasGlobalOrgRole,
   isGlobalAdmin,
   mayAddMember,
-  mayAdminister,
   readsStaffDirectory,
   regionChangeRefusal,
   seesProject,
@@ -48,14 +47,11 @@ const operationsManager = staff({ org: [["regional_operations_manager", ["region
 const lead = staff({ projects: { [projectId]: ["project_lead"] } });
 const consultant = staff({ projects: { [projectId]: ["consultant"] } });
 
-describe("org administration (D8, Q126)", () => {
+describe("org administration (Q126)", () => {
   it("is the global admin's alone", () => {
     expect(isGlobalAdmin(admin)).toBe(true);
-    for (const area of ["staff", "regions"] as const) {
-      expect(mayAdminister(admin, area)).toBe(true);
-      for (const other of [regionalAdmin, operationsManager, lead, participant]) {
-        expect(mayAdminister(other, area)).toBe(false);
-      }
+    for (const other of [regionalAdmin, operationsManager, lead, participant]) {
+      expect(isGlobalAdmin(other)).toBe(false);
     }
     // An admin role scoped to regions is no global admin
     expect(isGlobalAdmin(staff({ org: [["admin", ["region-north"]]] }))).toBe(false);
@@ -70,7 +66,7 @@ describe("org administration (D8, Q126)", () => {
   });
 });
 
-describe("seesProject (D7, Q106)", () => {
+describe("seesProject (Q106, Q126)", () => {
   it("knows the global org roles, which see every project", () => {
     expect(hasGlobalOrgRole(admin)).toBe(true);
     expect(hasGlobalOrgRole(staff({ org: [["regional_operations_manager", "all"]] }))).toBe(true);
@@ -104,7 +100,7 @@ describe("seesProject (D7, Q106)", () => {
   });
 });
 
-describe("regionChangeRefusal (D7)", () => {
+describe("regionChangeRefusal (Q126)", () => {
   it("lets the PL change the region only while draft, the global admin at any time", () => {
     expect(regionChangeRefusal(lead, { ...north, status: "draft" })).toBeNull();
     expect(regionChangeRefusal(lead, { ...north, status: "active" })).toBe("project_not_draft");
@@ -120,10 +116,10 @@ describe("regionChangeRefusal (D7)", () => {
   });
 });
 
-describe("mayAddMember (D9)", () => {
-  const add = (subject: Subject, staffUserId: string, role: ProjectRole) =>
-    mayAddMember(subject, north, { staffUserId, role });
+const add = (subject: Subject, staffUserId: string, role: ProjectRole) =>
+  mayAddMember(subject, north, { staffUserId, role });
 
+describe("mayAddMember (Q126)", () => {
   it("lets the PL add any role, the global admin only another person as PL", () => {
     for (const role of ["project_lead", "consultant", "back_office"] as const) {
       expect(add(lead, "staff-b", role)).toBe(true);

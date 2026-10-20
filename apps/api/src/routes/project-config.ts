@@ -16,7 +16,6 @@ import {
   SetAgenturSettingInput,
   TemplateMigrationPreview,
   WithdrawRelaxationInput,
-  type Operation,
 } from "@transfer/domain";
 import type { Context } from "hono";
 import { projectPermissions, type ProjectPermissions } from "../access";

@@ -13,7 +13,7 @@ describe("DataClass", () => {
   });
 });
 
-describe("staff roles (D8, Q126)", () => {
+describe("staff roles (Q126)", () => {
   it("has org roles and project roles, and no flat role any more", () => {
     expect(OrgRole.options).toEqual(["admin", "regional_admin", "regional_operations_manager"]);
     expect(ProjectRole.options).toEqual(["project_lead", "consultant", "back_office"]);

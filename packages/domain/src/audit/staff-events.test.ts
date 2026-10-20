@@ -71,7 +71,7 @@ describe("staff audit events (D6)", () => {
   });
 });
 
-describe("staff administration events (D8, D11, Q126)", () => {
+describe("staff administration events (Q126)", () => {
   const adminId = "00000000-0000-4000-8000-000000000001";
   const regionId = "00000000-0000-4000-a000-000000000001";
   const of = { ...base, actorStaffUserId: adminId, subjectStaffUserId: staffUserId };

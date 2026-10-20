@@ -103,7 +103,7 @@ describe("audit event types (plan 5.4)", () => {
       ...setupEventTypes,
       "participant_data_changed",
       "participation_dates_changed",
-      // Teams and assignments (D9, D10): only their functions write them.
+      // Teams and assignments (Q62, Q126): only their functions write them.
       "project_member_added",
       "project_member_removed",
       "participant_assigned",

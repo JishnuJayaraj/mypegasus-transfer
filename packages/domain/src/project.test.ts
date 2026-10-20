@@ -161,7 +161,7 @@ describe("checkProjectUpdate (Q98, round 22)", () => {
   });
 });
 
-describe("the region of a new project (D7)", () => {
+describe("the region of a new project (Q126)", () => {
   const regionId = "00000000-0000-4000-a000-000000000001";
 
   it("is chosen by its creator: required, refused as a value rule when missing", () => {

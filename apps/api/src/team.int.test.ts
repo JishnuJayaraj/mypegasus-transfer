@@ -386,11 +386,11 @@ describe("staff administration (Q126)", () => {
   });
 });
 
-describe("teams (Q61, Q126)", () => {
-  const members = async (projectId = werkNord) =>
-    (await readJson(await get(`/projects/${projectId}/members`, as(projectLead)), ProjectTeam))
-      .members;
+const teamMembers = async (projectId = werkNord) =>
+  (await readJson(await get(`/projects/${projectId}/members`, as(projectLead)), ProjectTeam))
+    .members;
 
+describe("teams (Q61, Q126)", () => {
   it("are managed by the PL: add and remove roles, with capabilities", async () => {
     const team = await readJson(
       await get(`/projects/${werkNord}/members`, as(projectLead)),
@@ -413,7 +413,7 @@ describe("teams (Q61, Q126)", () => {
       (await del(`/projects/${werkNord}/members/${backOffice}/back_office`, as(projectLead)))
         .status,
     ).toBe(204);
-    expect(await members()).toContainEqual(
+    expect(await teamMembers()).toContainEqual(
       expect.objectContaining({ staffUserId: backOffice, roles: ["consultant"] }),
     );
     await expectProblem(
@@ -506,15 +506,15 @@ describe("teams (Q61, Q126)", () => {
   });
 });
 
-describe("assignments (Q62)", () => {
-  const listed = async (auth: Auth) =>
-    (
-      await readJson(
-        await get(`/projects/${werkNord}/participations?limit=100`, auth),
-        ParticipationPage,
-      )
-    ).items;
+const listed = async (auth: Auth) =>
+  (
+    await readJson(
+      await get(`/projects/${werkNord}/participations?limit=100`, auth),
+      ParticipationPage,
+    )
+  ).items;
 
+describe("assignments (Q62)", () => {
   it("give a consultant exactly their assigned participations, until unassigned", async () => {
     const [a, b, c] = await participations(3);
     await expectProblem(

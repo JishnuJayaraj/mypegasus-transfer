@@ -111,18 +111,21 @@ beforeAll(() => Promise.all([app.connect(), other.connect(), owner.connect()]));
 afterAll(() => Promise.all([app.end(), other.end(), owner.end()]));
 beforeEach(() => resetTestDatabase({ seed: true, keepSessions: false }));
 
-describe("regions (Q35, Q126)", () => {
-  const create = (args: Record<string, unknown> = {}) =>
-    call(app, "create_region", {
-      code: "OST",
-      name: "Niederlassung Ost",
-      actor: admin,
-      requestId,
-      ...args,
-    });
+const createRegion = (args: Record<string, unknown> = {}) =>
+  call(app, "create_region", {
+    code: "OST",
+    name: "Niederlassung Ost",
+    actor: admin,
+    requestId,
+    ...args,
+  });
 
+const updateRegion = (args: Record<string, unknown>) =>
+  call(app, "update_region", { id: seedRegionIds.nord, actor: admin, requestId, ...args });
+
+describe("regions (Q35, Q126)", () => {
   it("are created by the global admin, audited by id, never by name", async () => {
-    const id = await create();
+    const id = await createRegion();
     expect((await app.query("select code, name from region where id = $1", [id])).rows).toEqual([
       { code: "OST", name: "Niederlassung Ost" },
     ]);
@@ -145,45 +148,45 @@ describe("regions (Q35, Q126)", () => {
     ["an untrimmed name", { name: " Ost" }, "invalid_argument"],
     ["a taken code", { code: "NORD" }, "region_code_taken"],
   ])("refuse %s without a write", async (_label, args, code) => {
-    expect(await refusal(create(args))).toBe(code);
+    expect(await refusal(createRegion(args))).toBe(code);
     expect(await count("region")).toBe(2);
     expect(await staffEvents()).toEqual([]);
   });
 
   it("refuse a deactivated admin", async () => {
     await owner.query("update staff_user set deactivated_at = now() where id = $1", [admin]);
-    expect(await refusal(create())).toBe("actor_not_allowed");
+    expect(await refusal(createRegion())).toBe("actor_not_allowed");
   });
 
   it("change code or name with the changed keys; refuse no change and a taken code", async () => {
-    const update = (args: Record<string, unknown>) =>
-      call(app, "update_region", { id: seedRegionIds.nord, actor: admin, requestId, ...args });
-    await update({ name: "Nord-Ost", code: null });
+    await updateRegion({ name: "Nord-Ost", code: null });
     expect((await staffEvents()).at(-1)).toMatchObject({
       event_type: "region_changed",
       details: { regionId: seedRegionIds.nord, fields: ["name"] },
     });
-    expect(await refusal(update({ name: "Nord-Ost" }))).toBe("region_unchanged");
-    expect(await refusal(update({ code: "SUED" }))).toBe("region_code_taken");
-    expect(await refusal(update({ id: werkNord, name: "X" }))).toBe("region_not_found");
-    expect(await refusal(update({ actor: projectLead, name: "X" }))).toBe("actor_not_allowed");
+    expect(await refusal(updateRegion({ name: "Nord-Ost" }))).toBe("region_unchanged");
+    expect(await refusal(updateRegion({ code: "SUED" }))).toBe("region_code_taken");
+    expect(await refusal(updateRegion({ id: werkNord, name: "X" }))).toBe("region_not_found");
+    expect(await refusal(updateRegion({ actor: projectLead, name: "X" }))).toBe(
+      "actor_not_allowed",
+    );
     expect(await staffEvents()).toHaveLength(1);
   });
 });
 
-describe("staff accounts (Q7, Q126)", () => {
-  const create = (args: Record<string, unknown> = {}) =>
-    call(app, "create_staff_user", {
-      displayName: "Anna Beispiel",
-      email: "anna.beispiel@example.org",
-      mayCreateProjects: true,
-      actor: admin,
-      requestId,
-      ...args,
-    });
+const createStaffUser = (args: Record<string, unknown> = {}) =>
+  call(app, "create_staff_user", {
+    displayName: "Anna Beispiel",
+    email: "anna.beispiel@example.org",
+    mayCreateProjects: true,
+    actor: admin,
+    requestId,
+    ...args,
+  });
 
+describe("staff accounts (Q7, Q126)", () => {
   it("are created by the global admin; the event names the flag, never name or email", async () => {
-    const id = await create();
+    const id = await createStaffUser();
     const { rows } = await app.query(
       "select display_name, email, may_create_projects, deactivated_at from staff_user where id = $1",
       [id],
@@ -215,7 +218,7 @@ describe("staff accounts (Q7, Q126)", () => {
     ["an empty name", { displayName: "" }, "invalid_argument"],
     ["no flag", { mayCreateProjects: null }, "invalid_argument"],
   ])("refuse %s without a write", async (_label, args, code) => {
-    expect(await refusal(create(args))).toBe(code);
+    expect(await refusal(createStaffUser(args))).toBe(code);
     expect(await count("staff_user")).toBe(6);
     expect(await staffEvents()).toEqual([]);
   });
@@ -245,16 +248,25 @@ describe("staff accounts (Q7, Q126)", () => {
   });
 });
 
+const grant = (args: Record<string, unknown> = {}) =>
+  call(app, "grant_org_role", {
+    staffUserId: consultant,
+    role: "regional_admin",
+    regionId: seedRegionIds.sued,
+    actor: admin,
+    requestId,
+    ...args,
+  });
+
+const rolesOf = async (staffUserId: string) =>
+  (
+    await owner.query(
+      "select role, region_id, granted_by from staff_org_role where staff_user_id = $1",
+      [staffUserId],
+    )
+  ).rows;
+
 describe("org roles (Q80, Q126)", () => {
-  const grant = (args: Record<string, unknown> = {}) =>
-    call(app, "grant_org_role", {
-      staffUserId: consultant,
-      role: "regional_admin",
-      regionId: seedRegionIds.sued,
-      actor: admin,
-      requestId,
-      ...args,
-    });
   const revoke = (args: Record<string, unknown> = {}) =>
     call(app, "revoke_org_role", {
       staffUserId: regionalAdmin,
@@ -264,13 +276,6 @@ describe("org roles (Q80, Q126)", () => {
       requestId,
       ...args,
     });
-  const rolesOf = async (staffUserId: string) =>
-    (
-      await owner.query(
-        "select role, region_id, granted_by from staff_org_role where staff_user_id = $1",
-        [staffUserId],
-      )
-    ).rows;
 
   it("are granted per region, admin globally, with the role and region in the event", async () => {
     await grant();
@@ -440,8 +445,8 @@ describe("project members (Q61, Q126)", () => {
   it("end the consultant's assignments in the project when the consultant role goes", async () => {
     const [a, b] = [await participation(), await participation()];
     await assign([a, b]);
-    const other = await participation(verwaltung);
-    await assign([other], { projectId: verwaltung });
+    const elsewhere = await participation(verwaltung);
+    await assign([elsewhere], { projectId: verwaltung });
     await remove({ staffUserId: consultant, role: "consultant" });
     expect(await openAssignments()).toEqual([
       { participation_id: other, staff_user_id: consultant },
@@ -530,10 +535,10 @@ describe("participant assignments (Q62)", () => {
   });
 });
 
-describe("deactivate_staff_user (Q59, Q126)", () => {
-  const deactivate = (id: string, actor: string = admin) =>
-    call(app, "deactivate_staff_user", { id, actor, requestId });
+const deactivate = (id: string, actor: string = admin) =>
+  call(app, "deactivate_staff_user", { id, actor, requestId });
 
+describe("deactivate_staff_user (Q59, Q126)", () => {
   it("ends sessions, memberships and assignments in one transaction, with the counts", async () => {
     const a = await participation();
     await assign([a]);
@@ -559,7 +564,7 @@ describe("deactivate_staff_user (Q59, Q126)", () => {
       ]),
     ).toEqual([
       ["participant_unassigned", "account_deactivated", admin],
-      ...Array(3).fill(["project_member_removed", "account_deactivated", admin]),
+      ...Array.from({ length: 3 }, () => ["project_member_removed", "account_deactivated", admin]),
     ]);
     expect((await staffEvents()).at(-1)).toEqual({
       event_type: "staff_account_deactivated",
@@ -642,45 +647,53 @@ describe("the project lock (ADR-0002, read, decide, write under the project lock
   });
 });
 
-describe("the staff audit event shape", () => {
-  const insert = async (values: Record<string, unknown>) => {
-    const columns = Object.keys(values);
-    await owner.query("begin");
-    try {
-      await owner.query(
-        `insert into staff_audit_event (${columns.join(", ")}) values (${columns.map((_, i) => `$${i + 1}`).join(", ")})`,
-        columns.map((c) => (c === "details" ? JSON.stringify(values[c]) : values[c])),
-      );
-      return "ok";
-    } catch (error) {
-      return (error as { constraint?: string }).constraint;
-    } finally {
-      await owner.query("rollback");
-    }
-  };
+const insertStaffEvent = async (values: Record<string, unknown>) => {
+  const columns = Object.keys(values);
+  await owner.query("begin");
+  try {
+    await owner.query(
+      `insert into staff_audit_event (${columns.join(", ")}) values (${columns.map((_, i) => `$${i + 1}`).join(", ")})`,
+      columns.map((c) => (c === "details" ? JSON.stringify(values[c]) : values[c])),
+    );
+    return "ok";
+  } catch (error) {
+    return (error as { constraint?: string }).constraint;
+  } finally {
+    await owner.query("rollback");
+  }
+};
 
+describe("the staff audit event shape", () => {
   it("holds an account event to an actor and a subject, a region event to its region", async () => {
     const shape = "staff_audit_event_shape";
     const ofAccount = { actor_staff_user_id: admin, subject_staff_user_id: consultant };
-    expect(await insert({ event_type: "staff_account_created", ...ofAccount })).toBe("ok");
-    expect(await insert({ event_type: "staff_account_created", actor_staff_user_id: admin })).toBe(
-      shape,
+    expect(await insertStaffEvent({ event_type: "staff_account_created", ...ofAccount })).toBe(
+      "ok",
     );
     expect(
-      await insert({ event_type: "org_role_granted", subject_staff_user_id: consultant }),
+      await insertStaffEvent({ event_type: "staff_account_created", actor_staff_user_id: admin }),
+    ).toBe(shape);
+    expect(
+      await insertStaffEvent({ event_type: "org_role_granted", subject_staff_user_id: consultant }),
     ).toBe(shape);
     const region = { regionId: seedRegionIds.nord };
     expect(
-      await insert({ event_type: "region_created", actor_staff_user_id: admin, details: region }),
+      await insertStaffEvent({
+        event_type: "region_created",
+        actor_staff_user_id: admin,
+        details: region,
+      }),
     ).toBe("ok");
-    expect(await insert({ event_type: "region_created", actor_staff_user_id: admin })).toBe(shape);
-    expect(await insert({ event_type: "region_changed", ...ofAccount, details: region })).toBe(
-      shape,
-    );
-    // The login events stay the actor's own; a refusal stays actor-less
-    expect(await insert({ event_type: "staff_login", ...ofAccount })).toBe(shape);
     expect(
-      await insert({
+      await insertStaffEvent({ event_type: "region_created", actor_staff_user_id: admin }),
+    ).toBe(shape);
+    expect(
+      await insertStaffEvent({ event_type: "region_changed", ...ofAccount, details: region }),
+    ).toBe(shape);
+    // The login events stay the actor's own; a refusal stays actor-less
+    expect(await insertStaffEvent({ event_type: "staff_login", ...ofAccount })).toBe(shape);
+    expect(
+      await insertStaffEvent({
         event_type: "staff_login_refused",
         actor_staff_user_id: admin,
         reason_code: "unknown_account",

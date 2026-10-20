@@ -4,7 +4,7 @@ import { AddMemberInput, AssignParticipationsInput, assignmentLimit } from "./te
 
 const id = (n: number) => `00000000-0000-4000-a000-${String(n).padStart(12, "0")}`;
 
-describe("regions (D7)", () => {
+describe("regions (Q35, Q126)", () => {
   it("takes an upper-case code and a name", () => {
     expect(CreateRegionInput.parse({ code: "NORD", name: " Niederlassung Nord " })).toEqual({
       code: "NORD",
@@ -25,7 +25,7 @@ describe("regions (D7)", () => {
   });
 });
 
-describe("team inputs (D9, D10)", () => {
+describe("team inputs (Q62, Q126)", () => {
   it("adds a member in one project role", () => {
     expect(AddMemberInput.safeParse({ staffUserId: id(1), role: "consultant" }).success).toBe(true);
     expect(AddMemberInput.safeParse({ staffUserId: id(1), role: "admin" }).success).toBe(false);

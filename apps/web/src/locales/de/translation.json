@@ -64,7 +64,9 @@
     "submit": "Projekt anlegen",
     "cancel": "Abbrechen",
     "failed": "Das Projekt konnte nicht angelegt werden.",
-    "datesOnWaves": "Unterschriftsfrist, TG-Beginn und TG-Ende werden nach dem Anlegen je Eintrittswelle erfasst."
+    "datesOnWaves": "Unterschriftsfrist, TG-Beginn und TG-Ende werden nach dem Anlegen je Eintrittswelle erfasst.",
+    "region": "Region (Niederlassung)",
+    "chooseRegion": "Region wählen"
   },
   "errors": {
     "required": "Pflichtfeld",
@@ -86,7 +88,9 @@
       "latestEntryDate": "Letzter Eintritt",
       "participations": "Teilnehmende",
       "actions": "Aktionen"
-    }
+    },
+    "tabs": "Projektbereiche",
+    "overview": "Projekt"
   },
   "waveForm": {
     "createTitle": "Neue Eintrittswelle",
@@ -526,7 +530,9 @@
       "firstName": "Vorname",
       "status": "Status",
       "profilingStatus": "Profiling",
-      "dsvStatus": "DSV"
+      "dsvStatus": "DSV",
+      "select": "Auswahl",
+      "consultants": "Beratung"
     },
     "statuses": {
       "imported": "Importiert",
@@ -552,7 +558,14 @@
       "dsv_declined": "Abgelehnt",
       "dsv_expired": "Abgelaufen"
     },
-    "open": "Öffnen"
+    "open": "Öffnen",
+    "select": "{{name}} auswählen",
+    "assignTo": "Beraterin oder Berater",
+    "chooseConsultant": "Person wählen",
+    "assign": "Zuweisen ({{count}})",
+    "assigned_one": "{{count}} Teilnehmende zugewiesen",
+    "assigned_other": "{{count}} Teilnehmende zugewiesen",
+    "assignFailed": "Die Zuweisung ist fehlgeschlagen. Nur Personen mit der Rolle Beratung im Projekt können zugewiesen werden."
   },
   "participant": {
     "title": "Teilnehmende Person",
@@ -720,6 +733,18 @@
         "createdAt": "Angelegt",
         "status": "Status"
       }
+    },
+    "assignments": {
+      "title": "Zuständige Beratung",
+      "empty": "Niemandem zugewiesen.",
+      "columns": {
+        "displayName": "Name",
+        "assignedAt": "Zugewiesen am",
+        "actions": "Aktionen"
+      },
+      "assign": "Zuweisen",
+      "unassign": "Zuweisung von {{name}} aufheben",
+      "failed": "Die Zuweisung konnte nicht geändert werden."
     }
   },
   "manual": {
@@ -802,6 +827,108 @@
       "import_busy": "Gerade laufen mehrere Importe. Bitte versuchen Sie es in einigen Sekunden erneut.",
       "personnel_number_taken": "Diese Personalnummer gibt es in diesem Projekt bereits.",
       "value_invalid": "Ungültiger Wert; bitte korrigieren oder leer lassen"
+    }
+  },
+  "projectRegion": {
+    "current": "Region: {{region}}",
+    "none": "Keine Region: nur die Administration sieht dieses Projekt.",
+    "save": "Region ändern",
+    "errors": {
+      "project_not_draft": "Die Region ändert nach der Aktivierung nur die Administration.",
+      "region_not_found": "Diese Region gibt es nicht mehr.",
+      "failed": "Die Region konnte nicht geändert werden."
+    }
+  },
+  "team": {
+    "title": "Team",
+    "members": "Mitglieder",
+    "empty": "Das Projekt hat noch keine Mitglieder.",
+    "columns": {
+      "displayName": "Name",
+      "roles": "Rollen",
+      "actions": "Aktionen"
+    },
+    "deactivatedMember": "{{name}} (deaktiviert)",
+    "removeRole": "{{role}} von {{name}} entfernen",
+    "add": "Mitglied hinzufügen",
+    "addReplacementLead": "Ersatz-Projektleitung hinzufügen",
+    "search": "Name suchen",
+    "person": "Person",
+    "choosePerson": "Person wählen",
+    "role": "Rolle",
+    "submit": "Hinzufügen",
+    "added": "Mitglied hinzugefügt",
+    "removed": "Rolle entfernt",
+    "errors": {
+      "last_project_lead": "Das Projekt braucht mindestens eine aktive Projektleitung.",
+      "membership_exists": "Die Person hat diese Rolle im Projekt schon.",
+      "account_deactivated": "Dieses Konto ist deaktiviert.",
+      "unknown_account": "Diese Person gibt es nicht.",
+      "failed": "Die Änderung ist fehlgeschlagen."
+    }
+  },
+  "adminStaff": {
+    "title": "Mitarbeitende",
+    "empty": "Es gibt noch keine Konten.",
+    "columns": {
+      "displayName": "Name",
+      "email": "E-Mail",
+      "orgRoles": "Organisationsrollen",
+      "mayCreateProjects": "Projekte anlegen",
+      "state": "Status",
+      "actions": "Aktionen"
+    },
+    "yes": "Ja",
+    "no": "Nein",
+    "active": "Aktiv",
+    "deactivated": "Deaktiviert",
+    "edit": "{{name}} bearbeiten",
+    "create": "Konto anlegen",
+    "account": "Konto",
+    "emailHelp": "Die erste Anmeldung mit dieser Adresse verknüpft das Unternehmenskonto.",
+    "mayCreateProjects": "Darf Projekte anlegen (und wird deren Projektleitung)",
+    "save": "Speichern",
+    "close": "Schließen",
+    "saved": "Konto gespeichert",
+    "orgRoles": "Organisationsrollen",
+    "noOrgRoles": "Keine Organisationsrollen.",
+    "role": "Rolle",
+    "addRole": "Rolle hinzufügen",
+    "removeRole": "{{role}} entfernen",
+    "saveRoles": "Rollen speichern",
+    "rolesSaved": "Rollen gespeichert",
+    "deactivation": "Deaktivierung",
+    "deactivate": "Konto deaktivieren",
+    "confirmDeactivation": "{{name}} wirklich deaktivieren?",
+    "deactivationEffects": "Die Sitzungen enden sofort, die Person verlässt alle Projektteams und ihre Zuweisungen enden. Das Konto bleibt erhalten.",
+    "deactivatedToast": "Konto deaktiviert",
+    "errors": {
+      "email_taken": "Diese E-Mail-Adresse gehört schon zu einem Konto.",
+      "last_project_lead": "Die Person ist die letzte aktive Projektleitung eines Projekts. Fügen Sie dort zuerst eine Ersatz-Projektleitung hinzu.",
+      "own_account": "Das eigene Konto und die eigene Admin-Rolle können Sie nicht ändern.",
+      "account_deactivated": "Dieses Konto ist deaktiviert.",
+      "region_not_found": "Diese Region gibt es nicht.",
+      "staff_user_unchanged": "Es gibt keine Änderung.",
+      "failed": "Die Änderung ist fehlgeschlagen."
+    }
+  },
+  "adminRegions": {
+    "title": "Regionen",
+    "empty": "Es gibt noch keine Regionen.",
+    "columns": {
+      "code": "Kürzel",
+      "name": "Name",
+      "actions": "Aktionen"
+    },
+    "edit": "{{code}} bearbeiten",
+    "create": "Region anlegen",
+    "codeHelp": "Großbuchstaben, Ziffern und Bindestriche, z. B. NORD",
+    "save": "Speichern",
+    "saved": "Region gespeichert",
+    "errors": {
+      "region_code_taken": "Dieses Kürzel ist schon vergeben.",
+      "region_unchanged": "Es gibt keine Änderung.",
+      "failed": "Die Region konnte nicht gespeichert werden."
     }
   }
 }

@@ -16,7 +16,7 @@ const codes = (result: { success: boolean; error?: { issues: readonly object[] }
     ? []
     : result.error!.issues.map((i) => (i as { params?: { code?: string } }).params?.code);
 
-describe("OrgRoleGrant (D7)", () => {
+describe("OrgRoleGrant (Q126)", () => {
   it("holds admin global and the regional roles to one region", () => {
     expect(OrgRoleGrant.safeParse({ role: "admin", regionId: null }).success).toBe(true);
     expect(OrgRoleGrant.safeParse({ role: "regional_admin", regionId: region }).success).toBe(true);

@@ -13,14 +13,12 @@ type Project = { id: string; regionId: string | null };
 
 const staffOf = (subject: Subject) => (subject.kind === "staff" ? subject : undefined);
 
-/** Holds `admin` for all regions (the only admin there is: `admin` is never region-scoped). */
+/**
+ * Holds `admin` for all regions (the only admin there is: `admin` is never region-scoped). Staff
+ * accounts, org roles and the regions are administered by the global admin alone (Q126).
+ */
 export const isGlobalAdmin = (subject: Subject) =>
   staffOf(subject)?.orgRoles.get("admin")?.regionIds === "all";
-
-/** Staff accounts and org roles, or the regions: the global admin's (Q126). */
-export function mayAdminister(subject: Subject, _area: "staff" | "regions"): boolean {
-  return isGlobalAdmin(subject);
-}
 
 /** An org role for all regions sees every project's metadata (Q106). */
 export const hasGlobalOrgRole = (subject: Subject) =>

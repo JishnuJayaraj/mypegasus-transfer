@@ -1,14 +1,34 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Add, Button, formatDate, PageHeader, SimpleTable, useToast } from "@transfer/ui";
+import {
+  Add,
+  Button,
+  formatDate,
+  PageHeader,
+  SimpleTable,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
+  useToast,
+} from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { entryWavesQuery, projectConfigQuery, projectQuery, useApi } from "../../api";
+import {
+  entryWavesQuery,
+  projectConfigQuery,
+  projectQuery,
+  projectTeamQuery,
+  useApi,
+} from "../../api";
 import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
 import { ImportSection } from "../../components/import-section";
 import { Participants } from "../../components/participants";
+import { ProjectRegion } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
+import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
 
 export const Route = createFileRoute("/projects/$projectId")({
@@ -16,6 +36,7 @@ export const Route = createFileRoute("/projects/$projectId")({
     const [project] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
       queryClient.ensureQueryData(projectConfigQuery(api, projectId)),
+      queryClient.ensureQueryData(projectTeamQuery(api, projectId)),
     ]);
     if (project.type === "ta_tg")
       await queryClient.ensureQueryData(entryWavesQuery(api, projectId));
@@ -38,15 +59,29 @@ function ProjectPage() {
           t(`projects.statuses.${project.status}`),
         ].join(" · ")}
       </p>
-      <ProjectSetup projectId={projectId} />
-      <AgenturSettings projectId={projectId} />
-      {project.type === "ta_tg" ? (
-        <EntryWaves projectId={projectId} />
-      ) : (
-        <p>{t("waveForm.errors.not_ta_tg")}</p>
-      )}
-      <ImportSection projectId={projectId} />
-      <Participants projectId={projectId} />
+      <ProjectRegion projectId={projectId} />
+      <Tabs>
+        <TabList aria-label={t("projectDetail.tabs")}>
+          <Tab>{t("projectDetail.overview")}</Tab>
+          <Tab>{t("team.title")}</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <ProjectSetup projectId={projectId} />
+            <AgenturSettings projectId={projectId} />
+            {project.type === "ta_tg" ? (
+              <EntryWaves projectId={projectId} />
+            ) : (
+              <p>{t("waveForm.errors.not_ta_tg")}</p>
+            )}
+            <ImportSection projectId={projectId} />
+            <Participants projectId={projectId} />
+          </TabPanel>
+          <TabPanel>
+            <ProjectTeam projectId={projectId} />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </>
   );
 }

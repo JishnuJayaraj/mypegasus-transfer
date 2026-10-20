@@ -49,7 +49,7 @@ const readOnly = {
   requestRelaxation: false,
 };
 
-function setup(config: object, routes: Parameters<typeof mockApi>[0] = {}, me = pl) {
+function setup(config: object, routes: Parameters<typeof mockApi>[0] = {}, me: object = pl) {
   const { api, calls } = mockApi({
     "GET /api/v1/me": () => json(me),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
@@ -129,7 +129,13 @@ describe("Konfiguration: rule relaxations", () => {
         [`POST /api/v1/config/relaxations/${requestId}/decision`]: () =>
           json({ ...approved, capabilities: readOnly }),
       },
-      { id: rom, displayName: "Olga Operations", role: "regional_operations_manager" },
+      {
+        id: rom,
+        displayName: "Olga Operations",
+        role: "regional_operations_manager",
+        mayCreateProjects: false,
+        orgRoles: [{ role: "regional_operations_manager", regionId: project.regionId }],
+      },
     );
     const form = await section();
     const row = form.getByText(ruleId).closest("tr")!;
@@ -168,7 +174,13 @@ describe("Konfiguration: rule relaxations", () => {
         capabilities: readOnly,
       },
       {},
-      { id: rom, displayName: "Olga Operations", role: "regional_operations_manager" },
+      {
+        id: rom,
+        displayName: "Olga Operations",
+        role: "regional_operations_manager",
+        mayCreateProjects: false,
+        orgRoles: [{ role: "regional_operations_manager", regionId: project.regionId }],
+      },
     );
     const form = await section();
     // Approved and asked again (after a removal), both read-only here.

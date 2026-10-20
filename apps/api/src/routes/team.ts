@@ -49,7 +49,7 @@ export function teamRoutes(deps: Deps) {
   const router = createRouter();
   const middleware = [requireSession(deps)];
 
-  /** The members with their roles, and what the viewer may do (capabilities, round 26). */
+  /** The members with their roles, and what the viewer may do (capabilities, ADR-0010). */
   async function teamOf(user: StaffUser, projectId: string) {
     const { subject, visible, regionId } = await projectAccess(db, user, projectId);
     if (!visible) return undefined;

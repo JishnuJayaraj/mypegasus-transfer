@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { json, mockApi, problem, project, renderApp, staffUsers } from "./test-utils";
+import { json, mockApi, problem, project, regions, renderApp, staffUsers } from "./test-utils";
 
 const loggedIn = {
   "GET /api/v1/me": () => json(staffUsers[1]),
@@ -185,6 +185,12 @@ const fill = async (fields: Record<string, string>) => {
   }
 };
 const submit = () => userEvent.click(screen.getByRole("button", { name: "Projekt anlegen" }));
+/** The creator chooses the region (Q126). */
+const chooseRegion = async () =>
+  userEvent.selectOptions(
+    await screen.findByLabelText("Region (Niederlassung)"),
+    await screen.findByRole("option", { name: "Niederlassung Nord (NORD)" }),
+  );
 
 describe("create project form", () => {
   it("asks for no contractual dates: they belong to the entry waves (Q79)", async () => {
@@ -215,6 +221,7 @@ describe("create project form", () => {
     });
     renderApp("/projects/new", api);
     await fill({ Projektname: "Projekt Ost", Kunde: "Beispiel GmbH" });
+    await chooseRegion();
     await submit();
     expect(await screen.findByText("Höchstens 200 Zeichen")).toBeInTheDocument();
   });
@@ -233,6 +240,7 @@ describe("create project form", () => {
     const { router } = renderApp("/projects/new", api);
     await userEvent.click(await screen.findByLabelText("Transferagentur"));
     await fill({ Projektname: "  Projekt Ost ", Kunde: "Beispiel GmbH" });
+    await chooseRegion();
     await submit();
 
     expect(await screen.findByText("Projekt angelegt")).toBeInTheDocument();
@@ -245,6 +253,7 @@ describe("create project form", () => {
         name: "Projekt Ost",
         customerName: "Beispiel GmbH",
         type: "ta_only",
+        regionId: regions[0]!.id,
       },
     });
   });

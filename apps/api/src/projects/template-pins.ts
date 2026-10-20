@@ -38,7 +38,6 @@ import {
   migrationTargets,
   planTemplatePin,
   projectActivationBlockers,
-  type Operation,
   type PinIssue,
   type PinTemplateInput,
   type ProjectConfig,
