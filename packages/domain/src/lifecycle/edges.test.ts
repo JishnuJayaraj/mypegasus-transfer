@@ -7,10 +7,6 @@ import { canTransition, type AnyStatus } from "./transition";
 // Plan 5.3, "Edges": track from to actor kind [guards] (project type). Restated by hand.
 const expected = `
 main - imported user manual
-main - self_registered participant anonymous_self_registration
-main self_registered imported user manual
-main self_registered rejected user manual
-main self_registered rejected system system
 main imported contacted user manual
 main contacted informed user manual
 main contacted unreachable user manual
@@ -84,7 +80,7 @@ describe("edges (AC-1)", () => {
           }
         }
       }
-      expect(pairs).toBe(10 ** 2 + 5 ** 2 + 5 ** 2);
+      expect(pairs).toBe(8 ** 2 + 5 ** 2 + 5 ** 2);
       expect(mismatches).toEqual([]);
     },
   );

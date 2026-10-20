@@ -10,13 +10,7 @@ export type LifecycleState = {
   hasWave: boolean;
 };
 
-const tracksNotStarted = new Set<MainStatus>([
-  "self_registered",
-  "rejected",
-  "imported",
-  "contacted",
-  "unreachable",
-]);
+const tracksNotStarted = new Set<MainStatus>(["imported", "contacted", "unreachable"]);
 const inOrAfterTg = new Set<MainStatus>(["active_in_tg", "exited"]);
 
 /**
@@ -34,8 +28,6 @@ export function isConsistentState(s: LifecycleState): boolean {
   if (tracksNotStarted.has(s.status) && (s.profilingStatus !== "not_started" || offered)) {
     return false;
   }
-  // A self-registration isn't matched yet, so it has no wave (Slice 4c).
-  if ((s.status === "self_registered" || s.status === "rejected") && s.hasWave) return false;
   if (offered && !s.hasWave) return false;
   return !inOrAfterTg.has(s.status) || s.dsvStatus === "dsv_signed";
 }

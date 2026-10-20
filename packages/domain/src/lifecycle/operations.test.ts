@@ -41,12 +41,9 @@ describe("assigning the entry wave (AC-7, Q79)", () => {
     },
   );
 
-  it.each(["self_registered", "active_in_tg", "withdrawn", "rejected", "exited"] as const)(
-    "is refused while %s",
-    (status) => {
-      expect(assignEntryWave(op(withStatus(status)), target)).toEqual(fail("status_not_open"));
-    },
-  );
+  it.each(["active_in_tg", "withdrawn", "exited"] as const)("is refused while %s", (status) => {
+    expect(assignEntryWave(op(withStatus(status)), target)).toEqual(fail("status_not_open"));
+  });
 
   it("refuses the current wave again as a no-op (round 16)", () => {
     const same = { ...target, wave: { id: "wave-1", projectId: "project-1" } };
@@ -131,7 +128,7 @@ describe("correcting the end reason (AC-11, Q72)", () => {
     );
   });
 
-  it.each(["informed", "active_in_tg", "rejected", "ta_completed"] as const)(
+  it.each(["informed", "active_in_tg", "ta_completed"] as const)(
     "has no end reason to correct while %s",
     (status) => {
       expect(correctEndReason(op(withStatus(status)), derived, "placed_direct")).toEqual(

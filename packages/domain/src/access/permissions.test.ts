@@ -65,10 +65,6 @@ const allowed = (check: (actor: Actor) => { ok: boolean }) =>
 // Q60, Q80, plan 5.6: track from to actor kind → who may take it. Restated by hand.
 const transitions = `
 main - imported user manual: PL
-main - self_registered participant anonymous_self_registration:
-main self_registered imported user manual: PL
-main self_registered rejected user manual: PL
-main self_registered rejected system system: SYS
 main imported contacted user manual: PL C
 main contacted informed user manual: PL C
 main contacted unreachable user manual: PL C
@@ -134,12 +130,6 @@ describe("mayPerformTransition (AC-28, Q60)", () => {
     expect(result(mayPerformTransition(actors.PL!, expiry, target))).toBe("actor_not_allowed");
     expect(result(mayPerformTransition(actors.SYS!, contact, target))).toBe("actor_not_allowed");
     expect(result(mayPerformTransition(participant, create, target))).toBe("actor_not_allowed");
-    const selfRegistration = edges.find((e) => e.kind === "anonymous_self_registration")!;
-    for (const actor of Object.values(actors)) {
-      expect(result(mayPerformTransition(actor, selfRegistration, target))).toBe(
-        "anonymous_registration_only",
-      );
-    }
     expect(result(mayPerformTransition(actors.ROM!, contact, target))).toBe("role_not_allowed");
   });
 });

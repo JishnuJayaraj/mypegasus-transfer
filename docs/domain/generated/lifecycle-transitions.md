@@ -14,10 +14,6 @@ consultant/profiler only for assigned participations, the PL and back office in 
 | Track | From | To | Actor | Kind | Who | Guards | Project types |
 |---|---|---|---|---|---|---|---|
 | main | *(create)* | `imported` | user | manual | PL | — | all |
-| main | *(create)* | `self_registered` | participant | anonymous_self_registration | nobody | — | all |
-| main | `self_registered` | `imported` | user | manual | PL | — | all |
-| main | `self_registered` | `rejected` | user | manual | PL | — | all |
-| main | `self_registered` | `rejected` | system | system | system | — | all |
 | main | `imported` | `contacted` | user | manual | Consultant/profiler (assigned), PL | — | all |
 | main | `contacted` | `informed` | user | manual | Consultant/profiler (assigned), PL | — | all |
 | main | `contacted` | `unreachable` | user | manual | Consultant/profiler (assigned), PL | — | all |

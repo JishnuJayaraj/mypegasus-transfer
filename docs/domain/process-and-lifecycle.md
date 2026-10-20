@@ -185,9 +185,8 @@ the participation's cutoff not to have passed, checked with database time at com
 `informed` or `active_in_tg` it changes no status. A terminal status revokes open activation codes
 and ends the participant's sessions.
 
-The code still has `self_registered` and `rejected` (its only path) until their removal PR in
-Slice 3; the generated transitions table shows them until then
-([round 35](../decisions/2026-10-20-answers-round-35.md)).
+There is no self-registration: `self_registered` and `rejected` (its only path) left the
+lifecycle core in Slice 3 ([round 35](../decisions/2026-10-20-answers-round-35.md)).
 
 ### Profiling track
 
