@@ -157,3 +157,13 @@ body {
   margin-block-start: 0.25rem;
   font-size: 0.75rem;
 }
+
+// The staff login page and the header's text actions (Slice 3, PR 3b).
+.tp-login {
+  max-inline-size: 36rem;
+}
+
+.tp-header-action.cds--btn {
+  align-self: stretch;
+  min-block-size: 100%;
+}

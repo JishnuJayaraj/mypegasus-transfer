@@ -8,8 +8,24 @@
     "error": "Es ist ein Fehler aufgetreten. Bitte laden Sie die Seite neu."
   },
   "session": {
-    "chooseUser": "Bitte Entwicklungsbenutzer wählen",
     "switcher": "Entwicklungsbenutzer wechseln",
+    "login": {
+      "title": "Anmelden",
+      "submit": "Anmelden",
+      "oidc": "Sie melden sich mit Ihrem Unternehmenskonto an; die Mehrfaktor-Anmeldung übernimmt der Anmeldedienst.",
+      "dev": "Entwicklungsmodus: Wählen Sie einen synthetischen Benutzer."
+    },
+    "logout": "Abmelden",
+    "expired": "Sitzung abgelaufen",
+    "expiredDetail": "Bitte melden Sie sich erneut an.",
+    "noAccess": "Kein Zugang",
+    "loginFailed": "Anmeldung fehlgeschlagen",
+    "errors": {
+      "unknown_account": "Für dieses Konto ist kein Zugang eingerichtet. Bitte wenden Sie sich an die Administration.",
+      "account_deactivated": "Dieses Konto ist deaktiviert. Bitte wenden Sie sich an die Administration.",
+      "identity_mismatch": "Dieses Konto ist mit einer anderen Anmeldung verknüpft. Bitte wenden Sie sich an die Administration.",
+      "login_failed": "Bitte versuchen Sie es erneut."
+    },
     "roles": {
       "admin": "Admin",
       "regional_admin": "Regionaladmin",

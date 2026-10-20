@@ -17,12 +17,18 @@ const me = async (page: Page) => (await page.request.get("/api/v1/me")).json();
 test("choose a dev user, see the seeded projects, create a project", async ({ page }) => {
   // One long walk through the whole PL path of Slice 2 (setup, configuration, import).
   test.slow();
+  // Slice 3 (PR 3b): without a session the app shows the login page; the dev switcher starts a
+  // session in the store and returns to the page asked for.
   await page.goto("/");
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fprojects$/);
+  await expect(page.getByRole("heading", { name: "Anmelden" })).toBeVisible();
+  await expect(page.getByText("Sitzung abgelaufen")).toHaveCount(0);
+  await expectAccessible(page);
+  await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
   await expect(page).toHaveURL(/\/projects$/);
-  await expect(page.getByText("Bitte Entwicklungsbenutzer wählen").first()).toBeVisible();
+  await expect(page.getByRole("banner")).toContainText("Petra Projektleitung");
 
   // AC-1: the three seeded projects, read from Postgres.
-  await chooseDevUser(page, "Petra Projektleitung · Projektleitung");
   await expect(page.getByRole("row")).toHaveCount(4);
   await expect(page.getByRole("cell", { name: "Beispiel Maschinenbau GmbH" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Entwurf" }).first()).toBeVisible();
@@ -318,4 +324,32 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
     "Rolf Regionalbetrieb",
   );
+});
+
+test("log out, log in again, and return to the login page when the session ends", async ({
+  page,
+  baseURL,
+}) => {
+  // Slice 3 (PR 3b): "Abmelden" ends the session in the store; a 401 after a session shows
+  // "Sitzung abgelaufen" and keeps the page asked for.
+  await page.goto("/projects");
+  await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
+  await expect(page.getByRole("banner")).toContainText("Petra Projektleitung");
+  await page.getByRole("button", { name: "Abmelden" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(page.getByRole("banner")).not.toContainText("Petra Projektleitung");
+  expect((await page.request.get("/api/v1/me")).status()).toBe(401);
+
+  await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
+  await expect(page.getByRole("link", { name: "Restrukturierung Werk Nord" })).toBeVisible();
+  // The session ends elsewhere (another tab's logout); the next request is a 401.
+  const logout = await page.request.post("/api/v1/auth/logout", {
+    data: {},
+    headers: { Origin: baseURL! },
+  });
+  expect(logout.status()).toBe(204);
+  await page.getByRole("link", { name: "Restrukturierung Werk Nord" }).click();
+  await expect(page.getByText("Sitzung abgelaufen")).toBeVisible();
+  await expect(page).toHaveURL(/\/login\?returnTo=%2Fprojects%2F[0-9a-f-]+&reason=expired$/);
+  await expectAccessible(page);
 });

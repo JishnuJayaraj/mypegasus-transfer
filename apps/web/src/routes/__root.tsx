@@ -1,7 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
-import { createLink, createRootRouteWithContext, Outlet } from "@tanstack/react-router";
-import { ApiProblemError } from "@transfer/api-client";
-import { AppShell, InlineNotification, SideNavLink, ToastProvider } from "@transfer/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  createLink,
+  createRootRouteWithContext,
+  Outlet,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
+import { AppShell, Button, InlineNotification, SideNavLink, ToastProvider } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { meQuery, useApi } from "../api";
 import { DevUserSwitcher } from "../components/dev-user-switcher";
@@ -16,8 +21,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 function RootLayout() {
   const { t } = useTranslation();
-  const me = useQuery(meQuery(useApi()));
-  const unauthenticated = me.error instanceof ApiProblemError && me.error.status === 401;
+  const onLogin = useRouterState({ select: (s) => s.location.pathname === "/login" });
+  const me = useQuery({ ...meQuery(useApi()), enabled: !onLogin });
+  const user = onLogin ? undefined : me.data;
 
   return (
     <ToastProvider closeLabel={t("app.closeNotification")}>
@@ -25,13 +31,41 @@ function RootLayout() {
         productName={t("app.name")}
         skipToContentLabel={t("app.skipToContent")}
         navLabel={t("app.navigation")}
-        headerInfo={unauthenticated ? t("session.chooseUser") : me.data?.displayName}
-        actions={<DevUserSwitcher activeUserId={me.data?.id} />}
-        nav={<NavLink to="/projects">{t("projects.title")}</NavLink>}
+        headerInfo={user?.displayName}
+        actions={
+          user && (
+            <>
+              <DevUserSwitcher activeUserId={user.id} />
+              <LogoutButton />
+            </>
+          )
+        }
+        nav={user && <NavLink to="/projects">{t("projects.title")}</NavLink>}
       >
         <Outlet />
       </AppShell>
     </ToastProvider>
+  );
+}
+
+/** "Abmelden": ends the session in the store, forgets what was loaded, shows the login page. */
+function LogoutButton() {
+  const { t } = useTranslation();
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  async function logout() {
+    await api.POST("/api/v1/auth/logout", { body: {} });
+    router.options.context.session.end();
+    queryClient.clear();
+    await router.navigate({ to: "/login" });
+  }
+
+  return (
+    <Button kind="ghost" className="tp-header-action" onClick={() => void logout()}>
+      {t("session.logout")}
+    </Button>
   );
 }
 
