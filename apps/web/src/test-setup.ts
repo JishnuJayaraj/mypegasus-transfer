@@ -19,3 +19,10 @@ window.matchMedia ??= (query: string) =>
 
 // jsdom doesn't implement scrolling; TanStack Router's scroll restoration calls it on navigation.
 window.scrollTo = () => {};
+
+// Carbon's TabList measures its overflow with a ResizeObserver, which jsdom doesn't have.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};

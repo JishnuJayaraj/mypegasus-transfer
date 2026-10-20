@@ -4,6 +4,8 @@ import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
 import { ProjectType } from "../project";
+import { ProjectRole } from "../enums";
+import { AssignmentEndReason, MemberRemovalReason } from "../projects/team";
 import {
   AgenturKey as agenturKey,
   AgenturSettingSource,
@@ -69,6 +71,11 @@ export const AuditEventType = z.enum([
   "participation_created_manually",
   // Slice 2, written only by `set_participation_dates` (PR 2h-3, plan 5.7)
   "participation_dates_changed",
+  // Slice 3, written only by the team and assignment functions (Q62, Q126)
+  "project_member_added",
+  "project_member_removed",
+  "participant_assigned",
+  "participant_unassigned",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -115,6 +122,10 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   ...setupEventTypes,
   "participant_data_changed",
   "participation_dates_changed",
+  "project_member_added",
+  "project_member_removed",
+  "participant_assigned",
+  "participant_unassigned",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -294,6 +305,28 @@ const configOverrideChanged = event("config_override_changed", {
     issue(ctx, "change_mismatch");
   }
 });
+/** Free text (name, customer) never enters the trail: the changed keys, the new region's id. */
+const projectChanged = event("project_changed", {
+  ...ofProject,
+  details: z.strictObject({
+    fields: z
+      .array(z.enum(["name", "customerName", "type", "projectAgenturKey", "regionId"]))
+      .min(1),
+    type: ProjectType.optional(),
+    projectAgenturKey: agenturKey.optional(),
+    regionId: z.uuid().optional(),
+  }),
+}).superRefine(({ details }, ctx) => {
+  if (details.fields.includes("regionId") !== (details.regionId !== undefined)) {
+    issue(ctx, "region_mismatch");
+  }
+});
+
+/** A member and the project role, by id and code (Q126). */
+const ofMember = { staffUserId: z.uuid(), role: ProjectRole };
+/** An assignment row and its consultant (Q62). */
+const ofAssignment = { staffUserId: z.uuid(), assignmentId: z.uuid() };
+
 /** Every relaxation event names its request and the rule (5.9); the reason code is its column. */
 const ofRelaxation = { relaxationRequestId: z.uuid(), ruleId: RuleId };
 /** Every profiling-exception event identifies its request record (Q94). */
@@ -367,14 +400,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("clarification_requested", { ...ofProjectOrParticipation, details: reviewOf }),
   /** Free text (name, customer) never enters the trail: the type, and the changed keys. */
   event("project_created", { ...ofProject, details: z.strictObject({ type: ProjectType }) }),
-  event("project_changed", {
-    ...ofProject,
-    details: z.strictObject({
-      fields: z.array(z.enum(["name", "customerName", "type", "projectAgenturKey"])).min(1),
-      type: ProjectType.optional(),
-      projectAgenturKey: agenturKey.optional(),
-    }),
-  }),
+  projectChanged,
   /** The wave's dates as created; the code and name stay on the row. */
   event("entry_wave_created", {
     ...ofProject,
@@ -458,6 +484,20 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("participation_created_manually", {
     ...ofParticipation,
     details: z.strictObject({ baseDefaultsVersion }),
+  }),
+  /** Team changes (Q126): who, in which project role; a removal says why. */
+  event("project_member_added", { ...ofProject, details: z.strictObject(ofMember) }),
+  event("project_member_removed", {
+    ...ofProject,
+    reasonCode: MemberRemovalReason,
+    details: z.strictObject(ofMember),
+  }),
+  /** Assignments (Q62): one event per participation and consultant; a closure says why. */
+  event("participant_assigned", { ...ofParticipation, details: z.strictObject(ofAssignment) }),
+  event("participant_unassigned", {
+    ...ofParticipation,
+    reasonCode: AssignmentEndReason,
+    details: z.strictObject(ofAssignment),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

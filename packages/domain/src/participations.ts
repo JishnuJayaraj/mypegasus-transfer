@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AssignedConsultant } from "./projects/team";
 import { page } from "./api";
 import { isoDate } from "./iso-date";
 import {
@@ -26,6 +27,8 @@ export const ParticipationListItem = z
     personnelNumber: z.string().optional(),
     lastName: z.string().optional(),
     firstName: z.string().optional(),
+    /** The consultants it is assigned to (Q62), by name. */
+    consultants: z.array(AssignedConsultant),
   })
   .meta({ id: "ParticipationListItem" });
 export type ParticipationListItem = z.infer<typeof ParticipationListItem>;
@@ -152,9 +155,13 @@ export const ParticipationDetail = z
     /** Absent where the viewer may not read them (R42); newest last. */
     amendments: z.array(DsvAmendmentView).optional(),
     baReportingTasks: z.array(BaReportingTaskView).optional(),
+    /** The consultants it is assigned to (Q62), oldest assignment first. */
+    assignments: z.array(AssignedConsultant),
     capabilities: z.strictObject({
       assignEntryWave: z.boolean(),
       setParticipationDates: z.boolean(),
+      /** Assign and unassign consultants (the PL). */
+      assignParticipations: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({

@@ -1,8 +1,22 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { createDb } from "./client";
-import { auditEvent, projectEntryWave, projectMembership, staffUser } from "./schema";
-import { seed, seedProjectIds, seedStaffUserIds, seedWaves } from "./seed";
+import {
+  auditEvent,
+  project,
+  projectEntryWave,
+  projectMembership,
+  staffOrgRole,
+  staffUser,
+} from "./schema";
+import {
+  seed,
+  seedOrgRoles,
+  seedProjectIds,
+  seedRegionIds,
+  seedStaffUserIds,
+  seedWaves,
+} from "./seed";
 import { resetTestDatabase, testDatabaseUrls } from "./testing";
 
 const db = createDb(testDatabaseUrls().owner);
@@ -32,14 +46,32 @@ const eventTypes = async () =>
     .slice(2);
 
 describe("the base seed", () => {
-  it("adds the synthetic regional operations manager and Werk Nord's waves, idempotently", async () => {
+  it("adds the synthetic org roles, regions and Werk Nord's waves, idempotently (Q126)", async () => {
     await seed(db);
     await seed(db);
     expect(await waves()).toEqual(
       seedWaves.map(({ id, code, latestEntryDate }) => ({ id, code, latestEntryDate })),
     );
-    const roles = await db.select({ role: staffUser.role }).from(staffUser);
-    expect(roles.map((r) => r.role)).toContain("regional_operations_manager");
+    const roles = await db
+      .select({
+        staffUserId: staffOrgRole.staffUserId,
+        role: staffOrgRole.role,
+        regionId: staffOrgRole.regionId,
+      })
+      .from(staffOrgRole);
+    expect(roles).toEqual(expect.arrayContaining([...seedOrgRoles]));
+    expect(roles).toHaveLength(seedOrgRoles.length);
+    const creators = await db
+      .select({ id: staffUser.id })
+      .from(staffUser)
+      .where(eq(staffUser.mayCreateProjects, true));
+    expect(creators).toEqual([{ id: seedStaffUserIds.projectLead }]);
+    const regions = await db.select({ id: project.id, regionId: project.regionId }).from(project);
+    expect(Object.fromEntries(regions.map((r) => [r.id, r.regionId]))).toEqual({
+      [seedProjectIds.werkNord]: seedRegionIds.nord,
+      [seedProjectIds.lagerSued]: seedRegionIds.sued,
+      [seedProjectIds.verwaltung]: seedRegionIds.nord,
+    });
   });
 
   it("gives a migrated W1 (no latest entry date) the seed's dates and keeps its id", async () => {

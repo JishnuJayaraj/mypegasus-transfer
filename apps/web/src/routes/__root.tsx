@@ -40,7 +40,20 @@ function RootLayout() {
             </>
           )
         }
-        nav={user && <NavLink to="/projects">{t("projects.title")}</NavLink>}
+        nav={
+          user && (
+            <>
+              <NavLink to="/projects">{t("projects.title")}</NavLink>
+              {/* The global admin's administration (Q126); the API refuses everyone else. */}
+              {user.orgRoles.some((grant) => grant.role === "admin") && (
+                <>
+                  <NavLink to="/admin/staff">{t("adminStaff.title")}</NavLink>
+                  <NavLink to="/admin/regions">{t("adminRegions.title")}</NavLink>
+                </>
+              )}
+            </>
+          )
+        }
       >
         <Outlet />
       </AppShell>

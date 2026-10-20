@@ -4,6 +4,7 @@ import {
   createDb,
   eq,
   seedProjectIds,
+  seedRegionIds,
   seedStaffUserIds,
   seedWaves,
 } from "@transfer/db";
@@ -86,7 +87,11 @@ describe("GET /api/v1/projects/{projectId}/entry-waves", () => {
     }
     const created = await app.request(
       "/api/v1/projects",
-      jsonRequest("POST", { name: "Neu", customerName: "Beispiel AG", type: "ta_tg" }, auth),
+      jsonRequest(
+        "POST",
+        { name: "Neu", customerName: "Beispiel AG", type: "ta_tg", regionId: seedRegionIds.nord },
+        auth,
+      ),
     );
     const { id } = await readJson(created, Project);
     await expectProblem(

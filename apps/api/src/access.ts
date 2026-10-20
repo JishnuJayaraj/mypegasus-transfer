@@ -1,67 +1,100 @@
-import { eq, project, projectMembership, type Database } from "@transfer/db";
 import {
-  mayCreateProject,
+  and,
+  eq,
+  isNull,
+  participantAssignment,
+  project,
+  projectMembership,
+  type Database,
+} from "@transfer/db";
+import {
+  isGlobalAdmin,
   mayPerformOperation,
-  OrgRole,
+  seesProject,
   type Operation,
+  type OrgRole,
   type ProjectRole,
   type StaffUser,
 } from "@transfer/domain";
 import { staffSubject, type StaffSubject } from "./participations/subjects";
 
 /**
- * The access subject of a staff user (Slice 2 plan 5.4): project roles from `project_membership`
- * (zero or more per project, D6); an org role from the flat `StaffRole`, with global scope until
- * Slice 3 gives projects a region (round 18, reading 2); no participant assignments yet (Q62).
+ * The access subject of a staff user, loaded per request so a change takes effect at the next one
+ * (Q62, Q126): project roles from `project_membership` (zero or more per project, D6), org roles
+ * from the session's `staff_org_role` rows (`admin` for all regions, the regional roles for theirs)
+ * and the open participant assignments.
  */
 export async function staffSubjectOf(db: Database, user: StaffUser): Promise<StaffSubject> {
-  const rows = await db
-    .select({ projectId: projectMembership.projectId, role: projectMembership.role })
-    .from(projectMembership)
-    .where(eq(projectMembership.staffUserId, user.id));
+  const [memberships, assignments] = await Promise.all([
+    db
+      .select({ projectId: projectMembership.projectId, role: projectMembership.role })
+      .from(projectMembership)
+      .where(eq(projectMembership.staffUserId, user.id)),
+    db
+      .select({ participationId: participantAssignment.participationId })
+      .from(participantAssignment)
+      .where(
+        and(eq(participantAssignment.staffUserId, user.id), isNull(participantAssignment.endedAt)),
+      ),
+  ]);
   const projectRoles: Record<string, ProjectRole[]> = {};
-  for (const { projectId, role } of rows) (projectRoles[projectId] ??= []).push(role);
-  const orgRole = OrgRole.safeParse(user.role);
-  return staffSubject(user.id, projectRoles, orgRole.success ? { [orgRole.data]: "all" } : {});
-}
-
-/** A global org role sees every project's metadata, a member their projects' (Q106). */
-export function hasGlobalOrgRole(subject: StaffSubject): boolean {
-  return [...subject.orgRoles.values()].some(({ regionIds }) => regionIds === "all");
-}
-
-export function seesProject(subject: StaffSubject, projectId: string): boolean {
-  return hasGlobalOrgRole(subject) || (subject.projectRoles[projectId]?.size ?? 0) > 0;
+  for (const { projectId, role } of memberships) (projectRoles[projectId] ??= []).push(role);
+  const orgRoles: Partial<Record<OrgRole, "all" | string[]>> = {};
+  for (const { role, regionId } of user.orgRoles) {
+    const held = orgRoles[role];
+    if (regionId === null || held === "all") orgRoles[role] = "all";
+    else orgRoles[role] = [...(held ?? []), regionId];
+  }
+  return staffSubject(
+    user.id,
+    projectRoles,
+    orgRoles,
+    assignments.map(({ participationId }) => participationId),
+  );
 }
 
 /**
  * Who reads the global template catalog (plan 5.8; Q108, confirmed in round 25): those who
- * choose or pin templates, i.e. the flat role `project_lead` (creates projects and chooses their
- * Project Agentur, R9, R12) and the PL of any project (`pinTemplate`), and the global org roles,
- * who see every project's configuration (Q106). Other members only see their projects' pins.
+ * choose or pin templates, i.e. staff who may create projects (and choose their Project Agentur,
+ * R9, R12) and the PL of any project (`pinTemplate`), and the org roles, who see the
+ * configuration of every project in their scope (Q106; the catalog itself is global reference
+ * data). Other members only see their projects' pins.
  */
 export function readsTemplateCatalog(subject: StaffSubject, user: StaffUser): boolean {
   return (
-    mayCreateProject(user.role) ||
-    hasGlobalOrgRole(subject) ||
+    user.mayCreateProjects ||
+    subject.orgRoles.size > 0 ||
     Object.values(subject.projectRoles).some((roles) => roles.has("project_lead"))
   );
 }
 
-/** The user's subject, and whether the project exists and they may see it (else a 404). */
+/** A permission target in a project of `regionId` (the project's region, Q126). */
+export const projectTarget = (
+  projectId: string,
+  regionId: string | null,
+  participationId: string | null = null,
+) => ({ projectId, regionId, participationId });
+
+/**
+ * The user's subject, and whether the project exists and they may see it (else a 404): members,
+ * the org roles of its region and global roles (Q106, Q126). With the project's region for the
+ * permission targets.
+ */
 export async function projectAccess(db: Database, user: StaffUser, projectId: string) {
-  const subject = await staffSubjectOf(db, user);
-  if (!seesProject(subject, projectId)) return { subject, visible: false };
-  const [found] = await db
-    .select({ id: project.id })
-    .from(project)
-    .where(eq(project.id, projectId));
-  return { subject, visible: found !== undefined };
+  const [subject, [found]] = await Promise.all([
+    staffSubjectOf(db, user),
+    db.select({ regionId: project.regionId }).from(project).where(eq(project.id, projectId)),
+  ]);
+  const regionId = found?.regionId ?? null;
+  const visible = found !== undefined && seesProject(subject, { id: projectId, regionId });
+  return { subject, visible, regionId };
 }
 
-/** Whether `subject` may perform a project-level operation in the project (5.4). */
-const mayIn = (subject: StaffSubject, projectId: string, operation: Operation) =>
-  mayPerformOperation(subject, operation, { projectId, regionId: null, participationId: null }).ok;
+/**
+ * The user's operation check in a project, and whether they hold the global admin role (who
+ * changes a region at any time, Q126).
+ */
+export type ProjectPermissions = ((operation: Operation) => boolean) & { globalAdmin: boolean };
 
 /**
  * The user's operation check in a project, from which the server derives the capabilities the UI
@@ -71,9 +104,12 @@ export async function projectPermissions(
   db: Database,
   user: StaffUser,
   projectId: string,
-): Promise<((operation: Operation) => boolean) | undefined> {
-  const { subject, visible } = await projectAccess(db, user, projectId);
-  return visible ? (operation) => mayIn(subject, projectId, operation) : undefined;
+): Promise<ProjectPermissions | undefined> {
+  const { subject, visible, regionId } = await projectAccess(db, user, projectId);
+  if (!visible) return undefined;
+  const may = (operation: Operation) =>
+    mayPerformOperation(subject, operation, projectTarget(projectId, regionId)).ok;
+  return Object.assign(may, { globalAdmin: isGlobalAdmin(subject) });
 }
 
 /**
@@ -87,8 +123,8 @@ export async function projectDenial(
   projectId: string,
   operation?: Operation,
 ): Promise<"not-found" | "forbidden" | undefined> {
-  const { subject, visible } = await projectAccess(db, user, projectId);
-  if (!visible) return "not-found";
-  if (operation && !mayIn(subject, projectId, operation)) return "forbidden";
+  const may = await projectPermissions(db, user, projectId);
+  if (!may) return "not-found";
+  if (operation && !may(operation)) return "forbidden";
   return undefined;
 }

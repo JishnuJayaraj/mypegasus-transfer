@@ -6,6 +6,7 @@ import {
   eq,
   projectConfigOverride,
   seedProjectIds,
+  seedRegionIds,
   seedStaffUserIds,
   sql,
 } from "@transfer/db";
@@ -189,7 +190,7 @@ describe("PUT …/config/agentur-settings/{agenturKey} (AC-14)", () => {
       "/api/v1/projects",
       jsonRequest(
         "POST",
-        { name: "Neu", customerName: "Beispiel GmbH", type: "ta_tg" },
+        { name: "Neu", customerName: "Beispiel GmbH", type: "ta_tg", regionId: seedRegionIds.nord },
         auth.projectLead,
       ),
     );

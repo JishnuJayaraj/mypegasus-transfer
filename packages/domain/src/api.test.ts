@@ -11,6 +11,7 @@ const project = {
   activatedAt: null,
   createdAt: "2026-10-15T20:05:23.123456Z",
   createdBy: "00000000-0000-4000-8000-000000000003",
+  regionId: "00000000-0000-4000-a000-000000000001",
 };
 
 describe("Project", () => {
@@ -34,20 +35,25 @@ describe("Project", () => {
 });
 
 describe("StaffUser", () => {
-  it("has id, display name and role", () => {
+  it("has id, display name, the project-creation flag and the org roles, no flat role (Q126)", () => {
     const user = {
       id: project.createdBy,
       displayName: "Petra Projektleitung",
-      role: "project_lead",
+      mayCreateProjects: true,
+      orgRoles: [{ role: "admin", regionId: null }],
     };
     expect(StaffUser.parse(user)).toEqual(user);
+    expect(
+      StaffUser.safeParse({ ...user, orgRoles: [{ role: "admin", regionId: project.id }] }).success,
+    ).toBe(false);
   });
 
   it("carries the session's end for /me as UTC (D2)", () => {
     const me = {
       id: project.createdBy,
       displayName: "Petra Projektleitung",
-      role: "project_lead",
+      mayCreateProjects: true,
+      orgRoles: [],
       sessionExpiresAt: "2026-10-20T16:30:00.123456Z",
     };
     expect(CurrentStaffUser.parse(me)).toEqual(me);

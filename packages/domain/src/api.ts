@@ -1,12 +1,32 @@
 import { z } from "zod";
-import { StaffRole } from "./enums";
+import { OrgRole, ProjectRole } from "./enums";
+import { OrgRoleGrant } from "./staff/accounts";
 
-/** A staff user: `GET /api/v1/me` and the dev user switcher. */
+/**
+ * A staff user as a session carries it (`GET /api/v1/me`): whether they may create projects and
+ * their org roles (Q126); their project roles and assignments are loaded per request.
+ */
 export const StaffUser = z
-  .object({ id: z.uuid(), displayName: z.string(), role: StaffRole })
+  .object({
+    id: z.uuid(),
+    displayName: z.string(),
+    mayCreateProjects: z.boolean(),
+    orgRoles: z.array(OrgRoleGrant),
+  })
   .meta({ id: "StaffUser" });
 
 export type StaffUser = z.infer<typeof StaffUser>;
+
+/** A synthetic user of the dev switcher, with the role it is best known by (`staffRoleLabel`). */
+export const DevStaffUser = z
+  .object({
+    id: z.uuid(),
+    displayName: z.string(),
+    role: z.union([OrgRole, ProjectRole]).nullable(),
+  })
+  .meta({ id: "DevStaffUser" });
+
+export type DevStaffUser = z.infer<typeof DevStaffUser>;
 
 /** `GET /api/v1/me`: the staff user and when the session ends (8 hours absolute, D2). */
 export const CurrentStaffUser = StaffUser.extend({

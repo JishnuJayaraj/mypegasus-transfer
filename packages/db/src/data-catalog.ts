@@ -54,6 +54,21 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // Regions (Niederlassungen, Q35, Q126): codes and names, no personal data.
+  region: { retentionClass: "reference_data", dataClass: "internal", holdsParticipantData: false },
+  // Org roles (Q126): staff ids, the role, the region and who granted it when.
+  staff_org_role: {
+    retentionClass: "staff_account",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  // Participant assignments (Q62): which consultant a participation is assigned to, by whom and
+  // when, and how it ended; ids and codes only, closed, never deleted.
+  participant_assignment: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Who holds which project role (D6); staff ids only, no participant data.
   project_membership: {
     retentionClass: "project_master",
@@ -280,9 +295,10 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
 /**
  * Participant-data tables without participant fields: the audit log holds ids and codes only; the
  * saved column mappings hold keyed hashes of header cells, which only a data row picked as the
- * header would make pseudonymised values of a person (R44), never a field of a participation.
+ * header would make pseudonymised values of a person (R44), never a field of a participation; the
+ * assignments hold which consultant a participation is assigned to, ids and dates only (Q62).
  */
-const withoutFields = new Set(["audit_event", "import_column_mapping"]);
+const withoutFields = new Set(["audit_event", "import_column_mapping", "participant_assignment"]);
 
 const dataClassRank: Record<DataClass, number> = {
   aggregated: 0,

@@ -33,7 +33,7 @@ export function mockApi(routes: Record<string, Handler>) {
       const body =
         request.method === "GET" ? undefined : await request.json().catch(() => undefined);
       calls.push({ key, body });
-      const handler = routes[key];
+      const handler = routes[key] ?? defaultRoutes(key);
       return handler ? handler({ query: url.searchParams, body }) : problem(404, "not-found");
     },
   });
@@ -51,14 +51,72 @@ export function renderApp(path: string, api: ReturnType<typeof mockApi>["api"]) 
   return { router };
 }
 
+/**
+ * Synthetic staff users: the dev switcher's entries (`role`) and, as `GET /me`, the session user
+ * (`mayCreateProjects`, `orgRoles`).
+ */
 export const staffUsers = [
-  { id: "00000000-0000-4000-8000-000000000001", displayName: "Erika Musterfrau", role: "admin" },
+  {
+    id: "00000000-0000-4000-8000-000000000001",
+    displayName: "Erika Musterfrau",
+    role: "admin",
+    mayCreateProjects: false,
+    orgRoles: [{ role: "admin", regionId: null }],
+  },
   {
     id: "00000000-0000-4000-8000-000000000003",
     displayName: "Petra Projektleitung",
     role: "project_lead",
+    mayCreateProjects: true,
+    orgRoles: [],
   },
 ];
+
+export const consultant = {
+  id: "00000000-0000-4000-8000-000000000004",
+  displayName: "Bernd Beratung",
+};
+
+export const regions = [
+  {
+    id: "00000000-0000-4000-b000-000000000101",
+    code: "NORD",
+    name: "Niederlassung Nord",
+    createdAt: "2026-10-15T08:00:00.000000Z",
+  },
+  {
+    id: "00000000-0000-4000-b000-000000000102",
+    code: "SUED",
+    name: "Niederlassung Süd",
+    createdAt: "2026-10-15T08:00:00.000000Z",
+  },
+];
+
+/** The seeded team of a project as its PL sees it (Q126). */
+export const team = {
+  members: [
+    {
+      staffUserId: consultant.id,
+      displayName: consultant.displayName,
+      roles: ["consultant"],
+      deactivated: false,
+    },
+    {
+      staffUserId: staffUsers[1]!.id,
+      displayName: staffUsers[1]!.displayName,
+      roles: ["project_lead"],
+      deactivated: false,
+    },
+  ],
+  capabilities: { manageMembers: true, addReplacementLead: true, assignParticipations: true },
+};
+
+/** Routes most pages read, unless a test answers them itself. */
+function defaultRoutes(key: string): Handler | undefined {
+  if (key === "GET /api/v1/regions") return () => json(regions);
+  if (/^GET \/api\/v1\/projects\/[^/]+\/members$/.test(key)) return () => json(team);
+  return undefined;
+}
 
 export const project = {
   id: "00000000-0000-4000-9000-000000000001",
@@ -70,6 +128,7 @@ export const project = {
   activatedAt: null,
   createdAt: "2026-10-15T08:30:00.123456Z",
   createdBy: staffUsers[1]!.id,
+  regionId: regions[0]!.id,
 };
 
 /** A project's configuration without pins (Slice 2 plan 5.12). */
@@ -91,5 +150,6 @@ export const unpinnedConfig = {
     activateProject: true,
     migrateTemplate: true,
     importParticipations: true,
+    setProjectRegion: true,
   },
 };

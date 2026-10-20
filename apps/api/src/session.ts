@@ -87,7 +87,10 @@ export function requireSession({ db, env }: Deps): MiddlewareHandler<AppEnv> {
     const tokenHash = cookieTokenHash(c, env);
     const { rows } = tokenHash
       ? await db.execute<StaffUser & { expiresAt: string }>(sql`
-          select u.id, u.display_name as "displayName", u.role,
+          select u.id, u.display_name as "displayName", u.may_create_projects as "mayCreateProjects",
+            coalesce((select json_agg(json_build_object('role', r.role, 'regionId', r.region_id)
+                        order by r.role, r.region_id)
+                      from staff_org_role r where r.staff_user_id = u.id), '[]') as "orgRoles",
             to_char(s.expires_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "expiresAt"
           from staff_session s join staff_user u on u.id = s.staff_user_id
           where s.token_hash = ${tokenHash} and s.ended_at is null and s.expires_at > now()

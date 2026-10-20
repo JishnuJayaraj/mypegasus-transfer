@@ -7,6 +7,7 @@ import {
   project,
   projectMembership,
   seedProjectIds,
+  seedRegionIds,
   seedStaffUserIds,
 } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
@@ -25,6 +26,7 @@ const valid = {
   name: "Projekt Integrationstest",
   customerName: "Beispiel Maschinenbau GmbH",
   type: "ta_tg",
+  regionId: seedRegionIds.nord,
 };
 
 const create = (body: unknown, headers = auth) =>
@@ -155,19 +157,21 @@ describe("GET /api/v1/projects (AC-2)", () => {
     expect(new Set(seen).size).toBe(120);
   });
 
-  it("lists only the projects the user is a member of; global org roles see all (Q106)", async () => {
+  it("lists only the projects the user is a member of; global org roles see all, regional ones their region's (Q106, Q126)", async () => {
     const created = await readJson(await create(valid), Project);
     const seeded = Object.values(seedProjectIds).toSorted();
     // The consultant holds a role in the seeded projects only.
     const consultant = await login(app, seedStaffUserIds.consultant);
     expect((await ids(await list("", consultant))).toSorted()).toEqual(seeded);
-    for (const staffUserId of [
-      seedStaffUserIds.admin,
-      seedStaffUserIds.regionalOperationsManager,
-    ]) {
-      const all = await ids(await list("", await login(app, staffUserId)));
-      expect(all.toSorted()).toEqual([...seeded, created.id].toSorted());
-    }
+    const all = await ids(await list("", await login(app, seedStaffUserIds.admin)));
+    expect(all.toSorted()).toEqual([...seeded, created.id].toSorted());
+    // Region Nord: Werk Nord, Verwaltung and the new project; not Lager Süd
+    const nord = await ids(
+      await list("", await login(app, seedStaffUserIds.regionalOperationsManager)),
+    );
+    expect(nord.toSorted()).toEqual(
+      [seedProjectIds.werkNord, seedProjectIds.verwaltung, created.id].toSorted(),
+    );
     // A PL without any membership sees nothing.
     await owner
       .delete(projectMembership)

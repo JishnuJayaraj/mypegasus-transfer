@@ -161,15 +161,13 @@ describe("POST /api/v1/projects/{projectId}/activation (AC-17)", () => {
 
   it("is the project's PL's: 404 for a project the user can't see, 403 for other roles, before the blockers", async () => {
     // Lager Süd has blockers, so a 422 would leak past the access checks (round 27/28 order).
-    for (const user of [
-      "consultant",
-      "backOffice",
-      "admin",
-      "regionalAdmin",
-      "regionalOperationsManager",
-    ]) {
+    for (const user of ["consultant", "backOffice", "admin"]) {
       await expectProblem(await activate(lagerSued, user), 403, "forbidden");
       expect((await config(lagerSued, user)).capabilities.activateProject).toBe(false);
+    }
+    // Lager Süd is outside the regional roles' region (Q126): hidden from them.
+    for (const user of ["regionalAdmin", "regionalOperationsManager"]) {
+      await expectProblem(await activate(lagerSued, user), 404, "not-found");
     }
     await owner
       .delete(projectMembership)

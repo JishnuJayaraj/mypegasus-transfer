@@ -129,3 +129,40 @@ export const participationQuery = (api: ApiClient, participationId: string) =>
         }),
       ),
   });
+
+/** The regions (a handful of Niederlassungen), for the region pickers (Q126). */
+export const regionsQuery = (api: ApiClient) =>
+  queryOptions({
+    queryKey: ["regions"],
+    queryFn: () => unwrap(api.GET("/api/v1/regions")),
+  });
+
+/** The staff accounts with their org roles (the global admin), page by page. */
+export const staffAccountsQuery = (api: ApiClient) =>
+  infiniteQueryOptions({
+    queryKey: ["staff-users"],
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/staff-users", {
+          params: { query: { limit: 100, ...(pageParam && { cursor: pageParam }) } },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+  });
+
+/** The project's members, their roles and what the viewer may do with the team (Q126). */
+export const projectTeamQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "members"],
+    queryFn: () =>
+      unwrap(api.GET("/api/v1/projects/{projectId}/members", { params: { path: { projectId } } })),
+  });
+
+/** Active staff whose name contains `search` (id and name), for the member picker. */
+export const staffDirectoryQuery = (api: ApiClient, search: string) =>
+  queryOptions({
+    queryKey: ["staff-directory", search],
+    queryFn: () => unwrap(api.GET("/api/v1/staff-directory", { params: { query: { search } } })),
+    enabled: search.trim().length > 0,
+  });

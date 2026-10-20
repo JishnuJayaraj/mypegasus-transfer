@@ -11,8 +11,8 @@ export {
 export {
   checkProjectUpdate,
   CreateProjectInput,
-  mayCreateProject,
   Project,
+  projectCreationRefusals,
   ProjectStatus,
   ProjectType,
   UpdateProjectInput,
@@ -67,7 +67,7 @@ export {
   type ParticipationListScope,
   type ParticipationRecord,
 } from "./access/participation-view";
-export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole, StaffRole } from "./enums";
+export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole } from "./enums";
 export * from "./lifecycle/enums";
 export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
 export { guardIds, type DatedFact, type GuardFacts, type GuardId } from "./lifecycle/guards";
@@ -336,4 +336,37 @@ export {
   type StaffLoginDecision,
 } from "./auth/staff-login";
 export { safeReturnPath } from "./auth/return-path";
-export { CurrentStaffUser, PageQuery, ProblemDetails, StaffUser, page } from "./api";
+export {
+  hasGlobalOrgRole,
+  isGlobalAdmin,
+  mayAddMember,
+  readsStaffDirectory,
+  regionChangeRefusal,
+  seesProject,
+} from "./access/org";
+export {
+  CreateStaffUserInput,
+  orgRoleChanges,
+  OrgRoleGrant,
+  SetOrgRolesInput,
+  StaffAccount,
+  StaffAccountPage,
+  StaffDirectoryEntry,
+  StaffDirectoryQuery,
+  staffRoleLabel,
+  UpdateStaffUserInput,
+  type StaffRoleLabel,
+} from "./staff/accounts";
+export { CreateRegionInput, Region, RegionCode, UpdateRegionInput } from "./projects/regions";
+export {
+  AddMemberInput,
+  AssignedConsultant,
+  AssignmentEndReason,
+  AssignmentResult,
+  assignmentLimit,
+  AssignParticipationsInput,
+  MemberRemovalReason,
+  ProjectMember,
+  ProjectTeam,
+} from "./projects/team";
+export { CurrentStaffUser, DevStaffUser, PageQuery, ProblemDetails, StaffUser, page } from "./api";

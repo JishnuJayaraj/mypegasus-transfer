@@ -44,6 +44,8 @@ function sampleOperation(kind: OperationKind, correction: EvidenceCorrectionTarg
       return { kind, actorStaffUserId: "staff-other" };
     case "requestEvidenceCorrection":
       return { kind, target: correction };
+    case "addReplacementLead":
+      return { kind, staffUserId: "staff-other" };
     default:
       return { kind };
   }

@@ -72,6 +72,7 @@ const participant = (n: number, extra: object = {}) => ({
   profilingStatus: "not_started",
   dsvStatus: "not_offered",
   entryWaveId: null,
+  consultants: [],
   personnelNumber: `BSP-000${n}`,
   lastName: "Mustermann",
   firstName: "Erika",

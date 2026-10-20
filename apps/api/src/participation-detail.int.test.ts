@@ -6,6 +6,7 @@ import {
   participantIdentity,
   seedStaffUserIds,
   seedWaves,
+  seedRegionIds,
 } from "@transfer/db";
 import { ParticipationDetail } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
@@ -120,7 +121,12 @@ describe("GET /api/v1/participations/{participationId} (AC-34)", () => {
       "/api/v1/projects",
       jsonRequest(
         "POST",
-        { name: "Nur PL", customerName: "Beispiel GmbH", type: "ta_tg" },
+        {
+          name: "Nur PL",
+          customerName: "Beispiel GmbH",
+          type: "ta_tg",
+          regionId: seedRegionIds.nord,
+        },
         auth.projectLead,
       ),
     );

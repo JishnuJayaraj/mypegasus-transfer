@@ -1,7 +1,8 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
+  consultant,
   json,
   mockApi,
   problem,
@@ -67,7 +68,8 @@ const detail = {
     privateEmail: "erika@example.org",
     workEmail: null,
   },
-  capabilities: { assignEntryWave: true, setParticipationDates: false },
+  assignments: [],
+  capabilities: { assignEntryWave: true, setParticipationDates: false, assignParticipations: true },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };
 const option1 =
@@ -220,5 +222,64 @@ describe("the participant page", () => {
     expect(
       await screen.findByText("Diese teilnehmende Person wurde nicht gefunden."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the participant's consultants (Q62)", () => {
+  const assigned = {
+    staffUserId: consultant.id,
+    displayName: consultant.displayName,
+    assignedAt: "2026-10-20T08:00:00.000000Z",
+  };
+
+  it("lists them and lets the PL end an assignment", async () => {
+    const calls = setup(
+      {
+        [`DELETE ${detailPath}/assignments/${consultant.id}`]: () =>
+          new Response(null, { status: 204 }),
+      },
+      { ...detail, assignments: [assigned] },
+    );
+    const consultants = await section("Zuständige Beratung");
+    expect(within(consultants).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
+    await userEvent.click(
+      within(consultants).getByRole("button", { name: "Zuweisung von Bernd Beratung aufheben" }),
+    );
+    await waitFor(() =>
+      expect(calls.map((c) => c.key)).toContain(
+        `DELETE ${detailPath}/assignments/${consultant.id}`,
+      ),
+    );
+  });
+
+  it("assigns a consultant of the project", async () => {
+    const calls = setup({ [`POST ${projectPath}/assignments`]: () => json({ assigned: 1 }) });
+    const consultants = await section("Zuständige Beratung");
+    expect(within(consultants).getByText("Niemandem zugewiesen.")).toBeInTheDocument();
+    await userEvent.selectOptions(
+      within(consultants).getByLabelText("Beraterin oder Berater"),
+      consultant.id,
+    );
+    await userEvent.click(within(consultants).getByRole("button", { name: "Zuweisen" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `POST ${projectPath}/assignments`,
+        body: { staffUserId: consultant.id, participationIds: [participationId] },
+      }),
+    );
+  });
+
+  it("shows them read-only without the capability", async () => {
+    setup(
+      {},
+      {
+        ...detail,
+        assignments: [assigned],
+        capabilities: { ...detail.capabilities, assignParticipations: false },
+      },
+    );
+    const consultants = await section("Zuständige Beratung");
+    expect(within(consultants).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
+    expect(within(consultants).queryByRole("button")).toBeNull();
   });
 });

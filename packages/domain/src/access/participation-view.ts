@@ -83,6 +83,7 @@ export const mayListField = (
 /** One participation as the API loads it, before projection. */
 export type ParticipationRecord = {
   amendments: DsvAmendmentView[];
+  assignments: ParticipationDetail["assignments"];
   baReportingTasks: BaReportingTaskView[];
   id: string;
   projectId: string;
@@ -147,6 +148,7 @@ export function participationDetail(
     ),
     ...(readable("dsvAmendment") && { amendments: record.amendments }),
     ...(readable("baReportingTask") && { baReportingTasks: record.baReportingTasks }),
+    assignments: record.assignments,
     capabilities: options.capabilities,
     refusals: options.refusals,
   };

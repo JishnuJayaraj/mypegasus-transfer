@@ -6,7 +6,7 @@ import {
   ImportResult,
   mayPerformOperation,
 } from "@transfer/domain";
-import { projectAccess } from "../access";
+import { projectAccess, projectTarget } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { createImportService, ImportRefusal } from "../imports/service";
 import { ImportBusyError } from "../imports/slots";
@@ -82,9 +82,9 @@ export function importRoutes(deps: Deps) {
   /** Visibility (404) and the PL's `importParticipations` (403) come before anything else. */
   async function access(c: Context, projectId: string) {
     const user = sessionUser(c as never);
-    const { subject, visible } = await projectAccess(db, user, projectId);
+    const { subject, visible, regionId } = await projectAccess(db, user, projectId);
     if (!visible) return { denied: problem(c, "not-found") };
-    const target = { projectId, regionId: null, participationId: null };
+    const target = projectTarget(projectId, regionId);
     if (!mayPerformOperation(subject, { kind: "importParticipations" }, target).ok) {
       return { denied: problem(c, "forbidden") };
     }

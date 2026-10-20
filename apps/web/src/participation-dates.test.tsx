@@ -48,7 +48,8 @@ const detail = {
   person: { personnelNumber: "BSP-0001", lastName: "Mustermann", firstName: "Erika" },
   amendments: [],
   baReportingTasks: [],
-  capabilities: { assignEntryWave: false, setParticipationDates: true },
+  assignments: [],
+  capabilities: { assignEntryWave: false, setParticipationDates: true, assignParticipations: true },
   refusals: { assignEntryWave: "no_other_wave", setParticipationDates: null },
 };
 const task = {

@@ -59,7 +59,9 @@ export function DevUserList({
               aria-current={user.id === activeUserId}
               onClick={() => void choose(user.id)}
             >
-              {`${user.displayName} · ${t(`session.roles.${user.role}`)}`}
+              {user.role
+                ? `${user.displayName} · ${t(`session.roles.${user.role}`)}`
+                : user.displayName}
             </Button>
           </li>
         ))}

@@ -63,6 +63,10 @@ describe("data catalog", () => {
       // Slice 3 (PR 3b, D2, D6, Q122)
       staff_session: entry("access_credential", "internal"),
       staff_audit_event: entry("audit_log", "internal"),
+      // Slice 3 (PR 3c, Q62, Q126)
+      region: entry("reference_data", "internal"),
+      staff_org_role: entry("staff_account", "internal"),
+      participant_assignment: entry("participation_record", "internal", true),
       project_membership: entry("project_master", "internal"),
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),

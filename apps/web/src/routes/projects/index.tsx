@@ -1,8 +1,8 @@
-import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink } from "@tanstack/react-router";
 import { Add, Button, formatTimestamp, Link, PageHeader, SimpleTable } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
-import { projectsQuery, useApi } from "../../api";
+import { meQuery, projectsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
 
 const ButtonLink = createLink(Button);
@@ -16,9 +16,12 @@ export const Route = createFileRoute("/projects/")({
 
 function ProjectsPage() {
   const { t } = useTranslation();
+  const api = useApi();
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } = useSuspenseInfiniteQuery(
-    projectsQuery(useApi()),
+    projectsQuery(api),
   );
+  // Only accounts the global admin allowed to create projects see the action (Q126).
+  const mayCreate = useQuery(meQuery(api)).data?.mayCreateProjects === true;
   const rows = data.pages
     .flatMap((page) => page.items)
     .map((project) => ({
@@ -43,9 +46,11 @@ function ProjectsPage() {
       <PageHeader
         title={t("projects.title")}
         actions={
-          <ButtonLink to="/projects/new" renderIcon={Add}>
-            {t("projects.create")}
-          </ButtonLink>
+          mayCreate && (
+            <ButtonLink to="/projects/new" renderIcon={Add}>
+              {t("projects.create")}
+            </ButtonLink>
+          )
         }
       />
       <SimpleTable

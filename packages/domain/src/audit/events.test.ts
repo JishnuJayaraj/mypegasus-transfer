@@ -72,6 +72,10 @@ describe("audit event types (plan 5.4)", () => {
       "import_confirmed",
       "participation_created_manually",
       "participation_dates_changed",
+      "project_member_added",
+      "project_member_removed",
+      "participant_assigned",
+      "participant_unassigned",
     ]);
   });
 
@@ -99,6 +103,11 @@ describe("audit event types (plan 5.4)", () => {
       ...setupEventTypes,
       "participant_data_changed",
       "participation_dates_changed",
+      // Teams and assignments (Q62, Q126): only their functions write them.
+      "project_member_added",
+      "project_member_removed",
+      "participant_assigned",
+      "participant_unassigned",
     ]);
   });
 
@@ -455,6 +464,38 @@ describe("the other event types", () => {
     ["clarification_requested", { details: { reviewedEventId: otherId } }],
     ["project_created", { participationId: null, details: { type: "ta_tg" } }],
     ["project_changed", { participationId: null, details: { fields: ["name", "customerName"] } }],
+    [
+      "project_changed",
+      { participationId: null, details: { fields: ["regionId"], regionId: otherId } },
+    ],
+    [
+      "project_member_added",
+      { participationId: null, details: { staffUserId: otherId, role: "consultant" } },
+    ],
+    [
+      "project_member_removed",
+      {
+        participationId: null,
+        reasonCode: "member_removed",
+        details: { staffUserId: otherId, role: "project_lead" },
+      },
+    ],
+    [
+      "project_member_removed",
+      {
+        participationId: null,
+        reasonCode: "account_deactivated",
+        details: { staffUserId: otherId, role: "back_office" },
+      },
+    ],
+    ["participant_assigned", { details: { staffUserId: otherId, assignmentId: otherId } }],
+    [
+      "participant_unassigned",
+      {
+        reasonCode: "consultant_removed",
+        details: { staffUserId: otherId, assignmentId: otherId },
+      },
+    ],
     ["project_changed", { participationId: null, details: { fields: ["type"], type: "ta_only" } }],
     [
       "project_changed",
@@ -608,6 +649,28 @@ describe("the other event types", () => {
     ["project_created", { details: { type: "ta_tg" } }],
     ["project_created", { participationId: null, details: { type: "ta_tg", name: "Werk Nord" } }],
     ["project_changed", { participationId: null, details: { fields: [] } }],
+    ["project_changed", { participationId: null, details: { fields: ["regionId"] } }],
+    [
+      "project_member_added",
+      { participationId: null, details: { staffUserId: otherId, role: "admin" } },
+    ],
+    ["project_member_added", { details: { staffUserId: otherId, role: "consultant" } }],
+    [
+      "project_member_removed",
+      {
+        participationId: null,
+        reasonCode: "unassigned",
+        details: { staffUserId: otherId, role: "consultant" },
+      },
+    ],
+    [
+      "participant_assigned",
+      { participationId: null, details: { staffUserId: otherId, assignmentId: otherId } },
+    ],
+    [
+      "participant_unassigned",
+      { reasonCode: "removed", details: { staffUserId: otherId, assignmentId: otherId } },
+    ],
     ["project_changed", { participationId: null, details: { fields: ["signingDeadline"] } }],
     [
       "project_changed",

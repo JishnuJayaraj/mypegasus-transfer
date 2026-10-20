@@ -57,7 +57,9 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 - `packages/db`: Drizzle schema, migrations (the SECURITY DEFINER status functions and grants
   are hand-written), seed, data catalog. `pnpm db:migrate` also creates pg-boss's `pgboss` schema
   and its `transfer_app` grants. The seed is synthetic only: idempotent by fixed UUIDs, fictional
-  names, `example.org` emails; `db:seed` and `db:reset` refuse `NODE_ENV=production`. After the
+  names, `example.org` emails; `db:seed` and `db:reset` refuse `NODE_ENV=production`. It holds
+  two fictional regions (Nord with Werk Nord and Verwaltung, Süd with Lager Süd), the admin's
+  global org role, the regional roles for Nord and the PL's `may_create_projects`. After the
   base seed, the API seed pins and activates through the services and creates and moves
   participations only through the status service: each staff step by the seeded user the Q60
   matrix allows, system steps as `system` with job `seed`, no bypass actor (Q95). It runs on a
@@ -90,7 +92,8 @@ need the proxy CA (`/root/.ccr/README.md`).
 ## Module boundaries
 
 - `packages/domain` has **no I/O**: no DB, no HTTP. Pure functions + types: lifecycle (main
-  status + profiling and DSV tracks), guards, completeness, and the field-level access matrix.
+  status + profiling and DSV tracks), guards, completeness, and the field-level access matrix
+  with its operation permissions, region scope and org administration (`access/`).
 - `apps/portal` must not import staff-only modules: Oxlint `no-restricted-imports` forbids
   `@transfer/web`, paths into `apps/web` and the `@transfer/staff-*` namespace (the naming
   convention for staff-only packages); a fixture test proves the rule fires.

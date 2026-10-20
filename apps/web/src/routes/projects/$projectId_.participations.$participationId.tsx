@@ -1,20 +1,31 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink, type ErrorComponentProps } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
+  Button,
   formatDate,
   formatTimestamp,
   InlineNotification,
   Link,
   PageHeader,
+  Select,
+  SelectItem,
   SimpleTable,
 } from "@transfer/ui";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { entryWavesQuery, participationQuery, projectQuery, useApi } from "../../api";
+import {
+  entryWavesQuery,
+  participantsQuery,
+  participationQuery,
+  projectQuery,
+  projectTeamQuery,
+  useApi,
+} from "../../api";
 import { EntryWaveChoice } from "../../components/entry-wave-choice";
 import { ParticipationDatesForm } from "../../components/participation-dates-form";
 import { RouteError } from "../../components/route-error";
+import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
 
 type Detail = components["schemas"]["ParticipationDetail"];
@@ -36,6 +47,8 @@ export const Route = createFileRoute("/projects/$projectId_/participations/$part
         status: 404,
       });
     }
+    // The assignment choice lists the project's consultants (Q62).
+    await queryClient.ensureQueryData(projectTeamQuery(api, projectId));
     // The wave choice lists the project's waves (visible to every member).
     if (project.type === "ta_tg")
       await queryClient.ensureQueryData(entryWavesQuery(api, projectId));
@@ -118,8 +131,110 @@ function ParticipationPage() {
           ["withdrawnOn", date(dates.withdrawnOn)],
         ]}
       />
+      <Assignments detail={detail} projectId={projectId} />
       {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
     </>
+  );
+}
+
+/**
+ * The consultants the participant is assigned to (Q62); the PL assigns another consultant of the
+ * project or ends an assignment (`capabilities.assignParticipations`). Access follows at once.
+ */
+function Assignments({ detail, projectId }: { detail: Detail; projectId: string }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const { consultants } = useConsultants(projectId);
+  const [staffUserId, setStaffUserId] = useState("");
+  const [failed, setFailed] = useState(false);
+  const may = detail.capabilities.assignParticipations;
+  const refresh = async () => {
+    setFailed(false);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: participationQuery(api, detail.id).queryKey }),
+      queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey }),
+    ]);
+  };
+  const assign = useMutation({
+    mutationFn: () =>
+      api.POST("/api/v1/projects/{projectId}/assignments", {
+        params: { path: { projectId } },
+        body: { staffUserId, participationIds: [detail.id] },
+      }),
+    onSuccess: async () => {
+      setStaffUserId("");
+      await refresh();
+    },
+    onError: () => setFailed(true),
+  });
+  const unassign = useMutation({
+    mutationFn: (consultant: string) =>
+      api.DELETE("/api/v1/participations/{participationId}/assignments/{staffUserId}", {
+        params: { path: { participationId: detail.id, staffUserId: consultant } },
+      }),
+    onSuccess: refresh,
+    onError: () => setFailed(true),
+  });
+  const assigned = new Set(detail.assignments.map((a) => a.staffUserId));
+  const rows = detail.assignments.map((a) => ({
+    id: a.staffUserId,
+    displayName: a.displayName,
+    assignedAt: formatTimestamp(a.assignedAt),
+    actions: may && (
+      <Button
+        kind="ghost"
+        size="sm"
+        disabled={unassign.isPending}
+        onClick={() => unassign.mutate(a.staffUserId)}
+      >
+        {t("participant.assignments.unassign", { name: a.displayName })}
+      </Button>
+    ),
+  }));
+  return (
+    <section className="tp-section" aria-label={t("participant.assignments.title")}>
+      {failed && (
+        <InlineNotification
+          kind="error"
+          title={t("participant.assignments.failed")}
+          onClose={() => setFailed(false)}
+        />
+      )}
+      <SimpleTable
+        title={t("participant.assignments.title")}
+        columns={(may
+          ? (["displayName", "assignedAt", "actions"] as const)
+          : (["displayName", "assignedAt"] as const)
+        ).map((key) => ({ key, header: t(`participant.assignments.columns.${key}`) }))}
+        rows={rows}
+        emptyState={t("participant.assignments.empty")}
+      />
+      {may && (
+        <div className="tp-bulk-actions">
+          <Select
+            id="participant-assign"
+            labelText={t("participants.assignTo")}
+            value={staffUserId}
+            onChange={(event) => setStaffUserId(event.target.value)}
+          >
+            <SelectItem value="" text={t("participants.chooseConsultant")} />
+            {consultants
+              .filter((c) => !assigned.has(c.staffUserId))
+              .map((c) => (
+                <SelectItem key={c.staffUserId} value={c.staffUserId} text={c.displayName} />
+              ))}
+          </Select>
+          <Button
+            kind="secondary"
+            disabled={!staffUserId || assign.isPending}
+            onClick={() => assign.mutate()}
+          >
+            {t("participant.assignments.assign")}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
