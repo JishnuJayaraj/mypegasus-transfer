@@ -1,7 +1,8 @@
 # Roadmap — vertical slices
 
 Each slice is one branch and one PR (or a short series). Each ends with something a PL could
-click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing.
+click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing; a finished slice's plan moves to
+`docs/plans/archive/`. Slices 0–2 are done.
 
 ## Slice 0 — Walking skeleton
 Monorepo (pnpm), Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell

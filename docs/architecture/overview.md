@@ -49,6 +49,39 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 | API contract | OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1` | 0010 |
 | Background jobs | pg-boss, idempotent, `system` actor, injected `Clock`, ID-only payloads | 0011 |
 
+## Packages
+
+- `packages/domain`: entities, lifecycle vocabulary and state machine, date helpers, field
+  catalog, Zod schemas (incl. the audit event model), completeness rules. No I/O, no system time.
+  Base defaults live in `packages/domain/config/base-defaults.json`.
+- `packages/db`: Drizzle schema, migrations (the SECURITY DEFINER status functions and grants
+  are hand-written), seed (synthetic only: a base seed, then participations through the status
+  service), data catalog. `pnpm db:migrate` also creates pg-boss's `pgboss` schema and its
+  `transfer_app` grants.
+- `packages/api-client`: the generated OpenAPI document + types and the typed client both SPAs
+  use.
+- `packages/ui`: thin wrappers around Carbon components, layout, tokens, i18n helpers.
+- `packages/config`: regional configuration: the Zod-authored layer model (base defaults,
+  Agentur templates, project overrides) exported as JSON Schema, the custom-field profile, the
+  two-level resolver with provenance and blockers, pinned template loading
+  (`@transfer/config/load`, Node only, from `CONFIG_DIR` in the image), the canonical template
+  hash, the fictional sample templates in `templates/<agenturKey>/<version>.json` (immutable once
+  merged; `pnpm lint` checks against `origin/main`, in CI the PR's base) and their generated
+  `manifest.json`.
+- `packages/adapters`: interfaces + implementations behind them (ADR-0006). Only `Clock` so far
+  (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus scan and export
+  come with the slices that need them.
+- `packages/forms` (Slice 4b): official BA form templates (blank PDF, field map, manifest),
+  ADR-0009.
+- `fixtures/`: synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV
+  import).
+
+Commands in more detail: `pnpm test:e2e` runs on the `transfer_e2e` database;
+`pnpm jobs:lifecycle` exits 1 with `run_not_due` when the run is not due by database time (Q96), and is refused
+with `NODE_ENV=production`; `scripts/image-smoke.sh` runs the migration and checks
+`/api/v1/health/ready`, `/`, `/portal/` and the template catalog. Image builds in cloud sessions
+need the proxy CA (`/root/.ccr/README.md`).
+
 ## Module boundaries
 
 - `packages/domain` has **no I/O**: no DB, no HTTP. Pure functions + types: lifecycle (main

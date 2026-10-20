@@ -61,13 +61,15 @@ You: pick slice from docs/roadmap.md
 ```
 
 Good prompts:
-- Planning: *"Read CLAUDE.md and docs/. Plan Slice 2 from the roadmap. Grill me on anything
-  unclear before writing the plan. Write it to docs/plans/slice-2.md. Don't write code."*
-- Building: *"Implement docs/plans/slice-2.md on a new branch. Tests first for domain logic.
-  Run typecheck, lint and tests before pushing. Open a PR when done."*
+- Planning: *"Read CLAUDE.md and the docs it points to for Slice 3. Plan Slice 3 from the
+  roadmap. Grill me on anything unclear before writing the plan. Write it to
+  docs/plans/slice-3.md. Don't write code."*
+- Building: *"Implement PR 3a of docs/plans/slice-3.md on a new branch. Tests first for domain
+  logic. Run pnpm verify before pushing. Open a PR when done."*
 
 Rules of thumb:
-- One slice per session. Long sessions drift; start fresh with the plan file.
+- One planned PR per session. Long sessions drift and fill the context; start fresh with the
+  plan file and the PR.
 - If Claude gets the domain wrong twice, the doc is missing something — fix the doc.
 - Start several sessions in parallel only for **independent** work (e.g. tests for module A
   while building UI for module B), never for the same files.

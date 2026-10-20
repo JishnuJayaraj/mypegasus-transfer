@@ -16,16 +16,16 @@ for employers who are reducing staff. It supports the whole participant lifecycl
 Users: Projektleiter (PL), Berater/Profiler, participants, back office, regional admin, admin.
 The customer/works council receives reports but has no login in the MVP.
 
-Start here:
+Start here (read the sections your task needs, not everything):
 - Domain & vocabulary: `docs/domain/glossary.md` (German terms are used in code — see below)
 - Process & lifecycle state machine: `docs/domain/process-and-lifecycle.md`
 - Regional variation (BA requirements differ per Agentur): `docs/domain/regional-variation.md`
 - Data protection rules: `docs/domain/data-protection.md`
 - Official BA forms (TL 407 profiling, Kug 200b Arbeitsuchendmeldung): `docs/domain/ba-forms.md`
-- Decisions log and open questions: `docs/open-questions.md`, answers in `docs/decisions/`
-- Product scope (MVP): `docs/prd.md`
-- Build order: `docs/roadmap.md`
-- Architecture: `docs/architecture/overview.md` and decisions in `docs/adr/`
+- Questions: unsettled in `docs/open-questions.md`, confirmed in
+  `docs/decisions/settled-questions.md` (same `Qnn`); the dated round files only if a row isn't enough
+- Product scope (MVP): `docs/prd.md`; build order: `docs/roadmap.md`
+- Architecture and packages: `docs/architecture/overview.md`, decisions in `docs/adr/`
 
 ## Non-negotiable rules
 
@@ -74,6 +74,13 @@ confirmed before the pilot.
   2g-1, 2g-2); one planned PR = one branch = one PR.
 - For each slice: **plan first** (write the plan to `docs/plans/<slice>.md`, wait for approval
   unless told otherwise) → implement with tests → self-review → open PR.
+- **Keep plans lean:** decisions, PR table, design, acceptance criteria. What a PR built goes in
+  its description, readings for the owner in `docs/open-questions.md`. A finished slice's plan
+  moves to `docs/plans/archive/`: history, don't read it. Its rules live in `docs/domain/`, the
+  ADRs and `docs/architecture/`; a rule found only in an archived plan moves there in your PR.
+- **Comments cite the doc that holds a rule** (e.g. "process-and-lifecycle.md, BA reporting"),
+  never rounds, plan items (R12, AC-40) or plan sections; replace such citations where you touch.
+- **One session per planned PR**; the plan and the PR are the handoff.
 - Write tests first for domain logic (lifecycle transitions, completeness rules, config
   resolution). UI gets component tests for critical flows and Playwright e2e for the happy path.
 - **PR size:** one PR per unit the plan names. Don't split a planned PR further just for size:
@@ -89,55 +96,37 @@ confirmed before the pilot.
   GitHub tools available in the session (`gh issue`/`gh pr` GraphQL commands are blocked in
   cloud sessions).
 
-## Tech stack (see ADR-0003)
+## Tech stack (ADR-0003 has the details and the rules)
 
 - Monorepo, **pnpm** workspaces. Do not use bun (proxy issues in cloud sessions).
-- **TypeScript 6** (`typescript@6.0.3`, the only TypeScript in the tree, no aliases or
-  overrides); `pnpm typecheck` = `tsc -b`. Never set `ignoreDeprecations` or use options TS 6
-  deprecates (ADR-0003 has the rules). TS 7 and Vite+ are deferred until after the MVP.
-- **Vite 8**, **Vitest**, **Oxlint**, **Oxfmt** (plain, each pinned exactly; `.npmrc` has
-  `save-exact=true`). The API runs with `tsx watch` in dev.
-- Frontend: **React**, **TanStack Router** (type-safe routes, preloading), **TanStack Query**,
-  **IBM Carbon** (`@carbon/react`) wrapped in our own `packages/ui` layer.
-- Backend: **Node 24 LTS** in production (code must also run on Node 22, which cloud sessions
-  ship), **Hono**, **Drizzle ORM**, **PostgreSQL 16**.
-- Shared validation: **Zod** schemas in `packages/domain` (used by API and UI).
-- Tests: Vitest (unit/integration), Playwright (e2e).
+- **TypeScript 6** (`typescript@6.0.3`, the only TypeScript in the tree); `pnpm typecheck` =
+  `tsc -b`. Never set `ignoreDeprecations` or use options TS 6 deprecates.
+- **Vite 8**, **Vitest**, **Oxlint**, **Oxfmt**, each pinned exactly (`save-exact=true`).
+- Frontend: **React**, **TanStack Router**, **TanStack Query**, **IBM Carbon** wrapped in
+  `packages/ui`.
+- Backend: **Node 24 LTS** in production (code must also run on Node 22), **Hono**, **Drizzle
+  ORM**, **PostgreSQL 16**. Shared validation: **Zod** schemas in `packages/domain`.
 - PDF: **pdf-lib** for official AcroForms, **Gotenberg** for HTML→PDF, both behind `PdfRenderer`.
-- Runs locally via Docker Compose (Postgres 16, MinIO, Gotenberg) on synthetic data; pilot and
-  production on the company Hetzner cluster (k3s, CloudNativePG) as container images
-  (ADR-0005). Keep application code provider-neutral.
+- Local: Docker Compose (Postgres 16, MinIO, Gotenberg) on synthetic data; pilot and production
+  on the company Hetzner cluster (k3s, CloudNativePG) as container images (ADR-0005). Keep
+  application code provider-neutral.
 
-## Repo layout
+## Repo layout (`docs/architecture/overview.md` describes each package)
 
 ```
-apps/
-  web/            React SPA for staff
-  portal/         React SPA for participants (mobile-first, own login flow) — ADR-0001.
-                  Must not import staff code (lint rule: no @transfer/web, apps/web or
-                  @transfer/staff-*; staff-only packages are named @transfer/staff-*)
-  api/            Hono API; in production also serves both built SPAs (/ and /portal/)
-packages/
-  domain/         entities, lifecycle vocabulary and state machine, date helpers, field
-                  catalog, Zod schemas (incl. the audit event model), completeness rules (no
-                  I/O, no system time)
-  db/             Drizzle schema, migrations (incl. the SECURITY DEFINER status functions and
-                  grants, hand-written), seed (synthetic only), data catalog
-  api-client/     generated OpenAPI document + types and the typed client both SPAs use
-  ui/             thin wrappers around Carbon components, layout, tokens, i18n helpers
-  config/         regional configuration: the Zod-authored layer model (base defaults, Agentur
-                  templates, project overrides) exported as JSON Schema, the custom-field
-                  profile, the two-level resolver with provenance and blockers, pinned template
-                  loading (@transfer/config/load, Node only, from CONFIG_DIR in the image), the
-                  canonical template hash, the fictional sample templates in
-                  templates/<agenturKey>/<version>.json (immutable once merged) and their
-                  generated manifest.json. Base defaults live in
-                  packages/domain/config/base-defaults.json
-  adapters/       interfaces + implementations behind them (ADR-0006). Only `Clock` so far
-                  (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus
-                  scan and export come with the slices that need them (D9)
-  forms/          (Slice 4b) official BA form templates (blank PDF, field map, manifest) — ADR-0009
-fixtures/         synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV import)
+apps/web          React SPA for staff
+apps/portal       React SPA for participants (mobile-first, own login, ADR-0001); must not import
+                  staff code (lint rule: no @transfer/web, apps/web or @transfer/staff-*)
+apps/api          Hono API; in production also serves both built SPAs (/ and /portal/)
+packages/domain   entities, lifecycle state machine, field catalog, Zod schemas, completeness
+                  rules (no I/O, no system time)
+packages/db       Drizzle schema, migrations (SECURITY DEFINER status functions and grants are
+                  hand-written), synthetic seed, data catalog
+packages/api-client  generated OpenAPI document + types and the typed client
+packages/ui       Carbon wrappers, layout, tokens, i18n helpers
+packages/config   regional configuration: layer model, resolver, pinned templates
+packages/adapters interfaces + implementations (ADR-0006)
+fixtures/         synthetic test files only
 docs/             product + domain + architecture docs (source of truth)
 scripts/          session start, tsconfig guard, image smoke test
 Dockerfile        the production image (Node 24): API bundle + both SPAs
@@ -156,9 +145,9 @@ Dockerfile        the production image (Node 24): API bundle + both SPAs
 - UI text through i18n only. Staff UI (`apps/web`) `de`; participant portal (`apps/portal`) `de` +
   `en` in the MVP, RTL-ready (CSS logical properties).
 - Never commit secrets. Config via environment variables; document new ones in `.env.example`.
-  The deny rules for `.env`, `.env.local` etc. in `.claude/settings.json` are a **guardrail,
-  not a security boundary** (they match command text and are easy to get around). Real secrets
-  live in the cluster's secret store, never in the repo or a local file an agent can read.
+  The deny rules for `.env` etc. in `.claude/settings.json` are a **guardrail, not a security
+  boundary**. Real secrets live in the cluster's secret store, never in the repo or a local file
+  an agent can read.
 - Every table holding participant data has a `project_id` column (RLS is added before the
   pilot, ADR-0002/0005).
 - API: OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1`
@@ -171,37 +160,31 @@ Dockerfile        the production image (Node 24): API bundle + both SPAs
 ```
 pnpm install          # CI and session start: --frozen-lockfile
 pnpm dev              # db:migrate, then api :3001, web :5173, portal :5174/portal/
-pnpm build            # both SPAs + the API bundle (apps/api/dist: server.js, migrate.js)
-pnpm start            # the built API serving both SPAs on :3001 (production-like)
+pnpm build            # both SPAs + the API bundle (apps/api/dist)
+pnpm start            # the built API serving both SPAs on :3001
 pnpm test             # vitest: unit, component, integration (needs Postgres)
 pnpm test:coverage    # the same with coverage; 100 % thresholds on the domain rules
-pnpm test:e2e         # playwright against the built app (pnpm build first) on transfer_e2e
-pnpm lint             # oxlint (incl. the portal boundary rule) + oxfmt --check + tsconfig guard
-                      # + template immutability against origin/main (CI: the PR's base)
+pnpm test:e2e         # playwright against the built app (pnpm build first)
+pnpm lint             # oxlint + oxfmt --check + tsconfig guard + template immutability
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
-pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, generated drift
+pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, drift
 pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
 pnpm db:generate      # drizzle-kit: SQL migration from the schema
-pnpm db:migrate       # app migrations, then pg-boss's pgboss schema and its transfer_app grants
-pnpm db:seed          # synthetic data only: base seed, then participations through the status service
+pnpm db:migrate       # app migrations, then pg-boss's schema and its grants
+pnpm db:seed          # synthetic data only
 pnpm db:reset         # dev only: empty schema, migrate, seed
-pnpm jobs:lifecycle [--today YYYY-MM-DD]
-                      # the nightly lifecycle sweep once (dev/CI); not due by database time:
-                      # exits 1 with run_not_due (Q96); refused with NODE_ENV=production
-pnpm api:generate     # openapi.json + schema.d.ts in packages/api-client
-pnpm generate         # all generators: api:generate, docs/domain/generated, the config JSON
-                      # Schema (packages/config/schema) and the template manifest, all committed
+pnpm jobs:lifecycle [--today YYYY-MM-DD]   # the nightly lifecycle sweep once (dev/CI only)
+pnpm generate         # all generators (API client, docs/domain/generated, config schema,
+                      # template manifest); the output is committed
 docker build -t transfer .          # the production image (CI builds and smoke-tests it)
-scripts/image-smoke.sh transfer     # migration + /api/v1/health/ready, /, /portal/ and the
-                                    # template catalog
+scripts/image-smoke.sh transfer     # smoke test of the image
 ```
 
 In cloud sessions PostgreSQL is pre-installed but not running: start it with
 `service postgresql start`. The session start hook (`scripts/session-start.sh`) does that,
-installs, and runs `db:setup` and `db:migrate`; then `pnpm db:seed && pnpm dev`. Docker is
-installed but its daemon isn't running, and image builds need the proxy CA (see
-`/root/.ccr/README.md`); CI is the reference for the image.
+installs, and runs `db:setup` and `db:migrate`; then `pnpm db:seed && pnpm dev`. Docker's daemon
+isn't running in cloud sessions; CI is the reference for the image.
 
 ## Definition of done (every PR)
 

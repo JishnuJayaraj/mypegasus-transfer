@@ -6,11 +6,13 @@ phase (coaching, qualification, applications, exit).
 
 **Status:** Slice 0 (walking skeleton) is complete: monorepo, `Project` list and create end to
 end (Postgres, Hono API, staff SPA), a thin participant portal shell (de/en), and one Node 24
-image that serves the API and both SPAs. Slice 1 (domain core, [plan](docs/plans/slice-1.md)) is
+image that serves the API and both SPAs. Slice 1 (domain core) is
 complete: the lifecycle, Transfer-KuG eligibility, the access matrix, completeness, regional
 configuration, the status functions and service with the seed, and pg-boss in the API with the
-nightly lifecycle sweep. Slice 2 ([plan](docs/plans/slice-2.md)) is under way: project setup,
-configuration and the Excel/CSV import API are in; the wizard and participations (detail, dates) follow.
+nightly lifecycle sweep. Slice 2 is complete: project setup and
+configuration, the Excel/CSV import with its wizard, manual creation, and the participant page with
+entry waves, individual TG dates, DSV amendments and BA reporting tasks. The plans of finished
+slices are in [`docs/plans/archive/`](docs/plans/archive/).
 
 ```
 pnpm install && pnpm db:setup && pnpm db:seed && pnpm dev   # web :5173, portal :5174/portal/
