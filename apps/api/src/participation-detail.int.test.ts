@@ -87,8 +87,8 @@ describe("GET /api/v1/participations/{participationId} (AC-34)", () => {
     const id = await imported();
     const body = await readJson(await detail(id, "backOffice"), ParticipationDetail);
     expect(body.person.personnelNumber).toBe("BSP-0001");
-    expect(body.capabilities).toEqual({ assignEntryWave: false });
-    expect(body.refusals).toEqual({ assignEntryWave: "forbidden" });
+    expect(body.capabilities).toMatchObject({ assignEntryWave: false });
+    expect(body.refusals).toMatchObject({ assignEntryWave: "forbidden" });
   });
 
   it("tells the PL why the wave choice is closed for a terminal participation", async () => {
@@ -103,8 +103,8 @@ describe("GET /api/v1/participations/{participationId} (AC-34)", () => {
       })
       .where(eq(participation.id, id));
     const body = await readJson(await detail(id), ParticipationDetail);
-    expect(body.capabilities).toEqual({ assignEntryWave: false });
-    expect(body.refusals).toEqual({ assignEntryWave: "status_not_open" });
+    expect(body.capabilities).toMatchObject({ assignEntryWave: false });
+    expect(body.refusals).toMatchObject({ assignEntryWave: "status_not_open" });
   });
 
   it("refuses the consultant without assignments and the org roles (403)", async () => {

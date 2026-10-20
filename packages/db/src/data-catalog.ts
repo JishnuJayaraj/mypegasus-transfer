@@ -120,6 +120,18 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // DSV amendments and BA reporting tasks (5.2, 5.7; round 32 D3; R41, R42; PR 2h-3): evidence of
+  // contractual date changes, in the participation record and its evidence set.
+  participation_dsv_amendment: {
+    retentionClass: "participation_record",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  ba_reporting_task: {
+    retentionClass: "participation_record",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */
@@ -218,6 +230,34 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     old_employment_end_date: "oldEmploymentEndDate",
     created_at: null,
     updated_at: null,
+  },
+  participation_dsv_amendment: {
+    id: null,
+    participation_id: null,
+    project_id: null,
+    kind: "dsvAmendment",
+    fully_executed_on: "dsvAmendment",
+    old_tg_start: "dsvAmendment",
+    new_tg_start: "dsvAmendment",
+    old_tg_end: "dsvAmendment",
+    new_tg_end: "dsvAmendment",
+    confirmed_by: null,
+    confirmed_at: "dsvAmendment",
+    original_location: "dsvAmendment",
+    document_reference: "dsvAmendment",
+  },
+  ba_reporting_task: {
+    id: null,
+    participation_id: null,
+    project_id: null,
+    reporting_kind: "baReportingTask",
+    subject_date: "baReportingTask",
+    amendment_id: null,
+    status: "baReportingTask",
+    created_at: null,
+    reported_on: "baReportingTask",
+    channel: "baReportingTask",
+    reference: "baReportingTask",
   },
 };
 

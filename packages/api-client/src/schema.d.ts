@@ -2317,6 +2317,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/dates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Change the participation's contractual TG dates (the PL), with the DSV amendment once it is signed; returns the participation */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ParticipationDatesInput"];
+                };
+            };
+            responses: {
+                /** @description The participation with its new dates and tasks */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationDetail"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -3136,7 +3232,7 @@ export interface components {
                  */
                 profilingDoneOn: string | null;
             };
-            hints: "tg_start_missed"[];
+            hints: ("tg_start_missed" | "new_start_needs_ba_review")[];
             person: {
                 personnelNumber?: string | null;
                 lastName?: string | null;
@@ -3159,12 +3255,17 @@ export interface components {
                 privateEmail?: string | null;
                 workEmail?: string | null;
             };
+            amendments?: components["schemas"]["DsvAmendment"][];
+            baReportingTasks?: components["schemas"]["BaReportingTask"][];
             capabilities: {
                 assignEntryWave: boolean;
+                setParticipationDates: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
                 assignEntryWave: "forbidden" | "not_ta_tg" | "status_not_open" | "dsv_already_offered" | "individual_dates_set" | "no_other_wave" | null;
+                /** @enum {string|null} */
+                setParticipationDates: "forbidden" | "not_ta_tg" | "wave_required" | "latest_entry_date_missing" | "participation_closed" | "dsv_offer_open" | null;
             };
         };
         ParticipantAddress: {
@@ -3173,6 +3274,77 @@ export interface components {
             city: string;
             country: string;
         } | null;
+        DsvAmendment: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "extension" | "new_start";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            fullyExecutedOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            oldTgStart: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            newTgStart: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            oldTgEnd: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            newTgEnd: string | null;
+            /** Format: uuid */
+            confirmedBy: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            confirmedAt: string;
+            /** @enum {string} */
+            originalLocation: "paper_personnel_file";
+            documentReference: string | null;
+        };
+        BaReportingTask: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            reportingKind: "later_entry" | "planned_end_changed" | "early_exit";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            subjectDate: string;
+            /** @enum {string} */
+            status: "pending" | "reported" | "not_required";
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            createdAt: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            reportedOn: string | null;
+        };
         ManualParticipationInput: {
             values: {
                 personnelNumber?: string;
@@ -3198,6 +3370,35 @@ export interface components {
         AssignEntryWaveInput: {
             /** Format: uuid */
             waveId: string;
+        };
+        ParticipationDatesInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tgStart: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tgEnd: string | null;
+            expectedVersion: number;
+            amendment?: {
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                fullyExecutedOn: string;
+                /** @enum {string} */
+                originalLocation: "paper_personnel_file";
+                documentReference?: string;
+                originalInspected: boolean;
+                allPartiesSigned: boolean;
+                retrievable: boolean;
+            };
         };
     };
     responses: never;

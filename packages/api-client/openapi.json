@@ -2594,7 +2594,8 @@
             "items": {
               "type": "string",
               "enum": [
-                "tg_start_missed"
+                "tg_start_missed",
+                "new_start_needs_ba_review"
               ]
             }
           },
@@ -2671,15 +2672,31 @@
             },
             "additionalProperties": false
           },
+          "amendments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DsvAmendment"
+            }
+          },
+          "baReportingTasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BaReportingTask"
+            }
+          },
           "capabilities": {
             "type": "object",
             "properties": {
               "assignEntryWave": {
                 "type": "boolean"
+              },
+              "setParticipationDates": {
+                "type": "boolean"
               }
             },
             "required": [
-              "assignEntryWave"
+              "assignEntryWave",
+              "setParticipationDates"
             ],
             "additionalProperties": false
           },
@@ -2700,10 +2717,26 @@
                   "no_other_wave",
                   null
                 ]
+              },
+              "setParticipationDates": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "forbidden",
+                  "not_ta_tg",
+                  "wave_required",
+                  "latest_entry_date_missing",
+                  "participation_closed",
+                  "dsv_offer_open",
+                  null
+                ]
               }
             },
             "required": [
-              "assignEntryWave"
+              "assignEntryWave",
+              "setParticipationDates"
             ],
             "additionalProperties": false
           }
@@ -2748,6 +2781,167 @@
           "postalCode",
           "city",
           "country"
+        ],
+        "additionalProperties": false
+      },
+      "DsvAmendment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "extension",
+              "new_start"
+            ]
+          },
+          "fullyExecutedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "oldTgStart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "newTgStart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "oldTgEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "newTgEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "confirmedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "originalLocation": {
+            "type": "string",
+            "enum": [
+              "paper_personnel_file"
+            ]
+          },
+          "documentReference": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "fullyExecutedOn",
+          "oldTgStart",
+          "newTgStart",
+          "oldTgEnd",
+          "newTgEnd",
+          "confirmedBy",
+          "confirmedAt",
+          "originalLocation",
+          "documentReference"
+        ],
+        "additionalProperties": false
+      },
+      "BaReportingTask": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reportingKind": {
+            "type": "string",
+            "enum": [
+              "later_entry",
+              "planned_end_changed",
+              "early_exit"
+            ]
+          },
+          "subjectDate": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "reported",
+              "not_required"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "reportedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "reportingKind",
+          "subjectDate",
+          "status",
+          "createdAt",
+          "reportedOn"
         ],
         "additionalProperties": false
       },
@@ -2836,6 +3030,83 @@
         },
         "required": [
           "waveId"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipationDatesInput": {
+        "type": "object",
+        "properties": {
+          "tgStart": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "tgEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "amendment": {
+            "type": "object",
+            "properties": {
+              "fullyExecutedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "originalLocation": {
+                "type": "string",
+                "enum": [
+                  "paper_personnel_file"
+                ]
+              },
+              "documentReference": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_./-]{1,40}$"
+              },
+              "originalInspected": {
+                "type": "boolean"
+              },
+              "allPartiesSigned": {
+                "type": "boolean"
+              },
+              "retrievable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "fullyExecutedOn",
+              "originalLocation",
+              "originalInspected",
+              "allPartiesSigned",
+              "retrievable"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "tgStart",
+          "tgEnd",
+          "expectedVersion"
         ],
         "additionalProperties": false
       }
@@ -5318,6 +5589,107 @@
         "responses": {
           "200": {
             "description": "The participation with its new wave",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dates": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Change the participation's contractual TG dates (the PL), with the DSV amendment once it is signed; returns the participation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipationDatesInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The participation with its new dates and tasks",
             "content": {
               "application/json": {
                 "schema": {

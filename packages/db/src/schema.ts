@@ -1,6 +1,10 @@
 import {
   ActorType,
+  AmendmentOriginalLocation,
   AuditEventType,
+  BaReportingKind,
+  BaReportingStatus,
+  DsvAmendmentKind,
   DsvStatus,
   EndReason,
   ImportTarget,
@@ -147,6 +151,13 @@ export const profilingExceptionSupersededReason = pgEnum(
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
 export const relaxationReasonCode = pgEnum("relaxation_reason_code", values(RelaxationReasonCode));
 export const importTarget = pgEnum("import_target", values(ImportTarget));
+export const dsvAmendmentKind = pgEnum("dsv_amendment_kind", values(DsvAmendmentKind));
+export const amendmentOriginalLocation = pgEnum(
+  "amendment_original_location",
+  values(AmendmentOriginalLocation),
+);
+export const baReportingKind = pgEnum("ba_reporting_kind", values(BaReportingKind));
+export const baReportingStatus = pgEnum("ba_reporting_status", values(BaReportingStatus));
 export const relaxationRequestStatus = pgEnum(
   "relaxation_request_status",
   values(RelaxationRequestStatus),
@@ -479,6 +490,95 @@ export const participantDetails = pgTable(
 );
 
 /**
+ * A fully executed DSV amendment of a contractual date change (Slice 2 plan 5.2, 5.7; round 32 L4,
+ * D3; R41; PR 2h-3): operational evidence, not the contract (the signed original stays on paper).
+ * Written only by `set_participation_dates`; a trigger refuses every update and deletion.
+ */
+export const participationDsvAmendment = pgTable(
+  "participation_dsv_amendment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    participationId: uuid("participation_id").notNull(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    kind: dsvAmendmentKind("kind").notNull(),
+    fullyExecutedOn: dateColumn("fully_executed_on").notNull(),
+    // The effective dates before and after; null where the wave had none.
+    oldTgStart: dateColumn("old_tg_start"),
+    newTgStart: dateColumn("new_tg_start"),
+    oldTgEnd: dateColumn("old_tg_end"),
+    newTgEnd: dateColumn("new_tg_end"),
+    /** The PL who confirmed the original was inspected, signed by all parties and retrievable. */
+    confirmedBy: uuid("confirmed_by")
+      .notNull()
+      .references(() => staffUser.id),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    originalLocation: amendmentOriginalLocation("original_location").notNull(),
+    documentReference: text("document_reference"),
+  },
+  (t) => [
+    foreignKey({
+      name: "participation_dsv_amendment_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    unique("participation_dsv_amendment_id_project").on(t.id, t.projectId),
+    index("participation_dsv_amendment_participation_idx").on(t.participationId),
+    check(
+      "participation_dsv_amendment_reference",
+      sql`${t.documentReference} ~ '^[A-Za-z0-9_./-]{1,40}$'`,
+    ),
+  ],
+);
+
+/**
+ * A BA reporting task (Slice 2 plan 5.2, 5.7; round 32 B3; R38, R42; PR 2h-3): created by
+ * `set_participation_dates` for each changed effective date and by the early-exit trigger,
+ * always `pending` in Slice 2; its status only moves forward (a trigger), it is never deleted.
+ */
+export const baReportingTask = pgTable(
+  "ba_reporting_task",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    participationId: uuid("participation_id").notNull(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    reportingKind: baReportingKind("reporting_kind").notNull(),
+    /** The date the report is about: the new start, the new end or the exit date. */
+    subjectDate: dateColumn("subject_date").notNull(),
+    amendmentId: uuid("amendment_id"),
+    status: baReportingStatus("status").notNull().default("pending"),
+    createdAt: createdAt(),
+    // Recorded by the Agentur-submission slice; their controlled values come with it.
+    reportedOn: dateColumn("reported_on"),
+    channel: text("channel"),
+    reference: text("reference"),
+  },
+  (t) => [
+    foreignKey({
+      name: "ba_reporting_task_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "ba_reporting_task_amendment_fk",
+      columns: [t.amendmentId, t.projectId],
+      foreignColumns: [participationDsvAmendment.id, participationDsvAmendment.projectId],
+    }),
+    index("ba_reporting_task_participation_idx").on(t.participationId),
+    // Reported tasks carry their date; channel and reference only once reported.
+    check(
+      "ba_reporting_task_reported_fields",
+      sql`(${t.status} = 'reported') = (${t.reportedOn} is not null) and (${t.status} = 'reported' or (${t.channel} is null and ${t.reference} is null))`,
+    ),
+  ],
+);
+
+/**
  * The lifecycle edges (plan 5.3) as reference data for the status functions; a drift test keeps
  * them equal to the domain's `edges`. Creation edges have no `from_value`.
  */
@@ -566,7 +666,7 @@ export const auditEvent = pgTable(
     ),
     check(
       "audit_event_lifecycle_has_participation",
-      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'participation_created_manually', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
+      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'participation_created_manually', 'participation_dates_changed', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
     ),
     // `field`, `from_value` and `to_value` only on a status change (creation: to `imported`) and,
     // as end reasons, on a correction; their values come from the matching enum.
@@ -825,4 +925,6 @@ export const tables = [
   projectConfigOverride,
   configRelaxationRequest,
   importColumnMapping,
+  participationDsvAmendment,
+  baReportingTask,
 ];

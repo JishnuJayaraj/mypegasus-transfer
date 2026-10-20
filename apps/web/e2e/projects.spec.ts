@@ -163,6 +163,19 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByText("Welle zugeordnet", { exact: true })).toBeVisible();
   await expect(page.getByText(/ \(aus der Welle\)$/).first()).toBeVisible();
   await expectAccessible(page);
+  // Slice 2 (PR 2h-3, AC-37, AC-48): before any offer the PL shortens the contractual end; the
+  // change leaves a pending BA reporting task.
+  await page.getByRole("button", { name: "Vertragsdaten ändern" }).click();
+  await expect(page.getByText(/nicht unterstützt/)).toBeVisible();
+  await page.getByLabel("TG-Ende (TT.MM.JJJJ)").fill("31.01.2092");
+  await expectAccessible(page);
+  await page.getByRole("button", { name: "Speichern", exact: true }).click();
+  await expect(page.getByText("Vertragsdaten geändert", { exact: true })).toBeVisible();
+  const reports = page.getByRole("region", { name: "Meldungen an die Agentur" });
+  await expect(reports.getByRole("cell", { name: "Geplantes Ende geändert" })).toBeVisible();
+  await expect(reports.getByRole("cell", { name: "Ausstehend" })).toBeVisible();
+  await expect(page.getByText("31.01.2092 (individuell)")).toBeVisible();
+  await expectAccessible(page);
   await page.getByRole("link", { name: /^Zurück zu / }).click();
   await expect(participants.getByRole("row")).toHaveCount(14);
 

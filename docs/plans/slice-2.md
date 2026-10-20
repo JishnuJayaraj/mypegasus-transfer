@@ -1453,6 +1453,49 @@ wizard's notices; ADR-0010 note; integration, component and e2e tests.
    `audit_event_lifecycle_has_participation` CHECK, migration `0030`; round 34).
 10. **No docs gap found** in 2h-2.
 
+### Built in PR 2h-3, with the readings taken (for confirmation)
+
+Built: `checkParticipationDates`, `datesPrecondition`, `ParticipationDatesInput` and the enums
+`DsvAmendmentKind`, `AmendmentOriginalLocation`, `BaReportingKind`, `BaReportingStatus`
+(`packages/domain/src/projects/participation-dates.ts`, under the 100 % threshold);
+`participationDatesCapability` and the detail's amendments, tasks, dates capability and
+`new_start_needs_ba_review` hint (`access/participation-view.ts`); the operation
+`setParticipationDates` (PL); the reserved audit type `participation_dates_changed`; the field
+catalog entries `dsvAmendment` and `baReportingTask`; migrations `0031_dsv_amendments_ba_tasks`
+(generated: the two tables, their enums, the event type, the participation CHECK) and
+`0032_participation_dates_functions` (hand-written: `set_participation_dates`, the immutability and
+forward-only triggers, the early-exit trigger, `record_audit_event` reserving the type, the
+grants); the data catalog; `setParticipationDates` in the status service and
+`PUT /participations/{participationId}/dates`; the dates form, the DSV-Nachträge and Meldungen
+sections of the participant page; integration, component and e2e tests.
+
+1. **The order of the checks.** The preconditions stop at the first that fails (`not_ta_tg`,
+   `wave_required`, `latest_entry_date_missing`, `participation_closed`, `dsv_offer_open`), then
+   `dates_unchanged`; every other rule is checked and each refusal listed at its field (`tgStart`,
+   `tgEnd`, `amendment`), so the PL sees them all. The detail's `refusals.setParticipationDates`
+   is the missing permission, else the first failing precondition.
+2. **The direct transition applies to every start change**, not only after a missed start: a
+   start that moves away from the day after the former employment's end leaves a gap or an
+   overlap whenever it moves (round 33's adjacency rule).
+3. **Clearing a date to a wave without that default** is refused (`start_missing`,
+   `end_missing`): an effective date never disappears by a date change.
+4. **The amendment's execution date** is not after today, for a new start before the new start,
+   and for a changed end on or before the current end; one `amendment_not_executed_in_time`
+   names every case. A change of both dates is one `new_start` amendment with both tasks.
+5. **`set_participation_dates` holds the integrity, the domain the rules**: the function refuses
+   a stale version, the preconditions, an amendment missing after signature or given before it,
+   the wrong kind and a start change after entry, and writes the dates, the amendment, the tasks
+   and the event in one call (a failing amendment row rolls the dates back; tested). The
+   twelve-month, past-date, transition and execution rules are the domain's, as for the waves.
+6. **Tasks name the date they report** (`subject_date`) and link their amendment. A task's
+   update may only move `pending` to `reported` (with `reported_on`) or `not_required`; nothing
+   in Slice 2 makes that update.
+7. **The early-exit trigger** runs inside the status function (as the owner), so no caller can
+   skip it; it compares the exit date with the effective `tgEnd` (own, else the wave's).
+8. **The 409 comes before the rules**: a stale `expectedVersion` is `stale_status` even when the
+   rules would refuse too.
+9. **No docs gap found** in 2h-3. With it, Slice 2's PR series is complete.
+
 ## 4. Design overview
 
 ```

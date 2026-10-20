@@ -71,6 +71,7 @@ describe("audit event types (plan 5.4)", () => {
       "participant_data_changed",
       "import_confirmed",
       "participation_created_manually",
+      "participation_dates_changed",
     ]);
   });
 
@@ -97,6 +98,7 @@ describe("audit event types (plan 5.4)", () => {
       ...lifecycleEventTypes,
       ...setupEventTypes,
       "participant_data_changed",
+      "participation_dates_changed",
     ]);
   });
 
@@ -486,6 +488,28 @@ describe("the other event types", () => {
       { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
     ],
     ["participant_data_changed", { details: { fields: ["lastName", "address", "phone"] } }],
+    // Contractual dates (5.7, PR 2h-3): old and new effective dates, the amendment, the tasks.
+    [
+      "participation_dates_changed",
+      {
+        details: {
+          oldTgStart: "2027-04-01",
+          newTgStart: "2027-04-15",
+          amendmentId: otherId,
+          reportingKinds: ["later_entry"],
+        },
+      },
+    ],
+    [
+      "participation_dates_changed",
+      {
+        details: {
+          oldTgEnd: "2028-03-31",
+          newTgEnd: "2028-02-29",
+          reportingKinds: ["planned_end_changed"],
+        },
+      },
+    ],
     // A participation created by hand: the base-defaults version (R26, round 33; PR 2h-2).
     ["participation_created_manually", { details: { baseDefaultsVersion: 1 } }],
     // A confirmed import: counts and the base-defaults version (R26), project-level.
@@ -819,6 +843,20 @@ describe("the other event types", () => {
     ],
     // Person data: the changed fields of a participation, never a value (PR 2f).
     ["participant_data_changed", { details: { fields: [] } }],
+    // A date change names its tasks, its dates as dates and no free text.
+    ["participation_dates_changed", { details: { reportingKinds: [] } }],
+    [
+      "participation_dates_changed",
+      { details: { newTgEnd: "29.02.2028", reportingKinds: ["planned_end_changed"] } },
+    ],
+    [
+      "participation_dates_changed",
+      { details: { reportingKinds: ["early_exit"], note: "per Telefon" } },
+    ],
+    [
+      "participation_dates_changed",
+      { participationId: null, details: { reportingKinds: ["later_entry"] } },
+    ],
     ["participant_data_changed", { details: { fields: ["addressStreet"] } }],
     ["participant_data_changed", { details: { fields: ["phone"], phone: "030 1234567" } }],
     ["participant_data_changed", { participationId: null, details: { fields: ["phone"] } }],

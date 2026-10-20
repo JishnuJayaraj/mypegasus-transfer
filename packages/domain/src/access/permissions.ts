@@ -54,8 +54,9 @@ export const OperationKind = z.enum([
   "requestRelaxation",
   "decideRelaxation",
   "withdrawRelaxation",
-  // Slice 2: the import (plan 5.4, 5.11)
+  // Slice 2: the import (plan 5.4, 5.11); individual TG dates (5.7, PR 2h-3)
   "importParticipations",
+  "setParticipationDates",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -122,6 +123,8 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   withdrawRelaxation: ["project_lead"],
   // The import is a domain operation of the PL (R17, Q60); preview and confirm alike.
   importParticipations: ["project_lead"],
+  // Contractual dates (5.7; Q102, round 32): the PL only, back office none.
+  setParticipationDates: ["project_lead"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

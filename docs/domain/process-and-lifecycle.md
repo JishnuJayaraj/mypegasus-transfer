@@ -294,7 +294,12 @@ created later:
    start date: the PL performs an **audited reconciliation** (reviewed after the fact by
    regional operations management, Q80).
 3. **A prerequisite actually arose after the planned start:** the PL records a new,
-   contractually valid start date.
+   contractually valid start date on the participant's page (Slice 2, PR 2h-3): today at the
+   earliest, tomorrow once today's entry run has completed, never after the wave's latest entry
+   date; once the DSV is signed with its fully executed amendment; and only as a direct
+   transition (the former employment ends exactly the day before, else `ba_review_required` or
+   an overlap refused). The derived `tg_start_missed` flag clears, and the next due run may
+   enter the participation with valid facts.
 
 The application records the effective employment date; it doesn't create the employment
 relationship.
@@ -459,6 +464,12 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
   `pending` until reported through the Agentur's channel (Kug 208 for later entries and early
   exits; a changed planned residence before any newly affected month is claimed). Project closure
   and the affected monthly claim are blocked while a required report is pending.
+  **As built in Slice 2 (PR 2h-3):** `set_participation_dates` creates one task per changed
+  effective date (`later_entry` with the new start, `planned_end_changed` with the new end) in
+  the change's own transaction, and a database trigger creates `early_exit` with the exit date
+  when a participation exits before its effective `tgEnd` or without one (`exitDate` is the last
+  day of employment, Q111 f). Every task starts `pending`; recording `reported` or
+  `not_required` comes with the Agentur-submission slice, and a task is never deleted.
 
 ## Phase 1 detail
 

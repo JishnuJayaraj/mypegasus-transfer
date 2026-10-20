@@ -1,11 +1,19 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink, type ErrorComponentProps } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
-import { formatDate, InlineNotification, Link, PageHeader } from "@transfer/ui";
+import {
+  formatDate,
+  formatTimestamp,
+  InlineNotification,
+  Link,
+  PageHeader,
+  SimpleTable,
+} from "@transfer/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, participationQuery, projectQuery, useApi } from "../../api";
 import { EntryWaveChoice } from "../../components/entry-wave-choice";
+import { ParticipationDatesForm } from "../../components/participation-dates-form";
 import { RouteError } from "../../components/route-error";
 import type de from "../../locales/de/translation.json";
 
@@ -145,7 +153,77 @@ function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string
         ]}
       />
       <EntryWaveChoice detail={detail} projectId={projectId} />
+      <ParticipationDatesForm detail={detail} />
+      <Amendments detail={detail} />
+      <ReportingTasks detail={detail} />
     </>
+  );
+}
+
+/** The DSV amendments (R41, R42): evidence only; the signed original stays on paper. */
+function Amendments({ detail }: { detail: Detail }) {
+  const { t } = useTranslation();
+  if (detail.amendments === undefined) return null;
+  const rows = detail.amendments.map((a) => ({
+    id: a.id,
+    kind: t(`participant.amendments.kinds.${a.kind}`),
+    fullyExecutedOn: formatDate(a.fullyExecutedOn),
+    dates: [
+      a.oldTgStart !== a.newTgStart &&
+        `${t("participant.fields.tgStart")}: ${formatDate(a.oldTgStart) || "—"} → ${formatDate(a.newTgStart)}`,
+      a.oldTgEnd !== a.newTgEnd &&
+        `${t("participant.fields.tgEnd")}: ${formatDate(a.oldTgEnd) || "—"} → ${formatDate(a.newTgEnd)}`,
+    ]
+      .filter(Boolean)
+      .join("; "),
+    originalLocation: t(`participant.dates.locations.${a.originalLocation}`),
+    documentReference: a.documentReference ?? "—",
+    confirmedAt: formatTimestamp(a.confirmedAt),
+  }));
+  const columns = [
+    "kind",
+    "fullyExecutedOn",
+    "dates",
+    "originalLocation",
+    "documentReference",
+    "confirmedAt",
+  ] as const;
+  return (
+    <section className="tp-section" aria-label={t("participant.amendments.title")}>
+      <SimpleTable
+        title={t("participant.amendments.title")}
+        columns={columns.map((key) => ({
+          key,
+          header: t(`participant.amendments.columns.${key}`),
+        }))}
+        rows={rows}
+        emptyState={t("participant.amendments.empty")}
+      />
+    </section>
+  );
+}
+
+/** The BA reporting tasks (R38): pending until the Agentur-submission slice records them. */
+function ReportingTasks({ detail }: { detail: Detail }) {
+  const { t } = useTranslation();
+  if (detail.baReportingTasks === undefined) return null;
+  const rows = detail.baReportingTasks.map((task) => ({
+    id: task.id,
+    reportingKind: t(`participant.tasks.kinds.${task.reportingKind}`),
+    subjectDate: formatDate(task.subjectDate),
+    createdAt: formatTimestamp(task.createdAt),
+    status: t(`participant.tasks.statuses.${task.status}`),
+  }));
+  const columns = ["reportingKind", "subjectDate", "createdAt", "status"] as const;
+  return (
+    <section className="tp-section" aria-label={t("participant.tasks.title")}>
+      <SimpleTable
+        title={t("participant.tasks.title")}
+        columns={columns.map((key) => ({ key, header: t(`participant.tasks.columns.${key}`) }))}
+        rows={rows}
+        emptyState={t("participant.tasks.empty")}
+      />
+    </section>
   );
 }
 

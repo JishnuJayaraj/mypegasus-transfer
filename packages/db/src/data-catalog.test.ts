@@ -75,6 +75,8 @@ describe("data catalog", () => {
       config_relaxation_request: entry("project_master", "internal"),
       // R44, round 33: possibly pseudonymised participant data, still kept with the project.
       import_column_mapping: entry("project_master", "confidential", true),
+      participation_dsv_amendment: entry("participation_record", "confidential", true),
+      ba_reporting_task: entry("participation_record", "confidential", true),
     });
   });
 

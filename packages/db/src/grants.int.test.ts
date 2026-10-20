@@ -110,6 +110,8 @@ const statusFunctions = [
   "migrate_agentur_template",
   // Slice 2 (PR 2f): person data
   "write_participant_data",
+  // Slice 2 (PR 2h-3): individual TG dates with their amendment and BA reporting tasks
+  "set_participation_dates",
 ];
 const helpers = [
   "assert_context",
@@ -129,6 +131,8 @@ const helpers = [
   "config_relaxation_request_progresses",
   "append_template_pin",
   "scoped_setting_keys",
+  "ba_reporting_task_progresses",
+  "create_early_exit_task",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -313,6 +317,30 @@ describe("transfer_app and the override table", () => {
       await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
     },
   );
+});
+
+// Plan 5.2, 5.3 (PR 2h-3, AC-40): DSV amendments and BA reporting tasks are read by the app and
+// written only by set_participation_dates and the early-exit trigger.
+describe("transfer_app and the amendments and BA reporting tasks", () => {
+  it("may select both", async () => {
+    expect((await app.query("select id from participation_dsv_amendment")).rows).toEqual([]);
+    expect((await app.query("select id from ba_reporting_task")).rows).toEqual([]);
+  });
+
+  it.each([
+    ...writes(
+      "participation_dsv_amendment",
+      "id",
+      `insert into participation_dsv_amendment (participation_id, project_id, kind, fully_executed_on, confirmed_by, original_location) values (gen_random_uuid(), '${seedProjectIds.werkNord}', 'extension', '2027-01-01', '${staffUserId}', 'paper_personnel_file')`,
+    ),
+    ...writes(
+      "ba_reporting_task",
+      "id",
+      `insert into ba_reporting_task (participation_id, project_id, reporting_kind, subject_date) values (gen_random_uuid(), '${seedProjectIds.werkNord}', 'early_exit', '2027-01-01')`,
+    ),
+  ])("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
 });
 
 // Plan 5.2, 5.3 (PR 2d-2, AC-40): relaxation requests are read by the app and written only by

@@ -33,6 +33,9 @@ export {
   type WaveValues,
 } from "./projects/waves";
 export {
+  BaReportingTaskView,
+  DsvAmendmentView,
+  SetParticipationDatesRefusal,
   AssignEntryWaveInput,
   AssignEntryWaveRefusal,
   ParticipantAddress,
@@ -42,7 +45,22 @@ export {
   ParticipationPage,
 } from "./participations";
 export {
+  AmendmentOriginalLocation,
+  BaReportingKind,
+  BaReportingStatus,
+  checkParticipationDates,
+  datesPrecondition,
+  DatesPrecondition,
+  DsvAmendmentKind,
+  ParticipationDatesInput,
+  type DatesCheck,
+  type DatesCheckInput,
+  type DatesIssue,
+  type DatesIssueCode,
+} from "./projects/participation-dates";
+export {
   entryWaveAssignment,
+  participationDatesCapability,
   mayListField,
   participationDetail,
   participationListScope,

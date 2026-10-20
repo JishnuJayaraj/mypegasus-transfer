@@ -9,6 +9,7 @@ import {
   AgenturSettingSource,
   OverrideChange,
 } from "../projects/agentur-settings";
+import { BaReportingKind } from "../projects/participation-dates";
 import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
 import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
@@ -66,6 +67,8 @@ export const AuditEventType = z.enum([
   // Slice 2, through `record_audit_event` (PR 2g, plan 5.11; PR 2h-2, R32)
   "import_confirmed",
   "participation_created_manually",
+  // Slice 2, written only by `set_participation_dates` (PR 2h-3, plan 5.7)
+  "participation_dates_changed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -111,6 +114,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   ...lifecycleEventTypes,
   ...setupEventTypes,
   "participant_data_changed",
+  "participation_dates_changed",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -436,6 +440,21 @@ export const AuditEvent = z.discriminatedUnion("type", [
    * were resolved with this base-defaults version (R26, round 33). The creation and the person
    * data have their own events; correlated by the request id.
    */
+  /**
+   * A change of the contractual dates (plan 5.7): the effective dates that changed, old and new,
+   * the amendment of a signed DSV, and the BA reporting tasks it created (R38).
+   */
+  event("participation_dates_changed", {
+    ...ofParticipation,
+    details: z.strictObject({
+      oldTgStart: isoDate.optional(),
+      newTgStart: isoDate.optional(),
+      oldTgEnd: isoDate.optional(),
+      newTgEnd: isoDate.optional(),
+      amendmentId: z.uuid().optional(),
+      reportingKinds: z.array(BaReportingKind).min(1),
+    }),
+  }),
   event("participation_created_manually", {
     ...ofParticipation,
     details: z.strictObject({ baseDefaultsVersion }),

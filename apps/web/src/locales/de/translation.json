@@ -553,7 +553,8 @@
     "fromWave": "aus der Welle",
     "individual": "individuell",
     "hints": {
-      "tg_start_missed": "TG-Beginn verpasst: Der vertragliche Beginn liegt in der Vergangenheit, der Eintritt ist nicht erfolgt."
+      "tg_start_missed": "TG-Beginn verpasst: Der vertragliche Beginn liegt in der Vergangenheit, der Eintritt ist nicht erfolgt.",
+      "new_start_needs_ba_review": "Neuer Beginn nur nach BA-/Rechtsprüfung: Das bisherige Arbeitsverhältnis endete so früh, dass jeder mögliche neue Beginn eine Lücke ließe (kein gewöhnlicher späterer Eintritt)."
     },
     "fields": {
       "personnelNumber": "Personalnummer",
@@ -605,6 +606,106 @@
       "dsv_already_offered": "Nach dem ersten DSV-Angebot ändert sich die Welle nicht mehr.",
       "individual_dates_set": "Die Person hat individuelle Vertragsdaten. Setzen Sie die Daten zuerst auf die Welle zurück, um die Welle zu ändern.",
       "no_other_wave": "Es gibt keine andere Welle in diesem Projekt."
+    },
+    "dates": {
+      "open": "Vertragsdaten ändern",
+      "title": "Vertragsdaten ändern",
+      "intro": "TG-Beginn und TG-Ende sind die vertraglichen Daten der Beschäftigung in der Transfergesellschaft, nicht der Anspruch auf Transfer-KuG. Ein neuer Beginn liegt nie in der Vergangenheit und nicht nach dem spätesten Eintritt der Welle; das bisherige Arbeitsverhältnis muss genau am Vortag enden. Verträge über mehr als zwölf Monate werden von der Anwendung nicht unterstützt. Nach der Unterschrift des DSV verlängert sich das Ende nur; ein früheres Ende ist ein Austritt.",
+      "tgStart": "TG-Beginn (TT.MM.JJJJ)",
+      "tgEnd": "TG-Ende (TT.MM.JJJJ)",
+      "emptyIsWave": "Leer: das Datum der Welle",
+      "dateHint": "TT.MM.JJJJ",
+      "amendment": "DSV-Nachtrag",
+      "amendmentIntro": "Der DSV ist unterschrieben: Jede Änderung braucht einen vollständig unterschriebenen Nachtrag in Papierform (alle ursprünglichen Vertragsparteien). Das Original bleibt in der Personalakte.",
+      "fullyExecutedOn": "Vollständig unterschrieben am",
+      "originalLocation": "Ablageort des Originals",
+      "locations": {
+        "paper_personnel_file": "Papier-Personalakte"
+      },
+      "documentReference": "Dokumentnummer (optional)",
+      "documentReferenceHint": "Nur Buchstaben, Ziffern und _ . / - (höchstens 40 Zeichen), kein Freitext",
+      "confirmations": {
+        "originalInspected": "Das unterschriebene Original liegt mir vor oder wurde eingesehen.",
+        "allPartiesSigned": "Alle erforderlichen Parteien haben unterschrieben (standardmäßig alle ursprünglichen DSV-Parteien).",
+        "retrievable": "Das Original ist abgelegt und bleibt auffindbar."
+      },
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saved": "Vertragsdaten geändert",
+      "refusals": {
+        "forbidden": "Nur die Projektleitung ändert Vertragsdaten.",
+        "not_ta_tg": "Nur Projekte mit Transfergesellschaft haben Vertragsdaten.",
+        "wave_required": "Ordnen Sie zuerst eine Welle zu.",
+        "latest_entry_date_missing": "Die Welle hat noch keinen spätesten Eintritt.",
+        "participation_closed": "Die Teilnahme ist beendet; ihre Vertragsdaten ändern sich nicht mehr.",
+        "dsv_offer_open": "Ein DSV-Angebot ist offen: Das ausgehändigte Angebot nennt die bisherigen Daten. Warten Sie auf Unterschrift, Ablehnung oder Ablauf."
+      },
+      "errors": {
+        "invalid_date": "Kein gültiges Datum (erwartet TT.MM.JJJJ)",
+        "dates_unchanged": "Die Vertragsdaten ändern sich dadurch nicht.",
+        "entered": "Nach dem TG-Eintritt ändert sich der Beginn nicht mehr.",
+        "start_missing": "Die Welle hat keinen Standard-Beginn; geben Sie einen Beginn an.",
+        "start_in_past": "Der neue Beginn liegt in der Vergangenheit.",
+        "start_today_after_entry_run": "Der heutige Eintrittslauf ist schon gelaufen; der neue Beginn ist frühestens morgen.",
+        "start_after_latest_entry": "Der Beginn liegt nach dem spätesten Eintritt der Welle.",
+        "start_before_offer_deadline": "Der Beginn liegt vor der Angebotsfrist.",
+        "old_employment_end_unknown": "Das Austrittsdatum des bisherigen Arbeitsverhältnisses fehlt; ohne es lässt sich der nahtlose Übergang nicht prüfen. Ergänzen Sie es über einen Import.",
+        "ba_review_required": "Kein gewöhnlicher späterer Eintritt: Zwischen dem bisherigen Arbeitsverhältnis und dem neuen Beginn läge eine Lücke. Das braucht eine BA-/Rechtsprüfung außerhalb dieser Änderung.",
+        "employment_overlap": "Das bisherige Arbeitsverhältnis endet erst am oder nach dem neuen Beginn; der Übergang muss genau am Vortag enden.",
+        "end_missing": "Die Welle hat kein Standard-Ende; geben Sie ein Ende an.",
+        "end_in_past": "Das neue Ende liegt in der Vergangenheit.",
+        "end_not_extension": "Nach der Unterschrift des DSV verlängert sich das Ende nur. Ein früheres Ende ist ein vorzeitiger Austritt (Aufhebungsvertrag oder vertragliches Austrittsrecht).",
+        "end_before_start": "Das Ende liegt vor dem Beginn.",
+        "period_exceeds_twelve_months": "Verträge über mehr als zwölf Monate werden von der Anwendung nicht unterstützt; sie werden außerhalb der Anwendung mit ihren Unterlagen geführt.",
+        "dsv_amendment_required": "Der DSV ist unterschrieben: Für die Änderung fehlt der Nachtrag.",
+        "amendment_not_allowed": "Vor der Unterschrift des DSV gibt es keinen Nachtrag; das spätere Angebot nennt die neuen Daten.",
+        "amendment_unconfirmed": "Bitte bestätigen Sie alle drei Angaben zum Original.",
+        "amendment_not_executed_in_time": "Der Nachtrag muss heute oder früher, vor dem neuen Beginn und spätestens am bisherigen Ende vollständig unterschrieben sein.",
+        "not_ta_tg": "Nur Projekte mit Transfergesellschaft haben Vertragsdaten.",
+        "wave_required": "Ordnen Sie zuerst eine Welle zu.",
+        "latest_entry_date_missing": "Die Welle hat noch keinen spätesten Eintritt.",
+        "participation_closed": "Die Teilnahme ist beendet.",
+        "dsv_offer_open": "Ein DSV-Angebot ist offen.",
+        "forbidden": "Sie dürfen die Vertragsdaten nicht ändern.",
+        "stale": "Die Person wurde inzwischen geändert. Die aktuellen Daten werden angezeigt; bitte prüfen Sie erneut.",
+        "failed": "Die Vertragsdaten konnten nicht geändert werden. Es wurde nichts gespeichert."
+      }
+    },
+    "amendments": {
+      "title": "DSV-Nachträge",
+      "empty": "Keine Nachträge.",
+      "kinds": {
+        "extension": "Verlängerung",
+        "new_start": "Neuer Beginn"
+      },
+      "columns": {
+        "kind": "Art",
+        "fullyExecutedOn": "Unterschrieben am",
+        "dates": "Daten",
+        "originalLocation": "Original",
+        "documentReference": "Dokumentnummer",
+        "confirmedAt": "Bestätigt"
+      }
+    },
+    "tasks": {
+      "title": "Meldungen an die Agentur",
+      "empty": "Keine Meldungen.",
+      "kinds": {
+        "later_entry": "Späterer Eintritt",
+        "planned_end_changed": "Geplantes Ende geändert",
+        "early_exit": "Vorzeitiger Austritt"
+      },
+      "statuses": {
+        "pending": "Ausstehend",
+        "reported": "Gemeldet",
+        "not_required": "Nicht erforderlich"
+      },
+      "columns": {
+        "reportingKind": "Meldung",
+        "subjectDate": "Datum",
+        "createdAt": "Angelegt",
+        "status": "Status"
+      }
     }
   },
   "manual": {
