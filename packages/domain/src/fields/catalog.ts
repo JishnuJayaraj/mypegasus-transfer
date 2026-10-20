@@ -111,6 +111,12 @@ export const fieldCatalog: readonly FieldEntry[] = [
     valueClasses: { long_term_illness_reduced_earning_capacity: "special_category" },
     ...record,
   }),
+  // DSV amendments and BA reporting tasks (5.2, 5.7; round 32 D3, R42; PR 2h-3): operational
+  // evidence of contractual date changes, never in lists or customer exports
+  ...fields(["dsvAmendment", "baReportingTask"], C, "confidential", false, {
+    listable: false,
+    ...record,
+  }),
   // codes only; `participant_prevented_documented` deliberately reveals no illness (Q81)
   field("profilingExceptionReasonCode", C, "confidential", false, record),
   // special category

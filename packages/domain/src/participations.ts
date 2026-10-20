@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { page } from "./api";
 import { isoDate } from "./iso-date";
+import {
+  AmendmentOriginalLocation,
+  BaReportingKind,
+  BaReportingStatus,
+  DatesPrecondition,
+  DsvAmendmentKind,
+} from "./projects/participation-dates";
 import { DsvStatus, MainStatus, ProfilingStatus } from "./lifecycle/enums";
 
 /**
@@ -26,7 +33,7 @@ export type ParticipationListItem = z.infer<typeof ParticipationListItem>;
 export const ParticipationPage = page(ParticipationListItem).meta({ id: "ParticipationPage" });
 
 /** Hints derived for the detail, never stored (plan 5.13; like the planner's flags). */
-export const ParticipationHint = z.enum(["tg_start_missed"]);
+export const ParticipationHint = z.enum(["tg_start_missed", "new_start_needs_ba_review"]);
 export type ParticipationHint = z.infer<typeof ParticipationHint>;
 
 /** Street with house number, postal code, city and country: one unit (round 32). */
@@ -53,6 +60,41 @@ export const AssignEntryWaveRefusal = z.enum([
   "no_other_wave",
 ]);
 export type AssignEntryWaveRefusal = z.infer<typeof AssignEntryWaveRefusal>;
+
+/** Why the dates can't be changed now: no permission, else the first failing precondition. */
+export const SetParticipationDatesRefusal = z.enum(["forbidden", ...DatesPrecondition.options]);
+export type SetParticipationDatesRefusal = z.infer<typeof SetParticipationDatesRefusal>;
+
+/** A DSV amendment as the detail shows it (R41, R42): dates, codes and the confirming staff id. */
+export const DsvAmendmentView = z
+  .strictObject({
+    id: z.uuid(),
+    kind: DsvAmendmentKind,
+    fullyExecutedOn: isoDate,
+    oldTgStart: isoDate.nullable(),
+    newTgStart: isoDate.nullable(),
+    oldTgEnd: isoDate.nullable(),
+    newTgEnd: isoDate.nullable(),
+    confirmedBy: z.uuid(),
+    confirmedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
+    originalLocation: AmendmentOriginalLocation,
+    documentReference: z.string().nullable(),
+  })
+  .meta({ id: "DsvAmendment" });
+export type DsvAmendmentView = z.infer<typeof DsvAmendmentView>;
+
+/** A BA reporting task as the detail shows it (R38, R42). */
+export const BaReportingTaskView = z
+  .strictObject({
+    id: z.uuid(),
+    reportingKind: BaReportingKind,
+    subjectDate: isoDate,
+    status: BaReportingStatus,
+    createdAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
+    reportedOn: isoDate.nullable(),
+  })
+  .meta({ id: "BaReportingTask" });
+export type BaReportingTaskView = z.infer<typeof BaReportingTaskView>;
 
 const recorded = <T extends z.ZodType>(schema: T) => schema.nullable().optional();
 
@@ -107,9 +149,18 @@ export const ParticipationDetail = z
       privateEmail: recorded(z.string()),
       workEmail: recorded(z.string()),
     }),
-    capabilities: z.strictObject({ assignEntryWave: z.boolean() }),
+    /** Absent where the viewer may not read them (R42); newest last. */
+    amendments: z.array(DsvAmendmentView).optional(),
+    baReportingTasks: z.array(BaReportingTaskView).optional(),
+    capabilities: z.strictObject({
+      assignEntryWave: z.boolean(),
+      setParticipationDates: z.boolean(),
+    }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
-    refusals: z.strictObject({ assignEntryWave: AssignEntryWaveRefusal.nullable() }),
+    refusals: z.strictObject({
+      assignEntryWave: AssignEntryWaveRefusal.nullable(),
+      setParticipationDates: SetParticipationDatesRefusal.nullable(),
+    }),
   })
   .meta({ id: "ParticipationDetail" });
 export type ParticipationDetail = z.infer<typeof ParticipationDetail>;

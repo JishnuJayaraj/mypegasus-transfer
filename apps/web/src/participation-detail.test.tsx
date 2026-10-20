@@ -67,8 +67,8 @@ const detail = {
     privateEmail: "erika@example.org",
     workEmail: null,
   },
-  capabilities: { assignEntryWave: true },
-  refusals: { assignEntryWave: null },
+  capabilities: { assignEntryWave: true, setParticipationDates: false },
+  refusals: { assignEntryWave: null, setParticipationDates: null },
 };
 const option1 =
   "W1 – Welle 1 (Unterschrift bis 15.02.2091, TG 01.03.2091 bis 29.02.2092, Eintritt bis 15.03.2091)";

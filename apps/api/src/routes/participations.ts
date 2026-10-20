@@ -4,7 +4,9 @@ import {
   asc,
   eq,
   inArray,
+  baReportingTask,
   participantDetails,
+  participationDsvAmendment,
   participantIdentity,
   participation,
   project,
@@ -15,9 +17,11 @@ import {
   AssignEntryWaveInput,
   entryWaveAssignment,
   ManualParticipationInput,
+  ParticipationDatesInput,
   mayListField,
   mayPerformOperation,
   PageQuery,
+  participationDatesCapability,
   participationDetail,
   ParticipationDetail,
   participationListScope,
@@ -31,7 +35,12 @@ import { createRouter, json, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { ImportRefusal } from "../imports/analysis";
 import { createManually, ManualCreationRefusal } from "../participations/manual-creation";
-import { createStatusService, StatusServiceError } from "../participations/status-service";
+import {
+  createStatusService,
+  DatesRefusal,
+  lifecycleRunCompleted,
+  StatusServiceError,
+} from "../participations/status-service";
 import { loadRelease } from "../projects/template-pins";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
@@ -101,6 +110,8 @@ export function participationRoutes(deps: Deps) {
     // The wave choice is offered when the PL may assign one and some other wave of the project
     // passes the domain rule; otherwise the reason, permission first (R31, round 26).
     const target = { projectId: p.projectId, regionId: null, participationId };
+    const permitted = (kind: "assignEntryWave" | "setParticipationDates") =>
+      mayPerformOperation(subject, { kind }, target).ok;
     const waves = await db
       .select({ id: projectEntryWave.id })
       .from(projectEntryWave)
@@ -117,11 +128,46 @@ export function participationRoutes(deps: Deps) {
       },
       p.projectId,
       waves.map(({ id }) => id),
-      mayPerformOperation(subject, { kind: "assignEntryWave" }, target).ok,
+      permitted("assignEntryWave"),
     );
+    const datesChange = participationDatesCapability(
+      { projectType: row.projectType, status: p.status, dsvStatus: p.dsvStatus, wave },
+      permitted("setParticipationDates"),
+    );
+    const amendments = await db
+      .select({
+        id: participationDsvAmendment.id,
+        kind: participationDsvAmendment.kind,
+        fullyExecutedOn: participationDsvAmendment.fullyExecutedOn,
+        oldTgStart: participationDsvAmendment.oldTgStart,
+        newTgStart: participationDsvAmendment.newTgStart,
+        oldTgEnd: participationDsvAmendment.oldTgEnd,
+        newTgEnd: participationDsvAmendment.newTgEnd,
+        confirmedBy: participationDsvAmendment.confirmedBy,
+        confirmedAt: utc(participationDsvAmendment.confirmedAt),
+        originalLocation: participationDsvAmendment.originalLocation,
+        documentReference: participationDsvAmendment.documentReference,
+      })
+      .from(participationDsvAmendment)
+      .where(eq(participationDsvAmendment.participationId, participationId))
+      .orderBy(asc(participationDsvAmendment.confirmedAt));
+    const baReportingTasks = await db
+      .select({
+        id: baReportingTask.id,
+        reportingKind: baReportingTask.reportingKind,
+        subjectDate: baReportingTask.subjectDate,
+        status: baReportingTask.status,
+        createdAt: utc(baReportingTask.createdAt),
+        reportedOn: baReportingTask.reportedOn,
+      })
+      .from(baReportingTask)
+      .where(eq(baReportingTask.participationId, participationId))
+      .orderBy(asc(baReportingTask.createdAt), asc(baReportingTask.reportingKind));
     return participationDetail(
       subject,
       {
+        amendments,
+        baReportingTasks,
         id: p.id,
         projectId: p.projectId,
         status: p.status,
@@ -160,8 +206,15 @@ export function participationRoutes(deps: Deps) {
       },
       {
         today,
-        capabilities: { assignEntryWave: assignment.allowed },
-        refusals: { assignEntryWave: assignment.refusal },
+        entryRunCompletedToday: await lifecycleRunCompleted(db, today),
+        capabilities: {
+          assignEntryWave: assignment.allowed,
+          setParticipationDates: datesChange.allowed,
+        },
+        refusals: {
+          assignEntryWave: assignment.refusal,
+          setParticipationDates: datesChange.refusal,
+        },
       },
     );
   }
@@ -382,6 +435,58 @@ export function participationRoutes(deps: Deps) {
           { requestId: c.get("requestId") },
         );
       } catch (error) {
+        return refusal(c, error);
+      }
+      const detail = await detailOf(user, participationId);
+      return detail ? c.json(detail, 200) : problem(c, "forbidden");
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "put",
+      path: "/participations/{participationId}/dates",
+      tags: ["participations"],
+      summary:
+        "Change the participation's contractual TG dates (the PL), with the DSV amendment once it is signed; returns the participation",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: ParticipationDatesInput } },
+        },
+      },
+      responses: {
+        200: json(ParticipationDetail, "The participation with its new dates and tasks"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { participationId } = c.req.valid("param");
+      // Visibility first, so a hidden participation is a 404 whatever the body says.
+      const [found] = await db
+        .select({ projectId: participation.projectId })
+        .from(participation)
+        .where(eq(participation.id, participationId));
+      const access = found && (await projectAccess(db, user, found.projectId));
+      if (!access?.visible) return problem(c, "not-found");
+      try {
+        await statusService.setParticipationDates(
+          access.subject,
+          { participationId, ...c.req.valid("json") },
+          { requestId: c.get("requestId") },
+        );
+      } catch (error) {
+        if (error instanceof DatesRefusal) return domainProblem(c, error.issues);
         return refusal(c, error);
       }
       const detail = await detailOf(user, participationId);

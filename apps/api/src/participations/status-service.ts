@@ -3,6 +3,7 @@ import {
   and,
   eq,
   jobRun,
+  participantDetails,
   participation,
   profilingExceptionRequest,
   project,
@@ -14,6 +15,7 @@ import {
   addDays,
   assignEntryWave,
   canTransition,
+  checkParticipationDates,
   correctEndReason,
   decideProfilingException,
   edges,
@@ -29,7 +31,9 @@ import {
   type EndReason,
   type EntryWave,
   type GuardId,
+  type DatesIssue,
   type IsoDate,
+  type ParticipationDatesInput,
   type Operation,
   type OperationContext,
   type ProfilingException,
@@ -57,6 +61,15 @@ export type ServiceActor = Subject | { kind: "system"; job: string };
 
 /** Correlation ids copied into the audit event. */
 export type Correlation = { requestId?: string; jobId?: string };
+
+/** A refused date change (5.7): every failing rule, at its field; never a value. */
+export class DatesRefusal extends Error {
+  override readonly name = "DatesRefusal";
+
+  constructor(readonly issues: readonly DatesIssue[]) {
+    super("dates_refused");
+  }
+}
 
 export type StatusServiceErrorKind = "not_found" | "forbidden" | "stale" | "domain" | "integrity";
 
@@ -173,7 +186,10 @@ async function call(tx: Transaction, query: SQL): Promise<string> {
  * Whether the lifecycle run of `day` has completed: its `job_run` row exists (round 19). A
  * reconciliation on the TG start day needs it; read inside the transaction, never from a caller.
  */
-async function lifecycleRunCompleted(tx: Transaction, day: IsoDate): Promise<boolean> {
+export async function lifecycleRunCompleted(
+  tx: Pick<Transaction, "select">,
+  day: IsoDate,
+): Promise<boolean> {
   const rows = await tx
     .select({ runDate: jobRun.runDate })
     .from(jobRun)
@@ -418,6 +434,68 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
               p_offer_deadline => ${change.offerDeadline ?? null}::date,
               p_effective_date => ${effectiveDate}::date,
               p_scheduled_at => ${change.scheduledAt?.toISOString() ?? null}::timestamptz)`,
+          ),
+        };
+      });
+    },
+
+    /**
+     * The PL's change of the contractual dates (5.7; rounds 32–34): under the participation and
+     * the shared project lock, the version first (409), then `checkParticipationDates` with the
+     * former employment's end and whether today's entry run completed, then
+     * `set_participation_dates`, which writes the dates, the amendment, the BA tasks and the event
+     * together. A refusal writes nothing.
+     */
+    setParticipationDates(
+      actor: ServiceActor,
+      input: { participationId: string } & ParticipationDatesInput,
+      correlation: Correlation = {},
+    ): Promise<{ auditEventId: string }> {
+      return transaction(async (tx) => {
+        const loaded = await load(tx, input.participationId, actor);
+        permitOperation(actor, { kind: "setParticipationDates" }, loaded);
+        const { p, context } = loaded;
+        if (p.statusVersion !== input.expectedVersion) fail("stale", "stale_status");
+        const details = await selectFirst(
+          tx
+            .select({ oldEmploymentEndDate: participantDetails.oldEmploymentEndDate })
+            .from(participantDetails)
+            .where(eq(participantDetails.participationId, p.id)),
+        );
+        const { amendment } = input;
+        const checked = checkParticipationDates({
+          projectType: context.projectType,
+          status: p.status,
+          dsvStatus: p.dsvStatus,
+          wave: context.wave,
+          participation: { tgStart: p.tgStart, tgEnd: p.tgEnd, offerDeadline: p.offerDeadline },
+          oldEmploymentEndDate: details?.oldEmploymentEndDate ?? null,
+          change: { tgStart: input.tgStart, tgEnd: input.tgEnd },
+          amendment: amendment
+            ? {
+                fullyExecutedOn: amendment.fullyExecutedOn,
+                confirmed:
+                  amendment.originalInspected &&
+                  amendment.allPartiesSigned &&
+                  amendment.retrievable,
+              }
+            : null,
+          today: context.today,
+          entryRunCompletedToday: await lifecycleRunCompleted(tx, context.today),
+        });
+        if (!checked.ok) throw new DatesRefusal(checked.issues);
+        return {
+          auditEventId: await call(
+            tx,
+            sql`set_participation_dates(p_id => ${p.id}::uuid,
+              p_tg_start => ${input.tgStart}::date, p_tg_end => ${input.tgEnd}::date,
+              p_expected_version => ${input.expectedVersion}::integer,
+              p_context => ${audit(actor, correlation)},
+              p_amendment_kind => ${checked.amendmentKind}::dsv_amendment_kind,
+              p_amendment_fully_executed_on => ${amendment?.fullyExecutedOn ?? null}::date,
+              p_amendment_original_location => ${amendment?.originalLocation ?? null}::amendment_original_location,
+              p_amendment_document_reference => ${amendment?.documentReference ?? null}::text,
+              p_amendment_confirmed => ${amendment ? true : null}::boolean)`,
           ),
         };
       });

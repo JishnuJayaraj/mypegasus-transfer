@@ -167,6 +167,7 @@ const operations: Record<OperationKind, string> = {
   decideRelaxation: "ROM",
   withdrawRelaxation: "PL",
   importParticipations: "PL",
+  setParticipationDates: "PL",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {

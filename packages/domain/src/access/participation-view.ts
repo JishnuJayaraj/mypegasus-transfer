@@ -3,8 +3,13 @@ import type { IsoDate } from "../iso-date";
 import type { DsvStatus, MainStatus, ProfilingStatus } from "../lifecycle/enums";
 import { assignEntryWave, type OperationContext } from "../lifecycle/operations";
 import { effectiveTgEnd, effectiveTgStart, type EntryWave } from "../lifecycle/waves";
+import { addDays } from "../dates";
+import { datesPrecondition } from "../projects/participation-dates";
 import type {
   AssignEntryWaveRefusal,
+  BaReportingTaskView,
+  DsvAmendmentView,
+  SetParticipationDatesRefusal,
   ParticipantAddress,
   ParticipationDetail,
   ParticipationHint,
@@ -77,6 +82,8 @@ export const mayListField = (
 
 /** One participation as the API loads it, before projection. */
 export type ParticipationRecord = {
+  amendments: DsvAmendmentView[];
+  baReportingTasks: BaReportingTaskView[];
   id: string;
   projectId: string;
   status: MainStatus;
@@ -103,6 +110,8 @@ export function participationDetail(
   record: ParticipationRecord,
   options: {
     today: IsoDate;
+    /** Whether today's entry run completed: then the earliest new start is tomorrow (5.7). */
+    entryRunCompletedToday: boolean;
     capabilities: ParticipationDetail["capabilities"];
     refusals: ParticipationDetail["refusals"];
   },
@@ -114,6 +123,10 @@ export function participationDetail(
   const hints: ParticipationHint[] = [];
   if (record.status === "informed" && effectiveStart !== null && effectiveStart < options.today) {
     hints.push("tg_start_missed");
+    // Every allowed new start would leave a gap after the former employment (R40, round 33).
+    const earliest = options.entryRunCompletedToday ? addDays(options.today, 1) : options.today;
+    const oldEnd = record.person.oldEmploymentEndDate;
+    if (oldEnd !== null && addDays(oldEnd, 1) < earliest) hints.push("new_start_needs_ba_review");
   }
   return {
     id: record.id,
@@ -132,9 +145,20 @@ export function participationDetail(
     person: Object.fromEntries(
       ParticipantDataField.options.filter(readable).map((field) => [field, record.person[field]]),
     ),
+    ...(readable("dsvAmendment") && { amendments: record.amendments }),
+    ...(readable("baReportingTask") && { baReportingTasks: record.baReportingTasks }),
     capabilities: options.capabilities,
     refusals: options.refusals,
   };
+}
+
+/** Whether the viewer may change the dates now (R31): the permission, then the preconditions. */
+export function participationDatesCapability(
+  state: Parameters<typeof datesPrecondition>[0],
+  permitted: boolean,
+): { allowed: boolean; refusal: SetParticipationDatesRefusal | null } {
+  const refusal = permitted ? datesPrecondition(state) : "forbidden";
+  return { allowed: refusal === null, refusal };
 }
 
 /**

@@ -114,6 +114,19 @@ body {
   }
 }
 
+// A group of fields with a legend, such as a DSV amendment (Slice 2, PR 2h-3).
+.tp-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  padding-block: $spacing-05;
+
+  legend {
+    font-weight: 600;
+    margin-block-end: $spacing-03;
+  }
+}
+
 .tp-list {
   list-style: disc;
   padding-inline-start: $spacing-06;

@@ -218,6 +218,20 @@
       "when": 1792441064132,
       "tag": "0030_manual_creation_has_participation",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792476334259,
+      "tag": "0031_dsv_amendments_ba_tasks",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792476360374,
+      "tag": "0032_participation_dates_functions",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import type { Subject } from "./decide";
 import type { OperationContext } from "../lifecycle/operations";
 import {
   entryWaveAssignment,
+  participationDatesCapability,
   participationDetail,
   participationListScope,
   type ParticipationRecord,
@@ -118,11 +119,37 @@ const record: ParticipationRecord = {
     privateEmail: "erika@example.org",
     workEmail: null,
   },
+  amendments: [
+    {
+      id: "a-1",
+      kind: "extension",
+      fullyExecutedOn: "2027-02-20",
+      oldTgStart: "2027-04-01",
+      newTgStart: "2027-04-01",
+      oldTgEnd: "2028-01-31",
+      newTgEnd: "2028-02-29",
+      confirmedBy: "staff-a",
+      confirmedAt: "2027-02-21T09:00:00.000000Z",
+      originalLocation: "paper_personnel_file",
+      documentReference: null,
+    },
+  ],
+  baReportingTasks: [
+    {
+      id: "t-1",
+      reportingKind: "planned_end_changed",
+      subjectDate: "2028-02-29",
+      status: "pending",
+      createdAt: "2027-02-21T09:00:00.000000Z",
+      reportedOn: null,
+    },
+  ],
 };
 const options = {
   today: "2027-03-01",
-  capabilities: { assignEntryWave: true },
-  refusals: { assignEntryWave: null },
+  entryRunCompletedToday: false,
+  capabilities: { assignEntryWave: true, setParticipationDates: true },
+  refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
 
 describe("participationDetail (R30, AC-34)", () => {
@@ -143,8 +170,10 @@ describe("participationDetail (R30, AC-34)", () => {
       },
       hints: [],
       person: record.person,
-      capabilities: { assignEntryWave: true },
-      refusals: { assignEntryWave: null },
+      amendments: record.amendments,
+      baReportingTasks: record.baReportingTasks,
+      capabilities: { assignEntryWave: true, setParticipationDates: true },
+      refusals: { assignEntryWave: null, setParticipationDates: null },
     });
   });
 
@@ -170,10 +199,36 @@ describe("participationDetail (R30, AC-34)", () => {
   it("derives the missed TG start for an informed participation, never stored", () => {
     const pl = staff({ [projectId]: ["project_lead"] });
     const late = { ...options, today: "2027-04-02" };
-    expect(participationDetail(pl, record, late)?.hints).toEqual(["tg_start_missed"]);
+    const directLater = {
+      ...record,
+      person: { ...record.person, oldEmploymentEndDate: "2027-04-05" },
+    };
+    expect(participationDetail(pl, directLater, late)?.hints).toEqual(["tg_start_missed"]);
     expect(participationDetail(pl, record, { ...options, today: "2027-04-01" })?.hints).toEqual([]);
     const entered = { ...record, status: "active_in_tg" as const };
     expect(participationDetail(pl, entered, late)?.hints).toEqual([]);
+    // Every allowed new start is too late for a direct transition: BA/legal review (R40).
+    expect(participationDetail(pl, record, late)?.hints).toEqual([
+      "tg_start_missed",
+      "new_start_needs_ba_review",
+    ]);
+    // The earliest new start is tomorrow once today's entry run completed.
+    const ranToday = { ...options, today: "2027-04-05", entryRunCompletedToday: true };
+    const endsToday = {
+      ...record,
+      person: { ...record.person, oldEmploymentEndDate: "2027-04-05" },
+    };
+    expect(participationDetail(pl, endsToday, ranToday)?.hints).toEqual(["tg_start_missed"]);
+    const endedYesterday = {
+      ...record,
+      person: { ...record.person, oldEmploymentEndDate: "2027-04-04" },
+    };
+    expect(participationDetail(pl, endedYesterday, ranToday)?.hints).toEqual([
+      "tg_start_missed",
+      "new_start_needs_ba_review",
+    ]);
+    const unknown = { ...record, person: { ...record.person, oldEmploymentEndDate: null } };
+    expect(participationDetail(pl, unknown, late)?.hints).toEqual(["tg_start_missed"]);
     const noWave = { ...record, wave: null };
     expect(participationDetail(pl, noWave, late)).toMatchObject({
       entryWave: null,
@@ -245,6 +300,29 @@ describe("entryWaveAssignment (R31, R33; review of PR 2h-1)", () => {
     const onWave1 = { ...context, wave: { ...record.wave!, id: "wave-1" } };
     expect(entryWaveAssignment(onWave1, projectId, ["wave-1"], true)).toEqual(
       refused("no_other_wave"),
+    );
+  });
+});
+
+describe("participationDatesCapability (R31; PR 2h-3)", () => {
+  const state = {
+    projectType: "ta_tg" as const,
+    status: "informed" as const,
+    dsvStatus: "not_offered" as const,
+    wave: record.wave,
+  };
+  it("is open to the PL while no precondition fails", () => {
+    expect(participationDatesCapability(state, true)).toEqual({ allowed: true, refusal: null });
+  });
+  it("names the missing permission first, then the first failing precondition", () => {
+    expect(participationDatesCapability({ ...state, wave: null }, false)).toEqual(
+      refused("forbidden"),
+    );
+    expect(participationDatesCapability({ ...state, dsvStatus: "dsv_offered" }, true)).toEqual(
+      refused("dsv_offer_open"),
+    );
+    expect(participationDatesCapability({ ...state, wave: null }, true)).toEqual(
+      refused("wave_required"),
     );
   });
 });
