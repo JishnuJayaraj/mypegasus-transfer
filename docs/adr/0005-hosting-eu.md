@@ -22,7 +22,7 @@ operates a Hetzner cluster in German data centres.
   - TLS via cert-manager + Let's Encrypt
   - Prometheus/Grafana for metrics, Loki for logs
   - Kubernetes Secrets, SOPS-encrypted in git
-- **One PostgreSQL major version everywhere** (Slice 0, D15): the cluster's PostgreSQL
+- **One PostgreSQL major version everywhere** (Slice 0): the cluster's PostgreSQL
   (CloudNativePG) runs the same major version as development (cloud session, Compose) and CI,
   currently **16**. A major upgrade is a deliberate change everywhere at once.
 - The app is delivered as **container images** (Node 24 LTS), with Helm or Kustomize manifests

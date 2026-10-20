@@ -6,7 +6,7 @@
 PostgreSQL database.
 Modules are separated by package boundaries, not by network calls.
 
-**One image** (Slice 0, D4): a Node 24 container runs the API bundle, which serves `/api/v1`,
+**One image** (Slice 0): a Node 24 container runs the API bundle, which serves `/api/v1`,
 the built staff SPA at `/` and the built portal at `/portal/` (SPA fallback to each
 `index.html`; hashed assets `immutable`, `index.html` `no-cache`; unknown `/api/*` paths stay a
 404 problem). Migrations are a separate command in the same image (`node dist/migrate.js`).
@@ -100,7 +100,7 @@ admission cutoff, `active_in_tg`), two-stage retention/deletion, PDF batch gener
 idempotent, run with the `system` actor, take time from the `Clock` adapter, and carry only IDs
 in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
-- **Where:** in the API process (D7), started before the server listens when `JOBS_ENABLED=true`
+- **Where:** in the API process, started before the server listens when `JOBS_ENABLED=true`
   (default); a separate worker is a Slice 9 scaling decision.
 - **Schema and roles:** `db:migrate` / `node dist/migrate.js` install or upgrade the `pgboss`
   schema as `transfer_owner` and re-apply `transfer_app`'s DML grants; the API runs pg-boss as

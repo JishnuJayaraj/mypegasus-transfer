@@ -52,8 +52,8 @@ generator then. No action now.
 - **`503` `service-unavailable` with `import_busy`:** an API process runs at most two parse
   workers; up to eight further preview or confirm requests wait for at most 20 s. A request that
   finds the queue full or whose wait expires is answered `503` with `errors[].code`
-  `import_busy` and `Retry-After: 10` (Slice 2 plan R43, round 33). The client retries later;
+  `import_busy` and `Retry-After: 10` (round 33). The client retries later;
   nothing was read or written.
 - **`participationId` in a problem:** a refusal that refers to a participation the caller may
   open names its id (an extension member of RFC 9457), never a value: a manual creation whose
-  Personalnummer exists already (`personnel_number_taken`, R32) links to that participation.
+  Personalnummer exists already (`personnel_number_taken`) links to that participation.

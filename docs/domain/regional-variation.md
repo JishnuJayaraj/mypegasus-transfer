@@ -88,7 +88,13 @@ Participation
   syntax), `minimum`/`maximum`, `title`, `description`, plus the required `x-dataClass` (only
   `confidential` or `internal`: special-category and highly confidential data needs encrypted
   columns, never `jsonb`), `x-retentionClass` (a participant retention class) and `x-label`.
-  Keys start with `custom.`. Everything else is rejected before compiling.
+  Keys are `custom.` plus lower snake_case starting with a letter, at most 63 characters after
+  the prefix. A field needs `type`, `enum` or `const`; a free string (no `enum`, `const` or
+  `format`) needs `maxLength`; string keywords only with `type: "string"`, `minimum`/`maximum`
+  only with numbers; `enum`/`const` values match the type; bounds are ordered. `x-label.de` is
+  required. Help-text keys are dotted lower snake_case (`<scope>.<key>`), texts at most 2000
+  characters (`packages/config/src/field-schema.ts`, `model.ts`). Everything else is rejected
+  before compiling.
 - `parseLayer` validates one layer: its shape, the profile, and its rules against the field
   catalog plus the custom fields it declares or inherits.
 - **The resolver** (`packages/config/src/resolve.ts`) merges the layers:
@@ -109,7 +115,7 @@ Participation
   (Q91). The ASU `defaultChannel` never blocks (round 14). Project
   activation additionally needs, for `ta_tg`, an entry wave with a `latestEntryDate` (Q77,
   `projectActivationBlockers` in the domain).
-- **Samples** (D8): `packages/config/templates/beispielstadt-nord/1.json` and `2.json`,
+- **Samples**: `packages/config/templates/beispielstadt-nord/1.json` and `2.json`,
   `beispielstadt-sued/1.json`: fictional Agenturen with `sample: true`, never a real Agentur's
   rules. `@transfer/config/load` reads a pinned version and checks its path.
 - Reminder rules are left to Slice 5; deadlines are entry-wave data (above).
@@ -133,7 +139,15 @@ Participation
   source code cannot be configuration. Core fields are real columns. Custom fields are `jsonb`,
   validated by the resolved schema.
 - **Completeness rules** use a minimal declarative format (ADR-0004): `required`, `requiredIf` (field
-  equals / exists), `documentPresent` (+ accepted). No scripting.
+  equals / exists), `documentPresent` (+ accepted). No scripting. The engine
+  (`packages/domain/src/completeness/`):
+  - Absent is `null`, `undefined`, a string blank after trim and `[]`; `false`, `0` and `{}` are
+    present. Completeness checks presence; validity is checked on write.
+  - `equals` compares strictly, without coercion; `exists` means present.
+  - `documentPresent`: a rejected document doesn't count, and `accepted: true` needs an accepted
+    one. An unmet rule is `not_accepted` when documents of the type exist, `missing` when none.
+  - Rule ids are unique across all steps (`duplicate_id`). Each failed rule gives one item (step,
+    rule id, kind, key), never a value.
 - **What may be relaxed** (Q75): every base rule is classified `statutory`, `ba_form` or
   `operational_default`. Statutory and BA-form requirements are **locked**. Regional templates
   only add requirements or change explicitly regional settings. A project override may relax
@@ -148,7 +162,22 @@ Participation
 - **Base defaults** contain the nationwide rules, the **allowed channel values** and the
   official form requirements, but **no default** for an Agentur's submission channel, batch
   channel, `originalRequired`, `leadTimeDays` or `rejectsOutdatedFormVersions` (round 8).
-  The base rules and their bases are listed in the Slice 1 plan (5.7).
+  The base rules (`packages/domain/config/base-defaults.json`):
+
+  | Step | Rule id | Requires | Basis | Project types |
+  |---|---|---|---|---|
+  | `asu_registration` | `base-asu-proof` | accepted `asu_proof` document | `statutory` | `ta_tg` |
+  | `data_collection` | `base-import-<field>` for `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | the field | `operational_default` | all |
+  | `dsv` | `base-dsv-signed-scan` | accepted `dsv_signed_scan` document | `statutory` | `ta_tg` |
+
+  Document rules need `accepted: true`. The import rules are not form requirements: the base
+  defaults hold no TL 407 or Kug 200b rule yet.
+- **Required import targets** (`isRequired` in `packages/domain/src/import/targets.ts`,
+  `apps/api/src/imports/analysis.ts`): Personalnummer, last and first name always (the import
+  ignores a relaxation of their rules); date of birth, Austrittsdatum and the address unless the
+  resolution for the base-only participant chain plus the project level (a participation has no
+  placement Agentur yet) relaxes `base-import-birthDate`, `-oldEmploymentEndDate` or `-address`.
+  An approved relaxation lifts exactly its target.
 - **Project types** (Q89): a rule may name the project types it applies to (`projectTypes`;
   absent = every type). Completeness skips a rule for another type, so it is never a missing
   item or a reminder. The ASU proof and the DSV scan are `ta_tg` only; the Kug 200b rules apply
@@ -169,10 +198,12 @@ Participation
 ## Template versions: identity, immutability, snapshots (Slice 2)
 
 - **Identity:** a template version is `templates/<agenturKey>/<version>.json`; its content
-  identity is the **SHA-256 of its canonical JSON** (keys sorted, no insignificant whitespace,
-  R22), so reformatting a file never counts as a change and any change of content does.
+  identity is the **SHA-256 of its canonical JSON** (keys sorted, no insignificant whitespace),
+  so reformatting a file never counts as a change and any change of content does. The hash covers the whole file, `$schema` included.
 - **Catalog:** `pnpm generate` writes `packages/config/templates/manifest.json` with every
   version's key, version, labels, `sample` flag and hash; CI fails when it differs from the files.
+  Its entries must be strictly ordered by Agentur key, then version, without duplicates; the API
+  refuses to start otherwise (`manifest_not_strictly_ordered`, `packages/config/src/manifest.ts`).
   `GET /api/v1/config/templates` serves it to the flat role `project_lead`, the PL members of any project and the global org
   roles (Q108).
 - **Immutability:** a merged version never changes and is never deleted.
@@ -185,7 +216,7 @@ Participation
   both the stored content and the hash (`template_version_changed`). Resolution of a pinned
   project reads only the stored content (validated, cached per key, version and hash), so a later
   change of a file can't change a project. Versions and pins are never updated or deleted.
-- **Choosing the Project Agentur (R12):** only an Agentur with a template in the catalog; the PL
+- **Choosing the Project Agentur:** only an Agentur with a template in the catalog; the PL
   pins its latest version (or an older one) and sets it as the Project Agentur in one step, while
   the project is a draft. Further Agenturen are pinned the same way, also once the project is
   active. Another version of an Agentur that is already pinned is a migration with review (PR
@@ -196,18 +227,21 @@ Participation
   Agentur without a template (`PUT`/`DELETE /api/v1/projects/{id}/config/agentur-settings/{key}`),
   with its settings, a source (`phone_call_agentur`, `email_agentur`, `letter_agentur`,
   `meeting_agentur`) and the confirmation date (not after today); the confirmer is always the
-  acting user (R14). Every change is a new **override version** (optimistic concurrency: a stale
+  acting user. Every change is a new **override version** (optimistic concurrency: a stale
   expected version is a 409) with a `config_override_changed` audit event naming the keys and the
-  source, never a value. The project snapshot is its pins plus its current override version
-  (R11), so a setting lifts the step-scoped blockers it supplies, for its own Agentur only.
-- **Rule relaxations with approval (PR 2d-2; Q75, round 8, round 14, R2, R3):** the PL requests
+  source, never a value. The project snapshot is its pins plus its current override version,
+  so a setting lifts the step-scoped blockers it supplies, for its own Agentur only.
+- **Rule relaxations with approval (PR 2d-2; Q75, round 8, round 14):** the PL requests
   the relaxation of one rule with a **controlled reason code** (`source_data_not_provided`,
   `not_needed_for_project_measures`, `collected_outside_platform`,
-  `agentur_confirmed_not_required`; Q100), never free text
+  `agentur_confirmed_not_required`; Q100), never free text; any code may go with any relaxable
+  rule, the code enforces no pairing
   (`POST /api/v1/projects/{id}/config/relaxations`). The request is checked against the current
   snapshot: the rule must exist in some chain, apply there to the project's type and be
   `operational_default` (`relaxation_unmatched`, `relaxation_locked`; round 28); one open request
-  per rule. It **takes effect
+  per rule. A relaxation names a rule id matching `^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$` (`RuleId`,
+  `packages/domain/src/projects/relaxations.ts`, checked in SQL too), so a template rule with
+  another id can't be relaxed. It **takes effect
   only once another person approves it**: the regional operations manager, never the requester
   (four eyes in the access check and in SQL). The approval writes, in the same transaction, a new
   override version that adds `{ ruleId, reasonCode, approvedBy, approvedOn }` and is validated
@@ -215,9 +249,9 @@ Participation
   withdraw a pending request. The PL may remove an approved relaxation without approval
   (tightening), as a new override version. Request, approval, rejection, withdrawal and removal
   are audited (rule id and reason code, never free text); request and approval record the
-  base-defaults version (R26). The configuration response lists the approved relaxations, the
+  base-defaults version. The configuration response lists the approved relaxations, the
   open requests and the rules a request may name, with what the viewer may do.
-- **Template version migration with review (PR 2e-2; Q36, Q93, R15):** the PL moves a pinned
+- **Template version migration with review (PR 2e-2; Q36, Q93):** the PL moves a pinned
   Agentur to a **newer** catalog version, in a draft or an active project. A preview
   (`POST /api/v1/projects/{id}/config/pins/{key}/migration-preview`, writes nothing) lists the
   template settings that differ (old and new value), the rules and custom fields added, removed or
@@ -233,14 +267,21 @@ Participation
   invalid is refused with its issues. Afterwards that Agentur resolves from the new version; the
   others are unchanged. Completeness is derived, so it follows the new version; generated
   documents don't exist yet.
-- **Cross-chain validation (round 15, R16):** every override write and every pin validates the
+- **Cross-chain validation (round 15):** every override write and every pin validates the
   override against the base-only chain and every pinned Agentur chain
   (`validateProjectOverride`): a rule on a custom field only one template declares, an override
   field a template declares too, a relaxation of a locked rule, a relaxation that matches no chain
   or a reason code outside the controlled list is refused (`override_invalid` with the issue
   codes), never stored. A migration validates the override with the new version the same way.
+- **How an override changes:** only through Agentur-scoped settings, approved relaxations (and
+  their removal) and the removals of a migration review; each write function checks in SQL that
+  the new version differs from the current one by exactly that change. Override additions of
+  fields, rules and help texts have no API until the admin UI.
 - **Base defaults** are release-managed, not pinned (Q107); configuration-dependent audit events
-  record their `version`.
+  record their `version` as `baseDefaultsVersion`: `project_activated`, `config_template_pinned`,
+  `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`,
+  `import_confirmed`, `participation_created_manually` (`configurationDependentEventTypes` in
+  `packages/domain/src/audit/events.ts`; a test keeps the list exact).
 - **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the
   templates and the base defaults to `apps/api/dist/config/`, and `CONFIG_DIR` points the built
   API there (the image, `pnpm start`, Playwright).

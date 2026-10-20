@@ -38,7 +38,7 @@
 
 ## Amendment 2026-10-15: Slice 0 toolchain
 
-Decided before PR 0a ([round 6](../decisions/2026-10-15-answers-round-6.md), D5 and D12–D14):
+Decided before PR 0a ([round 6](../decisions/2026-10-15-answers-round-6.md)):
 build speed doesn't matter yet; avoiding toolchain risk does.
 
 - **TypeScript 6.** Plain `typescript@6.0.3`, pinned, the only TypeScript in the tree: no npm

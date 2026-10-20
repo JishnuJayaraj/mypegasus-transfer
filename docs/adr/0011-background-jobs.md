@@ -23,7 +23,7 @@ profiling-exception deadlines, reminders and the retention job (ADR-0008).
 - Job state lives in the same database. Job tables are excluded from participant-data
   retention but cleaned up by pg-boss's own archive settings.
 
-## Note 2026-10-16: spike S2 (pg-boss, Slice 1 plan section 3)
+## Note 2026-10-16: spike S2 (pg-boss)
 
 **Passed; no fallback, no `transfer_jobs` role.** `pg-boss@12.38.0` (schema version 46) with
 `@opentelemetry/api@1.9.1`, against PostgreSQL 16 in a cloud session:
@@ -46,11 +46,11 @@ For PR 1h:
 - **`singletonKey` deduplicates only on queues with policy `stately` or `exclusive`**; on
   `standard` and `singleton` two sends with the same key both succeed. Create
   `lifecycle.evaluate-project` with one of those, and keep idempotency in the planner and the
-  compare-and-set (plan 5.9).
+  compare-and-set.
 
 ## Amendment 2026-10-16: setup, runtime role and schedule (Slice 1, PR 1h-1)
 
-Decided in the Slice 1 plan (D7, section 5.9) and built in PR 1h-1; the sweep, the catch-up
+Built in PR 1h-1; the sweep, the catch-up
 window and the per-project job follow in PR 1h-2.
 - **Schema install:** `db:migrate` (and `node dist/migrate.js` in the image) installs pg-boss's
   `pgboss` schema after the app migrations, as `transfer_owner`, from pg-boss's exported SQL
@@ -64,7 +64,7 @@ window and the per-project job follow in PR 1h-2.
   on its sequences, `EXECUTE` on its functions; no `CREATE`, no DDL. The API starts pg-boss as
   `transfer_app` with migration off, `persistQueueStats` off and `reindex: false`; a missing or
   outdated schema fails the API's start.
-- **In-process:** pg-boss runs in the API process (D7) when `JOBS_ENABLED=true` (the default),
+- **In-process:** pg-boss runs in the API process when `JOBS_ENABLED=true` (the default),
   started before the server listens. `SIGTERM`/`SIGINT` start a single-flight shutdown: the
   server stops accepting, HTTP draining and pg-boss's graceful stop are both awaited, then the
   pool is closed; failures are logged without their message and give a non-zero exit code. Tests and the
@@ -92,7 +92,7 @@ window and the per-project job follow in PR 1h-2.
 
 ## Amendment 2026-10-16: the nightly lifecycle sweep (Slice 1, PR 1h-2)
 
-Built in PR 1h-2 (plan 5.9; rounds 9, 18–20):
+Built in PR 1h-2 (rounds 9, 18–20):
 - **`lifecycle.sweep`**: the run date is the `Clock`'s Berlin today. The run is due only once its
   scheduled time has passed **by database time** (Q96); otherwise it stops before any change
   (`not_due`). A due run evaluates the **catch-up window**, every day after the last completed
@@ -118,12 +118,12 @@ Built in PR 1h-2 (plan 5.9; rounds 9, 18–20):
   in its own process (never through the queue, so a running API's workers don't take a `--today`
   run); `--today` uses a `ManualClock` at that day's run time; a run not due exits non-zero with
   `run_not_due`; refused with `NODE_ENV=production`.
-- The API's workers use the Slice 1 facts provider, which fails closed (D4): DSV expiry and cutoff
+- The API's workers use the Slice 1 facts provider, which fails closed: DSV expiry and cutoff
   withdrawals run, nobody enters the TG.
 
 ## Note 2026-10-17: draft projects plan nothing (Slice 2, PR 2e-1)
 
-A project is `draft` until it is activated (Slice 2 plan D9, R1, Q98). The sweep still dispatches
+A project is `draft` until it is activated (Q98). The sweep still dispatches
 a `lifecycle.evaluate-project` job for every project (round 21 reading 3), but the job plans
 nothing for a draft project: it reads the project's status in its planning transaction and
 returns with no change (counts 0), like a project without open participations. The status
