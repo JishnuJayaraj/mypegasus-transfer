@@ -1,6 +1,6 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { seedProjectIds, seedStaffUserIds } from "./seed";
+import { seedProjectIds, seedRegionIds, seedStaffUserIds } from "./seed";
 import { auditContext, call, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
 // Slice 2 plan 5.3 (PR 2a): project creation and editing through their functions (AC-1, AC-4) and
@@ -27,6 +27,7 @@ const createProject = (args: Record<string, unknown> = {}) =>
     name: "Neues Projekt",
     customerName: "Beispiel GmbH",
     type: "ta_tg",
+    regionId: seedRegionIds.nord,
     context: pl,
     ...args,
   });
@@ -44,7 +45,7 @@ describe("create_project (AC-1)", () => {
   it("creates a draft project with the creator as its PL member and one audit event without free text", async () => {
     const id = await createProject();
     const { rows } = await owner.query(
-      "select name, customer_name, type, status, project_agentur_key, created_by from project where id = $1",
+      "select name, customer_name, type, status, project_agentur_key, created_by, region_id from project where id = $1",
       [id],
     );
     expect(rows).toEqual([
@@ -55,6 +56,7 @@ describe("create_project (AC-1)", () => {
         status: "draft",
         project_agentur_key: null,
         created_by: seedStaffUserIds.projectLead,
+        region_id: seedRegionIds.nord,
       },
     ]);
     const members = await owner.query(
@@ -85,6 +87,9 @@ describe("create_project (AC-1)", () => {
     ["an empty name", { name: "" }, "invalid_argument"],
     ["an untrimmed name", { name: " Projekt" }, "invalid_argument"],
     ["a 201-character customer", { customerName: "x".repeat(201) }, "invalid_argument"],
+    // Q126: the creator chooses an existing region
+    ["no region", { regionId: null }, "region_required"],
+    ["an unknown region", { regionId: seedProjectIds.werkNord }, "region_not_found"],
   ])("refuses %s", async (_label, args, code) => {
     expect(await refusal(createProject(args))).toBe(code);
     expect((await owner.query("select count(*)::int as n from project")).rows).toEqual([{ n: 3 }]);

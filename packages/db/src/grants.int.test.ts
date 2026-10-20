@@ -1,7 +1,7 @@
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { runMigrations } from "./migrate";
-import { seedProjectIds, seedStaffUserIds } from "./seed";
+import { seedProjectIds, seedRegionIds, seedStaffUserIds } from "./seed";
 import { auditContext, call, createWave, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
 // AC-13: the runtime role only has the grants that migrations give it explicitly.
@@ -29,6 +29,7 @@ describe("transfer_app", () => {
       name: "Grant-Test",
       customerName: "Beispiel GmbH",
       type: "ta_only",
+      regionId: seedRegionIds.nord,
       context: auditContext({ actorType: "user", staffUserId }),
     });
     const selected = await app.query("select name, status from project where id = $1", [id]);
@@ -56,7 +57,7 @@ describe("transfer_app", () => {
     ["truncate project", "truncate project"],
     [
       "insert into staff_user",
-      "insert into staff_user (display_name, email, role) values ('x', 'x@example.org', 'admin')",
+      "insert into staff_user (display_name, email) values ('x', 'x@example.org')",
     ],
     ["update staff_user", "update staff_user set display_name = 'x'"],
     [
@@ -117,6 +118,18 @@ const statusFunctions = [
   "end_staff_session",
   "bind_staff_identity",
   "record_staff_login_refused",
+  // Slice 3 (PR 3c): regions, staff accounts, org roles, teams and assignments
+  "create_region",
+  "update_region",
+  "create_staff_user",
+  "update_staff_user",
+  "deactivate_staff_user",
+  "grant_org_role",
+  "revoke_org_role",
+  "add_project_member",
+  "remove_project_member",
+  "assign_participations",
+  "unassign_participation",
 ];
 const helpers = [
   "assert_context",
@@ -138,6 +151,13 @@ const helpers = [
   "scoped_setting_keys",
   "ba_reporting_task_progresses",
   "create_early_exit_task",
+  "assert_global_admin",
+  "is_project_lead",
+  "assert_team_context",
+  "staff_text_valid",
+  "region_code_valid",
+  "staff_email_valid",
+  "lock_projects_of_staff",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -365,6 +385,37 @@ describe("transfer_app and the relaxation requests", () => {
     ...writes("config_relaxation_request", "status", insert.replace("address", "birthDate")),
     ["call an internal helper", "select override_without_relaxation('{}', 'x')"],
     ["lock a request", `select lock_relaxation_request(gen_random_uuid(), null)`],
+  ])("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// Slice 3 (PR 3c): regions, org roles and assignments are read by the app and written only by
+// their functions.
+describe("transfer_app and the region, org-role and assignment tables", () => {
+  it("may select them", async () => {
+    expect((await app.query("select code from region order by code")).rows).toEqual([
+      { code: "NORD" },
+      { code: "SUED" },
+    ]);
+    expect((await app.query("select role from staff_org_role order by role")).rows).toHaveLength(3);
+    expect((await app.query("select id from participant_assignment")).rows).toEqual([]);
+  });
+
+  it.each([
+    ...writes("region", "code", "insert into region (code, name) values ('OST', 'Ost')"),
+    ...writes(
+      "staff_org_role",
+      "role",
+      `insert into staff_org_role (staff_user_id, role) values ('${staffUserId}', 'admin')`,
+    ),
+    ...writes(
+      "participant_assignment",
+      "id",
+      `insert into participant_assignment (project_id, participation_id, staff_user_id, assigned_by) select project_id, id, '${seedStaffUserIds.consultant}', '${staffUserId}' from participation`,
+    ),
+    ["call an internal helper", `select assert_global_admin('${staffUserId}')`],
+    ["lock a staff user's projects", `select lock_projects_of_staff('${staffUserId}')`],
   ])("may not %s (42501)", async (_label, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
   });

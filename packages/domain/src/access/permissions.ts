@@ -26,6 +26,8 @@ export type PermissionDenial =
   | "out_of_region"
   | "role_not_allowed"
   | "four_eyes"
+  /** Nobody grants themselves a project role as a replacement PL (Q126). */
+  | "own_account"
   /** A correction of a collection field names the entry it corrects. */
   | "entry_required";
 export type Permission = { ok: true } | { ok: false; because: PermissionDenial };
@@ -55,6 +57,11 @@ export const OperationKind = z.enum([
   // Slice 2: the import (plan 5.4, 5.11); individual TG dates (5.7, PR 2h-3)
   "importParticipations",
   "setParticipationDates",
+  // Slice 3: teams, assignments and the project's region (Q62, Q126)
+  "manageMembers",
+  "addReplacementLead",
+  "assignParticipations",
+  "setProjectRegion",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -69,6 +76,7 @@ export type Operation =
         | "reviewReconciliation"
         | "reviewBreakGlass"
         | "requestEvidenceCorrection"
+        | "addReplacementLead"
       >;
     }
   | {
@@ -76,7 +84,9 @@ export type Operation =
       requestedBy: string;
     }
   | { kind: "reviewReconciliation" | "reviewBreakGlass"; actorStaffUserId: string }
-  | { kind: "requestEvidenceCorrection"; target: EvidenceCorrectionTarget };
+  | { kind: "requestEvidenceCorrection"; target: EvidenceCorrectionTarget }
+  /** The staff user who becomes PL. */
+  | { kind: "addReplacementLead"; staffUserId: string };
 
 type Role = ProjectRole | OrgRole;
 
@@ -123,6 +133,13 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   importParticipations: ["project_lead"],
   // Contractual dates (5.7; Q102, round 32): the PL only, back office none.
   setParticipationDates: ["project_lead"],
+  // Teams (Q126): the PL manages members and assigns participations (Q62); a global admin adds a
+  // replacement PL for recovery, never themselves, and gains no case access by it. A regional
+  // admin manages no team. The region: the PL (while draft, `regionChangeRefusal`), the admin.
+  manageMembers: ["project_lead"],
+  addReplacementLead: ["project_lead", "admin"],
+  assignParticipations: ["project_lead"],
+  setProjectRegion: ["project_lead", "admin"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>
@@ -186,6 +203,9 @@ export function mayPerformOperation(
   if (actor.kind !== "staff") return no("actor_not_allowed");
   if (operation.kind === "requestEvidenceCorrection" && needsEntry(operation.target)) {
     return no("entry_required");
+  }
+  if (operation.kind === "addReplacementLead" && operation.staffUserId === actor.staffUserId) {
+    return no("own_account");
   }
   const roles: Role[] = operationRoles[operation.kind];
   const allows = (role: Role) =>

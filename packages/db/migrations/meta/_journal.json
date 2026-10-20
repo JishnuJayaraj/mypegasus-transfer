@@ -253,6 +253,20 @@
       "when": 1792513780228,
       "tag": "0035_staff_session_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792518386780,
+      "tag": "0036_regions_org_roles_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1792518403814,
+      "tag": "0037_team_and_org_functions",
+      "breakpoints": true
     }
   ]
 }

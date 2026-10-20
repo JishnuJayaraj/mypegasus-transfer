@@ -8,6 +8,8 @@ describe("safeReturnPath (D1, the login's return path)", () => {
     "/projects/",
     "/projects/new",
     "/projects/0a1b-2c/participations/x-1",
+    "/admin/staff",
+    "/admin/regions",
   ])("keeps the staff route %s", (path) => {
     expect(safeReturnPath(path)).toBe(path);
   });
@@ -26,6 +28,8 @@ describe("safeReturnPath (D1, the login's return path)", () => {
     "/projects/../api",
     "/projects/%2e%2e",
     "/projectsx",
+    "/adminx",
+    "/admin/staff?x=1",
     `/projects/${"a".repeat(300)}`,
   ])("replaces %s with /", (path) => {
     expect(safeReturnPath(path)).toBe("/");

@@ -19,7 +19,8 @@ import {
   RelaxationReasonCode,
   RelaxationRequestStatus,
   StaffAuditEventType,
-  StaffRole,
+  OrgRole,
+  AssignmentEndReason,
   StaffSessionEndReason,
   STAFF_SESSION_HOURS,
   StatusField,
@@ -52,15 +53,18 @@ import {
 // The Postgres enums take their values from the domain's Zod enums.
 const values = <T extends string>(e: { options: T[] }) => e.options as [T, ...T[]];
 
-export const staffRole = pgEnum("staff_role", values(StaffRole));
+export const orgRole = pgEnum("org_role", values(OrgRole));
 export const projectType = pgEnum("project_type", values(ProjectType));
 export const projectStatus = pgEnum("project_status", values(ProjectStatus));
 export const projectRole = pgEnum("project_role", values(ProjectRole));
 
 /**
- * Staff accounts, created in the app (Q7, Q126); synthetic ones from the seed. Never hard-deleted
- * (Q59). The first OIDC login binds `(oidc_issuer, oidc_subject)` through `bind_staff_identity`
- * (D5); a deactivated account can't log in.
+ * Staff accounts, created in the app by a global admin (Q7, Q126) through `create_staff_user`;
+ * synthetic ones from the seed. Never hard-deleted (Q59): `deactivate_staff_user` sets
+ * `deactivated_at`. The first OIDC login binds `(oidc_issuer, oidc_subject)` through
+ * `bind_staff_identity` (D5); a deactivated account can't log in. No flat role: org roles are
+ * `staff_org_role` rows, project roles `project_membership` rows, and `may_create_projects` lets
+ * its holder create projects (and become their first PL).
  */
 export const staffUser = pgTable(
   "staff_user",
@@ -68,7 +72,7 @@ export const staffUser = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     displayName: text("display_name").notNull(),
     email: text("email").notNull().unique(),
-    role: staffRole("role").notNull(),
+    mayCreateProjects: boolean("may_create_projects").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     oidcIssuer: text("oidc_issuer"),
     oidcSubject: text("oidc_subject"),
@@ -87,6 +91,65 @@ export const staffUser = pgTable(
       sql`${t.oidcIssuer} ~ '^https?://[!-~]{1,255}$' and length(${t.oidcIssuer}) <= 263`,
     ),
     check("staff_user_oidc_subject_format", sql`${t.oidcSubject} ~ '^[!-~]{1,255}$'`),
+    // The domain's StaffAccount inputs: a trimmed name, an address with one @, no control
+    // characters.
+    check(
+      "staff_user_display_name",
+      sql`${t.displayName} = btrim(${t.displayName}) and length(${t.displayName}) between 1 and 100 and ${t.displayName} !~ '[[:cntrl:]]'`,
+    ),
+    check(
+      "staff_user_email_format",
+      sql`${t.email} ~ '^[^@[:space:][:cntrl:]]+@[^@[:space:][:cntrl:]]+$' and length(${t.email}) <= 254`,
+    ),
+  ],
+);
+
+/**
+ * Regions (Niederlassungen, Q35, Q126): reference data the global admin maintains through
+ * `create_region` and `update_region`; `transfer_app` only reads it.
+ */
+export const region = pgTable(
+  "region",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(),
+    name: text("name").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check("region_code_format", sql`${t.code} ~ '^[A-Z0-9]([A-Z0-9-]{0,18}[A-Z0-9])?$'`),
+    check(
+      "region_name",
+      sql`${t.name} = btrim(${t.name}) and length(${t.name}) between 1 and 100 and ${t.name} !~ '[[:cntrl:]]'`,
+    ),
+  ],
+);
+
+/**
+ * Org roles (Q80, Q126): `admin` is global (no region), `regional_admin` and
+ * `regional_operations_manager` are granted per region. Granted and revoked only by the global
+ * admin through `grant_org_role` and `revoke_org_role`; a revoked role's row is deleted (its
+ * `org_role_revoked` event stays). `granted_by` is null only for roles migrated from the flat role.
+ */
+export const staffOrgRole = pgTable(
+  "staff_org_role",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    staffUserId: uuid("staff_user_id")
+      .notNull()
+      .references(() => staffUser.id),
+    role: orgRole("role").notNull(),
+    regionId: uuid("region_id").references(() => region.id),
+    grantedBy: uuid("granted_by").references(() => staffUser.id),
+    grantedAt: timestamp("granted_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("staff_org_role_unique").on(t.staffUserId, t.role, t.regionId).nullsNotDistinct(),
+    check("staff_org_role_region_scope", sql`(${t.role} = 'admin') = (${t.regionId} is null)`),
   ],
 );
 
@@ -150,6 +213,11 @@ export const project = pgTable(
     projectAgenturKey: text("project_agentur_key"),
     activatedAt: timestamp("activated_at", { withTimezone: true, mode: "string" }),
     activatedBy: uuid("activated_by").references(() => staffUser.id),
+    /**
+     * The region (Q126): chosen by the creator; the PL changes it while draft, a global admin at
+     * any time. Null only for projects created before regions; only global roles see those.
+     */
+    regionId: uuid("region_id").references(() => region.id),
   },
   (t) => [
     check(
@@ -158,12 +226,15 @@ export const project = pgTable(
     ),
     check("project_agentur_key_format", sql`${t.projectAgenturKey} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
     index("project_created_at_id_idx").on(t.createdAt.desc(), t.id.desc()),
+    index("project_region_idx").on(t.regionId),
   ],
 );
 
 /**
  * Project roles of staff (D6, Q61): zero or more per person and project; permissions are their
- * union. Filled by project creation and the seed; managing members is Slice 3 (plan D4).
+ * union. Written by `create_project` (the creator's PL row), `add_project_member` and
+ * `remove_project_member` (the PL; a global admin adds a replacement PL, Q126) and
+ * `deactivate_staff_user`; a removed role's row is deleted, its audit events stay.
  */
 export const projectMembership = pgTable(
   "project_membership",
@@ -207,6 +278,7 @@ export const profilingExceptionSupersededReason = pgEnum(
   values(ProfilingExceptionSupersededReason),
 );
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
+export const assignmentEndReason = pgEnum("assignment_end_reason", values(AssignmentEndReason));
 export const staffAuditEventType = pgEnum("staff_audit_event_type", values(StaffAuditEventType));
 export const relaxationReasonCode = pgEnum("relaxation_reason_code", values(RelaxationReasonCode));
 export const importTarget = pgEnum("import_target", values(ImportTarget));
@@ -721,7 +793,7 @@ export const auditEvent = pgTable(
     ),
     check(
       "audit_event_lifecycle_has_participation",
-      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'participation_created_manually', 'participation_dates_changed', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened')`,
+      sql`${t.participationId} is not null or ${t.eventType}::text not in ('participation_created', 'status_changed', 'entry_wave_assigned', 'profiling_exception_requested', 'profiling_exception_approved', 'profiling_exception_rejected', 'profiling_exception_revoked', 'profiling_exception_superseded', 'end_reason_corrected', 'participant_data_changed', 'participation_created_manually', 'participation_dates_changed', 'sensitive_read', 'sensitive_write', 'break_glass_access', 'document_opened', 'participant_assigned', 'participant_unassigned')`,
     ),
     // `field`, `from_value` and `to_value` only on a status change (creation: to `imported`) and,
     // as end reasons, on a correction; their values come from the matching enum.
@@ -789,16 +861,24 @@ export const staffAuditEvent = pgTable(
   (t) => [
     index("staff_audit_event_subject_seq_idx").on(t.subjectStaffUserId, t.seq),
     // A login, logout or binding is the user's own; a refusal has no actor, an account only
-    // where one was matched, and its code.
+    // where one was matched, and its code. An account or org-role event names the acting admin
+    // and the account; a region event the admin and, in its details, the region. The values
+    // added with the administration events are compared as text (ADR-0002, migrations). A null
+    // (a missing subject or region) fails the check.
     check(
       "staff_audit_event_shape",
-      sql`case ${t.eventType}
-        when 'staff_login_refused' then ${t.actorStaffUserId} is null
+      sql`coalesce(case
+        when ${t.eventType}::text = 'staff_login_refused' then ${t.actorStaffUserId} is null
           and ${t.reasonCode} in ('unknown_account', 'account_deactivated', 'identity_mismatch')
           and (${t.subjectStaffUserId} is null) = (${t.reasonCode} = 'unknown_account')
-        else ${t.actorStaffUserId} is not null and ${t.subjectStaffUserId} = ${t.actorStaffUserId}
+        when ${t.eventType}::text in ('staff_login', 'staff_logout', 'staff_identity_bound') then ${t.actorStaffUserId} is not null
+          and ${t.subjectStaffUserId} = ${t.actorStaffUserId} and ${t.reasonCode} is null
+        when ${t.eventType}::text in ('region_created', 'region_changed') then ${t.actorStaffUserId} is not null
+          and ${t.subjectStaffUserId} is null and ${t.reasonCode} is null
+          and jsonb_typeof(${t.details} -> 'regionId') = 'string'
+        else ${t.actorStaffUserId} is not null and ${t.subjectStaffUserId} is not null
           and ${t.reasonCode} is null
-      end`,
+      end, false)`,
     ),
     check(
       "staff_audit_event_reason_code_is_code",
@@ -988,6 +1068,54 @@ export const jobRun = pgTable(
 );
 
 /**
+ * Participant assignments (Q62): the PL assigns a participation to members holding `consultant`
+ * in its project, zero or more per participation. Rows are closed, never deleted (`ended_*`):
+ * by `unassign_participation`, when the consultant role is removed, or when the account is
+ * deactivated. The open ones are a consultant's access to person-level data. Written only by the
+ * functions; `transfer_app` only reads it.
+ */
+export const participantAssignment = pgTable(
+  "participant_assignment",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    staffUserId: uuid("staff_user_id")
+      .notNull()
+      .references(() => staffUser.id),
+    assignedBy: uuid("assigned_by")
+      .notNull()
+      .references(() => staffUser.id),
+    assignedAt: timestamp("assigned_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    endedBy: uuid("ended_by").references(() => staffUser.id),
+    endedAt: timestamp("ended_at", { withTimezone: true, mode: "string" }),
+    endReason: assignmentEndReason("end_reason"),
+  },
+  (t) => [
+    // An assignment is of its participation's project.
+    foreignKey({
+      name: "participant_assignment_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    uniqueIndex("participant_assignment_one_open_idx")
+      .on(t.participationId, t.staffUserId)
+      .where(sql`${t.endedAt} is null`),
+    index("participant_assignment_staff_user_open_idx")
+      .on(t.staffUserId)
+      .where(sql`${t.endedAt} is null`),
+    check(
+      "participant_assignment_ended",
+      sql`(${t.endedAt} is null) = (${t.endedBy} is null) and (${t.endedAt} is null) = (${t.endReason} is null) and ${t.endedAt} >= ${t.assignedAt}`,
+    ),
+  ],
+);
+
+/**
  * A saved import column mapping (Slice 2 plan 5.2, 5.11; R7): the keyed hash of a normalised
  * header and the target it was mapped to in a confirmed import of the project. Never header text
  * (a file without a header row would store a person's name). No personal data and no audit
@@ -1018,6 +1146,9 @@ export const importColumnMapping = pgTable(
 
 export const tables = [
   staffUser,
+  region,
+  staffOrgRole,
+  participantAssignment,
   staffSession,
   staffAuditEvent,
   project,

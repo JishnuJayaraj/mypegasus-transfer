@@ -8,29 +8,18 @@ export const DataClass = z
 export type DataClass = z.infer<typeof DataClass>;
 
 /**
- * Staff roles. Provisional: Slice 1 owns the final role and assignment model (ADR-0007).
- * The customer has no login in the MVP (Q47); participants are not staff.
+ * Organisation-wide roles (Q80, Q126): `admin` is global, the regional ones are granted per
+ * region. They replace the flat staff role; there is no customer or participant role (Q47).
  */
-export const StaffRole = z
-  .enum([
-    "admin",
-    "regional_admin",
-    "project_lead",
-    "consultant",
-    "back_office",
-    // Q80; added for the seed's synthetic reviewer (PR 1g-2)
-    "regional_operations_manager",
-  ])
-  .meta({ id: "StaffRole" });
-
-export type StaffRole = z.infer<typeof StaffRole>;
-
-/** Organisation-wide roles, scoped to regions or all (D6, Q80). Replace `StaffRole` in Slice 3. */
-export const OrgRole = z.enum(["admin", "regional_admin", "regional_operations_manager"]);
+export const OrgRole = z
+  .enum(["admin", "regional_admin", "regional_operations_manager"])
+  .meta({ id: "OrgRole" });
 export type OrgRole = z.infer<typeof OrgRole>;
 
 /** Project roles: zero or more per person and project; permissions are the union (D6, Q61). */
-export const ProjectRole = z.enum(["project_lead", "consultant", "back_office"]);
+export const ProjectRole = z
+  .enum(["project_lead", "consultant", "back_office"])
+  .meta({ id: "ProjectRole" });
 export type ProjectRole = z.infer<typeof ProjectRole>;
 
 /**

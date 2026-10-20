@@ -404,7 +404,7 @@ describe("the staff tables themselves (D2, D6)", () => {
   it("keeps one account per email, compared case-insensitively, and complete identities", async () => {
     await expect(
       owner.query(
-        "insert into staff_user (display_name, email, role) values ('X', 'Project-Lead@Example.org', 'consultant')",
+        "insert into staff_user (display_name, email) values ('X', 'Project-Lead@Example.org')",
       ),
     ).rejects.toMatchObject({ code: "23505", constraint: "staff_user_email_lower_key" });
     await expect(

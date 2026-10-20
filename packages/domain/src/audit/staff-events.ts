@@ -1,17 +1,26 @@
 import { z } from "zod";
 import { StaffLoginRefusal } from "../auth/staff-login";
+import { OrgRoleGrant } from "../staff/accounts";
 
 /**
  * The staff audit trail (D6, table `staff_audit_event`): staff logins, logouts, refusals and
- * identity bindings. It has no `project_id`, so it isn't `audit_event`. Ids and codes only: a
- * refused login never records the claimed email, and the table's `CHECK`s enforce the same.
- * Account and org-role events join with Slice 3's administration.
+ * identity bindings, and the global admin's account, org-role and region changes (Q126). It has no
+ * `project_id`, so it isn't `audit_event`. Ids and codes only: a refused login never records the
+ * claimed email, an account event never the name or email, a region event never the name; the
+ * table's `CHECK`s enforce the same.
  */
 export const StaffAuditEventType = z.enum([
   "staff_login",
   "staff_logout",
   "staff_login_refused",
   "staff_identity_bound",
+  "staff_account_created",
+  "staff_account_changed",
+  "staff_account_deactivated",
+  "org_role_granted",
+  "org_role_revoked",
+  "region_created",
+  "region_changed",
 ]);
 export type StaffAuditEventType = z.infer<typeof StaffAuditEventType>;
 
@@ -43,6 +52,24 @@ const refusedWithAccount = z.strictObject({
   subjectStaffUserId: z.uuid(),
 });
 
+/** An administration event: the acting global admin and the account it concerns. */
+const ofAccount = { requestId, actorStaffUserId: z.uuid(), subjectStaffUserId: z.uuid() };
+const ofRegion = { requestId, actorStaffUserId: z.uuid(), regionId: z.uuid() };
+
+const accountChanged = z
+  .strictObject({
+    type: z.literal("staff_account_changed"),
+    ...ofAccount,
+    fields: z.array(z.enum(["displayName", "email", "mayCreateProjects"])).min(1),
+    /** The flag's new value, with its key only. */
+    mayCreateProjects: z.boolean().optional(),
+  })
+  .refine((e) => e.fields.includes("mayCreateProjects") === (e.mayCreateProjects !== undefined), {
+    params: { code: "flag_mismatch" },
+  });
+
+const count = z.int().min(0);
+
 export const StaffAuditEvent = z.union([
   z.strictObject({ type: z.literal("staff_login"), ...ofUser, method: StaffLoginMethod }),
   z.strictObject({ type: z.literal("staff_logout"), ...ofUser }),
@@ -58,6 +85,35 @@ export const StaffAuditEvent = z.union([
     type: z.literal("staff_identity_bound"),
     ...ofUser,
     matchedBy: StaffLoginNameClaim,
+  }),
+  z.strictObject({
+    type: z.literal("staff_account_created"),
+    ...ofAccount,
+    mayCreateProjects: z.boolean(),
+  }),
+  accountChanged,
+  /** What the deactivation ended in its transaction (Q126). */
+  z.strictObject({
+    type: z.literal("staff_account_deactivated"),
+    ...ofAccount,
+    endedSessions: count,
+    removedMemberships: count,
+    endedAssignments: count,
+  }),
+  z
+    .strictObject({
+      type: z.enum(["org_role_granted", "org_role_revoked"]),
+      ...ofAccount,
+      ...OrgRoleGrant.shape,
+    })
+    .refine((e) => OrgRoleGrant.safeParse({ role: e.role, regionId: e.regionId }).success, {
+      params: { code: "region_scope" },
+    }),
+  z.strictObject({ type: z.literal("region_created"), ...ofRegion }),
+  z.strictObject({
+    type: z.literal("region_changed"),
+    ...ofRegion,
+    fields: z.array(z.enum(["code", "name"])).min(1),
   }),
 ]);
 export type StaffAuditEvent = z.infer<typeof StaffAuditEvent>;

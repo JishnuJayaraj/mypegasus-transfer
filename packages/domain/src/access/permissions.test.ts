@@ -158,6 +158,10 @@ const operations: Record<OperationKind, string> = {
   withdrawRelaxation: "PL",
   importParticipations: "PL",
   setParticipationDates: "PL",
+  manageMembers: "PL",
+  addReplacementLead: "PL AD",
+  assignParticipations: "PL",
+  setProjectRegion: "PL AD",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {
@@ -174,6 +178,8 @@ const operation = (kind: OperationKind, other = "staff-other"): Operation => {
         kind,
         target: { kind: "document", documentType: "dsv_signed_scan", documentId: "d" },
       };
+    case "addReplacementLead":
+      return { kind, staffUserId: other };
     default:
       return { kind };
   }
@@ -290,5 +296,33 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
     expect(result(mayPerformOperation(actors.PL!, supersede, target))).toBe("actor_not_allowed");
     expect(result(mayPerformOperation(actors.C!, assign, target))).toBe("role_not_allowed");
     expect(result(mayPerformOperation(staff([]), assign, target))).toBe("not_member");
+  });
+});
+
+describe("team and region operations (D7, D9, Q126)", () => {
+  const addLead = (staffUserId: string): Operation => ({ kind: "addReplacementLead", staffUserId });
+
+  it("lets a global admin add a replacement PL, never themselves; regional admins can't", () => {
+    const admin = staff([], { org: "admin", regions: "all", id: "staff-admin" });
+    expect(result(mayPerformOperation(admin, addLead("staff-other"), target))).toBe("ok");
+    expect(result(mayPerformOperation(admin, addLead("staff-admin"), target))).toBe("own_account");
+    expect(result(mayPerformOperation(actors.RA!, addLead("staff-other"), target))).toBe(
+      "role_not_allowed",
+    );
+    // A global admin gains no team management or assignment right by the replacement
+    const manage = operation("manageMembers");
+    expect(result(mayPerformOperation(admin, manage, target))).toBe("role_not_allowed");
+    const assign = operation("assignParticipations");
+    expect(result(mayPerformOperation(admin, assign, target))).toBe("role_not_allowed");
+  });
+
+  it("scopes a project's region change to its PL and the global admin, in any region", () => {
+    const region = operation("setProjectRegion");
+    const noRegion = { ...target, regionId: null };
+    expect(result(mayPerformOperation(actors.AD!, region, noRegion))).toBe("ok");
+    expect(result(mayPerformOperation(actors.RA!, region, target))).toBe("role_not_allowed");
+    expect(result(mayPerformOperation(actors.PL!, region, { ...target, projectId: "x" }))).toBe(
+      "not_member",
+    );
   });
 });

@@ -30,10 +30,21 @@ const requiredText = z.string().trim().min(1).max(200);
  * error, never silently dropped (round 23).
  */
 export const CreateProjectInput = z
-  .strictObject({ name: requiredText, customerName: requiredText, type: ProjectType })
+  .strictObject({
+    name: requiredText,
+    customerName: requiredText,
+    type: ProjectType,
+    /** The creator chooses the region (Q126); missing is the value rule `region_required`. */
+    regionId: z.uuid().optional(),
+  })
   .meta({ id: "CreateProjectInput" });
 
 export type CreateProjectInput = z.infer<typeof CreateProjectInput>;
+
+/** A new project needs a region (Q126): without one only global roles would ever see it. */
+export function projectCreationRefusals(input: CreateProjectInput): "region_required"[] {
+  return input.regionId === undefined ? ["region_required"] : [];
+}
 
 /** The fields a PL may change; at least one; strict. Type changes follow `checkProjectUpdate`. */
 export const UpdateProjectInput = z
@@ -41,6 +52,8 @@ export const UpdateProjectInput = z
     name: requiredText.optional(),
     customerName: requiredText.optional(),
     type: ProjectType.optional(),
+    /** The PL only while draft, the global admin at any time (Q126, `regionChangeRefusal`). */
+    regionId: z.uuid().optional(),
   })
   .refine((input) => Object.values(input).some((value) => value !== undefined), {
     message: "Change at least one field",
@@ -65,6 +78,13 @@ export const Project = z
     activatedAt: z.iso.datetime().nullable().meta({ description: "UTC timestamp (ISO 8601)" }),
     createdAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
     createdBy: z.uuid().meta({ description: "Staff user id" }),
+    regionId: z
+      .uuid()
+      .nullable()
+      .meta({
+        description:
+          "The region (Niederlassung); null for a project from before regions, which only global roles see",
+      }),
   })
   .meta({ id: "Project" });
 
@@ -92,12 +112,4 @@ export function checkProjectUpdate(
   if (usage.participations > 0) refusals.push("project_has_participations");
   if (usage.waves > 0) refusals.push("project_has_waves");
   return refusals;
-}
-
-/**
- * Who may create a project until Slice 3 (Q106, round 22): staff whose flat role is
- * `project_lead`; the creator becomes the project's PL member.
- */
-export function mayCreateProject(staffRole: string): boolean {
-  return staffRole === "project_lead";
 }

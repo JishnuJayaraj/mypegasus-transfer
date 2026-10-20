@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   checkProjectUpdate,
   CreateProjectInput,
-  mayCreateProject,
+  projectCreationRefusals,
   ProjectStatus,
   ProjectType,
   UpdateProjectInput,
@@ -161,17 +161,21 @@ describe("checkProjectUpdate (Q98, round 22)", () => {
   });
 });
 
-describe("mayCreateProject (Q106)", () => {
-  it("allows only the flat project_lead role until Slice 3", () => {
-    expect(mayCreateProject("project_lead")).toBe(true);
-    for (const role of [
-      "admin",
-      "regional_admin",
-      "consultant",
-      "back_office",
-      "regional_operations_manager",
-    ]) {
-      expect(mayCreateProject(role)).toBe(false);
-    }
+describe("the region of a new project (D7)", () => {
+  const regionId = "00000000-0000-4000-a000-000000000001";
+
+  it("is chosen by its creator: required, refused as a value rule when missing", () => {
+    expect(CreateProjectInput.parse({ ...validTaTg, regionId })).toEqual({
+      ...validTaTg,
+      regionId,
+    });
+    expect(projectCreationRefusals({ ...validTaTg, regionId })).toEqual([]);
+    expect(projectCreationRefusals(validTaTg)).toEqual(["region_required"]);
+    expect(CreateProjectInput.safeParse({ ...validTaTg, regionId: "nord" }).success).toBe(false);
+  });
+
+  it("changes with the other project fields", () => {
+    expect(UpdateProjectInput.safeParse({ regionId }).success).toBe(true);
+    expect(UpdateProjectInput.safeParse({ regionId: null }).success).toBe(false);
   });
 });
