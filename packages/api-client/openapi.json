@@ -7183,7 +7183,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Deactivate an account (the global admin, never their own): ends its sessions, memberships and assignments; refused for a project's last active PL",
+        "summary": "Deactivate an account (the global admin, never their own): removes org roles, ends sessions, memberships and assignments; refused for a project's last active PL",
         "parameters": [
           {
             "schema": {
@@ -7286,7 +7286,7 @@
         "tags": [
           "admin"
         ],
-        "summary": "Set an account's org roles (the global admin): admin globally, the regional roles per region",
+        "summary": "Atomically set an account's complete org-role set (the global admin): admin globally, the regional roles per region",
         "parameters": [
           {
             "schema": {

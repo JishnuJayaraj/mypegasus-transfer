@@ -3335,7 +3335,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Deactivate an account (the global admin, never their own): ends its sessions, memberships and assignments; refused for a project's last active PL */
+        /** Deactivate an account (the global admin, never their own): removes org roles, ends sessions, memberships and assignments; refused for a project's last active PL */
         post: {
             parameters: {
                 query?: never;
@@ -3430,7 +3430,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Set an account's org roles (the global admin): admin globally, the regional roles per region */
+        /** Atomically set an account's complete org-role set (the global admin): admin globally, the regional roles per region */
         put: {
             parameters: {
                 query?: never;

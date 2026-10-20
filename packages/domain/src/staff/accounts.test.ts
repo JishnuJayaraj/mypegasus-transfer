@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   CreateStaffUserInput,
-  orgRoleChanges,
   OrgRoleGrant,
   SetOrgRolesInput,
   StaffDirectoryQuery,
@@ -10,7 +9,6 @@ import {
 } from "./accounts";
 
 const region = "00000000-0000-4000-a000-000000000001";
-const other = "00000000-0000-4000-a000-000000000002";
 const codes = (result: { success: boolean; error?: { issues: readonly object[] } }) =>
   result.success
     ? []
@@ -38,17 +36,6 @@ describe("OrgRoleGrant (Q126)", () => {
     expect(codes(SetOrgRolesInput.safeParse({ orgRoles: [grant, grant] }))).toEqual([
       "duplicate_org_role",
     ]);
-  });
-
-  it("turns the wanted set into grants and revocations", () => {
-    const admin = { role: "admin", regionId: null } as const;
-    const north = { role: "regional_admin", regionId: region } as const;
-    const south = { role: "regional_admin", regionId: other } as const;
-    expect(orgRoleChanges([admin, north], [north, south])).toEqual({
-      grant: [south],
-      revoke: [admin],
-    });
-    expect(orgRoleChanges([north], [north])).toEqual({ grant: [], revoke: [] });
   });
 });
 

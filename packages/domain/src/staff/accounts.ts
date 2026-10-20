@@ -4,7 +4,8 @@ import { OrgRole, ProjectRole } from "../enums";
 /**
  * Staff accounts and org roles (Q7, Q59, Q126): only a global admin creates, changes and
  * deactivates accounts, grants org roles and sets `mayCreateProjects`. Accounts are never deleted;
- * a deactivated one can't log in. Name and email never enter the audit trail.
+ * deactivation removes their org-role grants and they can't log in. Name and email never enter
+ * the audit trail (data-protection.md, regions and org roles).
  */
 
 /** An org role: `admin` is global (no region), the regional roles name one region each. */
@@ -30,19 +31,6 @@ export const SetOrgRolesInput = z
   })
   .meta({ id: "SetOrgRolesInput" });
 export type SetOrgRolesInput = z.infer<typeof SetOrgRolesInput>;
-
-/** The grants and revocations that turn `current` into `wanted`. */
-export function orgRoleChanges(
-  current: readonly OrgRoleGrant[],
-  wanted: readonly OrgRoleGrant[],
-): { grant: OrgRoleGrant[]; revoke: OrgRoleGrant[] } {
-  const held = new Set(current.map(grantKey));
-  const kept = new Set(wanted.map(grantKey));
-  return {
-    grant: wanted.filter((grant) => !held.has(grantKey(grant))),
-    revoke: current.filter((grant) => !kept.has(grantKey(grant))),
-  };
-}
 
 const displayName = z.string().trim().min(1).max(100);
 const email = z.email().max(254);

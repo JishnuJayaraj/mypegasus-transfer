@@ -346,7 +346,6 @@ export {
 } from "./access/org";
 export {
   CreateStaffUserInput,
-  orgRoleChanges,
   OrgRoleGrant,
   SetOrgRolesInput,
   StaffAccount,

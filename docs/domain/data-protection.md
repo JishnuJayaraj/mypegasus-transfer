@@ -108,7 +108,7 @@
   only: project, responsible PL, number of overdue items per type (e.g. "3 × TL 407 not
   submitted"), and days overdue for the oldest item. **No participant names.** For details the
   regional admin contacts the PL (Q57).
-- **Regions and org roles** *(Q126 confirmed; readings Q131 assumed)*: a project belongs to a
+- **Regions and org roles** *(Q126 and Q131 confirmed)*: a project belongs to a
   region (Niederlassung, Q35); org roles are `staff_org_role` rows: `admin` global,
   `regional_admin` and `regional_operations_manager` per region. A regional role sees and acts only
   on projects of its regions; a project without a region (only those created before regions) is
@@ -119,11 +119,15 @@
   project chooses its region and becomes its first PL. The PL adds and removes members and their
   project roles and assigns participations to the project's consultants; a global admin may add a
   replacement PL, never themselves, and gains no case access by it; regional admins manage no team.
-  The last active PL can't be removed or deactivated. Assignment rows are closed, never deleted;
+  The last active PL can't be removed or deactivated. An admin can't remove their own authority;
+  authority-removing operations serialise and re-check their actor so concurrent mutual changes
+  preserve an active admin. Assignment rows are closed, never deleted;
   a consultant's access follows the open ones at the next request, and removing the consultant
-  role or deactivating the account ends them. Every change is audited (`project_member_added`,
+  role or deactivating the account ends them. Deactivation also deletes every org-role grant in
+  the transaction. Every change is audited (`project_member_added`,
   `project_member_removed`, `participant_assigned`, `participant_unassigned`; the account,
-  org-role and region events in `staff_audit_event`), with ids and codes, never a name or email.
+  org-role and region events in `staff_audit_event`), with ids and codes, never a name or email;
+  each role removed by deactivation preserves role, region and `account_deactivated`.
 - **Customer**: no login in the MVP (Q47). See the next section.
 
 ### Resources, categories and the generated matrix *(assumed, round 11)*
@@ -330,10 +334,10 @@ them, a legal hold suspends only the affected records, never the whole participa
 | Class | Tables | Rule |
 |---|---|---|
 | `project_master` | `project` (from Slice 3 with its region), `project_membership` (staff ids and project roles, Slice 2; a removed role's row is deleted, its event stays, PR 3c), `project_entry_wave`, `import_column_mapping` (the keyed hash of a normalised column header and its target, saved by a confirmed import, never header text; Slice 2, PR 2g. **Classed `confidential`, possibly pseudonymised participant data**: if a PL picks a data row as the header row, the hashes are keyed hashes of a person's values, which are pseudonymised, not anonymised (Art. 4(5) GDPR). The confirm saves no mapping when the chosen header row looks like a data row (a date, an `@` or five or more digits in a cell); hashes are never served, logged or exported; rotating the derived key makes every stored hash unlinkable. It stays in this class because it can't be linked to a person or participation. The runtime role writes it directly (SELECT, INSERT, UPDATE; no DELETE; not audited, a cache of hashes): the one project-data table written outside a database function), `project_template_pin` (which template versions a project pinned, by which staff user, Slice 2), `project_config_override` (override versions: Agentur-scoped settings with source codes, the confirming staff id and date, approved relaxations with rule id, reason code, approving staff id and date; project-wide, no participant data; append-only, PR 2d-1), `config_relaxation_request` (relaxation requests: rule id, controlled reason code, status, requesting and deciding staff ids and dates; project-wide, no participant data, PR 2d-2) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q58): retained while active or unsettled; after closure until the later of the end of the 3rd calendar year after closure and the end of the 4th calendar year after the later BA/§110 final settlement date; a never-activated draft without participants, never submitted externally: 1 year after its last activity. At expiry membership links and actor references are deleted or pseudonymised per the audit policy and identifying free text deleted; accounting, payroll, contract and tax records keep their own classes |
-| `staff_account` | `staff_user` (name, email, `may_create_projects`; from Slice 3 the bound OIDC identity `oidc_issuer`/`oidc_subject` and `deactivated_at`; the flat role is gone, PR 3c), `staff_org_role` (the org role, its region, who granted it when; `internal`; a revoked role's row is deleted, its event stays; Slice 3, PR 3c) | deactivate and pseudonymise, never delete (Q59, assumed) |
+| `staff_account` | `staff_user` (name, email, `may_create_projects`; from Slice 3 the bound OIDC identity `oidc_issuer`/`oidc_subject` and `deactivated_at`; the flat role is gone, PR 3c), `staff_org_role` (current org-role grants: role, region, who granted it when; `internal`; revocation or account deactivation deletes the row while the event preserves role, region and reason; Slice 3, PR 3c/Q131) | deactivate and pseudonymise the account, never delete it (Q59, assumed); executable period remains `unset` |
 | `access_credential` (Slice 3, PR 3b) | `staff_session` (the SHA-256 of a session token, never the token; the staff user, start, expiry, end and end reason; `internal`) | deleted, or stripped of the hash, 30 days after the session's end or expiry; a legal hold never keeps a secret usable (Q122, assumed). Activation codes, one-time challenges and participant sessions join from PR 3d/3e |
 | `participation_record` | `participation`, `participant_assignment` (which consultant a participation is assigned to, by whom and when, how it ended; ids and codes, `internal`, closed, never deleted; Slice 3, PR 3c), `participant_identity` (Personalnummer, last and first name, birth date; Slice 2, PR 2f), `participation_dsv_amendment` (DSV amendment metadata: kind, date fully executed, old and new effective dates, the confirming staff id and instant, the controlled original location, an optional document number; no free text; immutable; part of the evidence set, round 32 D3; Slice 2, PR 2h-3), `ba_reporting_task` (BA reporting tasks: kind, the date reported on, status; Slice 2, PR 2h-3), `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or responses, round 17; evidence records get their own class in Slice 4b) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q77/Q105): non-signer without a fully executed DSV or funded §110 participation 90 calendar days after `withdrawnOn` (unless a legal hold or documented dispute); fully executed DSV without TG entry, end of the 3rd calendar year after cancellation or contractual end; TG participant, end of the 3rd calendar year after exit; BA-funded, the minimum evidence set until the end of the 4th calendar year after the later of `kugFinalSettlementDate`/`measure110SettlementDate`, never while one is missing |
-| `audit_log` | `audit_event`, `staff_audit_event` (staff logins, logouts, refused logins and identity bindings: staff ids, codes and the login method; never a claimed email, token or claim; no `project_id`, `internal`; Slice 3, PR 3b) | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
+| `audit_log` | `audit_event`, `staff_audit_event` (staff authentication and administration history: staff ids, codes and counts; account, org-role and region changes; removed org roles preserve role, region and reason; never a name, email, claimed identity, token or claim; no `project_id`, `internal`; Slice 3, PR 3b/3c) | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
 | `personnel_file` (Slice 2, PR 2f) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate` | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
 | `reference_data` | `region` (code and name of a Niederlassung; Slice 3, PR 3c), `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`) | no personal data; never touched by the retention job |
 
@@ -371,10 +375,12 @@ Implementation:
       token, cookie, authorization code, claim or email reaches a log line, an error or a URL.
   - **As built (Slice 3, PR 3c):** accounts are created and deactivated only by a global admin
     (`/admin/staff`); deactivation ends the account's sessions at once (`end_reason`
-    `deactivated`), with its memberships and assignments, and is refused for a project's last
-    active PL. The staff audit trail adds `staff_account_created`, `staff_account_changed` (the
+    `deactivated`), removes its org roles and memberships, closes its assignments, and is refused
+    for a project's last active PL. The staff audit trail adds `staff_account_created`,
+    `staff_account_changed` (the
     changed keys, never the name or email), `staff_account_deactivated` (counts), `org_role_granted`
-    and `org_role_revoked` (role and region), `region_created` and `region_changed` (the region's
+    and `org_role_revoked` (role and region; deactivation also records `account_deactivated`),
+    `region_created` and `region_changed` (the region's
     id). A login may return to `/admin` pages too.
 - **Participants**:
   - First access: a personal activation code, generated when the PL issues it: a printed

@@ -51,8 +51,9 @@ Status: approved 2026-10-20 ([round 36](../decisions/2026-10-20-answers-round-36
   `staffSubjectOf` loads the open ones into `assignedParticipationIds`. Back office needs no
   assignment: "assigned back office" (Q118) is a back-office member of the project.
 - D11. **Deactivating a staff account** (global admin): refused while they are the last active PL
-  of a project; ends their sessions, memberships and assignments in one transaction (Q59
-  unchanged: never deleted).
+  of a project; removes org-role grants and memberships and ends sessions and assignments in one
+  transaction. Authority-removing operations serialise and re-check the actor so an active admin
+  survives concurrent mutual changes (Q131). The account remains (Q59 unchanged: never deleted).
 
 **Activation codes (rounds 35 and 36)**
 - D12. **Format:** 12 characters of Crockford base32 (no I, L, O, U; about 60 bits), printed
@@ -415,7 +416,9 @@ done in the roadmap.
   ends their assignments; all audited.
 - Assignments: only to project consultants; a consultant lists and reads exactly their assigned
   participations (existing scope tests extended); unassigning removes access at the next request.
-- Deactivation ends sessions, memberships and assignments, and is refused for a last PL.
+- Org-role complete-set updates are atomic; admin-authority removal is concurrency-safe.
+- Deactivation removes org-role grants and memberships, ends sessions and assignments, preserves
+  role/region/reason in the audit history, and is refused for a last PL (Q131).
 
 **3d**
 - A code is 12 Crockford characters, generated at issuance, stored only as its keyed hash; no

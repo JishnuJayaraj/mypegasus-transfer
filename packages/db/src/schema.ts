@@ -862,7 +862,8 @@ export const staffAuditEvent = pgTable(
     index("staff_audit_event_subject_seq_idx").on(t.subjectStaffUserId, t.seq),
     // A login, logout or binding is the user's own; a refusal has no actor, an account only
     // where one was matched, and its code. An account or org-role event names the acting admin
-    // and the account; a region event the admin and, in its details, the region. The values
+    // and the account; a deactivation-driven org-role revocation has `account_deactivated`; a
+    // region event names the admin and, in its details, the region. The values
     // added with the administration events are compared as text (ADR-0002, migrations). A null
     // (a missing subject or region) fails the check.
     check(
@@ -876,6 +877,9 @@ export const staffAuditEvent = pgTable(
         when ${t.eventType}::text in ('region_created', 'region_changed') then ${t.actorStaffUserId} is not null
           and ${t.subjectStaffUserId} is null and ${t.reasonCode} is null
           and jsonb_typeof(${t.details} -> 'regionId') = 'string'
+        when ${t.eventType}::text = 'org_role_revoked' then ${t.actorStaffUserId} is not null
+          and ${t.subjectStaffUserId} is not null
+          and (${t.reasonCode} is null or ${t.reasonCode} = 'account_deactivated')
         else ${t.actorStaffUserId} is not null and ${t.subjectStaffUserId} is not null
           and ${t.reasonCode} is null
       end, false)`,

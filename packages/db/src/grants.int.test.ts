@@ -126,6 +126,7 @@ const statusFunctions = [
   "deactivate_staff_user",
   "grant_org_role",
   "revoke_org_role",
+  "set_org_roles",
   "add_project_member",
   "remove_project_member",
   "assign_participations",
@@ -158,6 +159,7 @@ const helpers = [
   "region_code_valid",
   "staff_email_valid",
   "lock_projects_of_staff",
+  "lock_admin_survivorship",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

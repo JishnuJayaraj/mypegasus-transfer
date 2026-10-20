@@ -348,6 +348,9 @@ describe("staff administration (Q126)", () => {
       StaffAccount,
     );
     const clara = await login(app, id);
+    await send("PUT", `/staff-users/${id}/org-roles`, as(admin), {
+      orgRoles: [{ role: "regional_admin", regionId: seedRegionIds.nord }],
+    });
     await send("POST", `/projects/${werkNord}/members`, as(projectLead), {
       staffUserId: id,
       role: "consultant",
@@ -356,7 +359,9 @@ describe("staff administration (Q126)", () => {
     expect((await assign([a!], id)).status).toBe(200);
     expect((await get(`/participations/${a}`, clara)).status).toBe(200);
     const res = await send("POST", `/staff-users/${id}/deactivation`, as(admin));
-    expect((await readJson(res, StaffAccount)).deactivatedAt).not.toBeNull();
+    const deactivated = await readJson(res, StaffAccount);
+    expect(deactivated.deactivatedAt).not.toBeNull();
+    expect(deactivated.orgRoles).toEqual([]);
     await expectProblem(await get("/me", clara), 401, "unauthenticated");
     const team = await readJson(
       await get(`/projects/${werkNord}/members`, as(projectLead)),
