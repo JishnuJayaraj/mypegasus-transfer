@@ -77,6 +77,31 @@ generator then. No action now.
 - **Logs:** the request line has no query string, so neither the authorization code nor `state`
   reaches it; a failed callback logs the error's name, code and stack frames only.
 
+## Note 2026-10-20 (Slice 3, PR 3c): administration, teams, assignments
+
+- **New routes:** `GET/POST /regions`, `PATCH /regions/{id}`; `GET/POST /staff-users` (cursor
+  pagination), `PATCH /staff-users/{id}`, `POST /staff-users/{id}/deactivation` (an empty strict
+  body), `PUT /staff-users/{id}/org-roles` (the complete set; the server grants and revokes the
+  difference in one transaction); `GET /staff-directory?search=` (id and name of active staff,
+  at most 20); `GET/POST /projects/{id}/members`, `DELETE /projects/{id}/members/{staffUserId}/{role}`;
+  `POST /projects/{id}/assignments` (1–500 distinct participations, all or nothing),
+  `DELETE /participations/{id}/assignments/{staffUserId}`. `regionId` on project create, update
+  and the `Project` schema; `consultants` in participant list items; `assignments` and
+  `capabilities.assignParticipations` in the detail; `capabilities.setProjectRegion` in the
+  project configuration; `ProjectTeam.capabilities` (`manageMembers`, `addReplacementLead`,
+  `assignParticipations`). `GET /me` and `StaffUser` carry `mayCreateProjects` and `orgRoles`
+  instead of the flat `role`; the dev switcher's `DevStaffUser` a `role` label.
+- **Order:** the administration routes check the global admin first (403 for everyone else, also
+  for an unknown id), then the resource (404). Team and assignment routes keep the order above:
+  visibility 404, operation 403, then the refusals.
+- **Problem codes (422 unless noted):** `region_required`, `region_not_found`,
+  `region_code_taken` (`/code`), `region_unchanged`, `email_taken` (`/email`),
+  `staff_user_unchanged`, `account_deactivated`, `own_account`, `last_project_lead`,
+  `org_role_exists`, `org_role_not_found`, `membership_exists`, `unknown_account` and
+  `not_consultant` (`/staffUserId`), `participation_not_found` (`/participationIds`); an unknown
+  region, account, membership or assignment in the path is a 404; `region_scope` and
+  `duplicate_org_role` are 400 validation codes.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

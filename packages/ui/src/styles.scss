@@ -29,6 +29,9 @@
 @use "@carbon/react/scss/components/notification";
 @use "@carbon/react/scss/components/loading";
 @use "@carbon/react/scss/components/stack";
+@use "@carbon/react/scss/components/tabs";
+@use "@carbon/react/scss/components/tag";
+@use "@carbon/react/scss/components/checkbox";
 
 :root {
   @include theme.theme();

@@ -85,6 +85,8 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         activateProject: true,
         migrateTemplate: true,
         importParticipations: true,
+        // Q126: the PL changes the region while draft.
+        setProjectRegion: true,
       },
     });
   });
@@ -103,6 +105,8 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         activateProject: false,
         migrateTemplate: false,
         importParticipations: false,
+        // Q126: only the global admin changes the region besides the PL.
+        setProjectRegion: user === "admin",
       });
     },
   );
@@ -122,6 +126,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       activateProject: true,
       migrateTemplate: true,
       importParticipations: true,
+      setProjectRegion: true,
     });
     const elsewhere = await readJson(await get(lagerSued, "consultant"), ProjectConfig);
     expect(elsewhere.capabilities).toEqual({
@@ -132,6 +137,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       activateProject: false,
       migrateTemplate: false,
       importParticipations: false,
+      setProjectRegion: false,
     });
     await expectProblem(
       await pin(lagerSued, { agenturKey: "beispielstadt-sued" }, "consultant"),
@@ -264,6 +270,8 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
       activateProject: false,
       migrateTemplate: true,
       importParticipations: true,
+      // Active: the PL no longer changes the region (Q126).
+      setProjectRegion: false,
     });
     expect(
       await codes(await pin(lagerSued, { agenturKey: "beispielstadt-sued", projectAgentur: true })),

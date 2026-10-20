@@ -233,6 +233,9 @@ Roles and grants:
 - Slice 3 (PR 3b): `transfer_app` has `SELECT` on `staff_session` and no privilege on
   `staff_audit_event`; staff sessions, identity bindings and refused logins are written only by
   their functions (`0035_staff_session_functions.sql`, below).
+- Slice 3 (PR 3c): `transfer_app` has `SELECT` on `region`, `staff_org_role` and
+  `participant_assignment` and writes none of them, nor `staff_user` or `project_membership`;
+  their functions do (`0037_team_and_org_functions.sql`, below).
 
 Schema:
 - **Data catalog** (`packages/db/src/data-catalog.ts`): every table has a `dataClass`, a
@@ -303,6 +306,54 @@ Functions:
     every end; `staff_audit_event` holds the event shape (a refusal has no actor; every other event
     is the actor's own), codes, ids and the details pattern of `audit_event`. `staff_user` keeps
     `(oidc_issuer, oidc_subject)` unique and complete, and one account per `lower(email)`.
+
+- **Org model (0036, 0037; Slice 3, PR 3c, Q62, Q126):** the flat `staff_user.role` is gone.
+  0036 maps `project_lead` to `staff_user.may_create_projects` and `admin` to a global
+  `staff_org_role` row (`granted_by` null only for these); flat regional roles get none (no region
+  is known). `staff_org_role` holds `admin` without a region and `regional_admin` /
+  `regional_operations_manager` with one (a `CHECK`), unique per account, role and region (nulls
+  not distinct). `project.region_id` references `region` (code `^[A-Z0-9]([A-Z0-9-]{0,18}[A-Z0-9])?$`,
+  unique; a trimmed name). `participant_assignment` is of its participation's project (composite
+  FK), one open row per participation and consultant (partial unique index), closed with
+  `ended_by`, `ended_at`, `end_reason` (`unassigned`, `consultant_removed`, `account_deactivated`),
+  never deleted. `staff_user` holds a trimmed name and an address with one `@`.
+  - Staff administration, by the global admin only (an active account holding `admin`, checked
+    by the internal `assert_global_admin`), each with its `staff_audit_event` (actor, subject, ids
+    and codes; never a name or email): `create_region` / `update_region` (`region_created`,
+    `region_changed`; `region_code_taken`, `region_unchanged`, `region_not_found`),
+    `create_staff_user` / `update_staff_user` (`staff_account_created`, `staff_account_changed`
+    with the changed keys and the flag's value; `email_taken` from the case-insensitive unique
+    index, `staff_user_unchanged`, `account_deactivated`, `unknown_account`), `grant_org_role` /
+    `revoke_org_role` (`org_role_granted` / `org_role_revoked` with role and region;
+    `org_role_exists`, `org_role_not_found`, `region_not_found`, `own_account` for the admin's own
+    admin role). Their parameters are typed values, the actor's staff id and the request id.
+  - `deactivate_staff_user(id, actor, request_id)`: never the actor's own account
+    (`own_account`). It takes the exclusive lock of every project the account is a member of or
+    assigned in (id order), then locks the account `FOR UPDATE` (`start_staff_session` holds it
+    `FOR SHARE`, the team functions too), takes the locks of anything added before that, and
+    refuses `last_project_lead` while the account is a project's only active PL. In the same
+    transaction it ends the live sessions (`deactivated`), closes the open assignments
+    (`participant_unassigned`, `account_deactivated`), deletes the memberships
+    (`project_member_removed`, `account_deactivated`), sets `deactivated_at` and writes
+    `staff_account_deactivated` with the counts.
+  - Teams, under the exclusive project lock, with `audit_context` (a staff user, never assisted
+    mode): `add_project_member` (the project's PL any role; a global admin only `project_lead` for
+    someone else, `own_account`; an active account, `membership_exists`), `remove_project_member`
+    (the PL; `membership_not_found`, `last_project_lead`; removing `consultant` closes that
+    person's assignments in the project as `consultant_removed`), `assign_participations` (the
+    PL; 1–500 distinct participations of the project, `participation_not_found`; only to a member
+    holding `consultant`, `not_consultant`; open ones stay, returns the count of new ones) and
+    `unassign_participation` (the PL; `assignment_not_found`). Events: `project_member_added`,
+    `project_member_removed`, `participant_assigned`, `participant_unassigned` (staff id, role or
+    assignment id, an end reason as the reason code); `record_audit_event` refuses the four.
+  - `create_project` is replaced with `p_region_id` (`region_required`, `region_not_found`; the
+    actor's `may_create_projects`), `update_project` with `p_region_id` (`region_not_found`; after
+    activation only a global admin changes it, else `project_not_draft`).
+  - `staff_audit_event_shape` (replaced in 0036, the new values compared as text): a refusal stays
+    actor-less and email-free; logins, logouts and bindings stay the actor's own; account and
+    org-role events have an actor and a subject; region events an actor, no subject and the
+    region's id in `details`. The case is wrapped in `coalesce(…, false)`, so a missing column
+    fails the check instead of passing as null.
 
 Migrations:
 - A value added with `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the

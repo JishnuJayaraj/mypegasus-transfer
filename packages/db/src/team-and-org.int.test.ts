@@ -449,7 +449,7 @@ describe("project members (Q61, Q126)", () => {
     await assign([elsewhere], { projectId: verwaltung });
     await remove({ staffUserId: consultant, role: "consultant" });
     expect(await openAssignments()).toEqual([
-      { participation_id: other, staff_user_id: consultant },
+      { participation_id: elsewhere, staff_user_id: consultant },
     ]);
     expect(
       (await projectEvents(["participant_unassigned"])).map((e) => [
