@@ -1,7 +1,7 @@
 # Decisions — 2026-10-17, round 30 (Q102 and Q103: proposed answer package, awaiting confirmation)
 
 **Status record, not a confirmation.** Proposed answers to Q102 and Q103 of the
-[Slice 2 plan](../plans/slice-2.md) were prepared on 2026-10-17. They are **not confirmed**:
+[Slice 2 plan](../plans/archive/slice-2.md) were prepared on 2026-10-17. They are **not confirmed**:
 
 | Question | Must be confirmed by | Status | Gate |
 |---|---|---|---|
@@ -101,7 +101,7 @@ this record, which had claimed the confirmation.
 
 ## Where the proposed answers would differ from the plan's fail-safe readings
 
-**Not applied.** These are proposed amendments to the [Slice 2 plan](../plans/slice-2.md) for the
+**Not applied.** These are proposed amendments to the [Slice 2 plan](../plans/archive/slice-2.md) for the
 owners' review. The plan, `open-questions.md` and the domain docs keep the current fail-safe
 readings until a later round records the confirmation and applies them.
 

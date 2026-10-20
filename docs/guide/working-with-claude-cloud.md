@@ -113,6 +113,6 @@ or data protection — those always get level 1–2 and a careful review.
    docs/open-questions.md. Propose changes to the ADRs. Don't write code."*
    → Fix the docs, answer what you can, ask your PLs for the regional table.
 2. **Session 2 (Plan mode):** *"Install mattpocock/skills into this repo and run the setup
-   (issues as local markdown in docs/issues/). Then plan Slice 0 into docs/plans/slice-0.md."*
-3. **Session 3 (Default mode):** *"Implement docs/plans/slice-0.md."* — approve commands, watch
+   (issues as local markdown in docs/issues/). Then plan Slice 0 into docs/plans/archive/slice-0.md."*
+3. **Session 3 (Default mode):** *"Implement docs/plans/archive/slice-0.md."* — approve commands, watch
    what it does, add safe ones to the allowlist. Merge when CI is green.

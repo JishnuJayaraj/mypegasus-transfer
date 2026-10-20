@@ -1,6 +1,6 @@
 # Decisions — 2026-10-16, round 22 (Slice 2 planning)
 
-The product owner's review of [the Slice 2 plan](../plans/slice-2.md) (PR #24): seven required
+The product owner's review of [the Slice 2 plan](../plans/archive/slice-2.md) (PR #24): seven required
 corrections, the decisions D1–D11, the dependencies and the disposition of Q98–Q107. Where they
 differ from earlier rounds, round 22 wins. The corrections are carried into the plan and
 `open-questions.md` in the same PR.
