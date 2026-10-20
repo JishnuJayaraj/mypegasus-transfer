@@ -6,7 +6,7 @@ import { operationFailures } from "./operations";
 
 const code = (value: string) => `\`${value}\``;
 const list = (values: readonly string[]) => (values.length ? values.map(code).join(", ") : "—");
-const who = (names: readonly string[]) => (names.length ? names.join(", ") : "nobody");
+const who = (names: readonly string[]) => names.join(", ");
 const from = (e: Edge) => (e.from ? code(e.from) : "*(create)*");
 const arrow = (e: Edge) => `${e.track} ${from(e)} → ${code(e.to)}`;
 const table = (head: string, rows: string[]) => {

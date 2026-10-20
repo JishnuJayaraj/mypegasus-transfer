@@ -43,5 +43,7 @@ it("renders every edge, guard and operation (docs/domain/generated/lifecycle-tra
     "| main | `informed` | `ta_completed` | user | manual | PL | `ta_completion` | ta_only |",
   );
   expect(doc).toContain("| `ta_completion` | main `informed` → `ta_completed` |");
+  // Every edge and operation names who may take it: no table cell is empty.
+  expect(doc).not.toMatch(/\| *\|/);
   expect(doc.endsWith("\n")).toBe(true);
 });

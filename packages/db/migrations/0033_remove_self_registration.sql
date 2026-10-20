@@ -1,5 +1,5 @@
--- Hand-written (round 35, process-and-lifecycle.md): `self_registered`, `rejected` and the anonymous
--- self-registration edge kind leave the lifecycle core. Postgres can't drop an enum value, so both
+-- Hand-written (process-and-lifecycle.md, Main status): `self_registered`, `rejected` and the
+-- anonymous self-registration edge kind leave the lifecycle core. Postgres can't drop an enum value, so both
 -- types are recreated: every object that names them (the columns, the CHECKs, the early-exit
 -- trigger, `end_reason_fits`) is dropped and recreated unchanged in behaviour, and the functions
 -- that compared a status with 'rejected' are replaced with the same signatures. Refuses to run on a
@@ -113,8 +113,8 @@ BEGIN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
   r := public.lock_participation(p_id);
-  -- The draft gate (D9, R1, Q98): no transition of a draft project, manual or system. The shared
-  -- project lock taken above serialises this with activate_project.
+  -- The draft gate (process-and-lifecycle.md, Dates): no transition of a draft project, manual or
+  -- system. The shared project lock taken above serialises this with activate_project.
   IF (SELECT status FROM public.project WHERE id = r.project_id) <> 'active' THEN
     RAISE EXCEPTION 'project_not_active';
   END IF;
@@ -138,8 +138,9 @@ BEGIN
     RAISE EXCEPTION 'invalid_transition';
   END IF;
 
-  -- Track activity (plan 5.3): the tracks move while `informed` (DSV only in ta_tg); in the TG
-  -- with an approved exception, profiling moves forward or is declined (Q74).
+  -- Track activity (process-and-lifecycle.md, Lifecycle model): the tracks move while `informed`
+  -- (DSV only in ta_tg); in the TG with an approved exception, profiling moves forward or is
+  -- declined (Q74).
   IF v_track = 'dsv' AND NOT (r.status = 'informed' AND v_type = 'ta_tg')
      OR v_track = 'profiling' AND NOT (r.status = 'informed'
        OR r.status = 'active_in_tg' AND v_request.status IS NOT DISTINCT FROM 'approved' AND p_expected_from <> 'profiling_declined') THEN
@@ -165,8 +166,8 @@ BEGIN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
 
-  -- Round 18: a date for every dependent column and for DSV expiry (deadline + 1), and none where
-  -- it means nothing. Its value is bounded by the status service.
+  -- Effective dates (process-and-lifecycle.md, Rules): a date for every dependent column and for
+  -- DSV expiry (deadline + 1), and none where it means nothing. The status service bounds it.
   IF p_to IN ('active_in_tg', 'exited', 'withdrawn', 'profiling_done', 'dsv_expired') THEN
     IF p_effective_date IS NULL THEN
       RAISE EXCEPTION 'effective_date_required';
@@ -174,7 +175,8 @@ BEGIN
   ELSIF p_effective_date IS NOT NULL THEN
     RAISE EXCEPTION 'effective_date_not_allowed';
   END IF;
-  -- The automatic entry kinds record the run time of their snapshot (round 9), only they.
+  -- The automatic entry kinds record the run time of their snapshot (process-and-lifecycle.md,
+  -- TG entry guard), only they.
   IF (p_scheduled_at IS NULL) = coalesce(p_entry_kind IN ('scheduled_entry', 'scheduled_entry_catchup'), false) THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
@@ -218,8 +220,8 @@ BEGIN
       'offerDeadline', p_offer_deadline)),
     p_entry_kind IS NOT DISTINCT FROM 'reconciliation');
 
-  -- Supersede a pending request that no longer applies (round 10; system-only, round 12), as
-  -- system with the same correlation ids (round 16).
+  -- Supersede a pending request that no longer applies (process-and-lifecycle.md, Profiling
+  -- track), as system with the same correlation ids.
   IF v_request.status IS NOT DISTINCT FROM 'requested' THEN
     v_stale := CASE
       WHEN r.status IN ('withdrawn', 'ta_completed', 'exited') THEN 'participation_closed'
@@ -266,7 +268,7 @@ BEGIN
      OR (p_amendment_kind IS NULL AND p_amendment_document_reference IS NOT NULL) THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
-  -- The shared project lock, then the row (D3): a wave edit never interleaves.
+  -- The shared project lock, then the row (ADR-0002): a wave edit never interleaves.
   r := public.lock_participation(p_id);
   IF r.status_version <> p_expected_version THEN
     RAISE EXCEPTION 'stale_status';
@@ -284,7 +286,7 @@ BEGIN
   IF r.dsv_status = 'dsv_offered' THEN
     RAISE EXCEPTION 'dsv_offer_open';
   END IF;
-  -- An amendment exactly once the DSV is signed (R34, round 33).
+  -- An amendment exactly once the DSV is signed (process-and-lifecycle.md, TG start and end).
   IF r.dsv_status = 'dsv_signed' AND p_amendment_kind IS NULL THEN
     RAISE EXCEPTION 'dsv_amendment_required';
   END IF;
@@ -303,7 +305,7 @@ BEGIN
   IF v_start_changed AND r.status = 'active_in_tg' THEN
     RAISE EXCEPTION 'entered';
   END IF;
-  -- A new start's amendment when the start changes, else an extension's (R41).
+  -- A new start's amendment when the start changes, else an extension's (same section).
   v_kind := CASE WHEN r.dsv_status <> 'dsv_signed' THEN NULL
     WHEN v_start_changed THEN 'new_start' ELSE 'extension' END;
   IF p_amendment_kind IS DISTINCT FROM v_kind THEN
