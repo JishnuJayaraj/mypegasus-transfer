@@ -3,7 +3,7 @@
 The product owner reviewed how participants first get into the portal and replaced the
 project-wide QR registration (Q31) with personal activation codes. It's a pilot decision, made in
 the same placeholder roles as rounds 32–34: no external Legal, BA or DPO confirmation is involved,
-and anything here can be revisited. The owner answered the follow-up questions Q112–Q119 the same
+and anything here can be revisited. The owner answered the follow-up questions Q112–Q120 the same
 day (below).
 
 ## Why the QR goes
@@ -26,12 +26,14 @@ day (below).
   so the code can't be printed later. It is high-entropy, single-use, valid for a limited time
   from issuance and locked after a few failed attempts (Q118). Issuing a new code revokes the
   old one.
-- **Two ways to deliver it:**
+- **Three ways to issue it; the PL chooses per participant (Q120):**
   - an **activation letter** to the imported Anschrift (the address is a required import target
     unless relaxed);
-  - a **printed sheet** handed out at the info event.
+  - a **printed sheet** handed out at the info event;
+  - **in person, sent to a private email or mobile** the person gives after the PL checked their
+    ID.
 
-  Both carry the code and a QR of the personal activation link. The code sits in the link's
+  The letter and the sheet carry the code and a QR of the personal activation link. The code sits in the link's
   fragment (`#…`), so it never reaches server logs, proxies or `Referer` headers. The page posts
   it and removes it from the address bar.
 - **Activation:** the participant opens the link (or types the code), passes the knowledge check
@@ -86,3 +88,8 @@ day (below).
 - **Q112, re-import:** participant-maintained data wins. A re-import reports differences but
   never overwrites the private email, mobile or other contact data the participant manages.
   Employer-managed work email follows the normal import rules and stays unusable for login.
+- **Q120, in-person issuance:** yes, as a third channel next to letter and sheet; the PL picks
+  whatever fits. After an ID check the PL sends the activation link to the private email or
+  mobile the person gives. The person opens it on their own device, passes the knowledge check
+  and gives consent themselves; opening the link also verifies the channel. The PL never sees
+  the code, and the issuance is audited with the channel it went to, never the code.

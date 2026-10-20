@@ -335,9 +335,11 @@ Implementation:
 - **Staff**: Entra ID via OIDC, MFA enforced by Conditional Access. Roles and assignments are
   managed in the app. Sessions last 8 hours, server-side, in httpOnly SameSite cookies.
 - **Participants**:
-  - First access: a personal activation code, generated when the PL issues it (a printed
-    letter to the imported address or a sheet at the info event, with a QR of the personal
-    link; the code in the link's fragment, never in a URL the server logs). It is single-use,
+  - First access: a personal activation code, generated when the PL issues it: a printed
+    letter to the imported address, a sheet at the info event (both with a QR of the personal
+    link; the code in the link's fragment, never in a URL the server logs), or in person, sent
+    to a private email or mobile the person gives after an ID check, activated on the person's
+    own device; the PL never sees the code (Q120). It is single-use,
     stored only as a keyed hash, valid 30 days from issuance, locked after 5 failed attempts;
     a new issuance revokes the old one. The PL or assigned back office issue it after verifying
     the person; no anonymous or self-service reissue; every issuance is audited

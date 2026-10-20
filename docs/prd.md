@@ -58,7 +58,9 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 ### F3 Activation codes ([round 35](decisions/2026-10-20-answers-round-35.md))
 - Every participation can be issued a personal, single-use activation code: the PL batch-prints
   activation letters to the imported address (posted on normal project postage) or prints a
-  sheet for the info event, each with a QR of the personal link and the Art. 14 notice. The
+  sheet for the info event, each with a QR of the personal link and the Art. 14 notice; or, when
+  meeting the person, sends the activation link to the private email or mobile they give, after
+  an ID check (Q120). The PL chooses what fits per participant. The
   code is generated at printing, valid 30 days. The participant activates with the code and the
   knowledge check (birth date; without one the PL hands it over after an ID check), then
   registers at least one private email or mobile (email and SMS from Slice 3). Activation moves
@@ -66,7 +68,7 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - No anonymous self-registration and no matching. People missing from the employer's list are
   created by the PL and get a code too.
 - The PL sees who has activated and can reissue codes.
-- Decided in round 35 (Q112–Q119); open: Q120 (in-person issuance to email/mobile).
+- Decided in round 35 (Q112–Q120).
 
 ### F4 Communication & appointments
 - Invitations and reminders via email/SMS (adapter; mock in MVP dev).
