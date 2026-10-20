@@ -46,7 +46,7 @@ template a project of either type can't be activated (Q76, Q90).
 - **The project carries no contractual dates** (Slice 2): they live on its entry waves. A
   project is `draft` (setup, import, creation; no post-creation lifecycle transition) until it is
   activated once its blockers are gone, then `active` (Q98).
-- **Draft and active** (Slice 2, PR 2e-1): a draft project takes project data, the Project
+- **Draft and active**: a draft project takes project data, the Project
   Agentur, pins, overrides, waves, import, creation along the creation edge, wave assignment,
   person data and individual dates, but **no post-creation lifecycle transition**, manual or
   system: the status service refuses it (`project_not_active`), the database function refuses it
@@ -56,6 +56,9 @@ template a project of either type can't be activated (Q76, Q90).
   Agentur-submission blockers never block activation; they come back as warnings with their
   Agentur and step (Q91, Q92). Activation is one-way; the type and the Project Agentur are fixed
   from then on (Q98).
+- **Editing a project** (Q98): name and customer change any time; the type only while the project
+  is `draft` and has neither participations nor waves (`project_not_draft`,
+  `project_has_participations`, `project_has_waves`).
 - **TG start and end are per participation**, defaulting from the participation's entry wave (Q18, Q79). TL 407 needs
   both ("voraussichtliche Verweildauer in der beE von/bis").
 - **ASU due date** *(verify, Q1)*: `asuDueDate = max(endDate − 3 months, knowledgeDate + 3 days)`,
@@ -81,17 +84,24 @@ template a project of either type can't be activated (Q76, Q90).
     admission cutoff** starts the following Berlin calendar day (Q77). It **replaces the former
     "signing deadline + 90 days" grace period**.
   - Deadlines are **inclusive**: expiry happens the following day.
-  - **Creating and editing waves** (Slice 2, PR 2b; fail safe until Q101 is answered): only the
+  - **Creating and editing waves** (Q101): only the
     PL, through `create_entry_wave` / `update_entry_wave` under the exclusive project lock, each
-    with one audit event (changed keys and old/new dates, never the name). The dates are ordered
+    with one audit event (changed keys and old/new dates, never the name). The `code` matches
+    `^[A-Za-z0-9_-]{1,20}$` and is unique in the project; the `name` is 1–100 characters
+    (trimmed, no control characters). The dates are ordered
     `signingDeadline ≤ defaultTgStart ≤ latestEntryDate`, `signingDeadline ≤ latestEntryDate`,
     `defaultTgStart ≤ defaultTgEnd`, and the default period is at most twelve months
-    (`defaultTgEnd ≤ addMonths(defaultTgStart, 12) − 1 day`, R25, pending Q102). Once in use: a
+    (`defaultTgEnd ≤ addMonths(defaultTgStart, 12) − 1 day`, Q102). Once in use: a
     `latestEntryDate` is never set before today and never changes once its cutoff has passed; the
     `signingDeadline` doesn't change while first offers of the wave are open; a default TG start
-    that has been reached (`≤ today`, R29) doesn't change, and a new one isn't before today while
+    that has been reached (`≤ today`) doesn't change, and a new one isn't before today while
     participations rely on it; dates are cleared only while the wave has no participation, never
     the last `latestEntryDate` of an active project. Waves aren't deleted.
+  - **Assigning a wave** (`ta_tg` only, PL): while `imported`, `contacted`, `unreachable` or
+    `informed` and the DSV is `not_offered`. A participation with its own `tgStart` or `tgEnd`
+    keeps its wave (`individual_dates_set`, in the domain and the database function), so a wave
+    change never silently changes individual contractual dates. A wave change creates no DSV
+    amendment and no BA reporting task.
 
 ## Project checklist (project-level BA steps) *(provisional, Q16, Q52)*
 
@@ -118,7 +128,11 @@ with profiling** (round 4). So a participation has:
 | **ASU record** | `asu` | not a state machine: `submittedOn`, `channel`, optional `confirmedOn` |
 
 - The tracks start when the main status reaches `informed`. Before that they stay at
-  `not_started` / `not_offered`.
+  `not_started` / `not_offered`. **Track activity** (domain and database function): the tracks
+  move only while the main status is `informed`, the DSV track only in `ta_tg`; while
+  `active_in_tg` with an approved profiling exception, only forward profiling moves and a
+  refusal (`→ profiling_declined`); otherwise, and after any terminal status, a track change is
+  refused (`track_inactive`).
 - Each track has its own transition function in `packages/domain`
   (`canTransition(track, from, to, context)`), and every change of any track goes through the
   same audited status function (see Rules). Every edge with its actors and guards, and the
@@ -126,6 +140,14 @@ with profiling** (round 4). So a participation has:
   [lifecycle transitions table](generated/lifecycle-transitions.md).
 - The UI may show **one derived overall status** (e.g. "DSV unterschrieben, Profiling offen"),
   computed from the main status and both tracks. It is never stored.
+- **Lifecycle flags are derived, never stored** (`lifecycleFlags`, `projectFlags` in the
+  planner; vocabulary `LifecycleFlag` / `ProjectFlag` in `packages/domain/src/lifecycle/enums.ts`).
+  They inform or escalate, never change a status: `tg_start_missed` (`informed`, effective TG
+  start passed), `cutoff_warning`, `cutoff_final_reminder`, the cutoff cases for the PL
+  (`conflict_dsv_signed_profiling_declined`, `dsv_never_offered`,
+  `informed_without_wave_at_cutoff`), and the compliance flags, only while `active_in_tg`:
+  `profiling_declined_after_entry`, `profiling_exception_deadline_missed`. Project flag:
+  `latest_entry_date_missing` (a `ta_tg` project without waves or with a wave lacking one).
 
 ### Main status
 
@@ -228,7 +250,8 @@ stateDiagram-v2
 - Original tracking per document: `originalLocation`, `receivedOn`, `sentToCustomerOn`.
 - **Wave and offer deadline** (Q69, Q79): the DSV can only be offered once the participation
   is assigned to an entry wave. The first offer uses the wave's `signingDeadline`; a re-offer
-  needs its own `offerDeadline` (≤ the wave's `latestEntryDate`, ≤ planned TG start). If neither
+  needs its own `offerDeadline` (≥ today, ≤ the wave's `latestEntryDate`, ≤ planned TG start; see
+  Guards). If neither
   exists, the offer can't be recorded until the PL enters one. `dsv_expired` happens the day
   after.
 - **Withdrawal after `dsv_signed`** *(verify, Q46)*: before TG start, main status → `withdrawn`
@@ -294,8 +317,8 @@ created later:
    start date: the PL performs an **audited reconciliation** (reviewed after the fact by
    regional operations management, Q80).
 3. **A prerequisite actually arose after the planned start:** the PL records a new,
-   contractually valid start date on the participant's page (Slice 2, PR 2h-3): today at the
-   earliest, tomorrow once today's entry run has completed, never after the wave's latest entry
+   contractually valid start date on the participant's page (see "Changing them" under TG
+   sub-status periods): today at the earliest, tomorrow once today's entry run has completed, never after the wave's latest entry
    date; once the DSV is signed with its fully executed amendment; and only as a direct
    transition (the former employment ends exactly the day before, else `ba_review_required` or
    an overlap refused). The derived `tg_start_missed` flag clears, and the next due run may
@@ -397,7 +420,19 @@ automatically.
   columns directly (ADR-0002).
 - Audit events record: actor (`user`, `participant` or `system`), `onBehalfOf` (assisted mode),
   timestamp, which field (`status`, `profilingStatus`, `dsvStatus`), from, to, reason.
-- **Guards** depend on data and configuration. **Documentary and contractual guards are never
+- **Effective dates**: a change records a business date exactly when it leads to `active_in_tg`,
+  `exited`, `withdrawn`, `profiling_done` or `dsv_expired`; any other transition with a date is
+  refused (`effective_date_not_allowed`), one of these without it `effective_date_required`. The
+  status service validates the date after the lock; the database function requires it too.
+  Derived dates must match exactly (`effective_date_mismatch`): TG entry its effective TG start
+  (the caller may omit it), `dsv_expired` the offer deadline + 1, a system cutoff withdrawal the
+  applicable `latestEntryDate` + 1. Staff dates (manual withdrawal, exit, `profiling_done`) may
+  be backdated. No date lies in the future (`effective_date_in_future`); an exit never precedes
+  the entry (`effective_date_before_entry`).
+- **Fail-safe rule**: where the docs don't decide a case, the code takes the safe side: access is
+  denied (`undecided`, naming the open question), an automatic transition doesn't run, and an
+  operational exception is flagged to the PL rather than resolved (e.g. Q85, Q86).
+- **Guards** (defined below) depend on data and configuration. **Documentary and contractual guards are never
   overridable** (Q71): signed DSV scan and receiver, signed TL 407, fully executed DSV, ASU
   proof, cancellation after a signed DSV, TA completion evidence. The profiling exception is
   the only built-in alternative to a guard. A late admission after the cutoff needs a new
@@ -407,12 +442,32 @@ automatically.
   exits; back office DSV offered/signed/declined. Participants trigger no transition in the
   MVP: a portal declaration is evidence that authorised staff verify and record. The "Who"
   column of the [transitions table](generated/lifecycle-transitions.md) is generated from
-  `mayPerformTransition` / `mayPerformOperation` (PR 1d-2).
+  `mayPerformTransition` / `mayPerformOperation`.
 - **Late joiners** come back along the explicit return arrows (`unreachable → contacted`,
   `profiling_declined → profiling_accepted`, `dsv_declined/dsv_expired → dsv_offered`) until
   the admission cutoff (Q77). Terminal states are final.
 - **System transitions** (`dsv_expired`, `active_in_tg`, cutoff withdrawals) run in an
   idempotent nightly job with the `system` actor, using the `Clock` adapter.
+
+### Guards
+
+The pass conditions of the guards in the [transitions table](generated/lifecycle-transitions.md)
+(`canTransition`; none overridable, Q71). A dated fact counts only from its `validOn`; an absent
+fact is false. "By the TG start" means valid on the effective TG start (own, else the wave's);
+for a `system` entry the fact must also be recorded before the scheduled run (snapshot rule).
+
+| Guard | Passes when |
+|---|---|
+| `dsv_fully_executed` | DSV track `dsv_signed` **and** `dsvFullyExecuted` by the TG start (Q97) |
+| `asu_registered_with_proof` | ASU registration with proof by the TG start |
+| `profiling_done_or_approved_exception` | `profilingDone` or an approved profiling exception by the TG start |
+| `tg_start_date` | an effective TG start exists; `scheduled_entry`: today is the TG start; `scheduled_entry_catchup`: the TG start has passed; `reconciliation`: today is after the TG start, or on it once that day's run completed |
+| `ta_completion` | `taMeasuresComplete` valid today and the PL's confirmation |
+| `withdrawal_after_dsv_signed` | DSV not `dsv_signed`; else a cancellation signed by all three parties valid today, the PL's confirmation and a `user` actor (the system never withdraws a signed DSV) |
+| `before_cutoff` | no wave, or a wave without `latestEntryDate`, or today ≤ `latestEntryDate` |
+| `entry_wave_assigned` | the participation has a wave |
+| `offer_deadline_valid` | the deadline (an explicit `offerDeadline`; for a first offer, else the wave's `signingDeadline`) exists, today ≤ deadline ≤ `latestEntryDate` and ≤ the effective TG start; fails without a `latestEntryDate` or an effective TG start |
+| `tl407_signed`, `dsv_generated`, `dsv_scan_received` | the fact is valid today |
 
 ### Exit and withdrawal reasons *(provisional, Q34)*
 
@@ -441,32 +496,51 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 - Visibility: back office sees the type. PL and profiler see only "abwesend" with dates.
 - Transfer-KuG is limited to 12 months per person: remind the PL before `max_duration_reached`.
 - **What `tgStart` and `tgEnd` mean** (Q102, accepted sample-data pilot decision in
-  [round 32](../decisions/2026-10-19-answers-round-32.md); PR 2h is unblocked):
+  [round 32](../decisions/2026-10-19-answers-round-32.md)):
   the inclusive contractual dates of employment with the Transfergesellschaft under the DSV. An
   earlier actual departure is `exitDate`. They are **not** the Transfer-KuG entitlement or funding
   period: with staged entry into an existing beE only its remaining term is funded, and the app
   never derives, shows or promises entitlement ("twelve months from `tgStart`" is never shown).
   DSV periods over twelve months are **not supported by the MVP** (not unlawful: §111 SGB III limits
   Transfer-KuG, not the contract) and are handled outside the app with their records.
-- **Changing them** (Slice 2 plan 5.7; pilot decision, Q102): only the project's PL. A missed start gets a genuinely new
-  start date. Once the DSV is signed it needs a fully executed DSV amendment (all original parties
-  by default); for an unsigned DSV the later offer carries the new date
-  ([round 33](../decisions/2026-10-19-answers-round-33.md), narrowing round 32 L6). The transition
-  from the former employment must be direct: it ends exactly the day before the new start. With a
-  gap it is `ba_review_required` for a recorded BA/legal determination, never an ordinary late
-  entry; an overlap is refused. A new start is never in the past,
-  and not today once today's entry run has completed. `tgEnd` is never set in the past; after
-  entry it only **extends**, by an amendment fully executed before the current end; a shortening
-  is an early termination through the cancellation/exit workflow (§623 BGB: paper form). Past-date
-  corrections only through the audited Slice 7 correction/reconciliation process.
-- **BA reporting** (round 32, B3; pilot decision, Q102): every contractual date change creates a durable reporting task
+- **Changing them** (Q102, Q110, Q111): only the project's PL (`PUT /participations/{id}/dates`:
+  both own dates, `null` = back to the wave default, with the `statusVersion` seen). First the
+  preconditions: a `ta_tg` project, a wave with a `latestEntryDate`, a non-terminal participation
+  (`participation_closed`) and no open DSV offer (`dsv_offer_open`: the paper carries the old
+  dates). Every rule applies to the **effective** dates (own, else the wave's): no effective
+  change is `dates_unchanged`; clearing a date to a wave without that default is `start_missing`
+  / `end_missing`. All refusals are listed at once.
+  - **New start**: fixed once entered (`entered`). Never in the past, not today once today's entry
+    run has completed, never after the wave's `latestEntryDate`, never before the participation's
+    own `offerDeadline`. A missed start gets a genuinely new date. The transition from the former
+    employment must be direct: `oldEmploymentEndDate` is exactly the day before the new start.
+    With a gap it is `ba_review_required` for a recorded BA/legal determination, never an
+    ordinary late entry; an overlap is refused (`employment_overlap`); without a recorded
+    `oldEmploymentEndDate` it is refused (`old_employment_end_unknown`). The date change never
+    changes `oldEmploymentEndDate` (a re-import does).
+  - **New end**: never in the past. Once the DSV is signed, before entry too, it only **extends**
+    (`end_not_extension`); a shortening is an early termination through the cancellation/exit
+    workflow (§623 BGB: paper form). Start ≤ end and at most twelve months
+    (`end ≤ addMonths(start, 12) − 1 day`).
+  - **DSV amendment**: required exactly when the DSV is `dsv_signed`
+    (`dsv_amendment_required`), refused before (`amendment_not_allowed`; the later offer carries
+    the new dates). Kind `new_start` when the start changes (also together with the end), else
+    `extension`. `fullyExecutedOn` (all original parties) is ≤ today, before the new start when
+    the start changes, and ≤ the current `tgEnd` whenever the end changes
+    (`amendment_not_executed_in_time`). The PL confirms the original was inspected, all parties
+    signed and it is retrievable (`amendment_unconfirmed`); the original location is a controlled
+    value (only `paper_personnel_file`, Q110), an optional document number, no free text.
+  - The hint `new_start_needs_ba_review` is derived, never stored: a missed start where every
+    allowed new start would leave a gap after the former employment.
+  - Past-date corrections only through the audited Slice 7 correction/reconciliation process.
+- **BA reporting** (Q102, Q111): every contractual date change creates a durable reporting task
   (`later_entry`, `planned_end_changed`, or `early_exit` for an exit before the contractual end),
   `pending` until reported through the Agentur's channel (Kug 208 for later entries and early
   exits; a changed planned residence before any newly affected month is claimed). Project closure
   and the affected monthly claim are blocked while a required report is pending.
-  **As built in Slice 2 (PR 2h-3):** `set_participation_dates` creates one task per changed
-  effective date (`later_entry` with the new start, `planned_end_changed` with the new end) in
-  the change's own transaction, and a database trigger creates `early_exit` with the exit date
+  `set_participation_dates` creates one task per changed effective date (`later_entry` with the
+  new start, `planned_end_changed` with the new end; a change of both is one `new_start`
+  amendment with two tasks) in the change's own transaction, and a database trigger creates `early_exit` with the exit date
   when a participation exits before its effective `tgEnd` or without one (`exitDate` is the last
   day of employment, Q111 f). Every task starts `pending`; recording `reported` or
   `not_required` comes with the Agentur-submission slice, and a task is never deleted.
@@ -475,8 +549,8 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 
 | Step | Who | Output |
 |---|---|---|
-| Project setup | PL | project type, Project Agentur (KuG-Agentur for `ta_tg`), dates (signing deadline, default TG start/end), regional templates |
-| Import | PL | participations in `imported`; import report with row errors/duplicates |
+| Project setup | PL | name, customer, type, Project Agentur (KuG-Agentur for `ta_tg`), pinned Agentur templates, overrides; in `ta_tg` entry waves with their dates; activation |
+| Import / manual creation | PL | participations in `imported`; import report with row errors, warnings and possible duplicates (see below) |
 | Registration QR | PL → participants | `self_registered` participations, matched manually by the PL |
 | Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
@@ -485,6 +559,63 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 | Profiling | profiler + participant | profiling track, TL 407 (incl. "Anlage" for overflow), signatures |
 | Submission to Agentur | assigned PL | TL 407 submission status and channel per participant |
 | DSV | PL / back office | DSV track, signatures of all three parties, scan, original location |
+
+### Import and manual creation (Q103, Q104)
+
+Both run under the PL's `importParticipations` capability, also in a draft project, and create
+along the creation edge into `imported`. Issues name the row, the target and a code, never a value.
+
+- **Targets**: `personnelNumber`, `lastName`, `firstName` always required; `birthDate`,
+  `oldEmploymentEndDate` (Austrittsdatum) and the address unless the project relaxed
+  `base-import-birthDate`, `base-import-oldEmploymentEndDate` or `base-import-address` (Q75).
+  The address is one unit: `addressStreet`, `addressPostalCode`, `addressCity` and
+  `addressCountry` (from a column or one selection for the whole import, never both:
+  `country_source_conflict`; only Germany, stored `DE`). Optional: `phone`, `mobile`,
+  `privateEmail`, `workEmail` (never used for login). One column per target
+  (`target_mapped_twice`); unmapped columns are dropped.
+- **File**: the format is decided by content, not the file name: a ZIP signature is `.xlsx`,
+  anything else CSV/text; binary content (e.g. `.xls`) is `unsupported_file`. One header row,
+  chosen among the first 20 (no multi-row headers). Limits 5 MB, 5,000 data rows, 50 columns,
+  500 characters per cell; a workbook beyond the ZIP expansion limits is refused. CSV: strict
+  UTF-8 (BOM dropped), else Windows-1252; delimiter `;`, `,` or tab detected from the first 50
+  records; both overridable. XLSX: numeric cells stay marked numeric, date cells become ISO
+  dates (a non-zero time is `date_has_time`).
+- **Row errors**: names ≤ 100, Personalnummer ≤ 50, address parts ≤ 200 characters
+  (`too_long`); no control characters; dates `TT.MM.JJJJ` or date cells, an invalid date is an
+  error even when its rule is relaxed; `birth_date_in_future`; `end_before_birth`; a numeric
+  Personalnummer cell; a Personalnummer in several rows is `duplicate_in_file` on every one.
+  **Warnings**: `age_implausible` (15–67 at the Austrittsdatum), invalid optional contact values
+  dropped (`value_invalid_dropped`), a five-digit numeric postcode converted, `kept_existing`.
+- **Matching**: the exact Personalnummer is the only automatic match key; it is unique per
+  project, never generated and immutable once stored (`personnel_number_immutable`), so a
+  re-import never changes it. A match with a terminal participation is skipped with only
+  `terminal_not_updated`. Required values are checked on the merged record (row over stored),
+  so a blank cell keeps the stored value (`kept_existing`). Outcomes: create, update, unchanged,
+  skip, error; participations missing from the file are only counted. A new row with the same
+  birth date and names (trimmed, case-insensitive) as another new row or an existing
+  participation is a `possible_duplicate` for the PL to decide.
+- **Mapping suggestions**: the project's saved mappings, then those of projects with the same
+  customer name (newest first), then built-in header synonyms (a combined `Anschrift` never).
+  The PL confirms every mapping by sending it; only keyed hashes of headers are saved, and
+  nothing when the header row looks like a person's data.
+- **Preview** is stateless and stores nothing. Its `previewToken` is an HMAC over project, file
+  hash, sheet, CSV options, header row, mapping, country, wave and a digest of the plan; a file
+  with any error row gets none.
+- **Confirm** parses the file again, then in one transaction under `lock_project_setup` reloads
+  the state and re-plans: an error row is `import_has_errors`, a changed plan 409
+  `import_preview_stale`, decisions that don't fit the plan exactly `decisions_invalid` (every
+  `possible_duplicate` decided create or skip, none for other rows, `confirmWarnings` when a row
+  not skipped has another warning). It writes creations through the creation edge and
+  `write_participant_data`, updates through `write_participant_data`, `warning_confirmed` per
+  participation and code (`possible_duplicate` for a duplicate created anyway), `import_confirmed`
+  last with the counts and `baseDefaultsVersion`, then the mapping. All or nothing. In `ta_tg`
+  an optional wave applies to every participation the import creates.
+- **Manual creation** (`POST /projects/{id}/participations`): one person is one import row under
+  the same rules, capability and lock, the country always `DE`. An existing Personalnummer,
+  terminal included, is refused (`personnel_number_taken`), never updated; a value the import
+  would drop with a warning is a field error (`value_invalid`); warnings need `confirmWarnings`
+  and a possible duplicate `createDespiteDuplicate`, audited as `warning_confirmed` like the
+  import; it writes `participation_created_manually` with `baseDefaultsVersion`.
 
 ## Phase 2 detail (TG module)
 

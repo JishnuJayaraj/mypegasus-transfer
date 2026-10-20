@@ -8,7 +8,7 @@ identifiers. If you find a term that is not here, add it.
 | Transfergesellschaft (TG) | Transfer company | `tg` | Company that employs affected workers for up to 12 months, organised in one or more beE units, to move them into new jobs. Funded via Transfer-KuG. |
 | betriebsorganisatorisch eigenständige Einheit (beE) | beE unit | `beeUnit` (later slice) | The unit in which TG employment is organised. One beE may hold several entry waves; a later wave may instead get its own beE with its own term. Not a synonym for an entry wave (round 10). |
 | Transferagentur (TA) | Transfer agency / pre-phase | `ta` | Services before employment ends: information, consultation, profiling, transfer measures under §110 SGB III. Also used for TA-only projects without a TG. |
-| Transferprojekt | Transfer project | `project` | One engagement with one employer (customer) for one restructuring. Has its own dates, budget, rules. |
+| Transferprojekt | Transfer project | `project` | One engagement with one employer (customer) for one restructuring. Has its own budget and rules; its contractual dates live on its entry waves. |
 | Auftraggeber / abgebender Arbeitgeber | Customer / old employer | `customer` | The employer who is reducing staff and pays for the transfer. |
 | Betriebsrat (BR) | Works council | `worksCouncil` | Employee representatives; negotiate the social plan; receive aggregated reporting. |
 | Sozialplan / Transfersozialplan | Social plan | `socialPlan` | Agreement defining the transfer solution, budgets, terms. |
@@ -47,7 +47,9 @@ identifiers. If you find a term that is not here, add it.
 | eAU | Electronic sick note | — | Employer retrieves sick notes electronically; we store only "AU confirmed" + dates. |
 | Niederlassung | Branch / region | `region` | Organisational unit grouping projects and staff; scope of regional admins. |
 | Integrationsquote | Integration rate | `integrationRate` | Placements ÷ all exits (which reasons count is configurable). |
-| Unterschriftsfrist | Signing deadline / offer deadline | `signingDeadline`, `offerDeadline` | Deadline to return the signed DSV: per project for the first offer, per participation for a re-offer (Q69). Inclusive; expiry the next day. |
+| Unterschriftsfrist | Signing deadline / offer deadline | `signingDeadline`, `offerDeadline` | Deadline to return the signed DSV: per entry wave (`signingDeadline`) for the first offer, per participation (`offerDeadline`) for a re-offer (Q69, Q79). Inclusive; expiry the next day. |
+| Personalnummer | Personnel number | `personnelNumber` | The old employer's employee number: the only automatic match key of the import, unique per project, never generated, immutable once stored. |
+| Austrittsdatum | End of the old employment | `oldEmploymentEndDate` | Last day of the employment with the old employer, from the import; a new TG start must follow it directly. |
 | Letzter Eintrittstermin | Latest entry date | `latestEntryDate` | Last possible entry into the beE, per entry wave, inclusive. The final admission cutoff starts the next Berlin day; it replaces the former 90-day grace period (Q69, Q77). |
 | Projektstatus (Entwurf, aktiv) | Project status (draft, active) | `ProjectStatus`: `draft`, `active` | A `draft` project takes setup, import and creation but no post-creation lifecycle transition; it becomes `active` once its activation blockers are gone (one-way in Slice 2, Q98). |
 | Eintrittswelle | Entry wave | `entryWave` | A timing cohort within one `ta_tg` project: participants expected to enter the TG at roughly the same time under the same contractual schedule, with its own signing deadline, default TG start/end and `latestEntryDate` (Q79). Each participation belongs to exactly one wave before its DSV is offered; the individual DSV dates stay authoritative. Neither a beE nor a Transfer-KuG bucket (round 10). |
