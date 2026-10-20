@@ -356,6 +356,37 @@ Implementation:
   - Before special-category data is shown, the participant must enter their date of birth as a
     knowledge check. A real second factor comes later.
   - Fallbacks: a new activation code (letter or info event), and assisted mode.
+  - **Round 36** ([answers](../decisions/2026-10-20-answers-round-36.md), Q121–Q130, assumed
+    unless noted):
+    - **Identity per channel (Q127):** a letter is delivery, not verification: assurance is the
+      code plus the birth-date check, so no birth date, no letter. A sheet becomes activatable only
+      once staff record its handover after inspecting an original official photo ID against the
+      imported identity; an in-person send needs the same check first. Only the confirmer, time
+      and method are stored, never an ID number, copy or image. Without a birth date only these
+      two channels skip the birth-date step, and the method is recorded (Q129).
+    - **Failures (Q128):** a well-formed wrong birth date, or for an in-person code a wrong
+      delivery address, counts; the fifth locks. Unknown, expired, revoked, used or locked codes
+      count nothing and get one generic answer. A per-IP throttle covers every code submission;
+      a shared limiter is needed before a multi-process deployment with real data.
+    - **Art. 14 notice (Q124, verify):** supplied at issuance (letter, sheet, or a durable notice
+      or link in the first in-person message), never first in the portal; version, language,
+      method and time recorded; due at the first communication and at the latest one calendar
+      month after the data was received; the PL sees due and overdue. German and English for
+      every format.
+    - **Channels (Q123, Q125):** staff never retrieve a registered private email or mobile, only
+      its kind, verification and consent state and dates; the app sends versioned portal
+      notifications under the consent purpose `portal_contact`. One address belongs to at most one
+      active account; a collision never names the other account.
+    - **Cutoff and terminal statuses (Q121):** a first activation before `informed` needs the
+      participation's cutoff not to have passed; a terminal status revokes open codes and ends
+      sessions.
+    - **Lost access (Q130):** a recovery code; issuing it ends the sessions and suspends the old
+      channels at once; completion replaces them (consents end `lost_access_replaced`).
+    - **Retention (Q122):** activation codes, one-time codes and sessions (class
+      `access_credential`) are deleted or stripped of hashes and addresses 30 days after use,
+      expiry, lock, revocation or end; a removed address and its hash are erased after 30 days
+      while the value-free consent proof stays with the personnel file; a legal hold never keeps
+      a secret usable.
 - **Assisted mode**: staff act on behalf of the participant, audited as `actor` + `onBehalfOf`.
   No session sharing.
 - **No self-registration.** There is no anonymous endpoint that creates participant records;
