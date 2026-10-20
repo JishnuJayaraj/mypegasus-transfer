@@ -98,13 +98,10 @@ describe("the participation seed (AC-43)", () => {
     expect((await rows()).map((r) => r.id)).toEqual(ids.toSorted());
   });
 
-  it("covers every main status reachable before Slice 4c, each track status and exception state", async () => {
+  it("covers every main status, each track status and exception state", async () => {
     const seeded = await rows();
     const statuses = (key: keyof Row) => new Set(seeded.map((r) => r[key] ?? "none"));
-    // self_registered and rejected come with the anonymous QR flow (Slice 4c).
-    expect(statuses("status")).toEqual(
-      new Set(MainStatus.options.filter((s) => s !== "self_registered" && s !== "rejected")),
-    );
+    expect(statuses("status")).toEqual(new Set(MainStatus.options));
     expect(statuses("profiling_status")).toEqual(new Set(ProfilingStatus.options));
     expect(statuses("dsv_status")).toEqual(new Set(DsvStatus.options));
     expect(statuses("exception_status")).toEqual(new Set(ProfilingExceptionStatus.options));

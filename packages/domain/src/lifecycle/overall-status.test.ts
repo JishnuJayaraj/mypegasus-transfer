@@ -17,8 +17,6 @@ function* allStates(): Generator<LifecycleState> {
 // the DSV is signed; `ta_only` has no DSV, no wave and no TG; `ta_completed` is `ta_only` only.
 const expected: Record<ProjectType, Partial<Record<MainStatus, number>>> = {
   ta_tg: {
-    self_registered: 1,
-    rejected: 1,
     imported: 2,
     contacted: 2,
     unreachable: 2,
@@ -28,8 +26,6 @@ const expected: Record<ProjectType, Partial<Record<MainStatus, number>>> = {
     exited: 5,
   },
   ta_only: {
-    self_registered: 1,
-    rejected: 1,
     imported: 1,
     contacted: 1,
     unreachable: 1,
@@ -75,7 +71,6 @@ describe("derived overall status (AC-13)", () => {
     ["dsv_offered without a wave", { dsvStatus: "dsv_offered", hasWave: false }],
     ["in the TG without a signed DSV", { status: "active_in_tg", dsvStatus: "dsv_declined" }],
     ["exited without a signed DSV", { status: "exited" }],
-    ["a self-registration with a wave", { status: "self_registered" }],
   ] as const)("rejects %s", (_, overrides) => {
     const s = state(overrides);
     expect(isConsistentState(s)).toBe(false);
@@ -84,7 +79,7 @@ describe("derived overall status (AC-13)", () => {
 
   it("gives every consistent state a key; the tracks show while informed and in the TG", () => {
     const keys = [...allStates()].filter(isConsistentState).map(deriveOverallStatus);
-    expect(keys).toHaveLength(98);
+    expect(keys).toHaveLength(94);
     expect(keys.filter((key) => !key.startsWith("lifecycle.overall."))).toEqual([]);
     expect(
       deriveOverallStatus(

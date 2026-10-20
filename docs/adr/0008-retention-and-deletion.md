@@ -14,7 +14,7 @@ duty.
   item follows its own class. Where one item falls under several rules, the longest of those
   rules applies. **Never per person.**
 - Retention starts from lifecycle events: `withdrawn` (the grace period of 90 days after the
-  signing deadline is built into the lifecycle), `rejected`, beE exit, end of year of exit,
+  signing deadline is built into the lifecycle), beE exit, end of year of exit,
   project settlement dates. *Note 2026-10-16 (round 7): the fixed 90-day grace period is
   reopened; withdrawal happens at the final admission cutoff after `latestEntryDate` (Q69, Q70,
   Q77). Round 8: the non-signer deletion clock starts at `withdrawnOn` (manual or automatic);

@@ -206,6 +206,17 @@ Built in PR 2e-2 (Q36, Q93):
   base-defaults version. Only this function writes that change kind, in the call that pins
   the new version (round 28); `write_project_override` and `append_project_override` refuse it.
 
+## Amendment 2026-10-20: no self-registration in the core (Slice 3, PR 3a)
+
+Built in PR 3a (round 35): `main_status` loses `self_registered` and `rejected`, `edge_kind` loses
+`anonymous_self_registration`, and `lifecycle_edge` their edges. Postgres can't drop an enum
+value, so migration 0033 recreates both types: it drops every object that names them (the
+participation and audit `CHECK`s, `lifecycle_edge_values_of_track`, the early-exit trigger,
+`end_reason_fits`), converts the columns through `text` and recreates the objects unchanged; it
+replaces `change_participation_status`, `set_participation_dates` and `revoke_profiling_exception`
+(same signatures) without the `'rejected'` comparison, which would fail at run time. It refuses a
+database holding a removed value. `participation_unmatched_has_no_wave` is gone.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

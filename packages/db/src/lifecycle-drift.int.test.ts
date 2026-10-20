@@ -73,7 +73,7 @@ describe("enums (AC-17)", () => {
     ["profiling_exception_reason", ProfilingExceptionReason.options],
     ["profiling_exception_superseded_reason", ProfilingExceptionSupersededReason.options],
     ["audit_event_type", AuditEventType.options],
-    ["edge_kind", [...TgEntryKind.options, "manual", "system", "anonymous_self_registration"]],
+    ["edge_kind", [...TgEntryKind.options, "manual", "system"]],
   ])("%s equals the domain enum", async (type, values) => {
     const { rows } = await owner.query(`select enum_range(null::${type})::text[] as values`);
     expect(rows[0].values).toEqual(values);

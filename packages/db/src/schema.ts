@@ -129,12 +129,7 @@ export const lifecycleTrack = pgEnum("lifecycle_track", values(Track));
 export const statusField = pgEnum("status_field", values(StatusField));
 export const endReason = pgEnum("end_reason", values(EndReason));
 export const tgEntryKind = pgEnum("tg_entry_kind", values(TgEntryKind));
-export const edgeKind = pgEnum("edge_kind", [
-  ...values(TgEntryKind),
-  "manual",
-  "system",
-  "anonymous_self_registration",
-]);
+export const edgeKind = pgEnum("edge_kind", [...values(TgEntryKind), "manual", "system"]);
 export const actorType = pgEnum("actor_type", values(ActorType));
 export const profilingExceptionStatus = pgEnum(
   "profiling_exception_status",
@@ -294,19 +289,15 @@ export const participation = pgTable(
       sql.raw(`"participation"."profiling_status" = 'profiling_done'`),
       t.profilingDoneOn,
     ),
-    // isConsistentState (plan 5.3): the tracks start at `informed`, the TG needs a signed DSV,
-    // an unmatched self-registration has no wave.
+    // isConsistentState (process-and-lifecycle.md): the tracks start at `informed`, the TG needs
+    // a signed DSV.
     check(
       "participation_tracks_start_at_informed",
-      sql`not (${statusIn("self_registered", "rejected", "imported", "contacted", "unreachable")}) or (${t.profilingStatus} = 'not_started' and ${t.dsvStatus} = 'not_offered')`,
+      sql`not (${statusIn("imported", "contacted", "unreachable")}) or (${t.profilingStatus} = 'not_started' and ${t.dsvStatus} = 'not_offered')`,
     ),
     check(
       "participation_tg_needs_signed_dsv",
       sql`not (${statusIn("active_in_tg", "exited")}) or ${t.dsvStatus} = 'dsv_signed'`,
-    ),
-    check(
-      "participation_unmatched_has_no_wave",
-      sql`not (${statusIn("self_registered", "rejected")}) or ${t.entryWaveId} is null`,
     ),
     // Target of the request's composite FK: a request is of its participation's project.
     unique("participation_id_project_unique").on(t.id, t.projectId),

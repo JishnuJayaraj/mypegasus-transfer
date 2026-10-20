@@ -285,7 +285,6 @@ so a long payroll rule never keeps a whole profile.
 
 | Data | Retention (from) |
 |---|---|
-| Unmatched / rejected self-registrations (goes with `self_registered`, round 35) | 30 days |
 | Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion **90 calendar days after `withdrawnOn`** (manual or automatic withdrawal), if there was no fully executed DSV, funded §110 participation, legal hold or other retention duty. *Assumed (Q77): `unset` in executable configuration until the DPO confirms.* |
 | Non-signers with BA-funded §110 measures | full deletion after 90 days, **except the evidence set** |
 | Structured health fields | 3 months after beE exit, or with non-signer deletion |
