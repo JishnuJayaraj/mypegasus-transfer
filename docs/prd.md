@@ -55,10 +55,15 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
   skipped. No matching across projects.
 - Rules: process-and-lifecycle.md, "Import and manual creation" (Q103, Q104).
 
-### F3 Registration link & QR code
-- Per project QR for info events, valid 14 days, rate-limited, captcha; self-registration
-  creates `self_registered`; PL matches manually to imported records (suggested matches by
-  name + birth date). Unmatched registrations are deleted after 30 days.
+### F3 Activation codes ([round 35](decisions/2026-10-20-answers-round-35.md))
+- Every participation gets a personal, single-use activation code when it is created. It goes
+  out by activation letter to the imported address and as a printed sheet at the info event,
+  each with a QR of the personal link. The participant activates with the code and the knowledge
+  check, then registers a private email or mobile.
+- No anonymous self-registration and no matching. People missing from the employer's list are
+  created by the PL and get a code too.
+- The PL sees who has activated and can reissue codes.
+- Open: Q113–Q119.
 
 ### F4 Communication & appointments
 - Invitations and reminders via email/SMS (adapter; mock in MVP dev).
@@ -66,8 +71,9 @@ Field-level access rules: `docs/domain/data-protection.md` (access matrix).
 - All messages logged per participant.
 
 ### F5 Participant self-service
-- Separate participant app (`apps/portal`). Login via SMS link/code (primary) or private email; never imported work email. Birth date
-  check before special-category data. Printable one-time code for info events. Mobile-first
+- Separate participant app (`apps/portal`). First access with the personal activation code (F3); then
+  login with a one-time code to the private email or mobile the participant registered; never
+  imported work email. Birth date check before special-category data. Mobile-first
   step-by-step wizard, save & resume, progress bar. Consent screen first; consents are
   versioned records.
 - Steps (driven by regional config): personal data, contact, education, work history,

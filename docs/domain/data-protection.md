@@ -285,7 +285,7 @@ so a long payroll rule never keeps a whole profile.
 
 | Data | Retention (from) |
 |---|---|
-| Unmatched / rejected self-registrations | 30 days |
+| Unmatched / rejected self-registrations (goes with `self_registered`, round 35) | 30 days |
 | Non-signers (`withdrawn` pre-TG) without BA-funded measures | full deletion **90 calendar days after `withdrawnOn`** (manual or automatic withdrawal), if there was no fully executed DSV, funded §110 participation, legal hold or other retention duty. *Assumed (Q77): `unset` in executable configuration until the DPO confirms.* |
 | Non-signers with BA-funded §110 measures | full deletion after 90 days, **except the evidence set** |
 | Structured health fields | 3 months after beE exit, or with non-signer deletion |
@@ -335,18 +335,24 @@ Implementation:
 - **Staff**: Entra ID via OIDC, MFA enforced by Conditional Access. Roles and assignments are
   managed in the app. Sessions last 8 hours, server-side, in httpOnly SameSite cookies.
 - **Participants**:
-  - The mobile number is the primary channel (SMS link or code). Private email is secondary.
-    **Imported work emails are never used for login.**
+  - First access: a personal activation code (letter to the imported address or printed
+    sheet, with a QR of the personal link; the code in the link's fragment, never in a URL the
+    server logs). It is single-use and stored only as a keyed hash; a reissue revokes the old
+    one ([round 35](../decisions/2026-10-20-answers-round-35.md); values Q118).
+  - The participant then registers a private email or mobile (their choice, Q119) and logs in
+    with one-time codes to it. **Imported work emails are never used for login.** An email
+    login never takes effect on a bare GET (mail scanners open links).
+  - After an activation, a notice goes to the newly registered channel.
   - Links/codes are single-use and expire after 15 minutes, with at most 5 requests per hour
     per phone number or email.
   - Sessions: 30 minutes idle, 12 hours absolute.
   - Before special-category data is shown, the participant must enter their date of birth as a
     knowledge check. A real second factor comes later.
-  - Fallbacks: a printable one-time access code (info events), and assisted mode.
+  - Fallbacks: a new activation code (letter or info event), and assisted mode.
 - **Assisted mode**: staff act on behalf of the participant, audited as `actor` + `onBehalfOf`.
   No session sharing.
-- **Self-registration**: only via a project-specific QR code, valid 14 days, rate-limited, with
-  a captcha. Matched manually by the PL.
+- **No self-registration.** There is no anonymous endpoint that creates participant records;
+  every account is bound to a participation the PL created ([round 35](../decisions/2026-10-20-answers-round-35.md)).
 
 ## Other rules
 

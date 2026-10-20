@@ -154,7 +154,7 @@ with profiling** (round 4). So a participation has:
 ```mermaid
 stateDiagram-v2
   [*] --> imported : Excel import / manual
-  [*] --> self_registered : QR registration
+  [*] --> self_registered : QR registration (to be removed, round 35)
   self_registered --> imported : matched by PL
   self_registered --> rejected : not in scope / unmatched after 30 days
 
@@ -551,7 +551,7 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 |---|---|---|
 | Project setup | PL | name, customer, type, Project Agentur (KuG-Agentur for `ta_tg`), pinned Agentur templates, overrides; in `ta_tg` entry waves with their dates; activation |
 | Import / manual creation | PL | participations in `imported`; import report with row errors, warnings and possible duplicates (see below) |
-| Registration QR | PL → participants | `self_registered` participations, matched manually by the PL |
+| Portal activation | PL → participants | a personal activation code per participation (letter or printed sheet); the participant activates and registers a private email or mobile ([round 35](../decisions/2026-10-20-answers-round-35.md), Q113–Q119) |
 | Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |

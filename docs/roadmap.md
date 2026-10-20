@@ -31,8 +31,11 @@ review.
 
 ## Slice 3 — Auth & roles
 Connect login and identity to the Slice 1 access model: staff OIDC (dev stub first) in
-`apps/web`, participant SMS/email link (mock adapters) in `apps/portal`, sessions, audit of
-logins. Deferred here from Slice 2: membership management, participant assignments (Q62) and
+`apps/web`; in `apps/portal` personal activation codes, the activation flow (knowledge check,
+private email or mobile with consent), one-time-code login (mail/SMS mock adapters), sessions,
+audit of logins; the PL's activation status, reissue and printable letter/sheet (round 35,
+Q113–Q119). Removal of `self_registered` from the lifecycle core (its own PR).
+Deferred here from Slice 2: membership management, participant assignments (Q62) and
 regions on projects (until then the org roles have global scope).
 
 ## Slice 4a — Self-service wizard + consent (F5)
@@ -45,9 +48,9 @@ with the first such field (here or Slice 6).
 Uploads (storage + virus-scan adapters, mock), file-type allowlist, signed URLs, document
 records with retention class.
 
-## Slice 4c — QR registration and matching (F3)
-Project QR (14 days, rate limit, captcha), `self_registered`, manual matching by the PL,
-30-day deletion of unmatched registrations.
+## ~~Slice 4c — QR registration and matching~~
+Dropped in round 35: personal activation codes (Slice 3) replace the project QR, so there is no
+self-registration, matching or 30-day cleanup.
 
 ## Slice 5 — PL dashboard (F7) + reminders (F4 basics)
 Funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines.
