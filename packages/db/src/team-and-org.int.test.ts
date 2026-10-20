@@ -55,7 +55,7 @@ const members = async (projectId: string) =>
     )
   ).rows;
 
-const participation = (projectId = werkNord) =>
+const participation = (projectId: string = werkNord) =>
   call(app, "create_participation", { projectId, context: pl });
 
 const assign = (participationIds: string[], args: Record<string, unknown> = {}) =>
@@ -531,7 +531,7 @@ describe("participant assignments (Q62)", () => {
 });
 
 describe("deactivate_staff_user (Q59, Q126)", () => {
-  const deactivate = (id: string, actor = admin) =>
+  const deactivate = (id: string, actor: string = admin) =>
     call(app, "deactivate_staff_user", { id, actor, requestId });
 
   it("ends sessions, memberships and assignments in one transaction, with the counts", async () => {

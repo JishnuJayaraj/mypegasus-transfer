@@ -8,10 +8,13 @@ import {
   participantDetails,
   participationDsvAmendment,
   participantIdentity,
+  isNull,
+  participantAssignment,
   participation,
   project,
   projectEntryWave,
   sql,
+  staffUser,
 } from "@transfer/db";
 import {
   AssignEntryWaveInput,
@@ -26,11 +29,12 @@ import {
   ParticipationDetail,
   participationListScope,
   ParticipationPage,
+  type AssignedConsultant,
   type ParticipationListItem,
   type StaffUser,
 } from "@transfer/domain";
 import type { Context } from "hono";
-import { projectAccess } from "../access";
+import { projectAccess, projectTarget } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { ImportRefusal } from "../imports/analysis";
@@ -49,6 +53,35 @@ import { utc } from "../sql";
 const ProjectParams = z.object({ projectId: z.uuid() });
 const ParticipationParams = z.object({ participationId: z.uuid() });
 const personFields = ["personnelNumber", "lastName", "firstName"] as const;
+
+/** The open assignments of `participationIds` with the consultants' names, oldest first (Q62). */
+async function consultantsOf(db: Deps["db"], participationIds: readonly string[]) {
+  if (participationIds.length === 0) return new Map<string, AssignedConsultant[]>();
+  const rows = await db
+    .select({
+      participationId: participantAssignment.participationId,
+      staffUserId: participantAssignment.staffUserId,
+      displayName: staffUser.displayName,
+      assignedAt: utc(participantAssignment.assignedAt),
+    })
+    .from(participantAssignment)
+    .innerJoin(staffUser, eq(staffUser.id, participantAssignment.staffUserId))
+    .where(
+      and(
+        inArray(participantAssignment.participationId, [...participationIds]),
+        isNull(participantAssignment.endedAt),
+      ),
+    )
+    .orderBy(asc(participantAssignment.assignedAt), asc(participantAssignment.id));
+  const byParticipation = new Map<string, AssignedConsultant[]>();
+  for (const { participationId, ...consultant } of rows) {
+    byParticipation.set(participationId, [
+      ...(byParticipation.get(participationId) ?? []),
+      consultant,
+    ]);
+  }
+  return byParticipation;
+}
 
 const waveColumns = {
   id: projectEntryWave.id,
@@ -102,16 +135,17 @@ export function participationRoutes(deps: Deps) {
       .where(eq(participation.id, participationId));
     if (!row) return undefined;
     const { p, identity, details } = row;
-    const { subject, visible } = await projectAccess(db, user, p.projectId);
+    const { subject, visible, regionId } = await projectAccess(db, user, p.projectId);
     if (!visible) return undefined;
     const wave = row.wave?.id ? row.wave : null;
     const dates = { tgStart: p.tgStart, tgEnd: p.tgEnd, offerDeadline: p.offerDeadline };
     const today = clock.today();
     // The wave choice is offered when the PL may assign one and some other wave of the project
     // passes the domain rule; otherwise the reason, permission first (R31, round 26).
-    const target = { projectId: p.projectId, regionId: null, participationId };
-    const permitted = (kind: "assignEntryWave" | "setParticipationDates") =>
-      mayPerformOperation(subject, { kind }, target).ok;
+    const target = projectTarget(p.projectId, regionId, participationId);
+    const permitted = (
+      kind: "assignEntryWave" | "setParticipationDates" | "assignParticipations",
+    ) => mayPerformOperation(subject, { kind }, target).ok;
     const waves = await db
       .select({ id: projectEntryWave.id })
       .from(projectEntryWave)
@@ -163,10 +197,12 @@ export function participationRoutes(deps: Deps) {
       .from(baReportingTask)
       .where(eq(baReportingTask.participationId, participationId))
       .orderBy(asc(baReportingTask.createdAt), asc(baReportingTask.reportingKind));
+    const assignments = (await consultantsOf(db, [participationId])).get(participationId) ?? [];
     return participationDetail(
       subject,
       {
         amendments,
+        assignments,
         baReportingTasks,
         id: p.id,
         projectId: p.projectId,
@@ -210,6 +246,7 @@ export function participationRoutes(deps: Deps) {
         capabilities: {
           assignEntryWave: assignment.allowed,
           setParticipationDates: datesChange.allowed,
+          assignParticipations: permitted("assignParticipations"),
         },
         refusals: {
           assignEntryWave: assignment.refusal,
@@ -276,6 +313,10 @@ export function participationRoutes(deps: Deps) {
         .orderBy(asc(participation.createdAt), asc(participation.id))
         .limit(limit + 1);
       const last = rows.slice(0, limit).at(-1);
+      const consultants = await consultantsOf(
+        db,
+        rows.slice(0, limit).map(({ id }) => id),
+      );
       const items = rows
         .slice(0, limit)
         .map(({ createdAt: _createdAt, ...row }): ParticipationListItem => {
@@ -285,6 +326,7 @@ export function participationRoutes(deps: Deps) {
             profilingStatus: row.profilingStatus,
             dsvStatus: row.dsvStatus,
             entryWaveId: row.entryWaveId,
+            consultants: consultants.get(row.id) ?? [],
           };
           for (const field of personFields) {
             const value = row[field];
@@ -332,9 +374,9 @@ export function participationRoutes(deps: Deps) {
       const user = sessionUser(c);
       const { projectId } = c.req.valid("param");
       // Visibility (404) and the PL's permission (403) first, like the import (R32).
-      const { subject, visible } = await projectAccess(db, user, projectId);
+      const { subject, visible, regionId } = await projectAccess(db, user, projectId);
       if (!visible) return problem(c, "not-found");
-      const target = { projectId, regionId: null, participationId: null };
+      const target = projectTarget(projectId, regionId);
       if (!mayPerformOperation(subject, { kind: "importParticipations" }, target).ok) {
         return problem(c, "forbidden");
       }

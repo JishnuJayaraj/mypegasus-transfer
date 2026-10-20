@@ -167,6 +167,7 @@ describe("ProjectConfig", () => {
         activateProject: false,
         migrateTemplate: true,
         importParticipations: true,
+        setProjectRegion: false,
       },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);

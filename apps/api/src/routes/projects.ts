@@ -3,6 +3,8 @@ import {
   and,
   desc,
   eq,
+  inArray,
+  or,
   participation,
   project,
   projectEntryWave,
@@ -12,16 +14,19 @@ import {
 import {
   checkProjectUpdate,
   CreateProjectInput,
-  mayCreateProject,
+  hasGlobalOrgRole,
   mayPerformOperation,
   PageQuery,
   Project,
+  projectCreationRefusals,
+  regionChangeRefusal,
+  seesProject,
   UpdateProjectInput,
   page,
   type StaffUser,
 } from "@transfer/domain";
 
-import { hasGlobalOrgRole, seesProject, staffSubjectOf } from "../access";
+import { projectTarget, staffSubjectOf } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
 import { decodeCursor, encodeCursor } from "../cursor";
@@ -42,6 +47,7 @@ const columns = {
   activatedAt: utc(project.activatedAt),
   createdAt: utc(project.createdAt),
   createdBy: project.createdBy,
+  regionId: project.regionId,
 };
 
 /** The refusals of `update_project` (and `checkProjectUpdate`) that are a 422; others propagate. */
@@ -50,15 +56,22 @@ const projectRefusals: ReadonlySet<string> = new Set([
   "project_not_draft",
   "project_has_participations",
   "project_has_waves",
+  "region_not_found",
 ]);
 
-/** The project's metadata, if the subject may see it (Q106); otherwise undefined (404). */
+/** The project's metadata, if the subject may see it (Q106, Q126); otherwise undefined (404). */
 async function visibleProject(deps: Deps, user: StaffUser, id: string) {
   const subject = await staffSubjectOf(deps.db, user);
-  if (!seesProject(subject, id)) return { subject, found: undefined };
   const [found] = await deps.db.select(columns).from(project).where(eq(project.id, id));
+  if (!found || !seesProject(subject, found)) return { subject, found: undefined };
   return { subject, found };
 }
+
+/** The regions of the subject's regional org roles (global roles see every project anyway). */
+const regionsOf = (subject: Awaited<ReturnType<typeof staffSubjectOf>>) =>
+  [...subject.orgRoles.values()].flatMap(({ regionIds }) =>
+    regionIds === "all" ? [] : [...regionIds],
+  );
 
 export function projectRoutes(deps: Deps) {
   const { db } = deps;
@@ -95,9 +108,15 @@ export function projectRoutes(deps: Deps) {
           and(
             cursor &&
               sql`(${project.createdAt}, ${project.id}) < (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`,
+            // Members, the regional org roles of the project's region, global roles (Q126).
             hasGlobalOrgRole(subject)
               ? undefined
-              : sql`exists (select from ${projectMembership} where ${projectMembership.projectId} = ${project.id} and ${projectMembership.staffUserId} = ${user.id})`,
+              : or(
+                  sql`exists (select from ${projectMembership} where ${projectMembership.projectId} = ${project.id} and ${projectMembership.staffUserId} = ${user.id})`,
+                  regionsOf(subject).length > 0
+                    ? inArray(project.regionId, regionsOf(subject))
+                    : undefined,
+                ),
           ),
         )
         .orderBy(desc(project.createdAt), desc(project.id))
@@ -117,7 +136,7 @@ export function projectRoutes(deps: Deps) {
       method: "post",
       path: "/projects",
       tags: ["projects"],
-      summary: "Create a project; the creator becomes its PL",
+      summary: "Create a project in a region (Q126); the creator becomes its PL",
       middleware,
       request: {
         body: { required: true, content: { "application/json": { schema: CreateProjectInput } } },
@@ -129,20 +148,27 @@ export function projectRoutes(deps: Deps) {
           "unauthenticated",
           "forbidden",
           "unsupported-media-type",
+          "domain-error",
         ),
       },
     }),
     async (c) => {
       const input = c.req.valid("json");
       const user = sessionUser(c);
-      // Q106: until Slice 3, staff with the flat role project_lead create projects.
-      if (!mayCreateProject(user.role)) return problem(c, "forbidden");
+      // Q126: staff whose account may create projects, set by the global admin.
+      if (!user.mayCreateProjects) return problem(c, "forbidden");
+      const refusals = projectCreationRefusals(input);
+      if (refusals.length) return domainProblem(c, refusals);
       const id = await callFunction(
         db,
         sql`create_project(p_name => ${input.name}, p_customer_name => ${input.customerName},
-          p_type => ${input.type}::project_type,
+          p_type => ${input.type}::project_type, p_region_id => ${input.regionId!}::uuid,
           p_context => ${auditContext(user.id, c.get("requestId"))})`,
-      );
+      ).catch((error: unknown) => {
+        if (functionRefusal(error) === "region_not_found") return null;
+        throw error;
+      });
+      if (id === null) return domainProblem(c, ["region_not_found"]);
       const [created] = await db.select(columns).from(project).where(eq(project.id, id));
       return c.json(created!, 201);
     },
@@ -173,7 +199,8 @@ export function projectRoutes(deps: Deps) {
       method: "patch",
       path: "/projects/{projectId}",
       tags: ["projects"],
-      summary: "Change name, customer or type (the type only while draft and unused, Q98)",
+      summary:
+        "Change name, customer, type (only while draft and unused, Q98) or region (the PL while draft, the global admin at any time, Q126)",
       middleware,
       request: {
         params: ProjectParams,
@@ -197,10 +224,17 @@ export function projectRoutes(deps: Deps) {
       const user = sessionUser(c);
       const { subject, found } = await visibleProject(deps, user, projectId);
       if (!found) return problem(c, "not-found");
-      const target = { projectId, regionId: null, participationId: null };
-      if (!mayPerformOperation(subject, { kind: "editProject" }, target).ok) {
+      const { regionId, ...fields } = input;
+      const target = projectTarget(projectId, found.regionId);
+      const editsFields = Object.values(fields).some((value) => value !== undefined);
+      if (editsFields && !mayPerformOperation(subject, { kind: "editProject" }, target).ok) {
         return problem(c, "forbidden");
       }
+      const regionRefusal =
+        regionId === undefined || regionId === found.regionId
+          ? null
+          : regionChangeRefusal(subject, found);
+      if (regionRefusal === "forbidden") return problem(c, "forbidden");
       const refused = await db
         .transaction(async (tx) => {
           // The domain check reads under the lock the function takes again (re-entrant).
@@ -215,7 +249,9 @@ export function projectRoutes(deps: Deps) {
             .from(project)
             .where(eq(project.id, projectId));
           const { status, type, ...usage } = row!;
-          const refusals = checkProjectUpdate({ status, type }, usage, input);
+          const refusals: string[] = checkProjectUpdate({ status, type }, usage, input);
+          // Under the lock: the PL's region change only while draft (Q126).
+          if (regionRefusal !== null && status !== "draft") refusals.push(regionRefusal);
           if (refusals.length) return refusals;
           await callFunction(
             tx,
@@ -223,7 +259,8 @@ export function projectRoutes(deps: Deps) {
               p_context => ${auditContext(user.id, c.get("requestId"))},
               p_name => ${input.name ?? null}::text,
               p_customer_name => ${input.customerName ?? null}::text,
-              p_type => ${input.type ?? null}::project_type)`,
+              p_type => ${input.type ?? null}::project_type,
+              p_region_id => ${regionId ?? null}::uuid)`,
           );
           return [];
         })

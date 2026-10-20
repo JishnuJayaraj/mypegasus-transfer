@@ -49,8 +49,8 @@ describe("team inputs (D9, D10)", () => {
       staffUserId: id(9),
       participationIds: [id(1), id(1)],
     });
-    expect(duplicate.error?.issues.map((i) => (i.params as { code: string }).code)).toEqual([
-      "duplicate_participation",
-    ]);
+    expect(
+      duplicate.error?.issues.map((i) => (i as { params?: { code?: string } }).params?.code),
+    ).toEqual(["duplicate_participation"]);
   });
 });

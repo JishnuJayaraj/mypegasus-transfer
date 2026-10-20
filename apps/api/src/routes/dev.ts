@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, staffUser } from "@transfer/db";
-import { StaffUser } from "@transfer/domain";
+import { eq, sql, staffUser } from "@transfer/db";
+import { DevStaffUser, staffRoleLabel, type OrgRole, type ProjectRole } from "@transfer/domain";
 
 import { createRouter, type Deps } from "../context";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -9,11 +9,6 @@ import { loginAsDevUser } from "../staff-login";
 
 // Dev only: mounted when AUTH_MODE=dev, which the API refuses in production (env.ts).
 const devOnly = { tags: ["dev"], "x-dev-only": true };
-const staffUserColumns = {
-  id: staffUser.id,
-  displayName: staffUser.displayName,
-  role: staffUser.role,
-};
 
 export function devRoutes(deps: Deps) {
   const { db } = deps;
@@ -28,12 +23,35 @@ export function devRoutes(deps: Deps) {
       responses: {
         200: {
           description: "All staff users",
-          content: { "application/json": { schema: z.array(StaffUser) } },
+          content: { "application/json": { schema: z.array(DevStaffUser) } },
         },
       },
     }),
-    async (c) =>
-      c.json(await db.select(staffUserColumns).from(staffUser).orderBy(staffUser.id), 200),
+    async (c) => {
+      // Each with the role it is best known by, for "Name · Rolle" (no flat role since Q126).
+      const users = await db
+        .select({
+          id: staffUser.id,
+          displayName: staffUser.displayName,
+          mayCreateProjects: staffUser.mayCreateProjects,
+          orgRoles: sql<
+            OrgRole[]
+          >`array(select distinct r.role::text from staff_org_role r where r.staff_user_id = staff_user.id)`,
+          projectRoles: sql<
+            ProjectRole[]
+          >`array(select distinct m.role::text from project_membership m where m.staff_user_id = staff_user.id)`,
+        })
+        .from(staffUser)
+        .orderBy(staffUser.id);
+      return c.json(
+        users.map(({ id, displayName, ...roles }) => ({
+          id,
+          displayName,
+          role: staffRoleLabel(roles),
+        })),
+        200,
+      );
+    },
   );
 
   router.openapi(

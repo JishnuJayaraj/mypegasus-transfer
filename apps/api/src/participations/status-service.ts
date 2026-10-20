@@ -225,9 +225,13 @@ export async function createParticipationIn(
   correlation: Correlation = {},
 ): Promise<{ participationId: string }> {
   const edge = edges.find((e) => e.from === null && e.to === "imported")!;
+  const [found] = await tx
+    .select({ regionId: project.regionId })
+    .from(project)
+    .where(eq(project.id, input.projectId));
   const permission = mayPerformTransition(actor, edge, {
     projectId: input.projectId,
-    regionId: null,
+    regionId: found?.regionId ?? null,
     participationId: null,
   });
   if (!permission.ok) fail("forbidden", permission.because);
@@ -257,9 +261,13 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
     const p = (await selectFirst(
       tx.select().from(participation).where(eq(participation.id, participationId)),
     ))!;
-    const { type: projectType, status: projectStatus } = (await selectFirst(
+    const {
+      type: projectType,
+      status: projectStatus,
+      regionId,
+    } = (await selectFirst(
       tx
-        .select({ type: project.type, status: project.status })
+        .select({ type: project.type, status: project.status, regionId: project.regionId })
         .from(project)
         .where(eq(project.id, p.projectId)),
     ))!;
@@ -288,8 +296,8 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
       wave,
       participation: { tgStart: p.tgStart, tgEnd: p.tgEnd, offerDeadline: p.offerDeadline },
     };
-    // Projects get their region in Slice 3; until then only a global role reaches them.
-    const target = { projectId: p.projectId, regionId: null, participationId };
+    // The project's region scopes the org roles (Q126).
+    const target = { projectId: p.projectId, regionId, participationId };
     return { p, request, exception: exceptionOf(request), context, target, projectStatus };
   }
 

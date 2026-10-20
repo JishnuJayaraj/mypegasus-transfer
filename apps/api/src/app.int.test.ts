@@ -1,4 +1,4 @@
-import { createDb, seedStaffUserIds } from "@transfer/db";
+import { createDb, seedRegionIds, seedStaffUserIds } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -61,7 +61,11 @@ describe("logging", () => {
     const name = "Zzyzx-Logtest-4711";
     await app.request(
       "/api/v1/projects",
-      jsonRequest("POST", { name, customerName: "Beispiel GmbH", type: "ta_only" }, auth),
+      jsonRequest(
+        "POST",
+        { name, customerName: "Beispiel GmbH", type: "ta_only", regionId: seedRegionIds.nord },
+        auth,
+      ),
     );
     await app.request("/api/v1/projects?limit=7&cursor=Zzyzx", { headers: auth });
 

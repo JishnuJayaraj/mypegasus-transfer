@@ -11,10 +11,10 @@ import {
 
 const region = "00000000-0000-4000-a000-000000000001";
 const other = "00000000-0000-4000-a000-000000000002";
-const codes = (result: { success: boolean; error?: { issues: { params?: unknown }[] } }) =>
+const codes = (result: { success: boolean; error?: { issues: readonly object[] } }) =>
   result.success
     ? []
-    : result.error!.issues.map((i) => (i.params as { code?: string } | undefined)?.code);
+    : result.error!.issues.map((i) => (i as { params?: { code?: string } }).params?.code);
 
 describe("OrgRoleGrant (D7)", () => {
   it("holds admin global and the regional roles to one region", () => {

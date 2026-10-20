@@ -78,13 +78,10 @@ export const Project = z
     activatedAt: z.iso.datetime().nullable().meta({ description: "UTC timestamp (ISO 8601)" }),
     createdAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
     createdBy: z.uuid().meta({ description: "Staff user id" }),
-    regionId: z
-      .uuid()
-      .nullable()
-      .meta({
-        description:
-          "The region (Niederlassung); null for a project from before regions, which only global roles see",
-      }),
+    regionId: z.uuid().nullable().meta({
+      description:
+        "The region (Niederlassung); null for a project from before regions, which only global roles see",
+    }),
   })
   .meta({ id: "Project" });
 

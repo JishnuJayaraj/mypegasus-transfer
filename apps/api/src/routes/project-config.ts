@@ -19,7 +19,7 @@ import {
   type Operation,
 } from "@transfer/domain";
 import type { Context } from "hono";
-import { projectPermissions } from "../access";
+import { projectPermissions, type ProjectPermissions } from "../access";
 import { createRouter, json, type Deps } from "../context";
 import { activateProject } from "../projects/activation";
 import { migrateTemplate, previewMigration } from "../projects/migration";
@@ -145,7 +145,7 @@ export function projectConfigRoutes(deps: Deps) {
     c: Context,
     outcome: OverrideOutcome<P>,
     projectId: string,
-    may: (operation: Operation) => boolean,
+    may: ProjectPermissions,
   ) {
     if ("problem" in outcome) return problem(c, outcome.problem);
     if ("issues" in outcome) return domainProblem(c, outcome.issues);

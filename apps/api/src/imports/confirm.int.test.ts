@@ -9,6 +9,7 @@ import {
   projectConfigOverride,
   seedStaffUserIds,
   sql,
+  seedRegionIds,
 } from "@transfer/db";
 import { ImportResult, Project } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
@@ -430,7 +431,12 @@ describe("access, logs and saved mappings (AC-30, AC-31)", () => {
         "/api/v1/projects",
         jsonRequest(
           "POST",
-          { name: "Fremd", customerName: "Andere GmbH", type: "ta_only" },
+          {
+            name: "Fremd",
+            customerName: "Andere GmbH",
+            type: "ta_only",
+            regionId: seedRegionIds.nord,
+          },
           auth.projectLead,
         ),
       ),
@@ -510,7 +516,12 @@ describe("access, logs and saved mappings (AC-30, AC-31)", () => {
         "/api/v1/projects",
         jsonRequest(
           "POST",
-          { name: "Zweites Projekt", customerName: `${customer.toUpperCase()}`, type: "ta_only" },
+          {
+            name: "Zweites Projekt",
+            customerName: `${customer.toUpperCase()}`,
+            type: "ta_only",
+            regionId: seedRegionIds.nord,
+          },
           auth.projectLead,
         ),
       ),

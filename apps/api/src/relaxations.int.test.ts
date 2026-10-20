@@ -8,6 +8,7 @@ import {
   seedProjectIds,
   seedStaffUserIds,
   sql,
+  seedRegionIds,
 } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import { canonicalHash, loadTemplate } from "@transfer/config/load";
@@ -371,7 +372,13 @@ describe("POST /config/relaxations/{requestId}/decision and …/withdrawal", () 
       404,
       "not-found",
     );
-    // The global role sees it and decides it.
+    // Outside the regional operations manager's region it is hidden from it too (Q126) ...
+    await expectProblem(await decide(hidden!, { decision: "rejected" }), 404, "not-found");
+    // ... in its region it sees and decides it.
+    await owner.$client.query("update project set region_id = $1 where id = $2", [
+      seedRegionIds.nord,
+      lagerSued,
+    ]);
     expect((await decide(hidden!, { decision: "rejected" })).status).toBe(200);
   });
 });

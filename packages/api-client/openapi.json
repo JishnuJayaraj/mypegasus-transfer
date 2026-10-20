@@ -71,8 +71,14 @@
           "displayName": {
             "type": "string"
           },
-          "role": {
-            "$ref": "#/components/schemas/StaffRole"
+          "mayCreateProjects": {
+            "type": "boolean"
+          },
+          "orgRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgRoleGrant"
+            }
           },
           "sessionExpiresAt": {
             "type": "string",
@@ -83,18 +89,36 @@
         "required": [
           "id",
           "displayName",
-          "role",
+          "mayCreateProjects",
+          "orgRoles",
           "sessionExpiresAt"
         ]
       },
-      "StaffRole": {
+      "OrgRoleGrant": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/OrgRole"
+          },
+          "regionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "role",
+          "regionId"
+        ],
+        "additionalProperties": false
+      },
+      "OrgRole": {
         "type": "string",
         "enum": [
           "admin",
           "regional_admin",
-          "project_lead",
-          "consultant",
-          "back_office",
           "regional_operations_manager"
         ]
       },
@@ -162,6 +186,14 @@
             "type": "string",
             "format": "uuid",
             "description": "Staff user id"
+          },
+          "regionId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The region (Niederlassung); null for a project from before regions, which only global roles see"
           }
         },
         "required": [
@@ -173,7 +205,8 @@
           "projectAgenturKey",
           "activatedAt",
           "createdAt",
-          "createdBy"
+          "createdBy",
+          "regionId"
         ]
       },
       "ProjectType": {
@@ -207,6 +240,10 @@
           },
           "type": {
             "$ref": "#/components/schemas/ProjectType"
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -231,6 +268,10 @@
           },
           "type": {
             "$ref": "#/components/schemas/ProjectType"
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "additionalProperties": false
@@ -906,6 +947,9 @@
               },
               "importParticipations": {
                 "type": "boolean"
+              },
+              "setProjectRegion": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -915,7 +959,8 @@
               "requestRelaxation",
               "activateProject",
               "migrateTemplate",
-              "importParticipations"
+              "importParticipations",
+              "setProjectRegion"
             ],
             "additionalProperties": false
           }
@@ -2344,6 +2389,12 @@
           },
           "firstName": {
             "type": "string"
+          },
+          "consultants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignedConsultant"
+            }
           }
         },
         "required": [
@@ -2351,7 +2402,31 @@
           "status",
           "profilingStatus",
           "dsvStatus",
-          "entryWaveId"
+          "entryWaveId",
+          "consultants"
+        ],
+        "additionalProperties": false
+      },
+      "AssignedConsultant": {
+        "type": "object",
+        "properties": {
+          "staffUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "assignedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "staffUserId",
+          "displayName",
+          "assignedAt"
         ],
         "additionalProperties": false
       },
@@ -2686,6 +2761,12 @@
               "$ref": "#/components/schemas/BaReportingTask"
             }
           },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignedConsultant"
+            }
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -2694,11 +2775,15 @@
               },
               "setParticipationDates": {
                 "type": "boolean"
+              },
+              "assignParticipations": {
+                "type": "boolean"
               }
             },
             "required": [
               "assignEntryWave",
-              "setParticipationDates"
+              "setParticipationDates",
+              "assignParticipations"
             ],
             "additionalProperties": false
           },
@@ -2754,6 +2839,7 @@
           "dates",
           "hints",
           "person",
+          "assignments",
           "capabilities",
           "refusals"
         ],
@@ -3112,7 +3198,355 @@
         ],
         "additionalProperties": false
       },
-      "StaffUser": {
+      "ProjectTeam": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectMember"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "manageMembers": {
+                "type": "boolean"
+              },
+              "addReplacementLead": {
+                "type": "boolean"
+              },
+              "assignParticipations": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "manageMembers",
+              "addReplacementLead",
+              "assignParticipations"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "members",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectMember": {
+        "type": "object",
+        "properties": {
+          "staffUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectRole"
+            },
+            "minItems": 1
+          },
+          "deactivated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "staffUserId",
+          "displayName",
+          "roles",
+          "deactivated"
+        ],
+        "additionalProperties": false
+      },
+      "ProjectRole": {
+        "type": "string",
+        "enum": [
+          "project_lead",
+          "consultant",
+          "back_office"
+        ]
+      },
+      "AddMemberInput": {
+        "type": "object",
+        "properties": {
+          "staffUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ProjectRole"
+          }
+        },
+        "required": [
+          "staffUserId",
+          "role"
+        ],
+        "additionalProperties": false
+      },
+      "AssignmentResult": {
+        "type": "object",
+        "properties": {
+          "assigned": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "assigned"
+        ],
+        "additionalProperties": false
+      },
+      "AssignParticipationsInput": {
+        "type": "object",
+        "properties": {
+          "staffUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        },
+        "required": [
+          "staffUserId",
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
+      "RegionList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Region"
+        }
+      },
+      "Region": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9](?:[A-Z0-9-]{0,18}[A-Z0-9])?$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateRegionInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9](?:[A-Z0-9-]{0,18}[A-Z0-9])?$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateRegionInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9](?:[A-Z0-9-]{0,18}[A-Z0-9])?$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "additionalProperties": false
+      },
+      "StaffAccountPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StaffAccount"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "StaffAccount": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "mayCreateProjects": {
+            "type": "boolean"
+          },
+          "orgRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgRoleGrant"
+            }
+          },
+          "identityBound": {
+            "type": "boolean"
+          },
+          "deactivatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "email",
+          "mayCreateProjects",
+          "orgRoles",
+          "identityBound",
+          "deactivatedAt",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "CreateStaffUserInput": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "mayCreateProjects": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "displayName",
+          "email"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateStaffUserInput": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "format": "email"
+          },
+          "mayCreateProjects": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SetOrgRolesInput": {
+        "type": "object",
+        "properties": {
+          "orgRoles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgRoleGrant"
+            },
+            "maxItems": 20
+          }
+        },
+        "required": [
+          "orgRoles"
+        ],
+        "additionalProperties": false
+      },
+      "StaffDirectory": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/StaffDirectoryEntry"
+        }
+      },
+      "StaffDirectoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "DevStaffUser": {
         "type": "object",
         "properties": {
           "id": {
@@ -3123,7 +3557,17 @@
             "type": "string"
           },
           "role": {
-            "$ref": "#/components/schemas/StaffRole"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OrgRole"
+              },
+              {
+                "$ref": "#/components/schemas/ProjectRole"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3367,7 +3811,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Create a project; the creator becomes its PL",
+        "summary": "Create a project in a region (Q126); the creator becomes its PL",
         "requestBody": {
           "required": true,
           "content": {
@@ -3421,6 +3865,16 @@
           },
           "415": {
             "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -3496,7 +3950,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Change name, customer or type (the type only while draft and unused, Q98)",
+        "summary": "Change name, customer, type (only while draft and unused, Q98) or region (the PL while draft, the global admin at any time, Q126)",
         "parameters": [
           {
             "schema": {
@@ -5838,6 +6292,1158 @@
         }
       }
     },
+    "/api/v1/projects/{projectId}/members": {
+      "get": {
+        "tags": [
+          "team"
+        ],
+        "summary": "The project's members with their project roles, and the viewer's capabilities",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTeam"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "team"
+        ],
+        "summary": "Add a project role for a staff member (the PL; a global admin only a replacement PL other than themselves)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddMemberInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectTeam"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/members/{staffUserId}/{role}": {
+      "delete": {
+        "tags": [
+          "team"
+        ],
+        "summary": "Remove a member's project role (the PL); never the last active PL; removing consultant ends their assignments",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "staffUserId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ProjectRole"
+            },
+            "required": true,
+            "name": "role",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/assignments": {
+      "post": {
+        "tags": [
+          "team"
+        ],
+        "summary": "Assign up to 500 participations to a consultant of the project (the PL), all or nothing; already assigned ones stay",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignParticipationsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The number of new assignments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/assignments/{staffUserId}": {
+      "delete": {
+        "tags": [
+          "team"
+        ],
+        "summary": "Close a consultant's assignment (the PL); their access ends with the next request",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "staffUserId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unassigned"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regions": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The regions (Niederlassungen), by code: reference data every staff user may read",
+        "responses": {
+          "200": {
+            "description": "All regions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegionList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create a region (the global admin)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRegionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new region",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Region"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/regions/{regionId}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Change a region's code or name (the global admin)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "regionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRegionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed region",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Region"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff-users": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Staff accounts with their org roles, oldest first (the global admin; cursor pagination)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Opaque cursor from `nextCursor`."
+            },
+            "required": false,
+            "description": "Opaque cursor from `nextCursor`.",
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of staff accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccountPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create a staff account (the global admin); its first OIDC login binds the identity",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStaffUserInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The new staff account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccount"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff-users/{staffUserId}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Change an active account's name, email or project-creation flag (the global admin)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "staffUserId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStaffUserInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The changed staff account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccount"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff-users/{staffUserId}/deactivation": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Deactivate an account (the global admin, never their own): ends its sessions, memberships and assignments; refused for a project's last active PL",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "staffUserId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The deactivated account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccount"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff-users/{staffUserId}/org-roles": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Set an account's org roles (the global admin): admin globally, the regional roles per region",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "staffUserId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetOrgRolesInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The account with its org roles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffAccount"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff-directory": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Active staff whose name contains `search`: id and name only, for member pickers (a PL or the global admin)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "required": true,
+            "name": "search",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "At most 20 matches, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffDirectory"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/dev/staff-users": {
       "get": {
         "tags": [
@@ -5853,7 +7459,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/StaffUser"
+                    "$ref": "#/components/schemas/DevStaffUser"
                   }
                 }
               }

@@ -1,3 +1,4 @@
+import type { ProjectPermissions } from "../access";
 import {
   parseLayer,
   relaxableRules,
@@ -218,7 +219,7 @@ export async function projectConfig(
   db: Db,
   release: Release,
   projectId: string,
-  may: (operation: Operation) => boolean,
+  may: ProjectPermissions,
 ): Promise<ProjectConfig | undefined> {
   const snapshot = await projectSnapshot(db, release, projectId);
   if (!snapshot) return undefined;
@@ -292,6 +293,9 @@ export async function projectConfig(
       migrateTemplate: may({ kind: "migrateTemplate" }),
       // The import works in draft and active projects alike (R1).
       importParticipations: may({ kind: "importParticipations" }),
+      // The PL while draft, the global admin at any time (Q126, `regionChangeRefusal`).
+      setProjectRegion:
+        may({ kind: "setProjectRegion" }) && (found.status === "draft" || may.globalAdmin),
     },
   };
 }

@@ -1,7 +1,7 @@
 import { ManualClock } from "@transfer/adapters";
 import { createDb, seedStaffUserIds } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
-import { CurrentStaffUser, StaffUser } from "@transfer/domain";
+import { CurrentStaffUser, DevStaffUser } from "@transfer/domain";
 import { createHash } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -81,7 +81,7 @@ describe("sessions in the store (D1, D2)", () => {
       await app.request("/api/v1/me", { headers: { Cookie: cookie } }),
       CurrentStaffUser,
     );
-    expect(me).toMatchObject({ id: pl, role: "project_lead" });
+    expect(me).toMatchObject({ id: pl, mayCreateProjects: true, orgRoles: [] });
     const hours = (Date.parse(me.sessionExpiresAt) - Date.now()) / 3_600_000;
     expect(hours).toBeGreaterThan(7.99);
     expect(hours).toBeLessThanOrEqual(8);
@@ -141,7 +141,7 @@ describe("sessions in the store (D1, D2)", () => {
       "unauthenticated",
     );
     const me = await app.request("/api/v1/me", { headers: { Cookie: second } });
-    expect(await readJson(me, StaffUser)).toMatchObject({ id: consultant });
+    expect(await readJson(me, CurrentStaffUser)).toMatchObject({ id: consultant });
   });
 
   it("is a 401 once 8 hours have passed by database time", async () => {
@@ -202,7 +202,7 @@ describe("sessions in the store (D1, D2)", () => {
 describe("dev stub (AUTH_MODE=dev)", () => {
   it("lists the synthetic staff users for the switcher", async () => {
     const res = await app.request("/api/v1/dev/staff-users");
-    expect(await readJson(res, z.array(StaffUser))).toHaveLength(6);
+    expect(await readJson(res, z.array(DevStaffUser))).toHaveLength(6);
   });
 
   it("gives a 404 problem for an unknown staff user", async () => {

@@ -8,6 +8,7 @@ import { errorForLog, requestLogger } from "./logger";
 import { createOidc } from "./oidc";
 import { problem } from "./problem";
 import { logoutRoutes, oidcRoutes } from "./routes/auth";
+import { adminRoutes } from "./routes/admin";
 import { configRoutes } from "./routes/config";
 import { devRoutes } from "./routes/dev";
 import { entryWaveRoutes } from "./routes/entry-waves";
@@ -17,6 +18,7 @@ import { meRoutes } from "./routes/me";
 import { participationRoutes } from "./routes/participations";
 import { projectConfigRoutes } from "./routes/project-config";
 import { projectRoutes } from "./routes/projects";
+import { teamRoutes } from "./routes/team";
 import { mountSpas } from "./static";
 
 export const openApiConfig = {
@@ -88,6 +90,8 @@ export function createApp(deps: Deps) {
   api.route("/", projectConfigRoutes(deps));
   api.route("/", importRoutes(deps));
   api.route("/", participationRoutes(deps));
+  api.route("/", teamRoutes(deps));
+  api.route("/", adminRoutes(deps));
   if (env.authMode === "dev") api.route("/", devRoutes(deps));
   app.route("/api/v1", api);
 

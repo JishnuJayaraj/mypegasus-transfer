@@ -65,8 +65,8 @@ const staffUsers: NewStaffUser[] = [
 
 /** Two fictional Niederlassungen (Q35). */
 export const seedRegionIds = {
-  nord: "00000000-0000-4000-c000-000000000001",
-  sued: "00000000-0000-4000-c000-000000000002",
+  nord: "00000000-0000-4000-b000-000000000101",
+  sued: "00000000-0000-4000-b000-000000000102",
 } as const;
 
 const regions = [

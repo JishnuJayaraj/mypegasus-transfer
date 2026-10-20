@@ -144,11 +144,18 @@ const record: ParticipationRecord = {
       reportedOn: null,
     },
   ],
+  assignments: [
+    {
+      staffUserId: "staff-c",
+      displayName: "Bernd Beratung",
+      assignedAt: "2027-02-01T09:00:00.000000Z",
+    },
+  ],
 };
 const options = {
   today: "2027-03-01",
   entryRunCompletedToday: false,
-  capabilities: { assignEntryWave: true, setParticipationDates: true },
+  capabilities: { assignEntryWave: true, setParticipationDates: true, assignParticipations: true },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
 
@@ -172,7 +179,12 @@ describe("participationDetail (R30, AC-34)", () => {
       person: record.person,
       amendments: record.amendments,
       baReportingTasks: record.baReportingTasks,
-      capabilities: { assignEntryWave: true, setParticipationDates: true },
+      assignments: record.assignments,
+      capabilities: {
+        assignEntryWave: true,
+        setParticipationDates: true,
+        assignParticipations: true,
+      },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });
   });

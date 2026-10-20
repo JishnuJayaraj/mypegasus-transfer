@@ -18,6 +18,7 @@ import {
   projectTemplatePin,
   seedProjectIds,
   seedStaffUserIds,
+  seedRegionIds,
 } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import { Project, ProjectConfig } from "@transfer/domain";
@@ -144,7 +145,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       "/api/v1/projects",
       jsonRequest(
         "POST",
-        { name: "Neu", customerName: "Beispiel GmbH", type: "ta_tg" },
+        { name: "Neu", customerName: "Beispiel GmbH", type: "ta_tg", regionId: seedRegionIds.nord },
         auth.projectLead,
       ),
     );

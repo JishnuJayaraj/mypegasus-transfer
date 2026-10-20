@@ -40,6 +40,7 @@ describe("GET /api/v1/projects/{projectId}/participations (AC-33)", () => {
     // No date of birth, address or contact detail in a list (the fields are not listed at all).
     expect(Object.keys(all[0]!).toSorted()).toEqual(
       [
+        "consultants",
         "dsvStatus",
         "entryWaveId",
         "firstName",

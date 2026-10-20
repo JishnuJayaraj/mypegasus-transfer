@@ -147,6 +147,8 @@ export const ProjectConfig = z
       migrateTemplate: z.boolean(),
       /** Preview and confirm an import (the PL, in draft and active projects alike). */
       importParticipations: z.boolean(),
+      /** Change the project's region (the PL while draft, the global admin at any time, Q126). */
+      setProjectRegion: z.boolean(),
     }),
   })
   .meta({ id: "ProjectConfig" });
