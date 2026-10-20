@@ -12,7 +12,7 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Third-party actions are pinned by commit SHA (docs/plans/slice-0.md, section 5.8).
+# Third-party actions are pinned by commit SHA (ADR-0005).
 # pnpm's version comes from the packageManager field in package.json.
 
 jobs:

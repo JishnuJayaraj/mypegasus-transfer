@@ -1,4 +1,4 @@
-// Fails if any tsconfig*.json sets `ignoreDeprecations` (docs/plans/slice-0.md, section 3).
+// Fails if any tsconfig*.json sets `ignoreDeprecations` (ADR-0003).
 // Deprecated compiler options must be removed, not silenced, so that the move to TS 7 stays small.
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
