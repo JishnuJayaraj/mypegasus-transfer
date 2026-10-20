@@ -74,8 +74,9 @@ check /portal/ 200 '<title>Teilnehmerportal</title>'
 check /api/v1/unknown 404 'urn:transfer:problem:not-found'
 
 # The template catalog, read from CONFIG_DIR (dist/config) at start (AC-12, spike S2).
-sql "insert into staff_user (id, display_name, email, role) values ('$smoke_user',
-  'Smoke Projektleitung', 'smoke-project-lead@example.org', 'project_lead') on conflict do nothing"
+# A staff user who may create projects reads the catalog (no flat role since Slice 3, Q126).
+sql "insert into staff_user (id, display_name, email, may_create_projects) values ('$smoke_user',
+  'Smoke Projektleitung', 'smoke-project-lead@example.org', true) on conflict do nothing"
 curl -fsS -o /dev/null -c "$jar" -X POST -H 'Content-Type: application/json' -H "Origin: $base" \
   -d "{\"staffUserId\":\"$smoke_user\"}" "$base/api/v1/dev/session" || fail "dev login failed"
 catalog="$(curl -fsS -b "$jar" "$base/api/v1/config/templates")" ||
