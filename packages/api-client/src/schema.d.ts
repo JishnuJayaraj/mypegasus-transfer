@@ -97,7 +97,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The current staff user */
+        /** The current staff user and when their session ends */
         get: {
             parameters: {
                 query?: never;
@@ -113,7 +113,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["StaffUser"];
+                        "application/json": components["schemas"]["CurrentStaffUser"];
                     };
                 };
                 /** @description Not authenticated */
@@ -129,6 +129,71 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the staff session (clears the cookie); 204 with or without one */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description Logged out */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -2458,7 +2523,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log in as a staff user (sets the session cookie) */
+        /** Log in as a staff user: a session in the store, as an OIDC login starts one */
         post: {
             parameters: {
                 query?: never;
@@ -2518,9 +2583,18 @@ export interface paths {
                         "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
-        /** Log out (clears the session cookie) */
+        /** Log out: ends the session, as `POST /auth/logout` does */
         delete: {
             parameters: {
                 query?: never;
@@ -2574,11 +2648,16 @@ export interface components {
                 detail: string;
             }[];
         };
-        StaffUser: {
+        CurrentStaffUser: {
             /** Format: uuid */
             id: string;
             displayName: string;
             role: components["schemas"]["StaffRole"];
+            /**
+             * Format: date-time
+             * @description ISO 8601 UTC; no sliding window
+             */
+            sessionExpiresAt: string;
         };
         /** @enum {string} */
         StaffRole: "admin" | "regional_admin" | "project_lead" | "consultant" | "back_office" | "regional_operations_manager";
@@ -3399,6 +3478,12 @@ export interface components {
                 allPartiesSigned: boolean;
                 retrievable: boolean;
             };
+        };
+        StaffUser: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+            role: components["schemas"]["StaffRole"];
         };
     };
     responses: never;

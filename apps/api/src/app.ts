@@ -1,11 +1,13 @@
 import { HTTPException } from "hono/http-exception";
 import { bodyLimit } from "hono/body-limit";
-import { csrf } from "hono/csrf";
 import { secureHeaders } from "hono/secure-headers";
 import packageJson from "../package.json" with { type: "json" };
 import { createRouter, type Deps } from "./context";
+import { originCheck } from "./csrf";
 import { errorForLog, requestLogger } from "./logger";
+import { createOidc } from "./oidc";
 import { problem } from "./problem";
+import { logoutRoutes, oidcRoutes } from "./routes/auth";
 import { configRoutes } from "./routes/config";
 import { devRoutes } from "./routes/dev";
 import { entryWaveRoutes } from "./routes/entry-waves";
@@ -53,7 +55,7 @@ export function createApp(deps: Deps) {
 
   app.use(requestLogger(logger));
   app.use(secureHeaders({ contentSecurityPolicy }));
-  app.use("/api/*", csrf({ origin: env.appOrigins }));
+  app.use("/api/*", originCheck(env.appOrigins));
   const limits = Object.fromEntries(
     Object.entries(bodyLimits).map(([name, maxSize]) => [
       name,
@@ -75,6 +77,11 @@ export function createApp(deps: Deps) {
   const api = createRouter();
   api.route("/", healthRoutes(deps));
   api.route("/", meRoutes(deps));
+  api.route("/", logoutRoutes(deps));
+  if (env.authMode === "oidc") {
+    const oidc = deps.oidc ?? createOidc(env.oidc!);
+    api.route("/", oidcRoutes(deps, oidc));
+  }
   api.route("/", projectRoutes(deps));
   api.route("/", entryWaveRoutes(deps));
   api.route("/", configRoutes(deps));
@@ -94,7 +101,6 @@ export function createApp(deps: Deps) {
         errors: [{ pointer: "", code: "malformed_json", detail: "The body is not valid JSON" }],
       });
     }
-    if (error instanceof HTTPException && error.status === 403) return problem(c, "forbidden");
     const requestId = c.get("requestId");
     logger.error({ requestId, error: errorForLog(error) }, "unhandled error");
     return problem(c, "internal-error", { instance: `urn:request:${requestId}` });

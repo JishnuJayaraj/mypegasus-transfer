@@ -56,8 +56,12 @@ describe("project list", () => {
   });
 });
 
-describe("dev session", () => {
-  it("asks for a dev user without a session, and logs in through the switcher", async () => {
+const oidcMode = { "GET /api/v1/dev/staff-users": () => problem(404, "not-found") };
+const noSession = { "GET /api/v1/me": () => problem(401, "unauthenticated") };
+const banner = () => screen.getByRole("banner");
+
+describe("staff login (Slice 3, PR 3b)", () => {
+  it("sends a first visit to the login page without 'Sitzung abgelaufen', and logs in with the dev switcher", async () => {
     let session = false;
     const { api, calls } = mockApi({
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
@@ -69,23 +73,109 @@ describe("dev session", () => {
         return new Response(null, { status: 204 });
       },
     });
-    renderApp("/projects", api);
+    const { router } = renderApp("/projects", api);
 
-    // In the header (from /me) and in place of the list (from the route loader).
-    await waitFor(() =>
-      expect(screen.getAllByText("Bitte Entwicklungsbenutzer wählen")).toHaveLength(2),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Entwicklungsbenutzer wechseln" }));
+    expect(await screen.findByRole("heading", { name: "Anmelden" })).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({ returnTo: "/projects" });
+    expect(screen.queryByText("Sitzung abgelaufen")).not.toBeInTheDocument();
     await userEvent.click(
       await screen.findByRole("button", { name: "Petra Projektleitung · Projektleitung" }),
     );
 
     expect(await screen.findByText("Restrukturierung Werk Nord")).toBeInTheDocument();
-    expect(screen.queryByText("Bitte Entwicklungsbenutzer wählen")).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/projects");
+    expect(within(banner()).getByText("Petra Projektleitung")).toBeInTheDocument();
+    expect(within(banner()).getByRole("button", { name: "Abmelden" })).toBeInTheDocument();
     expect(calls).toContainEqual({
       key: "POST /api/v1/dev/session",
       body: { staffUserId: staffUsers[1]!.id },
     });
+  });
+
+  it("shows 'Anmelden' to the identity provider in OIDC mode, with the return path", async () => {
+    renderApp("/projects/new", mockApi({ ...oidcMode, ...noSession }).api);
+    const login = await screen.findByRole("link", { name: "Anmelden" });
+    expect(login).toHaveAttribute("href", "/api/v1/auth/login?returnTo=%2Fprojects%2Fnew");
+    expect(screen.queryByRole("button", { name: "Abmelden" })).not.toBeInTheDocument();
+  });
+
+  it("never offers a foreign return path", async () => {
+    renderApp("/login?returnTo=https%3A%2F%2Fevil.example", mockApi(oidcMode).api);
+    expect(await screen.findByRole("link", { name: "Anmelden" })).toHaveAttribute(
+      "href",
+      "/api/v1/auth/login?returnTo=%2F",
+    );
+  });
+
+  it.each([
+    ["unknown_account", "Kein Zugang", "Für dieses Konto ist kein Zugang eingerichtet."],
+    ["account_deactivated", "Kein Zugang", "Dieses Konto ist deaktiviert."],
+    ["identity_mismatch", "Kein Zugang", "mit einer anderen Anmeldung verknüpft"],
+    ["login_failed", "Anmeldung fehlgeschlagen", "Bitte versuchen Sie es erneut."],
+    ["something_else", "Anmeldung fehlgeschlagen", "Bitte versuchen Sie es erneut."],
+  ])("explains the refusal %s from the callback", async (code, title, text) => {
+    renderApp(`/login?error=${code}`, mockApi(oidcMode).api);
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(text))).toBeInTheDocument();
+  });
+
+  it("returns to the login page with 'Sitzung abgelaufen' on a 401 after a session", async () => {
+    let expired = false;
+    const { api } = mockApi({
+      ...oidcMode,
+      "GET /api/v1/me": () => (expired ? problem(401, "unauthenticated") : json(staffUsers[1])),
+      "GET /api/v1/projects": () => json({ items: [project], nextCursor: null }),
+      [`GET /api/v1/projects/${project.id}`]: () => problem(401, "unauthenticated"),
+    });
+    const { router } = renderApp("/projects", api);
+    expect(await screen.findByText("Restrukturierung Werk Nord")).toBeInTheDocument();
+    expired = true;
+    await userEvent.click(screen.getByRole("link", { name: "Restrukturierung Werk Nord" }));
+
+    expect(await screen.findByText("Sitzung abgelaufen")).toBeInTheDocument();
+    expect(screen.getByText("Bitte melden Sie sich erneut an.")).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({
+      returnTo: `/projects/${project.id}`,
+      reason: "expired",
+    });
+    expect(within(banner()).queryByText("Petra Projektleitung")).not.toBeInTheDocument();
+  });
+
+  it("logs out with 'Abmelden'", async () => {
+    let session = true;
+    const { api, calls } = mockApi({
+      ...oidcMode,
+      "GET /api/v1/me": () => (session ? json(staffUsers[1]) : problem(401, "unauthenticated")),
+      "GET /api/v1/projects": () => json({ items: [project], nextCursor: null }),
+      "POST /api/v1/auth/logout": () => {
+        session = false;
+        return new Response(null, { status: 204 });
+      },
+    });
+    const { router } = renderApp("/projects", api);
+    expect(await screen.findByText("Restrukturierung Werk Nord")).toBeInTheDocument();
+    await userEvent.click(await within(banner()).findByRole("button", { name: "Abmelden" }));
+
+    expect(await screen.findByRole("link", { name: "Anmelden" })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(screen.queryByText("Sitzung abgelaufen")).not.toBeInTheDocument();
+    expect(within(banner()).queryByText("Petra Projektleitung")).not.toBeInTheDocument();
+    expect(calls).toContainEqual({ key: "POST /api/v1/auth/logout", body: {} });
+  });
+
+  it("refuses a deactivated dev user with 'Kein Zugang'", async () => {
+    const { api } = mockApi({
+      ...noSession,
+      "GET /api/v1/dev/staff-users": () => json(staffUsers),
+      "POST /api/v1/dev/session": () =>
+        problem(422, "domain-error", {
+          errors: [{ pointer: "", code: "account_deactivated", detail: "Refused" }],
+        }),
+    });
+    renderApp("/login", api);
+    await userEvent.click(await screen.findByRole("button", { name: "Erika Musterfrau · Admin" }));
+    expect(await screen.findByText("Kein Zugang")).toBeInTheDocument();
+    expect(screen.getByText(/Dieses Konto ist deaktiviert/)).toBeInTheDocument();
   });
 });
 

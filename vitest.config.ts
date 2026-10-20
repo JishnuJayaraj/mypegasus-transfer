@@ -18,6 +18,7 @@ export default defineConfig({
           "packages/domain/src/eligibility/**",
           "packages/domain/src/access/**",
           "packages/domain/src/audit/**",
+          "packages/domain/src/auth/**",
           "packages/domain/src/documents/**",
           "packages/domain/src/completeness/**",
           "packages/domain/src/dates.ts",

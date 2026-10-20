@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { createDb } from "./client";
 import { migrationsFolder, runMigrations } from "./migrate";
-import { seed, seedProjectIds } from "./seed";
+import { seedProjectIds, seedStaffUserIds } from "./seed";
 import { testDatabaseUrls } from "./testing";
 
 // process-and-lifecycle.md: there is no self-registration, so 0033 removes `self_registered` and
@@ -33,7 +33,16 @@ describe("0033_remove_self_registration", () => {
   it("refuses a database holding a removed status and leaves it unchanged", async () => {
     await db.$client.query("drop owned by transfer_owner");
     await runMigrations(url, before0033);
-    await seed(db);
+    // Plain SQL in the schema as of 0032: the seed writes today's schema, which later migrations
+    // extend (e.g. `staff_user`'s OIDC columns).
+    await db.$client.query(
+      "insert into staff_user (id, display_name, email, role) values ($1, 'Petra Projektleitung', 'project-lead@example.org', 'project_lead')",
+      [seedStaffUserIds.projectLead],
+    );
+    await db.$client.query(
+      "insert into project (id, name, customer_name, type, created_by) values ($1, 'Restrukturierung Werk Nord', 'Beispiel Maschinenbau GmbH', 'ta_tg', $2)",
+      [seedProjectIds.werkNord, seedStaffUserIds.projectLead],
+    );
     await db.$client.query(
       "insert into participation (project_id, status, profiling_status, dsv_status) values ($1, 'self_registered', 'not_started', 'not_offered')",
       [seedProjectIds.werkNord],

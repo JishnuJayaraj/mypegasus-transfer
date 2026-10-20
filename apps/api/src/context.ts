@@ -8,6 +8,7 @@ import type { Env } from "./env";
 import { validationProblem } from "./problem";
 import type { Slots } from "./imports/slots";
 import type { SpaRoots } from "./static";
+import type { Oidc } from "./oidc";
 
 export interface Deps {
   db: Database;
@@ -19,10 +20,17 @@ export interface Deps {
   spa?: SpaRoots | undefined;
   /** The parse-worker slots of the import (R43); the process's own by default, a test's own. */
   importSlots?: Slots | undefined;
+  /** The OIDC client (AUTH_MODE=oidc); built from the environment unless a test injects one. */
+  oidc?: Oidc | undefined;
 }
 
 export interface AppEnv {
-  Variables: { requestId: string; staffUser: StaffUser | undefined };
+  Variables: {
+    requestId: string;
+    staffUser: StaffUser | undefined;
+    /** When the request's staff session ends (ISO 8601 UTC), behind `requireSession`. */
+    sessionExpiresAt: string | undefined;
+  };
 }
 
 /** A router whose Zod validation failures become RFC 9457 validation problems. */

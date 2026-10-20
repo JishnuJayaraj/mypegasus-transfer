@@ -34,6 +34,7 @@ export function testApp(
     spa?: Deps["spa"];
     clock?: Clock;
     importSlots?: Deps["importSlots"];
+    oidc?: Deps["oidc"];
   } = {},
 ) {
   const logs: string[] = [];
@@ -46,6 +47,7 @@ export function testApp(
     clock: options.clock ?? new SystemClock(),
     spa: options.spa,
     importSlots: options.importSlots,
+    oidc: options.oidc,
   });
   return { app, db, logs };
 }

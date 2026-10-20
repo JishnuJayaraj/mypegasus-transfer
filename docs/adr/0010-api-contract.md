@@ -58,6 +58,25 @@ generator then. No action now.
   open names its id (an extension member of RFC 9457), never a value: a manual creation whose
   Personalnummer exists already (`personnel_number_taken`) links to that participation.
 
+## Note 2026-10-20 (Slice 3, PR 3b): session cookie, CSRF, login problem codes
+
+- **Session cookie:** `__Host-tp_staff` (`Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/`) outside
+  development, `tp_staff` over http in development (ADR-0007, as built). Staff routes read only
+  that cookie; a missing, unknown, ended or expired session is a 401 `unauthenticated`.
+- **CSRF (`apps/api/src/csrf.ts`), replacing Hono's `csrf()`, which checked only form content
+  types:** every `POST`, `PUT`, `PATCH` and `DELETE` under `/api/*` needs an `Origin` in
+  `APP_ORIGINS`; without an `Origin`, `Sec-Fetch-Site: same-origin`. Anything else, `Origin: null`
+  included, is a 403 `forbidden` with `errors[].code` `csrf_origin`. It runs before the content-type
+  check. With JSON-only bodies, no CORS and `SameSite=Lax` cookies there is no token scheme.
+- **Login refusals** (`unknown_account`, `account_deactivated`, `identity_mismatch`): a 422
+  `domain-error` from the dev login; the OIDC callback, a browser navigation, redirects to
+  `/login?error=<code>` instead, with `login_failed` for a callback that fails its checks.
+- **New routes:** `GET /auth/login`, `GET /auth/callback` (302 only, `Cache-Control: no-store`, with
+  `AUTH_MODE=oidc`), `POST /auth/logout` (an empty strict body, 204 with or without a session);
+  `GET /me` gains `sessionExpiresAt` (schema `CurrentStaffUser`).
+- **Logs:** the request line has no query string, so neither the authorization code nor `state`
+  reaches it; a failed callback logs the error's name, code and stack frames only.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):
@@ -85,8 +104,7 @@ Errors (`apps/api/src/problem.ts`, `app.ts`, `database-errors.ts`, `packages/dom
   manifest, or an invalid stored template snapshot, is a 500 too.
 
 Requests:
-- `POST`, `PUT` and `PATCH` need `application/json` (415). CSRF: Hono's origin check against
-  `APP_ORIGINS` on `/api/*`.
+- `POST`, `PUT` and `PATCH` need `application/json` (415). CSRF: see the Slice 3 note below.
 - Bodies are strict: an unknown field is a 400 `unrecognized_keys` at its pointer, so
   server-owned values (creator, approver, confirmer, hashes, a new project's Project Agentur) never
   come from the client. Action routes (activation, withdrawal) take an empty strict object.

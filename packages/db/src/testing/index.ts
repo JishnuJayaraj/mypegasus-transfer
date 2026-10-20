@@ -66,15 +66,30 @@ export async function activateAsOwner(
  * `active` makes the seeded Werk Nord and Verwaltung active (the draft gate, D9).
  */
 export async function resetTestDatabase(
-  options: { seed?: boolean; active?: boolean } = {},
+  options: { seed?: boolean; active?: boolean; keepSessions?: boolean } = {},
 ): Promise<void> {
   const db = createDb(testDatabaseUrls().owner);
   try {
+    // A test file logs in once: its live staff sessions survive the reset (unless
+    // `keepSessions: false`), since the seed brings its staff users back with the same ids.
+    const { rows: sessions } = await db.$client.query(
+      "select json_agg(s) as rows from staff_session s where ended_at is null and $1",
+      [options.keepSessions ?? true],
+    );
     // lifecycle_edge is reference data from the migrations, never truncated.
     await db.$client.query(
-      "truncate audit_event, ba_reporting_task, participation_dsv_amendment, import_column_mapping, config_relaxation_request, profiling_exception_request, participant_details, participant_identity, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_user, job_run",
+      "truncate audit_event, ba_reporting_task, participation_dsv_amendment, import_column_mapping, config_relaxation_request, profiling_exception_request, participant_details, participant_identity, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_session, staff_audit_event, staff_user, job_run",
     );
-    if (options.seed) await seed(db);
+    if (options.seed) {
+      await seed(db);
+      await db.$client.query(
+        `insert into staff_session (token_hash, staff_user_id, created_at, expires_at)
+         select token_hash, staff_user_id, created_at, expires_at
+         from json_populate_recordset(null::staff_session, $1)
+         where staff_user_id in (select id from staff_user)`,
+        [JSON.stringify(sessions[0].rows ?? [])],
+      );
+    }
     if (options.active) await activateAsOwner(db.$client);
   } finally {
     await db.$client.end();

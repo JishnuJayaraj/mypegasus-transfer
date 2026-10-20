@@ -320,4 +320,20 @@ export {
   StatusField,
   statusFieldOfTrack,
 } from "./audit/events";
-export { PageQuery, ProblemDetails, StaffUser, page } from "./api";
+export {
+  StaffAuditEvent,
+  StaffAuditEventType,
+  StaffLoginMethod,
+  StaffLoginNameClaim,
+  StaffSessionEndReason,
+} from "./audit/staff-events";
+export {
+  loginNameOf,
+  STAFF_SESSION_HOURS,
+  StaffLoginRefusal,
+  staffLoginDecision,
+  type StaffLoginAccount,
+  type StaffLoginDecision,
+} from "./auth/staff-login";
+export { safeReturnPath } from "./auth/return-path";
+export { CurrentStaffUser, PageQuery, ProblemDetails, StaffUser, page } from "./api";

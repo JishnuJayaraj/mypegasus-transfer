@@ -43,7 +43,7 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 | Regional variation | Fixed lifecycle core + versioned regional templates | 0004 |
 | Hosting | Local (synthetic data); pilot + production on company Hetzner cluster (k3s, containers); one Node 24 image serves the API and both SPAs | 0005 |
 | External services | Ports & adapters with mocks; real impls added later | 0006 |
-| Auth | Staff: Entra ID via OIDC + MFA (dev stub first); participants: SMS/email link + birth-date check | 0007 |
+| Auth | Staff: Entra ID via OIDC + MFA, server-side sessions (dev stub in development); participants: SMS/email link + birth-date check | 0007 |
 | Retention | Per data item, two-stage deletion with evidence set | 0008 |
 | Official forms | Versioned BA form registry, AcroForm filling | 0009 |
 | API contract | OpenAPI via `@hono/zod-openapi`, RFC 9457 errors, cursor pagination, `/api/v1` | 0010 |

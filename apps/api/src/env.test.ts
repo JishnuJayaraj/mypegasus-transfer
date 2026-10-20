@@ -49,8 +49,74 @@ describe("parseEnv", () => {
     ).toThrow(/AUTH_MODE=dev is not allowed with NODE_ENV=production/);
   });
 
-  it("refuses AUTH_MODE=oidc until Slice 3", () => {
-    expect(() => parseEnv({ ...dev, AUTH_MODE: "oidc" })).toThrow(/not implemented until Slice 3/);
+  // Slice 3 plan, D1 (PR 3b).
+  describe("AUTH_MODE=oidc", () => {
+    const oidc = {
+      ...dev,
+      AUTH_MODE: "oidc",
+      OIDC_ISSUER: "https://login.example.org/tenant/v2.0",
+      OIDC_CLIENT_ID: "transfer-web",
+      OIDC_CLIENT_SECRET: "Zzyzx-client-secret",
+      OIDC_REDIRECT_URL: "http://localhost:5173/api/v1/auth/callback",
+    };
+    const production = {
+      ...oidc,
+      NODE_ENV: "production",
+      SESSION_SECRET: "s".repeat(32),
+      APP_ORIGINS: "https://transfer.example.org",
+      OIDC_REDIRECT_URL: "https://transfer.example.org/api/v1/auth/callback",
+    };
+
+    it("starts with its four variables set", () => {
+      expect(parseEnv(oidc)).toMatchObject({
+        authMode: "oidc",
+        oidc: {
+          issuer: oidc.OIDC_ISSUER,
+          clientId: "transfer-web",
+          clientSecret: "Zzyzx-client-secret",
+          redirectUrl: oidc.OIDC_REDIRECT_URL,
+        },
+      });
+      expect(parseEnv(production).oidc?.redirectUrl).toBe(production.OIDC_REDIRECT_URL);
+      expect(parseEnv(dev).oidc).toBeUndefined();
+    });
+
+    it.each(["OIDC_ISSUER", "OIDC_CLIENT_ID", "OIDC_CLIENT_SECRET", "OIDC_REDIRECT_URL"])(
+      "refuses to start without %s, naming it",
+      (name) => {
+        expect(() => parseEnv({ ...oidc, [name]: "" })).toThrow(
+          new RegExp(`AUTH_MODE=oidc needs ${name}`),
+        );
+      },
+    );
+
+    it("needs https outside development", () => {
+      expect(() =>
+        parseEnv({ ...production, OIDC_ISSUER: "http://login.example.org/tenant" }),
+      ).toThrow(/OIDC_ISSUER must be https/);
+      expect(() =>
+        parseEnv({
+          ...production,
+          APP_ORIGINS: "http://transfer.example.org",
+          OIDC_REDIRECT_URL: "http://transfer.example.org/api/v1/auth/callback",
+        }),
+      ).toThrow(/OIDC_REDIRECT_URL must be https/);
+    });
+
+    it.each([
+      "https://other.example.org/api/v1/auth/callback",
+      "http://localhost:5173/callback",
+      "http://localhost:5173/api/v1/auth/callback?x=1",
+    ])("refuses the redirect URL %s", (url) => {
+      expect(() => parseEnv({ ...oidc, OIDC_REDIRECT_URL: url })).toThrow(
+        /OIDC_REDIRECT_URL must be \/api\/v1\/auth\/callback on an origin in APP_ORIGINS/,
+      );
+    });
+
+    it("never puts the client secret into an error", () => {
+      expect(() => parseEnv({ ...oidc, OIDC_ISSUER: "not a url" })).toThrow(/OIDC_ISSUER/);
+      expect(() => parseEnv({ ...oidc, OIDC_ISSUER: "not a url" })).not.toThrow(/Zzyzx/);
+    });
   });
 
   it("requires SESSION_SECRET outside development", () => {

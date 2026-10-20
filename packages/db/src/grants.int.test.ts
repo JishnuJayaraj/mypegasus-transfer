@@ -112,6 +112,11 @@ const statusFunctions = [
   "write_participant_data",
   // Slice 2 (PR 2h-3): individual TG dates with their amendment and BA reporting tasks
   "set_participation_dates",
+  // Slice 3 (PR 3b): staff sessions
+  "start_staff_session",
+  "end_staff_session",
+  "bind_staff_identity",
+  "record_staff_login_refused",
 ];
 const helpers = [
   "assert_context",
