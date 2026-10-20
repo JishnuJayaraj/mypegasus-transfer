@@ -369,7 +369,7 @@ describe("staff administration (Q126)", () => {
     );
     expect(detail.assignments).toEqual([]);
     await expectProblem(
-      await send("POST", "/dev/session", {}, { staffUserId: id }),
+      await app.request("/api/v1/dev/session", jsonRequest("POST", { staffUserId: id })),
       422,
       "domain-error",
     );
