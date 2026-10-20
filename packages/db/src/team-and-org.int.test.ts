@@ -107,19 +107,6 @@ async function whileLocked(projectId: string, run: () => Promise<void>) {
   }
 }
 
-/** Waits until the backend is blocked on a PostgreSQL lock, proving the calls overlap. */
-async function waitForLock(pid: number) {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const { rows } = await owner.query(
-      "select wait_event_type from pg_stat_activity where pid = $1",
-      [pid],
-    );
-    if (rows[0]?.wait_event_type === "Lock") return;
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  throw new Error("concurrent database call did not wait for a lock");
-}
-
 beforeAll(() => Promise.all([app.connect(), other.connect(), owner.connect()]));
 afterAll(() => Promise.all([app.end(), other.end(), owner.end()]));
 beforeEach(() => resetTestDatabase({ seed: true, keepSessions: false }));
@@ -361,7 +348,7 @@ describe("org roles (Q80, Q126)", () => {
     expect(await refusal(revoke({ actor: projectLead }))).toBe("actor_not_allowed");
   });
 
-  it("serialize the complete-set operation so concurrent requests end as one requested set", async () => {
+  it("serialize complete-set operations so a retry ends as exactly one requested set", async () => {
     await setRoles(app, consultant, [{ role: "regional_admin", regionId: seedRegionIds.nord }]);
     const first = [{ role: "regional_operations_manager", regionId: seedRegionIds.sued }];
     const second = [
@@ -372,11 +359,17 @@ describe("org roles (Q80, Q126)", () => {
     await app.query("begin");
     try {
       await setRoles(app, consultant, first);
-      const otherPid = (await other.query("select pg_backend_pid() as pid")).rows[0].pid as number;
-      const concurrent = setRoles(other, consultant, second);
-      await waitForLock(otherPid);
+      expect(
+        await tryWithin(other, "select set_org_roles($1, $2::org_role[], $3::uuid[], $4, $5)", [
+          consultant,
+          second.map(({ role }) => role),
+          second.map(({ regionId }) => regionId),
+          admin,
+          requestId,
+        ]),
+      ).toBe("55P03");
       await app.query("commit");
-      await concurrent;
+      await setRoles(other, consultant, second);
     } catch (error) {
       await app.query("rollback");
       throw error;
@@ -405,19 +398,25 @@ describe("org roles (Q80, Q126)", () => {
         actor: admin,
         requestId,
       });
-      const otherPid = (await other.query("select pg_backend_pid() as pid")).rows[0].pid as number;
-      const concurrent = refusal(
-        call(other, "revoke_org_role", {
-          staffUserId: admin,
-          role: "admin",
-          regionId: null,
-          actor: secondAdmin,
+      expect(
+        await tryWithin(other, "select revoke_org_role($1, 'admin', null, $2, $3)", [
+          admin,
+          secondAdmin,
           requestId,
-        }),
-      );
-      await waitForLock(otherPid);
+        ]),
+      ).toBe("55P03");
       await app.query("commit");
-      expect(await concurrent).toBe("actor_not_allowed");
+      expect(
+        await refusal(
+          call(other, "revoke_org_role", {
+            staffUserId: admin,
+            role: "admin",
+            regionId: null,
+            actor: secondAdmin,
+            requestId,
+          }),
+        ),
+      ).toBe("actor_not_allowed");
     } catch (error) {
       await app.query("rollback");
       throw error;

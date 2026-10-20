@@ -72,11 +72,15 @@ BEGIN
      OR pg_catalog.cardinality(p_roles) <> pg_catalog.cardinality(p_region_ids)
      OR pg_catalog.cardinality(p_roles) > 20
      OR EXISTS (
-       SELECT FROM pg_catalog.unnest(p_roles, p_region_ids) AS w(role, region_id)
+       SELECT FROM ROWS FROM (
+         pg_catalog.unnest(p_roles), pg_catalog.unnest(p_region_ids)
+       ) AS w(role, region_id)
        WHERE w.role IS NULL OR (w.role = 'admin') IS DISTINCT FROM (w.region_id IS NULL))
      OR (SELECT count(*) FROM (
        SELECT w.role, w.region_id
-       FROM pg_catalog.unnest(p_roles, p_region_ids) AS w(role, region_id)
+       FROM ROWS FROM (
+         pg_catalog.unnest(p_roles), pg_catalog.unnest(p_region_ids)
+       ) AS w(role, region_id)
        GROUP BY w.role, w.region_id
      ) distinct_roles) <> pg_catalog.cardinality(p_roles) THEN
     RAISE EXCEPTION 'invalid_argument';
@@ -89,7 +93,9 @@ BEGIN
     RAISE EXCEPTION 'account_deactivated';
   END IF;
   IF EXISTS (
-    SELECT FROM pg_catalog.unnest(p_roles, p_region_ids) AS w(role, region_id)
+    SELECT FROM ROWS FROM (
+      pg_catalog.unnest(p_roles), pg_catalog.unnest(p_region_ids)
+    ) AS w(role, region_id)
     WHERE w.region_id IS NOT NULL
       AND NOT EXISTS (SELECT FROM public.region WHERE id = w.region_id)) THEN
     RAISE EXCEPTION 'region_not_found';
@@ -97,7 +103,9 @@ BEGIN
   IF p_staff_user_id = p_actor
      AND EXISTS (SELECT FROM public.staff_org_role WHERE staff_user_id = p_actor AND role = 'admin')
      AND NOT EXISTS (
-       SELECT FROM pg_catalog.unnest(p_roles, p_region_ids) AS w(role, region_id)
+       SELECT FROM ROWS FROM (
+         pg_catalog.unnest(p_roles), pg_catalog.unnest(p_region_ids)
+       ) AS w(role, region_id)
        WHERE w.role = 'admin' AND w.region_id IS NULL) THEN
     RAISE EXCEPTION 'own_account';
   END IF;
@@ -105,7 +113,9 @@ BEGIN
     SELECT held.role, held.region_id
     FROM public.staff_org_role held
     WHERE held.staff_user_id = p_staff_user_id AND NOT EXISTS (
-      SELECT FROM pg_catalog.unnest(p_roles, p_region_ids) AS w(role, region_id)
+      SELECT FROM ROWS FROM (
+        pg_catalog.unnest(p_roles), pg_catalog.unnest(p_region_ids)
+      ) AS w(role, region_id)
       WHERE w.role = held.role AND w.region_id IS NOT DISTINCT FROM held.region_id)
     ORDER BY held.role::text, held.region_id NULLS FIRST
   LOOP
@@ -114,7 +124,9 @@ BEGIN
   END LOOP;
   FOR r IN
     SELECT w.role, w.region_id
-    FROM pg_catalog.unnest(p_roles, p_region_ids) AS w(role, region_id)
+    FROM ROWS FROM (
+      pg_catalog.unnest(p_roles), pg_catalog.unnest(p_region_ids)
+    ) AS w(role, region_id)
     WHERE NOT EXISTS (
       SELECT FROM public.staff_org_role held
       WHERE held.staff_user_id = p_staff_user_id AND held.role = w.role
