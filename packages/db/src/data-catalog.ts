@@ -27,6 +27,10 @@ export const retentionPeriods = {
   // 3 years; pseudonymised when the subject's data is deleted; evidence-set entries follow the
   // evidence set (verify, Q3).
   audit_log: "unset",
+  // Q122 (assumed): sessions (and from 3d codes and one-time challenges) are deleted, or stripped of
+  // their hashes and addresses, 30 days after use, expiry, lock, revocation or end; a legal hold
+  // never keeps a secret usable.
+  access_credential: "unset",
   // No personal data: the retention job never touches it.
   reference_data: "never",
 } as const;
@@ -36,6 +40,18 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   staff_user: {
     retentionClass: "staff_account",
     dataClass: "confidential",
+    holdsParticipantData: false,
+  },
+  // Staff sessions (Slice 3, D2): a token's SHA-256, the staff user, the times; never the token.
+  staff_session: {
+    retentionClass: "access_credential",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  // Staff logins, logouts, refusals and identity bindings (D6): staff ids and codes only.
+  staff_audit_event: {
+    retentionClass: "audit_log",
+    dataClass: "internal",
     holdsParticipantData: false,
   },
   // Who holds which project role (D6); staff ids only, no participant data.

@@ -18,7 +18,10 @@ import {
   ProjectType,
   RelaxationReasonCode,
   RelaxationRequestStatus,
+  StaffAuditEventType,
   StaffRole,
+  StaffSessionEndReason,
+  STAFF_SESSION_HOURS,
   StatusField,
   TgEntryKind,
   Track,
@@ -54,14 +57,74 @@ export const projectType = pgEnum("project_type", values(ProjectType));
 export const projectStatus = pgEnum("project_status", values(ProjectStatus));
 export const projectRole = pgEnum("project_role", values(ProjectRole));
 
-/** Synthetic staff users only in Slice 0 (the dev session stub). Never hard-deleted (Q59). */
-export const staffUser = pgTable("staff_user", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  displayName: text("display_name").notNull(),
-  email: text("email").notNull().unique(),
-  role: staffRole("role").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+/**
+ * Staff accounts, created in the app (Q7, Q126); synthetic ones from the seed. Never hard-deleted
+ * (Q59). The first OIDC login binds `(oidc_issuer, oidc_subject)` through `bind_staff_identity`
+ * (D5); a deactivated account can't log in.
+ */
+export const staffUser = pgTable(
+  "staff_user",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayName: text("display_name").notNull(),
+    email: text("email").notNull().unique(),
+    role: staffRole("role").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    oidcIssuer: text("oidc_issuer"),
+    oidcSubject: text("oidc_subject"),
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    unique("staff_user_oidc_identity_key").on(t.oidcIssuer, t.oidcSubject),
+    // The first login matches the email case-insensitively (D5), so one address is one account.
+    uniqueIndex("staff_user_email_lower_key").on(sql`lower(${t.email})`),
+    check(
+      "staff_user_oidc_identity_complete",
+      sql`(${t.oidcIssuer} is null) = (${t.oidcSubject} is null)`,
+    ),
+    check(
+      "staff_user_oidc_issuer_format",
+      sql`${t.oidcIssuer} ~ '^https?://[!-~]{1,255}$' and length(${t.oidcIssuer}) <= 263`,
+    ),
+    check("staff_user_oidc_subject_format", sql`${t.oidcSubject} ~ '^[!-~]{1,255}$'`),
+  ],
+);
+
+export const staffSessionEndReason = pgEnum(
+  "staff_session_end_reason",
+  values(StaffSessionEndReason),
+);
+
+/**
+ * Server-side staff sessions for both login modes (D1, D2): the cookie holds 32 random bytes, the
+ * row only their SHA-256, so reading the table gives no live session. 8 hours absolute; the API
+ * checks expiry against database time. Written only by `start_staff_session` and
+ * `end_staff_session`; `transfer_app` only reads it.
+ */
+export const staffSession = pgTable(
+  "staff_session",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    staffUserId: uuid("staff_user_id")
+      .notNull()
+      .references(() => staffUser.id),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    endedAt: timestamp("ended_at", { withTimezone: true, mode: "string" }),
+    endReason: staffSessionEndReason("end_reason"),
+  },
+  (t) => [
+    index("staff_session_staff_user_idx").on(t.staffUserId),
+    check("staff_session_token_hash", sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "staff_session_lifetime",
+      sql`${t.expiresAt} = ${t.createdAt} + ${sql.raw(`interval '${STAFF_SESSION_HOURS} hours'`)}`,
+    ),
+    check("staff_session_ended", sql`(${t.endedAt} is null) = (${t.endReason} is null)`),
+  ],
+);
 
 /**
  * The root of project scoping, so it has no project_id itself (ADR-0002). Written only by the
@@ -144,6 +207,7 @@ export const profilingExceptionSupersededReason = pgEnum(
   values(ProfilingExceptionSupersededReason),
 );
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
+export const staffAuditEventType = pgEnum("staff_audit_event_type", values(StaffAuditEventType));
 export const relaxationReasonCode = pgEnum("relaxation_reason_code", values(RelaxationReasonCode));
 export const importTarget = pgEnum("import_target", values(ImportTarget));
 export const dsvAmendmentKind = pgEnum("dsv_amendment_kind", values(DsvAmendmentKind));
@@ -701,6 +765,59 @@ export const auditEvent = pgTable(
 );
 
 /**
+ * The staff audit trail (D6): logins, logouts, refused logins and identity bindings. No
+ * `project_id`, so not `audit_event`. Written only by the staff session functions; `transfer_app`
+ * has no privilege on it. Ids and codes only, held by the `CHECK`s: a refused login records its
+ * code, never the claimed email.
+ */
+export const staffAuditEvent = pgTable(
+  "staff_audit_event",
+  {
+    seq: bigint("seq", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    eventType: staffAuditEventType("event_type").notNull(),
+    actorStaffUserId: uuid("actor_staff_user_id").references(() => staffUser.id),
+    subjectStaffUserId: uuid("subject_staff_user_id").references(() => staffUser.id),
+    reasonCode: text("reason_code"),
+    details: jsonb("details")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    occurredAt: timestamp("occurred_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    requestId: text("request_id"),
+  },
+  (t) => [
+    index("staff_audit_event_subject_seq_idx").on(t.subjectStaffUserId, t.seq),
+    // A login, logout or binding is the user's own; a refusal has no actor, an account only
+    // where one was matched, and its code.
+    check(
+      "staff_audit_event_shape",
+      sql`case ${t.eventType}
+        when 'staff_login_refused' then ${t.actorStaffUserId} is null
+          and ${t.reasonCode} in ('unknown_account', 'account_deactivated', 'identity_mismatch')
+          and (${t.subjectStaffUserId} is null) = (${t.reasonCode} = 'unknown_account')
+        else ${t.actorStaffUserId} is not null and ${t.subjectStaffUserId} = ${t.actorStaffUserId}
+          and ${t.reasonCode} is null
+      end`,
+    ),
+    check(
+      "staff_audit_event_reason_code_is_code",
+      sql`${t.reasonCode} ~ ${sql.raw(`'${codePattern}'`)}`,
+    ),
+    check(
+      "staff_audit_event_request_id_is_id",
+      sql`${t.requestId} ~ ${sql.raw(`'${correlationPattern}'`)}`,
+    ),
+    check(
+      "staff_audit_event_details_ids_and_codes",
+      sql.raw(
+        `jsonb_typeof("staff_audit_event"."details") = 'object' and not jsonb_path_exists("staff_audit_event"."details", 'strict $.** ? (@.type() == "string" && !(@ like_regex "${detailsValuePattern}"))') and not jsonb_path_exists("staff_audit_event"."details", 'strict $.** ? (@.type() == "object").keyvalue() ? (!(@.key like_regex "${detailsKeyPattern}"))')`,
+      ),
+    ),
+  ],
+);
+
+/**
  * A template version as first pinned anywhere (Slice 2 plan 5.2, 5.8; D5): global reference data
  * without `project_id` (R27). Keyed by Agentur and version, so two first pins of one version
  * serialise on the primary key; every later pin must match both the content and its canonical
@@ -901,6 +1018,8 @@ export const importColumnMapping = pgTable(
 
 export const tables = [
   staffUser,
+  staffSession,
+  staffAuditEvent,
   project,
   projectMembership,
   projectEntryWave,

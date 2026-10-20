@@ -239,6 +239,20 @@
       "when": 1792501875448,
       "tag": "0033_remove_self_registration",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792513731002,
+      "tag": "0034_staff_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792513780228,
+      "tag": "0035_staff_session_functions",
+      "breakpoints": true
     }
   ]
 }

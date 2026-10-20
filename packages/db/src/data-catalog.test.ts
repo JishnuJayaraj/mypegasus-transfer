@@ -60,6 +60,9 @@ describe("data catalog", () => {
     expect(dataCatalog).toEqual({
       project: entry("project_master", "internal"),
       staff_user: entry("staff_account", "confidential"),
+      // Slice 3 (PR 3b, D2, D6, Q122)
+      staff_session: entry("access_credential", "internal"),
+      staff_audit_event: entry("audit_log", "internal"),
       project_membership: entry("project_master", "internal"),
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),
@@ -87,13 +90,14 @@ describe("data catalog", () => {
     expect(checkDataCatalog(tables, asParticipantData("config_template_version"))).toHaveLength(1);
   });
 
-  it("leaves every period with personal data unset until the DPO confirms it (Q3, Q58, Q59, Q77)", () => {
+  it("leaves every period with personal data unset until the DPO confirms it (Q3, Q58, Q59, Q77, Q122)", () => {
     expect(retentionPeriods).toEqual({
       project_master: "unset",
       staff_account: "unset",
       participation_record: "unset",
       personnel_file: "unset",
       audit_log: "unset",
+      access_credential: "unset",
       reference_data: "never",
     });
   });
