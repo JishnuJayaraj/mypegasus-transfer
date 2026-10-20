@@ -62,7 +62,7 @@ describe("checkParticipationDates: preconditions (5.7)", () => {
     ]);
   });
 
-  it.each(["withdrawn", "rejected", "exited", "ta_completed"] as const)(
+  it.each(["withdrawn", "exited", "ta_completed"] as const)(
     "refuses a closed participation (%s)",
     (status) => {
       expect(codes(end("2028-02-29", { status }))).toEqual(["participation_closed"]);

@@ -232,6 +232,13 @@
       "when": 1792476360374,
       "tag": "0032_participation_dates_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792501875448,
+      "tag": "0033_remove_self_registration",
+      "breakpoints": true
     }
   ]
 }

@@ -513,14 +513,12 @@
       "dsvStatus": "DSV"
     },
     "statuses": {
-      "self_registered": "Selbst registriert",
       "imported": "Importiert",
       "contacted": "Kontaktiert",
       "unreachable": "Nicht erreichbar",
       "informed": "Informiert",
       "active_in_tg": "In der TG",
       "withdrawn": "Ausgeschieden",
-      "rejected": "Abgelehnt",
       "ta_completed": "TA abgeschlossen",
       "exited": "Ausgetreten"
     },

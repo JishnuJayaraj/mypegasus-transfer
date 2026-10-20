@@ -3,14 +3,12 @@ import { z } from "zod";
 /** Lifecycle vocabulary (plan 5.2, process-and-lifecycle.md). Values are stored as they are. */
 
 export const MainStatus = z.enum([
-  "self_registered",
   "imported",
   "contacted",
   "unreachable",
   "informed",
   "active_in_tg",
   "withdrawn",
-  "rejected",
   "ta_completed",
   "exited",
 ]);
@@ -18,7 +16,6 @@ export type MainStatus = z.infer<typeof MainStatus>;
 
 export const terminalMainStatuses: ReadonlySet<MainStatus> = new Set([
   "withdrawn",
-  "rejected",
   "ta_completed",
   "exited",
 ]);

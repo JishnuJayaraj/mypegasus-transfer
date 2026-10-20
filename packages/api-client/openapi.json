@@ -2293,14 +2293,12 @@
           "status": {
             "type": "string",
             "enum": [
-              "self_registered",
               "imported",
               "contacted",
               "unreachable",
               "informed",
               "active_in_tg",
               "withdrawn",
-              "rejected",
               "ta_completed",
               "exited"
             ]
@@ -2365,14 +2363,12 @@
           "status": {
             "type": "string",
             "enum": [
-              "self_registered",
               "imported",
               "contacted",
               "unreachable",
               "informed",
               "active_in_tg",
               "withdrawn",
-              "rejected",
               "ta_completed",
               "exited"
             ]

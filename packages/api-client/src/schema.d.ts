@@ -3123,7 +3123,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            status: "self_registered" | "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "rejected" | "ta_completed" | "exited";
+            status: "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "ta_completed" | "exited";
             /** @enum {string} */
             profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
             /** @enum {string} */
@@ -3140,7 +3140,7 @@ export interface components {
             /** Format: uuid */
             projectId: string;
             /** @enum {string} */
-            status: "self_registered" | "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "rejected" | "ta_completed" | "exited";
+            status: "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "ta_completed" | "exited";
             /** @enum {string} */
             profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
             /** @enum {string} */

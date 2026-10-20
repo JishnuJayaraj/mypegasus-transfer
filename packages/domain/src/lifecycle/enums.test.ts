@@ -29,8 +29,7 @@ describe("vocabulary (plan 5.2)", () => {
     [
       "MainStatus",
       MainStatus,
-      words`self_registered imported contacted unreachable informed active_in_tg
-            withdrawn rejected ta_completed exited`,
+      words`imported contacted unreachable informed active_in_tg withdrawn ta_completed exited`,
     ],
     [
       "ProfilingStatus",
@@ -78,8 +77,8 @@ describe("vocabulary (plan 5.2)", () => {
     expect(schema.options).toEqual(values);
   });
 
-  it("has four terminal main statuses", () => {
-    expect([...terminalMainStatuses]).toEqual(words`withdrawn rejected ta_completed exited`);
+  it("has three terminal main statuses", () => {
+    expect([...terminalMainStatuses]).toEqual(words`withdrawn ta_completed exited`);
   });
 
   it("has no unrestricted exception reason (Q81)", () => {

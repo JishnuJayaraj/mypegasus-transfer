@@ -26,8 +26,6 @@ export type PermissionDenial =
   | "out_of_region"
   | "role_not_allowed"
   | "four_eyes"
-  /** The anonymous self-registration of Slice 4c, never through the transition service. */
-  | "anonymous_registration_only"
   /** A correction of a collection field names the entry it corrects. */
   | "entry_required";
 export type Permission = { ok: true } | { ok: false; because: PermissionDenial };
@@ -171,7 +169,6 @@ export function mayPerformTransition(
   edge: Edge,
   target: PermissionTarget,
 ): Permission {
-  if (edge.kind === "anonymous_self_registration") return no("anonymous_registration_only");
   if (actor.kind === "system") return edge.actor === "system" ? ok : no("actor_not_allowed");
   // An authenticated participant takes no transition (Q60, round 12).
   if (actor.kind === "participant" || edge.actor !== "user") return no("actor_not_allowed");
