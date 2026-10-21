@@ -27,6 +27,7 @@ import {
 } from "../../api";
 import { EntryWaveChoice } from "../../components/entry-wave-choice";
 import { ParticipationDatesForm } from "../../components/participation-dates-form";
+import { RecoveryPanel } from "../../components/recovery";
 import { RouteError } from "../../components/route-error";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -247,7 +248,11 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
           <dt>{t("activation.detail.status")}</dt>
           <dd>
             {status.account === "activated"
-              ? t("activation.status.activated")
+              ? status.code === "none"
+                ? t("activation.status.activated")
+                : t("activation.status.activatedRecovery", {
+                    code: t(`activation.code.${status.code}`),
+                  })
               : t(`activation.code.${status.code}`)}
           </dd>
         </div>
@@ -273,6 +278,10 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
         </div>
         {current && (
           <>
+            <div>
+              <dt>{t("activation.detail.purpose")}</dt>
+              <dd>{t(`activation.purpose.${current.purpose}`)}</dd>
+            </div>
             <div>
               <dt>{t("activation.detail.channel")}</dt>
               <dd>{t(`activation.channel.${current.channel}`)}</dd>
@@ -318,6 +327,11 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
                 {channel.noticeSentAt
                   ? t("activation.detail.noticeSent", { at: formatTimestamp(channel.noticeSentAt) })
                   : t("activation.detail.noticePending")}
+                {channel.suspendedAt &&
+                  !channel.removedAt &&
+                  ` ${t("activation.detail.suspended", { at: formatTimestamp(channel.suspendedAt) })}`}
+                {channel.removedAt &&
+                  ` ${t("activation.detail.removed", { at: formatTimestamp(channel.removedAt) })}`}
               </li>
             ))}
           </ul>
@@ -379,6 +393,15 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
             {t("activation.detail.send")}
           </Button>
         </fieldset>
+      )}
+      {detail.capabilities.issueActivationCode && status.account === "activated" && (
+        <RecoveryPanel
+          participationId={detail.id}
+          projectId={projectId}
+          language={language}
+          openCode={requiresReissueConfirmation}
+          onChanged={refresh}
+        />
       )}
       <div className="tp-bulk-actions">
         {detail.capabilities.revokeActivationCode && current && revocable && (

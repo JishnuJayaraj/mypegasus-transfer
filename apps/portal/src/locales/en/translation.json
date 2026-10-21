@@ -15,7 +15,9 @@
     "channels": "Your contact details",
     "channelEmail": "Email {{address}}, confirmed on {{at}}",
     "channelSms": "Mobile {{address}}, confirmed on {{at}}",
-    "logout": "Log out"
+    "logout": "Log out",
+    "login": "Log in",
+    "manageChannels": "Manage your contact details"
   },
   "status": {
     "checking": "Checking the connection …",
@@ -66,7 +68,9 @@
     "done": {
       "title": "Your access is active",
       "text": "You will also receive a confirmation at your contact.",
-      "home": "Go to the start page"
+      "home": "Go to the start page",
+      "recoveredTitle": "Your access is restored",
+      "recoveredText": "Your new contact replaces the previous ones. You will also receive a confirmation there."
     },
     "errors": {
       "code_invalid": "This code is not valid. Please contact your transfer company ({{contact}}).",
@@ -83,5 +87,36 @@
       "birth_date_format": "Please enter a valid date in the format DD.MM.YYYY.",
       "failed": "That did not work. Please try again."
     }
+  },
+  "login": {
+    "title": "Log in",
+    "intro": "Enter the private email address or mobile number you confirmed for the portal. We will send you a login code.",
+    "address": "Email address or mobile number",
+    "addressHelp": "The address your code was sent to.",
+    "send": "Send code",
+    "sent": "If this address belongs to an account, we have sent a six-digit code. It is valid for 15 minutes.",
+    "code": "Login code",
+    "submit": "Log in",
+    "resend": "Send a new code",
+    "noAccess": "No access yet?",
+    "errors": {
+      "one_time_code_invalid": "The code is wrong or no longer valid. Check it or request a new one.",
+      "rate_limited": "Too many attempts. Please try again later.",
+      "channel_invalid": "Please enter a valid email address or mobile number.",
+      "delivery_unavailable": "Messages cannot be sent right now. Please try again later.",
+      "failed": "That did not work. Please try again."
+    }
+  },
+  "channels": {
+    "title": "Your contact details",
+    "remove": "Remove",
+    "confirmRemove": "Remove contact",
+    "cancel": "Cancel",
+    "removeOne": "Your consent for this contact ends. We will no longer send codes or messages there.",
+    "removeLast": "This is your last contact. If you remove it, you will be logged out and can only log in again once your transfer company gives you a new access code.",
+    "loggedOut": "The contact is removed and you are logged out. For new access, please contact your transfer company.",
+    "expired": "Your session has expired. Please log in again.",
+    "add": "Add a contact",
+    "confirmAdd": "Add contact"
   }
 }

@@ -15,7 +15,9 @@
     "channels": "Ihre Kontaktwege",
     "channelEmail": "E-Mail {{address}}, bestätigt am {{at}}",
     "channelSms": "Mobilnummer {{address}}, bestätigt am {{at}}",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "login": "Anmelden",
+    "manageChannels": "Kontaktwege verwalten"
   },
   "status": {
     "checking": "Verbindung wird geprüft …",
@@ -66,7 +68,9 @@
     "done": {
       "title": "Ihr Zugang ist aktiv",
       "text": "Sie erhalten zusätzlich eine Bestätigung an Ihren Kontaktweg.",
-      "home": "Zur Startseite"
+      "home": "Zur Startseite",
+      "recoveredTitle": "Ihr Zugang ist wiederhergestellt",
+      "recoveredText": "Ihr neuer Kontaktweg ersetzt die bisherigen. Sie erhalten dort auch eine Bestätigung."
     },
     "errors": {
       "code_invalid": "Dieser Code ist nicht gültig. Bitte wenden Sie sich an Ihre Transfergesellschaft ({{contact}}).",
@@ -83,5 +87,36 @@
       "birth_date_format": "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
       "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut."
     }
+  },
+  "login": {
+    "title": "Anmelden",
+    "intro": "Geben Sie die private E-Mail-Adresse oder Mobilnummer ein, die Sie für das Portal bestätigt haben. Wir senden Ihnen einen Anmeldecode.",
+    "address": "E-Mail-Adresse oder Mobilnummer",
+    "addressHelp": "Die Adresse, an die Ihr Code gesendet wurde.",
+    "send": "Code senden",
+    "sent": "Wenn diese Adresse zu einem Zugang gehört, haben wir einen sechsstelligen Code gesendet. Er gilt 15 Minuten.",
+    "code": "Anmeldecode",
+    "submit": "Anmelden",
+    "resend": "Neuen Code senden",
+    "noAccess": "Noch keinen Zugang?",
+    "errors": {
+      "one_time_code_invalid": "Der Code ist falsch oder nicht mehr gültig. Prüfen Sie ihn oder fordern Sie einen neuen an.",
+      "rate_limited": "Zu viele Versuche. Bitte versuchen Sie es später noch einmal.",
+      "channel_invalid": "Bitte geben Sie eine gültige E-Mail-Adresse oder Mobilnummer ein.",
+      "delivery_unavailable": "Nachrichten können gerade nicht versendet werden. Bitte versuchen Sie es später noch einmal.",
+      "failed": "Das hat nicht geklappt. Bitte versuchen Sie es noch einmal."
+    }
+  },
+  "channels": {
+    "title": "Ihre Kontaktwege",
+    "remove": "Entfernen",
+    "confirmRemove": "Kontaktweg entfernen",
+    "cancel": "Abbrechen",
+    "removeOne": "Ihre Einwilligung für diesen Kontaktweg endet. Wir senden dorthin keine Codes und Nachrichten mehr.",
+    "removeLast": "Das ist Ihr letzter Kontaktweg. Wenn Sie ihn entfernen, werden Sie abgemeldet und können sich erst wieder anmelden, wenn Ihre Transfergesellschaft Ihnen einen neuen Zugangscode gibt.",
+    "loggedOut": "Der Kontaktweg ist entfernt und Sie sind abgemeldet. Für einen neuen Zugang wenden Sie sich an Ihre Transfergesellschaft.",
+    "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich neu an.",
+    "add": "Kontaktweg hinzufügen",
+    "confirmAdd": "Kontaktweg hinzufügen"
   }
 }
