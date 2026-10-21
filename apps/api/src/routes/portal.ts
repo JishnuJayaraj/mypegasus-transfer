@@ -8,7 +8,13 @@ import {
   ActivationCompletionInput,
   ActivationDeliveryAddressInput,
   ActivationState,
+  ChannelCodeRequestInput,
+  ChannelRemovalResult,
+  ChannelVerificationInput,
+  LoginCodeRequestInput,
+  LoginInput,
   PORTAL_CONTACT_CONSENT_VERSION,
+  PortalChannels,
   PortalMe,
   maskContactAddress,
   nextActivationStep,
@@ -16,6 +22,7 @@ import {
   normaliseContact,
   portalLimits,
   type ActivationChannel,
+  type ActivationPurpose,
   type ContactKind,
   type NoticeLanguage,
 } from "@transfer/domain";
@@ -40,12 +47,16 @@ import {
 } from "../portal-session";
 import { clientIp, createThrottle } from "../throttle";
 
-// The participant's activation (Slice 3 plan, PR 3e; D21–D29). Codes, one-time codes and
-// addresses arrive only in bodies and leave only as keyed hashes for the functions; no response,
-// log line or audit row carries them. Every code submission passes the per-IP throttle (D14).
+// The participant's activation and recovery (PRs 3e and 3f), login and channels
+// (3f); the rules are ADR-0007 and data-protection.md, Authentication. Codes, one-time codes and addresses arrive only in bodies and leave
+// only as keyed hashes for the functions (an address also to its own sender); no response, log
+// line or audit row carries them. Every code submission passes the per-IP throttle (Q128). The
+// login never says whether an address belongs to an account.
 
 const NoContent = { 204: { description: "Done" } };
-const ACTIVATED = "activated";
+/** `complete_activation`'s results that leave an active session. */
+const COMPLETED = new Set(["activated", "recovered"]);
+const ChannelParams = z.object({ channelId: z.uuid() });
 
 /** The refusals of the activation functions the portal answers with their code (422). */
 const domainRefusals = new Set([
@@ -60,6 +71,33 @@ function minutes(value: number) {
   return value * 60_000;
 }
 
+/** A six-digit one-time code (ADR-0007). */
+function newOneTimeCode() {
+  return String(randomInt(0, 10 ** portalLimits.oneTimeCode.digits)).padStart(
+    portalLimits.oneTimeCode.digits,
+    "0",
+  );
+}
+
+/**
+ * The login message (ADR-0007): the code and, by email, a link with it in the fragment, which the
+ * login page reads and posts only on a click.
+ */
+function loginCodeMessage(language: NoticeLanguage, code: string, link: string) {
+  const validity = portalLimits.oneTimeCode.validityMinutes;
+  return language === "de"
+    ? {
+        subject: "Ihr Anmeldecode für das Teilnehmerportal",
+        text: `Ihr Anmeldecode lautet ${code}. Er gilt ${validity} Minuten. Geben Sie ihn niemandem weiter.`,
+        link: `Oder öffnen Sie diesen Link und klicken Sie dort auf „Anmelden“: ${link}\n\nWenn Sie keinen Code angefordert haben, können Sie diese Nachricht ignorieren.`,
+      }
+    : {
+        subject: "Your login code for the participant portal",
+        text: `Your login code is ${code}. It is valid for ${validity} minutes. Do not share it with anyone.`,
+        link: `Or open this link and select “Log in” there: ${link}\n\nIf you did not ask for a code, you can ignore this message.`,
+      };
+}
+
 function oneTimeCodeMessage(language: NoticeLanguage, code: string) {
   return language === "de"
     ? {
@@ -70,6 +108,26 @@ function oneTimeCodeMessage(language: NoticeLanguage, code: string) {
         subject: "Your confirmation code for the participant portal",
         text: `Your confirmation code is ${code}. It is valid for ${portalLimits.oneTimeCode.validityMinutes} minutes. Do not share it with anyone.`,
       };
+}
+
+function rateLimited(c: Context<AppEnv>, retryAfterSeconds: number) {
+  c.header("Retry-After", String(retryAfterSeconds));
+  return problem(c, "too-many-requests", {
+    errors: [{ pointer: "", code: "rate_limited", detail: "Please try again later" }],
+  });
+}
+
+/** 503 before any code exists when no provider is configured (ADR-0006). */
+function deliveryUnavailable(c: Context<AppEnv>) {
+  return problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
+  });
+}
+
+function deliveryFailed(c: Context<AppEnv>) {
+  return problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" }],
+  });
 }
 
 export function portalRoutes(deps: Deps) {
@@ -86,27 +144,58 @@ export function portalRoutes(deps: Deps) {
   });
   const activating = [requirePortalSession(deps, "activating")];
   const active = [requirePortalSession(deps, "active")];
+  // ADR-0007: login codes per address and hour, counted for every address alike (keyed hashes, in
+  // memory) so a `429` doesn't tell a known address from an unknown one; the database counts
+  // login and verification codes of known addresses together as well.
+  const loginRequests = createThrottle({
+    limit: portalLimits.oneTimeCode.requestsPerAddressPerHour,
+    windowMs: minutes(60),
+    clock: deps.clock,
+  });
+  const loginLink = (code: string) => {
+    const base = env.portalPublicUrl!;
+    const url = new URL("login", base.endsWith("/") ? base : `${base}/`);
+    url.hash = code;
+    return url.href;
+  };
 
   /** 429 `rate_limited` when the client's IP has used up its submissions. */
   function throttled(c: Context<AppEnv>) {
     const taken = throttle.take(clientIp(c));
-    if (taken.ok) return undefined;
-    c.header("Retry-After", String(taken.retryAfterSeconds));
-    return problem(c, "too-many-requests", {
-      errors: [{ pointer: "", code: "rate_limited", detail: "Please try again later" }],
-    });
+    return taken.ok ? undefined : rateLimited(c, taken.retryAfterSeconds);
+  }
+
+  /**
+   * Sends a one-time code after its commit with the row id as the idempotency key (ADR-0006). Any
+   * provider error counts as unknown and is not logged: it may echo the destination.
+   */
+  async function sendOneTimeCode(
+    kind: ContactKind,
+    to: string,
+    message: { subject: string; text: string; link?: string },
+    idempotencyKey: string,
+  ): Promise<"sent" | "failed" | "unknown"> {
+    try {
+      return (
+        kind === "email"
+          ? await deps.mailer!.send({
+              to,
+              subject: message.subject,
+              text: message.link ? `${message.text}\n\n${message.link}` : message.text,
+              idempotencyKey,
+            })
+          : await deps.smsSender!.send({ to, text: message.text, idempotencyKey })
+      ).status;
+    } catch {
+      return "unknown";
+    }
   }
 
   /** A refusal of a function: 401 for a dead session, 422 with its code, or rethrown. */
   function refused(c: Context<AppEnv>, error: unknown) {
     const code = functionRefusal(error);
     if (code === "session_invalid") return problem(c, "unauthenticated");
-    if (code === "rate_limited") {
-      c.header("Retry-After", "3600");
-      return problem(c, "too-many-requests", {
-        errors: [{ pointer: "", code, detail: "Please try again later" }],
-      });
-    }
+    if (code === "rate_limited") return rateLimited(c, 3600);
     if (code === "code_invalid") clearPortalCookie(c, env);
     if (code && domainRefusals.has(code)) return domainProblem(c, [code]);
     throw error;
@@ -121,6 +210,7 @@ export function portalRoutes(deps: Deps) {
   /** Where the session's activation stands (D23), from its code and the steps it recorded. */
   async function stateOf(tokenHash: string): Promise<ActivationState> {
     const { rows } = await db.execute<{
+      purpose: ActivationPurpose;
       channel: ActivationChannel;
       deliveryKind: ContactKind | null;
       language: NoticeLanguage;
@@ -129,7 +219,8 @@ export function portalRoutes(deps: Deps) {
       deliveryAddressChecked: boolean;
       oneTimeCodeSent: boolean;
     }>(sql`
-      select c.channel, c.delivery_kind as "deliveryKind", c.notice_language as language,
+      select c.purpose, c.channel, c.delivery_kind as "deliveryKind",
+        c.notice_language as language,
         exists (select from participant_identity i
                 where i.participation_id = s.participation_id and i.birth_date is not null)
           as "hasBirthDate",
@@ -143,9 +234,10 @@ export function portalRoutes(deps: Deps) {
           as "oneTimeCodeSent"
       from participant_session s join activation_code c on c.id = s.activation_code_id
       where s.token_hash = ${tokenHash}`);
-    const { channel, deliveryKind, language, ...progress } = rows[0]!;
+    const { purpose, channel, deliveryKind, language, ...progress } = rows[0]!;
     return {
       nextStep: nextActivationStep({ channel, ...progress }),
+      purpose,
       channel,
       deliveryKind,
       language,
@@ -327,15 +419,8 @@ export function portalRoutes(deps: Deps) {
       if (!address) return domainProblem(c, [{ code: "channel_invalid", field: "address" }]);
       const sender = input.kind === "email" ? deps.mailer : deps.smsSender;
       // No provider configured (production has no mock): refuse before a code exists (D20).
-      if (!sender) {
-        return problem(c, "service-unavailable", {
-          errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
-        });
-      }
-      const code = String(randomInt(0, 10 ** portalLimits.oneTimeCode.digits)).padStart(
-        portalLimits.oneTimeCode.digits,
-        "0",
-      );
+      if (!sender) return deliveryUnavailable(c);
+      const code = newOneTimeCode();
       const challengeId = randomUUID();
       try {
         await db.execute(sql`select create_one_time_code(${tokenHash},
@@ -344,32 +429,15 @@ export function portalRoutes(deps: Deps) {
       } catch (error) {
         return refused(c, error);
       }
-      const message = oneTimeCodeMessage(input.language, code);
-      // After the commit, with the row id as the idempotency key (D20). Any provider error counts
-      // as unknown and is not logged: it may echo the destination.
-      let outcome: "sent" | "failed" | "unknown";
-      try {
-        outcome = (
-          input.kind === "email"
-            ? await deps.mailer!.send({ to: address, ...message, idempotencyKey: challengeId })
-            : await deps.smsSender!.send({
-                to: address,
-                text: message.text,
-                idempotencyKey: challengeId,
-              })
-        ).status;
-      } catch {
-        outcome = "unknown";
-      }
+      const outcome = await sendOneTimeCode(
+        input.kind,
+        address,
+        oneTimeCodeMessage(input.language, code),
+        challengeId,
+      );
       await db.execute(sql`select record_one_time_code_delivery(${tokenHash},
         ${challengeId}::uuid, ${outcome}::activation_delivery_status) as result`);
-      if (outcome === "failed") {
-        return problem(c, "service-unavailable", {
-          errors: [
-            { pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" },
-          ],
-        });
-      }
+      if (outcome === "failed") return deliveryFailed(c);
       return c.json(await stateOf(tokenHash), 202);
     },
   );
@@ -380,7 +448,7 @@ export function portalRoutes(deps: Deps) {
       path: "/portal/activation/completion",
       tags: ["portal"],
       summary:
-        "Complete the activation in one transaction; the session becomes active with a new token",
+        "Complete the activation or recovery in one transaction; the session becomes active with a new token",
       middleware: activating,
       request: {
         body: {
@@ -389,7 +457,7 @@ export function portalRoutes(deps: Deps) {
         },
       },
       responses: {
-        201: json(PortalMe, "Activated and logged in"),
+        201: json(PortalMe, "Activated (or recovered) and logged in"),
         ...problemResponses(
           "validation-error",
           "unauthenticated",
@@ -430,7 +498,7 @@ export function portalRoutes(deps: Deps) {
               p_channel_id => ${channelId}::uuid, p_consent_id => ${randomUUID()}::uuid,
               p_request_id => ${c.get("requestId")}, ${verification}) as result`);
           const outcome = rows[0]!.result;
-          if (outcome === ACTIVATED) {
+          if (COMPLETED.has(outcome)) {
             if (deps.activationNotices) {
               await deps.activationNotices.enqueue(channelId, {
                 executeSql: (text, values) => client.query(text, values),
@@ -446,7 +514,7 @@ export function portalRoutes(deps: Deps) {
       }
       if (result === "locked") return codeInvalid(c);
       if (result === "mismatch") return domainProblem(c, ["knowledge_check_failed"]);
-      if (result !== ACTIVATED) return domainProblem(c, ["one_time_code_invalid"]);
+      if (!COMPLETED.has(result)) return domainProblem(c, ["one_time_code_invalid"]);
       setPortalCookie(c, env, next.token);
       c.set("participant", { ...session, tokenHash: next.tokenHash, state: "active" });
       return c.json(await meOf(next.tokenHash), 201);
@@ -523,6 +591,256 @@ export function portalRoutes(deps: Deps) {
       }
       clearPortalCookie(c, env);
       return c.body(null, 204);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/login/code-request",
+      tags: ["portal"],
+      summary:
+        "Send a login code to a registered address; 202 whether or not the address has an account",
+      request: {
+        body: {
+          required: true,
+          content: { "application/json": { schema: LoginCodeRequestInput } },
+        },
+      },
+      responses: {
+        202: { description: "Accepted: a code goes out if the address belongs to an account" },
+        ...problemResponses(
+          "validation-error",
+          "domain-error",
+          "too-many-requests",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const limited = throttled(c);
+      if (limited) return limited;
+      const input = c.req.valid("json");
+      const address = normaliseContact(input.kind, input.address);
+      // Not an address at all: says nothing about any account.
+      if (!address) return domainProblem(c, [{ code: "channel_invalid", field: "address" }]);
+      // Depends on the kind only, never on the address (ADR-0006).
+      if (!(input.kind === "email" ? deps.mailer : deps.smsSender)) return deliveryUnavailable(c);
+      const perAddress = loginRequests.take(keyedHash(addressKey, `${input.kind}:${address}`));
+      if (!perAddress.ok) return rateLimited(c, perAddress.retryAfterSeconds);
+      const code = newOneTimeCode();
+      let challengeId: string | null;
+      try {
+        const { rows } = await db.execute<{ result: string | null }>(sql`
+          select request_login_code(${input.kind}::contact_channel_kind, ${address},
+            ${keyedHash(otpKey, code)}, ${randomUUID()}::uuid) as result`);
+        challengeId = rows[0]!.result;
+      } catch (error) {
+        // The database's own limit counts verification codes of known addresses too: answering
+        // it would tell them apart, so the request is accepted and nothing is sent.
+        if (functionRefusal(error) !== "rate_limited") throw error;
+        challengeId = null;
+      }
+      if (challengeId) {
+        const id = challengeId;
+        // The send finishes after the response, so a known address isn't slower (ADR-0007).
+        deps.detached!.run("login-code", async () => {
+          const outcome = await sendOneTimeCode(
+            input.kind,
+            address,
+            loginCodeMessage(input.language, code, loginLink(code)),
+            id,
+          );
+          await db.execute(sql`select record_login_code_delivery(${id}::uuid,
+            ${outcome}::activation_delivery_status) as result`);
+        });
+      }
+      return c.body(null, 202);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/login",
+      tags: ["portal"],
+      summary: "Log in with the code sent to the address; sets the portal session cookie",
+      request: {
+        body: { required: true, content: { "application/json": { schema: LoginInput } } },
+      },
+      responses: {
+        200: json(PortalMe, "Logged in"),
+        ...problemResponses("validation-error", "domain-error", "too-many-requests"),
+      },
+    }),
+    async (c) => {
+      const limited = throttled(c);
+      if (limited) return limited;
+      const input = c.req.valid("json");
+      const address = normaliseContact(input.kind, input.address);
+      // One answer for an unknown address, a wrong, expired or used code and the fifth wrong
+      // entry: none of them may tell whether the address has an account.
+      if (!address) return domainProblem(c, ["one_time_code_invalid"]);
+      const { token, tokenHash } = newPortalToken();
+      const { rows } = await db.execute<{ result: string }>(sql`
+        select start_participant_session(${input.kind}::contact_channel_kind, ${address},
+          ${keyedHash(otpKey, input.oneTimeCode)}, ${tokenHash}, ${c.get("requestId")}) as result`);
+      if (rows[0]!.result !== "ok") return domainProblem(c, ["one_time_code_invalid"]);
+      setPortalCookie(c, env, token);
+      c.header("Cache-Control", "no-store");
+      return c.json(await meOf(tokenHash), 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "get",
+      path: "/portal/channels",
+      tags: ["portal"],
+      summary: "The participant's own channels, masked",
+      middleware: active,
+      responses: {
+        200: json(PortalChannels, "The channels"),
+        ...problemResponses("unauthenticated"),
+      },
+    }),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      const { channels } = await meOf(portalSession(c).tokenHash);
+      return c.json({ channels }, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/channels",
+      tags: ["portal"],
+      summary: "Send a verification code to a new private email or mobile (committed first)",
+      middleware: active,
+      request: {
+        body: {
+          required: true,
+          content: { "application/json": { schema: ChannelCodeRequestInput } },
+        },
+      },
+      responses: {
+        202: { description: "Sent, or its outcome unknown: the code may still arrive" },
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "domain-error",
+          "too-many-requests",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const { tokenHash } = portalSession(c);
+      const input = c.req.valid("json");
+      const address = normaliseContact(input.kind, input.address);
+      if (!address) return domainProblem(c, [{ code: "channel_invalid", field: "address" }]);
+      if (!(input.kind === "email" ? deps.mailer : deps.smsSender)) return deliveryUnavailable(c);
+      const code = newOneTimeCode();
+      const challengeId = randomUUID();
+      try {
+        await db.execute(sql`select request_channel_code(${tokenHash},
+          ${input.kind}::contact_channel_kind, ${address}, ${keyedHash(otpKey, code)},
+          ${challengeId}::uuid) as result`);
+      } catch (error) {
+        return refused(c, error);
+      }
+      const outcome = await sendOneTimeCode(
+        input.kind,
+        address,
+        oneTimeCodeMessage(input.language, code),
+        challengeId,
+      );
+      await db.execute(sql`select record_one_time_code_delivery(${tokenHash},
+        ${challengeId}::uuid, ${outcome}::activation_delivery_status) as result`);
+      if (outcome === "failed") return deliveryFailed(c);
+      return c.body(null, 202);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/channels/verification",
+      tags: ["portal"],
+      summary: "Add the new channel with the code sent to it and its own consent",
+      middleware: active,
+      request: {
+        body: {
+          required: true,
+          content: { "application/json": { schema: ChannelVerificationInput } },
+        },
+      },
+      responses: {
+        201: json(PortalChannels, "Added; the channels now"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "domain-error",
+          "too-many-requests",
+        ),
+      },
+    }),
+    async (c) => {
+      const limited = throttled(c);
+      if (limited) return limited;
+      const { tokenHash } = portalSession(c);
+      const input = c.req.valid("json");
+      let result: string;
+      try {
+        const { rows } = await db.execute<{ result: string }>(sql`
+          select add_participant_channel(${tokenHash}, ${keyedHash(otpKey, input.oneTimeCode)},
+            ${randomUUID()}::uuid, ${randomUUID()}::uuid, ${input.consentVersion},
+            ${input.language}::notice_language, ${c.get("requestId")}) as result`);
+        result = rows[0]!.result;
+      } catch (error) {
+        return refused(c, error);
+      }
+      if (result !== "added") return domainProblem(c, ["one_time_code_invalid"]);
+      const { channels } = await meOf(tokenHash);
+      return c.json({ channels }, 201);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "delete",
+      path: "/portal/channels/{channelId}",
+      tags: ["portal"],
+      summary:
+        "Remove a channel and end its consent; removing the last one ends the participant's sessions",
+      middleware: active,
+      request: { params: ChannelParams },
+      responses: {
+        200: json(ChannelRemovalResult, "Removed"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "not-found",
+          "domain-error",
+          "too-many-requests",
+        ),
+      },
+    }),
+    async (c) => {
+      const { channelId } = c.req.valid("param");
+      let sessionEnded: boolean;
+      try {
+        const { rows } = await db.execute<{ result: boolean }>(sql`
+          select remove_participant_channel(${portalSession(c).tokenHash}, ${channelId}::uuid,
+            ${c.get("requestId")}) as result`);
+        sessionEnded = rows[0]!.result;
+      } catch (error) {
+        if (functionRefusal(error) === "channel_not_found") return problem(c, "not-found");
+        return refused(c, error);
+      }
+      if (sessionEnded) clearPortalCookie(c, env);
+      return c.json({ sessionEnded }, 200);
     },
   );
 

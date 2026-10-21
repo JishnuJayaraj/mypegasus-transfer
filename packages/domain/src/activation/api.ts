@@ -5,6 +5,7 @@ import {
   ActivationChannel,
   ActivationDeliveryKind,
   ActivationDeliveryStatus,
+  ActivationPurpose,
   ActivationRevokeReason,
   ChannelVerification,
 } from "./model";
@@ -75,6 +76,7 @@ export const ActivationCodeRevocationInput = z
 export const ActivationRecord = z
   .strictObject({
     activationCodeId: z.uuid(),
+    purpose: ActivationPurpose,
     channel: ActivationChannel,
     deliveryKind: ActivationDeliveryKind.nullable(),
     deliveryStatus: ActivationDeliveryStatus.nullable(),
@@ -155,3 +157,39 @@ export const PrivacyNoticePrintItem = z.strictObject({
 export const PrivacyNoticeBatchResult = z
   .strictObject({ items: z.array(PrivacyNoticePrintItem).min(1) })
   .meta({ id: "PrivacyNoticeBatchResult" });
+
+/**
+ * `POST /participations/{id}/activation-codes` with purpose `recovery` (Q130): after staff
+ * verified the person, a code by any channel; issuing it ends the participant's sessions and
+ * suspends the old channels at once. An `in_person` code is sent to the typed address like the
+ * first one (the photo-ID check recorded first).
+ */
+export const RecoveryCodeInput = z
+  .discriminatedUnion("channel", [
+    z.strictObject({
+      purpose: z.literal("recovery"),
+      channel: z.enum(["letter", "sheet"]),
+      language: NoticeLanguage.default("de"),
+      identityVerified: z.literal(true),
+      replaceOpenCode: z.boolean().default(false),
+    }),
+    z.strictObject({
+      purpose: z.literal("recovery"),
+      channel: z.literal("in_person"),
+      language: NoticeLanguage.default("de"),
+      identityVerified: z.literal(true),
+      identityChecked: z.literal(true),
+      deliveryKind: ActivationDeliveryKind,
+      deliveryAddress: z.string().min(1).max(254),
+      replaceOpenCode: z.boolean().default(false),
+    }),
+  ])
+  .meta({ id: "RecoveryCodeInput" });
+
+/** The new state, with the print data of a letter or sheet (never retrievable later). */
+export const RecoveryCodeResult = z
+  .strictObject({
+    item: ActivationPrintItem.nullable(),
+    activation: ParticipationActivation,
+  })
+  .meta({ id: "RecoveryCodeResult" });

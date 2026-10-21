@@ -1,9 +1,11 @@
 # Slice 3 — Auth & roles: plan
 
-Status: approved 2026-10-20 ([round 36](../decisions/2026-10-20-answers-round-36.md)); PRs 3a–3d
-merged and PR 3e implemented 2026-10-21; PR 3f remains planned. Scope:
-[roadmap](../roadmap.md) Slice 3, [ADR-0007](../adr/0007-auth.md) with its 2026-10-20 amendment,
-[round 35](../decisions/2026-10-20-answers-round-35.md) (Q112–Q120) and round 36 (Q121–Q130).
+Status: approved 2026-10-20 ([round 36](../../decisions/2026-10-20-answers-round-36.md)); **done**:
+PRs 3a–3e merged, PR 3f implemented 2026-10-21; archived. History, not the source of the rules:
+those live in ADR-0002/0006/0007/0010, `docs/domain/data-protection.md` and
+`docs/architecture/overview.md`. Scope:
+[roadmap](../../roadmap.md) Slice 3, [ADR-0007](../../adr/0007-auth.md) with its 2026-10-20 amendment,
+[round 35](../../decisions/2026-10-20-answers-round-35.md) (Q112–Q120) and round 36 (Q121–Q130).
 
 ## Decisions
 

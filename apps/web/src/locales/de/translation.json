@@ -571,7 +571,8 @@
   },
   "activation": {
     "status": {
-      "activated": "Konto aktiviert"
+      "activated": "Konto aktiviert",
+      "activatedRecovery": "Konto aktiviert; Wiederherstellungscode: {{code}}"
     },
     "code": {
       "none": "Kein Code",
@@ -659,7 +660,10 @@
       "channels": "Kontaktwege im Portal",
       "channelLine": "{{kind}}, bestätigt am {{verifiedAt}} {{verifiedBy}}, Einwilligung seit {{consentGivenAt}}.",
       "noticeSent": "Aktivierungsbenachrichtigung gesendet am {{at}}.",
-      "noticePending": "Aktivierungsbenachrichtigung ausstehend."
+      "noticePending": "Aktivierungsbenachrichtigung ausstehend.",
+      "purpose": "Zweck",
+      "suspended": "Gesperrt seit {{at}} (Zugangsverlust).",
+      "removed": "Entfernt am {{at}}."
     },
     "assurance": {
       "birth_date": "Geburtsdatum",
@@ -668,6 +672,20 @@
     "verifiedBy": {
       "one_time_code": "per Einmalcode",
       "activation_link": "über den persönlichen Aktivierungslink"
+    },
+    "purpose": {
+      "activation": "Erstaktivierung",
+      "recovery": "Wiederherstellung nach Zugangsverlust"
+    },
+    "recovery": {
+      "title": "Zugang wiederherstellen (Zugang verloren)",
+      "warning": "Die Ausgabe beendet sofort alle Sitzungen der Person im Portal und sperrt ihre bisherigen Kontaktwege für Anmeldung und Benachrichtigungen. Mit dem neuen Code registriert sie neue Kontaktwege; läuft er ab, bleiben die alten gesperrt.",
+      "identityVerified": "Ich habe die Person identifiziert und die Anfrage stammt von ihr",
+      "issue": "Wiederherstellungscode ausstellen",
+      "errors": {
+        "open_code_exists": "Es gibt bereits einen offenen Code. Bestätigen Sie die bewusste Neuausstellung.",
+        "failed": "Der Wiederherstellungscode konnte nicht ausgestellt werden."
+      }
     }
   },
   "participant": {

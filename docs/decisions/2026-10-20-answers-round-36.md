@@ -1,6 +1,6 @@
 # Decisions — 2026-10-20, round 36 (Slice 3 plan review, Q121–Q130)
 
-The product owner reviewed the [Slice 3 plan](../plans/slice-3.md) in
+The product owner reviewed the [Slice 3 plan](../plans/archive/slice-3.md) in
 [#58](https://github.com/JishnuJayaraj/mypegasus-transfer/pull/58) and answered the questions it
 raised. These are pilot answers in the placeholder roles of rounds 32–35: no external Legal, BA or
 DPO confirmation is involved, none blocks development on synthetic data, and external DPO approval

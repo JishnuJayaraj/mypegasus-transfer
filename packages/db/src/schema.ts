@@ -40,6 +40,10 @@ import {
   OneTimeCodePurpose,
   ParticipantSessionState,
   StepUpMethod,
+  ChannelSuspensionReason,
+  ChannelRemovalReason,
+  ConsentEndReason,
+  ParticipantSessionEndReason,
   edgeKinds,
   portalLimits,
 } from "@transfer/domain";
@@ -329,13 +333,13 @@ export const noticeMethod = pgEnum("notice_method", values(NoticeMethod));
 export const identityAssurance = pgEnum("identity_assurance", values(IdentityAssurance));
 export const contactChannelKind = pgEnum("contact_channel_kind", values(ActivationDeliveryKind));
 export const channelVerification = pgEnum("channel_verification", values(ChannelVerification));
-export const channelSuspensionReason = pgEnum("channel_suspension_reason", ["lost_access"]);
-export const channelRemovalReason = pgEnum("channel_removal_reason", [
-  "consent_revoked",
-  "lost_access_replaced",
-]);
+export const channelSuspensionReason = pgEnum(
+  "channel_suspension_reason",
+  values(ChannelSuspensionReason),
+);
+export const channelRemovalReason = pgEnum("channel_removal_reason", values(ChannelRemovalReason));
 export const consentPurpose = pgEnum("consent_purpose", values(ConsentPurpose));
-export const consentEndReason = pgEnum("consent_end_reason", ["revoked", "lost_access_replaced"]);
+export const consentEndReason = pgEnum("consent_end_reason", values(ConsentEndReason));
 export const oneTimeCodePurpose = pgEnum("one_time_code_purpose", values(OneTimeCodePurpose));
 export const challengeInvalidation = pgEnum("challenge_invalidation", [
   "superseded",
@@ -345,13 +349,10 @@ export const participantSessionState = pgEnum(
   "participant_session_state",
   values(ParticipantSessionState),
 );
-export const participantSessionEndReason = pgEnum("participant_session_end_reason", [
-  "logout",
-  "activated",
-  "superseded",
-  "code_closed",
-  "participation_closed",
-]);
+export const participantSessionEndReason = pgEnum(
+  "participant_session_end_reason",
+  values(ParticipantSessionEndReason),
+);
 export const stepUpMethod = pgEnum("step_up_method", values(StepUpMethod));
 
 const dateColumn = (name: string) => date(name, { mode: "string" });

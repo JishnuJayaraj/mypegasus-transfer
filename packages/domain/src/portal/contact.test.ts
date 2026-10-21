@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { maskContactAddress, normaliseContact, normaliseEmail, normaliseMobile } from "./contact";
+import {
+  contactKindOf,
+  maskContactAddress,
+  normaliseContact,
+  normaliseEmail,
+  normaliseMobile,
+} from "./contact";
 
 describe("private delivery address normalisation", () => {
   it("normalises email without retaining display syntax", () => {
@@ -22,5 +28,10 @@ describe("private delivery address normalisation", () => {
   it("masks a channel so a response never carries the whole address", () => {
     expect(maskContactAddress("email", "person@example.invalid")).toBe("p…@example.invalid");
     expect(maskContactAddress("sms", "+4915100000123")).toBe("+49 … 123");
+  });
+
+  it("tells an email from a mobile in one address field", () => {
+    expect(contactKindOf(" person@example.invalid")).toBe("email");
+    expect(contactKindOf("0151 00000000")).toBe("sms");
   });
 });

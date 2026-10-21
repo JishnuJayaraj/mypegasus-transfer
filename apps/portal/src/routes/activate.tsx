@@ -5,14 +5,12 @@ import {
   ART14_NOTICE_VERSION,
   PORTAL_CONTACT_CONSENT_VERSION,
   art14Notice,
-  portalContactConsent,
   type ActivationState,
   type ContactKind,
   type NoticeLanguage,
 } from "@transfer/domain";
 import {
   Button,
-  Checkbox,
   Form,
   InlineNotification,
   RadioButton,
@@ -23,6 +21,7 @@ import {
 } from "@transfer/ui";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Consent } from "../components/consent";
 
 export const Route = createFileRoute("/activate")({ component: Activate });
 
@@ -202,8 +201,16 @@ function Activate() {
       )}
       {step === "done" && (
         <Stack gap={5}>
-          <h2>{t("activate.done.title")}</h2>
-          <p>{t("activate.done.text")}</p>
+          <h2>
+            {state?.purpose === "recovery"
+              ? t("activate.done.recoveredTitle")
+              : t("activate.done.title")}
+          </h2>
+          <p>
+            {state?.purpose === "recovery"
+              ? t("activate.done.recoveredText")
+              : t("activate.done.text")}
+          </p>
           <Link to="/">{t("activate.done.home")}</Link>
         </Stack>
       )}
@@ -303,34 +310,6 @@ function BirthDateStep(props: {
         {t("activate.next")}
       </Button>
     </StepForm>
-  );
-}
-
-/** The consent text of the portal contact purpose (D28) and the participant's agreement. */
-function Consent({
-  language,
-  checked,
-  onChange,
-}: {
-  language: NoticeLanguage;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  const { t } = useTranslation();
-  const consent = portalContactConsent(language, organisation);
-  return (
-    <Stack gap={3}>
-      <h2>{consent.title}</h2>
-      {consent.text.split("\n\n").map((paragraph) => (
-        <p key={paragraph}>{paragraph}</p>
-      ))}
-      <Checkbox
-        id="portal-contact-consent"
-        labelText={t("activate.consent.label")}
-        checked={checked}
-        onChange={(_event, { checked: value }) => onChange(value)}
-      />
-    </Stack>
   );
 }
 

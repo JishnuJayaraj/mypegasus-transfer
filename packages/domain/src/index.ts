@@ -397,6 +397,11 @@ export {
   OneTimeCodePurpose,
   ParticipantSessionState,
   StepUpMethod,
+  ChannelSuspensionReason,
+  ChannelRemovalReason,
+  ConsentEndReason,
+  ParticipantSessionEndReason,
+  LoginMethod,
 } from "./activation/model";
 export {
   ActivationStep,
@@ -420,6 +425,7 @@ export {
   type NoticeVersion,
 } from "./notices/catalog";
 export {
+  contactKindOf,
   maskContactAddress,
   normaliseContact,
   normaliseEmail,
@@ -434,7 +440,13 @@ export {
   ActivationCompletionInput,
   ActivationDeliveryAddressInput,
   ActivationState,
+  ChannelCodeRequestInput,
+  ChannelRemovalResult,
+  ChannelVerificationInput,
+  LoginCodeRequestInput,
+  LoginInput,
   PortalChannel,
+  PortalChannels,
   PortalMe,
 } from "./portal/api";
 export {
@@ -451,4 +463,6 @@ export {
   PrivacyNoticeBatchResult,
   PrivacyNoticeInput,
   PrivacyNoticePrintItem,
+  RecoveryCodeInput,
+  RecoveryCodeResult,
 } from "./activation/api";

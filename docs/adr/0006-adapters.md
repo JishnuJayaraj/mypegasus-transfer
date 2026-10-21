@@ -73,3 +73,16 @@ Not adapters:
   (ADR-0011) with the provider key `activation-notice:<channelId>`. The server builds one set of
   senders for the API and the jobs (`messaging` in `apps/api/src/app.ts`), so the development
   outbox shows the notice too.
+
+## As built 2026-10-21: login codes (Slice 3, PR 3f)
+
+- A login code follows the same protocol (`request_login_code`, the send with the challenge id
+  as the idempotency key, `record_login_code_delivery`), except that the send runs **after the
+  `202`** (`apps/api/src/detached.ts`): the answer must not reveal, by its timing or its outcome,
+  whether the address has an account, so a definitive failure only invalidates the code. The code
+  exists only in the closure of that task, never in a job payload; failures are logged without a
+  message; shutdown waits for the tasks in flight before closing the pool. Whether a sender exists
+  depends on the kind only, so `503 delivery_unavailable` reveals nothing.
+- A channel verification code (`request_channel_code`) is sent in the request like the
+  activation's, and its outcome recorded by `record_one_time_code_delivery`.
+- A recovery code in person is sent like a first in-person code (`record_activation_delivery`).

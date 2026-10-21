@@ -120,9 +120,9 @@ need the proxy CA (`/root/.ccr/README.md`).
   one-time-code HMAC keys. `PORTAL_PUBLIC_URL` supplies the public fragment links. Both are required
   outside development; only HTTPS portal URLs are accepted there.
 
-## Portal activation boundary (Slice 3, PR 3e)
+## Portal boundary (Slice 3, PRs 3e and 3f)
 
-- `packages/domain/src/activation/steps.ts` owns the step machine (D23) and
+- `packages/domain/src/activation/steps.ts` owns the step machine and
   `packages/domain/src/portal` the limits (`limits.ts`, held to the SQL by a drift test), contact
   normalisation and masking, and the portal API schemas. None performs I/O.
 - `apps/api/src/routes/portal.ts` is the portal's HTTP boundary (`/api/v1/portal/...`), behind
@@ -135,6 +135,13 @@ need the proxy CA (`/root/.ccr/README.md`).
   logout). Codes and addresses live only in component state.
 - `apps/web` shows the account (how the identity was assured) and the channels' kind, states and
   dates; never an address.
+- PR 3f: the same router serves the login (`/portal/login/...`) and the channels
+  (`/portal/channels`); the login code is sent by a detached task (`apps/api/src/detached.ts`)
+  after the `202`, which shutdown awaits. `apps/portal` adds `/login` (address, then the code;
+  the email link's fragment fills the code) and `/channels` (masked list, removal with a warning
+  for the last one, addition with consent and a one-time code); shared pieces live in
+  `apps/portal/src/components` and `problem.ts`. `apps/web` adds the recovery panel
+  (`components/recovery.tsx`) to an activated participant's detail.
 
 ## Background jobs
 

@@ -302,6 +302,20 @@
       "when": 1792571079293,
       "tag": "0042_participant_activation_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1792579994341,
+      "tag": "0043_portal_login_channels",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1792580050057,
+      "tag": "0044_portal_login_channels_functions",
+      "breakpoints": true
     }
   ]
 }

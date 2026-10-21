@@ -2,7 +2,7 @@
 
 Each slice is one branch and one PR (or a short series). Each ends with something a PL could
 click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing; a finished slice's plan moves to
-`docs/plans/archive/`. Slices 0–2 are done.
+`docs/plans/archive/`. Slices 0–3 are done.
 
 ## Slice 0 — Walking skeleton
 Monorepo (pnpm), Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell
@@ -37,6 +37,8 @@ audit of logins; the PL's activation status, reissue and printable letter/sheet 
 Q112–Q120). Removal of `self_registered` and `rejected` from the lifecycle core (its own PR).
 Deferred here from Slice 2: membership management, participant assignments (Q62) and
 regions on projects (until then the org roles have global scope).
+**Done** 2026-10-21 (PRs 3a–3f): plan archived in [`plans/archive/slice-3.md`](plans/archive/slice-3.md);
+its rules live in ADR-0007, ADR-0002 and `domain/data-protection.md`.
 
 ## Slice 4a — Self-service wizard + consent (F5)
 Config-driven wizard in `apps/portal`, consent records, assisted mode (from `apps/web`).

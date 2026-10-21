@@ -51,7 +51,12 @@ function Home() {
         <>
           <h1>{t("home.title")}</h1>
           <p>{t("home.intro")}</p>
-          {!me.isPending && <Link to="/activate">{t("home.activate")}</Link>}
+          {!me.isPending && (
+            <Stack gap={3}>
+              <Link to="/login">{t("home.login")}</Link>
+              <Link to="/activate">{t("home.activate")}</Link>
+            </Stack>
+          )}
         </>
       )}
       <ApiStatus />
@@ -78,6 +83,7 @@ function Participant({ me }: { me: PortalMe }) {
           </li>
         ))}
       </ul>
+      <Link to="/channels">{t("home.manageChannels")}</Link>
       <Button
         kind="secondary"
         onClick={async () => {

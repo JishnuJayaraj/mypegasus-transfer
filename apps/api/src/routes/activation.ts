@@ -25,6 +25,8 @@ import {
   PrivacyNoticeBatchInput,
   PrivacyNoticeBatchResult,
   PrivacyNoticeInput,
+  RecoveryCodeInput,
+  RecoveryCodeResult,
   activationStatus,
   art14Notice,
   formatActivationCode,
@@ -33,6 +35,7 @@ import {
   normaliseMobile,
   type ActivationChannel,
   type ActivationDeliveryKind,
+  type ActivationPurpose,
   type NoticeLanguage,
 } from "@transfer/domain";
 import { randomUUID } from "node:crypto";
@@ -63,6 +66,7 @@ const issuanceCodes = [
   "identity_not_checked",
   "open_code_exists",
   "already_activated",
+  "not_activated",
 ] as const;
 
 function refusalIn(error: unknown, codes: readonly string[]) {
@@ -81,6 +85,29 @@ const activationLink = (base: string, code: string) => {
 
 const noticeLink = (base: string) =>
   new URL(`notice/art14/${ART14_NOTICE_VERSION}`, base.endsWith("/") ? base : `${base}/`).href;
+
+type PrintRow = Awaited<ReturnType<typeof printRow>>;
+
+/** The name and postal address a letter or sheet prints. */
+async function printRow(executor: Pick<Deps["db"], "select">, participationId: string) {
+  const [row] = await executor
+    .select({ p: participation, identity: participantIdentity, details: participantDetails })
+    .from(participation)
+    .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
+    .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
+    .where(eq(participation.id, participationId));
+  return row!;
+}
+
+/** 503 before any code exists when no provider is configured (production has no mock). */
+const deliveryUnavailable = (c: Context) =>
+  problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
+  });
+const deliveryFailed = (c: Context) =>
+  problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" }],
+  });
 
 export function activationRoutes(deps: Deps) {
   const { db } = deps;
@@ -138,6 +165,7 @@ export function activationRoutes(deps: Deps) {
     actorId: string,
     requestId: string,
     delivery?: { kind: ActivationDeliveryKind; addressHash: string },
+    purpose: ActivationPurpose = "activation",
   ) {
     const id = randomUUID();
     const code = generateActivationCode();
@@ -150,10 +178,88 @@ export function activationRoutes(deps: Deps) {
         p_delivery_kind => ${delivery?.kind ?? null}::activation_delivery_kind,
         p_delivery_address_hash => ${delivery?.addressHash ?? null},
         p_identity_checked => ${channel === "in_person"},
-        p_context => ${auditContext(actorId, requestId)}, p_id => ${id}::uuid)).expires_at
+        p_context => ${auditContext(actorId, requestId)}, p_id => ${id}::uuid,
+        p_purpose => ${purpose}::activation_purpose)).expires_at
         at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "expiresAt"`,
     );
     return { id, code, expiresAt: result.rows[0]!.expiresAt };
+  }
+
+  /** A letter's or sheet's print data with its code: only in the issuing response (ADR-0007). */
+  function printItem(
+    made: Awaited<ReturnType<typeof issue>>,
+    row: PrintRow,
+    language: NoticeLanguage,
+  ) {
+    const notice = art14Notice(language, organisation);
+    return {
+      activationCodeId: made.id,
+      participationId: row.p.id,
+      firstName: row.identity!.firstName,
+      lastName: row.identity!.lastName,
+      address: row.details?.addressStreet
+        ? {
+            street: row.details.addressStreet,
+            postalCode: row.details.addressPostalCode!,
+            city: row.details.addressCity!,
+            country: row.details.addressCountry!,
+          }
+        : null,
+      code: formatActivationCode(made.code),
+      activationUrl: activationLink(portalUrl, made.code),
+      expiresAt: made.expiresAt,
+      noticeVersion: ART14_NOTICE_VERSION,
+      noticeLanguage: language,
+      noticeTitle: notice.title,
+      noticeText: notice.text,
+    };
+  }
+
+  /**
+   * Sends a committed in-person code's link and the durable notice link, then records the outcome
+   * (ADR-0006). Any provider error leaves the outcome as open as DeliveryOutcomeUnknown does; it is not
+   * rethrown because a provider error may echo the destination into the log.
+   */
+  async function sendInPerson(
+    made: Awaited<ReturnType<typeof issue>>,
+    kind: ActivationDeliveryKind,
+    address: string,
+    language: NoticeLanguage,
+    actorId: string,
+    requestId: string,
+  ) {
+    const link = activationLink(portalUrl, made.code);
+    const durableNotice = noticeLink(portalUrl);
+    let outcome: "sent" | "failed" | "unknown";
+    try {
+      outcome = (
+        kind === "email"
+          ? await deps.mailer!.send({
+              to: address,
+              subject:
+                language === "de"
+                  ? "Ihr persönlicher Aktivierungslink"
+                  : "Your personal activation link",
+              text: `${link}\n\n${durableNotice}`,
+              idempotencyKey: made.id,
+            })
+          : await deps.smsSender!.send({
+              to: address,
+              text: `${link}\n${durableNotice}`,
+              idempotencyKey: made.id,
+            })
+      ).status;
+    } catch {
+      outcome = "unknown";
+    }
+    await callFunction(
+      db,
+      sql`record_activation_delivery(
+        p_activation_code_id => ${made.id}::uuid,
+        p_outcome => ${outcome}::activation_delivery_status,
+        p_context => ${auditContext(actorId, requestId)})`,
+    );
+    return outcome;
   }
 
   router.openapi(
@@ -210,14 +316,7 @@ export function activationRoutes(deps: Deps) {
         const issued = await db.transaction(async (tx) => {
           const results = new Map<
             string,
-            {
-              made: Awaited<ReturnType<typeof issue>>;
-              row: {
-                p: typeof participation.$inferSelect;
-                identity: typeof participantIdentity.$inferSelect | null;
-                details: typeof participantDetails.$inferSelect | null;
-              };
-            }
+            { made: Awaited<ReturnType<typeof issue>>; row: PrintRow }
           >();
           // A stable lock order avoids deadlocks between overlapping batches.
           for (const participationId of input.participationIds.toSorted()) {
@@ -230,53 +329,14 @@ export function activationRoutes(deps: Deps) {
               user.id,
               c.get("requestId"),
             );
-            const [row] = await tx
-              .select({
-                p: participation,
-                identity: participantIdentity,
-                details: participantDetails,
-              })
-              .from(participation)
-              .leftJoin(
-                participantIdentity,
-                eq(participantIdentity.participationId, participation.id),
-              )
-              .leftJoin(
-                participantDetails,
-                eq(participantDetails.participationId, participation.id),
-              )
-              .where(eq(participation.id, participationId));
-            results.set(participationId, { made, row: row! });
+            results.set(participationId, { made, row: await printRow(tx, participationId) });
           }
           return input.participationIds.map((participationId) => results.get(participationId)!);
         });
-        const notice = art14Notice(input.language, organisation);
         c.header("Cache-Control", "no-store");
         return c.json(
           {
-            items: issued.map(({ made, row }) => {
-              return {
-                activationCodeId: made.id,
-                participationId: row.p.id,
-                firstName: row.identity!.firstName,
-                lastName: row.identity!.lastName,
-                address: row.details?.addressStreet
-                  ? {
-                      street: row.details.addressStreet,
-                      postalCode: row.details.addressPostalCode!,
-                      city: row.details.addressCity!,
-                      country: row.details.addressCountry!,
-                    }
-                  : null,
-                code: formatActivationCode(made.code),
-                activationUrl: activationLink(portalUrl, made.code),
-                expiresAt: made.expiresAt,
-                noticeVersion: ART14_NOTICE_VERSION,
-                noticeLanguage: input.language,
-                noticeTitle: notice.title,
-                noticeText: notice.text,
-              };
-            }),
+            items: issued.map(({ made, row }) => printItem(made, row, input.language)),
           },
           201,
         );
@@ -286,6 +346,89 @@ export function activationRoutes(deps: Deps) {
           ? problem(c, "not-found")
           : asDomainProblem(c, refused);
       }
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/activation-codes",
+      tags: ["activation"],
+      summary:
+        "Issue a recovery code after lost access: ends the sessions and suspends the channels at once",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: RecoveryCodeInput } } },
+      },
+      responses: {
+        201: json(
+          RecoveryCodeResult,
+          "The new state, with a letter's or sheet's print data; never the code otherwise",
+        ),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "domain-error",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const checked = await accessTo(c, participationId, "issueActivationCode");
+      if (typeof checked === "string") return problem(c, checked);
+      let delivery: { kind: ActivationDeliveryKind; address: string } | undefined;
+      if (input.channel === "in_person") {
+        const address =
+          input.deliveryKind === "email"
+            ? normaliseEmail(input.deliveryAddress)
+            : normaliseMobile(input.deliveryAddress);
+        if (!address)
+          return domainProblem(c, [{ code: "channel_invalid", field: "deliveryAddress" }]);
+        if (!(input.deliveryKind === "email" ? deps.mailer : deps.smsSender)) {
+          return deliveryUnavailable(c);
+        }
+        delivery = { kind: input.deliveryKind, address };
+      }
+      let made: Awaited<ReturnType<typeof issue>>;
+      try {
+        made = await issue(
+          db,
+          participationId,
+          input.channel,
+          input.language,
+          input.replaceOpenCode,
+          user.id,
+          c.get("requestId"),
+          delivery && { kind: delivery.kind, addressHash: keyedHash(addressKey, delivery.address) },
+          "recovery",
+        );
+      } catch (error) {
+        return asDomainProblem(c, refusalIn(error, issuanceCodes));
+      }
+      let item: ReturnType<typeof printItem> | null = null;
+      if (delivery) {
+        const outcome = await sendInPerson(
+          made,
+          delivery.kind,
+          delivery.address,
+          input.language,
+          user.id,
+          c.get("requestId"),
+        );
+        if (outcome === "failed") return deliveryFailed(c);
+      } else {
+        item = printItem(made, await printRow(db, participationId), input.language);
+      }
+      const activation = await activationOf(c, participationId);
+      if (typeof activation === "string") return problem(c, activation);
+      c.header("Cache-Control", "no-store");
+      return c.json({ item, activation }, 201);
     },
   );
 
@@ -329,12 +472,7 @@ export function activationRoutes(deps: Deps) {
       if (!address)
         return domainProblem(c, [{ code: "channel_invalid", field: "deliveryAddress" }]);
       const sender = input.deliveryKind === "email" ? deps.mailer : deps.smsSender;
-      // No provider configured (production has no mock): refuse before a code exists.
-      if (!sender) {
-        return problem(c, "service-unavailable", {
-          errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
-        });
-      }
+      if (!sender) return deliveryUnavailable(c);
       let made: Awaited<ReturnType<typeof issue>>;
       try {
         made = await issue(
@@ -354,46 +492,15 @@ export function activationRoutes(deps: Deps) {
         const refused = refusalIn(error, issuanceCodes);
         return asDomainProblem(c, refused);
       }
-      const link = activationLink(portalUrl, made.code);
-      const durableNotice = noticeLink(portalUrl);
-      const send = () =>
-        input.deliveryKind === "email"
-          ? deps.mailer!.send({
-              to: address,
-              subject:
-                input.language === "de"
-                  ? "Ihr persönlicher Aktivierungslink"
-                  : "Your personal activation link",
-              text: `${link}\n\n${durableNotice}`,
-              idempotencyKey: made.id,
-            })
-          : deps.smsSender!.send({
-              to: address,
-              text: `${link}\n${durableNotice}`,
-              idempotencyKey: made.id,
-            });
-      // Any provider error leaves the outcome as open as DeliveryOutcomeUnknown does (D20); it is
-      // not rethrown because a provider error may echo the destination into the log.
-      let outcome: "sent" | "failed" | "unknown";
-      try {
-        outcome = (await send()).status;
-      } catch {
-        outcome = "unknown";
-      }
-      await callFunction(
-        db,
-        sql`record_activation_delivery(
-        p_activation_code_id => ${made.id}::uuid,
-        p_outcome => ${outcome}::activation_delivery_status,
-        p_context => ${auditContext(user.id, c.get("requestId"))})`,
+      const outcome = await sendInPerson(
+        made,
+        input.deliveryKind,
+        address,
+        input.language,
+        user.id,
+        c.get("requestId"),
       );
-      if (outcome === "failed") {
-        return problem(c, "service-unavailable", {
-          errors: [
-            { pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" },
-          ],
-        });
-      }
+      if (outcome === "failed") return deliveryFailed(c);
       const result = await activationOf(c, participationId);
       return typeof result === "string" ? problem(c, result) : c.json(result, 201);
     },
@@ -405,6 +512,7 @@ export function activationRoutes(deps: Deps) {
     const [current] = await db
       .select({
         activationCodeId: activationCode.id,
+        purpose: activationCode.purpose,
         channel: activationCode.channel,
         deliveryKind: activationCode.deliveryKind,
         deliveryStatus: activationCode.deliveryStatus,
@@ -463,6 +571,7 @@ export function activationRoutes(deps: Deps) {
     ) => mayPerformOperation(access.access.subject, { kind }, target).ok;
     const snapshot = current
       ? {
+          purpose: current.purpose,
           channel: current.channel,
           issuedAt: current.issuedAt,
           expiresAt: current.expiresAt,

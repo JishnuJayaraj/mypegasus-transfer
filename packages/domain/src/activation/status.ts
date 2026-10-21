@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ActivationChannel } from "./model";
+import type { ActivationChannel, ActivationPurpose } from "./model";
 
 export const ActivationCodeState = z.enum([
   "none",
@@ -23,6 +23,8 @@ export const ActivationStatus = z
 export type ActivationStatus = z.infer<typeof ActivationStatus>;
 
 export interface ActivationCodeSnapshot {
+  /** `activation` when left out. */
+  purpose?: ActivationPurpose;
   channel: ActivationChannel;
   issuedAt: string;
   expiresAt: string;
@@ -38,7 +40,8 @@ export function activationStatus(
   code: ActivationCodeSnapshot | null,
   now: string,
 ): ActivationStatus {
-  if (accountActivated || !code) {
+  // An activated account shows only a recovery code's state (Q130).
+  if (!code || (accountActivated && code.purpose !== "recovery")) {
     return {
       account: accountActivated ? "activated" : "not_activated",
       code: "none",
@@ -55,7 +58,7 @@ export function activationStatus(
   else if (code.channel === "sheet" && !code.handedOverAt) state = "printed";
   else state = "open";
   return {
-    account: "not_activated",
+    account: accountActivated ? "activated" : "not_activated",
     code: state,
     issuedAt: code.issuedAt,
     expiresAt: code.expiresAt,

@@ -14,6 +14,11 @@ export function normaliseMobile(value: string): string | null {
 
 export type ContactKind = "email" | "sms";
 
+/** What the participant typed into a single address field: an email if it has an `@`. */
+export function contactKindOf(value: string): ContactKind {
+  return value.includes("@") ? "email" : "sms";
+}
+
 export function normaliseContact(kind: ContactKind, value: string): string | null {
   return kind === "email" ? normaliseEmail(value) : normaliseMobile(value);
 }

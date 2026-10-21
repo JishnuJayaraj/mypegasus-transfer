@@ -26,6 +26,10 @@ import {
   ChannelVerification,
   ConsentPurpose,
   OneTimeCodePurpose,
+  ChannelRemovalReason,
+  ChannelSuspensionReason,
+  ConsentEndReason,
+  LoginMethod,
 } from "../activation/model";
 import { IdentityAssurance } from "../activation/steps";
 import { NoticeLanguage } from "../notices/catalog";
@@ -103,6 +107,11 @@ export const AuditEventType = z.enum([
   "activation_code_locked",
   "one_time_code_exhausted",
   "participant_logout",
+  // Slice 3, portal login, channels and recovery (Q130, ADR-0007, Q123): only their functions write them
+  "participant_login",
+  "contact_channel_removed",
+  "consent_ended",
+  "contact_channels_suspended",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -164,6 +173,10 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "activation_code_locked",
   "one_time_code_exhausted",
   "participant_logout",
+  "participant_login",
+  "contact_channel_removed",
+  "consent_ended",
+  "contact_channels_suspended",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -383,6 +396,27 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
   }),
   z.strictObject({ kind: z.literal("audit"), stream: AuditStream }),
 ]);
+
+/**
+ * A participant's login (ADR-0007): by a one-time code to a channel, or by completing a recovery
+ * (Q130), which names its code. Logouts are `participant_logout`.
+ */
+const participantLogin = event("participant_login", {
+  ...ofParticipation,
+  details: z.strictObject({
+    method: LoginMethod,
+    channelId: z.uuid().optional(),
+    activationCodeId: z.uuid().optional(),
+  }),
+}).superRefine(({ details }, ctx) => {
+  const byCode = details.method === "one_time_code";
+  if (
+    byCode !== (details.channelId !== undefined) ||
+    byCode === (details.activationCodeId !== undefined)
+  ) {
+    issue(ctx, "method_mismatch");
+  }
+});
 
 /**
  * Every audit event, discriminated by `type`. The types of Slices 3–9 that the plan gives no
@@ -623,5 +657,24 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject({ challengeId: z.uuid(), purpose: OneTimeCodePurpose }),
   }),
   event("participant_logout", { ...ofParticipation, details: noDetails }),
+  participantLogin,
+  /** A channel ended (Q123, Q130): the participant removed it, or a completed recovery replaced it. */
+  event("contact_channel_removed", {
+    ...ofParticipation,
+    reasonCode: ChannelRemovalReason,
+    details: z.strictObject({ channelId: z.uuid(), kind: ActivationDeliveryKind }),
+  }),
+  /** A consent's use ended with its channel; `lost_access_replaced` is never a withdrawal (Q130). */
+  event("consent_ended", {
+    ...ofParticipation,
+    reasonCode: ConsentEndReason,
+    details: z.strictObject({ consentId: z.uuid(), channelId: z.uuid(), purpose: ConsentPurpose }),
+  }),
+  /** A recovery code was issued (Q130): the sessions ended and these channels were suspended. */
+  event("contact_channels_suspended", {
+    ...ofParticipation,
+    reasonCode: ChannelSuspensionReason,
+    details: z.strictObject({ activationCodeId: z.uuid(), channelIds: z.array(z.uuid()) }),
+  }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

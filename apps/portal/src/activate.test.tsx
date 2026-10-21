@@ -1,26 +1,13 @@
-import { QueryClient } from "@tanstack/react-query";
-import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createApiClient } from "@transfer/api-client";
 import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "./i18n";
-import { createPortalRouter } from "./router";
+import { json, me, problem, renderPortal } from "./test-utils";
 
 // Slice 3 plan, PR 3e: the portal's activation flow (D22, D23) over a fake API.
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": status >= 400 ? "application/problem+json" : "application/json" },
-  });
-const problem = (status: number, code: string) =>
-  json(
-    { type: "urn:transfer:problem:x", title: "x", status, errors: [{ code, detail: "x" }] },
-    status,
-  );
-
 const state = (nextStep: string, extra: object = {}) => ({
   nextStep,
+  purpose: "activation",
   channel: "letter",
   deliveryKind: null,
   language: "de",
@@ -28,43 +15,6 @@ const state = (nextStep: string, extra: object = {}) => ({
   consentVersion: "portal-contact-consent:v1",
   ...extra,
 });
-const me = {
-  firstName: "Erika",
-  language: "de",
-  sessionExpiresAt: "2026-10-21T12:00:00.000Z",
-  channels: [
-    {
-      id: "00000000-0000-4000-8000-000000000001",
-      kind: "email",
-      maskedAddress: "e…@example.org",
-      verifiedAt: "2026-10-21T10:00:00.000Z",
-    },
-  ],
-};
-
-type Handler = (body: Record<string, unknown> | undefined) => Response;
-
-function renderPortal(path: string, routes: Record<string, Handler>) {
-  const calls: { path: string; body?: Record<string, unknown> }[] = [];
-  const api = createApiClient({
-    baseUrl: "http://localhost",
-    fetch: async (input, init) => {
-      const request = new Request(input, init);
-      const { pathname } = new URL(request.url);
-      const text = request.method === "GET" ? "" : await request.text();
-      const body = text ? (JSON.parse(text) as Record<string, unknown>) : undefined;
-      calls.push({ path: pathname, ...(body && { body }) });
-      const handler = routes[`${request.method} ${pathname}`];
-      return handler ? handler(body) : json({ status: "ok", version: "1" });
-    },
-  });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const history = createMemoryHistory({ initialEntries: [path] });
-  const router = createPortalRouter({ api, queryClient }, history);
-  render(<RouterProvider router={router} />);
-  return { calls, router };
-}
-
 afterEach(async () => {
   await i18n.changeLanguage("de");
 });
@@ -163,6 +113,26 @@ describe("activation (D22, D23)", () => {
     ]);
     expect(calls.at(-1)!.body).toMatchObject({ deliveryAddress: "0151 2345678", language: "en" });
     expect(document.documentElement.lang).toBe("en");
+  });
+
+  it("says a recovery restored the access (Q130)", async () => {
+    const user = userEvent.setup();
+    const recovery = { purpose: "recovery", channel: "sheet" };
+    renderPortal("/portal/activate#ABCD2345EFGH", {
+      "POST /api/v1/portal/activation": () => json(state("channel", recovery)),
+      "POST /api/v1/portal/activation/channel": () => json(state("one_time_code", recovery), 202),
+      "POST /api/v1/portal/activation/completion": () => json(me, 201),
+    });
+    await user.click(await screen.findByRole("button", { name: "Code prüfen" }));
+    await user.click(await screen.findByRole("button", { name: "Gelesen, weiter" }));
+    await user.type(await screen.findByLabelText("Private E-Mail-Adresse"), "neu@example.org");
+    await user.click(consentBox());
+    await user.click(screen.getByRole("button", { name: "Bestätigungscode senden" }));
+    await user.type(await screen.findByLabelText("Bestätigungscode"), "123456");
+    await user.click(screen.getByRole("button", { name: "Zugang aktivieren" }));
+    expect(
+      await screen.findByRole("heading", { name: "Ihr Zugang ist wiederhergestellt" }),
+    ).toBeInTheDocument();
   });
 
   it.each([

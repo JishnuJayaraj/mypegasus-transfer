@@ -245,6 +245,7 @@ describe("activation details", () => {
       expiresAt: "2026-11-20T10:00:00.000Z",
     },
     current: {
+      purpose: "activation",
       activationCodeId: "00000000-0000-4000-a000-000000000010",
       channel: "letter",
       deliveryKind: null,
@@ -402,6 +403,169 @@ describe("an activated account (D28, D29)", () => {
       ),
     ).toHaveTextContent("Aktivierungsbenachrichtigung ausstehend.");
     expect(within(panel).queryByRole("button", { name: "Aktivierungslink senden" })).toBeNull();
+  });
+
+  it("issues a recovery letter after the person was verified, warns first and shows the print", async () => {
+    const recovered = {
+      status: { account: "activated", code: "open", issuedAt: null, expiresAt: null },
+      current: null,
+      account: {
+        activatedAt: "2026-10-22T09:00:00.000Z",
+        identityAssurance: "birth_date",
+        identityAssuredAt: null,
+      },
+      channels: [],
+      capabilities: {
+        issueActivationCode: true,
+        recordHandover: true,
+        revokeActivationCode: true,
+        providePrivacyNotice: true,
+      },
+    };
+    const item = {
+      activationCodeId: "00000000-0000-4000-a000-000000000031",
+      participationId,
+      firstName: "Erika",
+      lastName: "Mustermann",
+      address: {
+        street: "Musterstraße 1",
+        postalCode: "99999",
+        city: "Beispielstadt",
+        country: "DE",
+      },
+      code: "ABCD-2345-EFGH",
+      activationUrl: "https://portal.example/portal/activate#ABCD2345EFGH",
+      expiresAt: "2026-11-21T10:00:00.000Z",
+      noticeVersion: "art14-activation:v1",
+      noticeLanguage: "de",
+      noticeTitle: "Datenschutzhinweise",
+      noticeText: "Synthetischer Hinweistext.",
+    };
+    const calls = setup(
+      {
+        [`GET ${activationPath}`]: () =>
+          json({ ...recovered, status: { ...recovered.status, code: "none" } }),
+        [`POST ${detailPath}/activation-codes`]: () => json({ item, activation: recovered }, 201),
+      },
+      {
+        ...detail,
+        activationStatus: { account: "activated", code: "none", issuedAt: null, expiresAt: null },
+        capabilities: { ...detail.capabilities, ...recovered.capabilities },
+      },
+    );
+    const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    const recovery = await within(panel).findByRole("group", {
+      name: "Zugang wiederherstellen (Zugang verloren)",
+    });
+    expect(within(recovery).getByText(/beendet sofort alle Sitzungen/)).toBeInTheDocument();
+    const issue = within(recovery).getByRole("button", {
+      name: "Wiederherstellungscode ausstellen",
+    });
+    expect(issue).toBeDisabled();
+    await userEvent.click(
+      within(recovery).getByLabelText(
+        "Ich habe die Person identifiziert und die Anfrage stammt von ihr",
+      ),
+    );
+    await userEvent.click(issue);
+    expect(await screen.findByText("ABCD-2345-EFGH")).toBeInTheDocument();
+    expect(calls).toContainEqual({
+      key: `POST ${detailPath}/activation-codes`,
+      body: {
+        purpose: "recovery",
+        channel: "letter",
+        language: "de",
+        identityVerified: true,
+        replaceOpenCode: false,
+      },
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: "Druckansicht schließen und Codes verwerfen" }),
+    );
+    expect(screen.queryByText("ABCD-2345-EFGH")).toBeNull();
+  });
+
+  it("sends a recovery in person only after the photo-ID check, and shows suspended channels", async () => {
+    const suspended = {
+      status: { account: "activated", code: "none", issuedAt: null, expiresAt: null },
+      current: null,
+      account: {
+        activatedAt: "2026-10-22T09:00:00.000Z",
+        identityAssurance: "birth_date",
+        identityAssuredAt: null,
+      },
+      channels: [
+        {
+          id: "00000000-0000-4000-a000-000000000021",
+          kind: "email",
+          verifiedAt: "2026-10-22T09:00:00.000Z",
+          verifiedBy: "one_time_code",
+          consentGivenAt: "2026-10-22T09:00:00.000Z",
+          consentEndedAt: null,
+          noticeSentAt: "2026-10-22T09:01:00.000Z",
+          suspendedAt: "2026-10-23T09:00:00.000Z",
+          removedAt: null,
+        },
+      ],
+      capabilities: {
+        issueActivationCode: true,
+        recordHandover: true,
+        revokeActivationCode: true,
+        providePrivacyNotice: true,
+      },
+    };
+    const calls = setup(
+      {
+        [`GET ${activationPath}`]: () => json(suspended),
+        [`POST ${detailPath}/activation-codes`]: () =>
+          json({ item: null, activation: suspended }, 201),
+      },
+      {
+        ...detail,
+        activationStatus: suspended.status,
+        capabilities: { ...detail.capabilities, ...suspended.capabilities },
+      },
+    );
+    const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(await within(panel).findByText(/Gesperrt seit 23\.10\.2026/)).toBeInTheDocument();
+    const recovery = within(panel).getByRole("group", {
+      name: "Zugang wiederherstellen (Zugang verloren)",
+    });
+    await userEvent.click(
+      within(recovery).getByLabelText(
+        "Ich habe die Person identifiziert und die Anfrage stammt von ihr",
+      ),
+    );
+    await userEvent.click(within(recovery).getByLabelText("Persönlich gesendet"));
+    await userEvent.type(
+      within(recovery).getByLabelText("Private E-Mail-Adresse oder Mobilnummer"),
+      "neu@example.org",
+    );
+    const issue = within(recovery).getByRole("button", {
+      name: "Wiederherstellungscode ausstellen",
+    });
+    expect(issue).toBeDisabled();
+    await userEvent.click(
+      within(recovery).getByLabelText(
+        "Originalen amtlichen Lichtbildausweis mit den importierten Identitätsdaten geprüft",
+      ),
+    );
+    await userEvent.click(issue);
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `POST ${detailPath}/activation-codes`,
+        body: {
+          purpose: "recovery",
+          channel: "in_person",
+          language: "de",
+          identityVerified: true,
+          replaceOpenCode: false,
+          identityChecked: true,
+          deliveryKind: "email",
+          deliveryAddress: "neu@example.org",
+        },
+      }),
+    );
   });
 });
 

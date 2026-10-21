@@ -511,7 +511,7 @@ function BulkActivation({
   );
 }
 
-function SheetHandover({
+export function SheetHandover({
   item,
   projectId,
   onChanged,

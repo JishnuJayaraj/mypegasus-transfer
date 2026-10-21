@@ -147,6 +147,7 @@ export function participationRoutes(deps: Deps) {
       db
         .select({
           participationId: activationCode.participationId,
+          purpose: activationCode.purpose,
           channel: activationCode.channel,
           issuedAt: utc(activationCode.issuedAt),
           expiresAt: utc(activationCode.expiresAt),
@@ -196,6 +197,7 @@ export function participationRoutes(deps: Deps) {
           activated.has(id),
           code
             ? {
+                purpose: code.purpose,
                 channel: code.channel,
                 issuedAt: code.issuedAt,
                 expiresAt: code.expiresAt,

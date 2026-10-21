@@ -76,4 +76,36 @@ describe("activation-code issuance", () => {
       ).not.toContain("before_cutoff");
     }
   });
+
+  // Q130: an activated account gets a code only as a recovery; no cutoff, no status change.
+  describe("recovery", () => {
+    const recovery: IssuanceFacts = {
+      ...valid,
+      purpose: "recovery",
+      participationStatus: "contacted",
+      accountActivated: true,
+      beforeCutoff: false,
+    };
+
+    it("is issued for an activated account after the cutoff", () => {
+      expect(issuanceRefusals(recovery)).toEqual([]);
+    });
+
+    it("needs an activated account and an open participation", () => {
+      expect(issuanceRefusals({ ...recovery, accountActivated: false })).toEqual(["not_activated"]);
+      expect(issuanceRefusals({ ...recovery, participationStatus: "exited" })).toContain(
+        "participation_closed",
+      );
+    });
+
+    it("keeps the channel rules and the reissue confirmation", () => {
+      expect(issuanceRefusals({ ...recovery, hasBirthDate: false })).toEqual([
+        "birth_date_required",
+      ]);
+      expect(issuanceRefusals({ ...recovery, hasOpenCode: true })).toEqual(["open_code_exists"]);
+      expect(issuanceRefusals({ ...recovery, channel: "in_person" })).toEqual([
+        "identity_not_checked",
+      ]);
+    });
+  });
 });

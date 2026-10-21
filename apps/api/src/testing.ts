@@ -8,6 +8,7 @@ import type { z } from "zod";
 import { createApp } from "./app";
 import type { Deps } from "./context";
 import type { Env } from "./env";
+import { createDetached } from "./detached";
 
 export const testEnv: Env = {
   nodeEnv: "test",
@@ -48,6 +49,7 @@ export function testApp(
   const logs: string[] = [];
   const logger = pino({ level: "info" }, { write: (line: string) => logs.push(line) });
   const db = options.db ?? createDb(testDatabaseUrls().app);
+  const detached = createDetached(logger);
   const app = createApp({
     db,
     env: { ...testEnv, ...options.env },
@@ -60,8 +62,9 @@ export function testApp(
     smsSender: options.smsSender,
     outbox: options.outbox,
     activationNotices: options.activationNotices,
+    detached,
   });
-  return { app, db, logs };
+  return { app, db, logs, detached };
 }
 
 export function jsonRequest(method: string, body: unknown, headers: Record<string, string> = {}) {

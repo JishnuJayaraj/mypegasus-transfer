@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivateRouteImport } from './routes/activate'
+import { Route as ChannelsRouteImport } from './routes/channels'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as NoticeArt14VersionRouteImport } from './routes/notice.art14.$version'
 
 const IndexRoute = IndexRouteImport.update({
@@ -23,6 +25,16 @@ const ActivateRoute = ActivateRouteImport.update({
   path: '/activate',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChannelsRoute = ChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
   id: '/notice/art14/$version',
   path: '/notice/art14/$version',
@@ -32,30 +44,45 @@ const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
+  '/channels': typeof ChannelsRoute
+  '/login': typeof LoginRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
+  '/channels': typeof ChannelsRoute
+  '/login': typeof LoginRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
+  '/channels': typeof ChannelsRoute
+  '/login': typeof LoginRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/activate' | '/notice/art14/$version'
+  fullPaths:
+    '/' | '/activate' | '/channels' | '/login' | '/notice/art14/$version'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/activate' | '/notice/art14/$version'
-  id: '__root__' | '/' | '/activate' | '/notice/art14/$version'
+  to: '/' | '/activate' | '/channels' | '/login' | '/notice/art14/$version'
+  id:
+    | '__root__'
+    | '/'
+    | '/activate'
+    | '/channels'
+    | '/login'
+    | '/notice/art14/$version'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivateRoute: typeof ActivateRoute
+  ChannelsRoute: typeof ChannelsRoute
+  LoginRoute: typeof LoginRoute
   NoticeArt14VersionRoute: typeof NoticeArt14VersionRoute
 }
 
@@ -75,6 +102,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ActivateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/channels': {
+      id: '/channels'
+      path: '/channels'
+      fullPath: '/channels'
+      preLoaderRoute: typeof ChannelsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notice/art14/$version': {
       id: '/notice/art14/$version'
       path: '/notice/art14/$version'
@@ -88,6 +129,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivateRoute: ActivateRoute,
+  ChannelsRoute: ChannelsRoute,
+  LoginRoute: LoginRoute,
   NoticeArt14VersionRoute: NoticeArt14VersionRoute,
 }
 export const routeTree = rootRouteImport
