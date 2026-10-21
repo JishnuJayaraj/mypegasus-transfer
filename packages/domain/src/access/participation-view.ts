@@ -85,6 +85,8 @@ export type ParticipationRecord = {
   amendments: DsvAmendmentView[];
   assignments: ParticipationDetail["assignments"];
   baReportingTasks: BaReportingTaskView[];
+  activationStatus: ParticipationDetail["activationStatus"];
+  privacyNoticeState: ParticipationDetail["privacyNoticeState"];
   id: string;
   projectId: string;
   status: MainStatus;
@@ -149,6 +151,8 @@ export function participationDetail(
     ...(readable("dsvAmendment") && { amendments: record.amendments }),
     ...(readable("baReportingTask") && { baReportingTasks: record.baReportingTasks }),
     assignments: record.assignments,
+    activationStatus: record.activationStatus,
+    privacyNoticeState: record.privacyNoticeState,
     capabilities: options.capabilities,
     refusals: options.refusals,
   };

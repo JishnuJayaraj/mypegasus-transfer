@@ -29,6 +29,14 @@ const item = (id: string, personnelNumber: string, consultants: object[] = []) =
   lastName: "Mustermann",
   firstName: "Erika",
   consultants,
+  activationStatus: { account: "not_activated", code: "none", issuedAt: null, expiresAt: null },
+  privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
+  activationCapabilities: {
+    issueActivationCode: false,
+    recordHandover: false,
+    revokeActivationCode: false,
+    providePrivacyNotice: false,
+  },
 });
 
 function setup(routes: Parameters<typeof mockApi>[0] = {}, me = staffUsers[1]) {

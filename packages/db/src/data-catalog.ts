@@ -99,6 +99,18 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // Activation credentials keep only separately keyed hashes, never a code or destination.
+  activation_code: {
+    retentionClass: "access_credential",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // Immutable Art. 14 delivery evidence: version, language, method, staff id and time.
+  privacy_notice_delivery: {
+    retentionClass: "personnel_file",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Reason codes are confidential (Q66); evidence records get their own class (round 16).
   profiling_exception_request: {
     retentionClass: "participation_record",
@@ -300,7 +312,13 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
  * header would make pseudonymised values of a person (R44), never a field of a participation; the
  * assignments hold which consultant a participation is assigned to, ids and dates only (Q62).
  */
-const withoutFields = new Set(["audit_event", "import_column_mapping", "participant_assignment"]);
+const withoutFields = new Set([
+  "audit_event",
+  "import_column_mapping",
+  "participant_assignment",
+  "activation_code",
+  "privacy_notice_delivery",
+]);
 
 const dataClassRank: Record<DataClass, number> = {
   aggregated: 0,

@@ -26,6 +26,14 @@ import {
   StatusField,
   TgEntryKind,
   Track,
+  ActivationChannel,
+  ActivationDeliveryKind,
+  ActivationDeliveryStatus,
+  ActivationPurpose,
+  ActivationRevokeReason,
+  IdentityCheck,
+  NoticeLanguage,
+  NoticeMethod,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -293,6 +301,23 @@ export const relaxationRequestStatus = pgEnum(
   "relaxation_request_status",
   values(RelaxationRequestStatus),
 );
+export const activationPurpose = pgEnum("activation_purpose", values(ActivationPurpose));
+export const activationChannel = pgEnum("activation_channel", values(ActivationChannel));
+export const identityCheck = pgEnum("identity_check", values(IdentityCheck));
+export const activationDeliveryKind = pgEnum(
+  "activation_delivery_kind",
+  values(ActivationDeliveryKind),
+);
+export const activationDeliveryStatus = pgEnum(
+  "activation_delivery_status",
+  values(ActivationDeliveryStatus),
+);
+export const activationRevokeReason = pgEnum(
+  "activation_revoke_reason",
+  values(ActivationRevokeReason),
+);
+export const noticeLanguage = pgEnum("notice_language", values(NoticeLanguage));
+export const noticeMethod = pgEnum("notice_method", values(NoticeMethod));
 
 const dateColumn = (name: string) => date(name, { mode: "string" });
 const createdAt = () =>
@@ -613,6 +638,128 @@ export const participantDetails = pgTable(
     personText("participant_details_mobile_text", sql`${t.mobile}`, 30),
     personText("participant_details_private_email_text", sql`${t.privateEmail}`, 254),
     personText("participant_details_work_email_text", sql`${t.workEmail}`, 254),
+  ],
+);
+
+/**
+ * A personal activation code (D12–D20). The code and an in-person destination are never stored:
+ * only HMAC-SHA256 values under separately derived keys. All writes go through the Slice 3d
+ * functions; the runtime role reads only the non-secret projection it needs.
+ */
+export const activationCode = pgTable(
+  "activation_code",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    purpose: activationPurpose("purpose").notNull().default("activation"),
+    codeHash: text("code_hash").notNull().unique(),
+    channel: activationChannel("channel").notNull(),
+    noticeLanguage: noticeLanguage("notice_language").notNull(),
+    identityCheck: identityCheck("identity_check").notNull().default("none"),
+    identityCheckedBy: uuid("identity_checked_by").references(() => staffUser.id),
+    identityCheckedAt: timestamp("identity_checked_at", { withTimezone: true, mode: "string" }),
+    printedAt: timestamp("printed_at", { withTimezone: true, mode: "string" }),
+    handedOverBy: uuid("handed_over_by").references(() => staffUser.id),
+    handedOverAt: timestamp("handed_over_at", { withTimezone: true, mode: "string" }),
+    deliveryKind: activationDeliveryKind("delivery_kind"),
+    deliveryAddressHash: text("delivery_address_hash"),
+    deliveryStatus: activationDeliveryStatus("delivery_status"),
+    issuedBy: uuid("issued_by")
+      .notNull()
+      .references(() => staffUser.id),
+    issuedAt: timestamp("issued_at", { withTimezone: true, mode: "string" }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "string" }).notNull(),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    lockedAt: timestamp("locked_at", { withTimezone: true, mode: "string" }),
+    revokedBy: uuid("revoked_by").references(() => staffUser.id),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "string" }),
+    revokeReason: activationRevokeReason("revoke_reason"),
+    usedAt: timestamp("used_at", { withTimezone: true, mode: "string" }),
+  },
+  (t) => [
+    foreignKey({
+      name: "activation_code_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    unique("activation_code_id_project_unique").on(t.id, t.projectId),
+    uniqueIndex("activation_code_one_open_idx")
+      .on(t.participationId)
+      .where(sql`${t.revokedAt} is null and ${t.usedAt} is null and ${t.lockedAt} is null`),
+    index("activation_code_participation_issued_idx").on(t.participationId, t.issuedAt.desc()),
+    check("activation_code_code_hash", sql`${t.codeHash} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "activation_code_delivery_address_hash",
+      sql`${t.deliveryAddressHash} ~ '^[0-9a-f]{64}$'`,
+    ),
+    check("activation_code_lifetime", sql`${t.expiresAt} = ${t.issuedAt} + interval '30 days'`),
+    check("activation_code_attempts", sql`${t.failedAttempts} between 0 and 5`),
+    check(
+      "activation_code_identity_check",
+      sql`(${t.identityCheck} = 'photo_id') = (${t.identityCheckedBy} is not null) and (${t.identityCheckedBy} is null) = (${t.identityCheckedAt} is null)`,
+    ),
+    check(
+      "activation_code_in_person_delivery",
+      sql`(${t.channel} = 'in_person') = (${t.deliveryKind} is not null) and (${t.deliveryKind} is null) = (${t.deliveryAddressHash} is null) and (${t.deliveryKind} is null) = (${t.deliveryStatus} is null)`,
+    ),
+    check(
+      "activation_code_printed",
+      sql`(${t.channel} in ('letter', 'sheet')) = (${t.printedAt} is not null)`,
+    ),
+    check(
+      "activation_code_handover",
+      sql`(${t.handedOverAt} is null) = (${t.handedOverBy} is null) and (${t.handedOverAt} is null or ${t.channel} = 'sheet')`,
+    ),
+    check(
+      "activation_code_revoked",
+      sql`(${t.revokedAt} is null) = (${t.revokeReason} is null) and (${t.revokedAt} is null or ${t.revokedBy} is not null or ${t.revokeReason} = 'participation_closed')`,
+    ),
+    check(
+      "activation_code_one_terminal",
+      sql`num_nonnulls(${t.lockedAt}, ${t.revokedAt}, ${t.usedAt}) <= 1`,
+    ),
+  ],
+);
+
+/** Immutable evidence that an Art. 14 version was sent or handed over (Q124). */
+export const privacyNoticeDelivery = pgTable(
+  "privacy_notice_delivery",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    language: noticeLanguage("language").notNull(),
+    method: noticeMethod("method").notNull(),
+    activationCodeId: uuid("activation_code_id"),
+    providedBy: uuid("provided_by")
+      .notNull()
+      .references(() => staffUser.id),
+    providedAt: timestamp("provided_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "privacy_notice_delivery_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "privacy_notice_delivery_activation_code_fk",
+      columns: [t.activationCodeId, t.projectId],
+      foreignColumns: [activationCode.id, activationCode.projectId],
+    }),
+    index("privacy_notice_delivery_participation_idx").on(t.participationId, t.providedAt),
+    check(
+      "privacy_notice_delivery_version",
+      sql`${t.noticeVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
+    ),
   ],
 );
 
@@ -1162,6 +1309,8 @@ export const tables = [
   profilingExceptionRequest,
   participantIdentity,
   participantDetails,
+  activationCode,
+  privacyNoticeDelivery,
   lifecycleEdge,
   auditEvent,
   jobRun,

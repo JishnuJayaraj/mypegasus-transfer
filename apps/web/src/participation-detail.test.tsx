@@ -16,6 +16,7 @@ import {
 const participationId = "00000000-0000-4000-a000-000000000001";
 const projectPath = `/api/v1/projects/${project.id}`;
 const detailPath = `/api/v1/participations/${participationId}`;
+const activationPath = `${detailPath}/activation`;
 const wave = (n: number) => ({
   id: `00000000-0000-4000-b000-00000000000${n}`,
   projectId: project.id,
@@ -69,7 +70,17 @@ const detail = {
     workEmail: null,
   },
   assignments: [],
-  capabilities: { assignEntryWave: true, setParticipationDates: false, assignParticipations: true },
+  activationStatus: { account: "not_activated", code: "none", issuedAt: null, expiresAt: null },
+  privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
+  capabilities: {
+    assignEntryWave: true,
+    setParticipationDates: false,
+    assignParticipations: true,
+    issueActivationCode: false,
+    recordHandover: false,
+    revokeActivationCode: false,
+    providePrivacyNotice: false,
+  },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };
 const option1 =
@@ -222,6 +233,92 @@ describe("the participant page", () => {
     expect(
       await screen.findByText("Diese teilnehmende Person wurde nicht gefunden."),
     ).toBeInTheDocument();
+  });
+});
+
+describe("activation details", () => {
+  const activation = {
+    status: {
+      account: "not_activated",
+      code: "open",
+      issuedAt: "2026-10-21T10:00:00.000Z",
+      expiresAt: "2026-11-20T10:00:00.000Z",
+    },
+    current: {
+      activationCodeId: "00000000-0000-4000-a000-000000000010",
+      channel: "letter",
+      deliveryKind: null,
+      deliveryStatus: null,
+      noticeLanguage: "de",
+      issuedBy: staffUsers[1]!.id,
+      issuedByDisplayName: staffUsers[1]!.displayName,
+      issuedAt: "2026-10-21T10:00:00.000Z",
+      expiresAt: "2026-11-20T10:00:00.000Z",
+      handedOverBy: null,
+      handedOverAt: null,
+      identityCheckedBy: null,
+      identityCheckedAt: null,
+      failedAttempts: 0,
+      attemptsLeft: 5,
+      lockedAt: null,
+      revokedAt: null,
+      revokeReason: null,
+      usedAt: null,
+    },
+    capabilities: {
+      issueActivationCode: true,
+      recordHandover: true,
+      revokeActivationCode: true,
+      providePrivacyNotice: true,
+    },
+  };
+  const activationDetail = {
+    ...detail,
+    activationStatus: activation.status,
+    capabilities: { ...detail.capabilities, ...activation.capabilities },
+  };
+
+  it("shows the issuer and requires explicit confirmation before replacing an open code", async () => {
+    const calls = setup(
+      {
+        [`GET ${activationPath}`]: () => json(activation),
+        [`POST ${detailPath}/activation-codes/in-person`]: () => json(activation, 201),
+      },
+      activationDetail,
+    );
+    const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(await within(panel).findByText("Petra Projektleitung")).toBeInTheDocument();
+
+    const send = within(panel).getByRole("button", { name: "Aktivierungslink senden" });
+    await userEvent.type(
+      within(panel).getByLabelText("Private E-Mail-Adresse oder Mobilnummer"),
+      "erika@example.org",
+    );
+    await userEvent.click(
+      within(panel).getByLabelText(
+        "Originalen amtlichen Lichtbildausweis mit den importierten Identitätsdaten geprüft",
+      ),
+    );
+    expect(send).toBeDisabled();
+    await userEvent.click(
+      within(panel).getByLabelText(
+        "Bestehenden offenen Code widerrufen und bewusst neu ausstellen",
+      ),
+    );
+    expect(send).toBeEnabled();
+    await userEvent.click(send);
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `POST ${detailPath}/activation-codes/in-person`,
+        body: {
+          deliveryKind: "email",
+          deliveryAddress: "erika@example.org",
+          language: "de",
+          identityChecked: true,
+          replaceOpenCode: true,
+        },
+      }),
+    );
   });
 });
 

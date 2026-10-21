@@ -180,3 +180,64 @@ body {
   align-self: stretch;
   min-block-size: 100%;
 }
+
+.tp-print-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-04;
+  margin-block: $spacing-05;
+}
+
+.tp-print-page {
+  position: relative;
+  min-block-size: 270mm;
+  max-inline-size: 210mm;
+  padding: 25mm 20mm;
+  margin-block-end: $spacing-07;
+  background: white;
+  color: #161616;
+  white-space: pre-line;
+  break-after: page;
+}
+
+.tp-window-address {
+  min-block-size: 45mm;
+  padding-block-start: 12mm;
+  font-style: normal;
+}
+
+.tp-print-code {
+  margin-block: $spacing-06;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.tp-print-qr {
+  inline-size: 45mm;
+  block-size: 45mm;
+}
+
+.tp-notice-text {
+  margin-block-start: $spacing-06;
+  line-height: 1.45;
+}
+
+@media print {
+  .cds--header,
+  .cds--side-nav,
+  .tp-print-controls {
+    display: none !important;
+  }
+
+  .tp-content {
+    padding: 0;
+    margin: 0;
+  }
+
+  .tp-print-page {
+    margin: 0;
+    box-shadow: none;
+  }
+}

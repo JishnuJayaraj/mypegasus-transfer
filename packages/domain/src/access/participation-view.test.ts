@@ -84,6 +84,17 @@ const record: ParticipationRecord = {
   profilingStatus: "not_started",
   dsvStatus: "not_offered",
   statusVersion: 3,
+  activationStatus: {
+    account: "not_activated",
+    code: "none",
+    issuedAt: null,
+    expiresAt: null,
+  },
+  privacyNoticeState: {
+    state: "due",
+    dueOn: "2027-03-15",
+    providedAt: null,
+  },
   wave: {
     id: "wave-1",
     code: "W1",
@@ -155,7 +166,15 @@ const record: ParticipationRecord = {
 const options = {
   today: "2027-03-01",
   entryRunCompletedToday: false,
-  capabilities: { assignEntryWave: true, setParticipationDates: true, assignParticipations: true },
+  capabilities: {
+    assignEntryWave: true,
+    setParticipationDates: true,
+    assignParticipations: true,
+    issueActivationCode: true,
+    recordHandover: false,
+    revokeActivationCode: false,
+    providePrivacyNotice: true,
+  },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
 
@@ -180,10 +199,16 @@ describe("participationDetail (R30, AC-34)", () => {
       amendments: record.amendments,
       baReportingTasks: record.baReportingTasks,
       assignments: record.assignments,
+      activationStatus: record.activationStatus,
+      privacyNoticeState: record.privacyNoticeState,
       capabilities: {
         assignEntryWave: true,
         setParticipationDates: true,
         assignParticipations: true,
+        issueActivationCode: true,
+        recordHandover: false,
+        revokeActivationCode: false,
+        providePrivacyNotice: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });

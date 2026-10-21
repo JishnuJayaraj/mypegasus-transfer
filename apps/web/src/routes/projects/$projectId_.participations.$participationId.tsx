@@ -1,8 +1,9 @@
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink, type ErrorComponentProps } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   Button,
+  Checkbox,
   formatDate,
   formatTimestamp,
   InlineNotification,
@@ -11,12 +12,14 @@ import {
   Select,
   SelectItem,
   SimpleTable,
+  TextInput,
 } from "@transfer/ui";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   entryWavesQuery,
   participantsQuery,
+  participationActivationQuery,
   participationQuery,
   projectQuery,
   projectTeamQuery,
@@ -132,8 +135,231 @@ function ParticipationPage() {
         ]}
       />
       <Assignments detail={detail} projectId={projectId} />
+      <ActivationPanel detail={detail} projectId={projectId} />
       {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
     </>
+  );
+}
+
+function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: string }) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const mayRead = Object.values({
+    issue: detail.capabilities.issueActivationCode,
+    handover: detail.capabilities.recordHandover,
+    revoke: detail.capabilities.revokeActivationCode,
+    notice: detail.capabilities.providePrivacyNotice,
+  }).some(Boolean);
+  const query = useQuery({
+    ...participationActivationQuery(api, detail.id),
+    enabled: mayRead,
+  });
+  const [deliveryKind, setDeliveryKind] = useState<"email" | "sms">("email");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [identityChecked, setIdentityChecked] = useState(false);
+  const [confirmReissue, setConfirmReissue] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const refresh = async () => {
+    setFailed(false);
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: participationActivationQuery(api, detail.id).queryKey,
+      }),
+      queryClient.invalidateQueries({ queryKey: participationQuery(api, detail.id).queryKey }),
+      queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey }),
+    ]);
+  };
+  const send = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.POST(
+        "/api/v1/participations/{participationId}/activation-codes/in-person",
+        {
+          params: { path: { participationId: detail.id } },
+          body: {
+            deliveryKind,
+            deliveryAddress,
+            language: "de",
+            identityChecked: true,
+            replaceOpenCode: confirmReissue,
+          },
+        },
+      );
+      if (!data) throw new Error("Activation delivery failed");
+      return data;
+    },
+    onSuccess: async () => {
+      setDeliveryAddress("");
+      setIdentityChecked(false);
+      setConfirmReissue(false);
+      await refresh();
+    },
+    onError: () => setFailed(true),
+  });
+  const revoke = useMutation({
+    mutationFn: async () => {
+      const activationCodeId = query.data?.current?.activationCodeId;
+      if (!activationCodeId) throw new Error("No activation code");
+      const { data } = await api.POST(
+        "/api/v1/participations/{participationId}/activation-codes/revocation",
+        {
+          params: { path: { participationId: detail.id } },
+          body: { activationCodeId, reason: "lost" },
+        },
+      );
+      if (!data) throw new Error("Revocation failed");
+    },
+    onSuccess: refresh,
+    onError: () => setFailed(true),
+  });
+  const provideNotice = useMutation({
+    mutationFn: async () => {
+      const { data, response } = await api.POST(
+        "/api/v1/participations/{participationId}/privacy-notices",
+        {
+          params: { path: { participationId: detail.id } },
+          body: { language: "de", method: "in_person_print", handedOver: true },
+        },
+      );
+      if (!data && response.status !== 201) throw new Error("Notice handover failed");
+    },
+    onSuccess: refresh,
+    onError: () => setFailed(true),
+  });
+  const status = query.data?.status ?? detail.activationStatus;
+  const current = query.data?.current;
+  const requiresReissueConfirmation = ["printed", "open", "delivery_unknown"].includes(status.code);
+  return (
+    <section className="tp-section" aria-label={t("activation.detail.title")}>
+      <h2>{t("activation.detail.title")}</h2>
+      {failed && (
+        <InlineNotification
+          kind="error"
+          title={t("activation.detail.failed")}
+          onClose={() => setFailed(false)}
+        />
+      )}
+      <dl className="tp-facts">
+        <div>
+          <dt>{t("activation.detail.status")}</dt>
+          <dd>
+            {status.account === "activated"
+              ? t("activation.status.activated")
+              : t(`activation.code.${status.code}`)}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("activation.detail.notice")}</dt>
+          <dd>
+            {t(`activation.notice.${detail.privacyNoticeState.state}`, {
+              dueOn: detail.privacyNoticeState.dueOn,
+            })}
+          </dd>
+        </div>
+        {current && (
+          <>
+            <div>
+              <dt>{t("activation.detail.channel")}</dt>
+              <dd>{t(`activation.channel.${current.channel}`)}</dd>
+            </div>
+            <div>
+              <dt>{t("activation.detail.issuedAt")}</dt>
+              <dd>{formatTimestamp(current.issuedAt)}</dd>
+            </div>
+            <div>
+              <dt>{t("activation.detail.issuedBy")}</dt>
+              <dd>{current.issuedByDisplayName}</dd>
+            </div>
+            <div>
+              <dt>{t("activation.detail.expiresAt")}</dt>
+              <dd>{formatTimestamp(current.expiresAt)}</dd>
+            </div>
+            <div>
+              <dt>{t("activation.detail.delivery")}</dt>
+              <dd>
+                {current.deliveryStatus ? t(`activation.delivery.${current.deliveryStatus}`) : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt>{t("activation.detail.attempts")}</dt>
+              <dd>{current.attemptsLeft}</dd>
+            </div>
+          </>
+        )}
+      </dl>
+      {detail.capabilities.issueActivationCode && (
+        <fieldset className="tp-fieldset">
+          <legend>{t("activation.detail.sendInPerson")}</legend>
+          <Select
+            id="activation-delivery-kind"
+            labelText={t("activation.detail.deliveryKind")}
+            value={deliveryKind}
+            onChange={(event) => setDeliveryKind(event.target.value as "email" | "sms")}
+          >
+            <SelectItem value="email" text={t("activation.deliveryKind.email")} />
+            <SelectItem value="sms" text={t("activation.deliveryKind.sms")} />
+          </Select>
+          <TextInput
+            id="activation-delivery-address"
+            labelText={t("activation.detail.deliveryAddress")}
+            value={deliveryAddress}
+            onChange={(event) => setDeliveryAddress(event.target.value)}
+            autoComplete="off"
+          />
+          <Checkbox
+            id="activation-identity-checked"
+            labelText={t("activation.detail.identityChecked")}
+            checked={identityChecked}
+            onChange={(_, { checked }) => setIdentityChecked(checked)}
+          />
+          {requiresReissueConfirmation && (
+            <Checkbox
+              id="activation-confirm-reissue"
+              labelText={t("activation.detail.confirmReissue")}
+              checked={confirmReissue}
+              onChange={(_, { checked }) => setConfirmReissue(checked)}
+            />
+          )}
+          <Button
+            disabled={
+              !deliveryAddress ||
+              !identityChecked ||
+              (requiresReissueConfirmation && !confirmReissue) ||
+              send.isPending
+            }
+            onClick={() => send.mutate()}
+          >
+            {t("activation.detail.send")}
+          </Button>
+        </fieldset>
+      )}
+      <div className="tp-bulk-actions">
+        {detail.capabilities.revokeActivationCode && current && status.code !== "revoked" && (
+          <Button
+            kind="danger--tertiary"
+            disabled={revoke.isPending}
+            onClick={() => revoke.mutate()}
+          >
+            {t("activation.detail.revoke")}
+          </Button>
+        )}
+        {detail.capabilities.providePrivacyNotice &&
+          detail.privacyNoticeState.state !== "provided" && (
+            <Button
+              kind="secondary"
+              disabled={provideNotice.isPending}
+              onClick={() => provideNotice.mutate()}
+            >
+              {t("activation.detail.noticeHandedOver")}
+            </Button>
+          )}
+        {detail.capabilities.issueActivationCode && (
+          <RouterLink to="/projects/$projectId" params={{ projectId }}>
+            {t("activation.detail.issuePrint")}
+          </RouterLink>
+        )}
+      </div>
+    </section>
   );
 }
 

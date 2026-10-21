@@ -261,7 +261,8 @@ const grant = (args: Record<string, unknown> = {}) =>
 const rolesOf = async (staffUserId: string) =>
   (
     await owner.query(
-      "select role, region_id, granted_by from staff_org_role where staff_user_id = $1",
+      `select role, region_id, granted_by from staff_org_role
+       where staff_user_id = $1 order by granted_at, role`,
       [staffUserId],
     )
   ).rows;

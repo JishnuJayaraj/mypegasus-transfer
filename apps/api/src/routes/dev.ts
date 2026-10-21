@@ -9,10 +9,49 @@ import { loginAsDevUser } from "../staff-login";
 
 // Dev only: mounted when AUTH_MODE=dev, which the API refuses in production (env.ts).
 const devOnly = { tags: ["dev"], "x-dev-only": true };
+const OutboxMessage = z.discriminatedUnion("kind", [
+  z.strictObject({
+    id: z.string(),
+    kind: z.literal("email"),
+    to: z.string(),
+    subject: z.string(),
+    text: z.string(),
+    idempotencyKey: z.string(),
+    createdAt: z.iso.datetime(),
+  }),
+  z.strictObject({
+    id: z.string(),
+    kind: z.literal("sms"),
+    to: z.string(),
+    text: z.string(),
+    idempotencyKey: z.string(),
+    createdAt: z.iso.datetime(),
+  }),
+]);
 
 export function devRoutes(deps: Deps) {
   const { db } = deps;
   const router = createRouter();
+
+  router.openapi(
+    createRoute({
+      ...devOnly,
+      method: "get",
+      path: "/dev/outbox",
+      summary: "Latest mock email and SMS messages (synthetic development only)",
+      responses: {
+        200: {
+          description: "At most 100 mock messages",
+          headers: { "Cache-Control": { schema: { type: "string" } } },
+          content: { "application/json": { schema: z.array(OutboxMessage) } },
+        },
+      },
+    }),
+    (c) => {
+      c.header("Cache-Control", "no-store");
+      return c.json([...(deps.outbox?.list() ?? [])], 200);
+    },
+  );
 
   router.openapi(
     createRoute({

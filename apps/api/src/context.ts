@@ -1,5 +1,5 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import type { Clock } from "@transfer/adapters";
+import type { Clock, DevelopmentOutbox, Mailer, SmsSender } from "@transfer/adapters";
 import type { Database } from "@transfer/db";
 import type { StaffUser } from "@transfer/domain";
 import type { Logger } from "pino";
@@ -22,6 +22,9 @@ export interface Deps {
   importSlots?: Slots | undefined;
   /** The OIDC client (AUTH_MODE=oidc); built from the environment unless a test injects one. */
   oidc?: Oidc | undefined;
+  mailer?: Mailer | undefined;
+  smsSender?: SmsSender | undefined;
+  outbox?: DevelopmentOutbox | undefined;
 }
 
 export interface AppEnv {

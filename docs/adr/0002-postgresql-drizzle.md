@@ -217,6 +217,28 @@ replaces `change_participation_status`, `set_participation_dates` and `revoke_pr
 (same signatures) without the `'rejected'` comparison, which would fail at run time. It refuses a
 database holding a removed value. `participation_unmatched_has_no_wave` is gone.
 
+## Amendment 2026-10-21: activation-code and notice evidence (Slice 3, PR 3d)
+
+- `activation_code` holds an activation credential's keyed hash, channel and non-secret state;
+  `privacy_notice_delivery` is immutable evidence of the exact Article 14 notice version,
+  language, method and provision time. Both carry `project_id` and `participation_id`.
+  `transfer_app` may select them for authorised projections but has no table-write privilege.
+- Five `SECURITY DEFINER` functions own the writes: `issue_activation_code`,
+  `record_activation_delivery`, `hand_over_activation_code`, `revoke_activation_code` and
+  `record_privacy_notice`. They use the established fixed `search_path`, revoke execution from
+  `PUBLIC`, grant it only to `transfer_app`, take the participation/project lock, repeat the
+  issuance checks under that lock and write ID/code-only audit details in the same transaction.
+- Batch issuance and notice-only letters lock participations in sorted UUID order and are all or
+  nothing. The partial unique index permits at most one non-terminal code per participation; a
+  conscious reissue revokes the prior code as `reissued` before inserting the replacement.
+- A terminal main-status transition invokes an `AFTER UPDATE` trigger in the status transaction
+  and revokes every open code as `participation_closed`. Notice rows reject update and delete for
+  every role. Database time sets the 30-day code lifetime and every evidence timestamp.
+- In-person delivery is a two-transaction protocol around the provider call: issuance commits as
+  `pending`; the API sends with the code row id as its idempotency key; then
+  `record_activation_delivery` records `sent`, `failed` or `unknown`. Only `sent` creates notice
+  evidence, `failed` revokes the code, and `unknown` leaves it valid without claiming delivery.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:
@@ -236,6 +258,9 @@ Roles and grants:
 - Slice 3 (PR 3c): `transfer_app` has `SELECT` on `region`, `staff_org_role` and
   `participant_assignment` and writes none of them, nor `staff_user` or `project_membership`;
   their functions do (`0037_team_and_org_functions.sql`, below).
+- Slice 3 (PR 3d): `transfer_app` has `SELECT` on `activation_code` and
+  `privacy_notice_delivery`, and no `INSERT`, `UPDATE` or `DELETE`; the functions above perform
+  every write (`0039_activation_codes.sql`, `0040_activation_code_functions.sql`).
 
 Schema:
 - **Data catalog** (`packages/db/src/data-catalog.ts`): every table has a `dataClass`, a

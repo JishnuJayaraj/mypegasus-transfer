@@ -83,6 +83,9 @@ const customer = { customerVisible: true, ...record };
 export const fieldCatalog: readonly FieldEntry[] = [
   // statuses and dates (internal), on `participation`
   ...fields(["status", "profilingStatus", "dsvStatus"], "internal", "case_internal", false, record),
+  ...fields(["activationStatus", "privacyNoticeState"], "internal", "case_internal", false, {
+    listable: true,
+  }),
   ...fields(["offerDeadline", "tgStart", "tgEnd"], "internal", "case_internal", false, record),
   field("dsvSignedOn", "internal", "case_internal", false, { customerVisible: true }),
   ...fields(["tgEntryDate", "exitDate"], "internal", "case_internal", false, customer),

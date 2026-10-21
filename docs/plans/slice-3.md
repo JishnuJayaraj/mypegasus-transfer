@@ -1,6 +1,7 @@
 # Slice 3 — Auth & roles: plan
 
-Status: approved 2026-10-20 ([round 36](../decisions/2026-10-20-answers-round-36.md)). Scope:
+Status: approved 2026-10-20 ([round 36](../decisions/2026-10-20-answers-round-36.md)); PRs 3a–3c
+merged and PR 3d implemented 2026-10-21; PRs 3e–3f remain planned. Scope:
 [roadmap](../roadmap.md) Slice 3, [ADR-0007](../adr/0007-auth.md) with its 2026-10-20 amendment,
 [round 35](../decisions/2026-10-20-answers-round-35.md) (Q112–Q120) and round 36 (Q121–Q130).
 
@@ -228,7 +229,7 @@ All `SECURITY DEFINER`, owned by `transfer_owner`, fixed `search_path`, `EXECUTE
 | 3a | the enum recreation; `change_participation_status` and the helpers whose signatures name the types recreated unchanged in behaviour |
 | 3b | `start_staff_session`, `end_staff_session`, `bind_staff_identity`, `record_staff_login_refused` |
 | 3c | `create_region`, `update_region`, `create_staff_user`, `update_staff_user`, `deactivate_staff_user`, `grant_org_role`, `revoke_org_role`, `add_project_member`, `remove_project_member`, `assign_participations`, `unassign_participation`; `create_project` and `update_project` replaced with a region parameter |
-| 3d | `issue_activation_code` (locks the participation, revokes the open code, re-checks D15–D17, writes the notice delivery for letter and in-person), `record_activation_delivery` (outcome; a failure revokes), `hand_over_activation_code` (writes the sheet's notice delivery), `revoke_activation_code`, `record_privacy_notice`; an `AFTER UPDATE OF status` trigger revoking open codes at a terminal status |
+| 3d | `issue_activation_code` (locks the participation, revokes the open code, re-checks D15–D17, writes the letter's notice delivery), `record_activation_delivery` (outcome; success writes the in-person notice delivery, failure revokes, unknown claims no notice), `hand_over_activation_code` (writes the sheet's notice delivery), `revoke_activation_code`, `record_privacy_notice`; an `AFTER UPDATE OF status` trigger revoking open codes at a terminal status |
 | 3e | the status body moves into the internal `apply_status_change` (no grant); `change_participation_status` keeps its signature and refuses `participant`; `start_activation`, `check_activation_birth_date`, `check_activation_delivery_address` (both count and lock under the row lock), `create_one_time_code` (per-address advisory lock, 5/hour), `record_one_time_code_delivery`, `verify_one_time_code`, `complete_activation`, `end_participant_session`, `mark_activation_notice_sent`; the terminal trigger also ends sessions |
 | 3f | `start_participant_session`, `add_participant_channel`, `remove_participant_channel`, `issue_activation_code` with purpose `recovery` (ends sessions, suspends channels) |
 

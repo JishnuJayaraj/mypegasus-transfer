@@ -15,6 +15,9 @@ import {
   projectEntryWave,
   sql,
   staffUser,
+  activationCode,
+  privacyNoticeDelivery,
+  desc,
 } from "@transfer/db";
 import {
   AssignEntryWaveInput,
@@ -23,7 +26,7 @@ import {
   ParticipationDatesInput,
   mayListField,
   mayPerformOperation,
-  PageQuery,
+  ParticipationListQuery,
   participationDatesCapability,
   participationDetail,
   ParticipationDetail,
@@ -32,6 +35,8 @@ import {
   type AssignedConsultant,
   type ParticipationListItem,
   type StaffUser,
+  activationStatus,
+  privacyNoticeState,
 } from "@transfer/domain";
 import type { Context } from "hono";
 import { projectAccess, projectTarget } from "../access";
@@ -106,12 +111,106 @@ function refusal(c: Context, error: unknown) {
   return domainProblem(c, [error.code]);
 }
 
+function activationCapabilities(
+  subject: Awaited<ReturnType<typeof projectAccess>>["subject"],
+  projectId: string,
+  regionId: string | null,
+  participationId: string,
+) {
+  const target = projectTarget(projectId, regionId, participationId);
+  const may = (
+    kind:
+      | "issueActivationCode"
+      | "recordHandover"
+      | "revokeActivationCode"
+      | "providePrivacyNotice",
+  ) => mayPerformOperation(subject, { kind }, target).ok;
+  return {
+    issueActivationCode: may("issueActivationCode"),
+    recordHandover: may("recordHandover"),
+    revokeActivationCode: may("revokeActivationCode"),
+    providePrivacyNotice: may("providePrivacyNotice"),
+  };
+}
+
 export function participationRoutes(deps: Deps) {
   const { db, clock } = deps;
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const statusService = createStatusService({ db, clock });
   const release = loadRelease(deps.env.configDir);
+
+  async function statesOf(ids: readonly string[], receivedOn: ReadonlyMap<string, string>) {
+    if (ids.length === 0) return new Map();
+    const [codes, deliveries] = await Promise.all([
+      db
+        .select({
+          participationId: activationCode.participationId,
+          channel: activationCode.channel,
+          issuedAt: utc(activationCode.issuedAt),
+          expiresAt: utc(activationCode.expiresAt),
+          deliveryStatus: activationCode.deliveryStatus,
+          handedOverAt: utc(activationCode.handedOverAt),
+          lockedAt: utc(activationCode.lockedAt),
+          revokedAt: utc(activationCode.revokedAt),
+          usedAt: utc(activationCode.usedAt),
+        })
+        .from(activationCode)
+        .where(inArray(activationCode.participationId, [...ids]))
+        .orderBy(desc(activationCode.issuedAt), desc(activationCode.id)),
+      db
+        .select({
+          participationId: privacyNoticeDelivery.participationId,
+          providedAt: utc(privacyNoticeDelivery.providedAt),
+        })
+        .from(privacyNoticeDelivery)
+        .where(inArray(privacyNoticeDelivery.participationId, [...ids])),
+    ]);
+    const latest = new Map<string, (typeof codes)[number]>();
+    for (const code of codes)
+      if (!latest.has(code.participationId)) latest.set(code.participationId, code);
+    const provided = new Map<string, { providedAt: string }[]>();
+    for (const delivery of deliveries) {
+      provided.set(delivery.participationId, [
+        ...(provided.get(delivery.participationId) ?? []),
+        delivery,
+      ]);
+    }
+    const result = new Map<
+      string,
+      {
+        activationStatus: ReturnType<typeof activationStatus>;
+        privacyNoticeState: ReturnType<typeof privacyNoticeState>;
+      }
+    >();
+    for (const id of ids) {
+      const code = latest.get(id);
+      result.set(id, {
+        activationStatus: activationStatus(
+          false,
+          code
+            ? {
+                channel: code.channel,
+                issuedAt: code.issuedAt,
+                expiresAt: code.expiresAt,
+                deliveryStatus: code.deliveryStatus,
+                handedOverAt: code.handedOverAt,
+                lockedAt: code.lockedAt,
+                revokedAt: code.revokedAt,
+                usedAt: code.usedAt,
+              }
+            : null,
+          deps.clock.now().toISOString(),
+        ),
+        privacyNoticeState: privacyNoticeState(
+          receivedOn.get(id)!,
+          provided.get(id) ?? [],
+          clock.today(),
+        ),
+      });
+    }
+    return result;
+  }
 
   /**
    * One participation for the user (R29–R31): undefined when it doesn't exist or its project is
@@ -126,6 +225,7 @@ export function participationRoutes(deps: Deps) {
         wave: waveColumns,
         identity: participantIdentity,
         details: participantDetails,
+        receivedOn: sql<string>`to_char(${participation.createdAt} at time zone 'Europe/Berlin', 'YYYY-MM-DD')`,
       })
       .from(participation)
       .innerJoin(project, eq(project.id, participation.projectId))
@@ -198,12 +298,16 @@ export function participationRoutes(deps: Deps) {
       .where(eq(baReportingTask.participationId, participationId))
       .orderBy(asc(baReportingTask.createdAt), asc(baReportingTask.reportingKind));
     const assignments = (await consultantsOf(db, [participationId])).get(participationId) ?? [];
+    const states = (
+      await statesOf([participationId], new Map([[participationId, row.receivedOn]]))
+    ).get(participationId)!;
     return participationDetail(
       subject,
       {
         amendments,
         assignments,
         baReportingTasks,
+        ...states,
         id: p.id,
         projectId: p.projectId,
         status: p.status,
@@ -247,6 +351,7 @@ export function participationRoutes(deps: Deps) {
           assignEntryWave: assignment.allowed,
           setParticipationDates: datesChange.allowed,
           assignParticipations: permitted("assignParticipations"),
+          ...activationCapabilities(subject, p.projectId, regionId, participationId),
         },
         refusals: {
           assignEntryWave: assignment.refusal,
@@ -264,7 +369,7 @@ export function participationRoutes(deps: Deps) {
       summary:
         "The project's participations in creation order (cursor pagination), with the person fields the viewer may list",
       middleware,
-      request: { params: ProjectParams, query: PageQuery },
+      request: { params: ProjectParams, query: ParticipationListQuery },
       responses: {
         200: json(ParticipationPage, "A page of participations"),
         ...problemResponses("validation-error", "unauthenticated", "forbidden", "not-found"),
@@ -272,24 +377,59 @@ export function participationRoutes(deps: Deps) {
     }),
     async (c) => {
       const { projectId } = c.req.valid("param");
-      const { limit, cursor: rawCursor } = c.req.valid("query");
+      const {
+        limit,
+        cursor: rawCursor,
+        activation: activationFilter,
+        privacyNotice: noticeFilter,
+      } = c.req.valid("query");
       const cursor = rawCursor === undefined ? undefined : decodeCursor(rawCursor);
       if (rawCursor !== undefined && !cursor) {
         return problem(c, "validation-error", {
           errors: [{ parameter: "cursor", code: "invalid_cursor", detail: "Malformed cursor" }],
         });
       }
-      const { subject, visible } = await projectAccess(db, sessionUser(c), projectId);
+      const { subject, visible, regionId } = await projectAccess(db, sessionUser(c), projectId);
       if (!visible) return problem(c, "not-found");
       // R29: the PL and back office list every participation, an assigned consultant exactly
       // theirs; a viewer who may list none (an unassigned consultant, an org role) gets a 403.
       // The per-row decision below stays.
       const scope = participationListScope(subject, projectId);
       if (scope.kind === "none") return problem(c, "forbidden");
+      const activationPredicate = activationFilter
+        ? sql`coalesce((
+            select case
+              when ac.used_at is not null then 'used'
+              when ac.revoked_at is not null then 'revoked'
+              when ac.locked_at is not null then 'locked'
+              when ac.expires_at < ${clock.now().toISOString()}::timestamptz then 'expired'
+              when ac.delivery_status = 'unknown' then 'delivery_unknown'
+              when ac.channel = 'sheet' and ac.handed_over_at is null then 'printed'
+              else 'open'
+            end
+            from activation_code ac
+            where ac.participation_id = ${participation.id}
+            order by ac.issued_at desc, ac.id desc
+            limit 1
+          ), 'none') = ${activationFilter}`
+        : undefined;
+      const noticePredicate = noticeFilter
+        ? sql`case
+            when exists (
+              select 1 from privacy_notice_delivery pnd
+              where pnd.participation_id = ${participation.id}
+            ) then 'provided'
+            when ${clock.today()}::date >
+              ((((${participation.createdAt} at time zone 'Europe/Berlin')::date)
+                + interval '1 month')::date) then 'overdue'
+            else 'due'
+          end = ${noticeFilter}`
+        : undefined;
       const rows = await db
         .select({
           id: participation.id,
           createdAt: utc(participation.createdAt),
+          receivedOn: sql<string>`to_char(${participation.createdAt} at time zone 'Europe/Berlin', 'YYYY-MM-DD')`,
           status: participation.status,
           profilingStatus: participation.profilingStatus,
           dsvStatus: participation.dsvStatus,
@@ -306,6 +446,8 @@ export function participationRoutes(deps: Deps) {
             scope.kind === "assigned"
               ? inArray(participation.id, [...scope.participationIds])
               : undefined,
+            activationPredicate,
+            noticePredicate,
             cursor &&
               sql`(${participation.createdAt}, ${participation.id}) > (${cursor.createdAt}::timestamptz, ${cursor.id}::uuid)`,
           ),
@@ -317,25 +459,34 @@ export function participationRoutes(deps: Deps) {
         db,
         rows.slice(0, limit).map(({ id }) => id),
       );
+      const visibleRows = rows.slice(0, limit);
+      const states = await statesOf(
+        visibleRows.map(({ id }) => id),
+        new Map(visibleRows.map(({ id, receivedOn }) => [id, receivedOn])),
+      );
       const items = rows
         .slice(0, limit)
-        .map(({ createdAt: _createdAt, ...row }): ParticipationListItem => {
-          const item: ParticipationListItem = {
-            id: row.id,
-            status: row.status,
-            profilingStatus: row.profilingStatus,
-            dsvStatus: row.dsvStatus,
-            entryWaveId: row.entryWaveId,
-            consultants: consultants.get(row.id) ?? [],
-          };
-          for (const field of personFields) {
-            const value = row[field];
-            if (value !== null && mayListField(subject, projectId, row.id, field)) {
-              item[field] = value;
+        .map(
+          ({ createdAt: _createdAt, receivedOn: _receivedOn, ...row }): ParticipationListItem => {
+            const item: ParticipationListItem = {
+              id: row.id,
+              status: row.status,
+              profilingStatus: row.profilingStatus,
+              dsvStatus: row.dsvStatus,
+              entryWaveId: row.entryWaveId,
+              consultants: consultants.get(row.id) ?? [],
+              ...states.get(row.id)!,
+              activationCapabilities: activationCapabilities(subject, projectId, regionId, row.id),
+            };
+            for (const field of personFields) {
+              const value = row[field];
+              if (value !== null && mayListField(subject, projectId, row.id, field)) {
+                item[field] = value;
+              }
             }
-          }
-          return item;
-        });
+            return item;
+          },
+        );
       const nextCursor =
         rows.length > limit && last
           ? encodeCursor({ createdAt: last.createdAt, id: last.id })

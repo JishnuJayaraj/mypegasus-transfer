@@ -99,6 +99,10 @@ their slices (3, 5, 7).
 | `addReplacementLead` | PL, Admin | — |
 | `assignParticipations` | PL | — |
 | `setProjectRegion` | PL, Admin | — |
+| `issueActivationCode` | PL, Back office | — |
+| `recordHandover` | PL, Back office | — |
+| `revokeActivationCode` | PL, Back office | — |
+| `providePrivacyNotice` | PL, Back office | — |
 
 `requestEvidenceCorrection` (`append_evidence_correction`) by target, from the
 correction-authority table (round 12, Q88), not from who may open a document; requesting grants

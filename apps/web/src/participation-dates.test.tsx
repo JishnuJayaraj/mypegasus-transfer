@@ -49,7 +49,17 @@ const detail = {
   amendments: [],
   baReportingTasks: [],
   assignments: [],
-  capabilities: { assignEntryWave: false, setParticipationDates: true, assignParticipations: true },
+  activationStatus: { account: "not_activated", code: "none", issuedAt: null, expiresAt: null },
+  privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
+  capabilities: {
+    assignEntryWave: false,
+    setParticipationDates: true,
+    assignParticipations: true,
+    issueActivationCode: false,
+    recordHandover: false,
+    revokeActivationCode: false,
+    providePrivacyNotice: false,
+  },
   refusals: { assignEntryWave: "no_other_wave", setParticipationDates: null },
 };
 const task = {

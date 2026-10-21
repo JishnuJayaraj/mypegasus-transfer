@@ -22,6 +22,10 @@ export const testEnv: Env = {
   jobsLifecycleTime: "04:15",
   clock: "system",
   configDir: undefined,
+  accessCodeSecret: "test-access-code-secret-test-access-code-secret",
+  portalPublicUrl: "https://portal.test/portal/",
+  mailAdapter: "mock",
+  smsAdapter: "mock",
 };
 
 export const origin = testEnv.appOrigins[0]!;
@@ -35,6 +39,9 @@ export function testApp(
     clock?: Clock;
     importSlots?: Deps["importSlots"];
     oidc?: Deps["oidc"];
+    mailer?: Deps["mailer"];
+    smsSender?: Deps["smsSender"];
+    outbox?: Deps["outbox"];
   } = {},
 ) {
   const logs: string[] = [];
@@ -48,6 +55,9 @@ export function testApp(
     spa: options.spa,
     importSlots: options.importSlots,
     oidc: options.oidc,
+    mailer: options.mailer,
+    smsSender: options.smsSender,
+    outbox: options.outbox,
   });
   return { app, db, logs };
 }

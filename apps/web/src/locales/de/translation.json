@@ -532,7 +532,9 @@
       "profilingStatus": "Profiling",
       "dsvStatus": "DSV",
       "select": "Auswahl",
-      "consultants": "Beratung"
+      "consultants": "Beratung",
+      "activationStatus": "Aktivierung",
+      "privacyNoticeState": "Datenschutzhinweis"
     },
     "statuses": {
       "imported": "Importiert",
@@ -566,6 +568,93 @@
     "assigned_one": "{{count}} Teilnehmende zugewiesen",
     "assigned_other": "{{count}} Teilnehmende zugewiesen",
     "assignFailed": "Die Zuweisung ist fehlgeschlagen. Nur Personen mit der Rolle Beratung im Projekt können zugewiesen werden."
+  },
+  "activation": {
+    "status": {
+      "activated": "Konto aktiviert"
+    },
+    "code": {
+      "none": "Kein Code",
+      "printed": "Gedruckt, nicht übergeben",
+      "open": "Code offen",
+      "delivery_unknown": "Zustellung unklar",
+      "expired": "Abgelaufen",
+      "locked": "Gesperrt",
+      "revoked": "Widerrufen",
+      "used": "Verwendet"
+    },
+    "notice": {
+      "provided": "Bereitgestellt",
+      "due": "Fällig bis {{dueOn}}",
+      "overdue": "Überfällig seit {{dueOn}}"
+    },
+    "filters": {
+      "activation": "Aktivierungsstatus",
+      "notice": "Datenschutzhinweis",
+      "all": "Alle"
+    },
+    "bulk": {
+      "title": "Aktivierung und Datenschutzhinweise",
+      "language": "Sprache",
+      "confirmReissue": "Offene Codes widerrufen und bewusst neu ausstellen",
+      "letters": "Aktivierungsbriefe drucken",
+      "sheets": "Aktivierungsblätter drucken",
+      "notices": "Datenschutzhinweis drucken",
+      "failed": "Die Ausgabe konnte nicht erstellt werden. Es wurde nichts teilweise ausgestellt."
+    },
+    "print": {
+      "letter": "Aktivierungsbriefe",
+      "sheet": "Aktivierungsblätter und Übergabe",
+      "notice": "Datenschutzhinweise",
+      "print": "Drucken",
+      "close": "Druckansicht schließen und Codes verwerfen",
+      "code": "Aktivierungscode",
+      "expires": "Gültig bis {{at}}"
+    },
+    "handover": {
+      "confirm": "Ausweis geprüft, übergeben",
+      "revoke": "Nicht übergeben – widerrufen",
+      "revokeRemaining": "Nicht übergebene Aktivierungsblätter widerrufen und Ansicht schließen",
+      "handed": "Übergeben und protokolliert",
+      "revoked": "Nicht übergeben; Code widerrufen",
+      "failed": "Aktion fehlgeschlagen"
+    },
+    "channel": {
+      "letter": "Brief",
+      "sheet": "Aktivierungsblatt",
+      "in_person": "Persönlich gesendet"
+    },
+    "delivery": {
+      "pending": "Versand wird verarbeitet",
+      "sent": "Gesendet",
+      "failed": "Zustellung fehlgeschlagen",
+      "unknown": "Zustellung unklar"
+    },
+    "deliveryKind": {
+      "email": "Private E-Mail",
+      "sms": "Mobilnummer (SMS)"
+    },
+    "detail": {
+      "title": "Portalaktivierung und Datenschutzhinweis",
+      "status": "Aktivierungsstatus",
+      "notice": "Datenschutzhinweis",
+      "channel": "Ausgabeweg",
+      "issuedAt": "Ausgestellt am",
+      "issuedBy": "Ausgestellt von",
+      "expiresAt": "Gültig bis",
+      "delivery": "Zustellung",
+      "attempts": "Verbleibende Versuche",
+      "sendInPerson": "Persönlich senden",
+      "deliveryKind": "Zustellweg",
+      "deliveryAddress": "Private E-Mail-Adresse oder Mobilnummer",
+      "identityChecked": "Originalen amtlichen Lichtbildausweis mit den importierten Identitätsdaten geprüft",
+      "confirmReissue": "Bestehenden offenen Code widerrufen und bewusst neu ausstellen",
+      "send": "Aktivierungslink senden",
+      "revoke": "Code widerrufen",
+      "noticeHandedOver": "Datenschutzhinweis ausgedruckt persönlich übergeben",
+      "issuePrint": "Brief oder Aktivierungsblatt in der Teilnehmendenliste ausstellen",
+      "failed": "Die Aktivierungsaktion ist fehlgeschlagen."
+    }
   },
   "participant": {
     "title": "Teilnehmende Person",

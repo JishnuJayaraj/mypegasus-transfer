@@ -80,3 +80,31 @@ describe("portal shell", () => {
     expect(await screen.findByText("Diese Seite gibt es nicht.")).toBeInTheDocument();
   });
 });
+
+describe("public Article 14 notice", () => {
+  const path = "/portal/notice/art14/art14-activation:v1";
+
+  it("renders the versioned German notice without an API request or personal data", async () => {
+    const { calls } = renderPortal(healthy, path);
+    expect(
+      await screen.findByRole("heading", { name: "Datenschutzhinweise nach Art. 14 DSGVO" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Beispiel Transfergesellschaft mbH/)).toBeInTheDocument();
+    expect(screen.getByText(/automatisierte Entscheidung/)).toBeInTheDocument();
+    expect(calls).toEqual([]);
+  });
+
+  it("switches the immutable notice to English", async () => {
+    renderPortal(healthy, path);
+    await userEvent.selectOptions(await screen.findByLabelText("Sprache"), "en");
+    expect(
+      await screen.findByRole("heading", { name: "Privacy information under Article 14 GDPR" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/No automated decision-making/)).toBeInTheDocument();
+  });
+
+  it("does not serve an unknown notice version", async () => {
+    renderPortal(healthy, "/portal/notice/art14/art14-activation:v2");
+    expect(await screen.findByText("Diese Seite gibt es nicht.")).toBeInTheDocument();
+  });
+});

@@ -39,3 +39,19 @@ Not adapters:
   (`packages/adapters/src/clock/no-direct-time.test.ts`). Business dates (Berlin today, run times)
   come from the injected `Clock`; recorded instants (`occurred_at`, `activated_at`,
   `completed_at`) are the database's `now()`.
+
+## As built 2026-10-21: activation delivery (Slice 3, PR 3d)
+
+- `Mailer.send` and `SmsSender.send` take the destination, rendered text and an explicit
+  `idempotencyKey`. They return `sent` or definitive `failed`; `DeliveryOutcomeUnknown` means a
+  timeout or lost response whose provider outcome cannot safely be guessed.
+- The mock implementations share a process-local `DevelopmentOutbox`, deduplicate by idempotency
+  key, retain only the last 100 messages and can be switched to sent, failed or unknown in tests.
+  Their log callback receives only the generated message id. In development,
+  `GET /api/v1/dev/outbox` exposes the synthetic outbox; it is not mounted in production.
+- Activation messages use the committed `activation_code.id` as the provider idempotency key.
+  The provider is called only after the issuance transaction commits. A definitive failure
+  revokes the code; an unknown outcome records `delivery_unknown` and keeps it valid.
+- `MAIL_ADAPTER` and `SMS_ADAPTER` currently accept only `mock`. A real EU provider, its AVV and
+  interface contract tests are required before real messages. SMS is one participant-selected
+  channel, not a default or primary channel.

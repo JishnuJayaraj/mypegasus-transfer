@@ -2084,8 +2084,9 @@ export interface paths {
             parameters: {
                 query?: {
                     limit?: number;
-                    /** @description Opaque cursor from `nextCursor`. */
                     cursor?: string;
+                    activation?: "none" | "printed" | "open" | "delivery_unknown" | "expired" | "locked" | "revoked" | "used";
+                    privacyNotice?: "provided" | "due" | "overdue";
                 };
                 header?: never;
                 path: {
@@ -3583,6 +3584,667 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/activation-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue and return printable letter or sheet activation codes, all or nothing */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BatchActivationCodeInput"];
+                };
+            };
+            responses: {
+                /** @description New codes and print data; never retrievable later */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BatchActivationCodeResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/activation-codes/in-person": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record the photo-ID check, commit a pending code, then send it outside the transaction */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["InPersonActivationCodeInput"];
+                };
+            };
+            responses: {
+                /** @description Committed activation state; never the code or address */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationActivation"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/activation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Activation state and capabilities without any code, destination or hash */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Activation state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationActivation"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/activation-codes/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record sheet handover after inspecting an original official photo ID */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ActivationCodeActionInput"];
+                };
+            };
+            responses: {
+                /** @description Updated activation state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationActivation"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/activation-codes/revocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke an open code as lost or an unhanded sheet */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ActivationCodeRevocationInput"];
+                };
+            };
+            responses: {
+                /** @description Updated activation state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationActivation"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/privacy-notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record and return notice-only letters, all or nothing */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PrivacyNoticeBatchInput"];
+                };
+            };
+            responses: {
+                /** @description Notice-only letter print data */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrivacyNoticeBatchResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/privacy-notices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record an Art. 14 notice handed over in person */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PrivacyNoticeInput"];
+                };
+            };
+            responses: {
+                /** @description Notice recorded */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": Record<string, never>;
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dev/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Latest mock email and SMS messages (synthetic development only) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description At most 100 mock messages */
+                200: {
+                    headers: {
+                        "Cache-Control"?: string;
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": ({
+                            id: string;
+                            /** @enum {string} */
+                            kind: "email";
+                            to: string;
+                            subject: string;
+                            text: string;
+                            idempotencyKey: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                        } | {
+                            id: string;
+                            /** @enum {string} */
+                            kind: "sms";
+                            to: string;
+                            text: string;
+                            idempotencyKey: string;
+                            /** Format: date-time */
+                            createdAt: string;
+                        })[];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/staff-users": {
         parameters: {
             query?: never;
@@ -4334,6 +4996,14 @@ export interface components {
             lastName?: string;
             firstName?: string;
             consultants: components["schemas"]["AssignedConsultant"][];
+            activationStatus: components["schemas"]["ActivationStatus"];
+            privacyNoticeState: components["schemas"]["PrivacyNoticeState"];
+            activationCapabilities: {
+                issueActivationCode: boolean;
+                recordHandover: boolean;
+                revokeActivationCode: boolean;
+                providePrivacyNotice: boolean;
+            };
         };
         AssignedConsultant: {
             /** Format: uuid */
@@ -4344,6 +5014,28 @@ export interface components {
              * @description UTC timestamp (ISO 8601)
              */
             assignedAt: string;
+        };
+        ActivationStatus: {
+            /** @enum {string} */
+            account: "activated" | "not_activated";
+            /** @enum {string} */
+            code: "none" | "printed" | "open" | "delivery_unknown" | "expired" | "locked" | "revoked" | "used";
+            /** Format: date-time */
+            issuedAt: string | null;
+            /** Format: date-time */
+            expiresAt: string | null;
+        };
+        PrivacyNoticeState: {
+            /** @enum {string} */
+            state: "provided" | "due" | "overdue";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            dueOn: string;
+            /** Format: date-time */
+            providedAt: string | null;
         };
         ParticipationDetail: {
             /** Format: uuid */
@@ -4469,10 +5161,16 @@ export interface components {
             amendments?: components["schemas"]["DsvAmendment"][];
             baReportingTasks?: components["schemas"]["BaReportingTask"][];
             assignments: components["schemas"]["AssignedConsultant"][];
+            activationStatus: components["schemas"]["ActivationStatus"];
+            privacyNoticeState: components["schemas"]["PrivacyNoticeState"];
             capabilities: {
                 assignEntryWave: boolean;
                 setParticipationDates: boolean;
                 assignParticipations: boolean;
+                issueActivationCode: boolean;
+                recordHandover: boolean;
+                revokeActivationCode: boolean;
+                providePrivacyNotice: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -4707,6 +5405,143 @@ export interface components {
             /** Format: uuid */
             id: string;
             displayName: string;
+        };
+        BatchActivationCodeResult: {
+            items: {
+                /** Format: uuid */
+                activationCodeId: string;
+                /** Format: uuid */
+                participationId: string;
+                firstName: string;
+                lastName: string;
+                address: components["schemas"]["ParticipantAddress"];
+                code: string;
+                /** Format: uri */
+                activationUrl: string;
+                /** Format: date-time */
+                expiresAt: string;
+                noticeVersion: string;
+                /** @enum {string} */
+                noticeLanguage: "de" | "en";
+                noticeTitle: string;
+                noticeText: string;
+            }[];
+        };
+        BatchActivationCodeInput: {
+            participationIds: string[];
+            /** @enum {string} */
+            channel: "letter" | "sheet";
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+            /** @default false */
+            replaceOpenCode: boolean;
+        };
+        ParticipationActivation: {
+            status: components["schemas"]["ActivationStatus"];
+            current: components["schemas"]["ActivationRecord"];
+            capabilities: {
+                issueActivationCode: boolean;
+                recordHandover: boolean;
+                revokeActivationCode: boolean;
+                providePrivacyNotice: boolean;
+            };
+        };
+        ActivationRecord: {
+            /** Format: uuid */
+            activationCodeId: string;
+            /** @enum {string} */
+            channel: "letter" | "sheet" | "in_person";
+            /** @enum {string|null} */
+            deliveryKind: "email" | "sms" | null;
+            /** @enum {string|null} */
+            deliveryStatus: "pending" | "sent" | "failed" | "unknown" | null;
+            /** @enum {string} */
+            noticeLanguage: "de" | "en";
+            /** Format: uuid */
+            issuedBy: string;
+            issuedByDisplayName: string;
+            /** Format: date-time */
+            issuedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            handedOverBy: string | null;
+            /** Format: date-time */
+            handedOverAt: string | null;
+            /** Format: uuid */
+            identityCheckedBy: string | null;
+            /** Format: date-time */
+            identityCheckedAt: string | null;
+            failedAttempts: number;
+            attemptsLeft: number;
+            /** Format: date-time */
+            lockedAt: string | null;
+            /** Format: date-time */
+            revokedAt: string | null;
+            /** @enum {string|null} */
+            revokeReason: "reissued" | "not_handed_over" | "lost" | "delivery_failed" | "participation_closed" | null;
+            /** Format: date-time */
+            usedAt: string | null;
+        } | null;
+        InPersonActivationCodeInput: {
+            /** @enum {string} */
+            deliveryKind: "email" | "sms";
+            deliveryAddress: string;
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+            /** @enum {boolean} */
+            identityChecked: true;
+            /** @default false */
+            replaceOpenCode: boolean;
+        };
+        ActivationCodeActionInput: {
+            /** Format: uuid */
+            activationCodeId: string;
+        };
+        ActivationCodeRevocationInput: {
+            /** Format: uuid */
+            activationCodeId: string;
+            /** @enum {string} */
+            reason: "not_handed_over" | "lost";
+        };
+        PrivacyNoticeBatchResult: {
+            items: {
+                /** Format: uuid */
+                participationId: string;
+                firstName: string;
+                lastName: string;
+                address: components["schemas"]["ParticipantAddress"];
+                noticeVersion: string;
+                /** @enum {string} */
+                noticeLanguage: "de" | "en";
+                noticeTitle: string;
+                noticeText: string;
+            }[];
+        };
+        PrivacyNoticeBatchInput: {
+            participationIds: string[];
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+        };
+        PrivacyNoticeInput: {
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+            /** @enum {string} */
+            method: "in_person_print";
+            /** @enum {boolean} */
+            handedOver: true;
         };
         DevStaffUser: {
             /** Format: uuid */

@@ -17,6 +17,7 @@
     "@transfer/domain": "workspace:*",
     "@transfer/ui": "workspace:*",
     "i18next": "26.4.6",
+    "qrcode": "1.5.4",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-i18next": "17.0.18"
@@ -29,6 +30,7 @@
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
     "@transfer/db": "workspace:*",
+    "@types/qrcode": "1.5.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
