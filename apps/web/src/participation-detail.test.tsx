@@ -320,6 +320,36 @@ describe("activation details", () => {
       }),
     );
   });
+
+  it("hands over the notice in the chosen language and offers no revocation of a used code", async () => {
+    const used = {
+      ...activation,
+      status: { ...activation.status, code: "used" },
+      current: { ...activation.current, usedAt: "2026-10-22T10:00:00.000Z" },
+    };
+    const calls = setup(
+      {
+        [`GET ${activationPath}`]: () => json(used),
+        [`POST ${detailPath}/privacy-notices`]: () => json({}, 201),
+      },
+      { ...activationDetail, activationStatus: used.status },
+    );
+    const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(await within(panel).findByText("Petra Projektleitung")).toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: "Code widerrufen" })).toBeNull();
+    await userEvent.selectOptions(within(panel).getByLabelText("Sprache"), "en");
+    await userEvent.click(
+      within(panel).getByRole("button", {
+        name: "Datenschutzhinweis ausgedruckt persönlich übergeben",
+      }),
+    );
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `POST ${detailPath}/privacy-notices`,
+        body: { language: "en", method: "in_person_print", handedOver: true },
+      }),
+    );
+  });
 });
 
 describe("the participant's consultants (Q62)", () => {

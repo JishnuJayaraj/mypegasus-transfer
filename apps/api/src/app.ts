@@ -59,11 +59,14 @@ export function createApp(deps: Deps) {
   const outbox =
     deps.outbox ??
     new DevelopmentOutbox(deps.clock, (fields, message) => logger.info(fields, message));
+  // The mocks report `sent` without sending, which would record Art. 14 evidence for a message
+  // nobody received: production gets no default sender until a real adapter exists (ADR-0006).
+  const mocks = env.nodeEnv !== "production";
   const runtimeDeps: Deps = {
     ...deps,
     outbox,
-    mailer: deps.mailer ?? new MockMailer(outbox),
-    smsSender: deps.smsSender ?? new MockSmsSender(outbox),
+    mailer: deps.mailer ?? (mocks ? new MockMailer(outbox) : undefined),
+    smsSender: deps.smsSender ?? (mocks ? new MockSmsSender(outbox) : undefined),
   };
   const app = createRouter();
 

@@ -155,6 +155,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
     ...participationActivationQuery(api, detail.id),
     enabled: mayRead,
   });
+  const [language, setLanguage] = useState<"de" | "en">("de");
   const [deliveryKind, setDeliveryKind] = useState<"email" | "sms">("email");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [identityChecked, setIdentityChecked] = useState(false);
@@ -179,7 +180,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
           body: {
             deliveryKind,
             deliveryAddress,
-            language: "de",
+            language,
             identityChecked: true,
             replaceOpenCode: confirmReissue,
           },
@@ -218,7 +219,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
         "/api/v1/participations/{participationId}/privacy-notices",
         {
           params: { path: { participationId: detail.id } },
-          body: { language: "de", method: "in_person_print", handedOver: true },
+          body: { language, method: "in_person_print", handedOver: true },
         },
       );
       if (!data && response.status !== 201) throw new Error("Notice handover failed");
@@ -229,6 +230,8 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
   const status = query.data?.status ?? detail.activationStatus;
   const current = query.data?.current;
   const requiresReissueConfirmation = ["printed", "open", "delivery_unknown"].includes(status.code);
+  // Expired codes are still open in the database; locked and used ones can't be revoked.
+  const revocable = requiresReissueConfirmation || status.code === "expired";
   return (
     <section className="tp-section" aria-label={t("activation.detail.title")}>
       <h2>{t("activation.detail.title")}</h2>
@@ -287,6 +290,17 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
           </>
         )}
       </dl>
+      {(detail.capabilities.issueActivationCode || detail.capabilities.providePrivacyNotice) && (
+        <Select
+          id="activation-detail-language"
+          labelText={t("activation.bulk.language")}
+          value={language}
+          onChange={(event) => setLanguage(event.target.value as "de" | "en")}
+        >
+          <SelectItem value="de" text="Deutsch" />
+          <SelectItem value="en" text="English" />
+        </Select>
+      )}
       {detail.capabilities.issueActivationCode && (
         <fieldset className="tp-fieldset">
           <legend>{t("activation.detail.sendInPerson")}</legend>
@@ -334,7 +348,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
         </fieldset>
       )}
       <div className="tp-bulk-actions">
-        {detail.capabilities.revokeActivationCode && current && status.code !== "revoked" && (
+        {detail.capabilities.revokeActivationCode && current && revocable && (
           <Button
             kind="danger--tertiary"
             disabled={revoke.isPending}

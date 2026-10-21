@@ -32,7 +32,6 @@ import {
   type ActivationDeliveryKind,
   type NoticeLanguage,
 } from "@transfer/domain";
-import { DeliveryOutcomeUnknown } from "@transfer/adapters";
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
 import { projectAccess, projectTarget } from "../access";
@@ -325,6 +324,13 @@ export function activationRoutes(deps: Deps) {
           : normaliseMobile(input.deliveryAddress);
       if (!address)
         return domainProblem(c, [{ code: "channel_invalid", field: "deliveryAddress" }]);
+      const sender = input.deliveryKind === "email" ? deps.mailer : deps.smsSender;
+      // No provider configured (production has no mock): refuse before a code exists.
+      if (!sender) {
+        return problem(c, "service-unavailable", {
+          errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
+        });
+      }
       let made: Awaited<ReturnType<typeof issue>>;
       try {
         made = await issue(
@@ -346,7 +352,7 @@ export function activationRoutes(deps: Deps) {
       }
       const link = activationLink(portalUrl, made.code);
       const durableNotice = noticeLink(portalUrl);
-      const sent =
+      const send = () =>
         input.deliveryKind === "email"
           ? deps.mailer!.send({
               to: address,
@@ -362,11 +368,12 @@ export function activationRoutes(deps: Deps) {
               text: `${link}\n${durableNotice}`,
               idempotencyKey: made.id,
             });
+      // Any provider error leaves the outcome as open as DeliveryOutcomeUnknown does (D20); it is
+      // not rethrown because a provider error may echo the destination into the log.
       let outcome: "sent" | "failed" | "unknown";
       try {
-        outcome = (await sent).status;
-      } catch (error) {
-        if (!(error instanceof DeliveryOutcomeUnknown)) throw error;
+        outcome = (await send()).status;
+      } catch {
         outcome = "unknown";
       }
       await callFunction(

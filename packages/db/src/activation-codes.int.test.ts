@@ -188,6 +188,31 @@ describe("activation-code functions (D12–D20)", () => {
     }
   });
 
+  it("keeps a revocation made during the send when the delivery then fails", async () => {
+    const participationId = await participation({ birthDate: null, address: false });
+    const pendingId = randomUUID();
+    await issue(participationId, { id: pendingId, hash: "7".repeat(64), channel: "in_person" });
+    await issue(participationId, {
+      id: randomUUID(),
+      hash: "8".repeat(64),
+      channel: "in_person",
+      replace: true,
+    });
+    await call(app, "record_activation_delivery", {
+      activationCodeId: pendingId,
+      outcome: "failed",
+      context: pl,
+    });
+    const pending = (await codes(participationId)).find((row) => row.id === pendingId);
+    expect(pending).toMatchObject({ delivery_status: "failed", revoke_reason: "reissued" });
+    const revocations = await owner.query(
+      `select reason_code from audit_event
+       where event_type = 'activation_code_revoked' and details->>'activationCodeId' = $1`,
+      [pendingId],
+    );
+    expect(revocations.rows).toEqual([{ reason_code: "reissued" }]);
+  });
+
   it("requires a conscious replacement and revokes the old code in the same transaction", async () => {
     const participationId = await participation();
     await issue(participationId, { id: randomUUID(), hash: "1".repeat(64) });

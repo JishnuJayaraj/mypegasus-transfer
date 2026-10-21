@@ -211,6 +211,60 @@ describe("activation-code issuance API", () => {
         .where(eq(privacyNoticeDelivery.participationId, unknownId)),
     ).toEqual([]);
   });
+
+  it("treats any provider error as an unknown outcome and never logs it", async () => {
+    const failing = testApp({
+      clock,
+      outbox,
+      mailer: {
+        send: () => Promise.reject(new Error("rejected recipient erika@example.org")),
+      },
+      smsSender,
+    });
+    const participationId = await person({ address: false });
+    const response = await failing.app.request(
+      `/api/v1/participations/${participationId}/activation-codes/in-person`,
+      jsonRequest(
+        "POST",
+        {
+          deliveryKind: "email",
+          deliveryAddress: "erika@example.org",
+          language: "en",
+          identityChecked: true,
+        },
+        await login(failing.app, seedStaffUserIds.projectLead),
+      ),
+    );
+    expect(response.status).toBe(201);
+    const body = await readJson(response, ParticipationActivation);
+    expect(body.status.code).toBe("delivery_unknown");
+    expect(body.current?.noticeLanguage).toBe("en");
+    expect(failing.logs.join("\n")).not.toContain("example.org");
+    await failing.db.$client.end();
+  });
+
+  it("refuses in-person issuance before any code exists when no provider is configured", async () => {
+    const production = testApp({ clock, env: { nodeEnv: "production" } });
+    const participationId = await person({ address: false });
+    const response = await production.app.request(
+      `/api/v1/participations/${participationId}/activation-codes/in-person`,
+      jsonRequest(
+        "POST",
+        { deliveryKind: "sms", deliveryAddress: "0171 3920000", identityChecked: true },
+        await login(production.app, seedStaffUserIds.projectLead),
+      ),
+    );
+    expect((await expectProblem(response, 503, "service-unavailable")).errors).toContainEqual(
+      expect.objectContaining({ code: "delivery_unavailable" }),
+    );
+    expect(
+      await owner
+        .select()
+        .from(activationCode)
+        .where(eq(activationCode.participationId, participationId)),
+    ).toEqual([]);
+    await production.db.$client.end();
+  });
 });
 
 describe("handover, revocation and list state", () => {

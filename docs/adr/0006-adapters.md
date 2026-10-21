@@ -51,7 +51,12 @@ Not adapters:
   `GET /api/v1/dev/outbox` exposes the synthetic outbox; it is not mounted in production.
 - Activation messages use the committed `activation_code.id` as the provider idempotency key.
   The provider is called only after the issuance transaction commits. A definitive failure
-  revokes the code; an unknown outcome records `delivery_unknown` and keeps it valid.
-- `MAIL_ADAPTER` and `SMS_ADAPTER` currently accept only `mock`. A real EU provider, its AVV and
-  interface contract tests are required before real messages. SMS is one participant-selected
+  revokes the code (unless a reissue or terminal transition already revoked it during the send;
+  that reason stands); an unknown outcome records `delivery_unknown` and keeps it valid. Any
+  other provider error counts as unknown and is not logged, since it may echo the destination.
+- `MAIL_ADAPTER` and `SMS_ADAPTER` currently accept only `mock`. The mocks are wired only outside
+  `NODE_ENV=production`: they report `sent` without sending, which would record Art. 14 evidence
+  for a message nobody received. In production, in-person issuance answers
+  `503 delivery_unavailable` before any code exists. A real EU provider, its AVV and interface
+  contract tests are required before real messages. SMS is one participant-selected
   channel, not a default or primary channel.

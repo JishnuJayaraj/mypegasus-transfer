@@ -134,7 +134,12 @@ CREATE FUNCTION record_activation_delivery(
   p_activation_code_id uuid, p_outcome activation_delivery_status, p_context audit_context
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog, public, pg_temp AS $$
-DECLARE c public.activation_code; v_notice_id uuid;
+DECLARE
+  c public.activation_code;
+  v_notice_id uuid;
+  -- A reissue or terminal transition may have revoked the code during the send; that revocation
+  -- and its reason stand.
+  v_revoke boolean;
 BEGIN
   SELECT * INTO c FROM public.activation_code WHERE id = p_activation_code_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'activation_code_not_found'; END IF;
@@ -143,16 +148,18 @@ BEGIN
      OR p_outcome NOT IN ('sent', 'failed', 'unknown') THEN
     RAISE EXCEPTION 'invalid_delivery_state';
   END IF;
+  v_revoke := p_outcome = 'failed' AND c.revoked_at IS NULL AND c.locked_at IS NULL
+    AND c.used_at IS NULL;
   UPDATE public.activation_code SET delivery_status = p_outcome,
-    revoked_at = CASE WHEN p_outcome = 'failed' THEN now() ELSE revoked_at END,
-    revoked_by = CASE WHEN p_outcome = 'failed' THEN (p_context).staff_user_id ELSE revoked_by END,
-    revoke_reason = CASE WHEN p_outcome = 'failed' THEN 'delivery_failed' ELSE revoke_reason END
+    revoked_at = CASE WHEN v_revoke THEN now() ELSE revoked_at END,
+    revoked_by = CASE WHEN v_revoke THEN (p_context).staff_user_id ELSE revoked_by END,
+    revoke_reason = CASE WHEN v_revoke THEN 'delivery_failed' ELSE revoke_reason END
   WHERE id = c.id;
   PERFORM public.write_audit_event(c.project_id, c.participation_id, 'activation_code_delivery',
     p_context, NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object(
       'activationCodeId', c.id, 'outcome', CASE WHEN p_outcome = 'unknown'
         THEN 'delivery_unknown' ELSE p_outcome::text END), false);
-  IF p_outcome = 'failed' THEN
+  IF v_revoke THEN
     PERFORM public.write_audit_event(c.project_id, c.participation_id, 'activation_code_revoked',
       p_context, NULL, NULL, NULL, 'delivery_failed', NULL,
       pg_catalog.jsonb_build_object('activationCodeId', c.id), false);
