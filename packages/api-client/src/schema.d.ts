@@ -2488,6 +2488,93 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/placement-agentur": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set the participation's placement Agentur (the PL or back office, while not terminal); pins an unpinned catalog Agentur at its latest version; returns the participation */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetPlacementAgenturInput"];
+                };
+            };
+            responses: {
+                /** @description The participation with its placement Agentur */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationDetail"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -5990,6 +6077,7 @@ export interface components {
             dsvStatus: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
             /** Format: uuid */
             entryWaveId: string | null;
+            placementAgenturKey: string | null;
             personnelNumber?: string;
             lastName?: string;
             firstName?: string;
@@ -6134,6 +6222,14 @@ export interface components {
                 profilingDoneOn: string | null;
             };
             hints: ("tg_start_missed" | "new_start_needs_ba_review")[];
+            placementAgenturKey: string | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            placementAgenturSetAt: string | null;
+            submissionBlockers: components["schemas"]["ConfigBlocker"][];
+            placementAgenturChoices: components["schemas"]["PlacementAgenturChoice"][];
             person: {
                 personnelNumber?: string | null;
                 lastName?: string | null;
@@ -6169,6 +6265,7 @@ export interface components {
                 recordHandover: boolean;
                 revokeActivationCode: boolean;
                 providePrivacyNotice: boolean;
+                setPlacementAgentur: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -6176,6 +6273,15 @@ export interface components {
                 /** @enum {string|null} */
                 setParticipationDates: "forbidden" | "not_ta_tg" | "wave_required" | "latest_entry_date_missing" | "participation_closed" | "dsv_offer_open" | null;
             };
+        };
+        PlacementAgenturChoice: {
+            agenturKey: string;
+            label: {
+                de: string;
+                en?: string;
+            };
+            pinnedVersion: number | null;
+            latestVersion: number | null;
         };
         ParticipantAddress: {
             street: string;
@@ -6308,6 +6414,9 @@ export interface components {
                 allPartiesSigned: boolean;
                 retrievable: boolean;
             };
+        };
+        SetPlacementAgenturInput: {
+            agenturKey: string;
         };
         ProjectTeam: {
             members: components["schemas"]["ProjectMember"][];

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { DataClass, ParticipantRetentionClass } from "../enums";
 
 /**
- * Categories of participant fields and documents (plan 5.6, data-protection.md). Audit
+ * Categories of participant fields and documents (data-protection.md). Audit
  * metadata and aggregates are resource kinds of their own (`decideAccess`, round 11).
  */
 export const AccessCategory = z.enum([
@@ -33,7 +33,7 @@ export type FieldEntry = {
   storage: "column" | "encrypted_column";
   /** Values more sensitive than the field itself (Q66). */
   valueClasses?: Readonly<Record<string, DataClass>>;
-  /** Set for every field a table stores (Slice 2 plan 5.2, ADR-0008). */
+  /** Set for every field a table stores (ADR-0008). */
   retentionClass?: ParticipantRetentionClass;
 };
 
@@ -90,6 +90,8 @@ export const fieldCatalog: readonly FieldEntry[] = [
   field("dsvSignedOn", "internal", "case_internal", false, { customerVisible: true }),
   ...fields(["tgEntryDate", "exitDate"], "internal", "case_internal", false, customer),
   ...fields(["withdrawnOn", "profilingDoneOn"], "internal", "case_internal", false, record),
+  // The Agentur the participant is placed with (Q139), a key; listed with the case data
+  field("placementAgenturKey", "internal", "case_internal", false, { listable: true, ...record }),
   // identity and case data (confidential); identity fields come from the import, on
   // `participant_identity` (participation record) and `participant_details` (personnel file,
   // Q105); `address` is street, postal code, city and country as one unit (round 32)
@@ -98,7 +100,7 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["workEmail", "oldEmploymentEndDate"], C, "confidential", false, personnelFile),
   field("knowledgeDate", C, "confidential", false),
   ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true, personnelFile),
-  // The participant's verified portal contacts (Slice 3 plan D28, Q123): staff see kind, state and
+  // The participant's verified portal contacts (ADR-0007, Q123): staff see kind, state and
   // dates only, never the address; never in lists
   field("portalChannels", C, "confidential", true, { listable: false, ...personnelFile }),
   ...fields(
@@ -117,7 +119,7 @@ export const fieldCatalog: readonly FieldEntry[] = [
     valueClasses: { long_term_illness_reduced_earning_capacity: "special_category" },
     ...record,
   }),
-  // DSV amendments and BA reporting tasks (5.2, 5.7; round 32 D3, R42; PR 2h-3): operational
+  // DSV amendments and BA reporting tasks (process-and-lifecycle.md; round 32): operational
   // evidence of contractual date changes, never in lists or customer exports
   ...fields(["dsvAmendment", "baReportingTask"], C, "confidential", false, {
     listable: false,

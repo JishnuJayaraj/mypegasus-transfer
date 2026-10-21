@@ -12,7 +12,7 @@ import {
   unpinnedConfig,
 } from "./test-utils";
 
-// Slice 2 plan, "Planned in PR 2h" (PR 2h-1): a participant's page and the PL's wave choice.
+// A participant's page (data-protection.md, "Participation detail") and the PL's wave choice.
 const participationId = "00000000-0000-4000-a000-000000000001";
 const projectPath = `/api/v1/projects/${project.id}`;
 const detailPath = `/api/v1/participations/${participationId}`;
@@ -52,6 +52,10 @@ const detail = {
     profilingDoneOn: null,
   },
   hints: [],
+  placementAgenturKey: null,
+  placementAgenturSetAt: null,
+  submissionBlockers: [],
+  placementAgenturChoices: [],
   person: {
     personnelNumber: "BSP-0001",
     lastName: "Mustermann",
@@ -80,6 +84,7 @@ const detail = {
     recordHandover: false,
     revokeActivationCode: false,
     providePrivacyNotice: false,
+    setPlacementAgentur: false,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };
@@ -355,7 +360,7 @@ describe("activation details", () => {
   });
 });
 
-describe("an activated account (D28, D29)", () => {
+describe("an activated account (ADR-0007, Q123)", () => {
   it("shows how the identity was assured and the channels without any address, and no issuance", async () => {
     const activated = {
       status: { account: "activated", code: "none", issuedAt: null, expiresAt: null },
@@ -625,5 +630,135 @@ describe("the participant's consultants (Q62)", () => {
     const consultants = await section("Zuständige Beratung");
     expect(within(consultants).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
     expect(within(consultants).queryByRole("button")).toBeNull();
+  });
+});
+
+/** The placement Agentur combobox of the participant page. */
+const field = async () =>
+  within(await section("Vermittlungs-Agentur")).findByRole("combobox", {
+    name: "Vermittlungs-Agentur festlegen",
+  });
+
+describe("the participant's placement Agentur (Q139)", () => {
+  const choices = [
+    {
+      agenturKey: "beispielstadt-nord",
+      label: { de: "Agentur Nord (Beispiel)" },
+      pinnedVersion: 1,
+      latestVersion: 2,
+    },
+    {
+      agenturKey: "beispielstadt-sued",
+      label: { de: "Agentur Süd (Beispiel)" },
+      pinnedVersion: null,
+      latestVersion: 1,
+    },
+  ];
+  const settable = {
+    ...detail,
+    placementAgenturChoices: choices,
+    capabilities: { ...detail.capabilities, setPlacementAgentur: true },
+  };
+  const placed = (agenturKey: string) => ({
+    ...settable,
+    placementAgenturKey: agenturKey,
+    placementAgenturSetAt: "2026-10-21T09:00:00.000000Z",
+  });
+  const put = `PUT ${detailPath}/placement-agentur`;
+
+  it("shows the current Agentur read-only without the capability, and a blocked submission", async () => {
+    setup(
+      {},
+      {
+        ...placed("beispielstadt-nord"),
+        placementAgenturChoices: [],
+        capabilities: detail.capabilities,
+        submissionBlockers: [
+          {
+            code: "agentur_submission_blocked",
+            step: "agentur_submission",
+            agenturKey: "beispielstadt-nord",
+            missing: ["submissionChannel"],
+          },
+        ],
+      },
+    );
+    const shown = await section("Vermittlungs-Agentur");
+    expect(within(shown).getByText("beispielstadt-nord")).toBeInTheDocument();
+    expect(
+      within(shown).getByText(/Übermittlung an die Agentur ist blockiert/),
+    ).toBeInTheDocument();
+    expect(within(shown).queryByRole("combobox")).toBeNull();
+  });
+
+  it("chooses a catalog Agentur, says which version will be pinned, and saves it", async () => {
+    const calls = setup({ [put]: () => json(placed("beispielstadt-sued")) }, settable);
+    expect(
+      within(await section("Vermittlungs-Agentur")).getByText("Noch nicht festgelegt"),
+    ).toBeInTheDocument();
+    await userEvent.click(await field());
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Agentur Süd (Beispiel) (beispielstadt-sued)" }),
+    );
+    expect(
+      screen.getByText("Die Vorlage wird mit Version 1 im Projekt hinterlegt."),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Vermittlungs-Agentur speichern" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({ key: put, body: { agenturKey: "beispielstadt-sued" } }),
+    );
+    expect(
+      await within(await section("Vermittlungs-Agentur")).findByText(
+        "Agentur Süd (Beispiel) (beispielstadt-sued)",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("names the project's pinned version for a pinned Agentur", async () => {
+    setup({}, settable);
+    await userEvent.click(await field());
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Agentur Nord (Beispiel) (beispielstadt-nord)" }),
+    );
+    expect(
+      screen.getByText("Die im Projekt hinterlegte Vorlage (Version 1) gilt."),
+    ).toBeInTheDocument();
+  });
+
+  it("takes a free key without a template, and refuses a malformed one", async () => {
+    const calls = setup({ [put]: () => json(placed("ohne-vorlage")) }, settable);
+    const input = await field();
+    await userEvent.type(input, "Ohne Vorlage");
+    expect(screen.getByText(/Kleinbuchstaben, Ziffern/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Vermittlungs-Agentur speichern" })).toBeDisabled();
+    await userEvent.clear(input);
+    await userEvent.type(input, "ohne-vorlage");
+    expect(
+      screen.getByText(/keine Vorlage: Die Übermittlung an die Agentur bleibt blockiert/),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Vermittlungs-Agentur speichern" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({ key: put, body: { agenturKey: "ohne-vorlage" } }),
+    );
+  });
+
+  it("shows the API's refusal by its code", async () => {
+    setup(
+      {
+        [put]: () =>
+          problem(422, "domain-error", {
+            errors: [{ pointer: "", code: "override_invalid", detail: "Refused by a domain rule" }],
+          }),
+      },
+      settable,
+    );
+    await userEvent.click(await field());
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Agentur Süd (Beispiel) (beispielstadt-sued)" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Vermittlungs-Agentur speichern" }));
+    expect(
+      await screen.findByText(/Projektkonfiguration ungültig. Es wurde nichts gespeichert./),
+    ).toBeInTheDocument();
   });
 });

@@ -27,6 +27,7 @@ import {
 } from "../../api";
 import { EntryWaveChoice } from "../../components/entry-wave-choice";
 import { ParticipationDatesForm } from "../../components/participation-dates-form";
+import { PlacementAgentur } from "../../components/placement-agentur";
 import { RecoveryPanel } from "../../components/recovery";
 import { RouteError } from "../../components/route-error";
 import { useConsultants } from "../../components/team";
@@ -43,7 +44,7 @@ export const Route = createFileRoute("/projects/$projectId_/participations/$part
       queryClient.ensureQueryData(participationQuery(api, participationId)),
     ]);
     // The participant must belong to the project in the URL; anything else is not found, and
-    // nothing of the other project (its waves) is loaded (review of PR 2h-1).
+    // nothing of the other project (its waves) is loaded.
     if (detail.projectId !== projectId) {
       throw new ApiProblemError({
         type: "urn:transfer:problem:not-found",
@@ -73,9 +74,10 @@ function ParticipationError(props: ErrorComponentProps) {
 }
 
 /**
- * One participant (Slice 2 plan, "Planned in PR 2h"; 5.13): person, contact, status, wave and
- * contractual dates. The API sends only what the viewer may read: an absent field isn't shown, a
- * field without a value shows a dash. Only the PL gets actions, as the API's capabilities say.
+ * One participant (process-and-lifecycle.md; data-protection.md, access matrix): person, contact,
+ * status, placement Agentur, wave and contractual dates. The API sends only what the viewer may
+ * read: an absent field isn't shown, a field without a value shows a dash. Actions follow the
+ * API's capabilities.
  */
 function ParticipationPage() {
   const { t } = useTranslation();
@@ -135,6 +137,7 @@ function ParticipationPage() {
           ["withdrawnOn", date(dates.withdrawnOn)],
         ]}
       />
+      <PlacementAgentur detail={detail} projectId={projectId} />
       <Assignments detail={detail} projectId={projectId} />
       <ActivationPanel detail={detail} projectId={projectId} />
       {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
@@ -314,7 +317,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
       {query.data && query.data.channels.length > 0 && (
         <>
           <h3>{t("activation.detail.channels")}</h3>
-          {/* D28, Q123: kind, states and dates; the address never reaches staff. */}
+          {/* Q123 (data-protection.md): kind, states and dates; the address never reaches staff. */}
           <ul className="tp-list">
             {query.data.channels.map((channel) => (
               <li key={channel.id}>
@@ -542,7 +545,8 @@ const address = (value: Detail["person"]["address"]) =>
 function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string }) {
   const { t } = useTranslation();
   const { entryWave: wave, dates } = detail;
-  // Where a contractual date comes from: the participation's own, else the wave's (5.7).
+  // Where a contractual date comes from: the participation's own, else the wave's
+  // (process-and-lifecycle.md, Dates).
   const source = (own: string | null, effective: string | null) =>
     effective === null
       ? null
@@ -553,7 +557,7 @@ function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string
         title={t("participant.waveAndDates")}
         rows={[
           ["wave", wave ? `${wave.code} – ${wave.name}` : null],
-          // The wave's own four dates, also where individual dates override them (5.13).
+          // The wave's own four dates, also where individual dates override them.
           ["signingDeadline", wave && formatDate(wave.signingDeadline)],
           ["defaultTgStart", wave && formatDate(wave.defaultTgStart)],
           ["defaultTgEnd", wave && formatDate(wave.defaultTgEnd)],
@@ -571,7 +575,10 @@ function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string
   );
 }
 
-/** The DSV amendments (R41, R42): evidence only; the signed original stays on paper. */
+/**
+ * The DSV amendments (process-and-lifecycle.md, "DSV amendment"): evidence only; the signed
+ * original stays on paper.
+ */
 function Amendments({ detail }: { detail: Detail }) {
   const { t } = useTranslation();
   if (detail.amendments === undefined) return null;
@@ -614,7 +621,10 @@ function Amendments({ detail }: { detail: Detail }) {
   );
 }
 
-/** The BA reporting tasks (R38): pending until the Agentur-submission slice records them. */
+/**
+ * The BA reporting tasks (process-and-lifecycle.md, "BA reporting"): pending until the
+ * Agentur-submission slice records them.
+ */
 function ReportingTasks({ detail }: { detail: Detail }) {
   const { t } = useTranslation();
   if (detail.baReportingTasks === undefined) return null;

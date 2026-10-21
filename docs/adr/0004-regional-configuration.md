@@ -208,3 +208,23 @@ Decided for Slice 2 (round 22):
 - **One transaction:** the new pin and, when keys are removed, the reduced override version are
   written together under the project lock, after the override is validated against every chain
   with the new version (ADR-0002 amendment of the same date).
+
+## Amendment 2026-10-21: the placement Agentur and its automatic pin (Slice 4a, PR 4a-1)
+
+- **Who chooses (Q139):** the participation's placement Agentur is a key on the participation
+  (`placement_agentur_key`), set by the PL or back office of the project through the SECURITY
+  DEFINER `set_placement_agentur`, while the participation isn't terminal; any key in the
+  template key format, from the catalog or not. It replaces "determined by the place of
+  residence": the staff choose, no postcode is mapped.
+- **The automatic pin (Q36):** a catalog Agentur the project hasn't pinned is pinned at its
+  latest catalog version in the same transaction, through `pin_agentur_template` (content and
+  hash checked as for every pin), after `validateProjectOverride` accepted the override with that
+  template (else `override_invalid`, nothing written). An Agentur the project has pinned keeps
+  its version; moving it is still a migration with review. `planPlacementAgentur`
+  (`packages/domain/src/projects/placement-agentur.ts`) decides; the API reads the state under
+  the exclusive project lock, as for a plain pin.
+- **No template:** the participation resolves base defaults and the override for its participant
+  steps, so its Agentur submission is blocked (Q76) while contact, data collection and profiling
+  go on. The participation detail carries the participant-level blockers of its own chain.
+- **Audit:** `placement_agentur_set` (new and replaced key, `baseDefaultsVersion`) is a
+  configuration-dependent event; a pin it makes is its own `config_template_pinned`.

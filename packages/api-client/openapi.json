@@ -2381,6 +2381,13 @@
             ],
             "format": "uuid"
           },
+          "placementAgenturKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
           "personnelNumber": {
             "type": "string"
           },
@@ -2433,6 +2440,7 @@
           "profilingStatus",
           "dsvStatus",
           "entryWaveId",
+          "placementAgenturKey",
           "consultants",
           "activationStatus",
           "privacyNoticeState",
@@ -2789,6 +2797,33 @@
               ]
             }
           },
+          "placementAgenturKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "placementAgenturSetAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "submissionBlockers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConfigBlocker"
+            }
+          },
+          "placementAgenturChoices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlacementAgenturChoice"
+            }
+          },
           "person": {
             "type": "object",
             "properties": {
@@ -2909,6 +2944,9 @@
               },
               "providePrivacyNotice": {
                 "type": "boolean"
+              },
+              "setPlacementAgentur": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -2918,7 +2956,8 @@
               "issueActivationCode",
               "recordHandover",
               "revokeActivationCode",
-              "providePrivacyNotice"
+              "providePrivacyNotice",
+              "setPlacementAgentur"
             ],
             "additionalProperties": false
           },
@@ -2973,12 +3012,61 @@
           "entryWave",
           "dates",
           "hints",
+          "placementAgenturKey",
+          "placementAgenturSetAt",
+          "submissionBlockers",
+          "placementAgenturChoices",
           "person",
           "assignments",
           "activationStatus",
           "privacyNoticeState",
           "capabilities",
           "refusals"
+        ],
+        "additionalProperties": false
+      },
+      "PlacementAgenturChoice": {
+        "type": "object",
+        "properties": {
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "label": {
+            "type": "object",
+            "properties": {
+              "de": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "de"
+            ],
+            "additionalProperties": false
+          },
+          "pinnedVersion": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "latestVersion": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        },
+        "required": [
+          "agenturKey",
+          "label",
+          "pinnedVersion",
+          "latestVersion"
         ],
         "additionalProperties": false
       },
@@ -3332,6 +3420,19 @@
           "tgStart",
           "tgEnd",
           "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "SetPlacementAgenturInput": {
+        "type": "object",
+        "properties": {
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          }
+        },
+        "required": [
+          "agenturKey"
         ],
         "additionalProperties": false
       },
@@ -7657,6 +7758,97 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/placement-agentur": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Set the participation's placement Agentur (the PL or back office, while not terminal); pins an unpinned catalog Agentur at its latest version; returns the participation",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPlacementAgenturInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The participation with its placement Agentur",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/problem+json": {
                 "schema": {

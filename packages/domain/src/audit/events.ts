@@ -45,8 +45,8 @@ import {
 } from "../lifecycle/enums";
 
 /**
- * The audit event model (plan 5.4, table `audit_event`). Events are append-only and written only
- * by the status functions (ADR-0002, D2). They carry IDs, codes and dates, never free text and
+ * The audit event model (ADR-0002, table `audit_event`). Events are append-only and written only
+ * by the status functions (ADR-0002). They carry IDs, codes and dates, never free text and
  * never sensitive values (Q66, round 11): every string is a closed enum or an id/code pattern,
  * and every `details` object is strict. The table's `CHECK`s enforce the same in the database.
  */
@@ -61,7 +61,7 @@ export const AuditEventType = z.enum([
   "profiling_exception_revoked",
   "profiling_exception_superseded", // round 10: "all closures are audited"
   "end_reason_corrected",
-  // Slices 3–9, through `record_audit_event` (`config_override_changed`: its function, PR 2d-1)
+  // Slices 3–9, through `record_audit_event` (`config_override_changed`: its function)
   "sensitive_read",
   "sensitive_write",
   "break_glass_access",
@@ -84,23 +84,23 @@ export const AuditEventType = z.enum([
   "project_activated",
   // Slice 2, written only by `write_participant_data` (PR 2f)
   "participant_data_changed",
-  // Slice 2, through `record_audit_event` (PR 2g, plan 5.11; PR 2h-2, R32)
+  // Slice 2, through `record_audit_event` (the import and manual creation)
   "import_confirmed",
   "participation_created_manually",
-  // Slice 2, written only by `set_participation_dates` (PR 2h-3, plan 5.7)
+  // Slice 2, written only by `set_participation_dates`
   "participation_dates_changed",
   // Slice 3, written only by the team and assignment functions (Q62, Q126)
   "project_member_added",
   "project_member_removed",
   "participant_assigned",
   "participant_unassigned",
-  // Slice 3, activation issuance and Art. 14 evidence (D12–D20)
+  // Slice 3, activation issuance and Art. 14 evidence (ADR-0007)
   "activation_code_issued",
   "activation_code_delivery",
   "activation_code_handed_over",
   "activation_code_revoked",
   "privacy_notice_provided",
-  // Slice 3, portal activation (D21–D29): written only by the activation functions
+  // Slice 3, portal activation (ADR-0007): written only by the activation functions
   "participant_activated",
   "consent_given",
   "contact_channel_added",
@@ -112,6 +112,8 @@ export const AuditEventType = z.enum([
   "contact_channel_removed",
   "consent_ended",
   "contact_channels_suspended",
+  // Slice 4a, written only by `set_placement_agentur` (Q139)
+  "placement_agentur_set",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -120,7 +122,7 @@ export const lifecycleEventTypes: ReadonlySet<AuditEventType> = new Set(
   AuditEventType.options.slice(0, AuditEventType.options.indexOf("end_reason_corrected") + 1),
 );
 
-/** Project setup events, written only by their functions (Slice 2 plan 5.3, D2). */
+/** Project setup events, written only by their functions (ADR-0002, project setup). */
 export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
   "project_created",
   "project_changed",
@@ -137,10 +139,10 @@ export const setupEventTypes: ReadonlySet<AuditEventType> = new Set([
 
 /**
  * The events whose result depends on the release's base defaults carry their `version` as
- * `baseDefaultsVersion` (R26, round 23: `project_activated`, `config_template_pinned`,
- * `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`,
- * `import_confirmed`; round 33: `participation_created_manually`); each joins this list with the
- * PR that adds its type.
+ * `baseDefaultsVersion` (regional-variation.md, base defaults; round 23: `project_activated`,
+ * `config_template_pinned`, `config_override_changed`, `rule_relaxation_requested`,
+ * `rule_relaxation_approved`, `import_confirmed`; round 33: `participation_created_manually`; Q139:
+ * `placement_agentur_set`); each joins this list with the PR that adds its type.
  */
 export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new Set([
   "config_override_changed",
@@ -150,6 +152,7 @@ export const configurationDependentEventTypes: ReadonlySet<AuditEventType> = new
   "project_activated",
   "import_confirmed",
   "participation_created_manually",
+  "placement_agentur_set",
 ]);
 
 /** `record_audit_event` refuses these: each is written only by its own function. */
@@ -177,6 +180,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "contact_channel_removed",
   "consent_ended",
   "contact_channels_suspended",
+  "placement_agentur_set",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -197,7 +201,7 @@ const textVersion = z.string().regex(/^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$/);
 const correlationId = z.string().regex(/^[A-Za-z0-9_.:-]{1,64}$/);
 /** A job name such as `lifecycle.evaluate-project` or `seed`. */
 const systemJob = z.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/);
-/** The base-defaults version of a configuration-dependent event (R26). */
+/** The base-defaults version of a configuration-dependent event (Q107). */
 const baseDefaultsVersion = z.int().min(1);
 /** A field key (`healthRestrictions`, `custom.…`) or document type. */
 const resourceKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_.]{0,99}$/);
@@ -231,7 +235,7 @@ const common = {
   requestId: correlationId.nullable(),
   jobId: correlationId.nullable(),
 };
-/** No FK to the participation: retention deletes it and pseudonymises the trail (plan 5.4). */
+/** No FK to the participation: retention deletes it and pseudonymises the trail (ADR-0008). */
 const ofParticipation = { ...common, participationId: z.uuid() };
 const ofProjectOrParticipation = { ...common, participationId: z.uuid().nullable() };
 const ofProject = { ...common, participationId: z.null() };
@@ -327,11 +331,11 @@ const entryWaveChanged = event("entry_wave_changed", {
   if (!same || withValues.length !== changedDates.length) issue(ctx, "dates_mismatch");
 });
 /**
- * A new override version (5.9): its number, what changed, and either the Agentur key, the setting
- * keys (`step.key`) and, when set, the source, or the relaxed rule's id; never a value or free
- * text (round 8). A migration's review (`agentur_setting_reviewed`, 5.8) names the removed keys as
- * `settingKeys` and the kept ones, if any, as `keptSettingKeys`. R26: the base-defaults version
- * it was validated with.
+ * A new override version (regional-variation.md, Agentur-scoped settings): its number, what
+ * changed, and either the Agentur key, the setting keys (`step.key`) and, when set, the source, or
+ * the relaxed rule's id; never a value or free text (round 8). A migration's review
+ * (`agentur_setting_reviewed`) names the removed keys as `settingKeys` and the kept ones, if any,
+ * as `keptSettingKeys`. Q107: the base-defaults version it was validated with.
  */
 const configOverrideChanged = event("config_override_changed", {
   ...ofProject,
@@ -380,7 +384,7 @@ const ofMember = { staffUserId: z.uuid(), role: ProjectRole };
 /** An assignment row and its consultant (Q62). */
 const ofAssignment = { staffUserId: z.uuid(), assignmentId: z.uuid() };
 
-/** Every relaxation event names its request and the rule (5.9); the reason code is its column. */
+/** Every relaxation event names its request and the rule; the reason code is its column. */
 const ofRelaxation = { relaxationRequestId: z.uuid(), ruleId: RuleId };
 /** Every profiling-exception event identifies its request record (Q94). */
 const ofRequest = { profilingExceptionRequestId: z.uuid() };
@@ -469,7 +473,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("warning_confirmed", { ...ofProjectOrParticipation, reasonCode: code, details: noDetails }),
   event("export_created", { ...ofProjectOrParticipation, reasonCode: code, details: noDetails }),
   configOverrideChanged,
-  /** Reviews and clarification requests are new events pointing at the reviewed one (5.4). */
+  /** Reviews and clarification requests are new events pointing at the reviewed one (ADR-0002). */
   event("review_recorded", { ...ofProjectOrParticipation, reasonCode: code, details: reviewOf }),
   event("clarification_requested", { ...ofProjectOrParticipation, details: reviewOf }),
   /** Free text (name, customer) never enters the trail: the type, and the changed keys. */
@@ -481,7 +485,10 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject({ waveId: z.uuid(), ...waveDates }),
   }),
   entryWaveChanged,
-  /** A pin of a template version (plan 5.8); `previousVersion` when it replaces one (2e-2). */
+  /**
+   * A pin of a template version (regional-variation.md); `previousVersion` when a migration
+   * replaces one.
+   */
   event("config_template_pinned", {
     ...ofProject,
     details: z.strictObject({
@@ -491,7 +498,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
       baseDefaultsVersion,
     }),
   }),
-  /** Requested against the snapshot of this release (R26); approved as override `version`. */
+  /** Requested against the snapshot of this release (Q107); approved as override `version`. */
   event("rule_relaxation_requested", {
     ...ofProject,
     reasonCode: RelaxationReasonCode,
@@ -505,8 +512,8 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("rule_relaxation_rejected", { ...ofProject, details: z.strictObject(ofRelaxation) }),
   event("rule_relaxation_withdrawn", { ...ofProject, details: z.strictObject(ofRelaxation) }),
   /**
-   * Draft → active (plan 5.5): the Project Agentur and the version of its pinned template the
-   * activation was checked against, and the base-defaults version (R26).
+   * Draft → active (process-and-lifecycle.md, Dates): the Project Agentur and the version of its
+   * pinned template the activation was checked against, and the base-defaults version (Q107).
    */
   event("project_activated", {
     ...ofProject,
@@ -516,14 +523,18 @@ export const AuditEvent = z.discriminatedUnion("type", [
       baseDefaultsVersion,
     }),
   }),
-  /** Person data written (plan 5.3, 5.10): the changed fields, never a value (Q66). */
+  /**
+   * Person data written (data-protection.md, person-data writes): the changed fields, never a value
+   * (Q66).
+   */
   event("participant_data_changed", {
     ...ofParticipation,
     details: z.strictObject({ fields: z.array(ParticipantDataField).min(1) }),
   }),
   /**
-   * A confirmed import (plan 5.11): the counts and the base-defaults version its required targets
-   * were resolved with (R26). Correlated with the rows' own events by the request id.
+   * A confirmed import (process-and-lifecycle.md, Import): the counts and the base-defaults
+   * version its required targets were resolved with (Q107). Correlated with the rows' own events by
+   * the request id.
    */
   event("import_confirmed", {
     ...ofProject,
@@ -536,13 +547,15 @@ export const AuditEvent = z.discriminatedUnion("type", [
     }),
   }),
   /**
-   * A participation the PL created by hand (R32, PR 2h-2): one import row, so its required targets
-   * were resolved with this base-defaults version (R26, round 33). The creation and the person
+   * A participation the PL created by hand (process-and-lifecycle.md, "Import and manual
+   * creation"): one import row, so its required targets were resolved with this base-defaults
+   * version (Q107, round 33). The creation and the person
    * data have their own events; correlated by the request id.
    */
   /**
-   * A change of the contractual dates (plan 5.7): the effective dates that changed, old and new,
-   * the amendment of a signed DSV, and the BA reporting tasks it created (R38).
+   * A change of the contractual dates (process-and-lifecycle.md, "BA reporting"): the effective
+   * dates that changed, old and new, the amendment of a signed DSV, and the BA reporting tasks it
+   * created.
    */
   event("participation_dates_changed", {
     ...ofParticipation,
@@ -615,8 +628,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
     }),
   }),
   /**
-   * The participant's own activation (D23, D25): the code used, how the identity was assured, the
-   * notice version shown in the portal (never a first delivery) and the account's language.
+   * The participant's own activation (ADR-0007, portal activation): the code used, how the identity
+   * was assured, the notice version shown in the portal (never a first delivery) and the account's
+   * language.
    */
   event("participant_activated", {
     ...ofParticipation,
@@ -627,7 +641,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
       language: NoticeLanguage,
     }),
   }),
-  /** A consent record (D28): its purpose, channel, text version and language; never the address. */
+  /**
+   * A consent record (Q123): its purpose, channel, text version and language; never the address.
+   */
   event("consent_given", {
     ...ofParticipation,
     details: z.strictObject({
@@ -646,12 +662,14 @@ export const AuditEvent = z.discriminatedUnion("type", [
       verifiedBy: ChannelVerification,
     }),
   }),
-  /** The fifth failure locked the code (D14); the system records it (job `portal-activation`). */
+  /**
+   * The fifth failure locked the code (ADR-0007); the system records it (job `portal-activation`).
+   */
   event("activation_code_locked", {
     ...ofParticipation,
     details: z.strictObject({ activationCodeId: z.uuid() }),
   }),
-  /** The fifth wrong entry ended a one-time code (D27). */
+  /** The fifth wrong entry ended a one-time code (ADR-0007). */
   event("one_time_code_exhausted", {
     ...ofParticipation,
     details: z.strictObject({ challengeId: z.uuid(), purpose: OneTimeCodePurpose }),
@@ -675,6 +693,19 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     reasonCode: ChannelSuspensionReason,
     details: z.strictObject({ activationCodeId: z.uuid(), channelIds: z.array(z.uuid()) }),
+  }),
+  /**
+   * The placement Agentur set or changed (Q139): the new key and the one it replaced, both keys
+   * (not free text), and the base-defaults version the override was checked with (Q107). A pin it
+   * made has its own `config_template_pinned`; correlated by the request id.
+   */
+  event("placement_agentur_set", {
+    ...ofParticipation,
+    details: z.strictObject({
+      agenturKey,
+      previousAgenturKey: agenturKey.optional(),
+      baseDefaultsVersion,
+    }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

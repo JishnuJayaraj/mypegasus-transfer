@@ -5,10 +5,10 @@ import { correctionRequesters, needsEntry, type EvidenceCorrectionTarget } from 
 import type { RegionScope, Subject } from "./decide";
 
 /**
- * Who may take a lifecycle edge or perform an operation (plan 5.6; Q60 confirmed, Q80
- * *assumed*, round 10 §6, rounds 11–13). The status service (PR 1g) checks this and the lifecycle
- * rules (`canTransition`, the operations) before it calls a status function; nothing callable
- * from outside bypasses either.
+ * Who may take a lifecycle edge or perform an operation (data-protection.md, access matrix; Q60
+ * confirmed, Q80 *assumed*, round 10 §6, rounds 11–13). The status service (PR 1g) checks this and
+ * the lifecycle rules (`canTransition`, the operations) before it calls a status function; nothing
+ * callable from outside bypasses either.
  */
 export type Actor = Subject | { kind: "system" };
 
@@ -44,7 +44,7 @@ export const OperationKind = z.enum([
   "requestClarification",
   "requestEvidenceCorrection",
   "approveEvidenceCorrection",
-  // Slice 2: project setup (plan 5.4)
+  // Slice 2: project setup (regional-variation.md)
   "editProject",
   "activateProject",
   "editEntryWaves",
@@ -54,7 +54,7 @@ export const OperationKind = z.enum([
   "requestRelaxation",
   "decideRelaxation",
   "withdrawRelaxation",
-  // Slice 2: the import (plan 5.4, 5.11); individual TG dates (5.7, PR 2h-3)
+  // Slice 2: the import and individual TG dates (process-and-lifecycle.md)
   "importParticipations",
   "setParticipationDates",
   // Slice 3: teams, assignments and the project's region (Q62, Q126)
@@ -62,11 +62,13 @@ export const OperationKind = z.enum([
   "addReplacementLead",
   "assignParticipations",
   "setProjectRegion",
-  // Slice 3: participant activation and the Art. 14 notice (D16)
+  // Slice 3: participant activation and the Art. 14 notice (ADR-0007)
   "issueActivationCode",
   "recordHandover",
   "revokeActivationCode",
   "providePrivacyNotice",
+  // Slice 4a: the placement Agentur (Q139)
+  "setPlacementAgentur",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -130,11 +132,11 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   pinTemplate: ["project_lead"],
   changeOverride: ["project_lead"],
   migrateTemplate: ["project_lead"],
-  // Rule relaxations (Slice 2 plan 5.9, R2): the PL asks or withdraws, another person decides.
+  // Rule relaxations (regional-variation.md): the PL asks or withdraws, another person decides.
   requestRelaxation: ["project_lead"],
   decideRelaxation: ["regional_operations_manager"],
   withdrawRelaxation: ["project_lead"],
-  // The import is a domain operation of the PL (R17, Q60); preview and confirm alike.
+  // The import is a domain operation of the PL (Q60); preview and confirm alike.
   importParticipations: ["project_lead"],
   // Contractual dates (5.7; Q102, round 32): the PL only, back office none.
   setParticipationDates: ["project_lead"],
@@ -149,6 +151,8 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   recordHandover: ["project_lead", "back_office"],
   revokeActivationCode: ["project_lead", "back_office"],
   providePrivacyNotice: ["project_lead", "back_office"],
+  // The placement Agentur (Q139): the PL or back office of the project; never a consultant.
+  setPlacementAgentur: ["project_lead", "back_office"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>
@@ -162,7 +166,7 @@ const denialRank: PermissionDenial[] = [
   "not_member",
 ];
 
-/** Allowed if any role the staff member holds allows it (D6); else the most telling denial. */
+/** Allowed if any role the staff member holds allows it; else the most telling denial. */
 function staffPermission(
   subject: Extract<Subject, { kind: "staff" }>,
   target: PermissionTarget,
@@ -196,8 +200,8 @@ export function mayPerformTransition(
   target: PermissionTarget,
 ): Permission {
   if (actor.kind === "system") return edge.actor === "system" ? ok : no("actor_not_allowed");
-  // A participant takes exactly the activation edges of their own participation (Slice 3 plan
-  // D25), never a staff edge (Q60, round 12).
+  // A participant takes exactly the activation edges of their own participation (ADR-0007),
+  // never a staff edge (Q60, round 12).
   if (actor.kind === "participant") {
     return edge.kind === "activation" && actor.participationId === target.participationId
       ? ok

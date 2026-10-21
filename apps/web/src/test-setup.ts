@@ -26,3 +26,6 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 };
+
+// Nor element scrolling; Carbon's ComboBox scrolls its highlighted option into view.
+Element.prototype.scrollIntoView ??= () => {};

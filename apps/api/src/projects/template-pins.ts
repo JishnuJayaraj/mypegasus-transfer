@@ -47,7 +47,7 @@ import { auditContext, callFunction, utc } from "../sql";
 
 /**
  * The configuration of this release (S2): the catalog, the template files and the base defaults,
- * read once at start from `CONFIG_DIR`. Base defaults are not pinned (R10); templates are, so a
+ * read once at start from `CONFIG_DIR`. Base defaults are not pinned (Q107); templates are, so a
  * project resolves only from its stored snapshot.
  */
 export type Release = {
@@ -88,12 +88,14 @@ export const currentPins = (db: Db, projectId: string) =>
 
 type StoredPin = Awaited<ReturnType<typeof currentPins>>[number];
 
-// A stored version never changes (D5), so its validated snapshot is cached by its identity.
+// A stored version never changes (regional-variation.md, immutability), so its validated snapshot
+// is cached by its identity.
 const snapshots = new Map<string, RegionalTemplate>();
 
 /**
- * The stored content of a pin as a template (AC-11): validated once, checked against its hash
- * and its key, then cached per (key, version, hash). The template file is never read here.
+ * The stored content of a pin as a template (regional-variation.md, snapshot): validated once,
+ * checked against its hash and its key, then cached per (key, version, hash). The template file is
+ * never read here.
  */
 export function snapshotOf({ agenturKey, version, content, sha256 }: StoredPin): RegionalTemplate {
   const identity = `${agenturKey}@${version}:${sha256}`;
@@ -118,8 +120,9 @@ export const templatesOf = (pins: readonly StoredPin[]) =>
   Object.fromEntries(pins.map((p) => [p.agenturKey, snapshotOf(p)]));
 
 /**
- * The project's current override (5.9): the highest version and its stored content, validated as
- * an override layer (a stored row that isn't one is a 500); version 0 without a row.
+ * The project's current override (regional-variation.md, Agentur-scoped settings): the highest
+ * version and its stored content, validated as an override layer (a stored row that isn't one is a
+ * 500); version 0 without a row.
  */
 export async function currentOverride(
   db: Db,
@@ -140,8 +143,9 @@ export async function currentOverride(
 }
 
 /**
- * The project's snapshot as read in `db` (R11): its type, status and Project Agentur, its current
- * pins and override version, and the resolution input they make. Undefined for no project.
+ * The project's snapshot as read in `db` (regional-variation.md, snapshot): its type, status and
+ * Project Agentur, its current pins and override version, and the resolution input they make.
+ * Undefined for no project.
  */
 export async function projectSnapshot(db: Db, release: Release, projectId: string) {
   const [found] = await db
@@ -166,8 +170,9 @@ export async function projectSnapshot(db: Db, release: Release, projectId: strin
 }
 
 /**
- * A template version of this release (5.8): the file through `loadTemplate` and its canonical hash
- * (R22), which must be the catalog's (AC-9); a differing file is a broken image (500).
+ * A template version of this release (regional-variation.md, "Template versions"): the file
+ * through `loadTemplate` and its canonical hash, which must be the catalog's; a differing file is
+ * a broken image (500).
  */
 export function releaseTemplate(release: Release, agenturKey: string, version: number) {
   const template = loadTemplate(agenturKey, version, release.templatesDir);
@@ -177,7 +182,7 @@ export function releaseTemplate(release: Release, agenturKey: string, version: n
   return { template, sha256 };
 }
 
-/** A refused override as domain issues (R21): `override_invalid`, then each issue's code. */
+/** A refused override as domain issues (ADR-0010): `override_invalid`, then each issue's code. */
 export const overrideIssues = (validation: Extract<OverrideValidation, { ok: false }>) => [
   "override_invalid",
   ...validation.issues.map((issue) => issue.code),
@@ -185,6 +190,15 @@ export const overrideIssues = (validation: Extract<OverrideValidation, { ok: fal
 
 const participantLevel = (blockers: Blocker[]) =>
   blockers.filter((blocker) => blocker.code === "agentur_submission_blocked");
+
+/**
+ * One participation's participant-level, step-scoped submission blockers (Q76, Q91, Q92), resolved
+ * with its placement Agentur (Q139): without a pinned template for it, base and override only.
+ */
+export const participationSubmissionBlockers = (
+  input: Omit<Parameters<typeof resolveForParticipation>[0], "placementAgenturKey">,
+  placementAgenturKey: string | null,
+) => participantLevel(resolveForParticipation({ ...input, placementAgenturKey }).blockers);
 
 /**
  * Per pinned Agentur as the placement Agentur, its participant-level, step-scoped submission
@@ -207,12 +221,12 @@ export const submissionBlockers = (
   });
 
 /**
- * The project's snapshot and what it blocks (plan 5.12): the pins, the project level resolved
- * against the Project Agentur's pinned template, per pinned Agentur the participant-level
- * blockers and warnings, and the activation blockers (Q76, Q77), all resolved with the current
- * override (R11), which is shown with its Agentur-scoped settings and approved relaxations; the
- * open relaxation requests and the rules a request may name; and what the user may do here, from
- * the route's operation check (round 26). Undefined for no project.
+ * The project's snapshot and what it blocks (regional-variation.md, Blockers): the pins, the
+ * project level resolved against the Project Agentur's pinned template, per pinned Agentur the
+ * participant-level blockers and warnings, and the activation blockers (Q76, Q77), all resolved
+ * with the current override, which is shown with its Agentur-scoped settings and approved
+ * relaxations; the open relaxation requests and the rules a request may name; and what the user may
+ * do here, from the route's operation check (round 26). Undefined for no project.
  */
 export async function projectConfig(
   db: Db,
@@ -251,7 +265,8 @@ export async function projectConfig(
       sha256Prefix: p.sha256.slice(0, 12),
       pinnedAt: p.pinnedAt,
       pinnedBy: p.pinnedBy,
-      // What this pin may migrate to (5.8), only for a user who may migrate here.
+      // What this pin may migrate to (regional-variation.md, migration), only for a user who may
+      // migrate here.
       migrationTargets: may({ kind: "migrateTemplate" })
         ? migrationTargets(release.catalog, p)
         : [],
@@ -272,7 +287,8 @@ export async function projectConfig(
     relaxationRequests: open.map((request) => ({
       ...request,
       capabilities: {
-        // Never the requester (four eyes, R2); the API's check stays authoritative.
+        // Never the requester (four eyes, regional-variation.md); the API's check stays
+        // authoritative.
         decide: may({ kind: "decideRelaxation", requestedBy: request.requestedBy }),
         withdraw: may({ kind: "withdrawRelaxation" }),
       },
@@ -282,15 +298,15 @@ export async function projectConfig(
     ),
     capabilities: {
       pinTemplate: may({ kind: "pinTemplate" }),
-      // The Project Agentur is fixed once active (R1, Q98); further Agenturen may still be pinned.
+      // The Project Agentur is fixed once active (Q98); further Agenturen may still be pinned.
       setProjectAgentur: may({ kind: "pinTemplate" }) && found.status === "draft",
       changeOverride: may({ kind: "changeOverride" }),
       requestRelaxation: may({ kind: "requestRelaxation" }),
-      // Activation is one-way (R1): offered only while draft.
+      // Activation is one-way (Q98): offered only while draft.
       activateProject: may({ kind: "activateProject" }) && found.status === "draft",
-      // A pinned template migrates in draft and active projects alike (5.8).
+      // A pinned template migrates in draft and active projects alike (regional-variation.md).
       migrateTemplate: may({ kind: "migrateTemplate" }),
-      // The import works in draft and active projects alike (R1).
+      // The import works in draft and active projects alike (process-and-lifecycle.md, Dates).
       importParticipations: may({ kind: "importParticipations" }),
       // The PL while draft, the global admin at any time (Q126, `regionChangeRefusal`).
       setProjectRegion:
@@ -299,7 +315,7 @@ export async function projectConfig(
   };
 }
 
-/** The pin refusals that are a 422 (R21, round 23); `project_not_found` is a 404. */
+/** The pin refusals that are a 422 (ADR-0010); `project_not_found` is a 404. */
 const pinRefusals: ReadonlySet<string> = new Set([
   "template_version_changed",
   "template_already_pinned",
@@ -308,10 +324,12 @@ const pinRefusals: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Pins a catalog template and/or makes it the Project Agentur (plan 5.8, R12), in one
+ * Pins a catalog template and/or makes it the Project Agentur (regional-variation.md, "Choosing
+ * the Project Agentur"), in one
  * transaction under the exclusive project lock: decides with `planTemplatePin` on the state read
- * under the lock, reads the file through `loadTemplate`, computes its canonical hash (R22),
- * refuses a pin that would make the current override invalid (5.9, AC-16), then
+ * under the lock, reads the file through `loadTemplate`, computes its canonical hash, refuses a
+ * pin that would make the current override invalid (regional-variation.md, cross-chain
+ * validation), then
  * `pin_agentur_template` and `update_project`. Returns null for no project, or the refusals.
  */
 export async function pinTemplate(

@@ -755,6 +755,31 @@
       "individual_dates_set": "Die Person hat individuelle Vertragsdaten. Setzen Sie die Daten zuerst auf die Welle zurück, um die Welle zu ändern.",
       "no_other_wave": "Es gibt keine andere Welle in diesem Projekt."
     },
+    "placementAgentur": {
+      "title": "Vermittlungs-Agentur",
+      "current": "Vermittlungs-Agentur",
+      "none": "Noch nicht festgelegt",
+      "setAt": "Festgelegt am",
+      "submissionBlocked": "Die Übermittlung an die Agentur ist blockiert, bis für diese Agentur eine Vorlage hinterlegt ist oder ihre Angaben vorliegen. Daten können trotzdem erfasst werden.",
+      "choose": "Vermittlungs-Agentur festlegen",
+      "change": "Andere Vermittlungs-Agentur festlegen",
+      "placeholder": "Agentur auswählen oder Schlüssel eingeben",
+      "pinned": "Die im Projekt hinterlegte Vorlage (Version {{version}}) gilt.",
+      "willPin": "Die Vorlage wird mit Version {{version}} im Projekt hinterlegt.",
+      "noTemplate": "Für diesen Schlüssel gibt es keine Vorlage: Die Übermittlung an die Agentur bleibt blockiert.",
+      "invalidKey": "Kleinbuchstaben, Ziffern und einzelne Bindestriche, z. B. beispielstadt-nord.",
+      "save": "Vermittlungs-Agentur speichern",
+      "saved": "Vermittlungs-Agentur gespeichert",
+      "errors": {
+        "participation_closed": "Die Teilnahme ist abgeschlossen; die Vermittlungs-Agentur ändert sich nicht mehr.",
+        "placement_agentur_unchanged": "Diese Vermittlungs-Agentur ist bereits festgelegt.",
+        "override_invalid": "Mit der Vorlage dieser Agentur wäre die Projektkonfiguration ungültig. Es wurde nichts gespeichert.",
+        "template_already_pinned": "Die Vorlage dieser Agentur wurde inzwischen hinterlegt. Bitte erneut speichern.",
+        "template_version_changed": "Die Vorlage dieser Agentur passt nicht zur gespeicherten Version. Es wurde nichts gespeichert.",
+        "forbidden": "Sie dürfen die Vermittlungs-Agentur nicht festlegen.",
+        "failed": "Die Vermittlungs-Agentur konnte nicht gespeichert werden."
+      }
+    },
     "dates": {
       "open": "Vertragsdaten ändern",
       "title": "Vertragsdaten ändern",

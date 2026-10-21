@@ -34,11 +34,21 @@ Customer (employer) ──► Transferprojekt (type: ta_only | ta_tg)
 | Role | Belongs to | Determined by | Responsible for |
 |---|---|---|---|
 | **Project Agentur** (`ta_tg`: the **KuG-Agentur**) | project | set at project setup (`ta_tg`: business location of the TG) | `ta_tg`: Anzeige über Arbeitsausfall, Transfer-KuG, final KuG settlement; `ta_only`: the §110 measure and its funding administration (Q90) |
-| **Placement Agentur** | participation | participant's place of residence | Arbeitsuchendmeldung (Kug 200b), TL 407 submission, placement |
+| **Placement Agentur** | participation | participant's place of residence, chosen by the PL or back office (Q139) | Arbeitsuchendmeldung (Kug 200b), TL 407 submission, placement |
 
 Participant steps resolve configuration from the placement Agentur's template, and project
 steps from the Project Agentur's template (see regional-variation.md). Without a Project-Agentur
 template a project of either type can't be activated (Q76, Q90).
+
+The placement Agentur *(assumed, Q139)* is a key on the participation, set by the PL or back
+office of the project while the participation isn't terminal (also in a draft project), from
+the catalog or a free key; it isn't a lifecycle status and needs no transition. Choosing a
+catalog Agentur the project hasn't pinned pins its latest template version in the same step;
+without a template the participation can still be contacted, collect data and be profiled, but
+its Agentur submission stays blocked until the Agentur's settings are known (Q76). There is no
+mapping from the postcode: a later address change only shows "Vermittlungs-Agentur prüfen".
+Every change is audited (`placement_agentur_set`). Details in regional-variation.md, "Placement
+Agentur".
 
 ## Dates
 

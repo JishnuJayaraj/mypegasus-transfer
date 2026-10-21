@@ -42,7 +42,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: false,
   },
-  // Staff sessions (Slice 3, D2): a token's SHA-256, the staff user, the times; never the token.
+  // Staff sessions (ADR-0007, staff sessions): a token's SHA-256, the staff user, the times; never
+  // the token.
   staff_session: {
     retentionClass: "access_credential",
     dataClass: "internal",
@@ -71,7 +72,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
-  // Who holds which project role (D6); staff ids only, no participant data.
+  // Who holds which project role (data-protection.md, access matrix); staff ids only, no
+  // participant data.
   project_membership: {
     retentionClass: "project_master",
     dataClass: "internal",
@@ -87,8 +89,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
-  // Person data (5.2, 5.10; R8, Q105): identity in the participation record, the rest in the
-  // personnel file; one row each per participation.
+  // Person data (data-protection.md, retention; Q105): identity in the participation record, the
+  // rest in the personnel file; one row each per participation.
   participant_identity: {
     retentionClass: "participation_record",
     dataClass: "confidential",
@@ -111,7 +113,7 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
-  // Portal activation (Slice 3 plan D23–D29, Q122, Q123). The account: activation time, code id,
+  // Portal activation (ADR-0007; Q122, Q123). The account: activation time, code id,
   // how the identity was assured (staff confirmer for a photo ID) and the language.
   participant_account: {
     retentionClass: "personnel_file",
@@ -160,9 +162,10 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
-  // Job names, run dates and instants only (plan 5.10).
+  // Job names, run dates and instants only (ADR-0011).
   job_run: { retentionClass: "reference_data", dataClass: "internal", holdsParticipantData: false },
-  // Template versions as released (R27): no personal data, global, never deleted.
+  // Template versions as released (regional-variation.md, "Template versions"): no personal data,
+  // global, never deleted.
   config_template_version: {
     retentionClass: "reference_data",
     dataClass: "internal",
@@ -182,23 +185,25 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     holdsParticipantData: false,
   },
   // Relaxation requests: rule id, reason code, status, staff ids and dates; project-wide, no
-  // participant data (5.2, AC-39).
+  // participant data (data-protection.md, retention).
   config_relaxation_request: {
     retentionClass: "project_master",
     dataClass: "internal",
     holdsParticipantData: false,
   },
   // Saved import column mappings: the keyed hash of a normalised header and its target, never
-  // header text (R7); the application writes them without an audit (D2). Confidential, possibly
-  // pseudonymised participant data (R44, round 33): a data row picked as the header would make the
-  // hashes keyed hashes of a person's values, which the confirm avoids for a header row that
-  // looks like data. No link to a person or participation, so it stays with the project.
+  // header text; the application writes them without an audit (data-protection.md, retention).
+  // Confidential, possibly pseudonymised participant data (round 33): a data row picked as the
+  // header would make the hashes keyed hashes of a person's values, which the confirm avoids for a
+  // header row that looks like data. No link to a person or participation, so it stays with the
+  // project.
   import_column_mapping: {
     retentionClass: "project_master",
     dataClass: "confidential",
     holdsParticipantData: true,
   },
-  // DSV amendments and BA reporting tasks (5.2, 5.7; round 32 D3; R41, R42; PR 2h-3): evidence of
+  // DSV amendments and BA reporting tasks (process-and-lifecycle.md, "DSV amendment", "BA
+  // reporting"; round 32): evidence of
   // contractual date changes, in the participation record and its evidence set.
   participation_dsv_amendment: {
     retentionClass: "participation_record",
@@ -240,10 +245,11 @@ export function checkDataCatalog(
 }
 
 /**
- * The field-catalog key of each column of the tables holding participant fields (plan 5.2, D8,
- * R8): null for a column that isn't a participant field (keys, references, versions, workflow
- * metadata). The address parts and the country are the field `address` (round 32). Every column of
- * these tables is classified here, so a new column needs a decision.
+ * The field-catalog key of each column of the tables holding participant fields
+ * (data-protection.md, Classification): null for a column that isn't a participant field (keys,
+ * references, versions, workflow metadata). The address parts and the country are the field
+ * `address` (round 32). Every column of these tables is classified here, so a new column needs a
+ * decision.
  */
 export const fieldColumns: Record<string, Record<string, string | null>> = {
   participation: {
@@ -266,6 +272,8 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     end_reason_secondary: "endReason",
     profiling_exception_request_id: null,
     status_version: null,
+    placement_agentur_key: "placementAgenturKey",
+    placement_agentur_set_at: "placementAgenturKey",
     created_at: null,
   },
   profiling_exception_request: {
@@ -357,7 +365,7 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
 /**
  * Participant-data tables without participant fields: the audit log holds ids and codes only; the
  * saved column mappings hold keyed hashes of header cells, which only a data row picked as the
- * header would make pseudonymised values of a person (R44), never a field of a participation; the
+ * header would make pseudonymised values of a person, never a field of a participation; the
  * assignments hold which consultant a participation is assigned to, ids and dates only (Q62).
  */
 const withoutFields = new Set([
@@ -384,11 +392,11 @@ const dataClassRank: Record<DataClass, number> = {
 };
 
 /**
- * Returns one message per problem (AC-21; review of PR #45): every table holding participant data
- * classifies all its columns; every field a column stores is catalogued, stored as a plain column
- * (no special-category or highly confidential field without encryption), not above the table's
- * data class and of the table's retention class, so a table holds one retention class only
- * (ADR-0008); and every field with a retention class is stored by some column.
+ * Returns one message per problem (data-protection.md, retention; ADR-0008): every table holding
+ * participant data classifies all its columns; every field a column stores is catalogued, stored as
+ * a plain column (no special-category or highly confidential field without encryption), not above
+ * the table's data class and of the table's retention class, so a table holds one retention class
+ * only (ADR-0008); and every field with a retention class is stored by some column.
  */
 export function checkFieldColumns(
   schemaTables: PgTable[] = tables,
