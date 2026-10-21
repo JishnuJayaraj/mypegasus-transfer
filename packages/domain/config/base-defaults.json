@@ -2,7 +2,7 @@
   "$schema": "../../config/schema/regional-template.schema.json",
   "schemaVersion": 1,
   "kind": "base_defaults",
-  "version": 1,
+  "version": 2,
   "nationwide": {
     "asuDueDate": {
       "monthsBeforeEnd": 3,
@@ -61,6 +61,110 @@
         "kind": "required",
         "field": "address",
         "basis": "operational_default"
+      }
+    ],
+    "profiling": [
+      {
+        "id": "base-tl407-gender",
+        "kind": "required",
+        "field": "gender",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-maritalStatus",
+        "kind": "required",
+        "field": "maritalStatus",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-nationality",
+        "kind": "required",
+        "field": "nationality",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-pensionInsuranceNumber",
+        "kind": "required",
+        "field": "pensionInsuranceNumber",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-buergergeld",
+        "kind": "required",
+        "field": "buergergeld",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-healthRestrictions",
+        "kind": "required",
+        "field": "healthRestrictions",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-severeDisability",
+        "kind": "required",
+        "field": "severeDisability",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-educationHistory",
+        "kind": "required",
+        "field": "educationHistory",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-workHistory",
+        "kind": "required",
+        "field": "workHistory",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-languageSkills",
+        "kind": "required",
+        "field": "languageSkills",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-drivingLicence",
+        "kind": "required",
+        "field": "drivingLicence",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-vehicleAvailable",
+        "kind": "required",
+        "field": "vehicleAvailable",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-workingTimePreferences",
+        "kind": "required",
+        "field": "workingTimePreferences",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-jobWishes",
+        "kind": "required",
+        "field": "jobWishes",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-desiredWorkLocations",
+        "kind": "required",
+        "field": "desiredWorkLocations",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-maxCommuteDistance",
+        "kind": "required",
+        "field": "maxCommuteDistance",
+        "basis": "ba_form"
+      },
+      {
+        "id": "base-tl407-earliestStartDate",
+        "kind": "required",
+        "field": "earliestStartDate",
+        "basis": "ba_form"
       }
     ],
     "dsv": [

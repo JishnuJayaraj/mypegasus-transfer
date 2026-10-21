@@ -74,6 +74,7 @@ function fields(
 const C = "confidential";
 const record = { retentionClass: "participation_record" } as const;
 const personnelFile = { retentionClass: "personnel_file" } as const;
+const healthRecord = { retentionClass: "health_record" } as const;
 const customer = { customerVisible: true, ...record };
 
 /**
@@ -103,16 +104,30 @@ export const fieldCatalog: readonly FieldEntry[] = [
   // The participant's verified portal contacts (ADR-0007, Q123): staff see kind, state and
   // dates only, never the address; never in lists
   field("portalChannels", C, "confidential", true, { listable: false, ...personnelFile }),
+  // The participant's profile, TL 407 section B (ba-forms.md; value sets in
+  // self-service/values.ts): `workingTimePreferences` is the pair of fields 44 and 45, `jobWishes`
+  // the desired job and its alternative; personnel file (Q141)
   ...fields(
-    ["maritalStatus", "gender", "educationHistory", "workHistory"],
+    [
+      "maritalStatus",
+      "gender",
+      "educationHistory",
+      "workHistory",
+      "languageSkills",
+      "drivingLicence",
+      "vehicleAvailable",
+      "workingTimePreferences",
+      "jobWishes",
+      "desiredWorkLocations",
+      "maxCommuteDistance",
+      "earliestStartDate",
+    ],
     C,
     "confidential",
     true,
+    personnelFile,
   ),
-  ...fields(["qualifications", "languageSkills", "drivingLicence"], C, "confidential", true),
-  ...fields(["vehicleAvailable", "workingTimePreferences", "jobWishes"], C, "confidential", true),
-  ...fields(["desiredWorkLocations", "maxCommuteDistance"], C, "confidential", true),
-  field("earliestStartDate", C, "confidential", true),
+  field("qualifications", C, "confidential", true),
   // recorded by the profiler on the profiling record (ba-forms.md)
   ...fields(["profilingSessions", "jobboerseChoice", "baContactConsent"], C, "confidential", false),
   field("endReason", C, "confidential", false, {
@@ -127,14 +142,20 @@ export const fieldCatalog: readonly FieldEntry[] = [
   }),
   // codes only; `participant_prevented_documented` deliberately reveals no illness (Q81)
   field("profilingExceptionReasonCode", C, "confidential", false, record),
-  // special category
-  field("healthRestrictions", "special_category", "health", true),
-  ...fields(["severeDisability", "disabilityDegree"], "special_category", "disability", true),
-  // highly confidential
-  field("pensionInsuranceNumber", "highly_confidential", "identifiers", true),
+  // special category; the yes/no answers are kept 3 months after exit (Q141)
+  field("healthRestrictions", "special_category", "health", true, healthRecord),
+  field("severeDisability", "special_category", "disability", true, healthRecord),
+  field("disabilityDegree", "special_category", "disability", true),
+  // highly confidential; the RV-Nummer is in the evidence set (Q88, Q141)
+  field("pensionInsuranceNumber", "highly_confidential", "identifiers", true, record),
   ...fields(["taxId", "iban", "baCustomerNumber"], "highly_confidential", "identifiers", false),
-  ...fields(["nationality", "entryToGermanyDate"], "highly_confidential", "residence_social", true),
-  ...fields(["residenceStatus", "buergergeld"], "highly_confidential", "residence_social", true),
+  ...fields(
+    ["nationality", "entryToGermanyDate", "residenceStatus", "buergergeld"],
+    "highly_confidential",
+    "residence_social",
+    true,
+    personnelFile,
+  ),
   // Q85 (open): not classified by the docs; the stricter class of its TL 407 section meanwhile
   field("unemploymentPeriod", "highly_confidential", "residence_social", true),
   // TL 407 section C and p. 7, profiler only; the health line is special category

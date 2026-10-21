@@ -5,9 +5,11 @@ import { describe, expect, it } from "vitest";
 import {
   ART14_NOTICE_VERSION,
   PORTAL_CONTACT_CONSENT_VERSION,
+  SELF_SERVICE_NOTICE_VERSION,
   art14Notice,
   noticeCatalog,
   portalContactConsent,
+  selfServicePurposesNotice,
 } from "./catalog";
 
 describe("immutable notice catalog", () => {
@@ -17,6 +19,8 @@ describe("immutable notice catalog", () => {
       `${ART14_NOTICE_VERSION}:en`,
       `${PORTAL_CONTACT_CONSENT_VERSION}:de`,
       `${PORTAL_CONTACT_CONSENT_VERSION}:en`,
+      `${SELF_SERVICE_NOTICE_VERSION}:de`,
+      `${SELF_SERVICE_NOTICE_VERSION}:en`,
     ]);
     for (const notice of noticeCatalog) {
       expect(createHash("sha256").update(notice.text).digest("hex")).toBe(notice.sha256);
@@ -51,6 +55,24 @@ describe("immutable notice catalog", () => {
       expect(consent.version).toBe(PORTAL_CONTACT_CONSENT_VERSION);
       expect(consent.text).not.toContain("{{");
       expect(consent.text).toContain("controller@example.invalid");
+    }
+  });
+
+  it("renders the self-service purposes notice, an acknowledgement (Q138)", () => {
+    const organisation = {
+      controllerName: "Synthetic Controller GmbH",
+      controllerAddress: "Example Street 1, 10115 Berlin",
+      controllerEmail: "controller@example.invalid",
+      dpoName: "Synthetic DPO",
+      dpoAddress: "Privacy Street 2, 10115 Berlin",
+      dpoEmail: "privacy@example.invalid",
+    };
+    for (const language of ["de", "en"] as const) {
+      const notice = selfServicePurposesNotice(language, organisation);
+      expect(notice.version).toBe(SELF_SERVICE_NOTICE_VERSION);
+      expect(notice.text).not.toContain("{{");
+      expect(notice.text).toContain("Synthetic Controller GmbH");
+      expect(notice.text).toMatch(/9\(2\)\(b\)|9 Abs\. 2 Buchst\. b/);
     }
   });
 });

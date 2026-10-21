@@ -4,7 +4,7 @@ import { Step } from "../lifecycle/enums";
 import type { ProjectType } from "../project";
 import { ruleAppliesTo, type CompletenessRule, type RulesByStep } from "./rules";
 
-/** Review states of a stored document (plan 5.5); document review comes with Slice 4b. */
+/** Review states of a stored document (process-and-lifecycle.md); document review comes with Slice 4b. */
 export const DocumentState = z.enum(["uploaded", "accepted", "rejected"]);
 export type DocumentState = z.infer<typeof DocumentState>;
 
@@ -65,18 +65,31 @@ export function evaluateCompleteness(
 const fieldValue = (facts: CompletenessFacts, key: string) =>
   Object.hasOwn(facts.fields, key) ? facts.fields[key] : undefined;
 
+/**
+ * The field a rule requires given the facts: a `required` rule's field, a `requiredIf` rule's
+ * field while its condition holds, else null (a document rule, or a condition that doesn't hold).
+ */
+export function requiredField(
+  rule: CompletenessRule,
+  fields: CompletenessFacts["fields"],
+): string | null {
+  if (rule.kind === "documentPresent") return null;
+  if (rule.kind === "required") return rule.field;
+  const condition = Object.hasOwn(fields, rule.when.field) ? fields[rule.when.field] : undefined;
+  const applies = "exists" in rule.when ? isPresent(condition) : condition === rule.when.equals;
+  return applies ? rule.field : null;
+}
+
 function check(step: Step, rule: CompletenessRule, facts: CompletenessFacts): MissingItem[] {
   const item = (kind: MissingItem["kind"], key: string, reason: MissingItem["reason"]) => [
     { step, ruleId: rule.id, kind, key, reason },
   ];
   switch (rule.kind) {
     case "required":
-      return isPresent(fieldValue(facts, rule.field)) ? [] : item("field", rule.field, "missing");
     case "requiredIf": {
-      const condition = fieldValue(facts, rule.when.field);
-      const applies = "exists" in rule.when ? isPresent(condition) : condition === rule.when.equals;
-      if (!applies || isPresent(fieldValue(facts, rule.field))) return [];
-      return item("field", rule.field, "missing");
+      const field = requiredField(rule, facts.fields);
+      if (field === null || isPresent(fieldValue(facts, field))) return [];
+      return item("field", field, "missing");
     }
     case "documentPresent": {
       // a rejected document is not present; `accepted: true` needs an accepted one

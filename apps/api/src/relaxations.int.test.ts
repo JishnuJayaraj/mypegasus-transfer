@@ -11,14 +11,16 @@ import {
   seedRegionIds,
 } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
-import { canonicalHash, loadTemplate } from "@transfer/config/load";
+import { canonicalHash, loadTemplate, loadBaseDefaults } from "@transfer/config/load";
 import { ProjectConfig } from "@transfer/domain";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { auditContext } from "./sql";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
-// Slice 2 plan 5.3, 5.4, 5.9 and 5.12 (PR 2d-2): rule relaxations with approval (Q75, round 8,
-// R2; AC-15, AC-16, AC-45).
+// Version 2 adds the TL 407 rules (regional-variation.md, base defaults).
+const baseDefaultsVersion = loadBaseDefaults().version;
+
+// Rule relaxations with approval (regional-variation.md, relaxations; Q75, round 8).
 const { app, db } = testApp({ clock: new ManualClock(new Date("2026-10-17T10:00:00Z")) });
 const owner = createDb(testDatabaseUrls().owner);
 const auth: Record<string, { Cookie: string }> = {};
@@ -115,31 +117,31 @@ describe("a relaxation takes effect only after another person's approval (AC-15)
     });
     expect(config.relaxationRequests).toEqual([]);
     expect(config.relaxableRules.map((r) => r.ruleId)).not.toContain(ruleId);
-    // AC-45: both configuration-dependent types carry the base-defaults version (R26).
+    // Both configuration-dependent types carry the base-defaults version (Q107).
     expect(await events()).toEqual([
       {
         type: "rule_relaxation_requested",
         actor: seedStaffUserIds.projectLead,
         reasonCode: "source_data_not_provided",
-        details: { relaxationRequestId: id, ruleId, baseDefaultsVersion: 1 },
+        details: { relaxationRequestId: id, ruleId, baseDefaultsVersion },
       },
       {
         type: "config_override_changed",
         actor: rom,
         reasonCode: null,
-        details: { version: 1, change: "relaxation_added", ruleId, baseDefaultsVersion: 1 },
+        details: { version: 1, change: "relaxation_added", ruleId, baseDefaultsVersion },
       },
       {
         type: "rule_relaxation_approved",
         actor: rom,
         reasonCode: "source_data_not_provided",
-        details: { relaxationRequestId: id, ruleId, version: 1, baseDefaultsVersion: 1 },
+        details: { relaxationRequestId: id, ruleId, version: 1, baseDefaultsVersion },
       },
     ]);
   });
 
   it("is never decided by the requester, nor by anyone but the regional operations manager (R2)", async () => {
-    // The regional operations manager is also this project's PL here (D6) and asks.
+    // The regional operations manager is also this project's PL here (Q61) and asks.
     await owner
       .insert(projectMembership)
       .values({ projectId: werkNord, staffUserId: rom, role: "project_lead" });
@@ -166,14 +168,11 @@ describe("a relaxation takes effect only after another person's approval (AC-15)
     const withdrawn = await requested();
     expect((await readJson(await withdraw(withdrawn), ProjectConfig)).override.version).toBe(0);
     expect((await events()).map(({ type, details }) => [type, details])).toEqual([
-      [
-        "rule_relaxation_requested",
-        { relaxationRequestId: rejected, ruleId, baseDefaultsVersion: 1 },
-      ],
+      ["rule_relaxation_requested", { relaxationRequestId: rejected, ruleId, baseDefaultsVersion }],
       ["rule_relaxation_rejected", { relaxationRequestId: rejected, ruleId }],
       [
         "rule_relaxation_requested",
-        { relaxationRequestId: withdrawn, ruleId, baseDefaultsVersion: 1 },
+        { relaxationRequestId: withdrawn, ruleId, baseDefaultsVersion },
       ],
       ["rule_relaxation_withdrawn", { relaxationRequestId: withdrawn, ruleId }],
     ]);
@@ -204,7 +203,7 @@ describe("a relaxation takes effect only after another person's approval (AC-15)
       type: "config_override_changed",
       actor: seedStaffUserIds.projectLead,
       reasonCode: null,
-      details: { version: 2, change: "relaxation_removed", ruleId, baseDefaultsVersion: 1 },
+      details: { version: 2, change: "relaxation_removed", ruleId, baseDefaultsVersion },
     });
   });
 });

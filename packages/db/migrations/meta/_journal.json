@@ -330,6 +330,20 @@
       "when": 1792599251361,
       "tag": "0046_placement_agentur_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792604386492,
+      "tag": "0047_self_service_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792604397581,
+      "tag": "0048_self_service_functions",
+      "breakpoints": true
     }
   ]
 }

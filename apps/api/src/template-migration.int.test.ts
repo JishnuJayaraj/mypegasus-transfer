@@ -20,9 +20,9 @@ import { loadRelease, projectSnapshot } from "./projects/template-pins";
 import { auditContext } from "./sql";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
-// Slice 2 plan 5.3, 5.4, 5.8, 5.9 and 5.12 (PR 2e-2; Q36, Q93, R15): a pinned template migrates
-// to a newer catalog version with the review of its Agentur's scoped setting (AC-16, AC-19,
-// AC-20, AC-44, AC-45). Sample templates and synthetic settings only.
+// A pinned template migrates to a newer catalog version with the review of its Agentur's scoped
+// setting (regional-variation.md, migration; Q36, Q93). Sample templates and synthetic settings
+// only.
 const { app, db } = testApp({ clock: new ManualClock(new Date("2026-10-17T10:00:00Z")) });
 const urls = testDatabaseUrls();
 const owner = createDb(urls.owner);
@@ -91,7 +91,7 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   await resetTestDatabase({ seed: true });
-  // Werk Nord: beispielstadt-nord@1 (the catalog has 2) and beispielstadt-sued@1.
+  // Werk Nord: beispielstadt-nord@1 (the catalog has 2 and 3) and beispielstadt-sued@1.
   await seedTemplatePins(db, release);
 });
 afterAll(() => Promise.all([db.$client.end(), owner.$client.end(), holder.$client.end()]));
@@ -103,7 +103,7 @@ describe("GET …/config: what may be migrated (5.8, round 26)", () => {
     expect(
       pl.pins.map(({ agenturKey, migrationTargets }) => [agenturKey, migrationTargets]),
     ).toEqual([
-      [nord, [2]],
+      [nord, [2, 3]],
       [sued, []],
     ]);
     for (const user of ["admin", "consultant", "backOffice", "regionalOperationsManager"]) {
@@ -157,7 +157,7 @@ describe("POST …/pins/{agenturKey}/migration-preview (AC-19)", () => {
   });
 
   it("refuses a version outside the catalog, the pinned one and another Agentur's pin", async () => {
-    expect(await codes(await preview(werkNord, nord, { version: 3 }))).toEqual([
+    expect(await codes(await preview(werkNord, nord, { version: 4 }))).toEqual([
       { code: "template_not_in_catalog", pointer: "/version" },
     ]);
     expect(await codes(await preview(werkNord, nord, { version: 1 }))).toEqual([
@@ -178,7 +178,7 @@ describe("POST …/pins/{agenturKey}/migration (AC-20, AC-45)", () => {
       [nord, 2],
       [sued, 1],
     ]);
-    expect(after.pins[0]!.migrationTargets).toEqual([]);
+    expect(after.pins[0]!.migrationTargets).toEqual([3]);
     expect(after.override.version).toBe(2);
     expect(after.override.agenturSettings).toEqual([
       expect.objectContaining({
@@ -248,7 +248,7 @@ describe("POST …/pins/{agenturKey}/migration (AC-20, AC-45)", () => {
 
   it("refuses a migration that would leave the override invalid, with its issues (AC-16)", async () => {
     // Valid with version 1; version 2 brings a rule of the same id (round 15). Override rules have
-    // no API (R13), so the state is inserted as the owner (round 27).
+    // no API, so the state is inserted as the owner (round 27).
     const rule = { id: "beispielstadt-nord-mobile", kind: "required", field: "mobile" };
     await owner.insert(projectConfigOverride).values({
       projectId: werkNord,
@@ -389,7 +389,7 @@ describe("POST …/pins/{agenturKey}/migration (AC-20, AC-45)", () => {
     });
     await lockTaken;
     const pending = migrate(werkNord, nord, confirm());
-    // The request waits on the exclusive project lock (D3) …
+    // The request waits on the exclusive project lock (ADR-0002) …
     await expect
       .poll(async () => {
         const { rows } = await owner.execute<{ n: number }>(

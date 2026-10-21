@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { checkRecord, type ImportValues, type ValidatedRow } from "./rows";
+import type { ContactField } from "../self-service/values";
 import { addressParts, type ImportIssue, type ImportTarget } from "./targets";
 
-// The import plan (Slice 2 plan 5.11; R6; round 32): what confirming would do with each row.
+// The import plan (process-and-lifecycle.md, Import; round 32): what confirming would do with each row.
 // Pure; matched by the exact Personalnummer, never fuzzy, never an automatic merge.
 
 export const ImportRowOutcome = z.enum(["create", "update", "unchanged", "skip", "error"]);
@@ -13,7 +14,35 @@ export type ExistingParticipant = {
   participationId: string;
   terminal: boolean;
   values: ImportValues & { personnelNumber: string };
+  /** The contact fields the participant wrote, which an import never overwrites (Q112). */
+  participantMaintained?: ReadonlySet<ContactField>;
 };
+
+/** The import targets of each contact field; the address is one unit (round 32). */
+const contactTargets: Record<ContactField, readonly ImportTarget[]> = {
+  address: [...addressParts, "addressCountry"],
+  phone: ["phone"],
+  mobile: ["mobile"],
+  privateEmail: ["privateEmail"],
+};
+
+/** The targets of the participant-maintained fields. */
+const maintainedTargets = (maintained: ReadonlySet<ContactField> = new Set()) =>
+  new Set([...maintained].flatMap((field) => contactTargets[field]));
+
+/**
+ * The row's values without the participant-maintained ones (Q112): what a confirm writes. The
+ * database skips them too.
+ */
+export function writableValues(
+  values: ImportValues,
+  maintained?: ReadonlySet<ContactField>,
+): ImportValues {
+  const skipped = maintainedTargets(maintained);
+  return Object.fromEntries(
+    Object.entries(values).filter(([target]) => !skipped.has(target as ImportTarget)),
+  );
+}
 
 export type PlannedRow = {
   row: number;
@@ -92,21 +121,33 @@ export function planImport(input: {
       return { row, outcome: "skip", participationId: match.participationId, issues: [notice] };
     }
     if (hasError(r.issues)) return { row, outcome: "error", issues: [...r.issues] };
+    const writable = writableValues(values, match?.participantMaintained);
     const record = checkRecord({
       row,
-      values: { ...match?.values, ...values },
-      fromRow: values,
+      values: { ...match?.values, ...writable },
+      fromRow: writable,
       relaxedRuleIds: input.relaxedRuleIds,
     });
     const issues = [...r.issues, ...record];
     if (hasError(record)) return { row, outcome: "error", issues };
     if (!match) return { row, outcome: "create", issues };
     const participationId = match.participationId;
-    const changed = (Object.keys(values) as ImportTarget[]).filter(
-      (target) => values[target] !== match.values[target],
+    const changed = (Object.keys(writable) as ImportTarget[]).filter(
+      (target) => writable[target] !== match.values[target],
     );
+    const maintained = maintainedTargets(match.participantMaintained);
     for (const target of keptTargets(input.mapped, values, match.values)) {
+      const unit = target === "address" ? contactTargets.address : [target];
+      if (unit.some((t) => maintained.has(t))) continue;
       issues.push({ row, target, code: "kept_existing", severity: "warning" });
+    }
+    // A difference to a value the participant wrote is reported by target, never a value (Q112).
+    for (const field of match.participantMaintained ?? []) {
+      const targets = contactTargets[field];
+      if (targets.some((t) => values[t] !== undefined && values[t] !== match.values[t])) {
+        const target = field === "address" ? "address" : (field as ImportTarget);
+        issues.push({ row, target, code: "participant_maintained", severity: "warning" });
+      }
     }
     return changed.length === 0
       ? { row, outcome: "unchanged", participationId, issues }

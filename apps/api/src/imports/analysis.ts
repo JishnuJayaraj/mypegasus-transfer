@@ -32,6 +32,7 @@ import {
   type ImportTarget,
   type ImportValues,
   type ValidatedRow,
+  type ContactField,
 } from "@transfer/domain";
 import { createHash } from "node:crypto";
 import type { Logger } from "pino";
@@ -91,6 +92,8 @@ export type State = {
   existing: ExistingParticipant[];
   /** The stored values by participation, for old values and kept values. */
   stored: Map<string, ImportValues>;
+  /** The contact fields each participant maintains, which the import never overwrites (Q112). */
+  maintained: Map<string, ReadonlySet<ContactField>>;
 };
 
 const valueColumns = [
@@ -141,6 +144,7 @@ export async function loadState(
       mobile: participantDetails.mobile,
       privateEmail: participantDetails.privateEmail,
       workEmail: participantDetails.workEmail,
+      participantMaintained: participantDetails.participantMaintained,
     })
     .from(participation)
     .innerJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
@@ -148,6 +152,7 @@ export async function loadState(
     .where(eq(participation.projectId, projectId));
   const existing: ExistingParticipant[] = [];
   const stored = new Map<string, ImportValues>();
+  const maintained = new Map<string, ReadonlySet<ContactField>>();
   for (const row of rows) {
     const values: ImportValues = {};
     for (const target of valueColumns) {
@@ -155,13 +160,23 @@ export async function loadState(
       if (value !== null) values[target] = value;
     }
     stored.set(row.id, values);
+    const kept = new Set((row.participantMaintained ?? []) as ContactField[]);
+    if (kept.size > 0) maintained.set(row.id, kept);
     existing.push({
       participationId: row.id,
       terminal: terminalMainStatuses.has(row.status),
       values: values as ExistingParticipant["values"],
+      ...(kept.size > 0 && { participantMaintained: kept }),
     });
   }
-  return { type: snapshot.project.type, customerName, relaxedRuleIds, existing, stored };
+  return {
+    type: snapshot.project.type,
+    customerName,
+    relaxedRuleIds,
+    existing,
+    stored,
+    maintained,
+  };
 }
 
 /**
@@ -364,6 +379,12 @@ export function planDigest(plan: ImportPlan, validated: ValidatedRow[], state: S
     values: validated.map((v) => [v.row, v.values]),
     stored: plan.rows.flatMap((r) =>
       r.participationId ? [[r.participationId, state.stored.get(r.participationId) ?? null]] : [],
+    ),
+    // A field the participant started maintaining since the preview changes what is written.
+    maintained: plan.rows.flatMap((r) =>
+      r.participationId
+        ? [[r.participationId, [...(state.maintained.get(r.participationId) ?? [])].toSorted()]]
+        : [],
     ),
     relaxed: [...state.relaxedRuleIds].toSorted(),
     missing: plan.missing,

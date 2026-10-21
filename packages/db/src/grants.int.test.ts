@@ -153,8 +153,10 @@ const statusFunctions = [
   "request_channel_code",
   "add_participant_channel",
   "remove_participant_channel",
-  // Slice 4a (PR 4a-1): the placement Agentur (Q139)
+  // Slice 4a: the placement Agentur (Q139) and the self-service writes (Q138, Q140)
   "set_placement_agentur",
+  "acknowledge_self_service_notice",
+  "write_self_service_data",
 ];
 const helpers = [
   "assert_context",
@@ -202,6 +204,8 @@ const helpers = [
   "verify_one_time_code",
   "participant_account_usable",
   "lock_active_session",
+  "lock_self_service_writer",
+  "keep_notice_acknowledgement_immutable",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

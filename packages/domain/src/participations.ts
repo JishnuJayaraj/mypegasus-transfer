@@ -54,8 +54,14 @@ export const ParticipationPage = page(ParticipationListItem).meta({ id: "Partici
 
 /**
  * Hints derived for the detail, never stored (process-and-lifecycle.md; like the planner's flags).
+ * `placement_agentur_check`: the participant wrote an address after the placement Agentur was
+ * chosen (regional-variation.md, "Placement Agentur"; Q139).
  */
-export const ParticipationHint = z.enum(["tg_start_missed", "new_start_needs_ba_review"]);
+export const ParticipationHint = z.enum([
+  "tg_start_missed",
+  "new_start_needs_ba_review",
+  "placement_agentur_check",
+]);
 export type ParticipationHint = z.infer<typeof ParticipationHint>;
 
 /** Street with house number, postal code, city and country: one unit (round 32). */

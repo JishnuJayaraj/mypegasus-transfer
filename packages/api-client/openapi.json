@@ -1878,7 +1878,8 @@
               "identifier_cell_converted",
               "possible_duplicate",
               "terminal_not_updated",
-              "kept_existing"
+              "kept_existing",
+              "participant_maintained"
             ]
           },
           "severity": {
@@ -2793,7 +2794,8 @@
               "type": "string",
               "enum": [
                 "tg_start_missed",
-                "new_start_needs_ba_review"
+                "new_start_needs_ba_review",
+                "placement_agentur_check"
               ]
             }
           },
@@ -5000,6 +5002,1379 @@
         },
         "required": [
           "sessionEnded"
+        ],
+        "additionalProperties": false
+      },
+      "PortalSelfService": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notice": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "enum": [
+                  "self-service-purposes:v1"
+                ]
+              },
+              "acknowledged": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "version",
+              "acknowledged"
+            ],
+            "additionalProperties": false
+          },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "firstName": {
+                "type": "string"
+              },
+              "lastName": {
+                "type": "string"
+              },
+              "birthDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "firstName",
+              "lastName",
+              "birthDate"
+            ],
+            "additionalProperties": false
+          },
+          "values": {
+            "$ref": "#/components/schemas/SelfServiceValues"
+          },
+          "customValues": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServicePageView"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceMissingItem"
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "notice",
+          "identity",
+          "values",
+          "customValues",
+          "pages",
+          "missing"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServiceValues": {
+        "type": "object",
+        "properties": {
+          "gender": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "male",
+              "female",
+              "diverse",
+              "not_specified",
+              null
+            ]
+          },
+          "maritalStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "single",
+              "married",
+              null
+            ]
+          },
+          "address": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "street": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "postalCode": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "country": {
+                "type": "string",
+                "enum": [
+                  "DE"
+                ]
+              }
+            },
+            "required": [
+              "street",
+              "postalCode",
+              "city",
+              "country"
+            ],
+            "additionalProperties": false
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mobile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "privateEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 254
+          },
+          "educationHistory": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/EducationRow"
+            },
+            "minItems": 1,
+            "maxItems": 20
+          },
+          "workHistory": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WorkRow"
+            },
+            "minItems": 1,
+            "maxItems": 20
+          },
+          "languageSkills": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "german": {
+                "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+              },
+              "others": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "language": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 60
+                    },
+                    "level": {
+                      "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                    }
+                  },
+                  "required": [
+                    "language",
+                    "level"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 9
+              }
+            },
+            "required": [
+              "german",
+              "others"
+            ],
+            "additionalProperties": false
+          },
+          "drivingLicence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DrivingLicenceClass"
+                },
+                "minItems": 1,
+                "maxItems": 16
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vehicleAvailable": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "workingTimePreferences": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "employmentType": {
+                "$ref": "#/components/schemas/SelfServiceEmploymentType"
+              },
+              "weeklyHours": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 1,
+                "maximum": 60
+              },
+              "distribution": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "required": [
+              "employmentType",
+              "weeklyHours",
+              "distribution"
+            ],
+            "additionalProperties": false
+          },
+          "jobWishes": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "desired": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "alternative": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "desired",
+              "alternative"
+            ],
+            "additionalProperties": false
+          },
+          "desiredWorkLocations": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "maxCommuteDistance": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "km"
+                    ]
+                  },
+                  "km": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 1000
+                  }
+                },
+                "required": [
+                  "kind",
+                  "km"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "nationwide"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "international"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "earliestStartDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "gender",
+          "maritalStatus",
+          "address",
+          "phone",
+          "mobile",
+          "privateEmail",
+          "educationHistory",
+          "workHistory",
+          "languageSkills",
+          "drivingLicence",
+          "vehicleAvailable",
+          "workingTimePreferences",
+          "jobWishes",
+          "desiredWorkLocations",
+          "maxCommuteDistance",
+          "earliestStartDate"
+        ],
+        "additionalProperties": false
+      },
+      "EducationRow": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "institution": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "qualification": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "completed": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "institution",
+          "qualification",
+          "completed"
+        ],
+        "additionalProperties": false
+      },
+      "WorkRow": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "employer": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "activity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "employer",
+          "activity"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServiceLanguageLevel": {
+        "type": "string",
+        "enum": [
+          "basic",
+          "extended",
+          "business_fluent"
+        ]
+      },
+      "DrivingLicenceClass": {
+        "type": "string",
+        "enum": [
+          "AM",
+          "A1",
+          "A2",
+          "A",
+          "B",
+          "BE",
+          "C1",
+          "C1E",
+          "C",
+          "CE",
+          "D1",
+          "D1E",
+          "D",
+          "DE",
+          "L",
+          "T"
+        ]
+      },
+      "SelfServiceEmploymentType": {
+        "type": "string",
+        "enum": [
+          "full_time",
+          "part_time"
+        ]
+      },
+      "SelfServicePageView": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "$ref": "#/components/schemas/SelfServicePage"
+          },
+          "sensitive": {
+            "type": "boolean"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceField"
+            }
+          }
+        },
+        "required": [
+          "page",
+          "sensitive",
+          "complete",
+          "fields"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServicePage": {
+        "type": "string",
+        "enum": [
+          "personal",
+          "contact",
+          "ba_details",
+          "education",
+          "work_history",
+          "languages_mobility",
+          "job_wish",
+          "health",
+          "further"
+        ]
+      },
+      "SelfServiceField": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "helpText": {
+            "type": "object",
+            "properties": {
+              "de": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "custom": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "object",
+                "properties": {
+                  "de": {
+                    "type": "string"
+                  },
+                  "en": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "de"
+                ],
+                "additionalProperties": false
+              },
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            },
+            "required": [
+              "label",
+              "schema"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "key",
+          "required"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServiceMissingItem": {
+        "type": "object",
+        "properties": {
+          "step": {
+            "type": "string",
+            "enum": [
+              "asu_registration",
+              "data_collection",
+              "profiling",
+              "agentur_submission",
+              "dsv",
+              "project_checklist"
+            ]
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "field",
+              "document"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "not_accepted"
+            ]
+          }
+        },
+        "required": [
+          "step",
+          "ruleId",
+          "kind",
+          "key",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "PortalSelfServiceWrite": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notice": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "enum": [
+                  "self-service-purposes:v1"
+                ]
+              },
+              "acknowledged": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "version",
+              "acknowledged"
+            ],
+            "additionalProperties": false
+          },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "firstName": {
+                "type": "string"
+              },
+              "lastName": {
+                "type": "string"
+              },
+              "birthDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "firstName",
+              "lastName",
+              "birthDate"
+            ],
+            "additionalProperties": false
+          },
+          "values": {
+            "$ref": "#/components/schemas/SelfServiceValues"
+          },
+          "customValues": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServicePageView"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceMissingItem"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceWarning"
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "notice",
+          "identity",
+          "values",
+          "customValues",
+          "pages",
+          "missing",
+          "warnings"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServiceWarning": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "from_after_to"
+            ]
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "code",
+          "path"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServiceConfidentialPage": {
+        "type": "string",
+        "enum": [
+          "personal",
+          "contact",
+          "education",
+          "work_history",
+          "languages_mobility",
+          "job_wish",
+          "further"
+        ]
+      },
+      "SelfServicePageInput": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "The page's fields (SelfServiceValues for the catalog pages, the custom fields on `further`); a field absent or null is empty. Unknown keys are refused."
+          }
+        },
+        "required": [
+          "revision",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "SelfServiceNoticeInput": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "enum": [
+              "self-service-purposes:v1"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "language"
+        ],
+        "additionalProperties": false
+      },
+      "PortalConsents": {
+        "type": "object",
+        "properties": {
+          "consents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PortalConsent"
+            }
+          }
+        },
+        "required": [
+          "consents"
+        ],
+        "additionalProperties": false
+      },
+      "PortalConsent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "portal_contact",
+              "kug200b_profile_access"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "portal",
+              "paper_form"
+            ]
+          },
+          "textVersion": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          },
+          "channelId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "givenAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "endedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "endReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "revoked",
+              "lost_access_replaced",
+              null
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "purpose",
+          "source",
+          "textVersion",
+          "language",
+          "channelId",
+          "givenAt",
+          "endedAt",
+          "endReason"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipationSelfService": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "notice": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "enum": [
+                  "self-service-purposes:v1"
+                ]
+              },
+              "acknowledgedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "version",
+              "acknowledgedAt"
+            ],
+            "additionalProperties": false
+          },
+          "values": {
+            "type": "object",
+            "properties": {
+              "gender": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "male",
+                  "female",
+                  "diverse",
+                  "not_specified",
+                  null
+                ]
+              },
+              "maritalStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "single",
+                  "married",
+                  null
+                ]
+              },
+              "address": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "street": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "postalCode": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "DE"
+                    ]
+                  }
+                },
+                "required": [
+                  "street",
+                  "postalCode",
+                  "city",
+                  "country"
+                ],
+                "additionalProperties": false
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mobile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "privateEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 254
+              },
+              "educationHistory": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/EducationRow"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "workHistory": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/WorkRow"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "languageSkills": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "german": {
+                    "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                  },
+                  "others": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "language": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 60
+                        },
+                        "level": {
+                          "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                        }
+                      },
+                      "required": [
+                        "language",
+                        "level"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 9
+                  }
+                },
+                "required": [
+                  "german",
+                  "others"
+                ],
+                "additionalProperties": false
+              },
+              "drivingLicence": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DrivingLicenceClass"
+                    },
+                    "minItems": 1,
+                    "maxItems": 16
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "vehicleAvailable": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "workingTimePreferences": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "employmentType": {
+                    "$ref": "#/components/schemas/SelfServiceEmploymentType"
+                  },
+                  "weeklyHours": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 60
+                  },
+                  "distribution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "employmentType",
+                  "weeklyHours",
+                  "distribution"
+                ],
+                "additionalProperties": false
+              },
+              "jobWishes": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "desired": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "alternative": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "desired",
+                  "alternative"
+                ],
+                "additionalProperties": false
+              },
+              "desiredWorkLocations": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "maxCommuteDistance": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "km"
+                        ]
+                      },
+                      "km": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "km"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "nationwide"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "international"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "earliestStartDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "customValues": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "participantMaintained": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "address",
+                "phone",
+                "mobile",
+                "privateEmail"
+              ]
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceMissingItem"
+            }
+          }
+        },
+        "required": [
+          "participationId",
+          "revision",
+          "updatedAt",
+          "notice",
+          "values",
+          "customValues",
+          "participantMaintained",
+          "missing"
         ],
         "additionalProperties": false
       },
@@ -10551,6 +11926,270 @@
           },
           "429": {
             "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/self-service": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The wizard: pages with their fields and requirements, the confidential values, missing items (codes), the notice state and the revision",
+        "responses": {
+          "200": {
+            "description": "The wizard state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSelfService"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/self-service/pages/{page}": {
+      "put": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Save one confidential page whole into the real fields; 409 stale_revision or notice_required",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SelfServiceConfidentialPage"
+            },
+            "required": true,
+            "name": "page",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServicePageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the state, with warnings on what was saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSelfServiceWrite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/self-service/notice": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Acknowledge the purposes notice (not a consent); once per version",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServiceNoticeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Acknowledged"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/consents": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The participant's own consents: purpose, source, version, given and ended",
+        "responses": {
+          "200": {
+            "description": "The consents, oldest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalConsents"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/self-service": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The participant's self-service data as the viewer may read it (normal mode), the maintained contact fields and the missing items (codes)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The self-service data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSelfService"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/problem+json": {
                 "schema": {

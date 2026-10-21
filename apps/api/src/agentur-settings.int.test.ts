@@ -1,5 +1,5 @@
 import { ManualClock } from "@transfer/adapters";
-import { canonicalHash, loadTemplate } from "@transfer/config/load";
+import { canonicalHash, loadTemplate, loadBaseDefaults } from "@transfer/config/load";
 import {
   auditEvent,
   createDb,
@@ -16,8 +16,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { auditContext } from "./sql";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
-// Slice 2 plan 5.3, 5.4, 5.9 and 5.12 (PR 2d-1): Agentur-scoped settings as override versions
-// (round 8, Q93, R14; AC-14, AC-16).
+// Version 2 adds the TL 407 rules (regional-variation.md, base defaults).
+const baseDefaultsVersion = loadBaseDefaults().version;
+
+// Agentur-scoped settings as override versions (regional-variation.md, Agentur-scoped settings;
+// round 8, Q93).
 const { app, db } = testApp({ clock: new ManualClock(new Date("2026-10-17T10:00:00Z")) });
 const owner = createDb(testDatabaseUrls().owner);
 const auth: Record<string, { Cookie: string }> = {};
@@ -97,7 +100,7 @@ describe("PUT …/config/agentur-settings/{agenturKey} (AC-14)", () => {
       ],
       relaxations: [],
     });
-    // The snapshot resolves with the override (R11): Nord's missing key is supplied; Süd keeps
+    // The snapshot resolves with the override (regional-variation.md, snapshot): Nord's missing key is supplied; Süd keeps
     // its template's values and blockers.
     expect(config.agenturen).toEqual([
       { agenturKey: nord, blockers: [], warnings: [] },
@@ -116,7 +119,7 @@ describe("PUT …/config/agentur-settings/{agenturKey} (AC-14)", () => {
           agenturKey: nord,
           settingKeys: ["agentur_submission.leadTimeDays"],
           source: "phone_call_agentur",
-          baseDefaultsVersion: 1,
+          baseDefaultsVersion,
         },
       },
     ]);
@@ -223,7 +226,7 @@ describe("DELETE …/config/agentur-settings/{agenturKey}", () => {
       change: "agentur_setting_removed",
       agenturKey: nord,
       settingKeys: ["agentur_submission.leadTimeDays"],
-      baseDefaultsVersion: 1,
+      baseDefaultsVersion,
     });
   });
 
@@ -243,7 +246,7 @@ describe("DELETE …/config/agentur-settings/{agenturKey}", () => {
 describe("the override across every pinned chain (5.9, AC-16)", () => {
   it("refuses a pin that would make the current override invalid, with the issues", async () => {
     // An override field that Nord's template declares too: a synthetic state inserted as the
-    // owner, since no function writes override fields before the admin UI (R13, round 27).
+    // owner, since no function writes override fields before the admin UI (round 27).
     const content = {
       schemaVersion: 1,
       kind: "project_override",

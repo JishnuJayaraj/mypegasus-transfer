@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { planImport, type ExistingParticipant } from "./plan";
+import { planImport, writableValues, type ExistingParticipant } from "./plan";
 import { validateRow, type ImportCell, type ImportValues, type ValidatedRow } from "./rows";
 import type { ImportTarget } from "./targets";
 
-// Slice 2 plan 5.11 (AC-25; R6): the duplicate and update plan. Synthetic values only (D8).
+// The duplicate and update plan (process-and-lifecycle.md, Import). Synthetic values only.
 const none = new Set<string>();
 const relaxed = new Set([
   "base-import-birthDate",
@@ -278,5 +278,77 @@ describe("validateRow → planImport", () => {
       [existing("p1", stored, true)],
     );
     expect(codes(terminal)).toEqual([["skip", "null:terminal_not_updated"]]);
+  });
+});
+
+describe("participant-maintained contact fields (Q112)", () => {
+  const stored = {
+    ...existing("p-1", person("BSP-0001", { phone: "030 1234567", mobile: "0171 3920000" })),
+    participantMaintained: new Set(["address", "mobile"] as const),
+  };
+
+  it("never overwrites them and reports a differing value by target, never the value", () => {
+    const result = plan(
+      [
+        row(
+          2,
+          person("BSP-0001", {
+            addressStreet: "Neuer Weg 2",
+            mobile: "0171 9999999",
+            phone: "030 7654321",
+          }),
+        ),
+      ],
+      [stored],
+    );
+    expect(result.rows).toEqual([
+      {
+        row: 2,
+        outcome: "update",
+        participationId: "p-1",
+        changed: ["phone"],
+        issues: [
+          { row: 2, target: "address", code: "participant_maintained", severity: "warning" },
+          { row: 2, target: "mobile", code: "participant_maintained", severity: "warning" },
+        ],
+      },
+    ]);
+  });
+
+  it("is unchanged when only maintained fields differ, and quiet when they match", () => {
+    const differs = plan([row(2, person("BSP-0001", { mobile: "0171 1" }))], [stored]);
+    expect(codes(differs)).toEqual([
+      ["unchanged", "phone:kept_existing", "mobile:participant_maintained"],
+    ]);
+    const same = plan([row(2, person("BSP-0001", { mobile: "0171 3920000" }))], [stored]);
+    expect(codes(same)).toEqual([["unchanged", "phone:kept_existing"]]);
+  });
+
+  it("keeps a maintained value for an empty cell without the kept notice", () => {
+    const { addressStreet: _street, ...withoutAddress } = person("BSP-0001");
+    const result = plan(
+      [row(2, { ...withoutAddress, addressPostalCode: undefined, addressCity: undefined })],
+      [stored],
+    );
+    expect(codes(result)).toEqual([["unchanged", "phone:kept_existing"]]);
+  });
+});
+
+describe("writableValues", () => {
+  it("drops the maintained targets, the address as a unit", () => {
+    expect(
+      writableValues(
+        person("BSP-0001", { phone: "030 1", mobile: "0171 2" }),
+        new Set(["address", "phone"]),
+      ),
+    ).toEqual({
+      personnelNumber: "BSP-0001",
+      lastName: "Mustermann",
+      firstName: "Person BSP-0001",
+      birthDate: "1970-02-01",
+      oldEmploymentEndDate: "2027-03-31",
+      mobile: "0171 2",
+    });
+    expect(writableValues({ phone: "030 1" })).toEqual({ phone: "030 1" });
   });
 });

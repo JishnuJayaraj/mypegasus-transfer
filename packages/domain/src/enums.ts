@@ -16,7 +16,7 @@ export const OrgRole = z
   .meta({ id: "OrgRole" });
 export type OrgRole = z.infer<typeof OrgRole>;
 
-/** Project roles: zero or more per person and project; permissions are the union (D6, Q61). */
+/** Project roles: zero or more per person and project; permissions are the union (Q61). */
 export const ProjectRole = z
   .enum(["project_lead", "consultant", "back_office"])
   .meta({ id: "ProjectRole" });
@@ -30,5 +30,8 @@ export const ParticipantRetentionClass = z.enum([
   "participation_record",
   "personnel_file",
   "evidence_set",
+  // The structured health and disability yes/no answers: 3 months after exit or with the
+  // non-signer deletion (data-protection.md, retention; Q141)
+  "health_record",
 ]);
 export type ParticipantRetentionClass = z.infer<typeof ParticipantRetentionClass>;

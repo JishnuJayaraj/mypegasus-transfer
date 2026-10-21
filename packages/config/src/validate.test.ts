@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseLayer } from "./validate";
 
-// Fictional Agenturen and staff ids only (D8).
+// Fictional Agenturen and staff ids only.
 const staffId = "00000000-0000-4000-8000-000000000001";
 const nationwide = {
   asuDueDate: { monthsBeforeEnd: 3, daysAfterKnowledge: 3 },
@@ -34,6 +34,8 @@ const customField = {
   "x-retentionClass": "participation_record",
   "x-label": { de: "Zusatznachweis" },
 };
+
+const texts = (de: Record<string, string>) => issues({ ...template, helpTexts: { de } });
 
 function issues(input: unknown, inheritedFields?: ReadonlySet<string>) {
   const result = parseLayer(input, inheritedFields && { inheritedFields });
@@ -90,6 +92,18 @@ describe("layers of one schema", () => {
         ],
       }),
     ).toEqual([]);
+  });
+
+  it("takes help texts per self-service field, its key keeping its case", () => {
+    expect(
+      texts({
+        "self_service.educationHistory": "Höchster Abschluss zuerst",
+        "self_service.custom.zusatznachweis_nr": "Steht auf dem Nachweis",
+      }),
+    ).toEqual([]);
+    for (const key of ["self_service", "Self_service.gender", "self_service.Gender"]) {
+      expect(texts({ [key]: "x" })).not.toEqual([]);
+    }
   });
 
   it("returns the parsed layer", () => {

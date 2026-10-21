@@ -28,7 +28,7 @@ import { seedTemplatePins } from "./projects/seed";
 import { loadRelease } from "./projects/template-pins";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
-// Slice 2 plan 5.4, 5.8 and 5.12 (PR 2c-2): the project's configuration and its pins.
+// The project's configuration and its pins (regional-variation.md, template versions, snapshot).
 const { app, db } = testApp();
 const owner = createDb(testDatabaseUrls().owner);
 const auth: Record<string, { Cookie: string }> = {};
@@ -92,7 +92,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
     });
   });
 
-  // Members and global org roles read the configuration (5.4, R9), without pinning (round 26).
+  // Members and global org roles read the configuration (Q106), without pinning (round 26).
   it.each(["consultant", "backOffice", "admin", "regionalAdmin", "regionalOperationsManager"])(
     "is readable by %s, who may not pin",
     async (user) => {
@@ -173,9 +173,9 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
       pins: [
         {
           agenturKey: "beispielstadt-nord",
-          version: 2,
+          version: 3,
           label: { de: "Agentur für Arbeit Beispielstadt Nord (Beispiel)" },
-          sha256Prefix: prefixOf("beispielstadt-nord", 2),
+          sha256Prefix: prefixOf("beispielstadt-nord", 3),
           pinnedBy: seedStaffUserIds.projectLead,
         },
       ],
@@ -195,7 +195,7 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
     expect(events.slice(-2)).toEqual([
       {
         type: "config_template_pinned",
-        details: { agenturKey: "beispielstadt-nord", version: 2, baseDefaultsVersion },
+        details: { agenturKey: "beispielstadt-nord", version: 3, baseDefaultsVersion },
         requestId: expect.any(String),
       },
       {

@@ -92,6 +92,7 @@ describe("audit event types (ADR-0002)", () => {
       "consent_ended",
       "contact_channels_suspended",
       "placement_agentur_set",
+      "self_service_notice_acknowledged",
     ]);
   });
 
@@ -142,6 +143,7 @@ describe("audit event types (ADR-0002)", () => {
       "consent_ended",
       "contact_channels_suspended",
       "placement_agentur_set",
+      "self_service_notice_acknowledged",
     ]);
   });
 
@@ -1183,5 +1185,62 @@ describe("placement_agentur_set (Q139)", () => {
         details: { agenturKey: "nord", baseDefaultsVersion: 1 },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("self-service events (Q138, Q112)", () => {
+  const participant = { type: "participant", participationId } as const;
+
+  it("name the profile and custom fields a participant wrote, never a value", () => {
+    const written = { ...base, type: "participant_data_changed", actor: participant };
+    const fields = ["gender", "educationHistory", "mobile", "custom.beispiel_nr"];
+    expect(issueCodes({ ...written, details: { fields } })).toEqual([]);
+    for (const bad of [["nationality"], ["healthRestrictions"], ["custom.Nr"], ["gender", 1]]) {
+      expect(AuditEvent.safeParse({ ...written, details: { fields: bad } }).success).toBe(false);
+    }
+  });
+
+  it("record the purposes notice acknowledged, with version and language", () => {
+    const acknowledged = {
+      ...base,
+      type: "self_service_notice_acknowledged",
+      actor: participant,
+      details: {
+        acknowledgementId: otherId,
+        noticeVersion: "self-service-purposes:v1",
+        language: "en",
+      },
+    };
+    expect(issueCodes(acknowledged)).toEqual([]);
+    expect(
+      AuditEvent.safeParse({ ...acknowledged, details: { ...acknowledged.details, text: "x" } })
+        .success,
+    ).toBe(false);
+  });
+
+  it("tie a consent's channel to the portal contact purpose", () => {
+    const given = {
+      ...base,
+      type: "consent_given",
+      actor: user,
+      details: {
+        consentId: otherId,
+        purpose: "kug200b_profile_access",
+        textVersion: "kug200b:v1",
+        language: "de",
+      },
+    };
+    expect(issueCodes(given)).toEqual([]);
+    expect(issueCodes({ ...given, details: { ...given.details, channelId: otherId } })).toEqual([
+      "channel_mismatch",
+    ]);
+    expect(
+      issueCodes({
+        ...given,
+        type: "consent_ended",
+        reasonCode: "revoked",
+        details: { consentId: otherId, purpose: "portal_contact" },
+      }),
+    ).toEqual(["channel_mismatch"]);
   });
 });

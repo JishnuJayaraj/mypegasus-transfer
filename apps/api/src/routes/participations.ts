@@ -244,6 +244,7 @@ export function participationRoutes(deps: Deps) {
         details: participantDetails,
         receivedOn: sql<string>`to_char(${participation.createdAt} at time zone 'Europe/Berlin', 'YYYY-MM-DD')`,
         placementAgenturSetAt: utc(participation.placementAgenturSetAt),
+        participantAddressWrittenAt: utc(participantDetails.participantAddressWrittenAt),
       })
       .from(participation)
       .innerJoin(project, eq(project.id, participation.projectId))
@@ -353,6 +354,7 @@ export function participationRoutes(deps: Deps) {
               )
             : [],
         },
+        participantAddressWrittenAt: row.participantAddressWrittenAt,
         wave,
         dates: {
           ...dates,

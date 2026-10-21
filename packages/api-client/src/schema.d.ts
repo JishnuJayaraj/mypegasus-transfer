@@ -5274,6 +5274,313 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/self-service": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The wizard: pages with their fields and requirements, the confidential values, missing items (codes), the notice state and the revision */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The wizard state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalSelfService"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/self-service/pages/{page}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save one confidential page whole into the real fields; 409 stale_revision or notice_required */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    page: components["schemas"]["SelfServiceConfidentialPage"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SelfServicePageInput"];
+                };
+            };
+            responses: {
+                /** @description Saved; the state, with warnings on what was saved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalSelfServiceWrite"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/self-service/notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge the purposes notice (not a consent); once per version */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SelfServiceNoticeInput"];
+                };
+            };
+            responses: {
+                /** @description Acknowledged */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participant's own consents: purpose, source, version, given and ended */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The consents, oldest first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalConsents"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/self-service": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participant's self-service data as the viewer may read it (normal mode), the maintained contact fields and the missing items (codes) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The self-service data */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationSelfService"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/outbox": {
         parameters: {
             query?: never;
@@ -5975,7 +6282,7 @@ export interface components {
             /** @enum {string|null} */
             target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address" | null;
             /** @enum {string} */
-            code: "required_missing" | "invalid_date" | "date_has_time" | "birth_date_in_future" | "end_before_birth" | "too_long" | "control_characters" | "invalid_cell_type" | "duplicate_in_file" | "identifier_cell_numeric" | "postal_code_invalid" | "foreign_address_unsupported" | "country_required" | "country_source_conflict" | "address_incomplete" | "target_mapped_twice" | "age_implausible" | "value_invalid_dropped" | "identifier_cell_converted" | "possible_duplicate" | "terminal_not_updated" | "kept_existing";
+            code: "required_missing" | "invalid_date" | "date_has_time" | "birth_date_in_future" | "end_before_birth" | "too_long" | "control_characters" | "invalid_cell_type" | "duplicate_in_file" | "identifier_cell_numeric" | "postal_code_invalid" | "foreign_address_unsupported" | "country_required" | "country_source_conflict" | "address_incomplete" | "target_mapped_twice" | "age_implausible" | "value_invalid_dropped" | "identifier_cell_converted" | "possible_duplicate" | "terminal_not_updated" | "kept_existing" | "participant_maintained";
             /** @enum {string} */
             severity: "error" | "warning";
         };
@@ -6221,7 +6528,7 @@ export interface components {
                  */
                 profilingDoneOn: string | null;
             };
-            hints: ("tg_start_missed" | "new_start_needs_ba_review")[];
+            hints: ("tg_start_missed" | "new_start_needs_ba_review" | "placement_agentur_check")[];
             placementAgenturKey: string | null;
             /**
              * Format: date-time
@@ -6846,6 +7153,309 @@ export interface components {
         };
         ChannelRemovalResult: {
             sessionEnded: boolean;
+        };
+        PortalSelfService: {
+            revision: number;
+            notice: {
+                /** @enum {string} */
+                version: "self-service-purposes:v1";
+                acknowledged: boolean;
+            };
+            identity: {
+                firstName: string;
+                lastName: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                birthDate: string | null;
+            };
+            values: components["schemas"]["SelfServiceValues"];
+            customValues: {
+                [key: string]: string | number | boolean | null;
+            };
+            pages: components["schemas"]["SelfServicePageView"][];
+            missing: components["schemas"]["SelfServiceMissingItem"][];
+        };
+        SelfServiceValues: {
+            /** @enum {string|null} */
+            gender: "male" | "female" | "diverse" | "not_specified" | null;
+            /** @enum {string|null} */
+            maritalStatus: "single" | "married" | null;
+            address: {
+                street: string;
+                postalCode: string;
+                city: string;
+                /** @enum {string} */
+                country: "DE";
+            } | null;
+            phone: string | null;
+            mobile: string | null;
+            privateEmail: string | null;
+            educationHistory: components["schemas"]["EducationRow"][] | null;
+            workHistory: components["schemas"]["WorkRow"][] | null;
+            languageSkills: {
+                german: components["schemas"]["SelfServiceLanguageLevel"];
+                others: {
+                    language: string;
+                    level: components["schemas"]["SelfServiceLanguageLevel"];
+                }[];
+            } | null;
+            drivingLicence: "none" | components["schemas"]["DrivingLicenceClass"][] | null;
+            vehicleAvailable: boolean | null;
+            workingTimePreferences: {
+                employmentType: components["schemas"]["SelfServiceEmploymentType"];
+                weeklyHours: number | null;
+                distribution: string | null;
+            } | null;
+            jobWishes: {
+                desired: string;
+                alternative: string | null;
+            } | null;
+            desiredWorkLocations: string | null;
+            maxCommuteDistance: {
+                /** @enum {string} */
+                kind: "km";
+                km: number;
+            } | {
+                /** @enum {string} */
+                kind: "nationwide";
+            } | {
+                /** @enum {string} */
+                kind: "international";
+            } | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            earliestStartDate: string | null;
+        };
+        EducationRow: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            to: string | null;
+            institution: string;
+            qualification: string;
+            completed: boolean | null;
+        };
+        WorkRow: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            to: string | null;
+            employer: string;
+            activity: string;
+        };
+        /** @enum {string} */
+        SelfServiceLanguageLevel: "basic" | "extended" | "business_fluent";
+        /** @enum {string} */
+        DrivingLicenceClass: "AM" | "A1" | "A2" | "A" | "B" | "BE" | "C1" | "C1E" | "C" | "CE" | "D1" | "D1E" | "D" | "DE" | "L" | "T";
+        /** @enum {string} */
+        SelfServiceEmploymentType: "full_time" | "part_time";
+        SelfServicePageView: {
+            page: components["schemas"]["SelfServicePage"];
+            sensitive: boolean;
+            complete: boolean;
+            fields: components["schemas"]["SelfServiceField"][];
+        };
+        /** @enum {string} */
+        SelfServicePage: "personal" | "contact" | "ba_details" | "education" | "work_history" | "languages_mobility" | "job_wish" | "health" | "further";
+        SelfServiceField: {
+            key: string;
+            required: boolean;
+            helpText?: {
+                de?: string;
+                en?: string;
+            };
+            custom?: {
+                label: {
+                    de: string;
+                    en?: string;
+                };
+                schema: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        SelfServiceMissingItem: {
+            /** @enum {string} */
+            step: "asu_registration" | "data_collection" | "profiling" | "agentur_submission" | "dsv" | "project_checklist";
+            ruleId: string;
+            /** @enum {string} */
+            kind: "field" | "document";
+            key: string;
+            /** @enum {string} */
+            reason: "missing" | "not_accepted";
+        };
+        PortalSelfServiceWrite: {
+            revision: number;
+            notice: {
+                /** @enum {string} */
+                version: "self-service-purposes:v1";
+                acknowledged: boolean;
+            };
+            identity: {
+                firstName: string;
+                lastName: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                birthDate: string | null;
+            };
+            values: components["schemas"]["SelfServiceValues"];
+            customValues: {
+                [key: string]: string | number | boolean | null;
+            };
+            pages: components["schemas"]["SelfServicePageView"][];
+            missing: components["schemas"]["SelfServiceMissingItem"][];
+            warnings: components["schemas"]["SelfServiceWarning"][];
+        };
+        SelfServiceWarning: {
+            /** @enum {string} */
+            code: "from_after_to";
+            path: (string | number)[];
+        };
+        /** @enum {string} */
+        SelfServiceConfidentialPage: "personal" | "contact" | "education" | "work_history" | "languages_mobility" | "job_wish" | "further";
+        SelfServicePageInput: {
+            revision: number;
+            /** @description The page's fields (SelfServiceValues for the catalog pages, the custom fields on `further`); a field absent or null is empty. Unknown keys are refused. */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        SelfServiceNoticeInput: {
+            /** @enum {string} */
+            version: "self-service-purposes:v1";
+            /** @enum {string} */
+            language: "de" | "en";
+        };
+        PortalConsents: {
+            consents: components["schemas"]["PortalConsent"][];
+        };
+        PortalConsent: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            purpose: "portal_contact" | "kug200b_profile_access";
+            /** @enum {string} */
+            source: "portal" | "paper_form";
+            textVersion: string;
+            /** @enum {string} */
+            language: "de" | "en";
+            /** Format: uuid */
+            channelId: string | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            givenAt: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            endedAt: string | null;
+            /** @enum {string|null} */
+            endReason: "revoked" | "lost_access_replaced" | null;
+        };
+        ParticipationSelfService: {
+            /** Format: uuid */
+            participationId: string;
+            revision: number;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            updatedAt: string | null;
+            notice: {
+                /** @enum {string} */
+                version: "self-service-purposes:v1";
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                acknowledgedAt: string | null;
+            };
+            values: {
+                /** @enum {string|null} */
+                gender?: "male" | "female" | "diverse" | "not_specified" | null;
+                /** @enum {string|null} */
+                maritalStatus?: "single" | "married" | null;
+                address?: {
+                    street: string;
+                    postalCode: string;
+                    city: string;
+                    /** @enum {string} */
+                    country: "DE";
+                } | null;
+                phone?: string | null;
+                mobile?: string | null;
+                privateEmail?: string | null;
+                educationHistory?: components["schemas"]["EducationRow"][] | null;
+                workHistory?: components["schemas"]["WorkRow"][] | null;
+                languageSkills?: {
+                    german: components["schemas"]["SelfServiceLanguageLevel"];
+                    others: {
+                        language: string;
+                        level: components["schemas"]["SelfServiceLanguageLevel"];
+                    }[];
+                } | null;
+                drivingLicence?: "none" | components["schemas"]["DrivingLicenceClass"][] | null;
+                vehicleAvailable?: boolean | null;
+                workingTimePreferences?: {
+                    employmentType: components["schemas"]["SelfServiceEmploymentType"];
+                    weeklyHours: number | null;
+                    distribution: string | null;
+                } | null;
+                jobWishes?: {
+                    desired: string;
+                    alternative: string | null;
+                } | null;
+                desiredWorkLocations?: string | null;
+                maxCommuteDistance?: {
+                    /** @enum {string} */
+                    kind: "km";
+                    km: number;
+                } | {
+                    /** @enum {string} */
+                    kind: "nationwide";
+                } | {
+                    /** @enum {string} */
+                    kind: "international";
+                } | null;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                earliestStartDate?: string | null;
+            };
+            customValues: {
+                [key: string]: string | number | boolean | null;
+            };
+            participantMaintained: ("address" | "phone" | "mobile" | "privateEmail")[];
+            missing: components["schemas"]["SelfServiceMissingItem"][];
         };
         DevStaffUser: {
             /** Format: uuid */

@@ -209,7 +209,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][A-Za-z0-9_]*)+$"
               },
               "additionalProperties": {
                 "type": "string",
@@ -221,7 +221,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][A-Za-z0-9_]*)+$"
               },
               "additionalProperties": {
                 "type": "string",
@@ -517,7 +517,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][A-Za-z0-9_]*)+$"
               },
               "additionalProperties": {
                 "type": "string",
@@ -529,7 +529,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][A-Za-z0-9_]*)+$"
               },
               "additionalProperties": {
                 "type": "string",
@@ -710,7 +710,8 @@
                 "enum": [
                   "participation_record",
                   "personnel_file",
-                  "evidence_set"
+                  "evidence_set",
+                  "health_record"
                 ]
               },
               "x-label": {
@@ -958,7 +959,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][A-Za-z0-9_]*)+$"
               },
               "additionalProperties": {
                 "type": "string",
@@ -970,7 +971,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$"
+                "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][A-Za-z0-9_]*)+$"
               },
               "additionalProperties": {
                 "type": "string",
@@ -1159,7 +1160,8 @@
                 "enum": [
                   "participation_record",
                   "personnel_file",
-                  "evidence_set"
+                  "evidence_set",
+                  "health_record"
                 ]
               },
               "x-label": {

@@ -25,6 +25,7 @@ import {
   ActivationPurpose,
   ChannelVerification,
   ConsentPurpose,
+  type ConsentPurpose as ConsentPurposeValue,
   OneTimeCodePurpose,
   ChannelRemovalReason,
   ChannelSuspensionReason,
@@ -33,6 +34,11 @@ import {
 } from "../activation/model";
 import { IdentityAssurance } from "../activation/steps";
 import { NoticeLanguage } from "../notices/catalog";
+import {
+  contactFields,
+  selfServiceValueSchemas,
+  type SelfServiceField,
+} from "../self-service/values";
 import {
   DsvStatus,
   EndReason,
@@ -114,6 +120,8 @@ export const AuditEventType = z.enum([
   "contact_channels_suspended",
   // Slice 4a, written only by `set_placement_agentur` (Q139)
   "placement_agentur_set",
+  // Slice 4a, written only by `acknowledge_self_service_notice` (Q138)
+  "self_service_notice_acknowledged",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -181,6 +189,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "consent_ended",
   "contact_channels_suspended",
   "placement_agentur_set",
+  "self_service_notice_acknowledged",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -203,6 +212,25 @@ const correlationId = z.string().regex(/^[A-Za-z0-9_.:-]{1,64}$/);
 const systemJob = z.string().regex(/^[a-z][a-z0-9_.-]{0,62}$/);
 /** The base-defaults version of a configuration-dependent event (Q107). */
 const baseDefaultsVersion = z.int().min(1);
+/** The profile fields a self-service write names (self-service/values.ts). */
+const ProfileField = z.enum(
+  (Object.keys(selfServiceValueSchemas) as SelfServiceField[]).filter(
+    (key) => !(contactFields as readonly string[]).includes(key),
+  ) as [SelfServiceField, ...SelfServiceField[]],
+);
+/** A custom field's key (regional-variation.md, custom fields). */
+const CustomFieldKey = z.string().regex(/^custom\.[a-z][a-z0-9_]{0,62}$/);
+
+/** A channel exactly for the portal contact purpose (data-protection.md, consents). */
+const channelOfPurpose = (
+  details: { purpose: ConsentPurposeValue; channelId?: string | undefined },
+  ctx: Issue,
+) => {
+  if ((details.purpose === "portal_contact") !== (details.channelId !== undefined)) {
+    issue(ctx, "channel_mismatch");
+  }
+};
+
 /** A field key (`healthRestrictions`, `custom.…`) or document type. */
 const resourceKey = z.string().regex(/^[A-Za-z][A-Za-z0-9_.]{0,99}$/);
 
@@ -529,7 +557,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
    */
   event("participant_data_changed", {
     ...ofParticipation,
-    details: z.strictObject({ fields: z.array(ParticipantDataField).min(1) }),
+    details: z.strictObject({
+      fields: z.array(z.union([ParticipantDataField, ProfileField, CustomFieldKey])).min(1),
+    }),
   }),
   /**
    * A confirmed import (process-and-lifecycle.md, Import): the counts and the base-defaults
@@ -646,13 +676,15 @@ export const AuditEvent = z.discriminatedUnion("type", [
    */
   event("consent_given", {
     ...ofParticipation,
-    details: z.strictObject({
-      consentId: z.uuid(),
-      channelId: z.uuid(),
-      purpose: ConsentPurpose,
-      textVersion,
-      language: NoticeLanguage,
-    }),
+    details: z
+      .strictObject({
+        consentId: z.uuid(),
+        channelId: z.uuid().optional(),
+        purpose: ConsentPurpose,
+        textVersion,
+        language: NoticeLanguage,
+      })
+      .superRefine(channelOfPurpose),
   }),
   event("contact_channel_added", {
     ...ofParticipation,
@@ -686,7 +718,13 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("consent_ended", {
     ...ofParticipation,
     reasonCode: ConsentEndReason,
-    details: z.strictObject({ consentId: z.uuid(), channelId: z.uuid(), purpose: ConsentPurpose }),
+    details: z
+      .strictObject({
+        consentId: z.uuid(),
+        channelId: z.uuid().optional(),
+        purpose: ConsentPurpose,
+      })
+      .superRefine(channelOfPurpose),
   }),
   /** A recovery code was issued (Q130): the sessions ended and these channels were suspended. */
   event("contact_channels_suspended", {
@@ -705,6 +743,18 @@ export const AuditEvent = z.discriminatedUnion("type", [
       agenturKey,
       previousAgenturKey: agenturKey.optional(),
       baseDefaultsVersion,
+    }),
+  }),
+  /**
+   * The participant (or staff on their behalf) acknowledged the purposes notice (Q138): its
+   * version and language; not a consent.
+   */
+  event("self_service_notice_acknowledged", {
+    ...ofParticipation,
+    details: z.strictObject({
+      acknowledgementId: z.uuid(),
+      noticeVersion: textVersion,
+      language: NoticeLanguage,
     }),
   }),
 ]);

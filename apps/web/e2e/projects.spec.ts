@@ -28,13 +28,13 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page).toHaveURL(/\/projects$/);
   await expect(page.getByRole("banner")).toContainText("Petra Projektleitung");
 
-  // AC-1: the three seeded projects, read from Postgres.
+  // The three seeded projects, read from Postgres.
   await expect(page.getByRole("row")).toHaveCount(4);
   await expect(page.getByRole("cell", { name: "Beispiel Maschinenbau GmbH" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Entwurf" }).first()).toBeVisible();
   await expectAccessible(page);
 
-  // AC-3: create a project; it shows at the top without a reload, as a draft. Its contractual
+  // Create a project; it shows at the top without a reload, as a draft. Its contractual
   // dates belong to its entry waves (Slice 2, Q79), not to this form.
   await page.getByRole("link", { name: "Projekt anlegen" }).click();
   await expect(page).toHaveURL(/\/projects\/new$/);
@@ -55,12 +55,12 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(firstRow).toContainText("Entwurf");
   await expect(page.getByRole("row")).toHaveCount(5);
 
-  // AC-11: createdBy is the active user, and switching users changes /api/v1/me.
+  // `createdBy` is the active user, and switching users changes /api/v1/me.
   const { items } = await (await page.request.get("/api/v1/projects?limit=1")).json();
   expect(items[0].createdBy).toBe(seedStaffUserIds.projectLead);
   expect((await me(page)).id).toBe(seedStaffUserIds.projectLead);
 
-  // Slice 2 (PR 2b, AC-8): the PL opens the new project and adds an entry wave; a rule the API
+  // The PL opens the new project and adds an entry wave; a rule the API
   // refuses is shown at its field.
   await firstRow.getByRole("link", { name: "E2E Projekt Ost" }).click();
   await expect(page.getByText("Es gibt noch keine Eintrittswellen.")).toBeVisible();
@@ -81,15 +81,15 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByText("Die TG-Dauer darf zwölf Monate nicht überschreiten.")).toBeVisible();
   await expectAccessible(page);
 
-  // Slice 2 (PR 2c-2, plan 5.8): without a Project Agentur the project is blocked; the PL pins the
+  // Without a Project Agentur the project is blocked; the PL pins the
   // sample Agentur from the catalog (the latest version is preselected; the PL takes version 1
-  // here and migrates it later, PR 2e-2) and the blocker clears.
-  // Listed with the blockers and again at the activation it blocks (PR 2e-1).
+  // here and migrates it later) and the blocker clears.
+  // Listed with the blockers and again at the activation it blocks.
   await expect(
     page.getByText("Aktivierung blockiert: Es fehlt die Vorlage der Projekt-Agentur."),
   ).toHaveCount(2);
   await expect(page.getByRole("button", { name: "Aktivieren" })).toBeDisabled();
-  await expect(page.getByLabel("Version")).toHaveValue("2");
+  await expect(page.getByLabel("Version")).toHaveValue("3");
   await page.getByLabel("Version").selectOption("1");
   await page.getByRole("button", { name: "Als Projekt-Agentur festlegen" }).click();
   await expect(page.getByText("Vorlage gepinnt")).toBeVisible();
@@ -101,9 +101,9 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
   await expectAccessible(page);
 
-  // Slice 2 (PR 2e-1, AC-17): with the Project Agentur pinned and W1's latest entry date nothing
+  // With the Project Agentur pinned and W1's latest entry date nothing
   // blocks, so the PL activates the project; activation is one-way, and the Project Agentur is
-  // fixed from then on (R1).
+  // fixed from then on (process-and-lifecycle.md).
   await expect(page.getByText("Status: Entwurf.", { exact: false })).toBeVisible();
   await expect(page.getByText(/Die Aktivierung ist endgültig/)).toBeVisible();
   await page.getByRole("button", { name: "Aktivieren" }).click();
@@ -114,7 +114,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("button", { name: "Als Projekt-Agentur festlegen" })).toHaveCount(0);
   await expectAccessible(page);
 
-  // Slice 2 (PR 2g-2, AC-35): the PL imports the sample CSV, confirms the suggested mapping, sees
+  // The PL imports the sample CSV, confirms the suggested mapping, sees
   // the report and the participants; a second file updates them instead of duplicating.
   const importSection = page.getByRole("region", { name: "Import" });
   await importSection
@@ -161,7 +161,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(participants.getByRole("row")).toHaveCount(14);
   await expectAccessible(page);
 
-  // Slice 2 (PR 2h-1, AC-34): the PL opens a participant's page, sees the updated address and
+  // The PL opens a participant's page, sees the updated address and
   // assigns the wave, then goes back to the project.
   await participants.getByRole("link", { name: "BSP-0001", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Mustermann, Erika" })).toBeVisible();
@@ -173,7 +173,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByText("Welle zugeordnet", { exact: true })).toBeVisible();
   await expect(page.getByText(/ \(aus der Welle\)$/).first()).toBeVisible();
   await expectAccessible(page);
-  // Slice 2 (PR 2h-3, AC-37, AC-48): before any offer the PL shortens the contractual end; the
+  // Before any offer the PL shortens the contractual end; the
   // change leaves a pending BA reporting task.
   await page.getByRole("button", { name: "Vertragsdaten ändern" }).click();
   await expect(page.getByText(/nicht unterstützt/)).toBeVisible();
@@ -189,7 +189,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("link", { name: /^Zurück zu / }).click();
   await expect(participants.getByRole("row")).toHaveCount(14);
 
-  // Slice 2 (PR 2h-2, AC-51): the PL adds one person by hand, through the import's rules.
+  // The PL adds one person by hand, through the import's rules.
   await participants.getByRole("button", { name: "Teilnehmende Person anlegen" }).click();
   await page.getByLabel("Personalnummer").fill("BSP-0100");
   await page.getByLabel("Nachname").fill("Beispiel");
@@ -209,7 +209,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });
 
-  // Slice 2 (PR 2e-2, AC-19, AC-20): a project-specific exception to the Project Agentur's
+  // A project-specific exception to the Project Agentur's
   // template (Q93), then the migration to version 2 with its review: the PL removes the setting,
   // so the new template's value applies.
   await configuration
@@ -225,7 +225,9 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await setupSection
     .getByRole("button", { name: "Agentur für Arbeit Beispielstadt Nord (Beispiel) migrieren" })
     .click();
-  await expect(setupSection.getByLabel("Neue Version")).toHaveValue("2");
+  // The newest version (3) is preselected; this migration takes 2.
+  await expect(setupSection.getByLabel("Neue Version")).toHaveValue("3");
+  await setupSection.getByLabel("Neue Version").selectOption("2");
   await setupSection.getByRole("button", { name: "Änderungen anzeigen" }).click();
   await expect(
     setupSection.getByText("Einstellung Vorlauf in Tagen: bisher 10, neu 14"),
@@ -249,12 +251,13 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
       "Projekt-Agentur: Agentur für Arbeit Beispielstadt Nord (Beispiel), Vorlage Version 2",
     ),
   ).toBeVisible();
-  await expect(setupSection.getByRole("button", { name: /migrieren$/ })).toHaveCount(0);
+  // Version 3 is still newer.
+  await expect(setupSection.getByRole("button", { name: /migrieren$/ })).toHaveCount(1);
   await expect(configuration.getByText("Stand der Projektkonfiguration: Version 2")).toBeVisible();
   await expect(configuration.getByRole("row", { name: /beispielstadt-nord/ })).toHaveCount(0);
   await expectAccessible(page);
 
-  // Slice 2 (PR 2d-1, AC-14): an Agentur-scoped setting for an Agentur without a template, with
+  // An Agentur-scoped setting for an Agentur without a template, with
   // its source and confirmation date; the PL is the confirmer.
   await configuration
     .getByRole("button", { name: "Agenturbezogene Einstellung hinzufügen" })
@@ -281,7 +284,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(configuration.getByText("Stand der Projektkonfiguration: Version 3")).toBeVisible();
   await expectAccessible(page);
 
-  // Slice 2 (PR 2d-2, AC-15): the PL requests the relaxation of Nord's operational default rule
+  // The PL requests the relaxation of Nord's operational default rule
   // with a controlled reason code; it takes effect only once another person approves it.
   await configuration.getByLabel("Regel").selectOption("beispielstadt-nord-mobile");
   await configuration.getByLabel("Begründung").selectOption("collected_outside_platform");
@@ -309,7 +312,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   // … and the open request, without deciding it (only the regional operations manager does).
   await expect(page.getByRole("button", { name: /genehmigen|ablehnen/ })).toHaveCount(0);
 
-  // AC-15: the regional operations manager, not the requester, approves; the relaxation enters
+  // The regional operations manager, not the requester, approves; the relaxation enters
   // the next override version.
   await page.goto("/projects");
   await chooseDevUser(page, "Rolf Regionalbetrieb · Regionale Betriebsleitung");
