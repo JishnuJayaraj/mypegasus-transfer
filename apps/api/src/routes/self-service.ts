@@ -1,24 +1,32 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { asc, consentRecord, eq, sql } from "@transfer/db";
+import { asc, consentRecord, eq, participation, sql } from "@transfer/db";
 import {
   completePageValues,
+  completeSensitiveValues,
   ConfidentialPage,
   contactFields,
   decideAccess,
   pageValuesSchema,
   ParticipationSelfService,
+  ParticipationSensitiveValues,
   PortalConsents,
   PortalSelfService,
   PortalSelfServiceWrite,
+  PortalSensitiveValues,
   SELF_SERVICE_NOTICE_VERSION,
   selfServiceMissing,
   SelfServiceNoticeInput,
   SelfServicePageInput,
   selfServiceValueSchemas,
   selfServiceWizard,
+  sensitiveFieldsOf,
+  SensitivePage,
+  sensitiveValuesSchema,
   valueIssueCode,
   valueWarnings,
+  type PortalStepUp,
   type SelfServiceField,
+  type SensitiveField,
   type StaffUser,
 } from "@transfer/domain";
 import type { Context } from "hono";
@@ -26,28 +34,33 @@ import { randomUUID } from "node:crypto";
 import { projectAccess } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
+import { fieldEncryptionKey } from "../field-encryption";
 import { loadSelfService, type SelfServiceRecord } from "../participations/self-service";
-import { portalSession, requirePortalSession } from "../portal-session";
+import { portalSession, portalStepUp, requirePortalSession } from "../portal-session";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
 import { requireSession, sessionUser } from "../session";
-import { utc } from "../sql";
+import { auditContext, utc } from "../sql";
 
-// Self-service data (data-protection.md, self-service; Q112, Q138, Q140): the participant's wizard
-// in the portal and the staff's normal-mode projection. Confidential data only: a highly
-// confidential or special-category key is unknown here (422) and no response carries one. The
-// functions check the session, the notice and the revision again under their locks.
+// Self-service data (data-protection.md, self-service; Q112, Q135, Q138, Q140): the participant's
+// wizard in the portal and the staff's normal-mode projection. A highly confidential or
+// special-category value travels only on the sensitive routes (decrypted and encrypted by the
+// database functions, each field read or written audited); a page write doesn't know those keys
+// (422) and every other response carries their presence only. The functions check the session,
+// the step-up, the notice and the revision again under their locks.
 
 const PageParams = z.object({ page: ConfidentialPage });
+const GroupParams = z.object({ group: SensitivePage });
 const ParticipationParams = z.object({ participationId: z.uuid() });
+const ParticipationGroupParams = z.object({ participationId: z.uuid(), group: SensitivePage });
 
 /** The participant's audit context (ADR-0002): the participation acts for itself. */
 const participantContext = (participationId: string, requestId: string) =>
   sql`row('participant'::actor_type, null::uuid, ${participationId}::uuid, null::text, null::uuid,
     ${requestId}::text, null::text)::audit_context`;
 
-/** The wizard state the portal shows. */
-function portalState(record: SelfServiceRecord) {
+/** The wizard state the portal shows: sensitive fields by presence only. */
+function portalState(record: SelfServiceRecord, stepUp: PortalStepUp) {
   const { pages, missing } = selfServiceWizard(record.wizard);
   return {
     revision: record.revision,
@@ -55,17 +68,37 @@ function portalState(record: SelfServiceRecord) {
     identity: record.identity,
     values: record.values,
     customValues: record.customValues,
+    sensitive: record.sensitive,
+    stepUp,
     pages,
     missing,
   };
 }
 
+/** Field keys as a Postgres array literal (a JS array would expand into a list). */
+const textArray = (keys: readonly string[]) => `{${keys.join(",")}}`;
+
 /** Where a page value is in the body, as a domain problem's field. */
 const at = (path: PropertyKey[]) => ["values", ...path.map(String)].join("/");
+
+/** Each issue's code and location under `/values`, never the value (ADR-0010). */
+const valueIssues = (issues: readonly z.core.$ZodIssue[]) =>
+  issues.flatMap((issue) => {
+    if (issue.code === "unrecognized_keys") {
+      return issue.keys.map((key) => ({ code: "unknown_field", field: at([...issue.path, key]) }));
+    }
+    return [{ code: valueIssueCode(issue), field: at(issue.path) }];
+  });
 
 /** 409 with the code (a stale revision, the notice not acknowledged). */
 const conflict = (c: Context<AppEnv>, code: string) =>
   problem(c, "conflict", { errors: [{ pointer: "", code, detail: "Read the state again" }] });
+
+/** 403 until the session's step-up before special-category data (Q137). */
+const stepUpRequired = (c: Context<AppEnv>) =>
+  problem(c, "forbidden", {
+    errors: [{ pointer: "", code: "step_up_required", detail: "Step up first" }],
+  });
 
 /** A refusal of the self-service functions as its problem, or rethrown. */
 function refused(c: Context<AppEnv>, error: unknown) {
@@ -76,11 +109,47 @@ function refused(c: Context<AppEnv>, error: unknown) {
   throw error;
 }
 
+/** A refusal of the sensitive read: a dead session, or the step-up missing; else rethrown. */
+function readRefused(c: Context<AppEnv>, error: unknown) {
+  const code = functionRefusal(error);
+  if (code === "session_invalid") return problem(c, "unauthenticated");
+  if (code === "step_up_required") return stepUpRequired(c);
+  throw error;
+}
+
 export function selfServiceRoutes(deps: Deps) {
   const { db } = deps;
   const router = createRouter();
   const release = loadRelease(deps.env.configDir);
   const active = [requirePortalSession(deps, "active")];
+  const fieldKey = fieldEncryptionKey(deps.env.fieldEncryptionKey!);
+
+  /** The participant's state after a read or write. */
+  async function stateOf(participationId: string, tokenHash: string) {
+    const [record, stepUp] = await Promise.all([
+      loadSelfService(db, release, participationId),
+      portalStepUp(db, tokenHash),
+    ]);
+    return portalState(record!, stepUp);
+  }
+
+  /**
+   * Whether the participant may use the group now (data-protection.md, access matrix): the health
+   * and disability fields need the session's step-up.
+   */
+  async function participantMay(group: SensitivePage, participationId: string, tokenHash: string) {
+    const { done } = await portalStepUp(db, tokenHash);
+    const subject = { kind: "participant", participationId, knowledgeCheckPassed: done } as const;
+    return sensitiveFieldsOf(group).every(
+      (field) =>
+        decideAccess(
+          subject,
+          { kind: "field", projectId: "", regionId: null, participationId, phase: "active", field },
+          "read",
+          { kind: "normal" },
+        ).effect === "allow",
+    );
+  }
 
   router.openapi(
     createRoute({
@@ -97,8 +166,8 @@ export function selfServiceRoutes(deps: Deps) {
     }),
     async (c) => {
       c.header("Cache-Control", "no-store");
-      const record = (await loadSelfService(db, release, portalSession(c).participationId))!;
-      return c.json(portalState(record), 200);
+      const session = portalSession(c);
+      return c.json(await stateOf(session.participationId, session.tokenHash), 200);
     },
   );
 
@@ -129,21 +198,7 @@ export function selfServiceRoutes(deps: Deps) {
       const input = c.req.valid("json");
       const record = (await loadSelfService(db, release, session.participationId))!;
       const parsed = pageValuesSchema(page, record.customValidators).safeParse(input.values);
-      if (!parsed.success) {
-        // Each issue's code and location under `/values`, never the value (ADR-0010).
-        return domainProblem(
-          c,
-          parsed.error.issues.flatMap((issue) => {
-            if (issue.code === "unrecognized_keys") {
-              return issue.keys.map((key) => ({
-                code: "unknown_field",
-                field: at([...issue.path, key]),
-              }));
-            }
-            return [{ code: valueIssueCode(issue), field: at(issue.path) }];
-          }),
-        );
-      }
+      if (!parsed.success) return domainProblem(c, valueIssues(parsed.error.issues));
       const values = completePageValues(page, parsed.data, [...record.customValidators.keys()]);
       try {
         await db.execute(sql`select write_self_service_data(
@@ -156,8 +211,100 @@ export function selfServiceRoutes(deps: Deps) {
       } catch (error) {
         return refused(c, error);
       }
-      const after = (await loadSelfService(db, release, session.participationId))!;
-      return c.json({ ...portalState(after), warnings: valueWarnings(parsed.data) }, 200);
+      const after = await stateOf(session.participationId, session.tokenHash);
+      return c.json({ ...after, warnings: valueWarnings(parsed.data) }, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "get",
+      path: "/portal/self-service/sensitive/{group}",
+      tags: ["portal"],
+      summary:
+        "The group's highly confidential or special-category values, decrypted; each field's read is audited. health needs the step-up (403 step_up_required)",
+      middleware: active,
+      request: { params: GroupParams },
+      responses: {
+        200: json(PortalSensitiveValues, "The values"),
+        ...problemResponses("validation-error", "unauthenticated", "forbidden"),
+      },
+    }),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      const session = portalSession(c);
+      const { group } = c.req.valid("param");
+      if (!(await participantMay(group, session.participationId, session.tokenHash))) {
+        return stepUpRequired(c);
+      }
+      let values: Partial<Record<SensitiveField, unknown>>;
+      try {
+        const { rows } = await db.execute<{ result: Partial<Record<SensitiveField, unknown>> }>(
+          sql`select read_sensitive_fields(
+            p_participation_id => ${session.participationId}::uuid,
+            p_context => ${participantContext(session.participationId, c.get("requestId"))},
+            p_keys => ${textArray(sensitiveFieldsOf(group))}::text[], p_key => ${fieldKey.key},
+            p_key_id => ${fieldKey.keyId}, p_token_hash => ${session.tokenHash}) as result`,
+        );
+        values = rows[0]!.result;
+      } catch (error) {
+        return readRefused(c, error);
+      }
+      return c.json({ group, values } as z.infer<typeof PortalSensitiveValues>, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "put",
+      path: "/portal/self-service/sensitive/{group}",
+      tags: ["portal"],
+      summary:
+        "Save one sensitive group whole, encrypted; each changed field is audited. health needs the step-up (403 step_up_required); 409 stale_revision or notice_required",
+      middleware: active,
+      request: {
+        params: GroupParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: SelfServicePageInput } },
+        },
+      },
+      responses: {
+        200: json(PortalSelfServiceWrite, "Saved; the state, sensitive fields by presence"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      const session = portalSession(c);
+      const { group } = c.req.valid("param");
+      const input = c.req.valid("json");
+      if (!(await participantMay(group, session.participationId, session.tokenHash))) {
+        return stepUpRequired(c);
+      }
+      const parsed = sensitiveValuesSchema(group).safeParse(input.values);
+      if (!parsed.success) return domainProblem(c, valueIssues(parsed.error.issues));
+      const values = completeSensitiveValues(group, parsed.data);
+      try {
+        await db.execute(sql`select write_sensitive_fields(
+          p_participation_id => ${session.participationId}::uuid,
+          p_context => ${participantContext(session.participationId, c.get("requestId"))},
+          p_group => ${group}, p_values => ${JSON.stringify(values)}::jsonb,
+          p_revision => ${input.revision}::integer,
+          p_notice_version => ${SELF_SERVICE_NOTICE_VERSION}, p_key => ${fieldKey.key},
+          p_key_id => ${fieldKey.keyId}, p_token_hash => ${session.tokenHash}) as result`);
+      } catch (error) {
+        if (functionRefusal(error) === "step_up_required") return stepUpRequired(c);
+        return refused(c, error);
+      }
+      const after = await stateOf(session.participationId, session.tokenHash);
+      return c.json({ ...after, warnings: [] }, 200);
     },
   );
 
@@ -294,6 +441,68 @@ export function selfServiceRoutes(deps: Deps) {
       if (view === null) return problem(c, "forbidden");
       c.header("Cache-Control", "no-store");
       return c.json(view, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "get",
+      path: "/participations/{participationId}/self-service/sensitive/{group}",
+      tags: ["participations"],
+      summary:
+        "The group's sensitive fields the viewer may read in normal mode, decrypted; each field's read is audited (sensitive_read). The others are left out",
+      middleware: [requireSession(deps)],
+      request: { params: ParticipationGroupParams },
+      responses: {
+        200: json(ParticipationSensitiveValues, "The readable values"),
+        ...problemResponses("validation-error", "unauthenticated", "forbidden", "not-found"),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { participationId, group } = c.req.valid("param");
+      const [found] = await db
+        .select({ projectId: participation.projectId })
+        .from(participation)
+        .where(eq(participation.id, participationId));
+      if (!found) return problem(c, "not-found");
+      const { subject, visible, regionId } = await projectAccess(db, user, found.projectId);
+      if (!visible) return problem(c, "not-found");
+      // Normal mode (data-protection.md, access matrix): each allowed read is a logged one.
+      const readable = sensitiveFieldsOf(group).filter(
+        (field) =>
+          decideAccess(
+            subject,
+            {
+              kind: "field",
+              projectId: found.projectId,
+              regionId,
+              participationId,
+              phase: "active",
+              field,
+            },
+            "read",
+            { kind: "normal" },
+          ).effect === "allow",
+      );
+      if (readable.length === 0) return problem(c, "forbidden");
+      let values: Partial<Record<SensitiveField, unknown>>;
+      try {
+        const { rows } = await db.execute<{ result: Partial<Record<SensitiveField, unknown>> }>(
+          sql`select read_sensitive_fields(p_participation_id => ${participationId}::uuid,
+            p_context => ${auditContext(user.id, c.get("requestId"))},
+            p_keys => ${textArray(readable)}::text[], p_key => ${fieldKey.key}, p_key_id => ${fieldKey.keyId}) as result`,
+        );
+        values = rows[0]!.result;
+      } catch (error) {
+        if (functionRefusal(error) === "actor_not_allowed") return problem(c, "forbidden");
+        throw error;
+      }
+      c.header("Cache-Control", "no-store");
+      return c.json(
+        { participationId, group, values } as z.infer<typeof ParticipationSensitiveValues>,
+        200,
+      );
     },
   );
 

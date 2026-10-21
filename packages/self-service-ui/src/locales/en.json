@@ -9,7 +9,8 @@
   "intro": {
     "required": "Details marked * are required.",
     "optional": "You may leave all other details open and add them later with your counsellor.",
-    "noDiagnoses": "Please do not enter any diagnosis or details about your health in text fields."
+    "noDiagnoses": "Please do not enter any diagnosis or details about your health in text fields.",
+    "yesNoOnly": "On this page we only ask yes or no. Please do not name any diagnoses; if needed, discuss details with your counsellor."
   },
   "progress": {
     "label": "Progress",
@@ -35,8 +36,7 @@
     "intro": "Here you can see which required details are still missing. You can open every page again.",
     "complete": "Complete",
     "missing_one": "One required detail is missing:",
-    "missing_other": "{{count}} required details are missing:",
-    "later": "You will soon be able to enter these details here. Until then, your counsellor can help you."
+    "missing_other": "{{count}} required details are missing:"
   },
   "identity": {
     "intro": "We received your name and date of birth from your former employer. If they are wrong, please contact your counsellor.",
@@ -61,7 +61,9 @@
     "date_invalid": "Please enter a valid date as DD.MM.YYYY.",
     "number_invalid": "Please enter a number.",
     "invalid_format": "The format of this detail is not right.",
-    "unknown_field": "This detail cannot be saved here."
+    "unknown_field": "This detail cannot be saved here.",
+    "pension_insurance_number_invalid": "Please enter the twelve-character pension insurance number, for example 12 345678 A 123.",
+    "not_applicable": "This only applies to another nationality."
   },
   "pages": {
     "personal": "Personal details",
@@ -175,30 +177,62 @@
       "label": "Earliest start date"
     },
     "pensionInsuranceNumber": {
-      "label": "Pension insurance number"
+      "label": "Pension insurance number",
+      "hint": "You find it on your social insurance card and on your payslip."
     },
     "nationality": {
-      "label": "Nationality"
+      "label": "Nationality",
+      "kind": "Your nationality",
+      "german": "German",
+      "other": "Another one",
+      "country": "Country"
     },
     "entryToGermanyDate": {
       "label": "Date of entry"
     },
     "residenceStatus": {
-      "label": "Residence status"
+      "label": "Residence status",
+      "blue_card": "EU Blue Card",
+      "residence_permit": "Residence permit",
+      "visa": "Visa",
+      "settlement_permit": "Settlement permit",
+      "permission_to_reside": "Permission to reside (Aufenthaltsgestattung)",
+      "toleration": "Toleration (Duldung)"
     },
     "buergergeld": {
-      "label": "Citizen's income (Bürgergeld)"
+      "label": "Citizen's income (Bürgergeld)",
+      "hint": "Do you currently receive Bürgergeld (citizen's income)?"
     },
     "healthRestrictions": {
-      "label": "Health restrictions"
+      "label": "Health restrictions",
+      "hint": "Do you have health restrictions to consider in your job search? Yes or no only, please."
     },
     "severeDisability": {
-      "label": "Severe disability or equal status"
+      "label": "Severe disability or equal status",
+      "hint": "Do you have a severe disability, or the equal status (Gleichstellung)?"
     }
   },
   "rows": {
     "limit": "At most {{max}} entries.",
     "empty": "No entries yet."
   },
-  "required": "{{label}} *"
+  "required": "{{label}} *",
+  "stepUp": {
+    "intro": "This page is about your health. To protect you, please confirm once more that it is you. You need to do this once per login.",
+    "birthDate": "Your date of birth",
+    "confirm": "Confirm",
+    "dateInvalid": "Please enter a valid date in the format DD.MM.YYYY.",
+    "wrongBirthDate": "The date of birth is not correct. After five wrong entries you will be logged out for your security.",
+    "ended": "You were logged out because the date of birth was entered wrongly five times. Please log in again.",
+    "channel": "Where should we send you a confirmation code?",
+    "chooseChannel": "Please choose where we should send the code.",
+    "send": "Send code",
+    "sendAgain": "Send a new code",
+    "sent": "We have sent you a code. It is valid for 15 minutes.",
+    "code": "Confirmation code",
+    "wrongCode": "The code is not correct or no longer valid. You can ask for a new code.",
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+    "failed": "That did not work. Please try again.",
+    "skip": "Continue without these details"
+  }
 }

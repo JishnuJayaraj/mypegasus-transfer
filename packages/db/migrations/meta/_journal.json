@@ -344,6 +344,20 @@
       "when": 1792604397581,
       "tag": "0048_self_service_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792620716505,
+      "tag": "0049_sensitive_data",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792620717576,
+      "tag": "0050_sensitive_functions",
+      "breakpoints": true
     }
   ]
 }

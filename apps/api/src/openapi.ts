@@ -25,6 +25,7 @@ export function openApiDocument(): ReturnType<
       clock: "system",
       configDir: undefined,
       accessCodeSecret: "unused-access-code-secret-unused-access-code-secret",
+      fieldEncryptionKey: "unused-field-encryption-key-unused-field-encryption",
       portalPublicUrl: "http://localhost:5174/portal/",
       mailAdapter: "mock",
       smsAdapter: "mock",

@@ -18,12 +18,13 @@ export const testEnv: Env = {
   databaseUrl: "unused",
   port: 0,
   logLevel: "info",
-  // Tests start pg-boss themselves (plan 5.9).
+  // Tests start pg-boss themselves (ADR-0011).
   jobsEnabled: false,
   jobsLifecycleTime: "04:15",
   clock: "system",
   configDir: undefined,
   accessCodeSecret: "test-access-code-secret-test-access-code-secret",
+  fieldEncryptionKey: "test-field-encryption-key-test-field-encryption-key",
   portalPublicUrl: "https://portal.test/portal/",
   mailAdapter: "mock",
   smsAdapter: "mock",

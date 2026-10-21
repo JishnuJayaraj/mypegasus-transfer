@@ -3,8 +3,11 @@ import {
   and,
   eq,
   participantDetails,
+  participantHealthData,
+  participantIdentifierData,
   participantIdentity,
   participantProfile,
+  participantResidenceSocialData,
   participation,
   selfServiceNoticeAcknowledgement as acknowledgement,
   type Database,
@@ -14,6 +17,7 @@ import {
   type ContactField,
   type CustomFieldDefinition,
   type SelfServiceValueMap,
+  type SensitivePresence,
   type WizardInput,
 } from "@transfer/domain";
 import type { z } from "zod";
@@ -23,7 +27,8 @@ import { utc } from "../sql";
 // What the self-service routes read (data-protection.md, self-service; Q140): a participation's
 // confidential self-service values, its own resolved chain (regional-variation.md, "Self-service
 // wizard") and the facts its completeness is evaluated on. No highly confidential or
-// special-category value is read here; their presence joins with their encrypted tables.
+// special-category value is read here, only their presence beside the ciphertexts (ADR-0002,
+// encryption), which the runtime role can't select.
 
 type Db = Pick<Database, "select" | "selectDistinctOn" | "execute">;
 type CustomValue = string | number | boolean;
@@ -33,6 +38,8 @@ export type SelfServiceRecord = {
   projectId: string;
   identity: { firstName: string; lastName: string; birthDate: string | null };
   values: SelfServiceValueMap;
+  /** Which sensitive fields hold a value; never the value. */
+  sensitive: SensitivePresence;
   customValues: Record<string, CustomValue>;
   revision: number;
   updatedAt: string | null;
@@ -58,17 +65,6 @@ function validatorOf(schema: FieldSchema) {
   return validator;
 }
 
-/** The highly confidential and special-category wizard fields: not stored yet, so absent. */
-const sensitiveFacts = {
-  pensionInsuranceNumber: null,
-  nationality: null,
-  entryToGermanyDate: null,
-  residenceStatus: null,
-  buergergeld: null,
-  healthRestrictions: null,
-  severeDisability: null,
-};
-
 /** One participation's self-service record, or undefined when it doesn't exist. */
 export async function loadSelfService(
   db: Db,
@@ -85,11 +81,27 @@ export async function loadSelfService(
       profile: participantProfile,
       profileUpdatedAt: utc(participantProfile.updatedAt),
       acknowledgedAt: utc(acknowledgement.acknowledgedAt),
+      pensionInsuranceNumber: participantIdentifierData.pensionInsuranceNumberPresent,
+      nationality: participantResidenceSocialData.nationalityPresent,
+      entryToGermanyDate: participantResidenceSocialData.entryToGermanyDatePresent,
+      residenceStatus: participantResidenceSocialData.residenceStatusPresent,
+      buergergeld: participantResidenceSocialData.buergergeldPresent,
+      healthRestrictions: participantHealthData.healthRestrictionsPresent,
+      severeDisability: participantHealthData.severeDisabilityPresent,
     })
     .from(participation)
     .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
     .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
     .leftJoin(participantProfile, eq(participantProfile.participationId, participation.id))
+    .leftJoin(
+      participantIdentifierData,
+      eq(participantIdentifierData.participationId, participation.id),
+    )
+    .leftJoin(
+      participantResidenceSocialData,
+      eq(participantResidenceSocialData.participationId, participation.id),
+    )
+    .leftJoin(participantHealthData, eq(participantHealthData.participationId, participation.id))
     .leftJoin(
       acknowledgement,
       and(
@@ -144,6 +156,19 @@ export async function loadSelfService(
     earliestStartDate: profile?.earliestStartDate ?? null,
   };
   const customValues = (profile?.customFields ?? {}) as Record<string, CustomValue>;
+  const sensitive: SensitivePresence = {
+    pensionInsuranceNumber: row.pensionInsuranceNumber ?? false,
+    nationality: row.nationality ?? false,
+    entryToGermanyDate: row.entryToGermanyDate ?? false,
+    residenceStatus: row.residenceStatus ?? false,
+    buergergeld: row.buergergeld ?? false,
+    healthRestrictions: row.healthRestrictions ?? false,
+    severeDisability: row.severeDisability ?? false,
+  };
+  // Completeness needs only presence (process-and-lifecycle.md, profiling).
+  const sensitiveFacts = Object.fromEntries(
+    Object.entries(sensitive).map(([key, present]) => [key, present ? true : null]),
+  );
   return {
     id: row.id,
     projectId: row.projectId,
@@ -153,6 +178,7 @@ export async function loadSelfService(
       birthDate: identity?.birthDate ?? null,
     },
     values,
+    sensitive,
     customValues,
     revision: profile?.revision ?? 0,
     updatedAt: profile ? row.profileUpdatedAt : null,

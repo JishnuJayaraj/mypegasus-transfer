@@ -9,7 +9,8 @@
   "intro": {
     "required": "Mit * gekennzeichnete Angaben sind Pflichtangaben.",
     "optional": "Alle anderen Angaben können Sie offen lassen und später mit Ihrer Beraterin oder Ihrem Berater ergänzen.",
-    "noDiagnoses": "Bitte tragen Sie in Textfelder keine Diagnosen und keine Angaben zu Ihrer Gesundheit ein."
+    "noDiagnoses": "Bitte tragen Sie in Textfelder keine Diagnosen und keine Angaben zu Ihrer Gesundheit ein.",
+    "yesNoOnly": "Auf dieser Seite fragen wir nur Ja oder Nein. Bitte nennen Sie keine Diagnosen; Einzelheiten besprechen Sie bei Bedarf mit Ihrer Beraterin oder Ihrem Berater."
   },
   "progress": {
     "label": "Fortschritt",
@@ -35,8 +36,7 @@
     "intro": "Hier sehen Sie, welche Pflichtangaben noch fehlen. Sie können jede Seite noch einmal öffnen.",
     "complete": "Vollständig",
     "missing_one": "Es fehlt noch eine Pflichtangabe:",
-    "missing_other": "Es fehlen noch {{count}} Pflichtangaben:",
-    "later": "Diese Angaben können Sie bald hier eintragen. Bis dahin hilft Ihnen Ihre Beraterin oder Ihr Berater."
+    "missing_other": "Es fehlen noch {{count}} Pflichtangaben:"
   },
   "identity": {
     "intro": "Name und Geburtsdatum haben wir von Ihrem bisherigen Arbeitgeber erhalten. Wenn sie nicht stimmen, wenden Sie sich bitte an Ihre Beratung.",
@@ -61,7 +61,9 @@
     "date_invalid": "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
     "number_invalid": "Bitte geben Sie eine Zahl ein.",
     "invalid_format": "Das Format dieser Angabe stimmt nicht.",
-    "unknown_field": "Diese Angabe kann hier nicht gespeichert werden."
+    "unknown_field": "Diese Angabe kann hier nicht gespeichert werden.",
+    "pension_insurance_number_invalid": "Bitte geben Sie die zwölfstellige Rentenversicherungsnummer ein, zum Beispiel 12 345678 A 123.",
+    "not_applicable": "Diese Angabe gilt nur bei einer anderen Staatsangehörigkeit."
   },
   "pages": {
     "personal": "Persönliches",
@@ -175,30 +177,62 @@
       "label": "Frühester Arbeitsbeginn"
     },
     "pensionInsuranceNumber": {
-      "label": "Rentenversicherungsnummer"
+      "label": "Rentenversicherungsnummer",
+      "hint": "Sie steht auf Ihrem Sozialversicherungsausweis und auf Ihrer Lohnabrechnung."
     },
     "nationality": {
-      "label": "Staatsangehörigkeit"
+      "label": "Staatsangehörigkeit",
+      "kind": "Ihre Staatsangehörigkeit",
+      "german": "Deutsch",
+      "other": "Eine andere",
+      "country": "Land"
     },
     "entryToGermanyDate": {
       "label": "Einreisedatum"
     },
     "residenceStatus": {
-      "label": "Aufenthaltsstatus"
+      "label": "Aufenthaltsstatus",
+      "blue_card": "Blaue Karte EU",
+      "residence_permit": "Aufenthaltserlaubnis",
+      "visa": "Visum",
+      "settlement_permit": "Niederlassungserlaubnis",
+      "permission_to_reside": "Aufenthaltsgestattung",
+      "toleration": "Duldung"
     },
     "buergergeld": {
-      "label": "Bürgergeld"
+      "label": "Bürgergeld",
+      "hint": "Beziehen Sie zurzeit Bürgergeld?"
     },
     "healthRestrictions": {
-      "label": "Gesundheitliche Einschränkungen"
+      "label": "Gesundheitliche Einschränkungen",
+      "hint": "Haben Sie gesundheitliche Einschränkungen, die bei der Arbeitssuche zu berücksichtigen sind? Bitte nur Ja oder Nein."
     },
     "severeDisability": {
-      "label": "Schwerbehinderung oder Gleichstellung"
+      "label": "Schwerbehinderung oder Gleichstellung",
+      "hint": "Sind Sie schwerbehindert oder einem schwerbehinderten Menschen gleichgestellt?"
     }
   },
   "rows": {
     "limit": "Höchstens {{max}} Einträge.",
     "empty": "Noch keine Einträge."
   },
-  "required": "{{label}} *"
+  "required": "{{label}} *",
+  "stepUp": {
+    "intro": "Auf dieser Seite geht es um Angaben zu Ihrer Gesundheit. Zu Ihrem Schutz bestätigen Sie bitte noch einmal, dass Sie es sind. Das ist einmal pro Anmeldung nötig.",
+    "birthDate": "Ihr Geburtsdatum",
+    "confirm": "Bestätigen",
+    "dateInvalid": "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
+    "wrongBirthDate": "Das Geburtsdatum stimmt nicht. Nach fünf falschen Eingaben werden Sie aus Sicherheitsgründen abgemeldet.",
+    "ended": "Sie wurden abgemeldet, weil das Geburtsdatum fünfmal falsch eingegeben wurde. Bitte melden Sie sich erneut an.",
+    "channel": "Wohin sollen wir Ihnen einen Bestätigungscode senden?",
+    "chooseChannel": "Bitte wählen Sie aus, wohin wir den Code senden sollen.",
+    "send": "Code senden",
+    "sendAgain": "Neuen Code senden",
+    "sent": "Wir haben Ihnen einen Code gesendet. Er gilt 15 Minuten.",
+    "code": "Bestätigungscode",
+    "wrongCode": "Der Code stimmt nicht oder ist nicht mehr gültig. Sie können einen neuen Code anfordern.",
+    "rateLimited": "Zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es dann noch einmal.",
+    "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+    "skip": "Ohne diese Angaben weiter"
+  }
 }

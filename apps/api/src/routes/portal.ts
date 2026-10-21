@@ -1,5 +1,5 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { sql, transactionWithClient } from "@transfer/db";
+import { and, eq, participantChannel, sql, transactionWithClient } from "@transfer/db";
 import {
   ART14_NOTICE_VERSION,
   ActivationBirthDateInput,
@@ -21,6 +21,10 @@ import {
   normaliseActivationCode,
   normaliseContact,
   portalLimits,
+  PortalStepUp,
+  StepUpBirthDateInput,
+  StepUpCodeInput,
+  StepUpCodeRequestInput,
   type ActivationChannel,
   type ActivationPurpose,
   type ContactKind,
@@ -41,19 +45,24 @@ import {
   clearPortalCookie,
   newPortalToken,
   portalSession,
+  portalStepUp,
   portalTokenHash,
   requirePortalSession,
   setPortalCookie,
 } from "../portal-session";
 import { clientIp, createThrottle } from "../throttle";
 
-// The participant's activation and recovery (PRs 3e and 3f), login and channels
-// (3f); the rules are ADR-0007 and data-protection.md, Authentication. Codes, one-time codes and addresses arrive only in bodies and leave
-// only as keyed hashes for the functions (an address also to its own sender); no response, log
-// line or audit row carries them. Every code submission passes the per-IP throttle (Q128). The
-// login never says whether an address belongs to an account.
+// The participant's activation and recovery, login, channels and the step-up before
+// special-category data; the rules are ADR-0007 and data-protection.md, Authentication. Codes,
+// one-time codes, birth dates and addresses arrive only in bodies and leave only as keyed hashes
+// for the functions (an address also to its own sender); no response, log line or audit row
+// carries them. Every code submission passes the per-IP throttle (Q128). The login never says
+// whether an address belongs to an account.
 
 const NoContent = { 204: { description: "Done" } };
+const StepUpCodeSent = {
+  202: { description: "Sent, or its outcome unknown: the code may still arrive" },
+};
 /** `complete_activation`'s results that leave an active session. */
 const COMPLETED = new Set(["activated", "recovered"]);
 const ChannelParams = z.object({ channelId: z.uuid() });
@@ -201,13 +210,13 @@ export function portalRoutes(deps: Deps) {
     throw error;
   }
 
-  /** The generic answer to any code that can't be used (D14), which ends the browser's session. */
+  /** The generic answer to any code that can't be used (ADR-0007, Q128), which ends the browser's session. */
   function codeInvalid(c: Context<AppEnv>) {
     clearPortalCookie(c, env);
     return domainProblem(c, [{ code: "code_invalid", field: null }]);
   }
 
-  /** Where the session's activation stands (D23), from its code and the steps it recorded. */
+  /** Where the session's activation stands (ADR-0007, steps), from its code and the steps it recorded. */
   async function stateOf(tokenHash: string): Promise<ActivationState> {
     const { rows } = await db.execute<{
       purpose: ActivationPurpose;
@@ -269,7 +278,7 @@ export function portalRoutes(deps: Deps) {
       const limited = throttled(c);
       if (limited) return limited;
       const code = normaliseActivationCode(c.req.valid("json").code);
-      // A malformed code counts nothing on any code (D14): the generic answer.
+      // A malformed code counts nothing on any code (Q128): the generic answer.
       if (!code) return codeInvalid(c);
       const { token, tokenHash } = newPortalToken();
       let started: unknown;
@@ -288,7 +297,7 @@ export function portalRoutes(deps: Deps) {
     },
   );
 
-  /** Runs a knowledge check; `mismatch` and `locked` are its counted failures (D14). */
+  /** Runs a knowledge check; `mismatch` and `locked` are its counted failures (Q128). */
   async function knowledgeCheck(c: Context<AppEnv>, query: ReturnType<typeof sql>) {
     const { tokenHash } = portalSession(c);
     let result: string;
@@ -376,7 +385,7 @@ export function portalRoutes(deps: Deps) {
       const kind = await deliveryKindOf(tokenHash);
       if (!kind) return domainProblem(c, ["step_not_allowed"]);
       const address = normaliseContact(kind, c.req.valid("json").deliveryAddress);
-      // Not an address at all: a syntax error, which counts nothing (D14).
+      // Not an address at all: a syntax error, which counts nothing (Q128).
       if (!address)
         return domainProblem(c, [{ code: "channel_invalid", field: "deliveryAddress" }]);
       return knowledgeCheck(
@@ -418,7 +427,7 @@ export function portalRoutes(deps: Deps) {
       const address = normaliseContact(input.kind, input.address);
       if (!address) return domainProblem(c, [{ code: "channel_invalid", field: "address" }]);
       const sender = input.kind === "email" ? deps.mailer : deps.smsSender;
-      // No provider configured (production has no mock): refuse before a code exists (D20).
+      // No provider configured (production has no mock): refuse before a code exists (ADR-0006).
       if (!sender) return deliveryUnavailable(c);
       const code = newOneTimeCode();
       const challengeId = randomUUID();
@@ -485,7 +494,7 @@ export function portalRoutes(deps: Deps) {
       }
       const next = newPortalToken();
       const channelId = randomUUID();
-      // One transaction: the completion and, when it activates, the notice job (D21), so a
+      // One transaction: the completion and, when it activates, the notice job (ADR-0011), so a
       // committed activation always has its notice queued.
       let result: string;
       try {
@@ -521,7 +530,7 @@ export function portalRoutes(deps: Deps) {
     },
   );
 
-  /** The participant's greeting and channels, masked (D28); never an address or code. */
+  /** The participant's greeting and channels, masked (Q123); never an address or code. */
   async function meOf(tokenHash: string): Promise<PortalMe> {
     const { rows } = await db.execute<{
       firstName: string;
@@ -841,6 +850,158 @@ export function portalRoutes(deps: Deps) {
       }
       if (sessionEnded) clearPortalCookie(c, env);
       return c.json({ sessionEnded }, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/step-up/birth-date",
+      tags: ["portal"],
+      summary:
+        "The step-up of a birth-date account: the birth date again; the fifth wrong one ends the session (step_up_failed)",
+      middleware: active,
+      request: {
+        body: { required: true, content: { "application/json": { schema: StepUpBirthDateInput } } },
+      },
+      responses: {
+        200: json(PortalStepUp, "Stepped up for this session"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "domain-error",
+          "too-many-requests",
+        ),
+      },
+    }),
+    async (c) => {
+      const limited = throttled(c);
+      if (limited) return limited;
+      const { tokenHash } = portalSession(c);
+      let result: string;
+      try {
+        const { rows } = await db.execute<{ result: string }>(sql`
+          select check_step_up_birth_date(${tokenHash}, ${c.req.valid("json").birthDate}::date,
+            ${c.get("requestId")}) as result`);
+        result = rows[0]!.result;
+      } catch (error) {
+        return refused(c, error);
+      }
+      if (result === "ended") {
+        clearPortalCookie(c, env);
+        return domainProblem(c, ["step_up_failed"]);
+      }
+      if (result === "mismatch") return domainProblem(c, ["knowledge_check_failed"]);
+      return c.json(await portalStepUp(db, tokenHash), 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/step-up/code-request",
+      tags: ["portal"],
+      summary:
+        "The step-up of a photo-ID account: send a step-up code to one of its channels (committed first)",
+      middleware: active,
+      request: {
+        body: {
+          required: true,
+          content: { "application/json": { schema: StepUpCodeRequestInput } },
+        },
+      },
+      responses: {
+        ...StepUpCodeSent,
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "not-found",
+          "domain-error",
+          "too-many-requests",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const limited = throttled(c);
+      if (limited) return limited;
+      const { tokenHash, participationId } = portalSession(c);
+      const input = c.req.valid("json");
+      const [channel] = await db
+        .select({ kind: participantChannel.kind })
+        .from(participantChannel)
+        .where(
+          and(
+            eq(participantChannel.id, input.channelId),
+            eq(participantChannel.participationId, participationId),
+          ),
+        );
+      if (!channel) return problem(c, "not-found");
+      // No provider for the kind: refuse before a code exists (ADR-0006).
+      if (!(channel.kind === "email" ? deps.mailer : deps.smsSender)) {
+        return deliveryUnavailable(c);
+      }
+      const code = newOneTimeCode();
+      const challengeId = randomUUID();
+      let to: { kind: ContactKind; address: string };
+      try {
+        const { rows } = await db.execute<{ result: { kind: ContactKind; address: string } }>(sql`
+          select request_step_up_code(${tokenHash}, ${input.channelId}::uuid,
+            ${keyedHash(otpKey, code)}, ${challengeId}::uuid) as result`);
+        to = rows[0]!.result;
+      } catch (error) {
+        if (functionRefusal(error) === "channel_not_found") return problem(c, "not-found");
+        return refused(c, error);
+      }
+      const outcome = await sendOneTimeCode(
+        to.kind,
+        to.address,
+        oneTimeCodeMessage(input.language, code),
+        challengeId,
+      );
+      await db.execute(sql`select record_one_time_code_delivery(${tokenHash},
+        ${challengeId}::uuid, ${outcome}::activation_delivery_status) as result`);
+      if (outcome === "failed") return deliveryFailed(c);
+      return c.body(null, 202);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/step-up/code",
+      tags: ["portal"],
+      summary:
+        "The step-up code; a login code never counts. Five wrong entries end the code, not the session",
+      middleware: active,
+      request: {
+        body: { required: true, content: { "application/json": { schema: StepUpCodeInput } } },
+      },
+      responses: {
+        200: json(PortalStepUp, "Stepped up for this session"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "domain-error",
+          "too-many-requests",
+        ),
+      },
+    }),
+    async (c) => {
+      const limited = throttled(c);
+      if (limited) return limited;
+      const { tokenHash } = portalSession(c);
+      let result: string;
+      try {
+        const { rows } = await db.execute<{ result: string }>(sql`
+          select verify_step_up_code(${tokenHash},
+            ${keyedHash(otpKey, c.req.valid("json").oneTimeCode)}, ${c.get("requestId")}) as result`);
+        result = rows[0]!.result;
+      } catch (error) {
+        return refused(c, error);
+      }
+      if (result !== "ok") return domainProblem(c, ["one_time_code_invalid"]);
+      return c.json(await portalStepUp(db, tokenHash), 200);
     },
   );
 

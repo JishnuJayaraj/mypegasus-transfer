@@ -423,10 +423,9 @@ describe("steps", () => {
     expect(resumeStep(wizardState())).toBe("personal");
     const pages = wizardState().pages.map((p) => ({ ...p, complete: p.page !== "education" }));
     expect(resumeStep(wizardState({ pages }))).toBe("education");
-    const done = wizardState().pages.map((p) => ({
-      ...p,
-      complete: !p.sensitive ? true : p.complete,
-    }));
+    const sensitiveOpen = wizardState().pages.map((p) => ({ ...p, complete: p.page !== "health" }));
+    expect(resumeStep(wizardState({ pages: sensitiveOpen }))).toBe("health");
+    const done = wizardState().pages.map((p) => ({ ...p, complete: true }));
     expect(resumeStep(wizardState({ pages: done }))).toBe("overview");
   });
 
@@ -438,13 +437,16 @@ describe("steps", () => {
     expect(currentStep(state, undefined)).toBe("personal");
   });
 
-  it("moves through the editable pages only; the sensitive ones come with their own path", () => {
+  it("moves through every page in TL 407 order, the special-category page last (Q140)", () => {
     const state = wizardState();
-    expect(nextStep(state, "contact")).toBe("education");
-    expect(nextStep(state, "job_wish")).toBe("overview");
-    expect(previousStep(state, "education")).toBe("contact");
+    expect(nextStep(state, "contact")).toBe("ba_details");
+    expect(nextStep(state, "ba_details")).toBe("education");
+    expect(nextStep(state, "job_wish")).toBe("health");
+    expect(nextStep(state, "health")).toBe("overview");
+    expect(previousStep(state, "education")).toBe("ba_details");
     expect(previousStep(state, "personal")).toBeUndefined();
-    expect(progress(state)).toEqual({ complete: 4, total: 6 });
+    // The progress bar counts the sensitive pages too, by their fields' presence.
+    expect(progress(state)).toEqual({ complete: 4, total: 8 });
   });
 });
 

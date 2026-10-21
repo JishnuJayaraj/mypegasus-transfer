@@ -1,6 +1,6 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { selfServiceValueSchemas } from "@transfer/domain";
+import { selfServiceValueSchemas, sensitiveFields } from "@transfer/domain";
 import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "./i18n";
 import { json, me, problem, renderPortal } from "./test-utils";
@@ -14,12 +14,14 @@ afterEach(async () => {
 
 const values = Object.fromEntries(Object.keys(selfServiceValueSchemas).map((key) => [key, null]));
 const field = (key: string, required = false) => ({ key, required });
-const state = (acknowledged: boolean, revision = 0) => ({
+const state = (acknowledged: boolean, revision = 0, steppedUp = false) => ({
   revision,
   notice: { version: "self-service-purposes:v1", acknowledged },
   identity: { firstName: "Erika", lastName: "Beispiel", birthDate: "1970-01-01" },
   values,
   customValues: {},
+  sensitive: Object.fromEntries(sensitiveFields.map((key) => [key, false])),
+  stepUp: { method: "birth_date", done: steppedUp },
   pages: [
     {
       page: "personal",
@@ -99,6 +101,48 @@ describe("Meine Angaben", () => {
         body: { version: "self-service-purposes:v1", language: "en" },
       }),
     );
+  });
+
+  it("steps up with the birth date, then reads and writes the health group on its own routes", async () => {
+    const user = userEvent.setup();
+    let steppedUp = false;
+    const health = {
+      page: "health",
+      sensitive: true,
+      complete: false,
+      fields: [field("healthRestrictions", true), field("severeDisability", true)],
+    };
+    const withHealth = () => {
+      const base = state(true, 1, steppedUp);
+      return { ...base, pages: [...base.pages, health] };
+    };
+    const { calls } = renderPortal("/portal/self-service?step=health", {
+      "GET /api/v1/portal/self-service": () => json(withHealth()),
+      "POST /api/v1/portal/step-up/birth-date": () => {
+        steppedUp = true;
+        return json({ method: "birth_date", done: true });
+      },
+      "GET /api/v1/portal/self-service/sensitive/health": () =>
+        json({ group: "health", values: { healthRestrictions: null, severeDisability: null } }),
+      "PUT /api/v1/portal/self-service/sensitive/health": () =>
+        json({ ...withHealth(), revision: 2, warnings: [] }),
+    });
+    await screen.findByRole("heading", { level: 1, name: "Gesundheit" });
+    await user.type(screen.getByLabelText("Ihr Geburtsdatum"), "01.01.1970");
+    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    const restrictions = await screen.findByRole("group", {
+      name: "Gesundheitliche Einschränkungen *",
+    });
+    await user.click(within(restrictions).getByRole("radio", { name: "Nein" }));
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await screen.findByRole("heading", { level: 1, name: "Übersicht" });
+    expect(calls.filter((call) => call.body)).toEqual([
+      { path: "/api/v1/portal/step-up/birth-date", body: { birthDate: "1970-01-01" } },
+      {
+        path: "/api/v1/portal/self-service/sensitive/health",
+        body: { revision: 1, values: { healthRestrictions: false, severeDisability: null } },
+      },
+    ]);
   });
 
   it("sends an expired session to the login", async () => {

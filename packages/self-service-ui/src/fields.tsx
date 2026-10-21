@@ -1,4 +1,11 @@
-import { DrivingLicenceClass, EmploymentType, LanguageLevel, rowLimits } from "@transfer/domain";
+import {
+  DrivingLicenceClass,
+  EmploymentType,
+  ForeignCountry,
+  LanguageLevel,
+  ResidenceStatus,
+  rowLimits,
+} from "@transfer/domain";
 import type { WizardField } from "@transfer/domain";
 import {
   Button,
@@ -12,7 +19,7 @@ import {
   TextArea,
   TextInput,
 } from "@transfer/ui";
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { SELF_SERVICE_NAMESPACE } from "./i18n";
 import {
@@ -20,6 +27,7 @@ import {
   emptyEducation,
   emptyLanguage,
   emptyWork,
+  foreignNationality,
   type AddressForm,
   type Draft,
   type DistanceForm,
@@ -27,6 +35,7 @@ import {
   type EducationForm,
   type JobWishesForm,
   type LanguageSkillsForm,
+  type NationalityForm,
   type WorkForm,
   type WorkingTimeForm,
 } from "./model";
@@ -585,11 +594,91 @@ export function FieldEditor({ field }: { field: WizardField }) {
       return (
         <DateText path={key} label={label} help={help} value={value as string} onChange={change} />
       );
+    case "pensionInsuranceNumber":
+      return (
+        <Text
+          path={key}
+          label={label}
+          help={help ?? sub("hint")}
+          value={value as string}
+          onChange={change}
+          autoComplete="off"
+        />
+      );
+    case "nationality":
+      return <NationalityEditor field={field} label={label} help={help} />;
+    // Entry date and residence status only with another nationality, never required (TL 407).
+    case "entryToGermanyDate":
+      return foreignNationality(draft) ? (
+        <DateText path={key} label={label} help={help} value={value as string} onChange={change} />
+      ) : null;
+    case "residenceStatus":
+      return foreignNationality(draft) ? (
+        <Dropdown
+          path={key}
+          label={label}
+          help={help}
+          value={value as string}
+          onChange={change}
+          options={options(ResidenceStatus.options)}
+        />
+      ) : null;
+    // Yes or no only (Q135): never a diagnosis.
+    case "buergergeld":
+    case "healthRestrictions":
+    case "severeDisability":
+      return (
+        <Choice
+          path={key}
+          legend={label}
+          help={help ?? sub("hint")}
+          value={value as string}
+          onChange={change}
+          options={yesNoOptions(t)}
+        />
+      );
     default:
       return (
         <Text path={key} label={label} help={help} value={value as string} onChange={change} />
       );
   }
+}
+
+/** German, or another nationality with its country, named in the language shown (TL 407). */
+function NationalityEditor(props: { field: WizardField; label: string; help: string | undefined }) {
+  const t = useT();
+  const { draft, set, language } = useForm();
+  const value = draft.nationality as NationalityForm;
+  const change = (patch: Partial<NationalityForm>) => set("nationality", { ...value, ...patch });
+  const countries = useMemo(() => {
+    const names = new Intl.DisplayNames([language], { type: "region" });
+    return ForeignCountry.options
+      .map((code) => ({ value: code, label: names.of(code) ?? code }))
+      .toSorted((a, b) => a.label.localeCompare(b.label, language));
+  }, [language]);
+  return (
+    <Group legend={props.label} help={props.help}>
+      <Choice
+        path="nationality"
+        legend={t("fields.nationality.kind")}
+        value={value.kind}
+        onChange={(kind) => change({ kind })}
+        options={[
+          { value: "german", label: t("fields.nationality.german") },
+          { value: "other", label: t("fields.nationality.other") },
+        ]}
+      />
+      {value.kind === "other" && (
+        <Dropdown
+          path="nationality/country"
+          label={t("fields.nationality.country")}
+          value={value.country}
+          onChange={(country) => change({ country })}
+          options={countries}
+        />
+      )}
+    </Group>
+  );
 }
 
 /** The EU classes or "keinen Führerschein" (an answer of its own, ba-forms.md). */

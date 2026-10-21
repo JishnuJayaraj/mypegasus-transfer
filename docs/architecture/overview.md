@@ -73,7 +73,9 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   mode) the staff app. It renders a page from the API's page definition with Carbon through
   `packages/ui`, brings its own i18n namespace `selfService` (de/en) and reads and writes through a
   `SelfServiceSource` the app supplies, so it holds no route and no staff code; Oxlint forbids it
-  Carbon directly, app code and `@transfer/staff-*`.
+  Carbon directly, app code and `@transfer/staff-*`. The sensitive groups go through the source's
+  own calls (`loadSensitive`, `saveSensitive`) and the portal's step-up (`stepUp`), never through
+  the wizard state (PR 4a-4).
 - `packages/config`: regional configuration: the Zod-authored layer model (base defaults,
   Agentur templates, project overrides) exported as JSON Schema, the custom-field profile, the
   two-level resolver with provenance and blockers, pinned template loading
@@ -152,6 +154,17 @@ need the proxy CA (`/root/.ccr/README.md`).
   for the last one, addition with consent and a one-time code); shared pieces live in
   `apps/portal/src/components` and `problem.ts`. `apps/web` adds the recovery panel
   (`components/recovery.tsx`) to an activated participant's detail.
+
+## Encrypted fields (Slice 4a, PR 4a-4)
+
+- The highly confidential and special-category self-service fields are encrypted in Postgres with
+  `pgcrypto` (in its own schema `crypto`) by `write_sensitive_fields` / `read_sensitive_fields`
+  (ADR-0002, field encryption). `apps/api/src/field-encryption.ts` derives the key from
+  `FIELD_ENCRYPTION_KEY` (HKDF `field-encryption:v1`, required outside development) and passes it
+  per call as a bind parameter; the routes live in `apps/api/src/routes/self-service.ts` (portal
+  and staff) and the step-up in `apps/api/src/routes/portal.ts` (ADR-0007, step-up).
+- `packages/domain/src/self-service/sensitive.ts` holds their value schemas and groups,
+  `packages/domain/src/portal/step-up.ts` the step-up rules; no I/O.
 
 ## Background jobs
 

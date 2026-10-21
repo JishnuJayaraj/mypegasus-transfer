@@ -31,6 +31,7 @@ describe("parseEnv", () => {
     });
     expect(env.sessionSecret.length).toBeGreaterThanOrEqual(32);
     expect(env.accessCodeSecret?.length).toBeGreaterThanOrEqual(32);
+    expect(env.fieldEncryptionKey?.length).toBeGreaterThanOrEqual(32);
   });
 
   it("treats empty variables as unset, as in the .env copied from .env.example", () => {
@@ -53,7 +54,7 @@ describe("parseEnv", () => {
     ).toThrow(/AUTH_MODE=dev is not allowed with NODE_ENV=production/);
   });
 
-  // Slice 3 plan, D1 (PR 3b).
+  // ADR-0007, staff sessions and OIDC login.
   describe("AUTH_MODE=oidc", () => {
     const oidc = {
       ...dev,
@@ -68,6 +69,7 @@ describe("parseEnv", () => {
       NODE_ENV: "production",
       SESSION_SECRET: "s".repeat(32),
       ACCESS_CODE_SECRET: "a".repeat(32),
+      FIELD_ENCRYPTION_KEY: "f".repeat(32),
       PORTAL_PUBLIC_URL: "https://transfer.example.org/portal/",
       APP_ORIGINS: "https://transfer.example.org",
       OIDC_REDIRECT_URL: "https://transfer.example.org/api/v1/auth/callback",
@@ -129,18 +131,18 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ ...dev, NODE_ENV: "test" })).toThrow(/SESSION_SECRET/);
   });
 
-  it("requires the activation secret and public portal URL outside development", () => {
+  it("requires the activation secret, the field key and public portal URL outside development", () => {
     const base = { ...dev, NODE_ENV: "test", SESSION_SECRET: "s".repeat(32) };
     expect(() => parseEnv(base)).toThrow(/ACCESS_CODE_SECRET/);
-    expect(() => parseEnv({ ...base, ACCESS_CODE_SECRET: "a".repeat(32) })).toThrow(
-      /PORTAL_PUBLIC_URL/,
+    const secrets = { ...base, ACCESS_CODE_SECRET: "a".repeat(32) };
+    expect(() => parseEnv(secrets)).toThrow(/FIELD_ENCRYPTION_KEY is required outside development/);
+    expect(() => parseEnv({ ...secrets, FIELD_ENCRYPTION_KEY: "short" })).toThrow(
+      /FIELD_ENCRYPTION_KEY \(too_small\)/,
     );
+    const keyed = { ...secrets, FIELD_ENCRYPTION_KEY: "f".repeat(32) };
+    expect(() => parseEnv(keyed)).toThrow(/PORTAL_PUBLIC_URL/);
     expect(() =>
-      parseEnv({
-        ...base,
-        ACCESS_CODE_SECRET: "a".repeat(32),
-        PORTAL_PUBLIC_URL: "http://transfer.example.org/portal/",
-      }),
+      parseEnv({ ...keyed, PORTAL_PUBLIC_URL: "http://transfer.example.org/portal/" }),
     ).toThrow(/PORTAL_PUBLIC_URL must be https/);
   });
 
@@ -150,7 +152,7 @@ describe("parseEnv", () => {
     expect(parseInvalid).not.toThrow(/Zzyzx/);
   });
 
-  // Plan 5.8, 5.9 (PR 1h-1).
+  // ADR-0006 (the clock) and ADR-0011 (jobs).
   it("parses the jobs switch, the Berlin run time and the clock", () => {
     expect(
       parseEnv({

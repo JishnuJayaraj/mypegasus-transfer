@@ -5005,6 +5005,80 @@
         ],
         "additionalProperties": false
       },
+      "PortalStepUp": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/SensitiveStepUpMethod"
+          },
+          "done": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "method",
+          "done"
+        ],
+        "additionalProperties": false
+      },
+      "SensitiveStepUpMethod": {
+        "type": "string",
+        "enum": [
+          "birth_date",
+          "photo_id_and_code"
+        ]
+      },
+      "StepUpBirthDateInput": {
+        "type": "object",
+        "properties": {
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "birthDate"
+        ],
+        "additionalProperties": false
+      },
+      "StepUpCodeRequestInput": {
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "default": "de"
+          }
+        },
+        "required": [
+          "channelId"
+        ],
+        "additionalProperties": false
+      },
+      "StepUpCodeInput": {
+        "type": "object",
+        "properties": {
+          "oneTimeCode": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          }
+        },
+        "required": [
+          "oneTimeCode"
+        ],
+        "additionalProperties": false
+      },
       "PortalSelfService": {
         "type": "object",
         "properties": {
@@ -5081,6 +5155,12 @@
               ]
             }
           },
+          "sensitive": {
+            "$ref": "#/components/schemas/SensitivePresence"
+          },
+          "stepUp": {
+            "$ref": "#/components/schemas/PortalStepUp"
+          },
           "pages": {
             "type": "array",
             "items": {
@@ -5100,6 +5180,8 @@
           "identity",
           "values",
           "customValues",
+          "sensitive",
+          "stepUp",
           "pages",
           "missing"
         ],
@@ -5555,6 +5637,42 @@
           "part_time"
         ]
       },
+      "SensitivePresence": {
+        "type": "object",
+        "properties": {
+          "pensionInsuranceNumber": {
+            "type": "boolean"
+          },
+          "nationality": {
+            "type": "boolean"
+          },
+          "entryToGermanyDate": {
+            "type": "boolean"
+          },
+          "residenceStatus": {
+            "type": "boolean"
+          },
+          "buergergeld": {
+            "type": "boolean"
+          },
+          "healthRestrictions": {
+            "type": "boolean"
+          },
+          "severeDisability": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pensionInsuranceNumber",
+          "nationality",
+          "entryToGermanyDate",
+          "residenceStatus",
+          "buergergeld",
+          "healthRestrictions",
+          "severeDisability"
+        ],
+        "additionalProperties": false
+      },
       "SelfServicePageView": {
         "type": "object",
         "properties": {
@@ -5773,6 +5891,12 @@
               ]
             }
           },
+          "sensitive": {
+            "$ref": "#/components/schemas/SensitivePresence"
+          },
+          "stepUp": {
+            "$ref": "#/components/schemas/PortalStepUp"
+          },
           "pages": {
             "type": "array",
             "items": {
@@ -5798,6 +5922,8 @@
           "identity",
           "values",
           "customValues",
+          "sensitive",
+          "stepUp",
           "pages",
           "missing",
           "warnings"
@@ -5863,6 +5989,376 @@
           "values"
         ],
         "additionalProperties": false
+      },
+      "PortalSensitiveValues": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "enum": [
+              "ba_details",
+              "health"
+            ]
+          },
+          "values": {
+            "$ref": "#/components/schemas/SensitiveValues"
+          }
+        },
+        "required": [
+          "group",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "SensitiveValues": {
+        "type": "object",
+        "properties": {
+          "pensionInsuranceNumber": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nationality": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "german"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "other"
+                    ]
+                  },
+                  "country": {
+                    "$ref": "#/components/schemas/ForeignCountry"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "country"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entryToGermanyDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "residenceStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "blue_card",
+              "residence_permit",
+              "visa",
+              "settlement_permit",
+              "permission_to_reside",
+              "toleration",
+              null
+            ]
+          },
+          "buergergeld": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "healthRestrictions": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "severeDisability": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "ForeignCountry": {
+        "type": "string",
+        "enum": [
+          "AD",
+          "AE",
+          "AF",
+          "AG",
+          "AI",
+          "AL",
+          "AM",
+          "AO",
+          "AQ",
+          "AR",
+          "AS",
+          "AT",
+          "AU",
+          "AW",
+          "AX",
+          "AZ",
+          "BA",
+          "BB",
+          "BD",
+          "BE",
+          "BF",
+          "BG",
+          "BH",
+          "BI",
+          "BJ",
+          "BL",
+          "BM",
+          "BN",
+          "BO",
+          "BQ",
+          "BR",
+          "BS",
+          "BT",
+          "BV",
+          "BW",
+          "BY",
+          "BZ",
+          "CA",
+          "CC",
+          "CD",
+          "CF",
+          "CG",
+          "CH",
+          "CI",
+          "CK",
+          "CL",
+          "CM",
+          "CN",
+          "CO",
+          "CR",
+          "CU",
+          "CV",
+          "CW",
+          "CX",
+          "CY",
+          "CZ",
+          "DJ",
+          "DK",
+          "DM",
+          "DO",
+          "DZ",
+          "EC",
+          "EE",
+          "EG",
+          "EH",
+          "ER",
+          "ES",
+          "ET",
+          "FI",
+          "FJ",
+          "FK",
+          "FM",
+          "FO",
+          "FR",
+          "GA",
+          "GB",
+          "GD",
+          "GE",
+          "GF",
+          "GG",
+          "GH",
+          "GI",
+          "GL",
+          "GM",
+          "GN",
+          "GP",
+          "GQ",
+          "GR",
+          "GS",
+          "GT",
+          "GU",
+          "GW",
+          "GY",
+          "HK",
+          "HM",
+          "HN",
+          "HR",
+          "HT",
+          "HU",
+          "ID",
+          "IE",
+          "IL",
+          "IM",
+          "IN",
+          "IO",
+          "IQ",
+          "IR",
+          "IS",
+          "IT",
+          "JE",
+          "JM",
+          "JO",
+          "JP",
+          "KE",
+          "KG",
+          "KH",
+          "KI",
+          "KM",
+          "KN",
+          "KP",
+          "KR",
+          "KW",
+          "KY",
+          "KZ",
+          "LA",
+          "LB",
+          "LC",
+          "LI",
+          "LK",
+          "LR",
+          "LS",
+          "LT",
+          "LU",
+          "LV",
+          "LY",
+          "MA",
+          "MC",
+          "MD",
+          "ME",
+          "MF",
+          "MG",
+          "MH",
+          "MK",
+          "ML",
+          "MM",
+          "MN",
+          "MO",
+          "MP",
+          "MQ",
+          "MR",
+          "MS",
+          "MT",
+          "MU",
+          "MV",
+          "MW",
+          "MX",
+          "MY",
+          "MZ",
+          "NA",
+          "NC",
+          "NE",
+          "NF",
+          "NG",
+          "NI",
+          "NL",
+          "NO",
+          "NP",
+          "NR",
+          "NU",
+          "NZ",
+          "OM",
+          "PA",
+          "PE",
+          "PF",
+          "PG",
+          "PH",
+          "PK",
+          "PL",
+          "PM",
+          "PN",
+          "PR",
+          "PS",
+          "PT",
+          "PW",
+          "PY",
+          "QA",
+          "RE",
+          "RO",
+          "RS",
+          "RU",
+          "RW",
+          "SA",
+          "SB",
+          "SC",
+          "SD",
+          "SE",
+          "SG",
+          "SH",
+          "SI",
+          "SJ",
+          "SK",
+          "SL",
+          "SM",
+          "SN",
+          "SO",
+          "SR",
+          "SS",
+          "ST",
+          "SV",
+          "SX",
+          "SY",
+          "SZ",
+          "TC",
+          "TD",
+          "TF",
+          "TG",
+          "TH",
+          "TJ",
+          "TK",
+          "TL",
+          "TM",
+          "TN",
+          "TO",
+          "TR",
+          "TT",
+          "TV",
+          "TW",
+          "TZ",
+          "UA",
+          "UG",
+          "UM",
+          "US",
+          "UY",
+          "UZ",
+          "VA",
+          "VC",
+          "VE",
+          "VG",
+          "VI",
+          "VN",
+          "VU",
+          "WF",
+          "WS",
+          "YE",
+          "YT",
+          "ZA",
+          "ZM",
+          "ZW"
+        ]
       },
       "SelfServiceNoticeInput": {
         "type": "object",
@@ -6375,6 +6871,31 @@
           "customValues",
           "participantMaintained",
           "missing"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipationSensitiveValues": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "group": {
+            "type": "string",
+            "enum": [
+              "ba_details",
+              "health"
+            ]
+          },
+          "values": {
+            "$ref": "#/components/schemas/SensitiveValues"
+          }
+        },
+        "required": [
+          "participationId",
+          "group",
+          "values"
         ],
         "additionalProperties": false
       },
@@ -11937,6 +12458,229 @@
         }
       }
     },
+    "/api/v1/portal/step-up/birth-date": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The step-up of a birth-date account: the birth date again; the fifth wrong one ends the session (step_up_failed)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpBirthDateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stepped up for this session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalStepUp"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/step-up/code-request": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The step-up of a photo-ID account: send a step-up code to one of its channels (committed first)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpCodeRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Sent, or its outcome unknown: the code may still arrive"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/step-up/code": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The step-up code; a login code never counts. Five wrong entries end the code, not the session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepUpCodeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stepped up for this session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalStepUp"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/portal/self-service": {
       "get": {
         "tags": [
@@ -12016,6 +12760,162 @@
           },
           "401": {
             "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/self-service/sensitive/{group}": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The group's highly confidential or special-category values, decrypted; each field's read is audited. health needs the step-up (403 step_up_required)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ba_details",
+                "health"
+              ]
+            },
+            "required": true,
+            "name": "group",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSensitiveValues"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Save one sensitive group whole, encrypted; each changed field is audited. health needs the step-up (403 step_up_required); 409 stale_revision or notice_required",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ba_details",
+                "health"
+              ]
+            },
+            "required": true,
+            "name": "group",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServicePageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the state, sensitive fields by presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSelfServiceWrite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12154,6 +13054,89 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ParticipationSelfService"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/self-service/sensitive/{group}": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The group's sensitive fields the viewer may read in normal mode, decrypted; each field's read is audited (sensitive_read). The others are left out",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ba_details",
+                "health"
+              ]
+            },
+            "required": true,
+            "name": "group",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The readable values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSensitiveValues"
                 }
               }
             }

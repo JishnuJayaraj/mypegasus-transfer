@@ -223,7 +223,12 @@ Participation
   classes or `none` (an answer, so the starred field is present), distance in km, `nationwide`
   or `international`. Row tables are bounded (education and work history 20 rows, languages 10;
   the Anlage for rows beyond the form's is Slice 6). Dates are ISO in the API, `TT.MM.JJJJ` in the
-  UI; an impossible date is an error, `von > bis` a warning the participant sees.
+  UI; an impossible date is an error, `von > bis` a warning the participant sees. The sensitive
+  fields' (`packages/domain/src/self-service/sensitive.ts`): the RV-Nummer's format, nationality
+  `german` or `other` with an ISO 3166-1 alpha-2 country, entry date and residence status
+  (`blue_card`, `residence_permit`, `visa`, `settlement_permit`, `permission_to_reside`,
+  `toleration`) only with another nationality and never required, Bürgergeld, health restrictions
+  and Schwerbehinderung/Gleichstellung yes/no.
 - **Configuration decides** from the participation's own chain (`resolveForParticipation` with its
   placement Agentur): which fields are **required** (an applicable rule of the `data_collection`
   or `profiling` step names the field; a `requiredIf` while its condition holds), the **custom
@@ -238,7 +243,7 @@ Participation
   their field schema's type (text, number, date `TT.MM.JJJJ`, yes/no, a list for `enum`) and
   checked in the browser with the same compiled schema as on the API. A returning participant
   resumes at the first page with missing items; the progress bar counts the pages without a
-  missing required field.
+  missing required field, the sensitive ones by their fields' presence (Q140).
 
 ## Template versions: identity, immutability, snapshots (Slice 2)
 

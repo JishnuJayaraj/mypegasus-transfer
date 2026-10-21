@@ -76,6 +76,9 @@ describe("data catalog", () => {
       participant_details: entry("personnel_file", "confidential", true),
       // Slice 4a (Q138, Q140, Q141)
       participant_profile: entry("personnel_file", "confidential", true),
+      participant_identifier_data: entry("participation_record", "highly_confidential", true),
+      participant_residence_social_data: entry("personnel_file", "highly_confidential", true),
+      participant_health_data: entry("health_record", "special_category", true),
       self_service_notice_acknowledgement: entry("personnel_file", "internal", true),
       // Slice 3 (Q122)
       activation_code: entry("access_credential", "confidential", true),
@@ -100,7 +103,7 @@ describe("data catalog", () => {
     });
   });
 
-  it("scopes the pins and overrides by a project_id FK; only the global template versions have none (R27, AC-39)", () => {
+  it("scopes the pins and overrides by a project_id FK; only the global template versions have none", () => {
     expect(checkDataCatalog(tables, asParticipantData("project_template_pin"))).toEqual([]);
     expect(checkDataCatalog(tables, asParticipantData("project_config_override"))).toEqual([]);
     expect(checkDataCatalog(tables, asParticipantData("config_relaxation_request"))).toEqual([]);
@@ -245,16 +248,23 @@ describe("field columns", () => {
   });
 
   it("lets a classified field wait for its encrypted table, until a column stores it", () => {
-    expect([...notYetStored].every((key) => fieldEntry(key).storage === "encrypted_column")).toBe(
-      true,
-    );
-    const nowStored = checkFieldColumns(
-      tables,
-      fieldColumns,
-      dataCatalog,
-      fieldCatalog,
-      new Set([...notYetStored, "gender"]),
-    );
-    expect(nowStored).toEqual(['gender: stored, so no longer "not yet stored"']);
+    expect([...notYetStored]).toEqual([]);
+    const { participant_health_data: _, ...withoutHealth } = fieldColumns;
+    const waiting = new Set(["healthRestrictions", "severeDisability"]);
+    expect(checkFieldColumns(tables, withoutHealth, dataCatalog, fieldCatalog, waiting)).toEqual([
+      "participant_health_data: holds participant data but its columns aren't classified",
+    ]);
+    expect(
+      checkFieldColumns(tables, fieldColumns, dataCatalog, fieldCatalog, new Set(["gender"])),
+    ).toEqual(['gender: stored, so no longer "not yet stored"']);
+  });
+
+  it("stores the sensitive fields only in ciphertext columns, and nothing else there", () => {
+    expect(fieldEntry("healthRestrictions").storage).toBe("encrypted_column");
+    expect(fieldColumns.participant_health_data!.health_restrictions).toBe("healthRestrictions");
+    expect(check(withColumn("participant_health_data", "health_restrictions", "gender"))).toEqual([
+      "participant_health_data.health_restrictions: a ciphertext column for a plain field",
+      "healthRestrictions: has a retention class but no column stores it",
+    ]);
   });
 });

@@ -3,8 +3,10 @@ import { ConsentEndReason, ConsentPurpose, ConsentSource } from "../activation/m
 import { isoDate } from "../iso-date";
 import { Step } from "../lifecycle/enums";
 import { NoticeLanguage, SELF_SERVICE_NOTICE_VERSION } from "../notices/catalog";
+import { PortalStepUp } from "../portal/step-up";
+import { sensitiveFields, sensitiveValueSchemas, type SensitiveField } from "./sensitive";
 import { contactFields, selfServiceValueSchemas, type SelfServiceField } from "./values";
-import { SelfServicePage } from "./wizard";
+import { SelfServicePage, SensitivePage } from "./wizard";
 
 // The self-service API (data-protection.md, self-service; Q112, Q138, Q140). No response carries a
 // highly confidential or special-category value: those have their own logged endpoints. Missing
@@ -24,6 +26,29 @@ export const SelfServiceValues = z
 /** A custom field's value (the field-schema profile: scalars only), `null` where empty. */
 const CustomValue = z.union([z.string(), z.number(), z.boolean()]).nullable();
 const CustomValues = z.record(z.string(), CustomValue);
+
+/**
+ * Which highly confidential and special-category fields hold a value: their presence only, never
+ * the value (data-protection.md, self-service).
+ */
+export const SensitivePresence = z
+  .strictObject(
+    Object.fromEntries(sensitiveFields.map((key) => [key, z.boolean()])) as {
+      [K in SensitiveField]: z.ZodBoolean;
+    },
+  )
+  .meta({ id: "SensitivePresence" });
+export type SensitivePresence = z.infer<typeof SensitivePresence>;
+
+/** The decrypted values of one sensitive group; `null` where nothing is recorded. */
+export const SensitiveValuesView = z
+  .strictObject(
+    Object.fromEntries(
+      Object.entries(sensitiveValueSchemas).map(([key, schema]) => [key, schema.nullable()]),
+    ) as { [K in SensitiveField]: z.ZodNullable<(typeof sensitiveValueSchemas)[K]> },
+  )
+  .partial()
+  .meta({ id: "SensitiveValues" });
 
 const LocalizedHelp = z.strictObject({ de: z.string().optional(), en: z.string().optional() });
 
@@ -81,6 +106,10 @@ export const PortalSelfService = z
     }),
     values: SelfServiceValues,
     customValues: CustomValues,
+    /** The sensitive fields' presence; their values only from their own endpoints. */
+    sensitive: SensitivePresence,
+    /** The session's step-up before the health and disability fields (Q137). */
+    stepUp: PortalStepUp,
     pages: z.array(SelfServicePageView),
     missing: z.array(SelfServiceMissingItem),
   })
@@ -114,6 +143,25 @@ export const PortalSelfServiceWrite = PortalSelfService.extend({
   warnings: z.array(SelfServiceWarning),
 }).meta({ id: "PortalSelfServiceWrite" });
 export type PortalSelfServiceWrite = z.infer<typeof PortalSelfServiceWrite>;
+
+/**
+ * `GET /portal/self-service/sensitive/{group}`: the group's decrypted values, a logged read
+ * (`sensitive_read` per field key).
+ */
+export const PortalSensitiveValues = z
+  .strictObject({ group: SensitivePage, values: SensitiveValuesView })
+  .meta({ id: "PortalSensitiveValues" });
+export type PortalSensitiveValues = z.infer<typeof PortalSensitiveValues>;
+
+/**
+ * `GET /participations/{id}/self-service/sensitive/{group}`: the group's fields the viewer may read
+ * in normal mode (data-protection.md, access matrix), a logged read; the others are left out, not
+ * shown empty.
+ */
+export const ParticipationSensitiveValues = z
+  .strictObject({ participationId: z.uuid(), group: SensitivePage, values: SensitiveValuesView })
+  .meta({ id: "ParticipationSensitiveValues" });
+export type ParticipationSensitiveValues = z.infer<typeof ParticipationSensitiveValues>;
 
 /** `POST /portal/self-service/notice`: the version and language shown. */
 export const SelfServiceNoticeInput = z
