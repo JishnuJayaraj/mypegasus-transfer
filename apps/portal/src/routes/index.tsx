@@ -2,21 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ApiProblemError } from "@transfer/api-client";
 import type { PortalMe } from "@transfer/domain";
-import {
-  Button,
-  InlineNotification,
-  Select,
-  SelectItem,
-  Stack,
-  formatTimestamp,
-} from "@transfer/ui";
+import { Button, InlineNotification, Stack, formatTimestamp } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
-import { languages } from "../i18n";
+import { LanguageSelect } from "../components/language";
 
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { api } = Route.useRouteContext();
   // The logged-in participant, or null without a live session (an idle or expired one too).
   const me = useQuery({
@@ -34,17 +27,7 @@ function Home() {
   });
   return (
     <Stack gap={6}>
-      <Select
-        id="portal-language"
-        labelText={t("language.label")}
-        value={i18n.resolvedLanguage}
-        onChange={(event) => void i18n.changeLanguage(event.target.value)}
-        inline
-      >
-        {Object.entries(languages).map(([code, name]) => (
-          <SelectItem key={code} value={code} text={name} lang={code} />
-        ))}
-      </Select>
+      <LanguageSelect id="portal-language" />
       {me.data ? (
         <Participant me={me.data} />
       ) : (
@@ -64,7 +47,7 @@ function Home() {
   );
 }
 
-/** Greeting and the participant's own channels, masked (D28). */
+/** Greeting, the participant's own channels (masked) and their pages (ADR-0007). */
 function Participant({ me }: { me: PortalMe }) {
   const { t } = useTranslation();
   const { api } = Route.useRouteContext();
@@ -83,11 +66,18 @@ function Participant({ me }: { me: PortalMe }) {
           </li>
         ))}
       </ul>
-      <Link to="/channels">{t("home.manageChannels")}</Link>
+      <Stack gap={3}>
+        <Link to="/self-service">{t("home.selfService")}</Link>
+        <Link to="/consents">{t("home.consents")}</Link>
+        <Link to="/channels">{t("home.manageChannels")}</Link>
+      </Stack>
       <Button
         kind="secondary"
         onClick={async () => {
           await api.POST("/api/v1/portal/logout", { body: {} });
+          // Nothing of the participant stays in the cache after logout.
+          queryClient.removeQueries({ queryKey: ["portal-self-service"] });
+          queryClient.removeQueries({ queryKey: ["portal-consents"] });
           queryClient.setQueryData(["portal-me"], null);
         }}
       >

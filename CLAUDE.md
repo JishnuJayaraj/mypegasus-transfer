@@ -124,6 +124,7 @@ packages/db       Drizzle schema, migrations (SECURITY DEFINER status functions 
                   hand-written), synthetic seed, data catalog
 packages/api-client  generated OpenAPI document + types and the typed client
 packages/ui       Carbon wrappers, layout, tokens, i18n helpers
+packages/self-service-ui  the self-service wizard, shared by both SPAs (no staff code)
 packages/config   regional configuration: layer model, resolver, pinned templates
 packages/adapters interfaces + implementations (ADR-0006)
 fixtures/         synthetic test files only

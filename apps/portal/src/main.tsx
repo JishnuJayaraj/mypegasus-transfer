@@ -1,15 +1,8 @@
-import "@transfer/ui/styles.scss";
-import { QueryClient } from "@tanstack/react-query";
-import { RouterProvider } from "@tanstack/react-router";
-import { createApiClient } from "@transfer/api-client";
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { createPortalRouter } from "./router";
+import { z } from "zod";
 
-const router = createPortalRouter({ api: createApiClient(), queryClient: new QueryClient() });
-
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
-);
+// Zod probes `new Function` when it builds its first object schema unless it runs jitless, and the
+// API's CSP (no `unsafe-eval`) reports that probe as a violation (ADR-0004, spike S1). The app is
+// loaded only after this setting: a bundle evaluates the shared chunks an entry imports (the
+// domain's schemas among them) before the entry's own code, so a first import would run too late.
+z.config({ jitless: true });
+void import("./app");

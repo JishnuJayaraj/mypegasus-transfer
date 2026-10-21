@@ -113,6 +113,7 @@ export const SelfServiceWarning = z
 export const PortalSelfServiceWrite = PortalSelfService.extend({
   warnings: z.array(SelfServiceWarning),
 }).meta({ id: "PortalSelfServiceWrite" });
+export type PortalSelfServiceWrite = z.infer<typeof PortalSelfServiceWrite>;
 
 /** `POST /portal/self-service/notice`: the version and language shown. */
 export const SelfServiceNoticeInput = z

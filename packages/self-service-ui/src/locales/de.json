@@ -1,0 +1,204 @@
+{
+  "title": "Meine Angaben",
+  "loading": "Ihre Angaben werden geladen …",
+  "loadFailed": "Ihre Angaben konnten nicht geladen werden. Bitte versuchen Sie es später noch einmal.",
+  "notice": {
+    "acknowledge": "Gelesen, weiter",
+    "newVersion": "Die Hinweise haben sich geändert. Bitte lesen Sie sie, bevor Sie weitermachen."
+  },
+  "intro": {
+    "required": "Mit * gekennzeichnete Angaben sind Pflichtangaben.",
+    "optional": "Alle anderen Angaben können Sie offen lassen und später mit Ihrer Beraterin oder Ihrem Berater ergänzen.",
+    "noDiagnoses": "Bitte tragen Sie in Textfelder keine Diagnosen und keine Angaben zu Ihrer Gesundheit ein."
+  },
+  "progress": {
+    "label": "Fortschritt",
+    "pages": "{{complete}} von {{total}} Seiten vollständig",
+    "step": "Seite {{current}} von {{total}}"
+  },
+  "actions": {
+    "next": "Weiter",
+    "back": "Zurück",
+    "toOverview": "Zur Übersicht",
+    "edit": "{{page}} bearbeiten",
+    "addRow": "Eintrag hinzufügen",
+    "removeRow": "Eintrag {{number}} entfernen"
+  },
+  "messages": {
+    "stale": "Ihre Angaben wurden inzwischen an anderer Stelle geändert. Wir haben den aktuellen Stand geladen. Bitte prüfen Sie die Seite und speichern Sie sie erneut.",
+    "invalid": "Bitte prüfen Sie die markierten Angaben.",
+    "failed": "Das Speichern hat nicht geklappt. Bitte versuchen Sie es erneut.",
+    "closed": "Ihre Teilnahme ist abgeschlossen. Angaben können nicht mehr geändert werden."
+  },
+  "overview": {
+    "title": "Übersicht",
+    "intro": "Hier sehen Sie, welche Pflichtangaben noch fehlen. Sie können jede Seite noch einmal öffnen.",
+    "complete": "Vollständig",
+    "missing_one": "Es fehlt noch eine Pflichtangabe:",
+    "missing_other": "Es fehlen noch {{count}} Pflichtangaben:",
+    "later": "Diese Angaben können Sie bald hier eintragen. Bis dahin hilft Ihnen Ihre Beraterin oder Ihr Berater."
+  },
+  "identity": {
+    "intro": "Name und Geburtsdatum haben wir von Ihrem bisherigen Arbeitgeber erhalten. Wenn sie nicht stimmen, wenden Sie sich bitte an Ihre Beratung.",
+    "name": "Name",
+    "birthDate": "Geburtsdatum"
+  },
+  "warnings": {
+    "from_after_to": "Das Datum „von“ liegt nach dem Datum „bis“. Bitte prüfen Sie den Eintrag."
+  },
+  "errors": {
+    "invalid": "Bitte prüfen Sie diese Angabe.",
+    "required_missing": "Bitte füllen Sie dieses Feld aus.",
+    "too_long": "Dieser Text ist zu lang.",
+    "too_many_rows": "Es sind zu viele Einträge.",
+    "out_of_range": "Dieser Wert liegt außerhalb des erlaubten Bereichs.",
+    "value_not_allowed": "Bitte wählen Sie einen der angebotenen Werte.",
+    "control_characters": "Dieser Text enthält unzulässige Zeichen.",
+    "postal_code_invalid": "Bitte geben Sie eine fünfstellige Postleitzahl ein.",
+    "phone_invalid": "Bitte geben Sie eine gültige Telefonnummer ein.",
+    "email_invalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+    "duplicate_value": "Jeder Wert darf nur einmal vorkommen.",
+    "date_invalid": "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
+    "number_invalid": "Bitte geben Sie eine Zahl ein.",
+    "invalid_format": "Das Format dieser Angabe stimmt nicht.",
+    "unknown_field": "Diese Angabe kann hier nicht gespeichert werden."
+  },
+  "pages": {
+    "personal": "Persönliches",
+    "contact": "Kontakt",
+    "ba_details": "Angaben für die Agentur",
+    "education": "Schule und Ausbildung",
+    "work_history": "Beruflicher Werdegang",
+    "languages_mobility": "Sprachen und Mobilität",
+    "job_wish": "Arbeitswunsch",
+    "health": "Gesundheit",
+    "further": "Weitere Angaben"
+  },
+  "options": {
+    "yes": "Ja",
+    "no": "Nein",
+    "choose": "Bitte wählen"
+  },
+  "fields": {
+    "gender": {
+      "label": "Geschlecht",
+      "male": "Männlich",
+      "female": "Weiblich",
+      "diverse": "Divers",
+      "not_specified": "Ohne Angabe"
+    },
+    "maritalStatus": {
+      "label": "Familienstand",
+      "single": "Ledig",
+      "married": "Verheiratet"
+    },
+    "address": {
+      "label": "Anschrift",
+      "street": "Straße und Hausnummer",
+      "postalCode": "Postleitzahl",
+      "city": "Ort"
+    },
+    "phone": {
+      "label": "Telefon"
+    },
+    "mobile": {
+      "label": "Mobilnummer"
+    },
+    "privateEmail": {
+      "label": "Private E-Mail-Adresse",
+      "hint": "Diese Angaben ändern nicht Ihre Kontaktwege für die Anmeldung."
+    },
+    "educationHistory": {
+      "label": "Schul- und Berufsausbildung, Studium",
+      "row": "Ausbildung {{number}}",
+      "from": "Von",
+      "to": "Bis",
+      "toHint": "Leer lassen, wenn sie noch läuft.",
+      "institution": "Schule, Betrieb oder Hochschule",
+      "qualification": "Ausbildung oder Abschluss",
+      "completed": "Abgeschlossen?",
+      "running": "Läuft noch"
+    },
+    "workHistory": {
+      "label": "Berufliche Tätigkeiten",
+      "hint": "Bitte auch Lücken angeben, zum Beispiel Elternzeit.",
+      "row": "Tätigkeit {{number}}",
+      "from": "Von",
+      "to": "Bis",
+      "toHint": "Leer lassen, wenn sie noch andauert.",
+      "employer": "Arbeitgeber",
+      "activity": "Tätigkeit"
+    },
+    "languageSkills": {
+      "label": "Sprachkenntnisse",
+      "german": "Deutsch",
+      "others": "Weitere Sprachen",
+      "row": "Sprache {{number}}",
+      "language": "Sprache",
+      "level": "Kenntnisse",
+      "basic": "Grundkenntnisse",
+      "extended": "Erweiterte Kenntnisse",
+      "business_fluent": "Verhandlungssicher"
+    },
+    "drivingLicence": {
+      "label": "Führerschein",
+      "none": "Keinen Führerschein",
+      "classes": "Klassen"
+    },
+    "vehicleAvailable": {
+      "label": "Ein Fahrzeug steht zur Verfügung"
+    },
+    "workingTimePreferences": {
+      "label": "Arbeitszeit",
+      "employmentType": "Gewünschter Umfang",
+      "full_time": "Vollzeit",
+      "part_time": "Teilzeit",
+      "weeklyHours": "Stunden pro Woche",
+      "distribution": "Gewünschte Verteilung der Arbeitszeit"
+    },
+    "jobWishes": {
+      "label": "Berufswunsch",
+      "desired": "Gewünschte Tätigkeit",
+      "alternative": "Alternative Tätigkeit"
+    },
+    "desiredWorkLocations": {
+      "label": "Gewünschte Arbeitsorte"
+    },
+    "maxCommuteDistance": {
+      "label": "Höchste Entfernung zum Arbeitsort",
+      "km": "Bis zu einer Entfernung",
+      "kmValue": "Entfernung in km",
+      "nationwide": "Bundesweit",
+      "international": "Auch im Ausland"
+    },
+    "earliestStartDate": {
+      "label": "Frühester Arbeitsbeginn"
+    },
+    "pensionInsuranceNumber": {
+      "label": "Rentenversicherungsnummer"
+    },
+    "nationality": {
+      "label": "Staatsangehörigkeit"
+    },
+    "entryToGermanyDate": {
+      "label": "Einreisedatum"
+    },
+    "residenceStatus": {
+      "label": "Aufenthaltsstatus"
+    },
+    "buergergeld": {
+      "label": "Bürgergeld"
+    },
+    "healthRestrictions": {
+      "label": "Gesundheitliche Einschränkungen"
+    },
+    "severeDisability": {
+      "label": "Schwerbehinderung oder Gleichstellung"
+    }
+  },
+  "rows": {
+    "limit": "Höchstens {{max}} Einträge.",
+    "empty": "Noch keine Einträge."
+  },
+  "required": "{{label}} *"
+}

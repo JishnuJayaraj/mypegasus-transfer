@@ -21,3 +21,11 @@ if (typeof window !== "undefined")
 
 // jsdom doesn't implement scrolling; TanStack Router's scroll restoration calls it on navigation.
 if (typeof window !== "undefined") window.scrollTo = () => {};
+
+// jsdom has no ResizeObserver; Carbon's TextArea observes its size.
+if (typeof window !== "undefined")
+  window.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };

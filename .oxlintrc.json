@@ -63,6 +63,33 @@
       }
     },
     {
+      "files": ["packages/self-service-ui/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@carbon/*"],
+                "message": "The wizard uses Carbon only through @transfer/ui."
+              },
+              {
+                "group": [
+                  "@transfer/web",
+                  "@transfer/web/**",
+                  "@transfer/staff-*",
+                  "@transfer/staff-*/**",
+                  "**/apps/*",
+                  "**/apps/*/**"
+                ],
+                "message": "The wizard is shared with the portal: no staff or app code (ADR-0001)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["apps/portal/**"],
       "rules": {
         "no-restricted-imports": [
