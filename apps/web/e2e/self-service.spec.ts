@@ -1,17 +1,9 @@
-import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
-import {
-  createDb,
-  participantDetails,
-  participantIdentity,
-  participation,
-  seedProjectIds,
-  seedStaffUserIds,
-} from "@transfer/db";
-import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
+import { seedProjectIds } from "@transfer/db";
 import { expect, expectAccessible, test } from "./helpers";
+import { activatedParticipant } from "./participants";
 
-// PR 4a-3 (data-protection.md, self-service; regional-variation.md, "Self-service wizard"): an
+// Self-service (data-protection.md, self-service; regional-variation.md, "Self-service wizard"): an
 // activated participant logs in, acknowledges the purposes notice, fills Persönliches and
 // Kontakt, reloads, resumes at the first page with missing items and sees the progress. Placed
 // with the sample Agentur Beispielstadt Nord, whose template adds a custom field: the portal
@@ -40,94 +32,19 @@ const countTo = async (staff: APIRequestContext, to: string) =>
     (m) => m.to === to,
   ).length;
 
-/** Fails the test unless the set-up request succeeded. */
-const ok = async (response: Promise<{ ok(): boolean; status(): number }>) =>
-  expect((await response).ok()).toBe(true);
-
 test("portal: the self-service wizard saves pages, resumes and shows the progress", async ({
   page,
   baseURL,
 }) => {
   test.slow();
-  const owner = createDb(testDatabaseUrls("transfer_e2e").owner);
-  const participationId = randomUUID();
-  const projectId = seedProjectIds.werkNord;
-  try {
-    await activateAsOwner(owner.$client, [projectId]);
-    await owner.insert(participation).values({
-      id: participationId,
-      projectId,
-      status: "imported",
-      profilingStatus: "not_started",
-      dsvStatus: "not_offered",
-    });
-    await owner.insert(participantIdentity).values({
-      participationId,
-      projectId,
-      personnelNumber: `E2E-${participationId.slice(0, 8)}`,
-      firstName: "Erika",
-      lastName: "Beispiel",
-      birthDate: "1970-01-01",
-    });
-    await owner.insert(participantDetails).values({
-      participationId,
-      projectId,
-      addressStreet: "Musterweg 1",
-      addressPostalCode: "10115",
-      addressCity: "Berlin",
-      addressCountry: "DE",
-    });
-  } finally {
-    await owner.$client.end();
-  }
-
-  // Set up over the API: the PL places the participation with Beispielstadt Nord and prints a
-  // letter; the participant activates it (the activation e2e drives these screens).
+  // Placed with Beispielstadt Nord, activated by letter (participants.ts; the activation e2e
+  // drives those screens).
   const api = page.context().request;
-  const headers = { Origin: baseURL! };
-  await ok(
-    api.post("/api/v1/dev/session", {
-      headers,
-      data: { staffUserId: seedStaffUserIds.projectLead },
-    }),
-  );
-  await ok(
-    api.put(`/api/v1/participations/${participationId}/placement-agentur`, {
-      headers,
-      data: { agenturKey: "beispielstadt-nord" },
-    }),
-  );
-  const issued = await api.post(`/api/v1/projects/${projectId}/activation-codes`, {
-    headers,
-    data: { participationIds: [participationId], channel: "letter", language: "de" },
+  await activatedParticipant(page, baseURL!, {
+    projectId: seedProjectIds.werkNord,
+    address: PRIVATE,
+    agenturKey: "beispielstadt-nord",
   });
-  const { items } = (await issued.json()) as { items: { code: string }[] };
-  await ok(api.post("/api/v1/portal/activation", { headers, data: { code: items[0]!.code } }));
-  await ok(
-    api.post("/api/v1/portal/activation/birth-date", {
-      headers,
-      data: { birthDate: "1970-01-01" },
-    }),
-  );
-  await ok(
-    api.post("/api/v1/portal/activation/channel", {
-      headers,
-      data: { kind: "email", address: PRIVATE, language: "de" },
-    }),
-  );
-  await ok(
-    api.post("/api/v1/portal/activation/completion", {
-      headers,
-      data: {
-        oneTimeCode: await lastCode(api, PRIVATE, 0),
-        noticeVersion: "art14-activation:v1",
-        consent: true,
-        consentVersion: "portal-contact-consent:v1",
-        language: "de",
-      },
-    }),
-  );
-  await ok(api.post("/api/v1/portal/logout", { headers, data: {} }));
 
   // The participant logs in by code.
   await page.goto("/portal/login");

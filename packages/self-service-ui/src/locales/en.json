@@ -231,7 +231,7 @@
     "sent": "We have sent you a code. It is valid for 15 minutes.",
     "code": "Confirmation code",
     "wrongCode": "The code is not correct or no longer valid. You can ask for a new code.",
-    "rateLimited": "You have asked for too many codes. Please try again later.",
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
     "failed": "That did not work. Please try again.",
     "skip": "Continue without these details"
   }

@@ -1,131 +1,25 @@
-import { randomUUID } from "node:crypto";
-import type { APIRequestContext } from "@playwright/test";
-import {
-  createDb,
-  participantDetails,
-  participantIdentity,
-  participation,
-  seedProjectIds,
-  seedStaffUserIds,
-} from "@transfer/db";
-import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
+import { seedProjectIds } from "@transfer/db";
 import { expect, expectAccessible, test } from "./helpers";
+import { activatedParticipant, loggedInAsOwner } from "./participants";
 
 // PR 4a-4 (data-protection.md, self-service; ADR-0007, step-up): a participant logged in by code
 // answers "Angaben für die Agentur" (encrypted, on its own logged routes) and, after entering the
-// birth date again, "Gesundheit" (yes/no only). The suite fails on any CSP violation. Synthetic
-// data only.
-
-const PRIVATE = "angaben.privat@example.org";
-
-async function lastCode(staff: APIRequestContext, to: string, after: number) {
-  let code = "";
-  await expect
-    .poll(async () => {
-      const outbox: { to: string; text: string }[] = await (
-        await staff.get("/api/v1/dev/outbox")
-      ).json();
-      const messages = outbox.filter((m) => m.to === to);
-      code = messages.length > after ? /\b(\d{6})\b/.exec(messages.at(-1)!.text)![1]! : "";
-      return code;
-    })
-    .not.toBe("");
-  return code;
-}
-
-const countTo = async (staff: APIRequestContext, to: string) =>
-  ((await (await staff.get("/api/v1/dev/outbox")).json()) as { to: string }[]).filter(
-    (m) => m.to === to,
-  ).length;
-
-const ok = async (response: Promise<{ ok(): boolean; status(): number }>) =>
-  expect((await response).ok()).toBe(true);
+// birth date again, "Gesundheit" (yes/no only). The suite fails on any CSP violation. The
+// activation and the login have their own spec; this one starts logged in (participants.ts).
+// Synthetic data only.
 
 test("portal: the participant answers the sensitive pages, Gesundheit after the birth date", async ({
   page,
   baseURL,
 }) => {
   test.slow();
-  const owner = createDb(testDatabaseUrls("transfer_e2e").owner);
-  const participationId = randomUUID();
-  const projectId = seedProjectIds.werkNord;
-  try {
-    await activateAsOwner(owner.$client, [projectId]);
-    await owner.insert(participation).values({
-      id: participationId,
-      projectId,
-      status: "imported",
-      profilingStatus: "not_started",
-      dsvStatus: "not_offered",
-    });
-    await owner.insert(participantIdentity).values({
-      participationId,
-      projectId,
-      personnelNumber: `E2E-${participationId.slice(0, 8)}`,
-      firstName: "Erika",
-      lastName: "Beispiel",
-      birthDate: "1970-01-01",
-    });
-    await owner.insert(participantDetails).values({
-      participationId,
-      projectId,
-      addressStreet: "Musterweg 1",
-      addressPostalCode: "10115",
-      addressCity: "Berlin",
-      addressCountry: "DE",
-    });
-  } finally {
-    await owner.$client.end();
-  }
-
-  // Set up over the API: a letter, the activation (the activation e2e drives these screens).
-  const api = page.context().request;
-  const headers = { Origin: baseURL! };
-  await ok(
-    api.post("/api/v1/dev/session", {
-      headers,
-      data: { staffUserId: seedStaffUserIds.projectLead },
-    }),
-  );
-  const issued = await api.post(`/api/v1/projects/${projectId}/activation-codes`, {
-    headers,
-    data: { participationIds: [participationId], channel: "letter", language: "de" },
+  const participationId = await activatedParticipant(page, baseURL!, {
+    projectId: seedProjectIds.werkNord,
+    address: "angaben.privat@example.org",
   });
-  const { items } = (await issued.json()) as { items: { code: string }[] };
-  await ok(api.post("/api/v1/portal/activation", { headers, data: { code: items[0]!.code } }));
-  await ok(
-    api.post("/api/v1/portal/activation/birth-date", {
-      headers,
-      data: { birthDate: "1970-01-01" },
-    }),
-  );
-  await ok(
-    api.post("/api/v1/portal/activation/channel", {
-      headers,
-      data: { kind: "email", address: PRIVATE, language: "de" },
-    }),
-  );
-  await ok(
-    api.post("/api/v1/portal/activation/completion", {
-      headers,
-      data: {
-        oneTimeCode: await lastCode(api, PRIVATE, 0),
-        noticeVersion: "art14-activation:v1",
-        consent: true,
-        consentVersion: "portal-contact-consent:v1",
-        language: "de",
-      },
-    }),
-  );
-  await ok(api.post("/api/v1/portal/logout", { headers, data: {} }));
+  await loggedInAsOwner(page, baseURL!, participationId);
 
-  // A login by code: this session has no step-up of its own.
-  await page.goto("/portal/login");
-  const before = await countTo(api, PRIVATE);
-  await page.getByLabel("E-Mail-Adresse oder Mobilnummer").fill(PRIVATE);
-  await page.getByRole("button", { name: "Code senden" }).click();
-  await page.getByLabel("Anmeldecode").fill(await lastCode(api, PRIVATE, before));
-  await page.getByRole("button", { name: "Anmelden" }).click();
+  await page.goto("/portal/");
   await expect(page.getByRole("heading", { name: "Hallo Erika" })).toBeVisible();
   await page.getByRole("link", { name: "Meine Angaben" }).click();
   await page.getByRole("button", { name: "Gelesen, weiter" }).click();

@@ -231,7 +231,7 @@
     "sent": "Wir haben Ihnen einen Code gesendet. Er gilt 15 Minuten.",
     "code": "Bestätigungscode",
     "wrongCode": "Der Code stimmt nicht oder ist nicht mehr gültig. Sie können einen neuen Code anfordern.",
-    "rateLimited": "Sie haben zu viele Codes angefordert. Bitte versuchen Sie es später noch einmal.",
+    "rateLimited": "Zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es dann noch einmal.",
     "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
     "skip": "Ohne diese Angaben weiter"
   }
