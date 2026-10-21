@@ -69,6 +69,8 @@ main imported contacted user manual: PL C
 main contacted informed user manual: PL C
 main contacted unreachable user manual: PL C
 main unreachable contacted user manual: PL C
+main imported contacted participant activation: P
+main unreachable contacted participant activation: P
 main informed active_in_tg system scheduled_entry: SYS
 main informed active_in_tg system scheduled_entry_catchup: SYS
 main informed active_in_tg user reconciliation: PL
@@ -131,6 +133,14 @@ describe("mayPerformTransition (AC-28, Q60)", () => {
     expect(result(mayPerformTransition(actors.SYS!, contact, target))).toBe("actor_not_allowed");
     expect(result(mayPerformTransition(participant, create, target))).toBe("actor_not_allowed");
     expect(result(mayPerformTransition(actors.ROM!, contact, target))).toBe("role_not_allowed");
+  });
+
+  it("lets a participant take only the activation edges of their own participation (D25)", () => {
+    const activation = edges.find((e) => e.kind === "activation")!;
+    expect(result(mayPerformTransition(participant, activation, target))).toBe("ok");
+    const other = { ...target, participationId: "participation-b" };
+    expect(result(mayPerformTransition(participant, activation, other))).toBe("actor_not_allowed");
+    expect(result(mayPerformTransition(participant, contact, target))).toBe("actor_not_allowed");
   });
 });
 

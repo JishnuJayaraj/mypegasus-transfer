@@ -81,6 +81,12 @@ describe("audit event types (plan 5.4)", () => {
       "activation_code_handed_over",
       "activation_code_revoked",
       "privacy_notice_provided",
+      "participant_activated",
+      "consent_given",
+      "contact_channel_added",
+      "activation_code_locked",
+      "one_time_code_exhausted",
+      "participant_logout",
     ]);
   });
 
@@ -119,6 +125,13 @@ describe("audit event types (plan 5.4)", () => {
       "activation_code_handed_over",
       "activation_code_revoked",
       "privacy_notice_provided",
+      // Portal activation (D21–D29): only the activation functions write them.
+      "participant_activated",
+      "consent_given",
+      "contact_channel_added",
+      "activation_code_locked",
+      "one_time_code_exhausted",
+      "participant_logout",
     ]);
   });
 
@@ -978,5 +991,75 @@ describe("the other event types", () => {
         details: { ...correction.details, secondaryReasons: [illness] },
       }),
     ).toEqual(["reason_not_storable"]);
+  });
+});
+
+describe("portal activation events (Slice 3 plan D21–D29)", () => {
+  const participant = { type: "participant", participationId } as const;
+  const portalJob = { type: "system", job: "portal-activation" } as const;
+
+  it.each([
+    [
+      "participant_activated",
+      participant,
+      {
+        activationCodeId: otherId,
+        identityAssurance: "photo_id",
+        noticeVersion: "art14-activation:v1",
+        language: "en",
+      },
+    ],
+    [
+      "consent_given",
+      participant,
+      {
+        consentId: otherId,
+        channelId: otherId,
+        purpose: "portal_contact",
+        textVersion: "portal-contact-consent:v1",
+        language: "de",
+      },
+    ],
+    [
+      "contact_channel_added",
+      participant,
+      { channelId: otherId, kind: "sms", verifiedBy: "activation_link" },
+    ],
+    ["activation_code_locked", portalJob, { activationCodeId: otherId }],
+    [
+      "one_time_code_exhausted",
+      portalJob,
+      { challengeId: otherId, purpose: "channel_verification" },
+    ],
+    ["participant_logout", participant, {}],
+    // The notice evidence of PR 3d with its real version string.
+    [
+      "privacy_notice_provided",
+      user,
+      {
+        noticeDeliveryId: otherId,
+        noticeVersion: "art14-activation:v1",
+        language: "de",
+        method: "letter",
+      },
+    ],
+  ] as const)("accept %s with ids and codes only", (type, actor, details) => {
+    expect(issueCodes({ ...base, type, actor, details })).toEqual([]);
+    // Never an address or a code beside them.
+    expect(
+      AuditEvent.safeParse({ ...base, type, actor, details: { ...details, address: "x" } }).success,
+    ).toBe(false);
+  });
+
+  it("names the participation of every activation event", () => {
+    expect(
+      AuditEvent.safeParse({
+        ...base,
+        type: "participant_logout",
+        actor: participant,
+        participationId: null,
+        details: {},
+      }).success,
+    ).toBe(false);
   });
 });

@@ -23,7 +23,11 @@ import {
   IdentityCheckMethod,
   NoticeMethod,
   ActivationPurpose,
+  ChannelVerification,
+  ConsentPurpose,
+  OneTimeCodePurpose,
 } from "../activation/model";
+import { IdentityAssurance } from "../activation/steps";
 import { NoticeLanguage } from "../notices/catalog";
 import {
   DsvStatus,
@@ -92,6 +96,13 @@ export const AuditEventType = z.enum([
   "activation_code_handed_over",
   "activation_code_revoked",
   "privacy_notice_provided",
+  // Slice 3, portal activation (D21–D29): written only by the activation functions
+  "participant_activated",
+  "consent_given",
+  "contact_channel_added",
+  "activation_code_locked",
+  "one_time_code_exhausted",
+  "participant_logout",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -147,6 +158,12 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "activation_code_handed_over",
   "activation_code_revoked",
   "privacy_notice_provided",
+  "participant_activated",
+  "consent_given",
+  "contact_channel_added",
+  "activation_code_locked",
+  "one_time_code_exhausted",
+  "participant_logout",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -161,6 +178,8 @@ export const statusFieldOfTrack: Readonly<Record<Track, StatusField>> = {
 
 /** A snake_case code (reason codes, warning codes); never a sentence. */
 const code = z.string().regex(/^[a-z][a-z0-9_]{0,62}$/);
+/** A versioned text (`art14-activation:v1`), as `privacy_notice_delivery` holds it. */
+const textVersion = z.string().regex(/^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$/);
 /** Request and job ids: id characters only. */
 const correlationId = z.string().regex(/^[A-Za-z0-9_.:-]{1,64}$/);
 /** A job name such as `lifecycle.evaluate-project` or `seed`. */
@@ -528,7 +547,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
       channel: ActivationChannel,
       identityCheck: IdentityCheck,
       deliveryKind: ActivationDeliveryKind.optional(),
-      noticeVersion: code,
+      noticeVersion: textVersion,
       language: NoticeLanguage,
     }),
   }),
@@ -556,10 +575,53 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject({
       noticeDeliveryId: z.uuid(),
       activationCodeId: z.uuid().optional(),
-      noticeVersion: code,
+      noticeVersion: textVersion,
       language: NoticeLanguage,
       method: NoticeMethod,
     }),
   }),
+  /**
+   * The participant's own activation (D23, D25): the code used, how the identity was assured, the
+   * notice version shown in the portal (never a first delivery) and the account's language.
+   */
+  event("participant_activated", {
+    ...ofParticipation,
+    details: z.strictObject({
+      activationCodeId: z.uuid(),
+      identityAssurance: IdentityAssurance,
+      noticeVersion: textVersion,
+      language: NoticeLanguage,
+    }),
+  }),
+  /** A consent record (D28): its purpose, channel, text version and language; never the address. */
+  event("consent_given", {
+    ...ofParticipation,
+    details: z.strictObject({
+      consentId: z.uuid(),
+      channelId: z.uuid(),
+      purpose: ConsentPurpose,
+      textVersion,
+      language: NoticeLanguage,
+    }),
+  }),
+  event("contact_channel_added", {
+    ...ofParticipation,
+    details: z.strictObject({
+      channelId: z.uuid(),
+      kind: ActivationDeliveryKind,
+      verifiedBy: ChannelVerification,
+    }),
+  }),
+  /** The fifth failure locked the code (D14); the system records it (job `portal-activation`). */
+  event("activation_code_locked", {
+    ...ofParticipation,
+    details: z.strictObject({ activationCodeId: z.uuid() }),
+  }),
+  /** The fifth wrong entry ended a one-time code (D27). */
+  event("one_time_code_exhausted", {
+    ...ofParticipation,
+    details: z.strictObject({ challengeId: z.uuid(), purpose: OneTimeCodePurpose }),
+  }),
+  event("participant_logout", { ...ofParticipation, details: noDetails }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

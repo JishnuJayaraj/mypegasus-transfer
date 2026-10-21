@@ -98,6 +98,9 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["workEmail", "oldEmploymentEndDate"], C, "confidential", false, personnelFile),
   field("knowledgeDate", C, "confidential", false),
   ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true, personnelFile),
+  // The participant's verified portal contacts (Slice 3 plan D28, Q123): staff see kind, state and
+  // dates only, never the address; never in lists
+  field("portalChannels", C, "confidential", true, { listable: false, ...personnelFile }),
   ...fields(
     ["maritalStatus", "gender", "educationHistory", "workHistory"],
     C,

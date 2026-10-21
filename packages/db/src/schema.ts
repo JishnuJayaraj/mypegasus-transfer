@@ -34,6 +34,14 @@ import {
   IdentityCheck,
   NoticeLanguage,
   NoticeMethod,
+  ChannelVerification,
+  ConsentPurpose,
+  IdentityAssurance,
+  OneTimeCodePurpose,
+  ParticipantSessionState,
+  StepUpMethod,
+  edgeKinds,
+  portalLimits,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -271,7 +279,7 @@ export const lifecycleTrack = pgEnum("lifecycle_track", values(Track));
 export const statusField = pgEnum("status_field", values(StatusField));
 export const endReason = pgEnum("end_reason", values(EndReason));
 export const tgEntryKind = pgEnum("tg_entry_kind", values(TgEntryKind));
-export const edgeKind = pgEnum("edge_kind", [...values(TgEntryKind), "manual", "system"]);
+export const edgeKind = pgEnum("edge_kind", edgeKinds);
 export const actorType = pgEnum("actor_type", values(ActorType));
 export const profilingExceptionStatus = pgEnum(
   "profiling_exception_status",
@@ -318,6 +326,33 @@ export const activationRevokeReason = pgEnum(
 );
 export const noticeLanguage = pgEnum("notice_language", values(NoticeLanguage));
 export const noticeMethod = pgEnum("notice_method", values(NoticeMethod));
+export const identityAssurance = pgEnum("identity_assurance", values(IdentityAssurance));
+export const contactChannelKind = pgEnum("contact_channel_kind", values(ActivationDeliveryKind));
+export const channelVerification = pgEnum("channel_verification", values(ChannelVerification));
+export const channelSuspensionReason = pgEnum("channel_suspension_reason", ["lost_access"]);
+export const channelRemovalReason = pgEnum("channel_removal_reason", [
+  "consent_revoked",
+  "lost_access_replaced",
+]);
+export const consentPurpose = pgEnum("consent_purpose", values(ConsentPurpose));
+export const consentEndReason = pgEnum("consent_end_reason", ["revoked", "lost_access_replaced"]);
+export const oneTimeCodePurpose = pgEnum("one_time_code_purpose", values(OneTimeCodePurpose));
+export const challengeInvalidation = pgEnum("challenge_invalidation", [
+  "superseded",
+  "delivery_failed",
+]);
+export const participantSessionState = pgEnum(
+  "participant_session_state",
+  values(ParticipantSessionState),
+);
+export const participantSessionEndReason = pgEnum("participant_session_end_reason", [
+  "logout",
+  "activated",
+  "superseded",
+  "code_closed",
+  "participation_closed",
+]);
+export const stepUpMethod = pgEnum("step_up_method", values(StepUpMethod));
 
 const dateColumn = (name: string) => date(name, { mode: "string" });
 const createdAt = () =>
@@ -759,6 +794,243 @@ export const privacyNoticeDelivery = pgTable(
     check(
       "privacy_notice_delivery_version",
       sql`${t.noticeVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
+    ),
+  ],
+);
+
+const instant = (name: string) => timestamp(name, { withTimezone: true, mode: "string" });
+const minutes = (value: number) => sql.raw(`interval '${value} minutes'`);
+
+/**
+ * An activated participant account (Slice 3 plan D23, D29): one per participation, with the code it
+ * was activated by and how the identity was assured (`photo_id` with the staff confirmer of the
+ * code's ID check, only when the birth-date step was skipped, Q129). Written only by
+ * `complete_activation`.
+ */
+export const participantAccount = pgTable(
+  "participant_account",
+  {
+    participationId: uuid("participation_id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    activatedAt: instant("activated_at").notNull().defaultNow(),
+    activationCodeId: uuid("activation_code_id").notNull(),
+    identityAssurance: identityAssurance("identity_assurance").notNull(),
+    identityAssuredBy: uuid("identity_assured_by").references(() => staffUser.id),
+    identityAssuredAt: instant("identity_assured_at"),
+    language: noticeLanguage("language").notNull(),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_account_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "participant_account_activation_code_fk",
+      columns: [t.activationCodeId, t.projectId],
+      foreignColumns: [activationCode.id, activationCode.projectId],
+    }),
+    check(
+      "participant_account_photo_id",
+      sql`(${t.identityAssurance} = 'photo_id') = (${t.identityAssuredBy} is not null) and (${t.identityAssuredBy} is null) = (${t.identityAssuredAt} is null)`,
+    ),
+  ],
+);
+
+/**
+ * A consent to the portal contact purpose for one channel (D28): the text version and language
+ * shown, who gave it and when; never the address. Written only by the activation functions.
+ */
+export const consentRecord = pgTable(
+  "consent_record",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    purpose: consentPurpose("purpose").notNull(),
+    channelId: uuid("channel_id").notNull(),
+    textVersion: text("text_version").notNull(),
+    language: noticeLanguage("language").notNull(),
+    actorType: actorType("actor_type").notNull(),
+    actorStaffUserId: uuid("actor_staff_user_id").references(() => staffUser.id),
+    givenAt: instant("given_at").notNull().defaultNow(),
+    endedAt: instant("ended_at"),
+    endReason: consentEndReason("end_reason"),
+  },
+  (t) => [
+    foreignKey({
+      name: "consent_record_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("consent_record_participation_idx").on(t.participationId),
+    check(
+      "consent_record_text_version",
+      sql`${t.textVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
+    ),
+    check("consent_record_ended", sql`(${t.endedAt} is null) = (${t.endReason} is null)`),
+    check(
+      "consent_record_actor",
+      sql`${t.actorType} in ('participant', 'user') and (${t.actorType} = 'user') = (${t.actorStaffUserId} is not null)`,
+    ),
+  ],
+);
+
+/**
+ * A verified private email or mobile of an activated participant (D28): the normalised address,
+ * how it was verified, its consent and when the activation notice went to it (D21). One address
+ * belongs to at most one channel that isn't removed. Staff never read the address (Q123).
+ */
+export const participantChannel = pgTable(
+  "participant_channel",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    kind: contactChannelKind("kind").notNull(),
+    address: text("address").notNull(),
+    verifiedAt: instant("verified_at").notNull().defaultNow(),
+    verifiedBy: channelVerification("verified_by").notNull(),
+    consentId: uuid("consent_id")
+      .notNull()
+      .references(() => consentRecord.id),
+    noticeSentAt: instant("notice_sent_at"),
+    suspendedAt: instant("suspended_at"),
+    suspensionReason: channelSuspensionReason("suspension_reason"),
+    removedAt: instant("removed_at"),
+    removedReason: channelRemovalReason("removed_reason"),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_channel_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    uniqueIndex("participant_channel_address_idx")
+      .on(t.kind, t.address)
+      .where(sql`${t.removedAt} is null`),
+    index("participant_channel_participation_idx").on(t.participationId),
+    check(
+      "participant_channel_address",
+      sql`case ${t.kind} when 'email' then ${t.address} ~ '^[^@[:space:]A-Z]+@[^@[:space:]A-Z]+[.][^@[:space:]A-Z]+$' and length(${t.address}) <= 254 else ${t.address} ~ '^[+][1-9][0-9]{7,14}$' end`,
+    ),
+    check(
+      "participant_channel_suspended",
+      sql`(${t.suspendedAt} is null) = (${t.suspensionReason} is null)`,
+    ),
+    check(
+      "participant_channel_removed",
+      sql`(${t.removedAt} is null) = (${t.removedReason} is null)`,
+    ),
+  ],
+);
+
+/**
+ * A one-time code sent to an address (D27): only its keyed hash; the normalised address it went to,
+ * the delivery outcome (D20), 15 minutes, its own counter of 5 wrong entries. Written only by the
+ * one-time-code functions; never served.
+ */
+export const oneTimeCodeChallenge = pgTable(
+  "one_time_code_challenge",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    purpose: oneTimeCodePurpose("purpose").notNull(),
+    kind: contactChannelKind("kind").notNull(),
+    address: text("address").notNull(),
+    codeHash: text("code_hash").notNull(),
+    deliveryStatus: activationDeliveryStatus("delivery_status").notNull().default("pending"),
+    createdAt: createdAt(),
+    expiresAt: instant("expires_at").notNull(),
+    failedAttempts: integer("failed_attempts").notNull().default(0),
+    consumedAt: instant("consumed_at"),
+    invalidatedAt: instant("invalidated_at"),
+    invalidationReason: challengeInvalidation("invalidation_reason"),
+  },
+  (t) => [
+    foreignKey({
+      name: "one_time_code_challenge_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("one_time_code_challenge_address_idx").on(t.kind, t.address, t.createdAt),
+    index("one_time_code_challenge_participation_idx").on(t.participationId, t.createdAt),
+    check("one_time_code_challenge_code_hash", sql`${t.codeHash} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "one_time_code_challenge_lifetime",
+      sql`${t.expiresAt} = ${t.createdAt} + ${minutes(portalLimits.oneTimeCode.validityMinutes)}`,
+    ),
+    check(
+      "one_time_code_challenge_attempts",
+      sql`${t.failedAttempts} between 0 and ${sql.raw(String(portalLimits.oneTimeCode.failures))}`,
+    ),
+    check(
+      "one_time_code_challenge_invalidated",
+      sql`(${t.invalidatedAt} is null) = (${t.invalidationReason} is null)`,
+    ),
+    check(
+      "one_time_code_challenge_one_end",
+      sql`num_nonnulls(${t.consumedAt}, ${t.invalidatedAt}) <= 1`,
+    ),
+  ],
+);
+
+/**
+ * Participant sessions (D29): the cookie holds 32 random bytes, the row their SHA-256. An
+ * `activating` session (code accepted) opens only the activation steps and records them; an
+ * `active` one starts with a new token at completion. 30 minutes idle, 12 hours absolute, checked
+ * against database time. `transfer_app` may update `last_seen_at` only; everything else goes
+ * through the activation functions.
+ */
+export const participantSession = pgTable(
+  "participant_session",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    state: participantSessionState("state").notNull(),
+    activationCodeId: uuid("activation_code_id"),
+    createdAt: createdAt(),
+    lastSeenAt: instant("last_seen_at").notNull().defaultNow(),
+    endedAt: instant("ended_at"),
+    endReason: participantSessionEndReason("end_reason"),
+    birthDateCheckedAt: instant("birth_date_checked_at"),
+    deliveryAddressCheckedAt: instant("delivery_address_checked_at"),
+    stepUpMethod: stepUpMethod("step_up_method"),
+    stepUpAt: instant("step_up_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_session_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "participant_session_activation_code_fk",
+      columns: [t.activationCodeId, t.projectId],
+      foreignColumns: [activationCode.id, activationCode.projectId],
+    }),
+    index("participant_session_participation_idx").on(t.participationId),
+    check("participant_session_token_hash", sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check("participant_session_ended", sql`(${t.endedAt} is null) = (${t.endReason} is null)`),
+    check(
+      "participant_session_step_up",
+      sql`(${t.stepUpMethod} is null) = (${t.stepUpAt} is null)`,
+    ),
+    check(
+      "participant_session_activating",
+      sql`(${t.state} = 'activating') = (${t.activationCodeId} is not null) and (${t.state} = 'activating' or ${t.birthDateCheckedAt} is null and ${t.deliveryAddressCheckedAt} is null)`,
     ),
   ],
 );
@@ -1311,6 +1583,11 @@ export const tables = [
   participantDetails,
   activationCode,
   privacyNoticeDelivery,
+  participantAccount,
+  consentRecord,
+  participantChannel,
+  oneTimeCodeChallenge,
+  participantSession,
   lifecycleEdge,
   auditEvent,
   jobRun,

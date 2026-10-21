@@ -45,6 +45,9 @@ operates a Hetzner cluster in German data centres.
 - [ ] TLS, monitoring and alerting in place; logs checked for personal data
 - [ ] Security review / penetration test of auth, permissions and uploads
 - [ ] Retention values confirmed by DPO and tax advisor
+- [ ] A shared rate limiter for portal code submissions (Slice 3 plan D14, Q128; in memory per
+      process until then) and the client IP behind the ingress (the throttle sees the peer
+      address; a trusted forwarded-for header needs the ingress configuration)
 - [ ] Every DPO/legal confirmation implemented; if one required a design change, that change
       is built and tested (round 9)
 

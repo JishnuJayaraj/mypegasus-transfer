@@ -251,6 +251,18 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
               : t(`activation.code.${status.code}`)}
           </dd>
         </div>
+        {query.data?.account && (
+          <>
+            <div>
+              <dt>{t("activation.detail.activatedAt")}</dt>
+              <dd>{formatTimestamp(query.data.account.activatedAt)}</dd>
+            </div>
+            <div>
+              <dt>{t("activation.detail.identityAssurance")}</dt>
+              <dd>{t(`activation.assurance.${query.data.account.identityAssurance}`)}</dd>
+            </div>
+          </>
+        )}
         <div>
           <dt>{t("activation.detail.notice")}</dt>
           <dd>
@@ -290,6 +302,27 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
           </>
         )}
       </dl>
+      {query.data && query.data.channels.length > 0 && (
+        <>
+          <h3>{t("activation.detail.channels")}</h3>
+          {/* D28, Q123: kind, states and dates; the address never reaches staff. */}
+          <ul className="tp-list">
+            {query.data.channels.map((channel) => (
+              <li key={channel.id}>
+                {t("activation.detail.channelLine", {
+                  kind: t(`activation.deliveryKind.${channel.kind}`),
+                  verifiedAt: formatTimestamp(channel.verifiedAt),
+                  verifiedBy: t(`activation.verifiedBy.${channel.verifiedBy}`),
+                  consentGivenAt: formatTimestamp(channel.consentGivenAt),
+                })}{" "}
+                {channel.noticeSentAt
+                  ? t("activation.detail.noticeSent", { at: formatTimestamp(channel.noticeSentAt) })
+                  : t("activation.detail.noticePending")}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
       {(detail.capabilities.issueActivationCode || detail.capabilities.providePrivacyNotice) && (
         <Select
           id="activation-detail-language"
@@ -301,7 +334,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
           <SelectItem value="en" text="English" />
         </Select>
       )}
-      {detail.capabilities.issueActivationCode && (
+      {detail.capabilities.issueActivationCode && status.account !== "activated" && (
         <fieldset className="tp-fieldset">
           <legend>{t("activation.detail.sendInPerson")}</legend>
           <Select
@@ -367,7 +400,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
               {t("activation.detail.noticeHandedOver")}
             </Button>
           )}
-        {detail.capabilities.issueActivationCode && (
+        {detail.capabilities.issueActivationCode && status.account !== "activated" && (
           <RouterLink to="/projects/$projectId" params={{ projectId }}>
             {t("activation.detail.issuePrint")}
           </RouterLink>

@@ -199,8 +199,19 @@ export type AssignEntryWaveInput = z.infer<typeof AssignEntryWaveInput>;
 export const ParticipationListQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.string().optional(),
+  /** A code state, or `activated` for an activated account (its code state is then `none`). */
   activation: z
-    .enum(["none", "printed", "open", "delivery_unknown", "expired", "locked", "revoked", "used"])
+    .enum([
+      "activated",
+      "none",
+      "printed",
+      "open",
+      "delivery_unknown",
+      "expired",
+      "locked",
+      "revoked",
+      "used",
+    ])
     .optional(),
   privacyNotice: z.enum(["provided", "due", "overdue"]).optional(),
 });

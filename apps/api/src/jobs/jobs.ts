@@ -9,7 +9,9 @@ import { JobError, jobErrorCode } from "./errors";
 import { evaluateProject } from "./evaluate-project";
 import { runLifecycleSweep } from "./lifecycle-sweep";
 import { jobNames, timeZone } from "./names";
-import { EvaluateProjectPayload, SweepPayload } from "./payloads";
+import type { ActivationNoticeQueue } from "../context";
+import { ActivationNoticePayload, EvaluateProjectPayload, SweepPayload } from "./payloads";
+import { sendActivationNotice, type ActivationNoticeDeps } from "./activation-notice";
 
 export { jobNames, timeZone } from "./names";
 
@@ -20,7 +22,8 @@ export { jobNames, timeZone } from "./names";
  * `lifecycle.evaluate-project` is `exclusive` per `singletonKey` `<projectId>:<runDate>`: a
  * second job for the same project and day is refused while one is queued or active. pg-boss
  * deduplicates keys only on `stately` and `exclusive` queues (spike S2). Failures retry with
- * backoff (plan 5.9).
+ * backoff (plan 5.9). `portal.activation-notice` is `exclusive` per channel id (Slice 3 plan D21):
+ * the completion queues it in its own transaction, at least once.
  */
 const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "exclusive" }> = {
   [jobNames.lifecycleSweep]: {
@@ -36,6 +39,13 @@ const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "excl
     retryDelay: 30,
     retryBackoff: true,
     expireInSeconds: 15 * 60,
+  },
+  [jobNames.activationNotice]: {
+    policy: "exclusive",
+    retryLimit: 5,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 5 * 60,
   },
 };
 
@@ -54,6 +64,8 @@ export type WorkDeps = {
   /** pg-boss's polling (default 2 s) and the sweep's wait for its project jobs (default 1 s). */
   pollingIntervalSeconds?: number;
   dispatchPollMs?: number;
+  /** The senders and the portal URL of the activation notice (D21). */
+  notices?: Omit<ActivationNoticeDeps, "db" | "logger">;
 };
 
 export type JobsOptions = {
@@ -147,6 +159,17 @@ async function startWorkers(
       });
     }
   });
+  const { notices } = deps;
+  if (notices) {
+    await boss.work(jobNames.activationNotice, { pollingIntervalSeconds }, async (jobs) => {
+      for (const job of jobs) {
+        await runJob(logger, job, async () => {
+          const { channelId } = ActivationNoticePayload.parse(job.data);
+          await sendActivationNotice({ db, logger, ...notices }, channelId, job.id);
+        });
+      }
+    });
+  }
   await boss.work(jobNames.lifecycleSweep, { pollingIntervalSeconds }, async (jobs) => {
     for (const job of jobs) {
       await runJob(logger, job, async () => {
@@ -156,4 +179,13 @@ async function startWorkers(
       });
     }
   });
+}
+
+/** Queues the activation notice in the caller's transaction (D21): `singletonKey` the channel. */
+export function activationNoticeQueue(boss: PgBoss): ActivationNoticeQueue {
+  return {
+    async enqueue(channelId, db) {
+      await boss.send(jobNames.activationNotice, { channelId }, { singletonKey: channelId, db });
+    },
+  };
 }

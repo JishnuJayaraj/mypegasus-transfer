@@ -288,6 +288,20 @@
       "when": 1792526201606,
       "tag": "0040_activation_code_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1792571063942,
+      "tag": "0041_participant_activation",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792571079293,
+      "tag": "0042_participant_activation_functions",
+      "breakpoints": true
     }
   ]
 }

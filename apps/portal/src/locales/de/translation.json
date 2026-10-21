@@ -9,11 +9,79 @@
   },
   "home": {
     "title": "Willkommen",
-    "intro": "Hier können Sie bald Ihre Angaben für das Transferprojekt machen und Ihre Unterlagen einsehen."
+    "intro": "Hier können Sie bald Ihre Angaben für das Transferprojekt machen und Ihre Unterlagen einsehen.",
+    "activate": "Zugang aktivieren",
+    "greeting": "Hallo {{name}}",
+    "channels": "Ihre Kontaktwege",
+    "channelEmail": "E-Mail {{address}}, bestätigt am {{at}}",
+    "channelSms": "Mobilnummer {{address}}, bestätigt am {{at}}",
+    "logout": "Abmelden"
   },
   "status": {
     "checking": "Verbindung wird geprüft …",
     "ok": "Verbindung zum Server besteht (Version {{version}}).",
     "unavailable": "Der Server ist gerade nicht erreichbar. Bitte versuchen Sie es später noch einmal."
+  },
+  "activate": {
+    "title": "Zugang aktivieren",
+    "next": "Weiter",
+    "complete": "Zugang aktivieren",
+    "code": {
+      "intro": "Geben Sie den persönlichen Aktivierungscode aus Ihrem Brief, Ihrem Blatt oder Ihrer Nachricht ein.",
+      "label": "Aktivierungscode",
+      "help": "12 Zeichen, zum Beispiel ABCD-EFGH-JK12",
+      "submit": "Code prüfen"
+    },
+    "notice": {
+      "continue": "Gelesen, weiter"
+    },
+    "birthDate": {
+      "intro": "Zur Sicherheit: Bitte geben Sie Ihr Geburtsdatum ein.",
+      "label": "Geburtsdatum",
+      "placeholder": "TT.MM.JJJJ"
+    },
+    "address": {
+      "introEmail": "Geben Sie die private E-Mail-Adresse ein, an die Ihr Aktivierungslink geschickt wurde.",
+      "introSms": "Geben Sie die private Mobilnummer ein, an die Ihr Aktivierungslink geschickt wurde."
+    },
+    "channel": {
+      "intro": "Wählen Sie einen privaten Kontaktweg. Wir schicken Ihnen dorthin Anmeldecodes und Benachrichtigungen aus dem Portal. Nutzen Sie nicht Ihre dienstliche E-Mail-Adresse.",
+      "kind": "Kontaktweg",
+      "email": "Private E-Mail-Adresse",
+      "sms": "Private Mobilnummer",
+      "help": "Nur Sie sollten Zugriff darauf haben.",
+      "send": "Bestätigungscode senden",
+      "kindEmail": "E-Mail",
+      "kindSms": "SMS an eine Mobilnummer"
+    },
+    "consent": {
+      "label": "Ich willige ein."
+    },
+    "oneTimeCode": {
+      "introEmail": "Wir haben Ihnen einen sechsstelligen Code per E-Mail geschickt. Er gilt 15 Minuten.",
+      "introSms": "Wir haben Ihnen einen sechsstelligen Code per SMS geschickt. Er gilt 15 Minuten.",
+      "label": "Bestätigungscode",
+      "resend": "Neuen Code senden"
+    },
+    "done": {
+      "title": "Ihr Zugang ist aktiv",
+      "text": "Sie erhalten zusätzlich eine Bestätigung an Ihren Kontaktweg.",
+      "home": "Zur Startseite"
+    },
+    "errors": {
+      "code_invalid": "Dieser Code ist nicht gültig. Bitte wenden Sie sich an Ihre Transfergesellschaft ({{contact}}).",
+      "before_cutoff": "Eine Aktivierung ist für Sie nicht mehr möglich. Bitte wenden Sie sich an Ihre Transfergesellschaft ({{contact}}).",
+      "knowledge_check_failed": "Die Angabe stimmt nicht. Bitte prüfen Sie sie; nach mehreren falschen Versuchen wird der Code gesperrt.",
+      "one_time_code_invalid": "Der Bestätigungscode ist falsch oder nicht mehr gültig. Prüfen Sie ihn oder fordern Sie einen neuen an.",
+      "rate_limited": "Zu viele Versuche. Bitte versuchen Sie es später erneut.",
+      "channel_in_use": "Dieser Kontaktweg kann nicht verwendet werden. Bitte wählen Sie einen anderen.",
+      "channel_invalid": "Bitte geben Sie eine gültige private E-Mail-Adresse oder Mobilnummer ein.",
+      "delivery_failed": "Die Nachricht konnte nicht zugestellt werden. Bitte prüfen Sie die Angabe.",
+      "delivery_unavailable": "Nachrichten können gerade nicht versendet werden. Bitte versuchen Sie es später erneut.",
+      "step_not_allowed": "Dieser Schritt ist gerade nicht möglich. Bitte beginnen Sie mit Ihrem Code von vorn.",
+      "session_expired": "Ihre Sitzung ist abgelaufen. Bitte geben Sie Ihren Code erneut ein.",
+      "birth_date_format": "Bitte geben Sie ein gültiges Datum im Format TT.MM.JJJJ ein.",
+      "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut."
+    }
   }
 }

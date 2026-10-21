@@ -265,6 +265,8 @@ describe("activation details", () => {
       revokeReason: null,
       usedAt: null,
     },
+    account: null,
+    channels: [],
     capabilities: {
       issueActivationCode: true,
       recordHandover: true,
@@ -349,6 +351,57 @@ describe("activation details", () => {
         body: { language: "en", method: "in_person_print", handedOver: true },
       }),
     );
+  });
+});
+
+describe("an activated account (D28, D29)", () => {
+  it("shows how the identity was assured and the channels without any address, and no issuance", async () => {
+    const activated = {
+      status: { account: "activated", code: "none", issuedAt: null, expiresAt: null },
+      current: null,
+      account: {
+        activatedAt: "2026-10-22T09:00:00.000Z",
+        identityAssurance: "photo_id",
+        identityAssuredAt: "2026-10-21T09:00:00.000Z",
+      },
+      channels: [
+        {
+          id: "00000000-0000-4000-a000-000000000020",
+          kind: "sms",
+          verifiedAt: "2026-10-22T09:00:00.000Z",
+          verifiedBy: "activation_link",
+          consentGivenAt: "2026-10-22T09:00:00.000Z",
+          consentEndedAt: null,
+          noticeSentAt: null,
+          suspendedAt: null,
+          removedAt: null,
+        },
+      ],
+      capabilities: {
+        issueActivationCode: true,
+        recordHandover: true,
+        revokeActivationCode: true,
+        providePrivacyNotice: true,
+      },
+    };
+    setup(
+      { [`GET ${activationPath}`]: () => json(activated) },
+      {
+        ...detail,
+        activationStatus: activated.status,
+        capabilities: { ...detail.capabilities, ...activated.capabilities },
+      },
+    );
+    const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(
+      await within(panel).findByText("Lichtbildausweis (kein Geburtsdatum hinterlegt)"),
+    ).toBeInTheDocument();
+    expect(
+      within(panel).getByText(
+        /Mobilnummer \(SMS\), bestätigt am 22\.10\.2026, 11:00 über den persönlichen Aktivierungslink/,
+      ),
+    ).toHaveTextContent("Aktivierungsbenachrichtigung ausstehend.");
+    expect(within(panel).queryByRole("button", { name: "Aktivierungslink senden" })).toBeNull();
   });
 });
 

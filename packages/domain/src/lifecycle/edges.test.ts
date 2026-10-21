@@ -11,6 +11,8 @@ main imported contacted user manual
 main contacted informed user manual
 main contacted unreachable user manual
 main unreachable contacted user manual before_cutoff
+main imported contacted participant activation before_cutoff
+main unreachable contacted participant activation before_cutoff
 main informed active_in_tg system scheduled_entry dsv_fully_executed,asu_registered_with_proof,profiling_done_or_approved_exception,tg_start_date ta_tg
 main informed active_in_tg system scheduled_entry_catchup dsv_fully_executed,asu_registered_with_proof,profiling_done_or_approved_exception,tg_start_date ta_tg
 main informed active_in_tg user reconciliation dsv_fully_executed,asu_registered_with_proof,profiling_done_or_approved_exception,tg_start_date ta_tg
@@ -84,6 +86,29 @@ describe("edges (AC-1)", () => {
       expect(mismatches).toEqual([]);
     },
   );
+
+  it("lets the participant's activation take imported or unreachable to contacted before the cutoff (D25)", () => {
+    const participant = { type: "participant" } as const;
+    for (const from of ["imported", "unreachable"] as const) {
+      const ctx = context({
+        actor: participant,
+        current: { status: from, profilingStatus: "not_started", dsvStatus: "not_offered" },
+      });
+      expect(canTransition("main", from, "contacted", ctx)).toEqual({
+        ok: true,
+        flagForReview: false,
+      });
+      expect(canTransition("main", from, "contacted", { ...ctx, today: "2027-05-01" })).toEqual({
+        ok: false,
+        code: "guard_failed",
+        failedGuards: ["before_cutoff"],
+      });
+    }
+    const informed = context({ actor: participant });
+    expect(canTransition("main", "informed", "withdrawn", informed)).toMatchObject({
+      code: "actor_not_allowed",
+    });
+  });
 
   it("refuses a `from` that isn't the current status", () => {
     expect(() => canTransition("main", "imported", "contacted", context())).toThrow(

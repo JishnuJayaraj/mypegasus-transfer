@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as NoticeArt14VersionRouteImport } from './routes/notice.art14.$version'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivateRoute = ActivateRouteImport.update({
+  id: '/activate',
+  path: '/activate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
@@ -25,27 +31,31 @@ const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activate': typeof ActivateRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activate': typeof ActivateRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activate': typeof ActivateRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/notice/art14/$version'
+  fullPaths: '/' | '/activate' | '/notice/art14/$version'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/notice/art14/$version'
-  id: '__root__' | '/' | '/notice/art14/$version'
+  to: '/' | '/activate' | '/notice/art14/$version'
+  id: '__root__' | '/' | '/activate' | '/notice/art14/$version'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivateRoute: typeof ActivateRoute
   NoticeArt14VersionRoute: typeof NoticeArt14VersionRoute
 }
 
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activate': {
+      id: '/activate'
+      path: '/activate'
+      fullPath: '/activate'
+      preLoaderRoute: typeof ActivateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notice/art14/$version': {
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivateRoute: ActivateRoute,
   NoticeArt14VersionRoute: NoticeArt14VersionRoute,
 }
 export const routeTree = rootRouteImport

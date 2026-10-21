@@ -357,6 +357,7 @@ function ParticipationFiltersView({
         }
       >
         <SelectItem value="" text={t("activation.filters.all")} />
+        <SelectItem value="activated" text={t("activation.status.activated")} />
         {(
           [
             "none",

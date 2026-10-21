@@ -2,7 +2,15 @@ import { HTTPException } from "hono/http-exception";
 import { bodyLimit } from "hono/body-limit";
 import { secureHeaders } from "hono/secure-headers";
 import packageJson from "../package.json" with { type: "json" };
-import { DevelopmentOutbox, MockMailer, MockSmsSender } from "@transfer/adapters";
+import {
+  DevelopmentOutbox,
+  MockMailer,
+  MockSmsSender,
+  type Clock,
+  type Mailer,
+  type SmsSender,
+} from "@transfer/adapters";
+import type { Logger } from "pino";
 import { createRouter, type Deps } from "./context";
 import { originCheck } from "./csrf";
 import { errorForLog, requestLogger } from "./logger";
@@ -21,6 +29,7 @@ import { projectConfigRoutes } from "./routes/project-config";
 import { projectRoutes } from "./routes/projects";
 import { teamRoutes } from "./routes/team";
 import { activationRoutes } from "./routes/activation";
+import { portalRoutes } from "./routes/portal";
 import { mountSpas } from "./static";
 
 export const openApiConfig = {
@@ -53,20 +62,29 @@ const contentSecurityPolicy = {
   frameAncestors: ["'none'"],
 };
 
+/**
+ * The senders: the mocks on a shared development outbox outside production. The mocks report
+ * `sent` without sending, which would record Art. 14 evidence for a message nobody received:
+ * production gets no sender until a real adapter exists (ADR-0006). The server builds them once for
+ * the API and the jobs, so the dev outbox shows the activation notice too.
+ */
+export function messaging(
+  { env, clock, logger }: { env: Pick<Deps["env"], "nodeEnv">; clock: Clock; logger: Logger },
+  outbox = new DevelopmentOutbox(clock, (fields, message) => logger.info(fields, message)),
+): { outbox: DevelopmentOutbox; mailer?: Mailer; smsSender?: SmsSender } {
+  if (env.nodeEnv === "production") return { outbox };
+  return { outbox, mailer: new MockMailer(outbox), smsSender: new MockSmsSender(outbox) };
+}
+
 /** The whole API with injected dependencies, so tests can use `app.request()`. */
 export function createApp(deps: Deps) {
   const { env, logger } = deps;
-  const outbox =
-    deps.outbox ??
-    new DevelopmentOutbox(deps.clock, (fields, message) => logger.info(fields, message));
-  // The mocks report `sent` without sending, which would record Art. 14 evidence for a message
-  // nobody received: production gets no default sender until a real adapter exists (ADR-0006).
-  const mocks = env.nodeEnv !== "production";
+  const defaults = messaging(deps, deps.outbox);
   const runtimeDeps: Deps = {
     ...deps,
-    outbox,
-    mailer: deps.mailer ?? (mocks ? new MockMailer(outbox) : undefined),
-    smsSender: deps.smsSender ?? (mocks ? new MockSmsSender(outbox) : undefined),
+    outbox: defaults.outbox,
+    mailer: deps.mailer ?? defaults.mailer,
+    smsSender: deps.smsSender ?? defaults.smsSender,
   };
   const app = createRouter();
 
@@ -108,6 +126,7 @@ export function createApp(deps: Deps) {
   api.route("/", teamRoutes(runtimeDeps));
   api.route("/", adminRoutes(runtimeDeps));
   api.route("/", activationRoutes(runtimeDeps));
+  api.route("/", portalRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 

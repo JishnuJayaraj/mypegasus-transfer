@@ -9,11 +9,79 @@
   },
   "home": {
     "title": "Welcome",
-    "intro": "Soon you will be able to enter your details for the transfer project and see your documents here."
+    "intro": "Soon you will be able to enter your details for the transfer project and see your documents here.",
+    "activate": "Activate your access",
+    "greeting": "Hello {{name}}",
+    "channels": "Your contact details",
+    "channelEmail": "Email {{address}}, confirmed on {{at}}",
+    "channelSms": "Mobile {{address}}, confirmed on {{at}}",
+    "logout": "Log out"
   },
   "status": {
     "checking": "Checking the connection …",
     "ok": "Connected to the server (version {{version}}).",
     "unavailable": "The server cannot be reached right now. Please try again later."
+  },
+  "activate": {
+    "title": "Activate your access",
+    "next": "Continue",
+    "complete": "Activate access",
+    "code": {
+      "intro": "Enter the personal activation code from your letter, your sheet or your message.",
+      "label": "Activation code",
+      "help": "12 characters, for example ABCD-EFGH-JK12",
+      "submit": "Check code"
+    },
+    "notice": {
+      "continue": "I have read this, continue"
+    },
+    "birthDate": {
+      "intro": "For your security, please enter your date of birth.",
+      "label": "Date of birth",
+      "placeholder": "DD.MM.YYYY"
+    },
+    "address": {
+      "introEmail": "Enter the private email address your activation link was sent to.",
+      "introSms": "Enter the private mobile number your activation link was sent to."
+    },
+    "channel": {
+      "intro": "Choose a private contact. We will send you login codes and portal notifications there. Do not use your work email address.",
+      "kind": "Contact",
+      "email": "Private email address",
+      "sms": "Private mobile number",
+      "help": "Only you should have access to it.",
+      "send": "Send confirmation code",
+      "kindEmail": "Email",
+      "kindSms": "Text message to a mobile"
+    },
+    "consent": {
+      "label": "I consent."
+    },
+    "oneTimeCode": {
+      "introEmail": "We have emailed you a six-digit code. It is valid for 15 minutes.",
+      "introSms": "We have texted you a six-digit code. It is valid for 15 minutes.",
+      "label": "Confirmation code",
+      "resend": "Send a new code"
+    },
+    "done": {
+      "title": "Your access is active",
+      "text": "You will also receive a confirmation at your contact.",
+      "home": "Go to the start page"
+    },
+    "errors": {
+      "code_invalid": "This code is not valid. Please contact your transfer company ({{contact}}).",
+      "before_cutoff": "Activation is no longer possible for you. Please contact your transfer company ({{contact}}).",
+      "knowledge_check_failed": "That does not match. Please check it; after several wrong attempts the code is locked.",
+      "one_time_code_invalid": "The confirmation code is wrong or no longer valid. Check it or request a new one.",
+      "rate_limited": "Too many attempts. Please try again later.",
+      "channel_in_use": "This contact cannot be used. Please choose another one.",
+      "channel_invalid": "Please enter a valid private email address or mobile number.",
+      "delivery_failed": "The message could not be delivered. Please check what you entered.",
+      "delivery_unavailable": "Messages cannot be sent right now. Please try again later.",
+      "step_not_allowed": "This step is not possible right now. Please start again with your code.",
+      "session_expired": "Your session has expired. Please enter your code again.",
+      "birth_date_format": "Please enter a valid date in the format DD.MM.YYYY.",
+      "failed": "That did not work. Please try again."
+    }
   }
 }

@@ -15,6 +15,8 @@ export const problemTypes = {
   "unsupported-media-type": [415, "Unsupported media type"],
   /** A domain rule refused the request; `errors[].code` names it, never a value. */
   "domain-error": [422, "Refused by a domain rule"],
+  /** A per-IP or per-address limit (Slice 3 plan D14, D27); with `Retry-After`. */
+  "too-many-requests": [429, "Too many requests"],
   "internal-error": [500, "Internal server error"],
   "service-unavailable": [503, "Service unavailable"],
 } as const satisfies Record<string, [number, string]>;
