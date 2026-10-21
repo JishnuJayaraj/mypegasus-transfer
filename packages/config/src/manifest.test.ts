@@ -11,7 +11,9 @@ import {
   configDirs,
   loadBaseDefaults,
   loadManifest,
+  loadOrganisation,
   loadTemplate,
+  organisationFile,
   renderManifest,
   templatesDir,
 } from "./load";
@@ -169,14 +171,19 @@ describe("loadManifest", () => {
 
 describe("CONFIG_DIR (S2)", () => {
   it("defaults to the repo paths", () => {
-    expect(configDirs()).toEqual({ templates: templatesDir, baseDefaults: baseDefaultsDir });
+    expect(configDirs()).toEqual({
+      templates: templatesDir,
+      baseDefaults: baseDefaultsDir,
+      organisation: organisationFile,
+    });
     expect(configDirs(undefined).baseDefaults.href).toMatch(/\/packages\/domain\/config\/$/);
   });
 
-  it("holds templates/ and base-defaults.json, as the API build copies them", () => {
+  it("holds templates/, base-defaults.json and organisation.json, as the API build copies them", () => {
     const { dir } = scratch();
     cpSync(new URL(".", templatesDir), join(dir, "templates"), { recursive: true });
     cpSync(new URL("base-defaults.json", baseDefaultsDir), join(dir, "base-defaults.json"));
+    cpSync(organisationFile, join(dir, "organisation.json"));
     const dirs = configDirs(dir);
     expect(dirs.templates.href).toBe(pathToFileURL(`${dir}/templates/`).href);
     expect(loadManifest(dirs.templates)).toEqual(committed);
@@ -184,6 +191,7 @@ describe("CONFIG_DIR (S2)", () => {
       loadTemplate("beispielstadt-nord", 2),
     );
     expect(loadBaseDefaults(dirs.baseDefaults)).toEqual(loadBaseDefaults());
+    expect(loadOrganisation(dirs.organisation)).toEqual(loadOrganisation());
   });
 
   it("resolves a relative CONFIG_DIR against the working directory", () => {

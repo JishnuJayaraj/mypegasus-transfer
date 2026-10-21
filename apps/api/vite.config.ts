@@ -12,6 +12,9 @@ const templates = fileURLToPath(new URL("../../packages/config/templates", impor
 const baseDefaults = fileURLToPath(
   new URL("../../packages/domain/config/base-defaults.json", import.meta.url),
 );
+const organisation = fileURLToPath(
+  new URL("../../packages/config/organisation.json", import.meta.url),
+);
 
 export default defineConfig({
   build: {
@@ -43,6 +46,7 @@ export default defineConfig({
       writeBundle: () => {
         cpSync(templates, "dist/config/templates", { recursive: true });
         cpSync(baseDefaults, "dist/config/base-defaults.json");
+        cpSync(organisation, "dist/config/organisation.json");
       },
     },
   ],

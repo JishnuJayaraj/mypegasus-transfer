@@ -21,8 +21,9 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
                                     │ JSON over HTTPS, /api/v1 (OpenAPI, typed clients — ADR-0010)
             ┌───────────────────────▼──────────────────────────────┐
             │ apps/api (Hono)                                      │
-            │  modules: projects · participants · import · forms   │
-            │           dsv · tg · reporting · admin/config        │
+            │  modules: projects · participants · activation       │
+            │           import · forms · dsv · tg · reporting      │
+            │           admin/config                               │
             │  cross-cutting: auth, permissions, audit, jobs       │
             └───────┬───────────────┬──────────────────┬───────────┘
                     │               │                  │
@@ -74,10 +75,12 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   (`@transfer/config/load`, Node only, from `CONFIG_DIR` in the image), the canonical template
   hash, the fictional sample templates in `templates/<agenturKey>/<version>.json` (immutable once
   merged; `pnpm lint` checks against `origin/main`, in CI the PR's base) and their generated
-  `manifest.json`.
+  `manifest.json`. It also owns `organisation.json`, the validated controller and DPO details
+  interpolated into immutable Article 14 notice templates (synthetic values in the repository).
 - `packages/adapters`: interfaces + implementations behind them (ADR-0006). Only `Clock` so far
-  (system, manual, Berlin dates and run times); pdf, mail, sms, storage, virus scan and export
-  come with the slices that need them.
+  (system, manual, Berlin dates and run times), plus `Mailer` and `SmsSender` contracts and their
+  idempotent last-100 development outbox. Real mail/SMS providers, pdf, storage, virus scan and
+  export come with the slices that need them.
 - `packages/forms` (Slice 4b): official BA form templates (blank PDF, field map, manifest),
   ADR-0009.
 - `fixtures/`: synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV
@@ -100,6 +103,22 @@ need the proxy CA (`/root/.ccr/README.md`).
 - API modules may depend on `domain`, `config`, `db`, `adapters` — never on each other's
   internals (talk through exported service functions).
 - UI talks only to the API. No business rules in the UI beyond display validation (shared Zod).
+
+## Activation-code boundary (Slice 3, PR 3d)
+
+- `packages/domain/src/activation` owns the code format, issuance refusals and derived status;
+  `packages/domain/src/notices` owns immutable bilingual notice texts; and
+  `packages/domain/src/privacy` owns the calendar-month notice deadline. None performs I/O.
+- `apps/api/src/routes/activation.ts` is the only HTTP orchestration boundary. Database functions
+  lock, decide and write credential/notice state; external mail/SMS sends occur after commit with
+  idempotency keys, and a second function records the outcome. Printable responses are no-store.
+- `apps/web` has capability-driven status, filtering, print and handover views. Codes live only in
+  the issuance mutation result and are dropped with the print view; QR generation is client-side
+  with pinned `qrcode@1.5.4`. `apps/portal` serves the public, static, personal-data-free Article 14
+  notice page in German and English. Portal code validation and participant sessions are PR 3e.
+- `ACCESS_CODE_SECRET` is a distinct HKDF root for activation-code, delivery-address and later
+  one-time-code HMAC keys. `PORTAL_PUBLIC_URL` supplies the public fragment links. Both are required
+  outside development; only HTTPS portal URLs are accepted there.
 
 ## Background jobs
 

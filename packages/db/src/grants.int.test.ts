@@ -131,6 +131,12 @@ const statusFunctions = [
   "remove_project_member",
   "assign_participations",
   "unassign_participation",
+  // Slice 3 (PR 3d): activation codes and Art. 14 notice evidence
+  "issue_activation_code",
+  "record_activation_delivery",
+  "hand_over_activation_code",
+  "revoke_activation_code",
+  "record_privacy_notice",
 ];
 const helpers = [
   "assert_context",
@@ -160,6 +166,9 @@ const helpers = [
   "staff_email_valid",
   "lock_projects_of_staff",
   "lock_admin_survivorship",
+  "assert_activation_actor",
+  "keep_privacy_notice_immutable",
+  "revoke_codes_at_terminal_status",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -420,6 +429,42 @@ describe("transfer_app and the region, org-role and assignment tables", () => {
     ["lock a staff user's projects", `select lock_projects_of_staff('${staffUserId}')`],
   ])("may not %s (42501)", async (_label, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// Slice 3 (PR 3d): code hashes and notice evidence are readable for projections, but every write
+// is confined to the hardened activation functions.
+describe("transfer_app and activation evidence", () => {
+  it("may select activation codes and privacy-notice deliveries", async () => {
+    expect((await app.query("select id from activation_code")).rows).toEqual([]);
+    expect((await app.query("select id from privacy_notice_delivery")).rows).toEqual([]);
+  });
+
+  it.each([
+    ...writes(
+      "activation_code",
+      "id",
+      `insert into activation_code
+         (project_id, participation_id, code_hash, channel, notice_language, issued_by, expires_at)
+       values ('${seedProjectIds.werkNord}', gen_random_uuid(), '${"a".repeat(64)}', 'letter',
+         'de', '${staffUserId}', now() + interval '30 days')`,
+    ),
+    ...writes(
+      "privacy_notice_delivery",
+      "id",
+      `insert into privacy_notice_delivery
+         (project_id, participation_id, notice_version, language, method, provided_by)
+       values ('${seedProjectIds.werkNord}', gen_random_uuid(), 'art14-activation:v1', 'de',
+         'letter', '${staffUserId}')`,
+    ),
+    [
+      "call assert_activation_actor",
+      `select assert_activation_actor('${seedProjectIds.werkNord}', null)`,
+    ],
+    ["call notice immutability trigger", "select keep_privacy_notice_immutable()"],
+    ["call terminal-code trigger", "select revoke_codes_at_terminal_status()"],
+  ])("may not %s (42501)", async (_label, statement) => {
+    await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });
 });
 

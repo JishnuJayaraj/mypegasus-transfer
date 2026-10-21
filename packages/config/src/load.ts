@@ -5,6 +5,7 @@ import { canonicalHash } from "./hash";
 import { compareTemplateVersions, TemplateManifest } from "./manifest";
 import { AgenturKey, type BaseDefaults, type RegionalTemplate } from "./model";
 import { ConfigError, parseLayer, type ConfigIssue } from "./validate";
+import { Organisation, type Organisation as OrganisationType } from "./organisation";
 
 // Node only (reads files): exported as `@transfer/config/load`, never from the package root,
 // which the SPAs may import.
@@ -15,16 +16,34 @@ export { canonicalHash } from "./hash";
 export const templatesDir = new URL("../templates/", import.meta.url);
 /** The repo's directory of `base-defaults.json` (ADR-0004). */
 export const baseDefaultsDir = new URL("../../domain/config/", import.meta.url);
+export const organisationFile = new URL("../organisation.json", import.meta.url);
 
 /**
  * Where the configuration files are (spike S2): `CONFIG_DIR` holds `templates/` and
  * `base-defaults.json`, as the API build copies them to `dist/config/`; a relative path is
  * resolved against the working directory. Unset, the repo paths.
  */
-export function configDirs(configDir?: string): { templates: URL; baseDefaults: URL } {
-  if (configDir === undefined) return { templates: templatesDir, baseDefaults: baseDefaultsDir };
+export function configDirs(configDir?: string): {
+  templates: URL;
+  baseDefaults: URL;
+  organisation: URL;
+} {
+  if (configDir === undefined)
+    return {
+      templates: templatesDir,
+      baseDefaults: baseDefaultsDir,
+      organisation: organisationFile,
+    };
   const root = pathToFileURL(`${resolve(configDir)}/`);
-  return { templates: new URL("templates/", root), baseDefaults: root };
+  return {
+    templates: new URL("templates/", root),
+    baseDefaults: root,
+    organisation: new URL("organisation.json", root),
+  };
+}
+
+export function loadOrganisation(file: URL = organisationFile): OrganisationType {
+  return Organisation.parse(readJson(file));
 }
 
 /**

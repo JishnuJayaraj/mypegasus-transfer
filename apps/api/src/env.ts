@@ -24,6 +24,10 @@ const schema = z.object({
   OIDC_CLIENT_ID: z.string().optional(),
   OIDC_CLIENT_SECRET: z.string().optional(),
   OIDC_REDIRECT_URL: z.url().optional(),
+  ACCESS_CODE_SECRET: z.string().min(32).optional(),
+  PORTAL_PUBLIC_URL: z.url().optional(),
+  MAIL_ADAPTER: z.literal("mock").default("mock"),
+  SMS_ADAPTER: z.literal("mock").default("mock"),
 });
 
 /** The route the identity provider returns to (routes/auth.ts). */
@@ -55,6 +59,10 @@ export interface Env {
   configDir: string | undefined;
   /** Set exactly when `authMode` is `oidc`. */
   oidc?: OidcEnv | undefined;
+  accessCodeSecret?: string | undefined;
+  portalPublicUrl?: string | undefined;
+  mailAdapter?: "mock" | undefined;
+  smsAdapter?: "mock" | undefined;
 }
 
 export interface OidcEnv {
@@ -92,6 +100,18 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   if (!env.SESSION_SECRET && env.NODE_ENV !== "development") {
     throw new Error("SESSION_SECRET is required outside development");
   }
+  if (!env.ACCESS_CODE_SECRET && env.NODE_ENV !== "development") {
+    throw new Error("ACCESS_CODE_SECRET is required outside development");
+  }
+  if (!env.PORTAL_PUBLIC_URL && env.NODE_ENV !== "development") {
+    throw new Error("PORTAL_PUBLIC_URL is required outside development");
+  }
+  if (env.NODE_ENV !== "development" && env.PORTAL_PUBLIC_URL) {
+    const portal = new URL(env.PORTAL_PUBLIC_URL);
+    if (portal.protocol !== "https:") {
+      throw new Error("PORTAL_PUBLIC_URL must be https outside development");
+    }
+  }
   return {
     nodeEnv: env.NODE_ENV,
     authMode: env.AUTH_MODE,
@@ -106,6 +126,11 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     clock: env.CLOCK,
     configDir: env.CONFIG_DIR,
     oidc,
+    // Fixed only for synthetic development so a watch restart keeps printed codes usable.
+    accessCodeSecret: env.ACCESS_CODE_SECRET ?? "development-access-code-secret-only-0001",
+    portalPublicUrl: env.PORTAL_PUBLIC_URL ?? "http://localhost:5174/portal/",
+    mailAdapter: env.MAIL_ADAPTER,
+    smsAdapter: env.SMS_ADAPTER,
   };
 }
 

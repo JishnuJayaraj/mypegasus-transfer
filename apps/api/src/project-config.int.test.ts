@@ -6,6 +6,7 @@ import {
   baseDefaultsDir,
   loadBaseDefaults,
   loadManifest,
+  organisationFile,
   renderManifest,
   templatesDir,
 } from "@transfer/config/load";
@@ -319,6 +320,7 @@ function changedConfigDir(change: (template: Record<string, unknown>) => void) {
     fileURLToPath(new URL("base-defaults.json", baseDefaultsDir)),
     join(dir, "base-defaults.json"),
   );
+  cpSync(fileURLToPath(organisationFile), join(dir, "organisation.json"));
   const file = join(dir, "templates/beispielstadt-nord/1.json");
   const template = JSON.parse(readFileSync(file, "utf8"));
   change(template);

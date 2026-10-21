@@ -47,3 +47,4 @@ export {
   type LayerValidation,
 } from "./validate";
 export { compareTemplateVersions, TemplateManifest, TemplateManifestEntry } from "./manifest";
+export { Organisation, organisation } from "./organisation";

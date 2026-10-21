@@ -62,6 +62,11 @@ export const OperationKind = z.enum([
   "addReplacementLead",
   "assignParticipations",
   "setProjectRegion",
+  // Slice 3: participant activation and the Art. 14 notice (D16)
+  "issueActivationCode",
+  "recordHandover",
+  "revokeActivationCode",
+  "providePrivacyNotice",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -140,6 +145,10 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   addReplacementLead: ["project_lead", "admin"],
   assignParticipations: ["project_lead"],
   setProjectRegion: ["project_lead", "admin"],
+  issueActivationCode: ["project_lead", "back_office"],
+  recordHandover: ["project_lead", "back_office"],
+  revokeActivationCode: ["project_lead", "back_office"],
+  providePrivacyNotice: ["project_lead", "back_office"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

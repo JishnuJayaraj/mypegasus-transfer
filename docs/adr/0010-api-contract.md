@@ -103,6 +103,29 @@ generator then. No action now.
   region, account, membership or assignment in the path is a 404; `region_scope` and
   `duplicate_org_role` are 400 validation codes.
 
+## Note 2026-10-21 (Slice 3, PR 3d): activation and Article 14 notice APIs
+
+- **New routes:** `POST /projects/{id}/activation-codes` (letter/sheet batch, 1–500 distinct
+  participations, all or nothing), `POST /participations/{id}/activation-codes/in-person`,
+  `POST /participations/{id}/activation-codes/handover`,
+  `POST /participations/{id}/activation-codes/revocation`, and
+  `GET /participations/{id}/activation`; notice-only routes are
+  `POST /projects/{id}/privacy-notices` and `POST /participations/{id}/privacy-notices`.
+  Participation list/detail responses add derived activation and notice state plus capabilities;
+  list filters execute in SQL before cursor pagination.
+- Printable batch responses are `Cache-Control: no-store` and are the only API responses that
+  contain activation codes. The in-person and state responses never contain a code, destination
+  or either keyed hash. The public portal route `/portal/notice/art14/{version}` is static,
+  bilingual, personal-data-free and makes no API request.
+- Batch requests reject duplicate ids and preserve input order while locking in sorted order.
+  Nested handover/revocation routes return 404 when the code does not belong to the participation
+  in the path. Issuance refusals are 422 domain codes; a definitive provider failure is 503 with
+  `delivery_failed`; an unknown provider outcome is a successful committed state reported as
+  `delivery_unknown`.
+- Activation and notice state are projections, never client claims. `provided` notice evidence
+  means a letter was produced, a sheet or in-person print was handed over, or an in-person
+  email/SMS send definitively succeeded. Failed and unknown sends do not claim provision.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

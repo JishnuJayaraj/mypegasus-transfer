@@ -10,6 +10,15 @@ import {
   DsvAmendmentKind,
 } from "./projects/participation-dates";
 import { DsvStatus, MainStatus, ProfilingStatus } from "./lifecycle/enums";
+import { ActivationStatus } from "./activation/status";
+import { PrivacyNoticeState } from "./privacy/notice-state";
+
+const activationCapabilities = z.strictObject({
+  issueActivationCode: z.boolean(),
+  recordHandover: z.boolean(),
+  revokeActivationCode: z.boolean(),
+  providePrivacyNotice: z.boolean(),
+});
 
 /**
  * A participation in the project's list (Slice 2 plan 5.12, R19). Only fields the viewer may
@@ -29,6 +38,9 @@ export const ParticipationListItem = z
     firstName: z.string().optional(),
     /** The consultants it is assigned to (Q62), by name. */
     consultants: z.array(AssignedConsultant),
+    activationStatus: ActivationStatus,
+    privacyNoticeState: PrivacyNoticeState,
+    activationCapabilities,
   })
   .meta({ id: "ParticipationListItem" });
 export type ParticipationListItem = z.infer<typeof ParticipationListItem>;
@@ -157,11 +169,17 @@ export const ParticipationDetail = z
     baReportingTasks: z.array(BaReportingTaskView).optional(),
     /** The consultants it is assigned to (Q62), oldest assignment first. */
     assignments: z.array(AssignedConsultant),
+    activationStatus: ActivationStatus,
+    privacyNoticeState: PrivacyNoticeState,
     capabilities: z.strictObject({
       assignEntryWave: z.boolean(),
       setParticipationDates: z.boolean(),
       /** Assign and unassign consultants (the PL). */
       assignParticipations: z.boolean(),
+      issueActivationCode: z.boolean(),
+      recordHandover: z.boolean(),
+      revokeActivationCode: z.boolean(),
+      providePrivacyNotice: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({
@@ -177,3 +195,12 @@ export const AssignEntryWaveInput = z
   .strictObject({ waveId: z.uuid() })
   .meta({ id: "AssignEntryWaveInput" });
 export type AssignEntryWaveInput = z.infer<typeof AssignEntryWaveInput>;
+
+export const ParticipationListQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.string().optional(),
+  activation: z
+    .enum(["none", "printed", "open", "delivery_unknown", "expired", "locked", "revoked", "used"])
+    .optional(),
+  privacyNotice: z.enum(["provided", "due", "overdue"]).optional(),
+});

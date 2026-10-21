@@ -2395,6 +2395,36 @@
             "items": {
               "$ref": "#/components/schemas/AssignedConsultant"
             }
+          },
+          "activationStatus": {
+            "$ref": "#/components/schemas/ActivationStatus"
+          },
+          "privacyNoticeState": {
+            "$ref": "#/components/schemas/PrivacyNoticeState"
+          },
+          "activationCapabilities": {
+            "type": "object",
+            "properties": {
+              "issueActivationCode": {
+                "type": "boolean"
+              },
+              "recordHandover": {
+                "type": "boolean"
+              },
+              "revokeActivationCode": {
+                "type": "boolean"
+              },
+              "providePrivacyNotice": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "issueActivationCode",
+              "recordHandover",
+              "revokeActivationCode",
+              "providePrivacyNotice"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -2403,7 +2433,10 @@
           "profilingStatus",
           "dsvStatus",
           "entryWaveId",
-          "consultants"
+          "consultants",
+          "activationStatus",
+          "privacyNoticeState",
+          "activationCapabilities"
         ],
         "additionalProperties": false
       },
@@ -2427,6 +2460,86 @@
           "staffUserId",
           "displayName",
           "assignedAt"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationStatus": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string",
+            "enum": [
+              "activated",
+              "not_activated"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "none",
+              "printed",
+              "open",
+              "delivery_unknown",
+              "expired",
+              "locked",
+              "revoked",
+              "used"
+            ]
+          },
+          "issuedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "account",
+          "code",
+          "issuedAt",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "PrivacyNoticeState": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "provided",
+              "due",
+              "overdue"
+            ]
+          },
+          "dueOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "providedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "state",
+          "dueOn",
+          "providedAt"
         ],
         "additionalProperties": false
       },
@@ -2767,6 +2880,12 @@
               "$ref": "#/components/schemas/AssignedConsultant"
             }
           },
+          "activationStatus": {
+            "$ref": "#/components/schemas/ActivationStatus"
+          },
+          "privacyNoticeState": {
+            "$ref": "#/components/schemas/PrivacyNoticeState"
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -2778,12 +2897,28 @@
               },
               "assignParticipations": {
                 "type": "boolean"
+              },
+              "issueActivationCode": {
+                "type": "boolean"
+              },
+              "recordHandover": {
+                "type": "boolean"
+              },
+              "revokeActivationCode": {
+                "type": "boolean"
+              },
+              "providePrivacyNotice": {
+                "type": "boolean"
               }
             },
             "required": [
               "assignEntryWave",
               "setParticipationDates",
-              "assignParticipations"
+              "assignParticipations",
+              "issueActivationCode",
+              "recordHandover",
+              "revokeActivationCode",
+              "providePrivacyNotice"
             ],
             "additionalProperties": false
           },
@@ -2840,6 +2975,8 @@
           "hints",
           "person",
           "assignments",
+          "activationStatus",
+          "privacyNoticeState",
           "capabilities",
           "refusals"
         ],
@@ -3543,6 +3680,515 @@
         "required": [
           "id",
           "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "BatchActivationCodeResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "activationCodeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "address": {
+                  "$ref": "#/components/schemas/ParticipantAddress"
+                },
+                "code": {
+                  "type": "string",
+                  "pattern": "^[0-9A-HJKMNP-TV-Z]{4}(?:-[0-9A-HJKMNP-TV-Z]{4}){2}$"
+                },
+                "activationUrl": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "noticeVersion": {
+                  "type": "string"
+                },
+                "noticeLanguage": {
+                  "type": "string",
+                  "enum": [
+                    "de",
+                    "en"
+                  ]
+                },
+                "noticeTitle": {
+                  "type": "string"
+                },
+                "noticeText": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "activationCodeId",
+                "participationId",
+                "firstName",
+                "lastName",
+                "address",
+                "code",
+                "activationUrl",
+                "expiresAt",
+                "noticeVersion",
+                "noticeLanguage",
+                "noticeTitle",
+                "noticeText"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "BatchActivationCodeInput": {
+        "type": "object",
+        "properties": {
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "letter",
+              "sheet"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "default": "de"
+          },
+          "replaceOpenCode": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "participationIds",
+          "channel"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipationActivation": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ActivationStatus"
+          },
+          "current": {
+            "$ref": "#/components/schemas/ActivationRecord"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "issueActivationCode": {
+                "type": "boolean"
+              },
+              "recordHandover": {
+                "type": "boolean"
+              },
+              "revokeActivationCode": {
+                "type": "boolean"
+              },
+              "providePrivacyNotice": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "issueActivationCode",
+              "recordHandover",
+              "revokeActivationCode",
+              "providePrivacyNotice"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "status",
+          "current",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationRecord": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "activationCodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "letter",
+              "sheet",
+              "in_person"
+            ]
+          },
+          "deliveryKind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "email",
+              "sms",
+              null
+            ]
+          },
+          "deliveryStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "pending",
+              "sent",
+              "failed",
+              "unknown",
+              null
+            ]
+          },
+          "noticeLanguage": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          },
+          "issuedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issuedByDisplayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "handedOverBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "handedOverAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "identityCheckedBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "identityCheckedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "failedAttempts": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "attemptsLeft": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          },
+          "lockedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "revokedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "revokeReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "reissued",
+              "not_handed_over",
+              "lost",
+              "delivery_failed",
+              "participation_closed",
+              null
+            ]
+          },
+          "usedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "activationCodeId",
+          "channel",
+          "deliveryKind",
+          "deliveryStatus",
+          "noticeLanguage",
+          "issuedBy",
+          "issuedByDisplayName",
+          "issuedAt",
+          "expiresAt",
+          "handedOverBy",
+          "handedOverAt",
+          "identityCheckedBy",
+          "identityCheckedAt",
+          "failedAttempts",
+          "attemptsLeft",
+          "lockedAt",
+          "revokedAt",
+          "revokeReason",
+          "usedAt"
+        ],
+        "additionalProperties": false
+      },
+      "InPersonActivationCodeInput": {
+        "type": "object",
+        "properties": {
+          "deliveryKind": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms"
+            ]
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 254
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "default": "de"
+          },
+          "identityChecked": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "replaceOpenCode": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "deliveryKind",
+          "deliveryAddress",
+          "identityChecked"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationCodeActionInput": {
+        "type": "object",
+        "properties": {
+          "activationCodeId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "activationCodeId"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationCodeRevocationInput": {
+        "type": "object",
+        "properties": {
+          "activationCodeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "not_handed_over",
+              "lost"
+            ]
+          }
+        },
+        "required": [
+          "activationCodeId",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "PrivacyNoticeBatchResult": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "address": {
+                  "$ref": "#/components/schemas/ParticipantAddress"
+                },
+                "noticeVersion": {
+                  "type": "string"
+                },
+                "noticeLanguage": {
+                  "type": "string",
+                  "enum": [
+                    "de",
+                    "en"
+                  ]
+                },
+                "noticeTitle": {
+                  "type": "string"
+                },
+                "noticeText": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "participationId",
+                "firstName",
+                "lastName",
+                "address",
+                "noticeVersion",
+                "noticeLanguage",
+                "noticeTitle",
+                "noticeText"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "PrivacyNoticeBatchInput": {
+        "type": "object",
+        "properties": {
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "default": "de"
+          }
+        },
+        "required": [
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
+      "PrivacyNoticeInput": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "default": "de"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "in_person_print"
+            ]
+          },
+          "handedOver": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "method",
+          "handedOver"
         ],
         "additionalProperties": false
       },
@@ -5867,12 +6513,41 @@
           },
           {
             "schema": {
-              "type": "string",
-              "description": "Opaque cursor from `nextCursor`."
+              "type": "string"
             },
             "required": false,
-            "description": "Opaque cursor from `nextCursor`.",
             "name": "cursor",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "none",
+                "printed",
+                "open",
+                "delivery_unknown",
+                "expired",
+                "locked",
+                "revoked",
+                "used"
+              ]
+            },
+            "required": false,
+            "name": "activation",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "provided",
+                "due",
+                "overdue"
+              ]
+            },
+            "required": false,
+            "name": "privacyNotice",
             "in": "query"
           }
         ],
@@ -7437,6 +8112,743 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/activation-codes": {
+      "post": {
+        "tags": [
+          "activation"
+        ],
+        "summary": "Issue and return printable letter or sheet activation codes, all or nothing",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchActivationCodeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New codes and print data; never retrievable later",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchActivationCodeResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/activation-codes/in-person": {
+      "post": {
+        "tags": [
+          "activation"
+        ],
+        "summary": "Record the photo-ID check, commit a pending code, then send it outside the transaction",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InPersonActivationCodeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Committed activation state; never the code or address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationActivation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/activation": {
+      "get": {
+        "tags": [
+          "activation"
+        ],
+        "summary": "Activation state and capabilities without any code, destination or hash",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activation state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationActivation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/activation-codes/handover": {
+      "post": {
+        "tags": [
+          "activation"
+        ],
+        "summary": "Record sheet handover after inspecting an original official photo ID",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationCodeActionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated activation state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationActivation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/activation-codes/revocation": {
+      "post": {
+        "tags": [
+          "activation"
+        ],
+        "summary": "Revoke an open code as lost or an unhanded sheet",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationCodeRevocationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated activation state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationActivation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/privacy-notices": {
+      "post": {
+        "tags": [
+          "privacy notices"
+        ],
+        "summary": "Record and return notice-only letters, all or nothing",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyNoticeBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notice-only letter print data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyNoticeBatchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/privacy-notices": {
+      "post": {
+        "tags": [
+          "privacy notices"
+        ],
+        "summary": "Record an Art. 14 notice handed over in person",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyNoticeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Notice recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dev/outbox": {
+      "get": {
+        "tags": [
+          "dev"
+        ],
+        "x-dev-only": true,
+        "summary": "Latest mock email and SMS messages (synthetic development only)",
+        "responses": {
+          "200": {
+            "description": "At most 100 mock messages",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "email"
+                            ]
+                          },
+                          "to": {
+                            "type": "string"
+                          },
+                          "subject": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "idempotencyKey": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "to",
+                          "subject",
+                          "text",
+                          "idempotencyKey",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "sms"
+                            ]
+                          },
+                          "to": {
+                            "type": "string"
+                          },
+                          "text": {
+                            "type": "string"
+                          },
+                          "idempotencyKey": {
+                            "type": "string"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "to",
+                          "text",
+                          "idempotencyKey",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
                 }
               }
             }

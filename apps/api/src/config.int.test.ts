@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TemplateManifest } from "@transfer/config";
-import { baseDefaultsDir, loadManifest, templatesDir } from "@transfer/config/load";
+import {
+  baseDefaultsDir,
+  loadManifest,
+  organisationFile,
+  templatesDir,
+} from "@transfer/config/load";
 import { createDb, projectMembership, seedProjectIds, seedStaffUserIds } from "@transfer/db";
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import { page } from "@transfer/domain";
@@ -109,6 +114,7 @@ function configDir(manifest?: unknown) {
     fileURLToPath(new URL("base-defaults.json", baseDefaultsDir)),
     join(dir, "base-defaults.json"),
   );
+  cpSync(fileURLToPath(organisationFile), join(dir, "organisation.json"));
   if (manifest) writeFileSync(join(dir, "templates/manifest.json"), JSON.stringify(manifest));
   return dir;
 }

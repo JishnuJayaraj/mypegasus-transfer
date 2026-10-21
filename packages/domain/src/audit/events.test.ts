@@ -76,6 +76,11 @@ describe("audit event types (plan 5.4)", () => {
       "project_member_removed",
       "participant_assigned",
       "participant_unassigned",
+      "activation_code_issued",
+      "activation_code_delivery",
+      "activation_code_handed_over",
+      "activation_code_revoked",
+      "privacy_notice_provided",
     ]);
   });
 
@@ -108,6 +113,12 @@ describe("audit event types (plan 5.4)", () => {
       "project_member_removed",
       "participant_assigned",
       "participant_unassigned",
+      // Activation and Art. 14 evidence: only their hardened functions write them.
+      "activation_code_issued",
+      "activation_code_delivery",
+      "activation_code_handed_over",
+      "activation_code_revoked",
+      "privacy_notice_provided",
     ]);
   });
 

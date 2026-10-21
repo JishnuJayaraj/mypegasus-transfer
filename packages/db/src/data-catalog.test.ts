@@ -73,6 +73,9 @@ describe("data catalog", () => {
       profiling_exception_request: entry("participation_record", "confidential", true),
       participant_identity: entry("participation_record", "confidential", true),
       participant_details: entry("personnel_file", "confidential", true),
+      // Slice 3 (PR 3d, D12–D20, Q122)
+      activation_code: entry("access_credential", "confidential", true),
+      privacy_notice_delivery: entry("personnel_file", "internal", true),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),

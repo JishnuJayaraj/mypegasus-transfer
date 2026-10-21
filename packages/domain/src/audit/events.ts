@@ -16,6 +16,16 @@ import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
 import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
 import {
+  ActivationChannel,
+  ActivationDeliveryKind,
+  ActivationRevokeReason,
+  IdentityCheck,
+  IdentityCheckMethod,
+  NoticeMethod,
+  ActivationPurpose,
+} from "../activation/model";
+import { NoticeLanguage } from "../notices/catalog";
+import {
   DsvStatus,
   EndReason,
   MainStatus,
@@ -76,6 +86,12 @@ export const AuditEventType = z.enum([
   "project_member_removed",
   "participant_assigned",
   "participant_unassigned",
+  // Slice 3, activation issuance and Art. 14 evidence (D12–D20)
+  "activation_code_issued",
+  "activation_code_delivery",
+  "activation_code_handed_over",
+  "activation_code_revoked",
+  "privacy_notice_provided",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -126,6 +142,11 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "project_member_removed",
   "participant_assigned",
   "participant_unassigned",
+  "activation_code_issued",
+  "activation_code_delivery",
+  "activation_code_handed_over",
+  "activation_code_revoked",
+  "privacy_notice_provided",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -498,6 +519,47 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     reasonCode: AssignmentEndReason,
     details: z.strictObject(ofAssignment),
+  }),
+  event("activation_code_issued", {
+    ...ofParticipation,
+    details: z.strictObject({
+      activationCodeId: z.uuid(),
+      purpose: ActivationPurpose,
+      channel: ActivationChannel,
+      identityCheck: IdentityCheck,
+      deliveryKind: ActivationDeliveryKind.optional(),
+      noticeVersion: code,
+      language: NoticeLanguage,
+    }),
+  }),
+  event("activation_code_delivery", {
+    ...ofParticipation,
+    details: z.strictObject({
+      activationCodeId: z.uuid(),
+      outcome: z.enum(["sent", "failed", "delivery_unknown"]),
+    }),
+  }),
+  event("activation_code_handed_over", {
+    ...ofParticipation,
+    details: z.strictObject({
+      activationCodeId: z.uuid(),
+      method: IdentityCheckMethod,
+    }),
+  }),
+  event("activation_code_revoked", {
+    ...ofParticipation,
+    reasonCode: ActivationRevokeReason,
+    details: z.strictObject({ activationCodeId: z.uuid() }),
+  }),
+  event("privacy_notice_provided", {
+    ...ofParticipation,
+    details: z.strictObject({
+      noticeDeliveryId: z.uuid(),
+      activationCodeId: z.uuid().optional(),
+      noticeVersion: code,
+      language: NoticeLanguage,
+      method: NoticeMethod,
+    }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

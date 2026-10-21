@@ -101,15 +101,35 @@ export const projectsQuery = (api: ApiClient) =>
   });
 
 /** The project's participations, page by page (Slice 2 plan 5.12); 403 for those who may not list them. */
-export const participantsQuery = (api: ApiClient, projectId: string) =>
+export type ParticipationFilters = {
+  activation?:
+    | "none"
+    | "printed"
+    | "open"
+    | "delivery_unknown"
+    | "expired"
+    | "locked"
+    | "revoked"
+    | "used";
+  privacyNotice?: "provided" | "due" | "overdue";
+};
+
+export const participantsQuery = (
+  api: ApiClient,
+  projectId: string,
+  filters: ParticipationFilters = {},
+) =>
   infiniteQueryOptions({
-    queryKey: ["projects", projectId, "participations"],
+    queryKey:
+      Object.keys(filters).length === 0
+        ? ["projects", projectId, "participations"]
+        : ["projects", projectId, "participations", filters],
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET("/api/v1/projects/{projectId}/participations", {
           params: {
             path: { projectId },
-            query: { limit: 50, ...(pageParam && { cursor: pageParam }) },
+            query: { limit: 50, ...filters, ...(pageParam && { cursor: pageParam }) },
           },
         }),
       ),
@@ -125,6 +145,17 @@ export const participationQuery = (api: ApiClient, participationId: string) =>
     queryFn: () =>
       unwrap(
         api.GET("/api/v1/participations/{participationId}", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
+export const participationActivationQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "activation"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/activation", {
           params: { path: { participationId } },
         }),
       ),

@@ -162,6 +162,10 @@ const operations: Record<OperationKind, string> = {
   addReplacementLead: "PL AD",
   assignParticipations: "PL",
   setProjectRegion: "PL AD",
+  issueActivationCode: "PL BO",
+  recordHandover: "PL BO",
+  revokeActivationCode: "PL BO",
+  providePrivacyNotice: "PL BO",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {

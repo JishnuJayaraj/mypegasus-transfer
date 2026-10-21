@@ -274,6 +274,20 @@
       "when": 1792524439050,
       "tag": "0038_slice_3c_corrective",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792526200606,
+      "tag": "0039_activation_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1792526201606,
+      "tag": "0040_activation_code_functions",
+      "breakpoints": true
     }
   ]
 }

@@ -13,6 +13,8 @@
     "@tanstack/react-query": "5.104.3",
     "@tanstack/react-router": "1.170.44",
     "@transfer/api-client": "workspace:*",
+    "@transfer/config": "workspace:*",
+    "@transfer/domain": "workspace:*",
     "@transfer/ui": "workspace:*",
     "i18next": "26.4.6",
     "react": "19.3.1",

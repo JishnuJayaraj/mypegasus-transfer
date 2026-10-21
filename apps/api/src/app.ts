@@ -2,6 +2,7 @@ import { HTTPException } from "hono/http-exception";
 import { bodyLimit } from "hono/body-limit";
 import { secureHeaders } from "hono/secure-headers";
 import packageJson from "../package.json" with { type: "json" };
+import { DevelopmentOutbox, MockMailer, MockSmsSender } from "@transfer/adapters";
 import { createRouter, type Deps } from "./context";
 import { originCheck } from "./csrf";
 import { errorForLog, requestLogger } from "./logger";
@@ -19,6 +20,7 @@ import { participationRoutes } from "./routes/participations";
 import { projectConfigRoutes } from "./routes/project-config";
 import { projectRoutes } from "./routes/projects";
 import { teamRoutes } from "./routes/team";
+import { activationRoutes } from "./routes/activation";
 import { mountSpas } from "./static";
 
 export const openApiConfig = {
@@ -41,7 +43,8 @@ const contentSecurityPolicy = {
   defaultSrc: ["'self'"],
   scriptSrc: ["'self'"],
   styleSrc: ["'self'"],
-  imgSrc: ["'self'"],
+  // Activation QR codes are generated in the staff browser and rendered as data URLs.
+  imgSrc: ["'self'", "data:"],
   fontSrc: ["'self'"],
   connectSrc: ["'self'"],
   objectSrc: ["'none'"],
@@ -53,6 +56,18 @@ const contentSecurityPolicy = {
 /** The whole API with injected dependencies, so tests can use `app.request()`. */
 export function createApp(deps: Deps) {
   const { env, logger } = deps;
+  const outbox =
+    deps.outbox ??
+    new DevelopmentOutbox(deps.clock, (fields, message) => logger.info(fields, message));
+  // The mocks report `sent` without sending, which would record Art. 14 evidence for a message
+  // nobody received: production gets no default sender until a real adapter exists (ADR-0006).
+  const mocks = env.nodeEnv !== "production";
+  const runtimeDeps: Deps = {
+    ...deps,
+    outbox,
+    mailer: deps.mailer ?? (mocks ? new MockMailer(outbox) : undefined),
+    smsSender: deps.smsSender ?? (mocks ? new MockSmsSender(outbox) : undefined),
+  };
   const app = createRouter();
 
   app.use(requestLogger(logger));
@@ -77,22 +92,23 @@ export function createApp(deps: Deps) {
   });
 
   const api = createRouter();
-  api.route("/", healthRoutes(deps));
-  api.route("/", meRoutes(deps));
-  api.route("/", logoutRoutes(deps));
+  api.route("/", healthRoutes(runtimeDeps));
+  api.route("/", meRoutes(runtimeDeps));
+  api.route("/", logoutRoutes(runtimeDeps));
   if (env.authMode === "oidc") {
     const oidc = deps.oidc ?? createOidc(env.oidc!);
-    api.route("/", oidcRoutes(deps, oidc));
+    api.route("/", oidcRoutes(runtimeDeps, oidc));
   }
-  api.route("/", projectRoutes(deps));
-  api.route("/", entryWaveRoutes(deps));
-  api.route("/", configRoutes(deps));
-  api.route("/", projectConfigRoutes(deps));
-  api.route("/", importRoutes(deps));
-  api.route("/", participationRoutes(deps));
-  api.route("/", teamRoutes(deps));
-  api.route("/", adminRoutes(deps));
-  if (env.authMode === "dev") api.route("/", devRoutes(deps));
+  api.route("/", projectRoutes(runtimeDeps));
+  api.route("/", entryWaveRoutes(runtimeDeps));
+  api.route("/", configRoutes(runtimeDeps));
+  api.route("/", projectConfigRoutes(runtimeDeps));
+  api.route("/", importRoutes(runtimeDeps));
+  api.route("/", participationRoutes(runtimeDeps));
+  api.route("/", teamRoutes(runtimeDeps));
+  api.route("/", adminRoutes(runtimeDeps));
+  api.route("/", activationRoutes(runtimeDeps));
+  if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 
   if (env.nodeEnv !== "production") app.doc31("/api/v1/openapi.json", openApiConfig);

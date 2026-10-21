@@ -6,7 +6,9 @@
 > Transfer-KuG eligibility), and from round 8 (entry waves, catch-up of missed runs, approval of
 > profiling exceptions, three Transfer-KuG outcomes, `taMeasuresComplete`) and round 9 (cutoff
 > for participations without a wave, snapshot rule for TG entry) and round 10 (waves vs. beE
-> units, profiling exception requests, end-reason corrections). Items marked *(provisional, Qnn)* rest on
+> units, profiling exception requests, end-reason corrections), and 2026-10-21 with Slice 3 PR 3d
+> activation issuance, handover, notice evidence and terminal revocation. Items marked
+> *(provisional, Qnn)* rest on
 > answers that are still `assumed` or `verify` in `open-questions.md`.
 
 ## Big picture
@@ -178,12 +180,24 @@ stateDiagram-v2
 `contacted`, `unreachable` and `informed`. If `dsvStatus = dsv_signed`, it additionally needs
 the cancellation document (see DSV track).
 
-**Activation** (Q116, Q121, [round 36](../decisions/2026-10-20-answers-round-36.md)): a
+**Activation-code issuance (as built in Slice 3, PR 3d):** the project's PL or back office may
+issue a letter, event sheet or in-person code while the project is active and the participation is
+non-terminal. Before `informed`, issuance is refused after the participation's cutoff. Letters need
+the imported postal address and birth date. Event sheets are not usable until an audited handover
+after a photo-ID check; in-person codes record the same check before being sent. Reissue is explicit
+and revokes the open code atomically. This step does not change lifecycle status.
+
+**Account activation** (Q116, Q121, [round 36](../decisions/2026-10-20-answers-round-36.md),
+planned for Slice 3 PR 3e): a
 participant's first activation moves `imported` or `unreachable` to `contacted` in the same
 transaction (actor `participant`, the only edges a participant takes). Before `informed` it needs
 the participation's cutoff not to have passed, checked with database time at completion; in
 `informed` or `active_in_tg` it changes no status. A terminal status revokes open activation codes
 and ends the participant's sessions.
+
+The terminal-status part already built in PR 3d runs in the status transaction: moving to
+`withdrawn`, `ta_completed` or `exited` revokes every open activation code as
+`participation_closed`. Ending participant sessions joins that trigger in PR 3e.
 
 There is no self-registration: `self_registered` and `rejected` (its only path) left the
 lifecycle core in Slice 3 ([round 35](../decisions/2026-10-20-answers-round-35.md)).
@@ -557,7 +571,7 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 |---|---|---|
 | Project setup | PL | name, customer, type, Project Agentur (KuG-Agentur for `ta_tg`), pinned Agentur templates, overrides; in `ta_tg` entry waves with their dates; activation |
 | Import / manual creation | PL | participations in `imported`; import report with row errors, warnings and possible duplicates (see below) |
-| Portal activation | PL → participants | a personal activation code per participation (letter, printed sheet, or sent in person to a private email or mobile; Q120); the participant activates and registers a private email or mobile ([round 35](../decisions/2026-10-20-answers-round-35.md), Q112–Q120); activation moves `imported`/`unreachable` to `contacted` (Q116) |
+| Portal activation | PL/back office → participants | PR 3d issues a personal activation code per participation (letter, printed sheet with recorded handover, or sent in person to a private email/mobile after a photo-ID check), supplies and records the Article 14 notice and revokes open codes when a participation closes; PR 3e lets the participant activate and register a private email/mobile, then moves `imported`/`unreachable` to `contacted` (Q112–Q120) |
 | Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |

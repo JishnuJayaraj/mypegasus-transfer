@@ -43,6 +43,7 @@ export {
   ParticipationHint,
   ParticipationListItem,
   ParticipationPage,
+  ParticipationListQuery,
 } from "./participations";
 export {
   AmendmentOriginalLocation,
@@ -369,3 +370,50 @@ export {
   ProjectTeam,
 } from "./projects/team";
 export { CurrentStaffUser, DevStaffUser, PageQuery, ProblemDetails, StaffUser, page } from "./api";
+export {
+  CROCKFORD_ALPHABET,
+  formatActivationCode,
+  normaliseActivationCode,
+} from "./activation/code";
+export { issuanceRefusals, type IssuanceFacts, type IssuanceRefusal } from "./activation/issuance";
+export {
+  activationStatus,
+  ActivationCodeState,
+  ActivationStatus,
+  type ActivationCodeSnapshot,
+} from "./activation/status";
+export { privacyNoticeState, PrivacyNoticeState } from "./privacy/notice-state";
+export {
+  ActivationChannel,
+  ActivationDeliveryKind,
+  ActivationDeliveryStatus,
+  ActivationPurpose,
+  ActivationRevokeReason,
+  IdentityCheck,
+  IdentityCheckMethod,
+  NoticeMethod,
+} from "./activation/model";
+export {
+  ART14_NOTICE_VERSION,
+  NoticeLanguage,
+  art14Notice,
+  noticeCatalog,
+  type NoticeOrganisation,
+  type NoticeTemplate,
+} from "./notices/catalog";
+export { normaliseEmail, normaliseMobile } from "./portal/contact";
+export {
+  ActivationCapabilities,
+  ActivationCodeActionInput,
+  ActivationCodeRevocationInput,
+  ActivationPrintItem,
+  ActivationRecord,
+  BatchActivationCodeInput,
+  BatchActivationCodeResult,
+  InPersonActivationCodeInput,
+  ParticipationActivation,
+  PrivacyNoticeBatchInput,
+  PrivacyNoticeBatchResult,
+  PrivacyNoticeInput,
+  PrivacyNoticePrintItem,
+} from "./activation/api";

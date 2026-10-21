@@ -1,0 +1,133 @@
+import { z } from "zod";
+import { ParticipantAddress } from "../participations";
+import { NoticeLanguage } from "../notices/catalog";
+import {
+  ActivationChannel,
+  ActivationDeliveryKind,
+  ActivationDeliveryStatus,
+  ActivationRevokeReason,
+} from "./model";
+import { ActivationStatus } from "./status";
+
+export const ActivationCapabilities = z.strictObject({
+  issueActivationCode: z.boolean(),
+  recordHandover: z.boolean(),
+  revokeActivationCode: z.boolean(),
+  providePrivacyNotice: z.boolean(),
+});
+
+export const BatchActivationCodeInput = z
+  .strictObject({
+    participationIds: z.array(z.uuid()).min(1).max(500),
+    channel: z.enum(["letter", "sheet"]),
+    language: NoticeLanguage.default("de"),
+    replaceOpenCode: z.boolean().default(false),
+  })
+  .superRefine(({ participationIds }, ctx) => {
+    if (new Set(participationIds).size !== participationIds.length) {
+      ctx.addIssue({ code: "custom", path: ["participationIds"], params: { code: "duplicate" } });
+    }
+  })
+  .meta({ id: "BatchActivationCodeInput" });
+
+export const ActivationPrintItem = z.strictObject({
+  activationCodeId: z.uuid(),
+  participationId: z.uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  address: ParticipantAddress.nullable(),
+  code: z.string().regex(/^[0-9A-HJKMNP-TV-Z]{4}(?:-[0-9A-HJKMNP-TV-Z]{4}){2}$/),
+  activationUrl: z.url(),
+  expiresAt: z.iso.datetime(),
+  noticeVersion: z.string(),
+  noticeLanguage: NoticeLanguage,
+  noticeTitle: z.string(),
+  noticeText: z.string(),
+});
+
+export const BatchActivationCodeResult = z
+  .strictObject({ items: z.array(ActivationPrintItem).min(1) })
+  .meta({ id: "BatchActivationCodeResult" });
+
+export const InPersonActivationCodeInput = z
+  .strictObject({
+    deliveryKind: ActivationDeliveryKind,
+    deliveryAddress: z.string().min(1).max(254),
+    language: NoticeLanguage.default("de"),
+    identityChecked: z.literal(true),
+    replaceOpenCode: z.boolean().default(false),
+  })
+  .meta({ id: "InPersonActivationCodeInput" });
+
+export const ActivationCodeActionInput = z
+  .strictObject({ activationCodeId: z.uuid() })
+  .meta({ id: "ActivationCodeActionInput" });
+
+export const ActivationCodeRevocationInput = z
+  .strictObject({
+    activationCodeId: z.uuid(),
+    reason: z.enum(["not_handed_over", "lost"]),
+  })
+  .meta({ id: "ActivationCodeRevocationInput" });
+
+export const ActivationRecord = z
+  .strictObject({
+    activationCodeId: z.uuid(),
+    channel: ActivationChannel,
+    deliveryKind: ActivationDeliveryKind.nullable(),
+    deliveryStatus: ActivationDeliveryStatus.nullable(),
+    noticeLanguage: NoticeLanguage,
+    issuedBy: z.uuid(),
+    issuedByDisplayName: z.string().min(1).max(100),
+    issuedAt: z.iso.datetime(),
+    expiresAt: z.iso.datetime(),
+    handedOverBy: z.uuid().nullable(),
+    handedOverAt: z.iso.datetime().nullable(),
+    identityCheckedBy: z.uuid().nullable(),
+    identityCheckedAt: z.iso.datetime().nullable(),
+    failedAttempts: z.int().min(0).max(5),
+    attemptsLeft: z.int().min(0).max(5),
+    lockedAt: z.iso.datetime().nullable(),
+    revokedAt: z.iso.datetime().nullable(),
+    revokeReason: ActivationRevokeReason.nullable(),
+    usedAt: z.iso.datetime().nullable(),
+  })
+  .meta({ id: "ActivationRecord" });
+
+export const ParticipationActivation = z
+  .strictObject({
+    status: ActivationStatus,
+    current: ActivationRecord.nullable(),
+    capabilities: ActivationCapabilities,
+  })
+  .meta({ id: "ParticipationActivation" });
+
+export const PrivacyNoticeBatchInput = z
+  .strictObject({
+    participationIds: z.array(z.uuid()).min(1).max(500),
+    language: NoticeLanguage.default("de"),
+  })
+  .meta({ id: "PrivacyNoticeBatchInput" });
+
+export const PrivacyNoticeInput = z
+  .strictObject({
+    language: NoticeLanguage.default("de"),
+    method: z.literal("in_person_print"),
+    handedOver: z.literal(true),
+  })
+  .meta({ id: "PrivacyNoticeInput" });
+
+export const PrivacyNoticePrintItem = z.strictObject({
+  participationId: z.uuid(),
+  firstName: z.string(),
+  lastName: z.string(),
+  address: ParticipantAddress.nullable(),
+  noticeVersion: z.string(),
+  noticeLanguage: NoticeLanguage,
+  noticeTitle: z.string(),
+  noticeText: z.string(),
+});
+
+export const PrivacyNoticeBatchResult = z
+  .strictObject({ items: z.array(PrivacyNoticePrintItem).min(1) })
+  .meta({ id: "PrivacyNoticeBatchResult" });

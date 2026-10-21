@@ -1,0 +1,8 @@
+{
+  "controllerName": "Beispiel Transfergesellschaft mbH",
+  "controllerAddress": "Musterstraße 10, 10115 Berlin",
+  "controllerEmail": "datenschutz@example.invalid",
+  "dpoName": "Beispiel Datenschutzberatung",
+  "dpoAddress": "Datenschutzweg 4, 10115 Berlin",
+  "dpoEmail": "dpo@example.invalid"
+}
