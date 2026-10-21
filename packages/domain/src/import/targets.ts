@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// The import contract (Slice 2 plan 5.1, 5.11; Q103 confirmed in round 32): what a column may
+// The import contract (process-and-lifecycle.md, Import; Q103 confirmed in round 32): what a column may
 // map to, which targets are required, and the issue codes a row or mapping can raise. Codes
 // only, never a value.
 
@@ -49,6 +49,8 @@ export const ImportIssueCode = z.enum([
   "possible_duplicate",
   "terminal_not_updated",
   "kept_existing",
+  // a differing value the participant maintains stays (Q112)
+  "participant_maintained",
 ]);
 export type ImportIssueCode = z.infer<typeof ImportIssueCode>;
 
@@ -72,7 +74,7 @@ const relaxableRule: Partial<Record<ImportTarget | "address", string>> = {
 
 /**
  * Whether a target is required: Personalnummer (the match key), last and first name always
- * (R6); date of birth, Austrittsdatum and the address unless the project relaxed their rule.
+ * (process-and-lifecycle.md, Import); date of birth, Austrittsdatum and the address unless the project relaxed their rule.
  */
 export function isRequired(
   target:
@@ -219,7 +221,7 @@ const digits = /\d/g;
 const textDate = /\d{1,2}\.\d{1,2}\.\d{4}/;
 
 /**
- * Whether the chosen header row looks like a person's data row (R44, round 33): a cell with a
+ * Whether the chosen header row looks like a person's data row (round 33): a cell with a
  * date, an `@` or five or more digits. A real header row has none; a confirm with such a row
  * saves no column mapping, because its keyed hashes would be pseudonymised values of a person.
  * A date cell arrives as an ISO date, which has eight digits.

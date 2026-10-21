@@ -33,10 +33,12 @@ function failure(load: () => unknown) {
 }
 
 describe("the sample templates (D8, AC-31)", () => {
-  it("are the two fictional Agenturen, nord in two versions", () => {
+  it("are the two fictional Agenturen, nord in three versions", () => {
     expect(samples.map(({ agenturKey, version }) => `${agenturKey}@${version}`)).toEqual([
       `${nord}@1`,
       `${nord}@2`,
+      // version 3 adds a self-service rule and help texts (regional-variation.md)
+      `${nord}@3`,
       `${sued}@1`,
     ]);
   });

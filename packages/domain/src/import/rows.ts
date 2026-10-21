@@ -9,7 +9,7 @@ import {
   type ImportTarget,
 } from "./targets";
 
-// Row validation (Slice 2 plan 5.11; R6, R23, R24; round 32). Pure: `today` comes from the
+// Row validation (process-and-lifecycle.md, Import; round 32). Pure: `today` comes from the
 // Clock. Issues name the row, the target and the code, never the value. `validateRow` checks the
 // cells; `checkRecord` checks the values a confirm would leave stored (the row's merged over the
 // stored ones for an update), because an empty cell keeps a stored value (Q103).
@@ -52,13 +52,13 @@ const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneCharacters = /^\+?[\d /()-]+$/;
 
 /** A pragmatic phone check (round 32): 6–30 characters, at least five digits, `+` only first. */
-const isPhone = (value: string) =>
+export const isPhone = (value: string) =>
   value.length >= 6 &&
   value.length <= 30 &&
   phoneCharacters.test(value) &&
   (value.match(/\d/g) ?? []).length >= 5;
 
-const isEmail = (value: string) => value.length <= 254 && email.test(value);
+export const isEmail = (value: string) => value.length <= 254 && email.test(value);
 
 /** `TT.MM.JJJJ` strictly, as an ISO date; null for anything else or an impossible date. */
 export function parseGermanDate(value: string): IsoDate | null {
@@ -121,7 +121,7 @@ export function validateRow(input: RowInput): ValidatedRow {
 /**
  * The values a confirm would leave stored (`values`: the row's own for a new participation, the
  * row's merged over the stored ones for an update): the names always, the dates and the address
- * unless their rule is relaxed (R6), and the Austrittsdatum not before the birth date with the age
+ * unless their rule is relaxed (Q75), and the Austrittsdatum not before the birth date with the age
  * at it plausible, checked when the row supplies at least one of the two dates.
  */
 export function checkRecord(input: {
@@ -197,7 +197,7 @@ function readCell(target: ImportTarget, cell: ImportCell | null | undefined): Ce
   return { text };
 }
 
-/** A numeric XLSX cell (R24, round 32): never an identifier, a five-digit postcode converted. */
+/** A numeric XLSX cell (round 32): never an identifier, a five-digit postcode converted. */
 function readNumber(target: ImportTarget, stored: string): CellResult {
   if (target === "addressPostalCode") {
     return /^\d{5}$/.test(stored)
@@ -209,7 +209,7 @@ function readNumber(target: ImportTarget, stored: string): CellResult {
 }
 
 /**
- * The address as one unit (R23, round 32): street, postal code and city all or none (a country
+ * The address as one unit (round 32): street, postal code and city all or none (a country
  * cell alone is incomplete too); the country from the cell, else the import's selected one, stored
  * as `DE`; a German postal code is five digits. An address with any error is dropped as a whole.
  * Whether an address is required is `checkRecord`'s question.

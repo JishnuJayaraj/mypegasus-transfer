@@ -36,6 +36,12 @@ import {
   NoticeMethod,
   ChannelVerification,
   ConsentPurpose,
+  ConsentSource,
+  contactFields,
+  DrivingLicenceClass,
+  Gender,
+  MaritalStatus,
+  rowLimits,
   IdentityAssurance,
   OneTimeCodePurpose,
   ParticipantSessionState,
@@ -340,6 +346,10 @@ export const channelSuspensionReason = pgEnum(
 );
 export const channelRemovalReason = pgEnum("channel_removal_reason", values(ChannelRemovalReason));
 export const consentPurpose = pgEnum("consent_purpose", values(ConsentPurpose));
+export const consentSource = pgEnum("consent_source", values(ConsentSource));
+export const gender = pgEnum("gender", values(Gender));
+export const maritalStatus = pgEnum("marital_status", values(MaritalStatus));
+export const drivingLicenceClass = pgEnum("driving_licence_class", values(DrivingLicenceClass));
 export const consentEndReason = pgEnum("consent_end_reason", values(ConsentEndReason));
 export const oneTimeCodePurpose = pgEnum("one_time_code_purpose", values(OneTimeCodePurpose));
 export const challengeInvalidation = pgEnum("challenge_invalidation", [
@@ -670,6 +680,16 @@ export const participantDetails = pgTable(
     privateEmail: text("private_email"),
     workEmail: text("work_email"),
     oldEmploymentEndDate: dateColumn("old_employment_end_date"),
+    /** The contact fields the participant wrote, also assisted; the import never overwrites them. */
+    participantMaintained: text("participant_maintained")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    /** When the participant last wrote the address ("Vermittlungs-Agentur prüfen", Q139). */
+    participantAddressWrittenAt: timestamp("participant_address_written_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
     ...personTimes(),
   },
   (t) => [
@@ -694,6 +714,127 @@ export const participantDetails = pgTable(
     personText("participant_details_mobile_text", sql`${t.mobile}`, 30),
     personText("participant_details_private_email_text", sql`${t.privateEmail}`, 254),
     personText("participant_details_work_email_text", sql`${t.workEmail}`, 254),
+    check(
+      "participant_details_participant_maintained",
+      sql`${t.participantMaintained} <@ ${sql.raw(`'{${contactFields.join(",")}}'::text[]`)} and array_position(${t.participantMaintained}, null) is null`,
+    ),
+    check(
+      "participant_details_address_written",
+      sql`${t.participantAddressWrittenAt} is null or 'address' = any(${t.participantMaintained})`,
+    ),
+  ],
+);
+
+const jsonType = (column: SQL, type: "array" | "object") =>
+  sql`jsonb_typeof(${column}) = ${sql.raw(`'${type}'`)}`;
+const rowsUpTo = (column: SQL, max: number) =>
+  sql`${jsonType(column, "array")} and jsonb_array_length(${column}) between 1 and ${sql.raw(String(max))}`;
+
+/**
+ * The participant's profile, TL 407 section B (data-protection.md, self-service; Q140, Q141):
+ * one row per participation, class `personnel_file`. The structured values are `jsonb` held to
+ * their domain schema (`packages/domain/src/self-service/values.ts`) by the write function, here
+ * to their JSON type and row limits; custom fields are validated against the participation's
+ * resolved chain. `revision` is the optimistic-concurrency token of every page write. Written
+ * only by `write_self_service_data` (ADR-0002).
+ */
+export const participantProfile = pgTable(
+  "participant_profile",
+  {
+    ...personKeys(),
+    gender: gender("gender"),
+    maritalStatus: maritalStatus("marital_status"),
+    educationHistory: jsonb("education_history"),
+    workHistory: jsonb("work_history"),
+    languageSkills: jsonb("language_skills"),
+    drivingLicence: drivingLicenceClass("driving_licence").array(),
+    vehicleAvailable: boolean("vehicle_available"),
+    workingTimePreferences: jsonb("working_time_preferences"),
+    jobWishes: jsonb("job_wishes"),
+    desiredWorkLocations: text("desired_work_locations"),
+    maxCommuteDistance: jsonb("max_commute_distance"),
+    earliestStartDate: dateColumn("earliest_start_date"),
+    customFields: jsonb("custom_fields")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    revision: integer("revision").notNull(),
+    ...personTimes(),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_profile_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check("participant_profile_revision", sql`${t.revision} >= 1`),
+    check(
+      "participant_profile_education_history",
+      rowsUpTo(sql`${t.educationHistory}`, rowLimits.educationHistory),
+    ),
+    check(
+      "participant_profile_work_history",
+      rowsUpTo(sql`${t.workHistory}`, rowLimits.workHistory),
+    ),
+    check("participant_profile_language_skills", jsonType(sql`${t.languageSkills}`, "object")),
+    check("participant_profile_working_time", jsonType(sql`${t.workingTimePreferences}`, "object")),
+    check("participant_profile_job_wishes", jsonType(sql`${t.jobWishes}`, "object")),
+    check(
+      "participant_profile_max_commute_distance",
+      jsonType(sql`${t.maxCommuteDistance}`, "object"),
+    ),
+    check("participant_profile_custom_fields", jsonType(sql`${t.customFields}`, "object")),
+    // An empty array is the answer "no licence" (TL 407 field 42).
+    check(
+      "participant_profile_driving_licence",
+      sql`array_position(${t.drivingLicence}, null) is null`,
+    ),
+    personText(
+      "participant_profile_desired_work_locations_text",
+      sql`${t.desiredWorkLocations}`,
+      500,
+    ),
+  ],
+);
+
+/**
+ * The purposes notice acknowledged (data-protection.md, self-service; Q138): version, language,
+ * who (the participant, or staff on their behalf) and when; an acknowledgement, not a consent.
+ * One per version; written only by `acknowledge_self_service_notice`, never changed.
+ */
+export const selfServiceNoticeAcknowledgement = pgTable(
+  "self_service_notice_acknowledgement",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    noticeVersion: text("notice_version").notNull(),
+    language: noticeLanguage("language").notNull(),
+    actorType: actorType("actor_type").notNull(),
+    actorStaffUserId: uuid("actor_staff_user_id").references(() => staffUser.id),
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "self_service_notice_acknowledgement_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    unique("self_service_notice_acknowledgement_version_unique").on(
+      t.participationId,
+      t.noticeVersion,
+    ),
+    check(
+      "self_service_notice_acknowledgement_version",
+      sql`${t.noticeVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
+    ),
+    check(
+      "self_service_notice_acknowledgement_actor",
+      sql`${t.actorType} in ('participant', 'user') and (${t.actorType} = 'user') = (${t.actorStaffUserId} is not null)`,
+    ),
   ],
 );
 
@@ -862,8 +1003,10 @@ export const participantAccount = pgTable(
 );
 
 /**
- * A consent to the portal contact purpose for one channel (Q123): the text version and language
- * shown, who gave it and when; never the address. Written only by the activation functions.
+ * One of our consents (data-protection.md, legal basis; Q123, Q138): its purpose and where it was
+ * given (the portal, or a signed paper form staff record), the channel of a portal contact
+ * consent, the text version and language shown, who gave it and when; never the address. Written
+ * only by the activation and channel functions.
  */
 export const consentRecord = pgTable(
   "consent_record",
@@ -874,7 +1017,8 @@ export const consentRecord = pgTable(
       .references(() => project.id),
     participationId: uuid("participation_id").notNull(),
     purpose: consentPurpose("purpose").notNull(),
-    channelId: uuid("channel_id").notNull(),
+    source: consentSource("source").notNull().default("portal"),
+    channelId: uuid("channel_id"),
     textVersion: text("text_version").notNull(),
     language: noticeLanguage("language").notNull(),
     actorType: actorType("actor_type").notNull(),
@@ -898,6 +1042,11 @@ export const consentRecord = pgTable(
     check(
       "consent_record_actor",
       sql`${t.actorType} in ('participant', 'user') and (${t.actorType} = 'user') = (${t.actorStaffUserId} is not null)`,
+    ),
+    // A channel exactly for the portal contact purpose, which is given in the portal (Q138).
+    check(
+      "consent_record_channel",
+      sql`(${t.purpose} = 'portal_contact') = (${t.channelId} is not null) and (${t.purpose} <> 'portal_contact' or ${t.source} = 'portal')`,
     ),
   ],
 );
@@ -1606,6 +1755,8 @@ export const tables = [
   profilingExceptionRequest,
   participantIdentity,
   participantDetails,
+  participantProfile,
+  selfServiceNoticeAcknowledgement,
   activationCode,
   privacyNoticeDelivery,
   participantAccount,

@@ -14,9 +14,15 @@ export const ActivationRevokeReason = z.enum([
 ]);
 export const NoticeMethod = z.enum(["letter", "sheet", "email", "sms", "in_person_print"]);
 export const IdentityCheckMethod = z.literal("official_photo_id");
-/** Slice 3 plan D28, D29: participant channels, consents, one-time codes and sessions. */
+/** Participant channels, consents, one-time codes and sessions (ADR-0007, Q123). */
 export const ChannelVerification = z.enum(["one_time_code", "activation_link"]);
-export const ConsentPurpose = z.enum(["portal_contact"]);
+/**
+ * Our consents (data-protection.md, legal basis; Q138): a portal contact channel, given in the
+ * portal; the TG's access to the BA applicant profile, recorded from the signed Kug 200b.
+ */
+export const ConsentPurpose = z.enum(["portal_contact", "kug200b_profile_access"]);
+/** Where a consent was given: in the portal, or on a signed paper form staff record. */
+export const ConsentSource = z.enum(["portal", "paper_form"]);
 export const OneTimeCodePurpose = z.enum(["login", "channel_verification"]);
 export const ParticipantSessionState = z.enum(["activating", "active"]);
 export const StepUpMethod = z.enum(["birth_date", "one_time_code"]);
@@ -50,6 +56,7 @@ export type ActivationRevokeReason = z.infer<typeof ActivationRevokeReason>;
 export type NoticeMethod = z.infer<typeof NoticeMethod>;
 export type ChannelVerification = z.infer<typeof ChannelVerification>;
 export type ConsentPurpose = z.infer<typeof ConsentPurpose>;
+export type ConsentSource = z.infer<typeof ConsentSource>;
 export type OneTimeCodePurpose = z.infer<typeof OneTimeCodePurpose>;
 export type ParticipantSessionState = z.infer<typeof ParticipantSessionState>;
 export type StepUpMethod = z.infer<typeof StepUpMethod>;

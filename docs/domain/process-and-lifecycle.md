@@ -233,8 +233,11 @@ stateDiagram-v2
   legal basis is §110/§111 SGB III (Q4). The participant can still refuse, but then loses
   Transfer-KuG eligibility. The signature on TL 407 page 2 is a declaration on the form, not
   our consent record.
-- Self-service data collection runs alongside: its completeness (per resolved config) is shown
-  in "what's missing" and pre-fills TL 407. It is not a state.
+- Self-service data collection runs alongside: its completeness is derived per participation
+  from its own resolved chain (the base TL 407 rules of the `profiling` step plus its placement
+  Agentur's and the override's, `regional-variation.md`, "Self-service wizard"), shown as codes in
+  "what's missing", and pre-fills TL 407. It is not a state: there is no "submitted"; each page is
+  saved on "Weiter" and the participant may leave one incomplete.
 - The TL 407 **submission to the Agentur** is tracked on the document (date, channel). It is a
   **"what's missing" item, not a TG entry guard** (Q54): §111(4) Nr. 4 requires taking part in
   profiling before the transfer, not submitting the form.
@@ -618,7 +621,8 @@ along the creation edge into `imported`. Issues name the row, the target and a c
   error even when its rule is relaxed; `birth_date_in_future`; `end_before_birth`; a numeric
   Personalnummer cell; a Personalnummer in several rows is `duplicate_in_file` on every one.
   **Warnings**: `age_implausible` (15–67 at the Austrittsdatum), invalid optional contact values
-  dropped (`value_invalid_dropped`), a five-digit numeric postcode converted, `kept_existing`.
+  dropped (`value_invalid_dropped`), a five-digit numeric postcode converted, `kept_existing`,
+  `participant_maintained` (below).
 - **Matching**: the exact Personalnummer is the only automatic match key; it is unique per
   project, never generated and immutable once stored (`personnel_number_immutable`), so a
   re-import never changes it. A match with a terminal participation is skipped with only
@@ -627,6 +631,11 @@ along the creation edge into `imported`. Issues name the row, the target and a c
   skip, error; participations missing from the file are only counted. A new row with the same
   birth date and names (trimmed, case-insensitive) as another new row or an existing
   participation is a `possible_duplicate` for the PL to decide.
+- **Participant-maintained contact fields** (Q112): a contact field the participant wrote in the
+  portal (also assisted) is never overwritten: the plan leaves it out of the update, a differing
+  value is the warning `participant_maintained` by row and target (never the value), and
+  `write_participant_data` skips it too. The maintained fields are part of the plan digest, so a
+  participant's write after the preview makes the confirm `import_preview_stale`.
 - **Mapping suggestions**: the project's saved mappings, then those of projects with the same
   customer name (newest first), then built-in header synonyms (a combined `Anschrift` never).
   The PL confirms every mapping by sending it; only keyed hashes of headers are saved, and

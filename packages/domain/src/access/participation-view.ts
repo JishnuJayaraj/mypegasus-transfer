@@ -102,6 +102,8 @@ export type ParticipationRecord = {
     | "submissionBlockers"
     | "placementAgenturChoices"
   >;
+  /** When the participant last wrote the address themselves (also assisted), ISO 8601 UTC. */
+  participantAddressWrittenAt: string | null;
   wave: (EntryWave & { name: string }) | null;
   dates: Record<
     "tgStart" | "tgEnd" | "offerDeadline" | "tgEntryDate" | "exitDate" | "withdrawnOn",
@@ -142,6 +144,12 @@ export function participationDetail(
     const earliest = options.entryRunCompletedToday ? addDays(options.today, 1) : options.today;
     const oldEnd = record.person.oldEmploymentEndDate;
     if (oldEnd !== null && addDays(oldEnd, 1) < earliest) hints.push("new_start_needs_ba_review");
+  }
+  // Nothing changes automatically: the PL or back office check the choice (Q139).
+  const chosenAt = record.placementAgentur.placementAgenturSetAt;
+  const writtenAt = record.participantAddressWrittenAt;
+  if (chosenAt !== null && writtenAt !== null && writtenAt > chosenAt) {
+    hints.push("placement_agentur_check");
   }
   return {
     id: record.id,

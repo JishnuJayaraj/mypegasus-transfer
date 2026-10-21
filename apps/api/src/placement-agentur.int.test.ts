@@ -1,3 +1,4 @@
+import { loadBaseDefaults } from "@transfer/config/load";
 import {
   and,
   auditEvent,
@@ -13,6 +14,9 @@ import { ParticipationDetail, ParticipationPage } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
 import { app, auth, codes, owner, werkNord } from "./imports/import-testing";
 import { expectProblem, jsonRequest, readJson } from "./testing";
+
+// Version 2 adds the TL 407 rules (regional-variation.md, base defaults).
+const baseDefaultsVersion = loadBaseDefaults().version;
 
 // Q139 (regional-variation.md, "Placement Agentur"): the PL or back office set a participation's
 // placement Agentur; an unpinned catalog Agentur is pinned at its latest version in the same
@@ -85,24 +89,24 @@ describe("PUT /api/v1/participations/{participationId}/placement-agentur (Q139)"
     expect(res.status).toBe(200);
     expect(body.placementAgenturKey).toBe("beispielstadt-nord");
     expect(body.placementAgenturSetAt).toMatch(/Z$/);
-    expect(await pinsOf(lagerSued)).toEqual(["beispielstadt-nord@2"]);
+    expect(await pinsOf(lagerSued)).toEqual(["beispielstadt-nord@3"]);
     const pinned = await eventsOf(lagerSued, "config_template_pinned");
     expect(pinned.at(-1)).toEqual({
       participationId: null,
-      details: { agenturKey: "beispielstadt-nord", version: 2, baseDefaultsVersion: 1 },
+      details: { agenturKey: "beispielstadt-nord", version: 3, baseDefaultsVersion },
     });
     expect(await eventsOf(lagerSued, "placement_agentur_set")).toEqual([
       {
         participationId: id,
-        details: { agenturKey: "beispielstadt-nord", baseDefaultsVersion: 1 },
+        details: { agenturKey: "beispielstadt-nord", baseDefaultsVersion },
       },
     ]);
     // The choices now offer the project's pin.
     expect(body.placementAgenturChoices).toContainEqual({
       agenturKey: "beispielstadt-nord",
       label: expect.objectContaining({ de: expect.any(String) }),
-      pinnedVersion: 2,
-      latestVersion: 2,
+      pinnedVersion: 3,
+      latestVersion: 3,
     });
   });
 
@@ -114,11 +118,11 @@ describe("PUT /api/v1/participations/{participationId}/placement-agentur (Q139)"
     expect((await place(id, "beispielstadt-sued", "backOffice")).status).toBe(200);
     expect(await pinsOf(werkNord)).toEqual(before);
     expect((await eventsOf(werkNord, "placement_agentur_set")).map((e) => e.details)).toEqual([
-      { agenturKey: "beispielstadt-nord", baseDefaultsVersion: 1 },
+      { agenturKey: "beispielstadt-nord", baseDefaultsVersion },
       {
         agenturKey: "beispielstadt-sued",
         previousAgenturKey: "beispielstadt-nord",
-        baseDefaultsVersion: 1,
+        baseDefaultsVersion,
       },
     ]);
   });
@@ -215,7 +219,7 @@ describe("the placement Agentur in the detail and the list (Q139)", () => {
     expect(
       pl.placementAgenturChoices.map((c) => [c.agenturKey, c.pinnedVersion, c.latestVersion]),
     ).toEqual([
-      ["beispielstadt-nord", 1, 2],
+      ["beispielstadt-nord", 1, 3],
       ["beispielstadt-sued", 1, 1],
     ]);
     expect((await detail(id, "backOffice")).capabilities.setPlacementAgentur).toBe(true);

@@ -12,7 +12,7 @@ import {
 const sensitive = new Set(["special_category", "highly_confidential"]);
 const retention = (key: string) => fieldEntry(key).retentionClass;
 
-// Which data classes a field of each access category may hold (plan 5.6, data-protection.md).
+// Which data classes a field of each access category may hold (data-protection.md).
 // Signed documents, audit metadata and aggregates are not participant fields.
 const classesByCategory: Partial<Record<AccessCategory, string[]>> = {
   case_internal: ["internal"],
@@ -85,7 +85,38 @@ describe("field catalog (AC-29)", () => {
     for (const key of ["tgEnd", "endReason", "profilingExceptionReasonCode"]) {
       expect(retention(key)).toBe("participation_record");
     }
-    expect(retention("healthRestrictions")).toBeUndefined();
+    expect(retention("qualifications")).toBeUndefined();
+  });
+
+  it("classifies every self-service field the wizard collects (Q141)", () => {
+    const personnelFile = [
+      "gender",
+      "maritalStatus",
+      "educationHistory",
+      "workHistory",
+      "languageSkills",
+      "drivingLicence",
+      "vehicleAvailable",
+      "workingTimePreferences",
+      "jobWishes",
+      "desiredWorkLocations",
+      "maxCommuteDistance",
+      "earliestStartDate",
+      "nationality",
+      "entryToGermanyDate",
+      "residenceStatus",
+      "buergergeld",
+    ];
+    for (const key of personnelFile) {
+      expect([key, retention(key), fieldEntry(key).selfService]).toEqual([
+        key,
+        "personnel_file",
+        true,
+      ]);
+    }
+    expect(retention("pensionInsuranceNumber")).toBe("participation_record");
+    expect(retention("healthRestrictions")).toBe("health_record");
+    expect(retention("severeDisability")).toBe("health_record");
   });
 
   it("rejects an unknown field key", () => {

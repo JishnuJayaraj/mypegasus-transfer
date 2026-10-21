@@ -3,6 +3,7 @@ import {
   checkImportDecisions,
   headerLooksLikeData,
   warningsToAudit,
+  writableValues,
   type ImportConfirmInput,
   type ImportDecisions,
   type ImportResult,
@@ -29,7 +30,7 @@ import {
 import { headerHmac, previewToken, tokensEqual } from "./keys";
 
 /**
- * The confirm (5.11, R18): the file is parsed again, then one transaction under the exclusive
+ * The confirm (process-and-lifecycle.md, Import): the file is parsed again, then one transaction under the exclusive
  * project lock reloads the state, re-plans, and refuses a mapping with issues or a plan with
  * errors (422), a plan that differs from the preview (409 `import_preview_stale`) and
  * decisions that don't fit the plan (422 `decisions_invalid`); then it writes every row
@@ -91,8 +92,14 @@ export async function confirmImport(
       const values = new Map(analysis.validated.map((v) => [v.row, v.values]));
       const idOfRow = new Map<number, string>();
       const counts = { created: 0, updated: 0, unchanged: 0, skipped: 0 };
+      // The participant's own contact values stay (Q112); the database skips them too.
       const write = (participationId: string, v: ImportValues) =>
-        writeParticipantData(tx, context, participationId, v);
+        writeParticipantData(
+          tx,
+          context,
+          participationId,
+          writableValues(v, state.maintained.get(participationId)),
+        );
 
       for (const planned of plan.rows) {
         const rowValues = values.get(planned.row)!;
@@ -142,10 +149,10 @@ export async function confirmImport(
           p_details => ${JSON.stringify({ ...counts, baseDefaultsVersion: release.baseDefaults.version })}::jsonb)`,
       );
 
-      // Saved last, keyed by the hash of each normalised header, never the header text (R7).
+      // Saved last, keyed by the hash of each normalised header, never the header text (data-protection.md, keys).
       // Columns whose headers normalise alike keep the first one's target (as `suggest` reads
       // it back); one upsert may not touch a key twice. A header row that looks like a person's
-      // data saves nothing: its hashes would be pseudonymised values of that person (R44).
+      // data saves nothing: its hashes would be pseudonymised values of that person (round 33).
       const byHmac = new Map<string, (typeof input.mapping)[number]["target"]>();
       const dataLike = headerLooksLikeData(read.grid.headers);
       for (const { column, target } of dataLike

@@ -1,9 +1,10 @@
 import { getTableConfig, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { fieldCatalog } from "@transfer/domain";
+import { fieldCatalog, fieldEntry } from "@transfer/domain";
 import {
   checkDataCatalog,
   checkFieldColumns,
+  notYetStored,
   dataCatalog,
   fieldColumns,
   retentionPeriods,
@@ -56,11 +57,11 @@ describe("data catalog", () => {
     expect(checkDataCatalog(tables, dataCatalog)).toEqual([]);
   });
 
-  it("classifies every table as planned (Q58, Q59; AC-42, plan 5.10)", () => {
+  it("classifies every table (Q58, Q59, Q141)", () => {
     expect(dataCatalog).toEqual({
       project: entry("project_master", "internal"),
       staff_user: entry("staff_account", "confidential"),
-      // Slice 3 (PR 3b, D2, D6, Q122)
+      // Slice 3 (Q122)
       staff_session: entry("access_credential", "internal"),
       staff_audit_event: entry("audit_log", "internal"),
       // Slice 3 (PR 3c, Q62, Q126)
@@ -73,10 +74,13 @@ describe("data catalog", () => {
       profiling_exception_request: entry("participation_record", "confidential", true),
       participant_identity: entry("participation_record", "confidential", true),
       participant_details: entry("personnel_file", "confidential", true),
-      // Slice 3 (PR 3d, D12–D20, Q122)
+      // Slice 4a (Q138, Q140, Q141)
+      participant_profile: entry("personnel_file", "confidential", true),
+      self_service_notice_acknowledgement: entry("personnel_file", "internal", true),
+      // Slice 3 (Q122)
       activation_code: entry("access_credential", "confidential", true),
       privacy_notice_delivery: entry("personnel_file", "internal", true),
-      // Slice 3 (PR 3e, D23–D29, Q122, Q123)
+      // Slice 3 (Q122, Q123)
       participant_account: entry("personnel_file", "internal", true),
       consent_record: entry("personnel_file", "confidential", true),
       participant_channel: entry("personnel_file", "confidential", true),
@@ -89,7 +93,7 @@ describe("data catalog", () => {
       project_template_pin: entry("project_master", "internal"),
       project_config_override: entry("project_master", "internal"),
       config_relaxation_request: entry("project_master", "internal"),
-      // R44, round 33: possibly pseudonymised participant data, still kept with the project.
+      // Round 33: possibly pseudonymised participant data, still kept with the project.
       import_column_mapping: entry("project_master", "confidential", true),
       participation_dsv_amendment: entry("participation_record", "confidential", true),
       ba_reporting_task: entry("participation_record", "confidential", true),
@@ -103,12 +107,13 @@ describe("data catalog", () => {
     expect(checkDataCatalog(tables, asParticipantData("config_template_version"))).toHaveLength(1);
   });
 
-  it("leaves every period with personal data unset until the DPO confirms it (Q3, Q58, Q59, Q77, Q122)", () => {
+  it("leaves every period with personal data unset until the DPO confirms it (Q3, Q58, Q59, Q77, Q122, Q141)", () => {
     expect(retentionPeriods).toEqual({
       project_master: "unset",
       staff_account: "unset",
       participation_record: "unset",
       personnel_file: "unset",
+      health_record: "unset",
       audit_log: "unset",
       access_credential: "unset",
       reference_data: "never",
@@ -171,7 +176,7 @@ const withColumn = (table: string, column: string, key: string | null | undefine
   return { ...fieldColumns, [table]: mapping };
 };
 
-// Plan 5.2 (D8, R8; AC-21; review of PR #45): every column of a table with participant fields is
+// data-protection.md, classification and retention (ADR-0008): every column of a table with participant fields is
 // classified; each stored field is catalogued, a plain column, not above the table's data class and
 // of its retention class; and every field with a retention class is stored by some column.
 describe("field columns", () => {
@@ -237,5 +242,19 @@ describe("field columns", () => {
     expect(check(fieldColumns, unstored)).toEqual([
       "knowledgeDate: has a retention class but no column stores it",
     ]);
+  });
+
+  it("lets a classified field wait for its encrypted table, until a column stores it", () => {
+    expect([...notYetStored].every((key) => fieldEntry(key).storage === "encrypted_column")).toBe(
+      true,
+    );
+    const nowStored = checkFieldColumns(
+      tables,
+      fieldColumns,
+      dataCatalog,
+      fieldCatalog,
+      new Set([...notYetStored, "gender"]),
+    );
+    expect(nowStored).toEqual(['gender: stored, so no longer "not yet stored"']);
   });
 });

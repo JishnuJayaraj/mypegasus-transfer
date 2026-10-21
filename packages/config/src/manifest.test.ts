@@ -40,6 +40,7 @@ describe("the template manifest (plan 5.8, AC-9)", () => {
     ).toEqual([
       ["beispielstadt-nord", 1, true],
       ["beispielstadt-nord", 2, true],
+      ["beispielstadt-nord", 3, true],
       ["beispielstadt-sued", 1, true],
     ]);
     for (const entry of committed.templates) {

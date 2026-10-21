@@ -42,7 +42,8 @@ export const RuleRelaxation = z.strictObject({
 });
 export type RuleRelaxation = z.infer<typeof RuleRelaxation>;
 
-const helpTextKey = z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/);
+/** `<step or area>.<key>`; a field's key keeps its case (`self_service.educationHistory`). */
+const helpTextKey = z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][A-Za-z0-9_]*)+$/);
 const helpTexts = z.record(helpTextKey, z.string().min(1).max(2000));
 
 const common = {
@@ -67,7 +68,7 @@ export const RegionalTemplate = z.strictObject({
   id: AgenturKey,
   version: positive,
   agenturKey: AgenturKey,
-  /** Fictional sample Agentur (D8). */
+  /** Fictional sample Agentur (CLAUDE.md rule 1: synthetic data only). */
   sample: z.boolean().optional(),
   label: LocalizedText,
   settings: RegionalSettings.optional(),

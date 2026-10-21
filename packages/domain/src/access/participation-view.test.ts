@@ -90,6 +90,7 @@ const record: ParticipationRecord = {
     submissionBlockers: [],
     placementAgenturChoices: [],
   },
+  participantAddressWrittenAt: null,
   activationStatus: {
     account: "not_activated",
     code: "none",
@@ -282,6 +283,31 @@ describe("participationDetail", () => {
       hints: [],
       dates: { effectiveTgStart: null, effectiveTgEnd: "2028-02-29" },
     });
+  });
+
+  it("asks to check the placement Agentur after a participant-written address (Q139)", () => {
+    const pl = staff({ [projectId]: ["project_lead"] });
+    const at = (participantAddressWrittenAt: string | null, setAt: string | null = null) => ({
+      ...record,
+      participantAddressWrittenAt,
+      placementAgentur: {
+        ...record.placementAgentur,
+        placementAgenturSetAt: setAt ?? record.placementAgentur.placementAgenturSetAt,
+      },
+    });
+    const hints = (r: ParticipationRecord) => participationDetail(pl, r, options)?.hints;
+    expect(hints(at("2027-02-01T09:00:00.000001Z"))).toEqual(["placement_agentur_check"]);
+    expect(hints(at("2027-02-01T09:00:00.000000Z"))).toEqual([]);
+    expect(hints(at("2027-01-31T09:00:00.000000Z"))).toEqual([]);
+    const unset = {
+      ...at("2027-02-02T09:00:00.000000Z"),
+      placementAgentur: {
+        ...record.placementAgentur,
+        placementAgenturKey: null,
+        placementAgenturSetAt: null,
+      },
+    };
+    expect(hints(unset)).toEqual([]);
   });
 });
 

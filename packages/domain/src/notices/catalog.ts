@@ -4,9 +4,17 @@ export const NoticeLanguage = z.enum(["de", "en"]);
 export type NoticeLanguage = z.infer<typeof NoticeLanguage>;
 
 export const ART14_NOTICE_VERSION = "art14-activation:v1" as const;
-/** The consent text of a portal contact channel (Slice 3 plan D28, Q119, Q125). */
+/** The consent text of a portal contact channel (ADR-0007, Q119, Q125). */
 export const PORTAL_CONTACT_CONSENT_VERSION = "portal-contact-consent:v1" as const;
-export type NoticeVersion = typeof ART14_NOTICE_VERSION | typeof PORTAL_CONTACT_CONSENT_VERSION;
+/**
+ * The purposes notice before the first wizard page (data-protection.md, self-service; Q138): an
+ * acknowledgement, not a consent.
+ */
+export const SELF_SERVICE_NOTICE_VERSION = "self-service-purposes:v1" as const;
+export type NoticeVersion =
+  | typeof ART14_NOTICE_VERSION
+  | typeof PORTAL_CONTACT_CONSENT_VERSION
+  | typeof SELF_SERVICE_NOTICE_VERSION;
 
 export interface NoticeOrganisation {
   controllerName: string;
@@ -59,7 +67,7 @@ Retention depends on the purpose and applicable statutory duties. In particular,
 };
 
 /**
- * Consent to the portal contact purpose for one private email or mobile (D28): login codes and
+ * Consent to the portal contact purpose for one private email or mobile (Q123): login codes and
  * versioned portal notifications. Final wording: DPO review before real data, like the notice.
  */
 const consentTemplates: Record<NoticeLanguage, NoticeTemplate> = {
@@ -83,9 +91,44 @@ Providing it is voluntary. I can withdraw this consent at any time with effect f
   },
 };
 
+/**
+ * What the self-service data is for, per phase, and on which legal basis (data-protection.md,
+ * legal basis; Q138). Shown before the first page; a new version is shown again before the next.
+ * Final wording: DPO review before real data, like the notice.
+ */
+const purposesTemplates: Record<NoticeLanguage, NoticeTemplate> = {
+  de: {
+    version: SELF_SERVICE_NOTICE_VERSION,
+    language: "de",
+    title: "Wofür wir Ihre Angaben verwenden",
+    text: `Mit Ihren Angaben bereiten {{controllerName}} und Ihre Beraterin oder Ihr Berater das Profiling und den Profilingbogen (TL 407) für die Agentur für Arbeit vor.
+
+Vor dem Eintritt in die Transfergesellschaft dienen die Angaben der Beratung, dem Profiling und der Vorbereitung Ihres Vertrags (Art. 6 Abs. 1 Buchst. b DSGVO). Während der Beschäftigung in der Transfergesellschaft dienen sie der Vermittlung, der Qualifizierung und den gesetzlichen Meldungen an die Agentur für Arbeit (Art. 6 Abs. 1 Buchst. b und c DSGVO, §§ 110, 111 SGB III).
+
+Gesundheitliche Einschränkungen und eine Schwerbehinderung oder Gleichstellung erfragen wir nur mit Ja oder Nein (Art. 9 Abs. 2 Buchst. b DSGVO). Bitte tragen Sie keine Diagnosen ein.
+
+Angaben, die nicht als Pflicht markiert sind, können Sie auch im Gespräch mit Ihrer Beratung ergänzen. Ihre Rechte finden Sie in den Datenschutzhinweisen; Fragen richten Sie an {{controllerEmail}}.`,
+    sha256: "120b74d84368c5a5fa9c1359dac9bbbfda0f13bd706b4a725eddfc664050d890",
+  },
+  en: {
+    version: SELF_SERVICE_NOTICE_VERSION,
+    language: "en",
+    title: "What we use your details for",
+    text: `With your details, {{controllerName}} and your counsellor prepare the profiling and the profiling form (TL 407) for the employment agency.
+
+Before you join the transfer company, the details serve counselling, profiling and preparing your contract (Article 6(1)(b) GDPR). While you are employed by the transfer company, they serve placement, qualification and the statutory reports to the employment agency (Article 6(1)(b) and (c) GDPR, sections 110 and 111 of Social Code Book III).
+
+We ask about health restrictions and a severe disability or equal status with yes or no only (Article 9(2)(b) GDPR). Please do not enter any diagnosis.
+
+Details not marked as required can also be added with your counsellor. Your rights are set out in the privacy information; please send questions to {{controllerEmail}}.`,
+    sha256: "ee22d8a09cb68241bc58e810fb8c661c66b8397a67215e0a7333a3e071d920f8",
+  },
+};
+
 export const noticeCatalog: readonly NoticeTemplate[] = [
   ...NoticeLanguage.options.map((language) => templates[language]),
   ...NoticeLanguage.options.map((language) => consentTemplates[language]),
+  ...NoticeLanguage.options.map((language) => purposesTemplates[language]),
 ];
 
 const render = (template: NoticeTemplate, organisation: NoticeOrganisation) => {
@@ -103,4 +146,11 @@ export function art14Notice(language: NoticeLanguage, organisation: NoticeOrgani
 
 export function portalContactConsent(language: NoticeLanguage, organisation: NoticeOrganisation) {
   return render(consentTemplates[language], organisation);
+}
+
+export function selfServicePurposesNotice(
+  language: NoticeLanguage,
+  organisation: NoticeOrganisation,
+) {
+  return render(purposesTemplates[language], organisation);
 }

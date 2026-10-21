@@ -484,6 +484,7 @@
       "possible_duplicate": "Mögliche Dublette: gleiches Geburtsdatum und gleicher Name",
       "terminal_not_updated": "Die Teilnahme ist beendet und wird nicht aktualisiert",
       "kept_existing": "Leere Zelle: der gespeicherte Wert bleibt",
+      "participant_maintained": "Abweichender Wert: Die Person pflegt diese Angabe selbst, der gespeicherte Wert bleibt",
       "import_busy": "Gerade laufen mehrere Importe. Bitte versuchen Sie es in einigen Sekunden erneut."
     },
     "report": {
@@ -702,7 +703,8 @@
     "individual": "individuell",
     "hints": {
       "tg_start_missed": "TG-Beginn verpasst: Der vertragliche Beginn liegt in der Vergangenheit, der Eintritt ist nicht erfolgt.",
-      "new_start_needs_ba_review": "Neuer Beginn nur nach BA-/Rechtsprüfung: Das bisherige Arbeitsverhältnis endete so früh, dass jeder mögliche neue Beginn eine Lücke ließe (kein gewöhnlicher späterer Eintritt)."
+      "new_start_needs_ba_review": "Neuer Beginn nur nach BA-/Rechtsprüfung: Das bisherige Arbeitsverhältnis endete so früh, dass jeder mögliche neue Beginn eine Lücke ließe (kein gewöhnlicher späterer Eintritt).",
+      "placement_agentur_check": "Vermittlungs-Agentur prüfen: Die Person hat ihre Anschrift nach der Wahl der Vermittlungs-Agentur geändert."
     },
     "fields": {
       "personnelNumber": "Personalnummer",
@@ -970,6 +972,7 @@
       "possible_duplicate": "Mögliche Dublette: Es gibt bereits eine Person mit gleichem Geburtsdatum und Namen. Bitte prüfen Sie, ob es dieselbe Person ist.",
       "terminal_not_updated": "Die Teilnahme ist beendet und wird nicht aktualisiert",
       "kept_existing": "Leere Zelle: der gespeicherte Wert bleibt",
+      "participant_maintained": "Abweichender Wert: Die Person pflegt diese Angabe selbst, der gespeicherte Wert bleibt",
       "import_busy": "Gerade laufen mehrere Importe. Bitte versuchen Sie es in einigen Sekunden erneut.",
       "personnel_number_taken": "Diese Personalnummer gibt es in diesem Projekt bereits.",
       "value_invalid": "Ungültiger Wert; bitte korrigieren oder leer lassen"

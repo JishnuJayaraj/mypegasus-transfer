@@ -188,6 +188,11 @@ describe("the participant page", () => {
     expect(screen.getByText(/individuelle Vertragsdaten/)).toBeInTheDocument();
   });
 
+  it("asks to check the placement Agentur after the participant changed the address (Q139)", async () => {
+    setup({}, { ...detail, hints: ["placement_agentur_check"] });
+    expect(await screen.findByText(/Vermittlungs-Agentur prüfen/)).toBeInTheDocument();
+  });
+
   it("assigns a wave and shows the result", async () => {
     const calls = setup({
       [`PUT ${detailPath}/entry-wave`]: () =>

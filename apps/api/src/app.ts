@@ -30,6 +30,7 @@ import { projectRoutes } from "./routes/projects";
 import { teamRoutes } from "./routes/team";
 import { activationRoutes } from "./routes/activation";
 import { portalRoutes } from "./routes/portal";
+import { selfServiceRoutes } from "./routes/self-service";
 import { createDetached } from "./detached";
 import { mountSpas } from "./static";
 
@@ -38,7 +39,7 @@ export const openApiConfig = {
   info: { title: "Transfer Platform API", version: packageJson.version },
 };
 
-/** Bodies are 100 kB, except the two import routes, which carry a base64 file (plan 5.11). */
+/** Bodies are 100 kB, except the two import routes, which carry a base64 file (ADR-0010, uploads). */
 const bodyLimits = { default: 100 * 1024, imports: 8 * 1024 * 1024 } as const;
 const IMPORT_PATH = /^\/api\/v1\/projects\/[^/]+\/imports(\/preview)?$/;
 
@@ -129,6 +130,7 @@ export function createApp(deps: Deps) {
   api.route("/", adminRoutes(runtimeDeps));
   api.route("/", activationRoutes(runtimeDeps));
   api.route("/", portalRoutes(runtimeDeps));
+  api.route("/", selfServiceRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 

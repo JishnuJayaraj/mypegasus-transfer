@@ -42,17 +42,18 @@ describe("GET /api/v1/config/templates (plan 5.8, 5.12)", () => {
     expect(body.items.map((t) => `${t.agenturKey}@${t.version}`)).toEqual([
       "beispielstadt-nord@1",
       "beispielstadt-nord@2",
+      "beispielstadt-nord@3",
       "beispielstadt-sued@1",
     ]);
   });
 
   it("pages by (agenturKey, version) with an opaque cursor", async () => {
-    const first = await readJson(await get("?limit=2"), CatalogPage);
-    expect(first.items).toEqual(templates.slice(0, 2));
+    const first = await readJson(await get("?limit=3"), CatalogPage);
+    expect(first.items).toEqual(templates.slice(0, 3));
     expect(first.nextCursor).toEqual(expect.any(String));
-    const second = await readJson(await get(`?limit=2&cursor=${first.nextCursor}`), CatalogPage);
-    expect(second).toEqual({ items: templates.slice(2), nextCursor: null });
-    const exact = await readJson(await get("?limit=3"), CatalogPage);
+    const second = await readJson(await get(`?limit=3&cursor=${first.nextCursor}`), CatalogPage);
+    expect(second).toEqual({ items: templates.slice(3), nextCursor: null });
+    const exact = await readJson(await get("?limit=4"), CatalogPage);
     expect(exact.nextCursor).toBeNull();
   });
 

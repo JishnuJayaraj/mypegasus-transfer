@@ -20,7 +20,7 @@ const committedSchema = readFileSync(
 );
 const baseDefaults = read("../../domain/config/base-defaults.json");
 
-describe("the committed JSON Schema (AC-31)", () => {
+describe("the committed JSON Schema", () => {
   it("matches the Zod model (pnpm generate)", () => {
     expect(committedSchema).toBe(renderJsonSchema());
   });
@@ -33,7 +33,30 @@ describe("the committed JSON Schema (AC-31)", () => {
   });
 });
 
-describe("base-defaults.json (plan 5.7)", () => {
+// The TL 407 08/2025 section B fields marked `*` that a participant answers (ba-forms.md, Q140);
+// address and identity are the import's rules. Not the unemployment period (Q85) or the Jobbörse
+// choice (a declaration to the BA, the profiler's).
+const tl407 = [
+  "gender",
+  "maritalStatus",
+  "nationality",
+  "pensionInsuranceNumber",
+  "buergergeld",
+  "healthRestrictions",
+  "severeDisability",
+  "educationHistory",
+  "workHistory",
+  "languageSkills",
+  "drivingLicence",
+  "vehicleAvailable",
+  "workingTimePreferences",
+  "jobWishes",
+  "desiredWorkLocations",
+  "maxCommuteDistance",
+  "earliestStartDate",
+];
+
+describe("base-defaults.json (regional-variation.md, base defaults)", () => {
   const result = parseLayer(baseDefaults);
   if (!result.ok) throw new Error(JSON.stringify(result.issues));
   const layer = result.layer;
@@ -90,6 +113,13 @@ describe("base-defaults.json (plan 5.7)", () => {
         key,
         projectTypes: undefined,
       })),
+      ...tl407.map((key) => ({
+        step: "profiling",
+        id: `base-tl407-${key}`,
+        basis: "ba_form",
+        key,
+        projectTypes: undefined,
+      })),
       {
         step: "dsv",
         id: "base-dsv-signed-scan",
@@ -100,8 +130,13 @@ describe("base-defaults.json (plan 5.7)", () => {
     ]);
   });
 
+  it("is version 2, which adds the TL 407 rules (Q140)", () => {
+    expect(layer.version).toBe(2);
+    expect(JSON.stringify(layer.rules)).not.toMatch(/unemploymentPeriod|jobboerseChoice/);
+  });
+
   it("leaves out the Kug 200b rules until the ASU route and the offer outcome exist (Slice 6)", () => {
-    expect(JSON.stringify(layer.rules)).not.toMatch(/kug200b|pensionInsuranceNumber/);
+    expect(JSON.stringify(layer.rules)).not.toMatch(/kug200b/);
   });
 
   const missing = (projectType: ProjectType) =>
@@ -112,10 +147,11 @@ describe("base-defaults.json (plan 5.7)", () => {
       .map((item) => item.ruleId);
 
   it("shows no TG-only item in a ta_only project", () => {
-    const imports = missing("ta_only");
+    const shared = missing("ta_only");
+    const imports = shared.filter((id) => id.startsWith("base-import-"));
     expect(imports).toHaveLength(6);
-    expect(imports.every((id) => id.startsWith("base-import-"))).toBe(true);
-    expect(missing("ta_tg")).toEqual(["base-asu-proof", ...imports, "base-dsv-signed-scan"]);
+    expect(shared).toEqual([...imports, ...tl407.map((key) => `base-tl407-${key}`)]);
+    expect(missing("ta_tg")).toEqual(["base-asu-proof", ...shared, "base-dsv-signed-scan"]);
   });
 
   it("requires accepted documents", () => {

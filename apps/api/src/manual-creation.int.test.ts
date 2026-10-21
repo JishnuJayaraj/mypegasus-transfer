@@ -1,3 +1,4 @@
+import { loadBaseDefaults } from "@transfer/config/load";
 import {
   auditEvent,
   eq,
@@ -25,9 +26,11 @@ import {
 import { Slots } from "./imports/slots";
 import { expectProblem, jsonRequest, readJson, testApp } from "./testing";
 
-// Slice 2 plan, "Planned in PR 2h" (PR 2h-2): manual creation through the import's rules (R32,
-// AC-51), the parse-worker cap (R43, AC-52) and the header-row guard of saved mappings (R44,
-// AC-53).
+// Version 2 adds the TL 407 rules (regional-variation.md, base defaults).
+const baseDefaultsVersion = loadBaseDefaults().version;
+
+// Manual creation through the import's rules, the parse-worker cap and the header-row guard of
+// saved mappings (process-and-lifecycle.md, Import; ADR-0010, uploads; round 33).
 
 const [w1] = seedWaves;
 const create = (body: object, user = "projectLead", projectId: string = werkNord) =>
@@ -88,7 +91,7 @@ describe("POST /api/v1/projects/{projectId}/participations (R32, AC-51)", () => 
     expect(await eventsOf(body.id)).toEqual([
       expect.objectContaining({ type: "participation_created" }),
       expect.objectContaining({ type: "participant_data_changed" }),
-      { type: "participation_created_manually", reason: null, details: { baseDefaultsVersion: 1 } },
+      { type: "participation_created_manually", reason: null, details: { baseDefaultsVersion } },
     ]);
   });
 

@@ -21,6 +21,16 @@
       "sha256": "68de4937f2fa5d263d3276ea11fba3b96e2b71d6a7117bde89fd2226ff3ed1c4"
     },
     {
+      "agenturKey": "beispielstadt-nord",
+      "version": 3,
+      "label": {
+        "de": "Agentur für Arbeit Beispielstadt Nord (Beispiel)",
+        "en": "Employment agency Beispielstadt Nord (sample)"
+      },
+      "sample": true,
+      "sha256": "d8451d3ff89e5a95b4a56556c621021d00d4de5905d8e03d8edf71264ae5f254"
+    },
+    {
       "agenturKey": "beispielstadt-sued",
       "version": 1,
       "label": {

@@ -115,9 +115,10 @@ Participation
   (Q91). The ASU `defaultChannel` never blocks (round 14). Project
   activation additionally needs, for `ta_tg`, an entry wave with a `latestEntryDate` (Q77,
   `projectActivationBlockers` in the domain).
-- **Samples**: `packages/config/templates/beispielstadt-nord/1.json` and `2.json`,
-  `beispielstadt-sued/1.json`: fictional Agenturen with `sample: true`, never a real Agentur's
-  rules. `@transfer/config/load` reads a pinned version and checks its path.
+- **Samples**: `packages/config/templates/beispielstadt-nord/1.json`, `2.json` and `3.json`
+  (version 3 adds the self-service rule `beispielstadt-nord-private-email` in `profiling` and
+  `self_service.*` help texts), `beispielstadt-sued/1.json`: fictional Agenturen with
+  `sample: true`, never a real Agentur's rules. `@transfer/config/load` reads a pinned version and checks its path.
 - Reminder rules are left to Slice 5; deadlines are entry-wave data (above).
 
 - The **Step enum** in `packages/domain` is the single vocabulary for steps, used by both the
@@ -169,10 +170,17 @@ Participation
   |---|---|---|---|---|
   | `asu_registration` | `base-asu-proof` | accepted `asu_proof` document | `statutory` | `ta_tg` |
   | `data_collection` | `base-import-<field>` for `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | the field | `operational_default` | all |
+  | `profiling` | `base-tl407-<field>` for `gender`, `maritalStatus`, `nationality`, `pensionInsuranceNumber`, `buergergeld`, `healthRestrictions`, `severeDisability`, `educationHistory`, `workHistory`, `languageSkills`, `drivingLicence`, `vehicleAvailable`, `workingTimePreferences`, `jobWishes`, `desiredWorkLocations`, `maxCommuteDistance`, `earliestStartDate` | the field | `ba_form` | all |
   | `dsv` | `base-dsv-signed-scan` | accepted `dsv_signed_scan` document | `statutory` | `ta_tg` |
 
-  Document rules need `accepted: true`. The import rules are not form requirements: the base
-  defaults hold no TL 407 or Kug 200b rule yet.
+  Document rules need `accepted: true`. The import rules are not form requirements. The TL 407
+  rules (base defaults **version 2**, Q140) are the section B fields marked `*` on the form
+  (08/2025, the primary source) that a participant answers; address and identity are the import
+  rules. The entry date and the residence status aren't starred (asked when the nationality
+  isn't German, never required); the unemployment period (Q85, the profiler records it) and the
+  Jobbörse choice (a declaration to the BA, the profiler's) are not base rules. As `ba_form`
+  rules they are locked: no project relaxes them, and `relaxableRules` doesn't offer them. The
+  base defaults hold no Kug 200b rule yet (Slice 6).
 - **Required import targets** (`isRequired` in `packages/domain/src/import/targets.ts`,
   `apps/api/src/imports/analysis.ts`): Personalnummer, last and first name always (the import
   ignores a relaxation of their rules); date of birth, Austrittsdatum and the address unless the
@@ -196,6 +204,35 @@ Participation
   fields and rules belong in that Agentur's template.
 - In the MVP, templates are seed files. A new region therefore needs a deploy until an admin UI
   exists.
+
+## Self-service wizard: pages are code, requirements are configuration (Q140)
+
+- **Pages** (`packages/domain/src/self-service/wizard.ts`) are fixed in code, in the order of
+  TL 407 section B (`ba-forms.md`), the special-category page last behind its step-up:
+  `personal` (gender, Familienstand), `contact` (address, phone, mobile, private email; names and
+  birth date shown read-only), `ba_details` (RV-Nummer, nationality, entry date, residence status,
+  Bürgergeld), `education`, `work_history`, `languages_mobility` (languages, driving licence,
+  vehicle), `job_wish` (working time, desired job and alternative, locations, distance, earliest
+  start), `health` (health restrictions, Schwerbehinderung/Gleichstellung) and `further`
+  ("Weitere Angaben", only when the chain has custom fields). `ba_details` and `health` hold the
+  highly confidential and special-category fields and are written on their own encrypted path,
+  never through the page writes. There is no page keyword in the template schema.
+- **Value sets** (`packages/domain/src/self-service/values.ts`) are the form's (TL 407 08/2025):
+  e.g. gender `male`/`female`/`diverse`/`not_specified`, Familienstand `single`/`married`,
+  language levels `basic`/`extended`/`business_fluent` with German first, the EU driving licence
+  classes or `none` (an answer, so the starred field is present), distance in km, `nationwide`
+  or `international`. Row tables are bounded (education and work history 20 rows, languages 10;
+  the Anlage for rows beyond the form's is Slice 6). Dates are ISO in the API, `TT.MM.JJJJ` in the
+  UI; an impossible date is an error, `von > bis` a warning the participant sees.
+- **Configuration decides** from the participation's own chain (`resolveForParticipation` with its
+  placement Agentur): which fields are **required** (an applicable rule of the `data_collection`
+  or `profiling` step names the field; a `requiredIf` while its condition holds), the **custom
+  fields** of the final page (the chain's `confidential` custom fields; `internal` ones are staff
+  data) and the **help texts**: `self_service.<field>`, the field key keeping its case
+  (`self_service.educationHistory`, `self_service.custom.<key>`).
+- **Completeness is derived per participation** (codes only): the wizard shows the missing items a
+  participant can fix (fields on a page), staff see every missing item of the two steps they may
+  read (`selfServiceMissing`). A page is complete when none of its required fields is missing.
 
 ## Template versions: identity, immutability, snapshots (Slice 2)
 
@@ -225,7 +262,7 @@ Participation
   2e-2), never a plain pin (the database refuses it too). `GET /api/v1/projects/{id}/config` shows the pins and, from the
   snapshot, the project's blockers, each pinned Agentur's step-scoped blockers and the activation
   blockers.
-- **Placement Agentur (Q139, PR 4a-1):** the PL or back office of the project sets a
+- **Placement Agentur (Q139):** the PL or back office of the project sets a
   participation's placement Agentur (`PUT /api/v1/participations/{id}/placement-agentur`) to any
   key in the template key format, from the catalog or not, while the participation isn't
   terminal, in a draft or an active project; a consultant, an org role and assisted mode can't.
@@ -242,8 +279,10 @@ Participation
   participation detail shows the key, when it was set and the participant-level blockers of its
   own chain; the PL and back office get the catalog's and the project's Agenturen to choose from,
   or type a free key. There is no postcode mapping: the choice is the staff's. A participant
-  address change after the choice shows "Vermittlungs-Agentur prüfen" on the detail (PR 4a-2,
-  derived, never stored); nothing changes automatically.
+  address the participant writes after the choice (also in assisted mode;
+  `participant_details.participant_address_written_at` newer than `placement_agentur_set_at`)
+  shows the hint `placement_agentur_check`, "Vermittlungs-Agentur prüfen", on the detail (derived,
+  never stored); nothing changes automatically.
 - **Agentur-scoped settings (PR 2d-1):** the PL sets or removes one per Agentur key, also for an
   Agentur without a template (`PUT`/`DELETE /api/v1/projects/{id}/config/agentur-settings/{key}`),
   with its settings, a source (`phone_call_agentur`, `email_agentur`, `letter_agentur`,
@@ -304,7 +343,10 @@ Participation
   `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`,
   `import_confirmed`, `participation_created_manually`, `placement_agentur_set`
   (`configurationDependentEventTypes` in
-  `packages/domain/src/audit/events.ts`; a test keeps the list exact).
+  `packages/domain/src/audit/events.ts`; a test keeps the list exact). A self-service write
+  (`participant_data_changed`) isn't one: it validates values with the domain's schemas and custom
+  fields with the pinned template's, never with the base defaults, whose rules decide only what
+  is missing (derived, never stored).
 - **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the
   templates and the base defaults to `apps/api/dist/config/`, and `CONFIG_DIR` points the built
   API there (the image, `pnpm start`, Playwright).

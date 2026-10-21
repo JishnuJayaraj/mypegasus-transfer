@@ -23,7 +23,7 @@ export function testDatabaseUrls(database: TestDatabase = "transfer_test") {
 }
 
 /**
- * Drops everything transfer_owner owns in a test database and migrates from scratch (AC-15);
+ * Drops everything transfer_owner owns in a test database and migrates from scratch;
  * optionally seeds the synthetic data.
  */
 export async function recreateTestDatabase(
@@ -43,7 +43,7 @@ export async function recreateTestDatabase(
 
 /**
  * The seeded projects the participation tests move (Werk Nord, Verwaltung) made active, as the API
- * seed leaves them after pinning and activating through the services (Slice 2 plan 5.5); Lager Süd
+ * seed leaves them after pinning and activating through the services (regional-variation.md, snapshot); Lager Süd
  * stays a draft. A test fixture written directly as the owner (round 27): the base seed pins no
  * template, so `activate_project` would refuse these projects.
  */
@@ -63,7 +63,7 @@ export async function activateAsOwner(
 
 /**
  * Empties all tables of transfer_test (as owner) before a test; optionally seeds, and with
- * `active` makes the seeded Werk Nord and Verwaltung active (the draft gate, D9).
+ * `active` makes the seeded Werk Nord and Verwaltung active (the draft gate, process-and-lifecycle.md).
  */
 export async function resetTestDatabase(
   options: { seed?: boolean; active?: boolean; keepSessions?: boolean } = {},
@@ -78,7 +78,7 @@ export async function resetTestDatabase(
     );
     // lifecycle_edge is reference data from the migrations, never truncated.
     await db.$client.query(
-      "truncate audit_event, participant_session, one_time_code_challenge, participant_channel, consent_record, participant_account, privacy_notice_delivery, activation_code, participant_assignment, staff_org_role, region, ba_reporting_task, participation_dsv_amendment, import_column_mapping, config_relaxation_request, profiling_exception_request, participant_details, participant_identity, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_session, staff_audit_event, staff_user, job_run",
+      "truncate audit_event, self_service_notice_acknowledgement, participant_profile, participant_session, one_time_code_challenge, participant_channel, consent_record, participant_account, privacy_notice_delivery, activation_code, participant_assignment, staff_org_role, region, ba_reporting_task, participation_dsv_amendment, import_column_mapping, config_relaxation_request, profiling_exception_request, participant_details, participant_identity, participation, project_entry_wave, project_config_override, project_template_pin, config_template_version, project_membership, project, staff_session, staff_audit_event, staff_user, job_run",
     );
     if (options.seed) {
       await seed(db);

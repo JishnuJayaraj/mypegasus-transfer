@@ -24,6 +24,9 @@ export const retentionPeriods = {
   // the end of the 3rd calendar year after exit, cancellation or contractual end; never in the BA
   // evidence set. The Slice 7 retention job will encode the period.
   personnel_file: "unset",
+  // Q141: the structured health and disability yes/no answers, 3 months after exit or with the
+  // non-signer deletion (data-protection.md, retention); stored with the encrypted fields.
+  health_record: "unset",
   // 3 years; pseudonymised when the subject's data is deleted; evidence-set entries follow the
   // evidence set (verify, Q3).
   audit_log: "unset",
@@ -99,6 +102,18 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   participant_details: {
     retentionClass: "personnel_file",
     dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // The participant's profile, TL 407 section B (Q140, Q141): the wizard's confidential answers.
+  participant_profile: {
+    retentionClass: "personnel_file",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // The purposes notice acknowledged (Q138): version, language, actor and time; immutable.
+  self_service_notice_acknowledgement: {
+    retentionClass: "personnel_file",
+    dataClass: "internal",
     holdsParticipantData: true,
   },
   // Activation credentials keep only separately keyed hashes, never a code or destination.
@@ -314,6 +329,31 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     private_email: "privateEmail",
     work_email: "workEmail",
     old_employment_end_date: "oldEmploymentEndDate",
+    // Which contact fields the participant wrote, and when the address (Q112, Q139): metadata
+    participant_maintained: null,
+    participant_address_written_at: null,
+    created_at: null,
+    updated_at: null,
+  },
+  participant_profile: {
+    participation_id: null,
+    project_id: null,
+    gender: "gender",
+    marital_status: "maritalStatus",
+    education_history: "educationHistory",
+    work_history: "workHistory",
+    language_skills: "languageSkills",
+    driving_licence: "drivingLicence",
+    vehicle_available: "vehicleAvailable",
+    working_time_preferences: "workingTimePreferences",
+    job_wishes: "jobWishes",
+    desired_work_locations: "desiredWorkLocations",
+    max_commute_distance: "maxCommuteDistance",
+    earliest_start_date: "earliestStartDate",
+    // Custom fields are confidential at most and carry their own retention class in the
+    // template's field schema (regional-variation.md, custom fields).
+    custom_fields: null,
+    revision: null,
     created_at: null,
     updated_at: null,
   },
@@ -381,6 +421,22 @@ const withoutFields = new Set([
   "consent_record",
   "one_time_code_challenge",
   "participant_session",
+  "self_service_notice_acknowledgement",
+]);
+
+/**
+ * Fields with a retention class that no table stores yet: the highly confidential and
+ * special-category self-service fields, whose encrypted tables come with their own write path
+ * (data-protection.md, self-service). Each leaves this list when a column stores it.
+ */
+export const notYetStored: ReadonlySet<string> = new Set([
+  "pensionInsuranceNumber",
+  "nationality",
+  "entryToGermanyDate",
+  "residenceStatus",
+  "buergergeld",
+  "healthRestrictions",
+  "severeDisability",
 ]);
 
 const dataClassRank: Record<DataClass, number> = {
@@ -403,6 +459,7 @@ export function checkFieldColumns(
   columns: Record<string, Record<string, string | null>> = fieldColumns,
   catalog: Record<string, CatalogEntry> = dataCatalog,
   fields: readonly FieldEntry[] = fieldCatalog,
+  unstored: ReadonlySet<string> = notYetStored,
 ): string[] {
   const problems: string[] = [];
   const configs = schemaTables.map((t) => getTableConfig(t));
@@ -440,8 +497,11 @@ export function checkFieldColumns(
     }
   }
   for (const field of fields) {
-    if (field.retentionClass && !stored.has(field.key)) {
+    if (field.retentionClass && !stored.has(field.key) && !unstored.has(field.key)) {
       problems.push(`${field.key}: has a retention class but no column stores it`);
+    }
+    if (unstored.has(field.key) && stored.has(field.key)) {
+      problems.push(`${field.key}: stored, so no longer "not yet stored"`);
     }
   }
   return problems;
