@@ -32,6 +32,8 @@
 @use "@carbon/react/scss/components/tabs";
 @use "@carbon/react/scss/components/tag";
 @use "@carbon/react/scss/components/checkbox";
+@use "@carbon/react/scss/components/progress-bar";
+@use "@carbon/react/scss/components/text-area";
 
 :root {
   @include theme.theme();
@@ -217,6 +219,43 @@ body {
 .tp-print-qr {
   inline-size: 45mm;
   block-size: 45mm;
+}
+
+// The self-service wizard (Slice 4a): one column, row groups and the step buttons.
+.tp-row {
+  padding-inline: $spacing-05;
+  border-inline-start: 2px solid theme.$border-subtle;
+}
+
+.tp-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+  gap: $spacing-03;
+}
+
+.tp-wizard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-05;
+}
+
+.tp-overview {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-06;
+
+  h2 {
+    @include type.type-style("heading-03");
+  }
+}
+
+.tp-error {
+  color: theme.$text-error;
+}
+
+.tp-warning {
+  padding-inline-start: $spacing-03;
+  border-inline-start: 3px solid theme.$support-warning;
 }
 
 .tp-notice-text {

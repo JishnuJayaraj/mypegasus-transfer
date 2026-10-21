@@ -233,6 +233,12 @@ Participation
 - **Completeness is derived per participation** (codes only): the wizard shows the missing items a
   participant can fix (fields on a page), staff see every missing item of the two steps they may
   read (`selfServiceMissing`). A page is complete when none of its required fields is missing.
+- **The UI renders the pages from this definition** (`@transfer/self-service-ui`, both SPAs): a
+  required field carries `*`, help texts show under their field, custom fields are entered by
+  their field schema's type (text, number, date `TT.MM.JJJJ`, yes/no, a list for `enum`) and
+  checked in the browser with the same compiled schema as on the API. A returning participant
+  resumes at the first page with missing items; the progress bar counts the pages without a
+  missing required field.
 
 ## Template versions: identity, immutability, snapshots (Slice 2)
 

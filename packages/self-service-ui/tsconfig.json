@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": ".tsbuild",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": ["src", "src/**/*.json"],
+  "references": [
+    { "path": "../domain" },
+    { "path": "../config" },
+    { "path": "../ui" },
+    { "path": "../api-client" }
+  ]
+}

@@ -17,7 +17,9 @@
     "channelSms": "Mobilnummer {{address}}, bestätigt am {{at}}",
     "logout": "Abmelden",
     "login": "Anmelden",
-    "manageChannels": "Kontaktwege verwalten"
+    "manageChannels": "Kontaktwege verwalten",
+    "selfService": "Meine Angaben",
+    "consents": "Einwilligungen"
   },
   "status": {
     "checking": "Verbindung wird geprüft …",
@@ -118,5 +120,28 @@
     "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich neu an.",
     "add": "Kontaktweg hinzufügen",
     "confirmAdd": "Kontaktweg hinzufügen"
+  },
+  "consents": {
+    "title": "Ihre Einwilligungen",
+    "intro": "Hier sehen Sie, welche Einwilligungen Sie uns erteilt haben und ob sie noch gelten.",
+    "empty": "Sie haben keine Einwilligungen erteilt.",
+    "failed": "Ihre Einwilligungen konnten nicht geladen werden. Bitte versuchen Sie es später noch einmal.",
+    "given": "Erteilt am {{at}} ({{source}})",
+    "active": "Gilt",
+    "ended": "Beendet am {{at}} ({{reason}})",
+    "version": "Fassung des Textes: {{version}}",
+    "portalContact": "Ihre Einwilligung für einen Kontaktweg widerrufen Sie, indem Sie den Kontaktweg entfernen.",
+    "purpose": {
+      "portal_contact": "Kontakt über das Teilnehmerportal",
+      "kug200b_profile_access": "Zugriff auf Ihr Profil bei der Agentur für Arbeit (Kug 200b)"
+    },
+    "source": {
+      "portal": "im Portal",
+      "paper_form": "auf Papier"
+    },
+    "endReason": {
+      "revoked": "widerrufen",
+      "lost_access_replaced": "Zugang wiederhergestellt, Kontaktweg ersetzt"
+    }
   }
 }

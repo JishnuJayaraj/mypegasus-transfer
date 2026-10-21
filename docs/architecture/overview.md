@@ -69,6 +69,11 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
 - `packages/api-client`: the generated OpenAPI document + types and the typed client both SPAs
   use.
 - `packages/ui`: thin wrappers around Carbon components, layout, tokens, i18n helpers.
+- `packages/self-service-ui` (Slice 4a): the self-service wizard, shared by the portal and (assisted
+  mode) the staff app. It renders a page from the API's page definition with Carbon through
+  `packages/ui`, brings its own i18n namespace `selfService` (de/en) and reads and writes through a
+  `SelfServiceSource` the app supplies, so it holds no route and no staff code; Oxlint forbids it
+  Carbon directly, app code and `@transfer/staff-*`.
 - `packages/config`: regional configuration: the Zod-authored layer model (base defaults,
   Agentur templates, project overrides) exported as JSON Schema, the custom-field profile, the
   two-level resolver with provenance and blockers, pinned template loading
@@ -100,6 +105,11 @@ need the proxy CA (`/root/.ccr/README.md`).
 - `apps/portal` must not import staff-only modules: Oxlint `no-restricted-imports` forbids
   `@transfer/web`, paths into `apps/web` and the `@transfer/staff-*` namespace (the naming
   convention for staff-only packages); a fixture test proves the rule fires.
+- **Zod runs jitless in both SPAs** (ADR-0004): each `main.tsx` imports only Zod, sets
+  `z.config({ jitless: true })` and then loads the app with a dynamic import. A first static import
+  would run too late, because a bundle evaluates the shared chunks an entry imports (the domain's
+  schemas) before the entry's own code. The e2e suite fails on any CSP violation, including those
+  Chromium reports only as a `securitypolicyviolation` event.
 - API modules may depend on `domain`, `config`, `db`, `adapters` — never on each other's
   internals (talk through exported service functions).
 - UI talks only to the API. No business rules in the UI beyond display validation (shared Zod).

@@ -15,11 +15,13 @@
     "@transfer/api-client": "workspace:*",
     "@transfer/config": "workspace:*",
     "@transfer/domain": "workspace:*",
+    "@transfer/self-service-ui": "workspace:*",
     "@transfer/ui": "workspace:*",
     "i18next": "26.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-i18next": "17.0.18"
+    "react-i18next": "17.0.18",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "1.168.46",

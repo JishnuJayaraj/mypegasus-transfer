@@ -11,6 +11,7 @@
     { "path": "./apps/api" },
     { "path": "./packages/api-client" },
     { "path": "./packages/ui" },
+    { "path": "./packages/self-service-ui" },
     { "path": "./apps/web" },
     { "path": "./apps/portal" }
   ]

@@ -12,7 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as ChannelsRouteImport } from './routes/channels'
+import { Route as ConsentsRouteImport } from './routes/consents'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SelfServiceRouteImport } from './routes/self-service'
 import { Route as NoticeArt14VersionRouteImport } from './routes/notice.art14.$version'
 
 const IndexRoute = IndexRouteImport.update({
@@ -30,9 +32,19 @@ const ChannelsRoute = ChannelsRouteImport.update({
   path: '/channels',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsentsRoute = ConsentsRouteImport.update({
+  id: '/consents',
+  path: '/consents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SelfServiceRoute = SelfServiceRouteImport.update({
+  id: '/self-service',
+  path: '/self-service',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
@@ -45,14 +57,18 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
   '/channels': typeof ChannelsRoute
+  '/consents': typeof ConsentsRoute
   '/login': typeof LoginRoute
+  '/self-service': typeof SelfServiceRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
   '/channels': typeof ChannelsRoute
+  '/consents': typeof ConsentsRoute
   '/login': typeof LoginRoute
+  '/self-service': typeof SelfServiceRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRoutesById {
@@ -60,21 +76,38 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
   '/channels': typeof ChannelsRoute
+  '/consents': typeof ConsentsRoute
   '/login': typeof LoginRoute
+  '/self-service': typeof SelfServiceRoute
   '/notice/art14/$version': typeof NoticeArt14VersionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/activate' | '/channels' | '/login' | '/notice/art14/$version'
+    | '/'
+    | '/activate'
+    | '/channels'
+    | '/consents'
+    | '/login'
+    | '/self-service'
+    | '/notice/art14/$version'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/activate' | '/channels' | '/login' | '/notice/art14/$version'
+  to:
+    | '/'
+    | '/activate'
+    | '/channels'
+    | '/consents'
+    | '/login'
+    | '/self-service'
+    | '/notice/art14/$version'
   id:
     | '__root__'
     | '/'
     | '/activate'
     | '/channels'
+    | '/consents'
     | '/login'
+    | '/self-service'
     | '/notice/art14/$version'
   fileRoutesById: FileRoutesById
 }
@@ -82,7 +115,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivateRoute: typeof ActivateRoute
   ChannelsRoute: typeof ChannelsRoute
+  ConsentsRoute: typeof ConsentsRoute
   LoginRoute: typeof LoginRoute
+  SelfServiceRoute: typeof SelfServiceRoute
   NoticeArt14VersionRoute: typeof NoticeArt14VersionRoute
 }
 
@@ -109,11 +144,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChannelsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/consents': {
+      id: '/consents'
+      path: '/consents'
+      fullPath: '/consents'
+      preLoaderRoute: typeof ConsentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/self-service': {
+      id: '/self-service'
+      path: '/self-service'
+      fullPath: '/self-service'
+      preLoaderRoute: typeof SelfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notice/art14/$version': {
@@ -130,7 +179,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivateRoute: ActivateRoute,
   ChannelsRoute: ChannelsRoute,
+  ConsentsRoute: ConsentsRoute,
   LoginRoute: LoginRoute,
+  SelfServiceRoute: SelfServiceRoute,
   NoticeArt14VersionRoute: NoticeArt14VersionRoute,
 }
 export const routeTree = rootRouteImport

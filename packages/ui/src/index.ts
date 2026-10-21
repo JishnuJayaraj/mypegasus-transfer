@@ -11,6 +11,7 @@ export {
   InlineNotification,
   Link,
   Loading,
+  ProgressBar,
   RadioButton,
   RadioButtonGroup,
   Select,
@@ -23,6 +24,7 @@ export {
   TabPanels,
   Tabs,
   Tag,
+  TextArea,
   TextInput,
 } from "@carbon/react";
 export { Add, UserAvatar } from "@carbon/icons-react";

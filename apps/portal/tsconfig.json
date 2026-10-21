@@ -8,5 +8,9 @@
     "types": ["vite/client", "node"]
   },
   "include": ["src", "src/**/*.json", "vite.config.ts"],
-  "references": [{ "path": "../../packages/ui" }, { "path": "../../packages/api-client" }]
+  "references": [
+    { "path": "../../packages/ui" },
+    { "path": "../../packages/self-service-ui" },
+    { "path": "../../packages/api-client" }
+  ]
 }

@@ -3,7 +3,10 @@ import { expect, test as base, type Page } from "@playwright/test";
 
 /**
  * Every test fails on a Content-Security-Policy violation: the API serves the built SPAs with a
- * strict CSP (no inline styles or scripts), and this proves Carbon works under it.
+ * strict CSP (no inline styles or scripts, no eval), and this proves Carbon and Zod work under it.
+ * Chromium reports some violations only as a `securitypolicyviolation` event, never on the
+ * console (e.g. a caught `new Function`, which is how Zod probes for eval; ADR-0004), so both
+ * are watched.
  */
 export const test = base.extend<{ cspViolations: string[] }>({
   cspViolations: [
@@ -13,6 +16,16 @@ export const test = base.extend<{ cspViolations: string[] }>({
         if (message.type() === "error" && /Content Security Policy/i.test(message.text())) {
           violations.push(message.text());
         }
+      });
+      await page.exposeBinding("reportCspViolation", (_source, violation: string) => {
+        violations.push(violation);
+      });
+      await page.addInitScript(() => {
+        document.addEventListener("securitypolicyviolation", (event) => {
+          const report = (window as unknown as { reportCspViolation: (v: string) => void })
+            .reportCspViolation;
+          void report(`${event.violatedDirective} ${event.blockedURI} (${event.sourceFile})`);
+        });
       });
       await use(violations);
       expect(violations).toEqual([]);

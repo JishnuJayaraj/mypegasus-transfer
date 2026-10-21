@@ -73,6 +73,17 @@ Two details for PR 1f (`field-schema.ts`):
   `\p{…}` classes don't work. The profile should reject patterns that need the flag.
 - String lengths count code points, as JSON Schema requires (a hand-written `.max()` does too).
 
+## Note 2026-10-21: jitless in the bundled SPAs (Slice 4a, PR 4a-3)
+
+`z.config({ jitless: true })` as main.tsx's first import was **not enough** in the Vite 8 build:
+the bundle evaluates the shared chunks an entry imports, where Zod and the domain's schemas
+live, before the entry's own code, so the first object schema probed `new Function` and the CSP
+reported `script-src eval`. Chromium reports that caught probe only as a
+`securitypolicyviolation` event, not on the console, which the e2e check watched until then. Now
+each SPA's `main.tsx` imports only Zod, sets the option and loads the app with a dynamic import;
+the e2e fixture also records `securitypolicyviolation` events, and removing the setting fails the
+self-service e2e (custom fields compiled in the browser) with `script-src eval`.
+
 ## Amendment 2026-10-16: the configuration model (Slice 1, PR 1f-1)
 
 - **One Zod-authored model, exported as JSON Schema.** Base defaults, regional templates and

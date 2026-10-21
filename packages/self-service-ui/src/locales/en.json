@@ -1,0 +1,204 @@
+{
+  "title": "My details",
+  "loading": "Loading your details …",
+  "loadFailed": "Your details could not be loaded. Please try again later.",
+  "notice": {
+    "acknowledge": "Read, continue",
+    "newVersion": "This information has changed. Please read it before you continue."
+  },
+  "intro": {
+    "required": "Details marked * are required.",
+    "optional": "You may leave all other details open and add them later with your counsellor.",
+    "noDiagnoses": "Please do not enter any diagnosis or details about your health in text fields."
+  },
+  "progress": {
+    "label": "Progress",
+    "pages": "{{complete}} of {{total}} pages complete",
+    "step": "Page {{current}} of {{total}}"
+  },
+  "actions": {
+    "next": "Next",
+    "back": "Back",
+    "toOverview": "To the overview",
+    "edit": "Edit {{page}}",
+    "addRow": "Add an entry",
+    "removeRow": "Remove entry {{number}}"
+  },
+  "messages": {
+    "stale": "Your details were changed elsewhere in the meantime. We loaded the current state. Please check the page and save it again.",
+    "invalid": "Please check the marked details.",
+    "failed": "Saving did not work. Please try again.",
+    "closed": "Your participation has ended. Details can no longer be changed."
+  },
+  "overview": {
+    "title": "Overview",
+    "intro": "Here you can see which required details are still missing. You can open every page again.",
+    "complete": "Complete",
+    "missing_one": "One required detail is missing:",
+    "missing_other": "{{count}} required details are missing:",
+    "later": "You will soon be able to enter these details here. Until then, your counsellor can help you."
+  },
+  "identity": {
+    "intro": "We received your name and date of birth from your former employer. If they are wrong, please contact your counsellor.",
+    "name": "Name",
+    "birthDate": "Date of birth"
+  },
+  "warnings": {
+    "from_after_to": "The \"from\" date is after the \"to\" date. Please check the entry."
+  },
+  "errors": {
+    "invalid": "Please check this detail.",
+    "required_missing": "Please fill in this field.",
+    "too_long": "This text is too long.",
+    "too_many_rows": "There are too many entries.",
+    "out_of_range": "This value is outside the allowed range.",
+    "value_not_allowed": "Please choose one of the values offered.",
+    "control_characters": "This text contains characters that are not allowed.",
+    "postal_code_invalid": "Please enter a five-digit postal code.",
+    "phone_invalid": "Please enter a valid phone number.",
+    "email_invalid": "Please enter a valid email address.",
+    "duplicate_value": "Each value may appear only once.",
+    "date_invalid": "Please enter a valid date as DD.MM.YYYY.",
+    "number_invalid": "Please enter a number.",
+    "invalid_format": "The format of this detail is not right.",
+    "unknown_field": "This detail cannot be saved here."
+  },
+  "pages": {
+    "personal": "Personal details",
+    "contact": "Contact",
+    "ba_details": "Details for the employment agency",
+    "education": "School and training",
+    "work_history": "Work history",
+    "languages_mobility": "Languages and mobility",
+    "job_wish": "Job wishes",
+    "health": "Health",
+    "further": "Further details"
+  },
+  "options": {
+    "yes": "Yes",
+    "no": "No",
+    "choose": "Please choose"
+  },
+  "fields": {
+    "gender": {
+      "label": "Gender",
+      "male": "Male",
+      "female": "Female",
+      "diverse": "Diverse",
+      "not_specified": "Not specified"
+    },
+    "maritalStatus": {
+      "label": "Marital status",
+      "single": "Single",
+      "married": "Married"
+    },
+    "address": {
+      "label": "Address",
+      "street": "Street and house number",
+      "postalCode": "Postal code",
+      "city": "City"
+    },
+    "phone": {
+      "label": "Phone"
+    },
+    "mobile": {
+      "label": "Mobile number"
+    },
+    "privateEmail": {
+      "label": "Private email address",
+      "hint": "These details do not change your contacts for logging in."
+    },
+    "educationHistory": {
+      "label": "School, vocational training, university",
+      "row": "Education {{number}}",
+      "from": "From",
+      "to": "To",
+      "toHint": "Leave empty if it is still running.",
+      "institution": "School, company or university",
+      "qualification": "Training or qualification",
+      "completed": "Completed?",
+      "running": "Still running"
+    },
+    "workHistory": {
+      "label": "Work history",
+      "hint": "Please include gaps too, for example parental leave.",
+      "row": "Job {{number}}",
+      "from": "From",
+      "to": "To",
+      "toHint": "Leave empty if it is still ongoing.",
+      "employer": "Employer",
+      "activity": "Activity"
+    },
+    "languageSkills": {
+      "label": "Languages",
+      "german": "German",
+      "others": "Further languages",
+      "row": "Language {{number}}",
+      "language": "Language",
+      "level": "Level",
+      "basic": "Basic",
+      "extended": "Extended",
+      "business_fluent": "Business fluent"
+    },
+    "drivingLicence": {
+      "label": "Driving licence",
+      "none": "No driving licence",
+      "classes": "Classes"
+    },
+    "vehicleAvailable": {
+      "label": "A vehicle is available"
+    },
+    "workingTimePreferences": {
+      "label": "Working time",
+      "employmentType": "Desired extent",
+      "full_time": "Full time",
+      "part_time": "Part time",
+      "weeklyHours": "Hours per week",
+      "distribution": "Desired distribution of working hours"
+    },
+    "jobWishes": {
+      "label": "Desired job",
+      "desired": "Desired activity",
+      "alternative": "Alternative activity"
+    },
+    "desiredWorkLocations": {
+      "label": "Desired work locations"
+    },
+    "maxCommuteDistance": {
+      "label": "Maximum distance to work",
+      "km": "Up to a distance",
+      "kmValue": "Distance in km",
+      "nationwide": "Anywhere in Germany",
+      "international": "Abroad too"
+    },
+    "earliestStartDate": {
+      "label": "Earliest start date"
+    },
+    "pensionInsuranceNumber": {
+      "label": "Pension insurance number"
+    },
+    "nationality": {
+      "label": "Nationality"
+    },
+    "entryToGermanyDate": {
+      "label": "Date of entry"
+    },
+    "residenceStatus": {
+      "label": "Residence status"
+    },
+    "buergergeld": {
+      "label": "Citizen's income (Bürgergeld)"
+    },
+    "healthRestrictions": {
+      "label": "Health restrictions"
+    },
+    "severeDisability": {
+      "label": "Severe disability or equal status"
+    }
+  },
+  "rows": {
+    "limit": "At most {{max}} entries.",
+    "empty": "No entries yet."
+  },
+  "required": "{{label}} *"
+}

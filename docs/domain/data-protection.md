@@ -317,6 +317,14 @@ and highly confidential data only; ordinary person-data writes are `participant_
   codes, only for fields the viewer may read. Nothing on it needs a logged read.
 - **The portal's own consents** (`GET /api/v1/portal/consents`): purpose, source, text version,
   language, given and ended, and the channel id of a portal contact consent; never an address.
+  The portal page "Einwilligungen" lists them; revoking `portal_contact` is removing the channel.
+- **The wizard in the portal** (`@transfer/self-service-ui`, "Meine Angaben"): the purposes notice
+  first, then one page at a time, saved whole on "Weiter" with the revision read ("Zurück" doesn't
+  save); a `409` reloads the state and says so, a `422` shows the codes at their fields. The copy
+  says optional data may be left for the Berater and asks for no diagnoses in free text. The
+  highly confidential and special-category pages show no input until their encrypted path and
+  step-up exist (PR 4a-4); the overview lists their missing items as codes turned into labels.
+  Nothing is kept in browser storage; logging out drops the cached state.
 
 ## Customer reporting *(assumed, Q5, Q13, Q47)*
 

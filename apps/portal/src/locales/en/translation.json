@@ -17,7 +17,9 @@
     "channelSms": "Mobile {{address}}, confirmed on {{at}}",
     "logout": "Log out",
     "login": "Log in",
-    "manageChannels": "Manage your contact details"
+    "manageChannels": "Manage your contact details",
+    "selfService": "My details",
+    "consents": "Consents"
   },
   "status": {
     "checking": "Checking the connection …",
@@ -118,5 +120,28 @@
     "expired": "Your session has expired. Please log in again.",
     "add": "Add a contact",
     "confirmAdd": "Add contact"
+  },
+  "consents": {
+    "title": "Your consents",
+    "intro": "Here you can see which consents you have given us and whether they still apply.",
+    "empty": "You have not given any consent.",
+    "failed": "Your consents could not be loaded. Please try again later.",
+    "given": "Given on {{at}} ({{source}})",
+    "active": "Applies",
+    "ended": "Ended on {{at}} ({{reason}})",
+    "version": "Version of the text: {{version}}",
+    "portalContact": "You withdraw your consent for a contact by removing that contact.",
+    "purpose": {
+      "portal_contact": "Contact through the participant portal",
+      "kug200b_profile_access": "Access to your profile at the employment agency (Kug 200b)"
+    },
+    "source": {
+      "portal": "in the portal",
+      "paper_form": "on paper"
+    },
+    "endReason": {
+      "revoked": "withdrawn",
+      "lost_access_replaced": "access recovered, contact replaced"
+    }
   }
 }
