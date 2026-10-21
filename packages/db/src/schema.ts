@@ -82,9 +82,9 @@ export const projectRole = pgEnum("project_role", values(ProjectRole));
  * Staff accounts, created in the app by a global admin (Q7, Q126) through `create_staff_user`;
  * synthetic ones from the seed. Never hard-deleted (Q59): `deactivate_staff_user` sets
  * `deactivated_at`. The first OIDC login binds `(oidc_issuer, oidc_subject)` through
- * `bind_staff_identity` (D5); a deactivated account can't log in. No flat role: org roles are
- * `staff_org_role` rows, project roles `project_membership` rows, and `may_create_projects` lets
- * its holder create projects (and become their first PL).
+ * `bind_staff_identity` (ADR-0007, staff sessions); a deactivated account can't log in. No flat
+ * role: org roles are `staff_org_role` rows, project roles `project_membership` rows, and
+ * `may_create_projects` lets its holder create projects (and become their first PL).
  */
 export const staffUser = pgTable(
   "staff_user",
@@ -100,7 +100,8 @@ export const staffUser = pgTable(
   },
   (t) => [
     unique("staff_user_oidc_identity_key").on(t.oidcIssuer, t.oidcSubject),
-    // The first login matches the email case-insensitively (D5), so one address is one account.
+    // The first login matches the email case-insensitively (ADR-0007), so one address is one
+    // account.
     uniqueIndex("staff_user_email_lower_key").on(sql`lower(${t.email})`),
     check(
       "staff_user_oidc_identity_complete",
@@ -179,9 +180,9 @@ export const staffSessionEndReason = pgEnum(
 );
 
 /**
- * Server-side staff sessions for both login modes (D1, D2): the cookie holds 32 random bytes, the
- * row only their SHA-256, so reading the table gives no live session. 8 hours absolute; the API
- * checks expiry against database time. Written only by `start_staff_session` and
+ * Server-side staff sessions for both login modes (ADR-0007, staff sessions): the cookie holds 32
+ * random bytes, the row only their SHA-256, so reading the table gives no live session. 8 hours
+ * absolute; the API checks expiry against database time. Written only by `start_staff_session` and
  * `end_staff_session`; `transfer_app` only reads it.
  */
 export const staffSession = pgTable(
@@ -211,7 +212,7 @@ export const staffSession = pgTable(
 
 /**
  * The root of project scoping, so it has no project_id itself (ADR-0002). Written only by the
- * setup functions (Slice 2, D2); `transfer_app` only reads it.
+ * setup functions (ADR-0002, project setup); `transfer_app` only reads it.
  */
 export const project = pgTable(
   "project",
@@ -229,7 +230,7 @@ export const project = pgTable(
       .references(() => staffUser.id),
     /** Draft until activated (Q98); one-way in Slice 2. Written only by the setup functions. */
     status: projectStatus("status").notNull().default("draft"),
-    /** The Project Agentur (Q90); chosen with its pinned template (PR 2c-2). */
+    /** The Project Agentur (Q90); chosen with its pinned template (regional-variation.md). */
     projectAgenturKey: text("project_agentur_key"),
     activatedAt: timestamp("activated_at", { withTimezone: true, mode: "string" }),
     activatedBy: uuid("activated_by").references(() => staffUser.id),
@@ -251,10 +252,10 @@ export const project = pgTable(
 );
 
 /**
- * Project roles of staff (D6, Q61): zero or more per person and project; permissions are their
- * union. Written by `create_project` (the creator's PL row), `add_project_member` and
- * `remove_project_member` (the PL; a global admin adds a replacement PL, Q126) and
- * `deactivate_staff_user`; a removed role's row is deleted, its audit events stay.
+ * Project roles of staff (Q61; data-protection.md, access matrix): zero or more per person and
+ * project; permissions are their union. Written by `create_project` (the creator's PL row),
+ * `add_project_member` and `remove_project_member` (the PL; a global admin adds a replacement PL,
+ * Q126) and `deactivate_staff_user`; a removed role's row is deleted, its audit events stay.
  */
 export const projectMembership = pgTable(
   "project_membership",
@@ -361,8 +362,9 @@ const createdAt = () =>
 
 /**
  * An entry wave of a `ta_tg` project (Q79): a timing cohort with its contractual dates, nullable
- * while draft. Written only by `create_entry_wave` and `update_entry_wave` (Slice 2 plan 5.6);
- * `transfer_app` only reads it. The CHECKs hold the ordering the offer and entry guards need.
+ * while draft. Written only by `create_entry_wave` and `update_entry_wave`
+ * (process-and-lifecycle.md, Dates); `transfer_app` only reads it. The CHECKs hold the ordering the
+ * offer and entry guards need.
  */
 export const projectEntryWave = pgTable(
   "project_entry_wave",
@@ -413,7 +415,7 @@ const iff = (name: string, condition: SQL, column: { name: string }) =>
   check(name, sql`(${condition}) = (${sql.identifier(column.name)} is not null)`);
 
 /**
- * One person in one project (plan 5.10). Written only by the status functions (ADR-0002, D2):
+ * One person in one project. Written only by the status functions (ADR-0002):
  * `transfer_app` may only select. Personal data comes with Slice 2.
  */
 export const participation = pgTable(
@@ -446,6 +448,12 @@ export const participation = pgTable(
     /** The current (latest) profiling-exception request; every request is its own row (Q94). */
     profilingExceptionRequestId: uuid("profiling_exception_request_id"),
     statusVersion: integer("status_version").notNull().default(0),
+    /** The Agentur the participant is placed with (Q139), set only by `set_placement_agentur`. */
+    placementAgenturKey: text("placement_agentur_key"),
+    placementAgenturSetAt: timestamp("placement_agentur_set_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
     createdAt: createdAt(),
   },
   (t): PgTableExtraConfigValue[] => [
@@ -456,6 +464,15 @@ export const participation = pgTable(
     }),
     index("participation_project_id_idx").on(t.projectId),
     check("participation_tg_dates_ordered", sql`${t.tgStart} <= ${t.tgEnd}`),
+    check(
+      "participation_placement_agentur_key_format",
+      sql`${t.placementAgenturKey} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
+    ),
+    iff(
+      "participation_placement_agentur_set_at_with_key",
+      sql.raw("placement_agentur_key is not null"),
+      t.placementAgenturSetAt,
+    ),
     check("participation_offer_deadline_before_tg_start", sql`${t.offerDeadline} <= ${t.tgStart}`),
     check(
       "participation_offer_needs_wave",
@@ -581,7 +598,10 @@ export const profilingExceptionRequest = pgTable(
   ],
 );
 
-/** Trimmed text of 1 to `max` characters without control characters (plan 5.11). */
+/**
+ * Trimmed text of 1 to `max` characters without control characters (process-and-lifecycle.md,
+ * Import).
+ */
 const personText = (name: string, column: SQL, max: number) =>
   check(
     name,
@@ -601,9 +621,9 @@ const personTimes = () => ({
 });
 
 /**
- * Who a participation is (Slice 2 plan 5.2, 5.10; R8): the import's match key and the minimal
- * identity, class `participation_record`. Written only by `write_participant_data` (D2); the
- * Personalnummer never changes and is unique in the project.
+ * Who a participation is (data-protection.md, person-data writes): the import's match key and the
+ * minimal identity, class `participation_record`. Written only by `write_participant_data`
+ * (ADR-0002); the Personalnummer never changes and is unique in the project.
  */
 export const participantIdentity = pgTable(
   "participant_identity",
@@ -632,10 +652,10 @@ export const participantIdentity = pgTable(
 );
 
 /**
- * The personnel-file data of a participation (plan 5.2, 5.10; R8, round 32): the structured
- * address with its country (ISO 3166-1 alpha-2, only `DE` in the MVP; all four parts or none),
- * phone, mobile, emails and the Austrittsdatum; class `personnel_file`. Written only by
- * `write_participant_data` (D2).
+ * The personnel-file data of a participation (data-protection.md, retention; round 32): the
+ * structured address with its country (ISO 3166-1 alpha-2, only `DE` in the MVP; all four parts or
+ * none), phone, mobile, emails and the Austrittsdatum; class `personnel_file`. Written only by
+ * `write_participant_data` (ADR-0002).
  */
 export const participantDetails = pgTable(
   "participant_details",
@@ -678,9 +698,10 @@ export const participantDetails = pgTable(
 );
 
 /**
- * A personal activation code (D12–D20). The code and an in-person destination are never stored:
- * only HMAC-SHA256 values under separately derived keys. All writes go through the Slice 3d
- * functions; the runtime role reads only the non-secret projection it needs.
+ * A personal activation code (ADR-0007, activation-code issuance). The code and an in-person
+ * destination are never stored: only HMAC-SHA256 values under separately derived keys. All writes
+ * go through the Slice 3d functions; the runtime role reads only the non-secret projection it
+ * needs.
  */
 export const activationCode = pgTable(
   "activation_code",
@@ -803,9 +824,9 @@ const instant = (name: string) => timestamp(name, { withTimezone: true, mode: "s
 const minutes = (value: number) => sql.raw(`interval '${value} minutes'`);
 
 /**
- * An activated participant account (Slice 3 plan D23, D29): one per participation, with the code it
- * was activated by and how the identity was assured (`photo_id` with the staff confirmer of the
- * code's ID check, only when the birth-date step was skipped, Q129). Written only by
+ * An activated participant account (ADR-0007, portal activation): one per participation, with the
+ * code it was activated by and how the identity was assured (`photo_id` with the staff confirmer of
+ * the code's ID check, only when the birth-date step was skipped, Q129). Written only by
  * `complete_activation`.
  */
 export const participantAccount = pgTable(
@@ -841,7 +862,7 @@ export const participantAccount = pgTable(
 );
 
 /**
- * A consent to the portal contact purpose for one channel (D28): the text version and language
+ * A consent to the portal contact purpose for one channel (Q123): the text version and language
  * shown, who gave it and when; never the address. Written only by the activation functions.
  */
 export const consentRecord = pgTable(
@@ -882,9 +903,10 @@ export const consentRecord = pgTable(
 );
 
 /**
- * A verified private email or mobile of an activated participant (D28): the normalised address,
- * how it was verified, its consent and when the activation notice went to it (D21). One address
- * belongs to at most one channel that isn't removed. Staff never read the address (Q123).
+ * A verified private email or mobile of an activated participant (ADR-0007, Q123): the
+ * normalised address, how it was verified, its consent and when the activation notice went to it.
+ * One address belongs to at most one channel that isn't removed. Staff never read the address
+ * (Q123).
  */
 export const participantChannel = pgTable(
   "participant_channel",
@@ -933,9 +955,9 @@ export const participantChannel = pgTable(
 );
 
 /**
- * A one-time code sent to an address (D27): only its keyed hash; the normalised address it went to,
- * the delivery outcome (D20), 15 minutes, its own counter of 5 wrong entries. Written only by the
- * one-time-code functions; never served.
+ * A one-time code sent to an address (ADR-0007): only its keyed hash; the normalised address it
+ * went to, the delivery outcome, 15 minutes, its own counter of 5 wrong entries. Written only by
+ * the one-time-code functions; never served.
  */
 export const oneTimeCodeChallenge = pgTable(
   "one_time_code_challenge",
@@ -986,11 +1008,11 @@ export const oneTimeCodeChallenge = pgTable(
 );
 
 /**
- * Participant sessions (D29): the cookie holds 32 random bytes, the row their SHA-256. An
- * `activating` session (code accepted) opens only the activation steps and records them; an
- * `active` one starts with a new token at completion. 30 minutes idle, 12 hours absolute, checked
- * against database time. `transfer_app` may update `last_seen_at` only; everything else goes
- * through the activation functions.
+ * Participant sessions (ADR-0007, participant sessions): the cookie holds 32 random bytes, the row
+ * their SHA-256. An `activating` session (code accepted) opens only the activation steps and
+ * records them; an `active` one starts with a new token at completion. 30 minutes idle, 12 hours
+ * absolute, checked against database time. `transfer_app` may update `last_seen_at` only;
+ * everything else goes through the activation functions.
  */
 export const participantSession = pgTable(
   "participant_session",
@@ -1037,9 +1059,9 @@ export const participantSession = pgTable(
 );
 
 /**
- * A fully executed DSV amendment of a contractual date change (Slice 2 plan 5.2, 5.7; round 32 L4,
- * D3; R41; PR 2h-3): operational evidence, not the contract (the signed original stays on paper).
- * Written only by `set_participation_dates`; a trigger refuses every update and deletion.
+ * A fully executed DSV amendment of a contractual date change (process-and-lifecycle.md, "DSV
+ * amendment"; round 32): operational evidence, not the contract (the signed original stays on
+ * paper). Written only by `set_participation_dates`; a trigger refuses every update and deletion.
  */
 export const participationDsvAmendment = pgTable(
   "participation_dsv_amendment",
@@ -1082,7 +1104,7 @@ export const participationDsvAmendment = pgTable(
 );
 
 /**
- * A BA reporting task (Slice 2 plan 5.2, 5.7; round 32 B3; R38, R42; PR 2h-3): created by
+ * A BA reporting task (process-and-lifecycle.md, "BA reporting"; round 32): created by
  * `set_participation_dates` for each changed effective date and by the early-exit trigger,
  * always `pending` in Slice 2; its status only moves forward (a trigger), it is never deleted.
  */
@@ -1126,8 +1148,9 @@ export const baReportingTask = pgTable(
 );
 
 /**
- * The lifecycle edges (plan 5.3) as reference data for the status functions; a drift test keeps
- * them equal to the domain's `edges`. Creation edges have no `from_value`.
+ * The lifecycle edges (process-and-lifecycle.md, generated transitions) as reference data for the
+ * status functions; a drift test keeps them equal to the domain's `edges`. Creation edges have no
+ * `from_value`.
  */
 export const lifecycleEdge = pgTable(
   "lifecycle_edge",
@@ -1165,7 +1188,7 @@ const detailsValuePattern = "^[A-Za-z0-9_.:+-]{1,100}$";
 const detailsKeyPattern = "^[a-z][A-Za-z0-9]{0,62}$";
 
 /**
- * The append-only audit trail (plan 5.4, ADR-0002). Written only by the status functions;
+ * The append-only audit trail (ADR-0002). Written only by the status functions;
  * `transfer_app` has no privilege on it in Slice 1. No free-text column: every text column and
  * every string in `details` is held to an id or code pattern by a `CHECK`.
  */
@@ -1177,7 +1200,7 @@ export const auditEvent = pgTable(
     projectId: uuid("project_id")
       .notNull()
       .references(() => project.id),
-    // No FK: retention deletes the participation and pseudonymises the trail (plan 5.4).
+    // No FK: retention deletes the participation and pseudonymises the trail (ADR-0008).
     participationId: uuid("participation_id"),
     eventType: auditEventType("event_type").notNull(),
     actorType: actorType("actor_type").notNull(),
@@ -1257,10 +1280,10 @@ export const auditEvent = pgTable(
 );
 
 /**
- * The staff audit trail (D6): logins, logouts, refused logins and identity bindings. No
- * `project_id`, so not `audit_event`. Written only by the staff session functions; `transfer_app`
- * has no privilege on it. Ids and codes only, held by the `CHECK`s: a refused login records its
- * code, never the claimed email.
+ * The staff audit trail (data-protection.md, Authentication): logins, logouts, refused logins and
+ * identity bindings. No `project_id`, so not `audit_event`. Written only by the staff session
+ * functions; `transfer_app` has no privilege on it. Ids and codes only, held by the `CHECK`s: a
+ * refused login records its code, never the claimed email.
  */
 export const staffAuditEvent = pgTable(
   "staff_audit_event",
@@ -1322,11 +1345,11 @@ export const staffAuditEvent = pgTable(
 );
 
 /**
- * A template version as first pinned anywhere (Slice 2 plan 5.2, 5.8; D5): global reference data
- * without `project_id` (R27). Keyed by Agentur and version, so two first pins of one version
- * serialise on the primary key; every later pin must match both the content and its canonical
- * SHA-256 (R22). Written only by `pin_agentur_template`; a trigger refuses `UPDATE` and `DELETE`,
- * for the owner too.
+ * A template version as first pinned anywhere (regional-variation.md, "Template versions"):
+ * global reference data without `project_id`. Keyed by Agentur and version, so two first pins of
+ * one version serialise on the primary key; every later pin must match both the content and its
+ * canonical SHA-256. Written only by `pin_agentur_template`; a trigger refuses `UPDATE` and
+ * `DELETE`, for the owner too.
  */
 export const configTemplateVersion = pgTable(
   "config_template_version",
@@ -1352,8 +1375,9 @@ export const configTemplateVersion = pgTable(
 );
 
 /**
- * A project's pins (plan 5.2): append-only, the current pin per Agentur is the one with the
- * highest `seq`. Written only by `pin_agentur_template`; a trigger refuses `UPDATE` and `DELETE`.
+ * A project's pins (regional-variation.md, snapshot): append-only, the current pin per Agentur is
+ * the one with the highest `seq`. Written only by `pin_agentur_template`; a trigger refuses
+ * `UPDATE` and `DELETE`.
  */
 export const projectTemplatePin = pgTable(
   "project_template_pin",
@@ -1381,7 +1405,7 @@ export const projectTemplatePin = pgTable(
 );
 
 /**
- * A project's configuration override, one row per version (Slice 2 plan 5.2, 5.9): append-only
+ * A project's configuration override, one row per version (regional-variation.md): append-only
  * and written only by `write_project_override`, which takes the next version under the project
  * lock (`override_version_stale` otherwise). The current override is the highest version; no row
  * is version 0, the empty override. The content is a validated `project_override` layer.
@@ -1415,10 +1439,10 @@ const relaxationStatusIn = (...list: string[]) =>
   sql.raw(`"config_relaxation_request"."status" in (${list.map((v) => `'${v}'`).join(", ")})`);
 
 /**
- * A request to relax one `operational_default` rule of a project (Slice 2 plan 5.2, 5.9; Q75,
- * R2): the PL asks with a controlled reason code; another person approves or rejects it, or the
- * PL withdraws it. Only an approval changes the configuration, as a new override version in the
- * same transaction. At most one open request per project and rule. Written only by the
+ * A request to relax one `operational_default` rule of a project (regional-variation.md, rule
+ * relaxations; Q75): the PL asks with a controlled reason code; another person approves or rejects
+ * it, or the PL withdraws it. Only an approval changes the configuration, as a new override version
+ * in the same transaction. At most one open request per project and rule. Written only by the
  * relaxation functions; a trigger lets the status move only forward.
  */
 export const configRelaxationRequest = pgTable(
@@ -1457,13 +1481,13 @@ export const configRelaxationRequest = pgTable(
       "config_relaxation_request_decision",
       sql`(${t.decidedBy} is null) = (${t.decidedOn} is null) and (${t.decidedBy} is null) = (${t.decidedAt} is null) and (${relaxationStatusIn("approved", "rejected")}) = (${t.decidedBy} is not null)`,
     ),
-    // Four eyes (round 8, R2): the decider is never the requester.
+    // Four eyes (round 8): the decider is never the requester.
     check("config_relaxation_request_four_eyes", sql`${t.decidedBy} <> ${t.requestedBy}`),
   ],
 );
 
 /**
- * One row per job and Berlin run day, inserted once when that day's run has completed (plan 5.9):
+ * One row per job and Berlin run day, inserted once when that day's run has completed (ADR-0011):
  * the lifecycle sweep's catch-up window starts after the latest, and a same-day reconciliation
  * needs today's row. No personal data. `transfer_app` may select it and insert only `job_name`,
  * `run_date` and `scheduled_at`, never update or delete: `completed_at` is always database time
@@ -1540,10 +1564,10 @@ export const participantAssignment = pgTable(
 );
 
 /**
- * A saved import column mapping (Slice 2 plan 5.2, 5.11; R7): the keyed hash of a normalised
+ * A saved import column mapping (data-protection.md, retention): the keyed hash of a normalised
  * header and the target it was mapped to in a confirmed import of the project. Never header text
- * (a file without a header row would store a person's name). No personal data and no audit
- * (D2): the application writes it directly (`SELECT, INSERT, UPDATE`). Suggestions for another
+ * (a file without a header row would store a person's name). No personal data and no audit:
+ * the application writes it directly (`SELECT, INSERT, UPDATE`). Suggestions for another
  * project of the same customer read it by the customer name.
  */
 export const importColumnMapping = pgTable(

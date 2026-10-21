@@ -10,7 +10,7 @@ import {
   type ParticipationRecord,
 } from "./participation-view";
 
-// Slice 2 plan, "Planned in PR 2h" (R29, R30; AC-34, AC-49): who lists which participations of
+// data-protection.md, "Participation detail": who lists which participations of
 // a project, and what the detail of one participation shows.
 
 const projectId = "project-a";
@@ -31,7 +31,7 @@ function staff(
   };
 }
 
-describe("participationListScope (R29, AC-49)", () => {
+describe("participationListScope", () => {
   it("lets the PL and back office list every participation of their project", () => {
     expect(participationListScope(staff({ [projectId]: ["project_lead"] }), projectId)).toEqual({
       kind: "all",
@@ -57,7 +57,7 @@ describe("participationListScope (R29, AC-49)", () => {
     expect(participationListScope(elsewhere, projectId)).toEqual({ kind: "none" });
   });
 
-  it("takes the most permissive of several roles (D6)", () => {
+  it("takes the most permissive of several roles", () => {
     const both = staff({ [projectId]: ["consultant", "back_office"] }, { assigned: ["p-1"] });
     expect(participationListScope(both, projectId)).toEqual({ kind: "all" });
   });
@@ -84,6 +84,12 @@ const record: ParticipationRecord = {
   profilingStatus: "not_started",
   dsvStatus: "not_offered",
   statusVersion: 3,
+  placementAgentur: {
+    placementAgenturKey: "beispielstadt-nord",
+    placementAgenturSetAt: "2027-02-01T09:00:00.000000Z",
+    submissionBlockers: [],
+    placementAgenturChoices: [],
+  },
   activationStatus: {
     account: "not_activated",
     code: "none",
@@ -174,11 +180,12 @@ const options = {
     recordHandover: false,
     revokeActivationCode: false,
     providePrivacyNotice: true,
+    setPlacementAgentur: true,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
 
-describe("participationDetail (R30, AC-34)", () => {
+describe("participationDetail", () => {
   it("shows the PL the case data, the effective dates and every person field", () => {
     const detail = participationDetail(staff({ [projectId]: ["project_lead"] }), record, options);
     expect(detail).toEqual({
@@ -195,6 +202,7 @@ describe("participationDetail (R30, AC-34)", () => {
         effectiveTgEnd: "2028-02-29",
       },
       hints: [],
+      ...record.placementAgentur,
       person: record.person,
       amendments: record.amendments,
       baReportingTasks: record.baReportingTasks,
@@ -209,6 +217,7 @@ describe("participationDetail (R30, AC-34)", () => {
         recordHandover: false,
         revokeActivationCode: false,
         providePrivacyNotice: true,
+        setPlacementAgentur: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });
@@ -244,7 +253,8 @@ describe("participationDetail (R30, AC-34)", () => {
     expect(participationDetail(pl, record, { ...options, today: "2027-04-01" })?.hints).toEqual([]);
     const entered = { ...record, status: "active_in_tg" as const };
     expect(participationDetail(pl, entered, late)?.hints).toEqual([]);
-    // Every allowed new start is too late for a direct transition: BA/legal review (R40).
+    // Every allowed new start is too late for a direct transition: BA/legal review
+    // (process-and-lifecycle.md, "New start").
     expect(participationDetail(pl, record, late)?.hints).toEqual([
       "tg_start_missed",
       "new_start_needs_ba_review",
@@ -277,7 +287,7 @@ describe("participationDetail (R30, AC-34)", () => {
 
 const refused = (refusal: string) => ({ allowed: false, refusal });
 
-describe("entryWaveAssignment (R31, R33; review of PR 2h-1)", () => {
+describe("entryWaveAssignment (process-and-lifecycle.md, assigning a wave)", () => {
   const context: OperationContext = {
     projectType: "ta_tg",
     current: { status: "imported", profilingStatus: "not_started", dsvStatus: "not_offered" },
@@ -341,7 +351,7 @@ describe("entryWaveAssignment (R31, R33; review of PR 2h-1)", () => {
   });
 });
 
-describe("participationDatesCapability (R31; PR 2h-3)", () => {
+describe("participationDatesCapability", () => {
   const state = {
     projectType: "ta_tg" as const,
     status: "informed" as const,

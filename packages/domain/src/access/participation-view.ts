@@ -16,10 +16,11 @@ import type {
 } from "../participations";
 import { decideAccess, type AccessAction, type Subject } from "./decide";
 
-// Who lists which participations of a project, and what the detail of one shows (Slice 2 plan,
-// "Planned in PR 2h", R29, R30). Pure: the API loads the rows and applies the result.
+// Who lists which participations of a project, and what the detail of one shows
+// (data-protection.md, "Participation detail"). Pure: the API loads the rows and applies the
+// result.
 
-/** The person fields a participant list carries (plan 5.12). */
+/** The person fields a participant list carries (data-protection.md, access matrix). */
 const listedFields = ["personnelNumber", "lastName", "firstName"] as const;
 /** The case data of a participation, all `case_internal` in the field catalog. */
 const caseFields = [
@@ -33,6 +34,7 @@ const caseFields = [
   "exitDate",
   "withdrawnOn",
   "profilingDoneOn",
+  "placementAgenturKey",
 ] as const;
 
 const allowed = (
@@ -93,6 +95,13 @@ export type ParticipationRecord = {
   profilingStatus: ProfilingStatus;
   dsvStatus: DsvStatus;
   statusVersion: number;
+  placementAgentur: Pick<
+    ParticipationDetail,
+    | "placementAgenturKey"
+    | "placementAgenturSetAt"
+    | "submissionBlockers"
+    | "placementAgenturChoices"
+  >;
   wave: (EntryWave & { name: string }) | null;
   dates: Record<
     "tgStart" | "tgEnd" | "offerDeadline" | "tgEntryDate" | "exitDate" | "withdrawnOn",
@@ -106,14 +115,16 @@ export type ParticipationRecord = {
 /**
  * The detail of one participation for the viewer, or null when they may not read its case data
  * (a 403). Each person field is included where `decideAccess` allows `read`; nothing in Slice 2
- * needs a logged read, so the decision's audit is always null here (R30).
+ * needs a logged read, so the decision's audit is always null here.
  */
 export function participationDetail(
   subject: Subject,
   record: ParticipationRecord,
   options: {
     today: IsoDate;
-    /** Whether today's entry run completed: then the earliest new start is tomorrow (5.7). */
+    /**
+     * Whether today's entry run completed: then the earliest new start is tomorrow ("New start").
+     */
     entryRunCompletedToday: boolean;
     capabilities: ParticipationDetail["capabilities"];
     refusals: ParticipationDetail["refusals"];
@@ -126,7 +137,8 @@ export function participationDetail(
   const hints: ParticipationHint[] = [];
   if (record.status === "informed" && effectiveStart !== null && effectiveStart < options.today) {
     hints.push("tg_start_missed");
-    // Every allowed new start would leave a gap after the former employment (R40, round 33).
+    // Every allowed new start would leave a gap after the former employment
+    // (process-and-lifecycle.md, "New start"; round 33).
     const earliest = options.entryRunCompletedToday ? addDays(options.today, 1) : options.today;
     const oldEnd = record.person.oldEmploymentEndDate;
     if (oldEnd !== null && addDays(oldEnd, 1) < earliest) hints.push("new_start_needs_ba_review");
@@ -145,6 +157,7 @@ export function participationDetail(
       effectiveTgEnd: effectiveTgEnd(dates, wave),
     },
     hints,
+    ...record.placementAgentur,
     person: Object.fromEntries(
       ParticipantDataField.options.filter(readable).map((field) => [field, record.person[field]]),
     ),
@@ -158,7 +171,7 @@ export function participationDetail(
   };
 }
 
-/** Whether the viewer may change the dates now (R31): the permission, then the preconditions. */
+/** Whether the viewer may change the dates now: the permission, then the preconditions. */
 export function participationDatesCapability(
   state: Parameters<typeof datesPrecondition>[0],
   permitted: boolean,
@@ -168,7 +181,8 @@ export function participationDatesCapability(
 }
 
 /**
- * Whether the viewer may assign another wave now (R31, R33): the permission first, then
+ * Whether the viewer may assign another wave now (process-and-lifecycle.md, assigning a wave):
+ * the permission first, then
  * `assignEntryWave`'s rules in their order, against the project's other waves (they all share the
  * participation's state, so the first decides); none left is `no_other_wave`.
  */

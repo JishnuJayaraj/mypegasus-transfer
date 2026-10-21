@@ -37,7 +37,7 @@ const issueCodes = (input: unknown) => {
     : result.error.issues.map((i) => (i as { params?: { code?: string } }).params?.code ?? i.code);
 };
 
-describe("audit event types (plan 5.4)", () => {
+describe("audit event types (ADR-0002)", () => {
   it("are the plan's list plus the superseded closure (round 10)", () => {
     expect(AuditEventType.options).toEqual([
       "participation_created",
@@ -91,6 +91,7 @@ describe("audit event types (plan 5.4)", () => {
       "contact_channel_removed",
       "consent_ended",
       "contact_channels_suspended",
+      "placement_agentur_set",
     ]);
   });
 
@@ -98,7 +99,7 @@ describe("audit event types (plan 5.4)", () => {
     expect([...lifecycleEventTypes]).toEqual(AuditEventType.options.slice(0, 9));
   });
 
-  it("reserves the setup types too (Slice 2, D2)", () => {
+  it("reserves the setup types too (ADR-0002, project setup)", () => {
     expect([...setupEventTypes]).toEqual([
       "project_created",
       "project_changed",
@@ -129,7 +130,7 @@ describe("audit event types (plan 5.4)", () => {
       "activation_code_handed_over",
       "activation_code_revoked",
       "privacy_notice_provided",
-      // Portal activation (D21–D29): only the activation functions write them.
+      // Portal activation (ADR-0007): only the activation functions write them.
       "participant_activated",
       "consent_given",
       "contact_channel_added",
@@ -140,6 +141,7 @@ describe("audit event types (plan 5.4)", () => {
       "contact_channel_removed",
       "consent_ended",
       "contact_channels_suspended",
+      "placement_agentur_set",
     ]);
   });
 
@@ -158,7 +160,8 @@ describe("audit event types (plan 5.4)", () => {
   });
 });
 
-// R26 (round 23): this exact list; a type joins `configurationDependentEventTypes` with its PR.
+// regional-variation.md, base defaults (round 23): this exact list; a type joins
+// `configurationDependentEventTypes` with its PR.
 const r26 = [
   "project_activated",
   "config_template_pinned",
@@ -166,12 +169,14 @@ const r26 = [
   "rule_relaxation_requested",
   "rule_relaxation_approved",
   "import_confirmed",
-  // round 33: manual creation resolves the import's required targets (R32, PR 2h-2)
+  // round 33: manual creation resolves the import's required targets
   "participation_created_manually",
+  // Q139: the placement Agentur's chain is checked like a pin's
+  "placement_agentur_set",
 ];
 
-describe("configuration-dependent events (R26, AC-45)", () => {
-  it("are exactly the R26 types that exist so far", () => {
+describe("configuration-dependent events (Q107)", () => {
+  it("are exactly the listed types that exist so far", () => {
     const existing = r26.filter((type) => (AuditEventType.options as string[]).includes(type));
     expect([...configurationDependentEventTypes].toSorted()).toEqual(existing.toSorted());
   });
@@ -189,7 +194,7 @@ describe("configuration-dependent events (R26, AC-45)", () => {
   });
 });
 
-describe("actors (AC-18)", () => {
+describe("actors (ADR-0002)", () => {
   it.each([
     ["a user", user],
     ["a user in assisted mode", { ...user, onBehalfOf: participationId }],
@@ -278,7 +283,7 @@ describe("status_changed", () => {
     details: { entryKind: "scheduled_entry_catchup", scheduledAt: "2027-03-01T03:15:00.000Z" },
   } as const;
 
-  it("carries the entry kind of a TG entry, and flags reconciliations (AC-18)", () => {
+  it("carries the entry kind of a TG entry, and flags reconciliations", () => {
     expect(issueCodes(entry)).toEqual([]);
     const reconciliation = {
       ...entry,
@@ -438,7 +443,8 @@ describe("the other event types", () => {
         },
       },
     ],
-    // A migration's review (5.8, R15): the removed keys, and the kept ones when there are any.
+    // A migration's review (regional-variation.md, migration): the removed keys, and the kept ones
+    // when there are any.
     [
       "config_override_changed",
       {
@@ -561,7 +567,8 @@ describe("the other event types", () => {
       { participationId: null, details: { waveId: otherId, latestEntryDate: "2027-03-15" } },
     ],
     ["participant_data_changed", { details: { fields: ["lastName", "address", "phone"] } }],
-    // Contractual dates (5.7, PR 2h-3): old and new effective dates, the amendment, the tasks.
+    // Contractual dates (process-and-lifecycle.md, "BA reporting"): old and new effective dates,
+    // the amendment, the tasks.
     [
       "participation_dates_changed",
       {
@@ -583,9 +590,9 @@ describe("the other event types", () => {
         },
       },
     ],
-    // A participation created by hand: the base-defaults version (R26, round 33; PR 2h-2).
+    // A participation created by hand: the base-defaults version (Q107, round 33).
     ["participation_created_manually", { details: { baseDefaultsVersion: 1 } }],
-    // A confirmed import: counts and the base-defaults version (R26), project-level.
+    // A confirmed import: counts and the base-defaults version (Q107), project-level.
     [
       "import_confirmed",
       {
@@ -822,7 +829,8 @@ describe("the other event types", () => {
           },
         ] as [string, object],
     ),
-    // Relaxation events: a controlled reason code where there is one, ids only, R26's version.
+    // Relaxation events: a controlled reason code where there is one, ids only, the base-defaults
+    // version.
     [
       "rule_relaxation_requested",
       {
@@ -1002,7 +1010,7 @@ describe("the other event types", () => {
   });
 });
 
-describe("portal activation events (Slice 3 plan D21–D29)", () => {
+describe("portal activation events (ADR-0007)", () => {
   const participant = { type: "participant", participationId } as const;
   const portalJob = { type: "system", job: "portal-activation" } as const;
 
@@ -1144,6 +1152,35 @@ describe("portal login, channel and recovery events (Q130, ADR-0007, Q123)", () 
         actor: participant,
         reasonCode: "lost_access",
         details: { channelId: otherId, kind: "sms" },
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("placement_agentur_set (Q139)", () => {
+  const set = { ...base, type: "placement_agentur_set", actor: user };
+
+  it("names the new and the replaced key and the base-defaults version", () => {
+    for (const details of [
+      { agenturKey: "nord", baseDefaultsVersion: 1 },
+      { agenturKey: "sued", previousAgenturKey: "nord", baseDefaultsVersion: 1 },
+    ]) {
+      expect(issueCodes({ ...set, details })).toEqual([]);
+    }
+  });
+
+  it("takes keys only, of a participation", () => {
+    for (const details of [
+      { agenturKey: "Agentur Nord", baseDefaultsVersion: 1 },
+      { agenturKey: "nord", baseDefaultsVersion: 1, version: 2 },
+    ]) {
+      expect(AuditEvent.safeParse({ ...set, details }).success).toBe(false);
+    }
+    const ofProject = { ...set, participationId: null };
+    expect(
+      AuditEvent.safeParse({
+        ...ofProject,
+        details: { agenturKey: "nord", baseDefaultsVersion: 1 },
       }).success,
     ).toBe(false);
   });

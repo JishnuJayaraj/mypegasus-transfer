@@ -4,7 +4,7 @@ import { runMigrations } from "./migrate";
 import { seedProjectIds, seedRegionIds, seedStaffUserIds } from "./seed";
 import { auditContext, call, createWave, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
-// AC-13: the runtime role only has the grants that migrations give it explicitly.
+// ADR-0002: the runtime role only has the grants that migrations give it explicitly.
 const urls = testDatabaseUrls();
 const app = new Client({ connectionString: urls.app });
 const owner = new Client({ connectionString: urls.owner });
@@ -23,7 +23,7 @@ afterAll(() => Promise.all([app.end(), owner.end()]));
 beforeEach(() => resetTestDatabase({ seed: true }));
 
 describe("transfer_app", () => {
-  it("may select projects and memberships, and creates projects only through create_project (AC-1)", async () => {
+  it("may select projects and memberships, and creates projects only through create_project", async () => {
     await expect(insertProject(app)).rejects.toMatchObject(permissionDenied);
     const id = await call(app, "create_project", {
       name: "Grant-Test",
@@ -79,7 +79,7 @@ describe("transfer_app", () => {
   });
 });
 
-// AC-15 (plan 5.4, D2): statuses and audit events are written only by the status functions.
+// ADR-0002: statuses and audit events are written only by the status functions.
 const statusFunctions = [
   "lock_participation",
   "create_participation",
@@ -153,6 +153,8 @@ const statusFunctions = [
   "request_channel_code",
   "add_participant_channel",
   "remove_participant_channel",
+  // Slice 4a (PR 4a-1): the placement Agentur (Q139)
+  "set_placement_agentur",
 ];
 const helpers = [
   "assert_context",
@@ -210,7 +212,7 @@ const writes = (table: string, column: string, insert: string) => [
   [`truncate ${table}`, `truncate ${table}`],
 ];
 
-describe("transfer_app and the Slice 1 tables (AC-15)", () => {
+describe("transfer_app and the Slice 1 tables (ADR-0002)", () => {
   let participationId: string;
   let waveId: string;
   beforeEach(async () => {
@@ -329,8 +331,8 @@ describe("transfer_app and the Slice 1 tables (AC-15)", () => {
   });
 });
 
-// Plan 5.2, 5.3 (PR 2c-2, AC-40): template versions and pins are read by the app and written
-// only by pin_agentur_template.
+// ADR-0002, template versions and pins (PR 2c-2): template versions and pins are read by the app
+// and written only by pin_agentur_template.
 describe("transfer_app and the template tables", () => {
   const version = `insert into config_template_version (agentur_key, version, content, content_sha256)
     values ('x', 1, '{"kind":"regional_template","agenturKey":"x","version":1}', '${"0".repeat(64)}')`;
@@ -365,8 +367,8 @@ describe("transfer_app and the template tables", () => {
   });
 });
 
-// Plan 5.2, 5.3 (PR 2d-1, AC-40): override versions are read by the app and written only by
-// write_project_override.
+// ADR-0002, project override versions (PR 2d-1): override versions are read by the app and written
+// only by write_project_override.
 describe("transfer_app and the override table", () => {
   const insert = `insert into project_config_override (project_id, version, content, created_by)
     values ('${seedProjectIds.werkNord}', 1, '{"kind":"project_override","schemaVersion":1}', '${staffUserId}')`;
@@ -386,8 +388,8 @@ describe("transfer_app and the override table", () => {
   );
 });
 
-// Plan 5.2, 5.3 (PR 2h-3, AC-40): DSV amendments and BA reporting tasks are read by the app and
-// written only by set_participation_dates and the early-exit trigger.
+// process-and-lifecycle.md, "DSV amendment" (PR 2h-3): DSV amendments and BA reporting tasks are
+// read by the app and written only by set_participation_dates and the early-exit trigger.
 describe("transfer_app and the amendments and BA reporting tasks", () => {
   it("may select both", async () => {
     expect((await app.query("select id from participation_dsv_amendment")).rows).toEqual([]);
@@ -410,8 +412,8 @@ describe("transfer_app and the amendments and BA reporting tasks", () => {
   });
 });
 
-// Plan 5.2, 5.3 (PR 2d-2, AC-40): relaxation requests are read by the app and written only by
-// their functions.
+// ADR-0002, rule relaxation requests (PR 2d-2): relaxation requests are read by the app and written
+// only by their functions.
 describe("transfer_app and the relaxation requests", () => {
   const insert = `insert into config_relaxation_request (project_id, rule_id, reason_code, status, requested_by, requested_on)
     values ('${seedProjectIds.werkNord}', 'base-import-address', 'source_data_not_provided', 'requested', '${staffUserId}', '2026-10-17')`;
@@ -501,7 +503,7 @@ describe("transfer_app and activation evidence", () => {
 
 // Slice 3 (PR 3e): accounts, channels, consents, one-time codes and participant sessions are read
 // by the app and written only by the activation functions; of a session, the app may touch
-// `last_seen_at` alone (D29).
+// `last_seen_at` alone (ADR-0007, participant sessions).
 describe("transfer_app and the participant activation tables", () => {
   it("may select them", async () => {
     for (const table of [
@@ -575,7 +577,7 @@ const insertRun = (client: Client, runDate = "2025-04-01") =>
     [runDate, `${runDate}T02:15:00Z`],
   );
 
-// Plan 5.4 grants, 5.10, round 19: one row per job and run day, written once and never changed.
+// ADR-0011, round 19: one row per job and run day, written once and never changed.
 describe("transfer_app and job_run (PR 1h-1)", () => {
   it("may insert and select runs; the database records the completion", async () => {
     await insertRun(app);
@@ -637,8 +639,8 @@ describe("transfer_app and job_run (PR 1h-1)", () => {
   });
 });
 
-// Plan 5.2, 5.11 (PR 2g, AC-31, AC-40): saved import mappings hold no personal data and no audit
-// is needed (D2): the app reads, adds and replaces them, but never deletes or truncates them.
+// data-protection.md, retention (PR 2g): saved import mappings hold no personal data and no audit
+// is needed: the app reads, adds and replaces them, but never deletes or truncates them.
 const hmac = (digit: string) => digit.repeat(64);
 const insert = (header: string, target = "lastName") =>
   `insert into import_column_mapping (project_id, header_hmac, target, updated_by)

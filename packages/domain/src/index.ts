@@ -126,6 +126,15 @@ export {
   type PinPlan,
 } from "./projects/pins";
 export {
+  PlacementAgenturChoice,
+  placementAgenturCapability,
+  placementAgenturChoices,
+  planPlacementAgentur,
+  SetPlacementAgenturInput,
+  type PlacementAgenturPlan,
+  type PlacementAgenturRefusal,
+} from "./projects/placement-agentur";
+export {
   AgenturKey,
   AgenturSettingSource,
   AsuChannel,

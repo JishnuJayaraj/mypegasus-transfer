@@ -12,6 +12,9 @@ import {
 import { DsvStatus, MainStatus, ProfilingStatus } from "./lifecycle/enums";
 import { ActivationStatus } from "./activation/status";
 import { PrivacyNoticeState } from "./privacy/notice-state";
+import { AgenturKey } from "./projects/agentur-settings";
+import { ConfigBlocker } from "./projects/pins";
+import { PlacementAgenturChoice } from "./projects/placement-agentur";
 
 const activationCapabilities = z.strictObject({
   issueActivationCode: z.boolean(),
@@ -21,8 +24,8 @@ const activationCapabilities = z.strictObject({
 });
 
 /**
- * A participation in the project's list (Slice 2 plan 5.12, R19). Only fields the viewer may
- * `list` (decideAccess, the field catalog's `listable`) carry a value; the person fields are
+ * A participation in the project's list (data-protection.md, access matrix). Only fields the viewer
+ * may `list` (decideAccess, the field catalog's `listable`) carry a value; the person fields are
  * absent for a viewer who may not list them. Paged by `(created_at, id)`, never by a name or a
  * Personalnummer.
  */
@@ -33,6 +36,8 @@ export const ParticipationListItem = z
     profilingStatus: ProfilingStatus,
     dsvStatus: DsvStatus,
     entryWaveId: z.uuid().nullable(),
+    /** The Agentur the participant is placed with (Q139); `null` until it is set. */
+    placementAgenturKey: AgenturKey.nullable(),
     personnelNumber: z.string().optional(),
     lastName: z.string().optional(),
     firstName: z.string().optional(),
@@ -47,7 +52,9 @@ export type ParticipationListItem = z.infer<typeof ParticipationListItem>;
 
 export const ParticipationPage = page(ParticipationListItem).meta({ id: "ParticipationPage" });
 
-/** Hints derived for the detail, never stored (plan 5.13; like the planner's flags). */
+/**
+ * Hints derived for the detail, never stored (process-and-lifecycle.md; like the planner's flags).
+ */
 export const ParticipationHint = z.enum(["tg_start_missed", "new_start_needs_ba_review"]);
 export type ParticipationHint = z.infer<typeof ParticipationHint>;
 
@@ -63,7 +70,7 @@ export const ParticipantAddress = z
 export type ParticipantAddress = z.infer<typeof ParticipantAddress>;
 
 /**
- * Why the wave choice is closed (review of PR 2h-1): no permission, the first failing rule of
+ * Why the wave choice is closed: no permission, the first failing rule of
  * `assignEntryWave` in its order, or no other wave of the project to choose.
  */
 export const AssignEntryWaveRefusal = z.enum([
@@ -80,7 +87,10 @@ export type AssignEntryWaveRefusal = z.infer<typeof AssignEntryWaveRefusal>;
 export const SetParticipationDatesRefusal = z.enum(["forbidden", ...DatesPrecondition.options]);
 export type SetParticipationDatesRefusal = z.infer<typeof SetParticipationDatesRefusal>;
 
-/** A DSV amendment as the detail shows it (R41, R42): dates, codes and the confirming staff id. */
+/**
+ * A DSV amendment as the detail shows it (process-and-lifecycle.md): dates, codes and the
+ * confirming staff id.
+ */
 export const DsvAmendmentView = z
   .strictObject({
     id: z.uuid(),
@@ -98,7 +108,7 @@ export const DsvAmendmentView = z
   .meta({ id: "DsvAmendment" });
 export type DsvAmendmentView = z.infer<typeof DsvAmendmentView>;
 
-/** A BA reporting task as the detail shows it (R38, R42). */
+/** A BA reporting task as the detail shows it (process-and-lifecycle.md, "BA reporting"). */
 export const BaReportingTaskView = z
   .strictObject({
     id: z.uuid(),
@@ -114,7 +124,7 @@ export type BaReportingTaskView = z.infer<typeof BaReportingTaskView>;
 const recorded = <T extends z.ZodType>(schema: T) => schema.nullable().optional();
 
 /**
- * One participation for its detail page (Slice 2 plan, "Planned in PR 2h", R30, R31; AC-34). The
+ * One participation for its detail page (data-protection.md, "Participation detail"). The
  * case data (statuses, wave, dates) is shown only to a viewer who may read all of it; each person
  * field is absent where the viewer may not read it and `null` where nothing is recorded. The
  * capabilities are derived by the server; the routes decide again.
@@ -152,6 +162,25 @@ export const ParticipationDetail = z
       profilingDoneOn: isoDate.nullable(),
     }),
     hints: z.array(ParticipationHint),
+    /**
+     * The Agentur the participant is placed with (Q139), and when it was set; `null` until then.
+     */
+    placementAgenturKey: AgenturKey.nullable(),
+    placementAgenturSetAt: z.iso
+      .datetime()
+      .nullable()
+      .meta({ description: "UTC timestamp (ISO 8601)" }),
+    /**
+     * The participant-level blockers of this participation's chain: base, the placement Agentur's
+     * pinned template, the override (Q76, Q91, Q92). Without a template the Agentur submission
+     * stays blocked; collecting data does not.
+     */
+    submissionBlockers: z.array(ConfigBlocker),
+    /**
+     * The Agenturen offered for `setPlacementAgentur` (empty without it); a free key is possible
+     * too.
+     */
+    placementAgenturChoices: z.array(PlacementAgenturChoice),
     person: z.strictObject({
       personnelNumber: recorded(z.string()),
       lastName: recorded(z.string()),
@@ -164,7 +193,7 @@ export const ParticipationDetail = z
       privateEmail: recorded(z.string()),
       workEmail: recorded(z.string()),
     }),
-    /** Absent where the viewer may not read them (R42); newest last. */
+    /** Absent where the viewer may not read them; newest last. */
     amendments: z.array(DsvAmendmentView).optional(),
     baReportingTasks: z.array(BaReportingTaskView).optional(),
     /** The consultants it is assigned to (Q62), oldest assignment first. */
@@ -180,6 +209,8 @@ export const ParticipationDetail = z
       recordHandover: z.boolean(),
       revokeActivationCode: z.boolean(),
       providePrivacyNotice: z.boolean(),
+      /** Set the placement Agentur (the PL or back office, while not terminal, Q139). */
+      setPlacementAgentur: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({
@@ -190,7 +221,7 @@ export const ParticipationDetail = z
   .meta({ id: "ParticipationDetail" });
 export type ParticipationDetail = z.infer<typeof ParticipationDetail>;
 
-/** `PUT /participations/{id}/entry-wave` (R33). */
+/** `PUT /participations/{id}/entry-wave` (process-and-lifecycle.md, assigning a wave). */
 export const AssignEntryWaveInput = z
   .strictObject({ waveId: z.uuid() })
   .meta({ id: "AssignEntryWaveInput" });

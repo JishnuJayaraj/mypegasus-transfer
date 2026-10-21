@@ -3,6 +3,7 @@ export {
   Button,
   ButtonSet,
   Checkbox,
+  ComboBox,
   FileUploaderButton,
   Form,
   HeaderGlobalAction,

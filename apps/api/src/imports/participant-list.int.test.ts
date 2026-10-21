@@ -49,6 +49,7 @@ describe("GET /api/v1/projects/{projectId}/participations (AC-33)", () => {
         "id",
         "lastName",
         "personnelNumber",
+        "placementAgenturKey",
         "privacyNoticeState",
         "profilingStatus",
         "status",

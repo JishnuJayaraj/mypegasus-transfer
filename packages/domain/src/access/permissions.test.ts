@@ -62,7 +62,8 @@ const allowed = (check: (actor: Actor) => { ok: boolean }) =>
     .map(([key]) => key)
     .join(" ");
 
-// Q60, Q80, plan 5.6: track from to actor kind → who may take it. Restated by hand.
+// Q60, Q80 (data-protection.md, access matrix): track from to actor kind → who may take it.
+// Restated by hand.
 const transitions = `
 main - imported user manual: PL
 main imported contacted user manual: PL C
@@ -103,7 +104,7 @@ dsv dsv_expired dsv_offered user manual: PL BO`
 
 const edgeKey = (e: Edge) => [e.track, e.from ?? "-", e.to, e.actor, e.kind].join(" ");
 
-describe("mayPerformTransition (AC-28, Q60)", () => {
+describe("mayPerformTransition (Q60)", () => {
   it("restates every edge", () => {
     expect(transitions.map(([key]) => key)).toEqual(edges.map(edgeKey));
   });
@@ -135,7 +136,7 @@ describe("mayPerformTransition (AC-28, Q60)", () => {
     expect(result(mayPerformTransition(actors.ROM!, contact, target))).toBe("role_not_allowed");
   });
 
-  it("lets a participant take only the activation edges of their own participation (D25)", () => {
+  it("lets a participant take only the activation edges of their own participation (ADR-0007)", () => {
     const activation = edges.find((e) => e.kind === "activation")!;
     expect(result(mayPerformTransition(participant, activation, target))).toBe("ok");
     const other = { ...target, participationId: "participation-b" };
@@ -176,6 +177,7 @@ const operations: Record<OperationKind, string> = {
   recordHandover: "PL BO",
   revokeActivationCode: "PL BO",
   providePrivacyNotice: "PL BO",
+  setPlacementAgentur: "PL BO",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {
@@ -210,7 +212,7 @@ const correction = (correctionTarget: EvidenceCorrectionTarget) =>
 const correctedField = (fieldKey: string, entryId?: string) =>
   correction({ kind: "field", fieldKey, ...(entryId && { entryId }) });
 
-describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
+describe("mayPerformOperation (Q60, Q80)", () => {
   it("lists every operation", () => {
     expect(Object.keys(operations)).toEqual(OperationKind.options);
   });
@@ -227,7 +229,7 @@ describe("mayPerformOperation (AC-25, AC-28, Q60, Q80)", () => {
       "reviewReconciliation",
       "reviewBreakGlass",
       "approveEvidenceCorrection",
-      "decideRelaxation", // AC-15: never the requester (R2)
+      "decideRelaxation", // never the requester (regional-variation.md, rule relaxations)
     ] as const) {
       expect([kind, result(mayPerformOperation(rom, operation(kind, "staff-r"), target))]).toEqual([
         kind,

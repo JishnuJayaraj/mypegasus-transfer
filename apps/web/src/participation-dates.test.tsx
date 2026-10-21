@@ -11,8 +11,8 @@ import {
   unpinnedConfig,
 } from "./test-utils";
 
-// Slice 2 plan 5.7 (PR 2h-3; rounds 32–34): the PL changes the contractual TG dates; a signed DSV
-// asks for its amendment; amendments and BA reporting tasks are listed.
+// process-and-lifecycle.md, Dates (rounds 32–34): the PL changes the contractual TG dates; a signed
+// DSV asks for its amendment; amendments and BA reporting tasks are listed.
 const participationId = "00000000-0000-4000-a000-000000000001";
 const projectPath = `/api/v1/projects/${project.id}`;
 const detailPath = `/api/v1/participations/${participationId}`;
@@ -45,6 +45,10 @@ const detail = {
     profilingDoneOn: null,
   },
   hints: [],
+  placementAgenturKey: null,
+  placementAgenturSetAt: null,
+  submissionBlockers: [],
+  placementAgenturChoices: [],
   person: { personnelNumber: "BSP-0001", lastName: "Mustermann", firstName: "Erika" },
   amendments: [],
   baReportingTasks: [],
@@ -59,6 +63,7 @@ const detail = {
     recordHandover: false,
     revokeActivationCode: false,
     providePrivacyNotice: false,
+    setPlacementAgentur: false,
   },
   refusals: { assignEntryWave: "no_other_wave", setParticipationDates: null },
 };

@@ -316,6 +316,20 @@
       "when": 1792580050057,
       "tag": "0044_portal_login_channels_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792599227199,
+      "tag": "0045_placement_agentur",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1792599251361,
+      "tag": "0046_placement_agentur_functions",
+      "breakpoints": true
     }
   ]
 }

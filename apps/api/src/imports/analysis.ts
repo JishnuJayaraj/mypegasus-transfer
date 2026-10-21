@@ -44,9 +44,9 @@ import { headerHmac } from "./keys";
 import { defaultParseDeps, parseSpreadsheet } from "./parse";
 import type { Slots } from "./slots";
 
-// What the preview and the confirm share (Slice 2 plan 5.11, D6): the state a plan needs, the
-// mapping suggestions, the analysis of a file against that state, the report and the digest the
-// preview token binds. Nothing here logs a file name, a header or a value.
+// What the preview and the confirm share (process-and-lifecycle.md, Import): the state a plan
+// needs, the mapping suggestions, the analysis of a file against that state, the report and the
+// digest the preview token binds. Nothing here logs a file name, a header or a value.
 
 export type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
@@ -76,7 +76,7 @@ export type ImportContext = {
   release: Release;
   clock: Clock;
   logger: Logger;
-  /** The parse-worker slots (R43). */
+  /** The parse-worker slots (ADR-0010, uploads). */
   slots: Slots;
   /** Keys derived from `SESSION_SECRET` (keys.ts). */
   mapKey: Buffer;
@@ -120,7 +120,8 @@ export async function loadState(
     .select({ customerName: project.customerName })
     .from(project)
     .where(eq(project.id, projectId))) as [{ customerName: string }];
-  // A participation has no placement Agentur yet (R12): the base-only chain, plus the project's.
+  // The import's required targets are base rules, and a new participation has no placement
+  // Agentur (regional-variation.md, "Placement Agentur"): the base-only chain, plus the project's.
   const resolution = resolveForParticipation({ ...snapshot.input, placementAgenturKey: null });
   const relaxedRuleIds = new Set(resolution.config.relaxed.map(({ ruleId }) => ruleId));
   const rows = await tx
@@ -163,7 +164,10 @@ export async function loadState(
   return { type: snapshot.project.type, customerName, relaxedRuleIds, existing, stored };
 }
 
-/** The wave of a new participation: only a `ta_tg` project's own waves (5.6). */
+/**
+ * The wave of a new participation: only a `ta_tg` project's own waves (process-and-lifecycle.md,
+ * Dates).
+ */
 export async function checkWave(
   tx: Tx,
   state: State,
@@ -182,8 +186,9 @@ export async function checkWave(
 type Source = "project" | "customer" | "builtin";
 
 /**
- * The suggested target per column (5.11): this project's saved mappings first, then those of the
- * project's customer (other projects, newest first), then the built-in synonyms; one target once.
+ * The suggested target per column (process-and-lifecycle.md, Import): this project's saved mappings
+ * first, then those of the project's customer (other projects, newest first), then the built-in
+ * synonyms; one target once.
  */
 export async function suggest(
   tx: Tx,
@@ -414,8 +419,9 @@ export const binding = (
 });
 
 /**
- * Writes a participation's person data through `write_participant_data` (5.3): a missing value is
- * `null`, which keeps the stored one (Q103: an empty cell never clears data).
+ * Writes a participation's person data through `write_participant_data` (data-protection.md,
+ * person-data writes): a missing value is `null`, which keeps the stored one (Q103: an empty cell
+ * never clears data).
  */
 export function writeParticipantData(
   tx: Tx,

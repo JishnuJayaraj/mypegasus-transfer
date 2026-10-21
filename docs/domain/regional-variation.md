@@ -76,7 +76,7 @@ Project
   └─ projectAgenturKey (the KuG-Agentur for ta_tg, Q90), the snapshotted template versions per
      Agentur and the override (Slice 2)
 Participation
-  └─ placementAgenturKey   (from place of residence)
+  └─ placementAgenturKey   (set by the PL or back office, Q139; see "Placement Agentur" below)
 ```
 
 - **Channel values** are enums in the schema: ASU `kug_200b` / `online_self` / `in_person`;
@@ -131,10 +131,11 @@ Participation
   same JSON Schema as regional templates. It describes the nationwide
   process (fields required by TL 407 and Kug 200b, standard documents). Templates only add or
   change things relative to it.
-- **Template versions are pinned** per project *(provisional, Q36)*. When a participant with a
-  new placement Agentur joins, the current version of that Agentur's template is snapshotted
-  into the project. A PL can **migrate** a project to a newer version explicitly. This
-  recomputes completeness. Generated documents always keep the version they were made with.
+- **Template versions are pinned** per project *(provisional, Q36)*. When a participation gets a
+  placement Agentur the project hasn't pinned, the latest version of that Agentur's template is
+  pinned (snapshotted) into the project in the same step (Q139, "Placement Agentur" below). A PL
+  can **migrate** a project to a newer version explicitly. This recomputes completeness.
+  Generated documents always keep the version they were made with.
 - **Field schemas are JSON Schema** (ADR-0004) stored as data and compiled to validators at runtime. Zod
   source code cannot be configuration. Core fields are real columns. Custom fields are `jsonb`,
   validated by the resolved schema.
@@ -175,8 +176,9 @@ Participation
 - **Required import targets** (`isRequired` in `packages/domain/src/import/targets.ts`,
   `apps/api/src/imports/analysis.ts`): Personalnummer, last and first name always (the import
   ignores a relaxation of their rules); date of birth, Austrittsdatum and the address unless the
-  resolution for the base-only participant chain plus the project level (a participation has no
-  placement Agentur yet) relaxes `base-import-birthDate`, `-oldEmploymentEndDate` or `-address`.
+  resolution for the base-only participant chain plus the project level (the import rules are
+  base rules, and a new participation has no placement Agentur) relaxes `base-import-birthDate`,
+  `-oldEmploymentEndDate` or `-address`.
   An approved relaxation lifts exactly its target.
 - **Project types** (Q89): a rule may name the project types it applies to (`projectTypes`;
   absent = every type). Completeness skips a rule for another type, so it is never a missing
@@ -223,6 +225,25 @@ Participation
   2e-2), never a plain pin (the database refuses it too). `GET /api/v1/projects/{id}/config` shows the pins and, from the
   snapshot, the project's blockers, each pinned Agentur's step-scoped blockers and the activation
   blockers.
+- **Placement Agentur (Q139, PR 4a-1):** the PL or back office of the project sets a
+  participation's placement Agentur (`PUT /api/v1/participations/{id}/placement-agentur`) to any
+  key in the template key format, from the catalog or not, while the participation isn't
+  terminal, in a draft or an active project; a consultant, an org role and assisted mode can't.
+  A catalog Agentur the project hasn't pinned is pinned at its **latest** catalog version in the
+  same transaction as the key (`set_placement_agentur` calls `pin_agentur_template`, so content
+  and hash are checked as for every pin; `config_template_pinned`). An Agentur the project has
+  pinned keeps its pinned version (a newer one is a migration). If the override wouldn't validate
+  with the new template (cross-chain validation below), nothing is written (`override_invalid`
+  with the issues). A key without a template is accepted: that participation resolves base +
+  override (+ an Agentur-scoped setting for its key) and its Agentur submission stays blocked
+  (Q76); data collection and profiling go on. The same key again is
+  `placement_agentur_unchanged`, a terminal participation `participation_closed`. Each change is
+  audited as `placement_agentur_set` (new and replaced key, `baseDefaultsVersion`). The
+  participation detail shows the key, when it was set and the participant-level blockers of its
+  own chain; the PL and back office get the catalog's and the project's Agenturen to choose from,
+  or type a free key. There is no postcode mapping: the choice is the staff's. A participant
+  address change after the choice shows "Vermittlungs-Agentur prüfen" on the detail (PR 4a-2,
+  derived, never stored); nothing changes automatically.
 - **Agentur-scoped settings (PR 2d-1):** the PL sets or removes one per Agentur key, also for an
   Agentur without a template (`PUT`/`DELETE /api/v1/projects/{id}/config/agentur-settings/{key}`),
   with its settings, a source (`phone_call_agentur`, `email_agentur`, `letter_agentur`,
@@ -267,7 +288,8 @@ Participation
   invalid is refused with its issues. Afterwards that Agentur resolves from the new version; the
   others are unchanged. Completeness is derived, so it follows the new version; generated
   documents don't exist yet.
-- **Cross-chain validation (round 15):** every override write and every pin validates the
+- **Cross-chain validation (round 15):** every override write and every pin (also the automatic
+  pin of a placement Agentur) validates the
   override against the base-only chain and every pinned Agentur chain
   (`validateProjectOverride`): a rule on a custom field only one template declares, an override
   field a template declares too, a relaxation of a locked rule, a relaxation that matches no chain
@@ -280,7 +302,8 @@ Participation
 - **Base defaults** are release-managed, not pinned (Q107); configuration-dependent audit events
   record their `version` as `baseDefaultsVersion`: `project_activated`, `config_template_pinned`,
   `config_override_changed`, `rule_relaxation_requested`, `rule_relaxation_approved`,
-  `import_confirmed`, `participation_created_manually` (`configurationDependentEventTypes` in
+  `import_confirmed`, `participation_created_manually`, `placement_agentur_set`
+  (`configurationDependentEventTypes` in
   `packages/domain/src/audit/events.ts`; a test keeps the list exact).
 - **Where the files are at runtime:** the repo paths in dev and tests; the API build copies the
   templates and the base defaults to `apps/api/dist/config/`, and `CONFIG_DIR` points the built

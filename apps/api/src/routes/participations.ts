@@ -33,6 +33,9 @@ import {
   ParticipationDetail,
   participationListScope,
   ParticipationPage,
+  placementAgenturCapability,
+  placementAgenturChoices,
+  SetPlacementAgenturInput,
   type AssignedConsultant,
   type ParticipationListItem,
   type StaffUser,
@@ -51,7 +54,13 @@ import {
   lifecycleRunCompleted,
   StatusServiceError,
 } from "../participations/status-service";
-import { loadRelease } from "../projects/template-pins";
+import { setPlacementAgentur } from "../participations/placement-agentur";
+import {
+  loadRelease,
+  participationSubmissionBlockers,
+  projectSnapshot,
+  snapshotOf,
+} from "../projects/template-pins";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
 import { utc } from "../sql";
@@ -99,7 +108,7 @@ const waveColumns = {
   latestEntryDate: projectEntryWave.latestEntryDate,
 };
 
-/** A status service refusal as its problem (R21): codes only, never a value. */
+/** A status service refusal as its problem (ADR-0010): codes only, never a value. */
 function refusal(c: Context, error: unknown) {
   if (!(error instanceof StatusServiceError)) throw error;
   if (error.kind === "not_found") return problem(c, "not-found");
@@ -221,9 +230,9 @@ export function participationRoutes(deps: Deps) {
   }
 
   /**
-   * One participation for the user (R29–R31): undefined when it doesn't exist or its project is
-   * hidden from them (both a 404, so its existence isn't revealed), null when they may read none
-   * of its case data (a 403).
+   * One participation for the user (data-protection.md, "Participation detail"): undefined when it
+   * doesn't exist or its project is hidden from them (both a 404, so its existence isn't revealed),
+   * null when they may read none of its case data (a 403).
    */
   async function detailOf(user: StaffUser, participationId: string) {
     const [row] = await db
@@ -234,6 +243,7 @@ export function participationRoutes(deps: Deps) {
         identity: participantIdentity,
         details: participantDetails,
         receivedOn: sql<string>`to_char(${participation.createdAt} at time zone 'Europe/Berlin', 'YYYY-MM-DD')`,
+        placementAgenturSetAt: utc(participation.placementAgenturSetAt),
       })
       .from(participation)
       .innerJoin(project, eq(project.id, participation.projectId))
@@ -249,10 +259,14 @@ export function participationRoutes(deps: Deps) {
     const dates = { tgStart: p.tgStart, tgEnd: p.tgEnd, offerDeadline: p.offerDeadline };
     const today = clock.today();
     // The wave choice is offered when the PL may assign one and some other wave of the project
-    // passes the domain rule; otherwise the reason, permission first (R31, round 26).
+    // passes the domain rule; otherwise the reason, permission first (round 26).
     const target = projectTarget(p.projectId, regionId, participationId);
     const permitted = (
-      kind: "assignEntryWave" | "setParticipationDates" | "assignParticipations",
+      kind:
+        | "assignEntryWave"
+        | "setParticipationDates"
+        | "assignParticipations"
+        | "setPlacementAgentur",
     ) => mayPerformOperation(subject, { kind }, target).ok;
     const waves = await db
       .select({ id: projectEntryWave.id })
@@ -309,6 +323,9 @@ export function participationRoutes(deps: Deps) {
     const states = (
       await statesOf([participationId], new Map([[participationId, row.receivedOn]]))
     ).get(participationId)!;
+    // The participation's own chain (Q139): its placement Agentur's pinned template, if any.
+    const snapshot = (await projectSnapshot(db, release, p.projectId))!;
+    const setPlacement = placementAgenturCapability(p.status, permitted("setPlacementAgentur"));
     return participationDetail(
       subject,
       {
@@ -322,6 +339,20 @@ export function participationRoutes(deps: Deps) {
         profilingStatus: p.profilingStatus,
         dsvStatus: p.dsvStatus,
         statusVersion: p.statusVersion,
+        placementAgentur: {
+          placementAgenturKey: p.placementAgenturKey,
+          placementAgenturSetAt: row.placementAgenturSetAt,
+          submissionBlockers: participationSubmissionBlockers(
+            snapshot.input,
+            p.placementAgenturKey,
+          ),
+          placementAgenturChoices: setPlacement
+            ? placementAgenturChoices(
+                release.catalog,
+                snapshot.pins.map((pin) => ({ ...pin, label: snapshotOf(pin).label })),
+              )
+            : [],
+        },
         wave,
         dates: {
           ...dates,
@@ -360,6 +391,7 @@ export function participationRoutes(deps: Deps) {
           setParticipationDates: datesChange.allowed,
           assignParticipations: permitted("assignParticipations"),
           ...activationCapabilities(subject, p.projectId, regionId, participationId),
+          setPlacementAgentur: setPlacement,
         },
         refusals: {
           assignEntryWave: assignment.refusal,
@@ -399,7 +431,7 @@ export function participationRoutes(deps: Deps) {
       }
       const { subject, visible, regionId } = await projectAccess(db, sessionUser(c), projectId);
       if (!visible) return problem(c, "not-found");
-      // R29: the PL and back office list every participation, an assigned consultant exactly
+      // The PL and back office list every participation, an assigned consultant exactly
       // theirs; a viewer who may list none (an unassigned consultant, an org role) gets a 403.
       // The per-row decision below stays.
       const scope = participationListScope(subject, projectId);
@@ -444,6 +476,7 @@ export function participationRoutes(deps: Deps) {
           profilingStatus: participation.profilingStatus,
           dsvStatus: participation.dsvStatus,
           entryWaveId: participation.entryWaveId,
+          placementAgenturKey: participation.placementAgenturKey,
           personnelNumber: participantIdentity.personnelNumber,
           lastName: participantIdentity.lastName,
           firstName: participantIdentity.firstName,
@@ -484,6 +517,7 @@ export function participationRoutes(deps: Deps) {
               profilingStatus: row.profilingStatus,
               dsvStatus: row.dsvStatus,
               entryWaveId: row.entryWaveId,
+              placementAgenturKey: row.placementAgenturKey,
               consultants: consultants.get(row.id) ?? [],
               ...states.get(row.id)!,
               activationCapabilities: activationCapabilities(subject, projectId, regionId, row.id),
@@ -534,7 +568,8 @@ export function participationRoutes(deps: Deps) {
     async (c) => {
       const user = sessionUser(c);
       const { projectId } = c.req.valid("param");
-      // Visibility (404) and the PL's permission (403) first, like the import (R32).
+      // Visibility (404) and the PL's permission (403) first, like the import
+      // (process-and-lifecycle.md, "Import and manual creation").
       const { subject, visible, regionId } = await projectAccess(db, user, projectId);
       if (!visible) return problem(c, "not-found");
       const target = projectTarget(projectId, regionId);
@@ -692,6 +727,62 @@ export function participationRoutes(deps: Deps) {
         if (error instanceof DatesRefusal) return domainProblem(c, error.issues);
         return refusal(c, error);
       }
+      const detail = await detailOf(user, participationId);
+      return detail ? c.json(detail, 200) : problem(c, "forbidden");
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "put",
+      path: "/participations/{participationId}/placement-agentur",
+      tags: ["participations"],
+      summary:
+        "Set the participation's placement Agentur (the PL or back office, while not terminal); pins an unpinned catalog Agentur at its latest version; returns the participation",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: SetPlacementAgenturInput } },
+        },
+      },
+      responses: {
+        200: json(ParticipationDetail, "The participation with its placement Agentur"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { participationId } = c.req.valid("param");
+      // Visibility first, so a hidden participation is a 404 whatever the body says.
+      const [found] = await db
+        .select({ projectId: participation.projectId })
+        .from(participation)
+        .where(eq(participation.id, participationId));
+      if (!found) return problem(c, "not-found");
+      const access = await projectAccess(db, user, found.projectId);
+      if (!access.visible) return problem(c, "not-found");
+      const target = projectTarget(found.projectId, access.regionId, participationId);
+      if (!mayPerformOperation(access.subject, { kind: "setPlacementAgentur" }, target).ok) {
+        return problem(c, "forbidden");
+      }
+      const result = await setPlacementAgentur(
+        db,
+        release,
+        { staffUserId: user.id, requestId: c.get("requestId") as string },
+        participationId,
+        c.req.valid("json").agenturKey,
+      );
+      if (result === null) return problem(c, "not-found");
+      if (result === "forbidden") return problem(c, "forbidden");
+      if (result !== true) return domainProblem(c, result.issues);
       const detail = await detailOf(user, participationId);
       return detail ? c.json(detail, 200) : problem(c, "forbidden");
     },
