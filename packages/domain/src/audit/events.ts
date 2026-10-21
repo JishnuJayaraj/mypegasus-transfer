@@ -107,7 +107,7 @@ export const AuditEventType = z.enum([
   "activation_code_locked",
   "one_time_code_exhausted",
   "participant_logout",
-  // Slice 3, portal login, channels and recovery (D24, D27, D28): only their functions write them
+  // Slice 3, portal login, channels and recovery (Q130, ADR-0007, Q123): only their functions write them
   "participant_login",
   "contact_channel_removed",
   "consent_ended",
@@ -398,8 +398,8 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
 ]);
 
 /**
- * A participant's login (D27): by a one-time code to a channel, or by completing a recovery
- * (D24), which names its code. Logouts are `participant_logout`.
+ * A participant's login (ADR-0007): by a one-time code to a channel, or by completing a recovery
+ * (Q130), which names its code. Logouts are `participant_logout`.
  */
 const participantLogin = event("participant_login", {
   ...ofParticipation,
@@ -658,7 +658,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
   }),
   event("participant_logout", { ...ofParticipation, details: noDetails }),
   participantLogin,
-  /** A channel ended (D28, D24): the participant removed it, or a completed recovery replaced it. */
+  /** A channel ended (Q123, Q130): the participant removed it, or a completed recovery replaced it. */
   event("contact_channel_removed", {
     ...ofParticipation,
     reasonCode: ChannelRemovalReason,
@@ -670,7 +670,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
     reasonCode: ConsentEndReason,
     details: z.strictObject({ consentId: z.uuid(), channelId: z.uuid(), purpose: ConsentPurpose }),
   }),
-  /** A recovery code was issued (D24): the sessions ended and these channels were suspended. */
+  /** A recovery code was issued (Q130): the sessions ended and these channels were suspended. */
   event("contact_channels_suspended", {
     ...ofParticipation,
     reasonCode: ChannelSuspensionReason,

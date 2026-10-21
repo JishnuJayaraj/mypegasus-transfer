@@ -19,7 +19,7 @@ const db = createDb(env.databaseUrl);
 const clock = createClock({ CLOCK: env.clock, NODE_ENV: env.nodeEnv });
 // One set of senders for the API and the jobs (the activation notice, D21).
 const senders = messaging({ env, clock, logger });
-// Login-code sends finish after their response (D27); shutdown waits for them.
+// Login-code sends finish after their response (ADR-0007); shutdown waits for them.
 const detached = createDetached(logger);
 // pg-boss in this process (D7) as the runtime role, before listening: a schema `db:migrate`
 // hasn't installed fails the start (plan 5.9).

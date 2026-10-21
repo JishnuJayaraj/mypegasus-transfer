@@ -20,7 +20,7 @@ type PrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][num
 type Channel = "letter" | "sheet" | "in_person";
 
 /**
- * Lost access after activation (Slice 3 plan D24, Q130): after staff verified the person, a
+ * Lost access after activation (Q130): after staff verified the person, a
  * recovery code by any channel. Issuing it ends the participant's sessions and suspends their
  * channels at once, so the panel says so before the button. A letter's or sheet's code lives only
  * in the print view; closing it drops the code.

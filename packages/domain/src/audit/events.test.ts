@@ -1072,7 +1072,7 @@ describe("portal activation events (Slice 3 plan D21–D29)", () => {
   });
 });
 
-describe("portal login, channel and recovery events (Slice 3 plan D24, D27, D28)", () => {
+describe("portal login, channel and recovery events (Q130, ADR-0007, Q123)", () => {
   const participant = { type: "participant", participationId } as const;
 
   it.each([

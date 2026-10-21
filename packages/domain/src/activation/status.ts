@@ -40,7 +40,7 @@ export function activationStatus(
   code: ActivationCodeSnapshot | null,
   now: string,
 ): ActivationStatus {
-  // An activated account shows only a recovery code's state (D24).
+  // An activated account shows only a recovery code's state (Q130).
   if (!code || (accountActivated && code.purpose !== "recovery")) {
     return {
       account: accountActivated ? "activated" : "not_activated",

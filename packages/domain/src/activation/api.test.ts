@@ -20,7 +20,7 @@ describe("batch activation-code input", () => {
   });
 });
 
-describe("recovery-code input (D24)", () => {
+describe("recovery-code input (Q130)", () => {
   it("needs the staff's verification, and for in person the photo-ID check and an address", () => {
     expect(
       RecoveryCodeInput.parse({ purpose: "recovery", channel: "letter", identityVerified: true }),

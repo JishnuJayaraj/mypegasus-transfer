@@ -4,7 +4,7 @@ import { Checkbox, Stack } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 
 /**
- * The consent text of the portal contact purpose (Slice 3 plan D28) and the participant's
+ * The consent text of the portal contact purpose (Q123) and the participant's
  * agreement: each channel has its own consent record, at activation and when one is added.
  */
 export function Consent({

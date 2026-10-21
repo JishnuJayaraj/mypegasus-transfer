@@ -47,7 +47,7 @@ function targets() {
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe("createShutdown", () => {
-  it("closes the pool only after the detached sends finished (login codes, D27)", async () => {
+  it("closes the pool only after the detached sends finished (login codes, ADR-0007)", async () => {
     const t = targets();
     const sent = deferred();
     const detached = { settle: vi.fn<() => Promise<void>>(() => sent.promise) };

@@ -115,7 +115,7 @@ describe("activation (D22, D23)", () => {
     expect(document.documentElement.lang).toBe("en");
   });
 
-  it("says a recovery restored the access (D24)", async () => {
+  it("says a recovery restored the access (Q130)", async () => {
     const user = userEvent.setup();
     const recovery = { purpose: "recovery", channel: "sheet" };
     renderPortal("/portal/activate#ABCD2345EFGH", {

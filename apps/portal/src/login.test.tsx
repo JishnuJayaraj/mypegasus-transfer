@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "./i18n";
 import { json, me, problem, renderPortal } from "./test-utils";
 
-// Slice 3 plan, PR 3f: the portal login (D27) over a fake API.
+// PR 3f: the portal login (ADR-0007) over a fake API.
 afterEach(async () => {
   await i18n.changeLanguage("de");
 });
@@ -12,7 +12,7 @@ afterEach(async () => {
 const portalCalls = (calls: { path: string; body?: Record<string, unknown> }[]) =>
   calls.filter((call) => call.path.startsWith("/api/v1/portal/login"));
 
-describe("login (D27)", () => {
+describe("login (ADR-0007)", () => {
   it("asks for the address, says a code goes out only if it has an account, and logs in", async () => {
     const user = userEvent.setup();
     const { calls, router } = renderPortal("/portal/login", {

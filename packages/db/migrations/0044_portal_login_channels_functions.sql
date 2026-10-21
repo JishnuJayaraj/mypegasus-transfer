@@ -1,4 +1,4 @@
--- Hand-written (Slice 3 plan, PR 3f; D24, D27, D28): portal login, channel management and
+-- Hand-written (Slice 3, PR 3f; ADR-0007, Q123, Q130): portal login, channel management and
 -- lost-access recovery, with 0042's conventions: SECURITY DEFINER with a fixed search_path,
 -- executable only by transfer_app, database time, the lock order participation → code → session,
 -- counted failures returned (never raised) so the count commits, the audit in the same
@@ -24,7 +24,7 @@ ALTER TABLE audit_event ADD CONSTRAINT audit_event_lifecycle_has_participation C
 
 -- Internal helpers (no grant).
 
--- D14, D15, D24: an activation or recovery code that can still be used. A sheet only after its
+-- Q128, ADR-0007, Q130: an activation or recovery code that can still be used. A sheet only after its
 -- handover; a failed in-person delivery is revoked anyway, a pending or unknown one stays valid.
 CREATE OR REPLACE FUNCTION activation_code_open(c activation_code)
 RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
@@ -35,9 +35,9 @@ RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_tem
 $$;
 --> statement-breakpoint
 
--- D28: a channel is a private address that isn't the imported work email and belongs to no other
+-- Q123: a channel is a private address that isn't the imported work email and belongs to no other
 -- active channel; a collision is the generic `channel_in_use`, never naming the other account. A
--- recovery (D24) may register an address of the participation's own old channels again: they are
+-- recovery (Q130) may register an address of the participation's own old channels again: they are
 -- removed in the same transaction before the new one is written.
 DROP FUNCTION assert_channel_available(uuid, contact_channel_kind, text);
 --> statement-breakpoint
@@ -59,7 +59,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D27: checks a one-time code against the participation's live code of `p_purpose` (for a login,
+-- ADR-0007: checks a one-time code against the participation's live code of `p_purpose` (for a login,
 -- only one sent to `p_kind`/`p_address`). A match consumes it (`ok`); a wrong entry counts
 -- (`mismatch`), the fifth ends it (`exhausted`, recorded by the system); no live code is `none`.
 DROP FUNCTION verify_one_time_code(uuid, one_time_code_purpose, text, text);
@@ -123,10 +123,10 @@ END $$;
 
 -- The functions transfer_app may execute.
 
--- D22, D23, D24: a submitted code starts an `activating` session. An activation code needs an
+-- ADR-0007, Q130: a submitted code starts an `activating` session. An activation code needs an
 -- account not yet activated, a recovery code an activated one; any other unknown, expired,
 -- revoked, used, locked or not handed-over code returns NULL (the one generic answer) and counts
--- nothing. A first activation past the cutoff refuses `before_cutoff` (D25); a recovery has none
+-- nothing. A first activation past the cutoff refuses `before_cutoff` (Q121); a recovery has none
 -- (Q121). A new session of the same code supersedes the earlier one.
 CREATE OR REPLACE FUNCTION start_activation(p_code_hash text, p_token_hash text, p_request_id text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
@@ -159,8 +159,8 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D23, D27: a one-time code for the private email or mobile the participant chose, committed
--- `pending` before the send (D20). Refuses an in-person code, a missing birth-date step, an
+-- ADR-0007: a one-time code for the private email or mobile the participant chose, committed
+-- `pending` before the send (ADR-0006). Refuses an in-person code, a missing birth-date step, an
 -- invalid or taken address (in a recovery, the participation's own old addresses are free again)
 -- and the sixth code in an hour per address. Returns the expiry.
 CREATE OR REPLACE FUNCTION create_one_time_code(
@@ -187,7 +187,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D23, D24, D25, D28, D29: the activation or recovery in one transaction. The verification first:
+-- ADR-0007, Q130, Q121, Q123: the activation or recovery in one transaction. The verification first:
 -- for an `in_person` code the retyped address (a mismatch counts on the code), else the one-time
 -- code (a wrong one counts on it); either returns its result without writing anything else. Then
 -- the code is used and the consent and channel written. A first activation writes the account,
@@ -341,8 +341,8 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D27: a login code to the address of a live channel, committed `pending` before the send (D20).
--- An address of no channel, a suspended channel (D24) or an account that can't be used gets no
+-- ADR-0007: a login code to the address of a live channel, committed `pending` before the send (ADR-0006).
+-- An address of no channel, a suspended channel (Q130) or an account that can't be used gets no
 -- code and the same answer (the API says `202` either way): returns the challenge's id or NULL.
 -- The sixth code in an hour per address raises `rate_limited` (login and verification together).
 CREATE FUNCTION request_login_code(
@@ -369,7 +369,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D20: the outcome of a login code's send, recorded after it (there is no session yet). A
+-- ADR-0006: the outcome of a login code's send, recorded after it (there is no session yet). A
 -- definitive failure invalidates the code unless it was consumed or superseded during the send;
 -- an unknown outcome stays valid.
 CREATE FUNCTION record_login_code_delivery(p_challenge_id uuid, p_outcome activation_delivery_status)
@@ -390,7 +390,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D27, D29: a login with the code sent to a live channel's address starts an `active` session with
+-- ADR-0007: a login with the code sent to a live channel's address starts an `active` session with
 -- its step-up, audited as the participant. An address of no live channel, an unusable account, no
 -- live code or a wrong one is `one_time_code_invalid` (a wrong one counts); the fifth wrong entry
 -- is `one_time_code_exhausted`. Returns `ok` or one of those.
@@ -428,8 +428,8 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D27, D28: a verification code to a new private address of a logged-in participant, committed
--- `pending` before the send (D20); `record_one_time_code_delivery` records the outcome. Refuses
+-- ADR-0007, Q123: a verification code to a new private address of a logged-in participant, committed
+-- `pending` before the send (ADR-0006); `record_one_time_code_delivery` records the outcome. Refuses
 -- an invalid or taken address (the participant's own included) and the sixth code in an hour per
 -- address. Returns the expiry.
 CREATE FUNCTION request_channel_code(
@@ -450,7 +450,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D28: the verified new channel with its own consent record (text version and language), audited
+-- Q123: the verified new channel with its own consent record (text version and language), audited
 -- as the participant. A wrong code counts on it (`one_time_code_invalid`, the fifth
 -- `one_time_code_exhausted`); a taken address raises the generic `channel_in_use` and rolls the
 -- verification back. Returns `added` or one of those.
@@ -502,7 +502,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D28: the participant removes one of their channels; its consent ends `revoked`, both audited as
+-- Q123: the participant removes one of their channels; its consent ends `revoked`, both audited as
 -- the participant. Removing the last one ends all the participant's sessions (`no_channel`): the
 -- account has no way to log in until staff issue a recovery. Returns whether the sessions ended.
 CREATE FUNCTION remove_participant_channel(
@@ -538,7 +538,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- D17, D24 (Q130): `p_purpose` `recovery` issues a code for an activated account only (else
+-- ADR-0007, Q130: `p_purpose` `recovery` issues a code for an activated account only (else
 -- `not_activated`), without the first activation's cutoff (Q121). Issuing it ends all the
 -- participant's sessions and suspends every live channel for login and notifications at once
 -- (`contact_channels_suspended`); expiry or revocation of the code leaves them suspended. An

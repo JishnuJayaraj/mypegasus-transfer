@@ -22,7 +22,7 @@ const isErrorKey = (code: string | undefined): code is ErrorKey =>
   (errorKeys as readonly (string | undefined)[]).includes(code);
 
 /**
- * The login (Slice 3 plan D27): the participant's private email or mobile, then the six-digit
+ * The login (ADR-0007): the participant's private email or mobile, then the six-digit
  * code sent there. The request is answered alike whether or not the address has an account, and
  * the page says so. The email's link carries the code in the fragment: it is moved into the code
  * field, removed from the address bar and posted only when the participant clicks "Log in". The

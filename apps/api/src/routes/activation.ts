@@ -175,7 +175,7 @@ export function activationRoutes(deps: Deps) {
     return row!;
   }
 
-  /** A letter's or sheet's print data with its code: only in the issuing response (D13). */
+  /** A letter's or sheet's print data with its code: only in the issuing response (ADR-0007). */
   function printItem(
     made: Awaited<ReturnType<typeof issue>>,
     row: PrintRow,
@@ -207,7 +207,7 @@ export function activationRoutes(deps: Deps) {
 
   /**
    * Sends a committed in-person code's link and the durable notice link, then records the outcome
-   * (D20). Any provider error leaves the outcome as open as DeliveryOutcomeUnknown does; it is not
+   * (ADR-0006). Any provider error leaves the outcome as open as DeliveryOutcomeUnknown does; it is not
    * rethrown because a provider error may echo the destination into the log.
    */
   async function sendInPerson(

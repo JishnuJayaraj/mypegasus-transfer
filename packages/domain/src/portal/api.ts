@@ -20,7 +20,7 @@ export const ActivationCodeInput = z
 export const ActivationState = z
   .strictObject({
     nextStep: ActivationStep,
-    /** `recovery` after lost access (D24): the same steps; the new channel replaces the old ones. */
+    /** `recovery` after lost access (Q130): the same steps; the new channel replaces the old ones. */
     purpose: ActivationPurpose,
     channel: ActivationChannel,
     /** For an `in_person` code: the kind of address the link came to. */
@@ -92,7 +92,7 @@ export const PortalMe = z
   .meta({ id: "PortalMe" });
 export type PortalMe = z.infer<typeof PortalMe>;
 
-// Login, channels (Slice 3 plan, PR 3f; D27, D28). The login answers never say whether an address
+// Login, channels (PR 3f; ADR-0007, Q123). The login answers never say whether an address
 // belongs to an account.
 
 const oneTimeCode = z.string().regex(/^[0-9]{6}$/);
@@ -140,7 +140,7 @@ export const ChannelVerificationInput = z
   })
   .meta({ id: "ChannelVerificationInput" });
 
-/** `DELETE /portal/channels/{id}`: whether removing it ended the session (the last one, D28). */
+/** `DELETE /portal/channels/{id}`: whether removing it ended the session (the last one, Q123). */
 export const ChannelRemovalResult = z
   .strictObject({ sessionEnded: z.boolean() })
   .meta({ id: "ChannelRemovalResult" });

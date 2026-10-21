@@ -35,7 +35,7 @@ const isErrorKey = (code: string | undefined): code is ErrorKey =>
   (errorKeys as readonly (string | undefined)[]).includes(code);
 
 /**
- * The participant's channels (Slice 3 plan D28): each masked, with its removal (its consent ends;
+ * The participant's channels (Q123): each masked, with its removal (its consent ends;
  * the last one ends the session, so the page warns first) and the addition of a private email or
  * mobile, verified by a one-time code, with its own consent. Never the work email.
  */

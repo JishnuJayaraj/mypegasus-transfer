@@ -77,7 +77,7 @@ describe("activation-code issuance", () => {
     }
   });
 
-  // D24 (Q130): an activated account gets a code only as a recovery; no cutoff, no status change.
+  // Q130: an activated account gets a code only as a recovery; no cutoff, no status change.
   describe("recovery", () => {
     const recovery: IssuanceFacts = {
       ...valid,

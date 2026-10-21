@@ -159,7 +159,7 @@ export const PrivacyNoticeBatchResult = z
   .meta({ id: "PrivacyNoticeBatchResult" });
 
 /**
- * `POST /participations/{id}/activation-codes` with purpose `recovery` (D24, Q130): after staff
+ * `POST /participations/{id}/activation-codes` with purpose `recovery` (Q130): after staff
  * verified the person, a code by any channel; issuing it ends the participant's sessions and
  * suspends the old channels at once. An `in_person` code is sent to the typed address like the
  * first one (the photo-ID check recorded first).

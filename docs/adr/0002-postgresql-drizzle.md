@@ -268,6 +268,29 @@ database holding a removed value. `participation_unmatched_has_no_wave` is gone.
 - `issue_activation_code` refuses an activated account (`already_activated`); the terminal-status
   trigger also ends the participation's sessions.
 
+## Amendment 2026-10-21: portal login, channels and recovery (Slice 3, PR 3f)
+
+- No new tables. `0043` adds the audit types `participant_login`, `contact_channel_removed`,
+  `consent_ended`, `contact_channels_suspended` and the session end reasons `lost_access` and
+  `no_channel`; `0044` adds the functions, with 0042's conventions.
+- Six new granted functions: `request_login_code` (a live channel's address gets a `login`
+  challenge, any other address `NULL` and nothing written), `record_login_code_delivery` (the
+  send's outcome, no session needed), `start_participant_session` (the code sent to that address,
+  an `active` session with its step-up, `participant_login`), `request_channel_code`,
+  `add_participant_channel` (the verified channel with its own consent) and
+  `remove_participant_channel` (consent ended `revoked`; the last one ends every session). Counted
+  failures are returned as in 0042. The active-session functions lock through the internal
+  `lock_active_session` (participation, then session).
+- `issue_activation_code` gains `p_purpose` (`activation` by default). `recovery` needs an
+  activated account (`not_activated`), skips the cutoff, and in the same transaction ends every
+  session (`lost_access`) and suspends every live channel (`contact_channels_suspended`).
+  `start_activation`, `create_one_time_code` and `complete_activation` accept a recovery code for
+  an activated account; its completion removes the old channels and ends their consents with
+  `lost_access_replaced`, writes no account and no status change, and audits a
+  `participant_login`. `assert_channel_available` may ignore the participation's own old
+  channels (a recovery only); `verify_one_time_code` may require the challenge's address (login).
+  Both were dropped and recreated, so no overload remains.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

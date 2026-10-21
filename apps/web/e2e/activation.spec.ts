@@ -33,7 +33,7 @@ const countTo = async (staff: APIRequestContext, to: string) =>
     (m) => m.to === to,
   ).length;
 
-// Slice 3 plan, PRs 3e and 3f (the 3f acceptance path): the PL logs in with the dev switcher and
+// PRs 3e and 3f (the 3f acceptance path): the PL logs in with the dev switcher and
 // prints a letter; the participant activates it in the built portal with the one-time code from
 // the dev outbox; the PL sees the account activated, the notice provided and `contacted`; the
 // participant logs out and logs in again by code through the email's link.
@@ -88,7 +88,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await page.getByRole("button", { name: "Druckansicht schließen und Codes verwerfen" }).click();
   await expect(page.getByText(code)).toHaveCount(0);
 
-  // The participant types the letter's code (D22 covers the link's fragment in the portal tests).
+  // The participant types the letter's code (the portal tests cover the link's fragment).
   await page.goto("/portal/activate");
   await page.getByLabel("Aktivierungscode").fill(code);
   await expectAccessible(page);
@@ -115,7 +115,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await expect(page.getByText(/E-Mail e…@example.org, bestätigt am/)).toBeVisible();
   await expectAccessible(page);
 
-  // The PL sees "aktiviert", the notice provided and the status moved to contacted (D25).
+  // The PL sees "aktiviert", the notice provided and the status moved to contacted (Q121).
   await page.goto(`/projects/${projectId}/participations/${participationId}`);
   const panel = page.getByRole("region", { name: "Portalaktivierung und Datenschutzhinweis" });
   await expect(panel.getByText("Konto aktiviert")).toBeVisible();
@@ -124,7 +124,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await expect(page.getByText(PRIVATE)).toHaveCount(0);
   await expectAccessible(page);
 
-  // The participant logs out and logs in again by code, through the email's link (D27).
+  // The participant logs out and logs in again by code, through the email's link (ADR-0007).
   await page.goto("/portal/");
   await page.getByRole("button", { name: "Abmelden" }).click();
   await page.getByRole("link", { name: "Anmelden" }).click();
@@ -144,7 +144,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page.getByRole("heading", { name: "Hallo Erika" })).toBeVisible();
 
-  // Channels (D28): the masked list; the last one warns before it goes.
+  // Channels (Q123): the masked list; the last one warns before it goes.
   await page.getByRole("link", { name: "Kontaktwege verwalten" }).click();
   await expect(page.getByRole("heading", { name: "Ihre Kontaktwege" })).toBeVisible();
   await page.getByRole("button", { name: "Entfernen" }).click();

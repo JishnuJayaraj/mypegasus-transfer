@@ -147,6 +147,27 @@ generator then. No action now.
   `already_activated`.
 - Portal request log lines carry `participationId`, never a code, address or token.
 
+## Note 2026-10-21 (Slice 3, PR 3f): portal login, channels and recovery
+
+- **Login:** `POST /portal/login/code-request` (`{ kind, address, language }`) answers `202` with
+  no body whether or not the address has an account; `POST /portal/login`
+  (`{ kind, address, oneTimeCode }`) answers `200` with `PortalMe` and the portal cookie, or the
+  one 422 `one_time_code_invalid` for every failure (unknown address included). A sixth code
+  request for an address within an hour is a `429` for any address. A malformed address is 422
+  `channel_invalid`, which says nothing about an account.
+- **Channels:** `GET /portal/channels` (`PortalChannels`, masked), `POST /portal/channels`
+  (`202`, a verification code sent), `POST /portal/channels/verification` (`201` with the
+  channels; the consent with its version and language), `DELETE /portal/channels/{channelId}`
+  (`200` `{ sessionEnded }`; `true` when it was the last channel, and the cookie is cleared; 404
+  for a channel not the participant's own).
+- **Recovery:** `POST /participations/{id}/activation-codes` takes `RecoveryCodeInput` (purpose
+  `recovery`; `letter`, `sheet` or `in_person` with the address and the photo-ID check;
+  `identityVerified: true` always) and answers `201` `RecoveryCodeResult`: the print item with
+  the code for a letter or sheet (`Cache-Control: no-store`, never retrievable later), `null` for
+  in person, and the new `ParticipationActivation`. New refusal `not_activated`.
+  `ActivationRecord` and `ActivationState` carry `purpose`; for an activated account
+  `ActivationStatus.code` shows a recovery code's state.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

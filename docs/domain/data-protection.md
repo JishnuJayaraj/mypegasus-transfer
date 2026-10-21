@@ -371,14 +371,14 @@ Implementation:
       their SHA-256, so a database read gives no live session. Every login issues a new token and
       ends the one the browser carried (`superseded`). 8 hours absolute, no sliding window,
       checked in SQL against database time; logout ends the row.
-    - **Binding (D5):** staff accounts are created in the app. The first OIDC login of an active,
+    - **Binding:** staff accounts are created in the app. The first OIDC login of an active,
       unbound account binds the token's `(iss, sub)` to the account whose email equals the `email`
       claim (else `preferred_username`), compared case-insensitively; later logins match
       `(iss, sub)` only. Unknown, deactivated and differently bound accounts are refused
       (`unknown_account`, `account_deactivated`, `identity_mismatch`). The app doesn't check `amr`:
       MFA is the identity provider's. Use the tenant-specific issuer: the `email` claim is only
       trusted for the first binding of an account an admin created.
-    - **Staff audit (D6):** `staff_audit_event` records `staff_login` (with the method),
+    - **Staff audit:** `staff_audit_event` records `staff_login` (with the method),
       `staff_logout`, `staff_login_refused` (the code, and the matched account where there is one;
       never the claimed email) and `staff_identity_bound` (the claim matched). The runtime role has
       no privilege on it.
@@ -447,7 +447,9 @@ Implementation:
       while the value-free consent proof stays with the personnel file; a legal hold never keeps
       a secret usable.
   - **As built (Slice 3, PR 3d — issuance only):**
-    - Codes are twelve Crockford base32 characters generated only on issuance. HMAC keys for the
+    - Codes are twelve Crockford base32 characters (about 60 bits, printed `XXXX-XXXX-XXXX`)
+      generated only on issuance; input is normalised (upper case, spaces and hyphens dropped,
+      O→0, I/L→1), and a malformed code counts nothing. HMAC keys for the
       code, destination and later one-time codes are independently HKDF-derived from
       `ACCESS_CODE_SECRET`; staff-session keys are unrelated. Rotation invalidates open codes but
       never staff sessions.
@@ -489,6 +491,29 @@ Implementation:
       own channels masked. No response, log line or audit row carries a code, one-time code,
       address or hash; portal request lines carry the participation id.
     - The consent and message wording are pilot drafts awaiting DPO review (Q132).
+  - **As built (Slice 3, PR 3f — login, channels, lost-access recovery):**
+    - **Login:** the participant types their private email or mobile; the answer (`202`) is the
+      same whether or not it is a live channel of a usable account, and a code is sent only when it
+      is, after the response so the timing doesn't tell either. The email carries the six-digit
+      code and a link with it in the fragment (never the address); the page logs in only after the
+      participant typed the address and clicked. An unknown address, a wrong, expired or used code
+      and the fifth wrong entry get the same `one_time_code_invalid`. Login codes are limited to
+      five per address and hour for every address alike (in memory, keyed hashes); the database
+      also counts login and verification codes of known addresses together, and a request only it
+      refuses is accepted silently. Logins are audited (`participant_login`, the channel's id).
+    - **Channels:** the participant adds a private email or mobile with its own consent and a
+      one-time code to it, and removes one, which ends its consent `revoked` (both audited as the
+      participant). Removing the last channel ends all their sessions; the portal warns first. An
+      address of another account, or the participant's own, is the generic `channel_in_use`; the
+      work email is `channel_invalid`. Staff still see only kind, states and dates.
+    - **Recovery (Q130):** the PL or back office issue a recovery code (letter, sheet or in person)
+      for an activated account only, after confirming they verified the person (Q133 for how).
+      Issuing it ends every session and suspends every live channel in the same transaction
+      (`contact_channels_suspended`); suspended channels get no login codes or notices. The
+      participant runs the activation steps again; completion removes the old channels, ends their
+      consents `lost_access_replaced` (never a withdrawal), adds the new channel and consent,
+      changes no lifecycle status, and is a login. The account keeps its first identity
+      assurance. If the code expires or is revoked, the channels stay suspended.
 - **Assisted mode**: staff act on behalf of the participant, audited as `actor` + `onBehalfOf`.
   No session sharing.
 - **No self-registration.** There is no anonymous endpoint that creates participant records;

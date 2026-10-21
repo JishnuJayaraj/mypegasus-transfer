@@ -14,7 +14,7 @@ export type IssuanceRefusal =
   | "not_activated";
 
 export interface IssuanceFacts {
-  /** `recovery` only for an activated account (D24); `activation` when left out. */
+  /** `recovery` only for an activated account (Q130); `activation` when left out. */
   purpose?: ActivationPurpose;
   projectStatus: ProjectStatus;
   participationStatus: MainStatus;
@@ -32,8 +32,8 @@ const terminal = new Set<MainStatus>(["withdrawn", "ta_completed", "exited"]);
 const beforeAdmission = new Set<MainStatus>(["imported", "contacted", "unreachable"]);
 
 /**
- * Pure preflight for the rules the database re-checks under the participation lock (D15–D17). A
- * recovery (D24) needs the activated account the first activation refuses, and no cutoff: an
+ * Pure preflight for the rules the database re-checks under the participation lock (ADR-0007). A
+ * recovery (Q130) needs the activated account the first activation refuses, and no cutoff: an
  * activated account stays usable until the participation is terminal (Q121).
  */
 export function issuanceRefusals(facts: IssuanceFacts): IssuanceRefusal[] {

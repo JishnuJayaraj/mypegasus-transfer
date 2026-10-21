@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { i18n } from "./i18n";
 import { json, me, problem, renderPortal } from "./test-utils";
 
-// Slice 3 plan, PR 3f: channel management (D28) over a fake API.
+// PR 3f: channel management (Q123) over a fake API.
 afterEach(async () => {
   await i18n.changeLanguage("de");
 });
@@ -17,7 +17,7 @@ const sms = {
 };
 const emailId = me.channels[0]!.id;
 
-describe("channels (D28)", () => {
+describe("channels (Q123)", () => {
   it("adds a channel with its consent and the code sent to it", async () => {
     const user = userEvent.setup();
     const { calls } = renderPortal("/portal/channels", {
@@ -110,7 +110,7 @@ describe("channels (D28)", () => {
   });
 });
 
-describe("the portal home with login (D27, D28)", () => {
+describe("the portal home with login (ADR-0007, Q123)", () => {
   it("offers the login and the activation without a session, and the channels with one", async () => {
     renderPortal("/portal/", { "GET /api/v1/portal/me": () => problem(401, "unauthenticated") });
     expect(await screen.findByRole("link", { name: "Anmelden" })).toHaveAttribute(

@@ -2,7 +2,7 @@ import type { Logger } from "pino";
 import { errorForLog } from "./logger";
 
 /**
- * Work a request starts and doesn't wait for: the send of a login code (Slice 3 plan D27), so the
+ * Work a request starts and doesn't wait for: the send of a login code (ADR-0007), so the
  * `202` comes back alike whether or not the address has an account. The secret lives only in the
  * task's closure, never in a job payload (ADR-0011). Failures are logged without their message
  * (CLAUDE.md rule 9); shutdown and tests wait for the tasks in flight.

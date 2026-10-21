@@ -27,7 +27,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { expectProblem, jsonRequest, login, origin, readJson, testApp } from "./testing";
 
-// Slice 3 plan, PR 3f: portal login (D27), channels (D28) and lost-access recovery (D24) end to
+// PR 3f: portal login (ADR-0007), channels (Q123) and lost-access recovery (Q130) end to
 // end against transfer_test.
 const clock = new ManualClock(new Date("2026-10-21T10:00:00Z"));
 const outbox = new DevelopmentOutbox(clock);
@@ -50,8 +50,8 @@ beforeEach(async () => {
   outbox.mode = "sent";
   logs.length = 0;
   answered.length = 0;
-  // A new throttle window for every test: 10 code submissions per 15 minutes and IP (D14) and
-  // 5 login codes per address and hour (D27).
+  // A new throttle window for every test: 10 code submissions per 15 minutes and IP (Q128) and
+  // 5 login codes per address and hour (ADR-0007).
   nextWindow(61);
 });
 afterAll(() => Promise.all([db.$client.end(), owner.$client.end()]));
@@ -195,7 +195,7 @@ async function expectNoSecrets(secrets: string[]) {
   }
 }
 
-describe("portal login (D27)", () => {
+describe("portal login (ADR-0007)", () => {
   it("sends a code with a link and logs in with it once, audited", async () => {
     const { participationId, browser } = await activated();
     expect((await browser.post("/logout")).status).toBe(204);
@@ -305,7 +305,7 @@ describe("portal login (D27)", () => {
     const browser = portal();
     const sent = outbox.list().length;
     for (let i = 0; i < 5; i++) expect((await requestLoginCode(browser, PRIVATE)).status).toBe(202);
-    // The activation's verification code counts too (D27): the fifth login code went nowhere.
+    // The activation's verification code counts too (ADR-0007): the fifth login code went nowhere.
     expect(outbox.list().length - sent).toBe(4);
     const limited = await requestLoginCode(browser, PRIVATE);
     await expectProblem(limited, 429, "too-many-requests");
@@ -320,7 +320,7 @@ describe("portal login (D27)", () => {
     );
   });
 
-  it("records a failed send after the 202 and invalidates the code (D20)", async () => {
+  it("records a failed send after the 202 and invalidates the code (ADR-0006)", async () => {
     await activated();
     outbox.mode = "failed";
     const browser = portal();
@@ -350,7 +350,7 @@ describe("portal login (D27)", () => {
   });
 });
 
-describe("portal channels (D28)", () => {
+describe("portal channels (Q123)", () => {
   it("adds a verified channel with its consent and removes one with its consent ended", async () => {
     const { participationId, browser } = await activated();
     const listed = await readJson(await browser.get("/channels"), PortalChannels);
@@ -462,7 +462,7 @@ describe("portal channels (D28)", () => {
   });
 });
 
-describe("lost-access recovery (D24)", () => {
+describe("lost-access recovery (Q130)", () => {
   it("ends the sessions and suspends the channels at issuance; completion replaces them", async () => {
     const { participationId, browser } = await activated();
     const issued = await app.request(

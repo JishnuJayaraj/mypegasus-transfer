@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds } from "./seed";
 import { call, changeStatus, createWave, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
-// Slice 3 plan, PR 3f (D24, D27, D28): login, channels and lost-access recovery, as transfer_app
+// PR 3f (Q130, ADR-0007, Q123): login, channels and lost-access recovery, as transfer_app
 // calls them.
 const urls = testDatabaseUrls();
 const app = new Client({ connectionString: urls.app });
@@ -139,7 +139,7 @@ const liveSessions = (participationId: string) =>
     [participationId],
   );
 
-describe("login codes (D27)", () => {
+describe("login codes (ADR-0007)", () => {
   it("creates a login challenge for a live channel's address and none for any other", async () => {
     const { participationId } = await activated();
     const codeHash = hex();
@@ -220,7 +220,7 @@ describe("login codes (D27)", () => {
   });
 });
 
-describe("start_participant_session (D27, D29)", () => {
+describe("start_participant_session (ADR-0007)", () => {
   it("logs in with the code sent to the address, once, with the step-up and the audit", async () => {
     const { participationId, channelId } = await activated();
     const codeHash = hex();
@@ -310,7 +310,7 @@ describe("start_participant_session (D27, D29)", () => {
   });
 });
 
-describe("channels (D28)", () => {
+describe("channels (Q123)", () => {
   async function addChannel(tokenHash: string, address: string, kind = "email") {
     const codeHash = hex();
     await call(app, "request_channel_code", {
@@ -530,7 +530,7 @@ describe("channels (D28)", () => {
   });
 });
 
-describe("lost-access recovery (D24, Q130)", () => {
+describe("lost-access recovery (Q130)", () => {
   it("refuses a recovery for an account not activated, and an activation code for an activated one", async () => {
     const participationId = await participation();
     await expect(issue(participationId, { purpose: "recovery" })).rejects.toMatchObject(

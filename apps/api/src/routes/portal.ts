@@ -47,10 +47,10 @@ import {
 } from "../portal-session";
 import { clientIp, createThrottle } from "../throttle";
 
-// The participant's activation and recovery (Slice 3 plan, PRs 3e and 3f; D21–D29), login and
-// channels (3f; D27, D28). Codes, one-time codes and addresses arrive only in bodies and leave
+// The participant's activation and recovery (PRs 3e and 3f), login and channels
+// (3f); the rules are ADR-0007 and data-protection.md, Authentication. Codes, one-time codes and addresses arrive only in bodies and leave
 // only as keyed hashes for the functions (an address also to its own sender); no response, log
-// line or audit row carries them. Every code submission passes the per-IP throttle (D14). The
+// line or audit row carries them. Every code submission passes the per-IP throttle (Q128). The
 // login never says whether an address belongs to an account.
 
 const NoContent = { 204: { description: "Done" } };
@@ -71,7 +71,7 @@ function minutes(value: number) {
   return value * 60_000;
 }
 
-/** A six-digit one-time code (D27). */
+/** A six-digit one-time code (ADR-0007). */
 function newOneTimeCode() {
   return String(randomInt(0, 10 ** portalLimits.oneTimeCode.digits)).padStart(
     portalLimits.oneTimeCode.digits,
@@ -80,7 +80,7 @@ function newOneTimeCode() {
 }
 
 /**
- * The login message (D27): the code and, by email, a link with it in the fragment, which the
+ * The login message (ADR-0007): the code and, by email, a link with it in the fragment, which the
  * login page reads and posts only on a click.
  */
 function loginCodeMessage(language: NoticeLanguage, code: string, link: string) {
@@ -124,7 +124,7 @@ export function portalRoutes(deps: Deps) {
   });
   const activating = [requirePortalSession(deps, "activating")];
   const active = [requirePortalSession(deps, "active")];
-  // D27: login codes per address and hour, counted for every address alike (keyed hashes, in
+  // ADR-0007: login codes per address and hour, counted for every address alike (keyed hashes, in
   // memory) so a `429` doesn't tell a known address from an unknown one; the database counts
   // login and verification codes of known addresses together as well.
   const loginRequests = createThrottle({
@@ -152,7 +152,7 @@ export function portalRoutes(deps: Deps) {
     });
   }
 
-  /** 503 before any code exists when no provider is configured (D20). */
+  /** 503 before any code exists when no provider is configured (ADR-0006). */
   function deliveryUnavailable(c: Context<AppEnv>) {
     return problem(c, "service-unavailable", {
       errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
@@ -166,7 +166,7 @@ export function portalRoutes(deps: Deps) {
   }
 
   /**
-   * Sends a one-time code after its commit with the row id as the idempotency key (D20). Any
+   * Sends a one-time code after its commit with the row id as the idempotency key (ADR-0006). Any
    * provider error counts as unknown and is not logged: it may echo the destination.
    */
   async function sendOneTimeCode(
@@ -624,7 +624,7 @@ export function portalRoutes(deps: Deps) {
       const address = normaliseContact(input.kind, input.address);
       // Not an address at all: says nothing about any account.
       if (!address) return domainProblem(c, [{ code: "channel_invalid", field: "address" }]);
-      // Depends on the kind only, never on the address (D20).
+      // Depends on the kind only, never on the address (ADR-0006).
       if (!(input.kind === "email" ? deps.mailer : deps.smsSender)) return deliveryUnavailable(c);
       const perAddress = loginRequests.take(keyedHash(addressKey, `${input.kind}:${address}`));
       if (!perAddress.ok) return rateLimited(c, perAddress.retryAfterSeconds);
@@ -643,7 +643,7 @@ export function portalRoutes(deps: Deps) {
       }
       if (challengeId) {
         const id = challengeId;
-        // The send finishes after the response, so a known address isn't slower (D27).
+        // The send finishes after the response, so a known address isn't slower (ADR-0007).
         deps.detached!.run("login-code", async () => {
           const outcome = await sendOneTimeCode(
             input.kind,

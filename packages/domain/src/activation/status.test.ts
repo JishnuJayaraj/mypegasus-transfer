@@ -47,7 +47,7 @@ describe("activation status", () => {
     expect(activationStatus(false, code, "2026-10-20T12:00:00.000Z").code).toBe("expired");
   });
 
-  // D24: an activated account shows its recovery code; an earlier activation code shows nothing.
+  // Q130: an activated account shows its recovery code; an earlier activation code shows nothing.
   it("derives the state of a recovery code for an activated account", () => {
     const code = {
       channel: "letter" as const,
