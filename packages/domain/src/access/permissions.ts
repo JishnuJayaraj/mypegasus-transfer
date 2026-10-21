@@ -196,8 +196,14 @@ export function mayPerformTransition(
   target: PermissionTarget,
 ): Permission {
   if (actor.kind === "system") return edge.actor === "system" ? ok : no("actor_not_allowed");
-  // An authenticated participant takes no transition (Q60, round 12).
-  if (actor.kind === "participant" || edge.actor !== "user") return no("actor_not_allowed");
+  // A participant takes exactly the activation edges of their own participation (Slice 3 plan
+  // D25), never a staff edge (Q60, round 12).
+  if (actor.kind === "participant") {
+    return edge.kind === "activation" && actor.participationId === target.participationId
+      ? ok
+      : no("actor_not_allowed");
+  }
+  if (edge.actor !== "user") return no("actor_not_allowed");
   return staffPermission(actor, target, (role) => transitionRoles[role]?.(edge) ?? false);
 }
 

@@ -121,6 +121,19 @@ Built in PR 1h-2 (rounds 9, 18–20):
 - The API's workers use the Slice 1 facts provider, which fails closed: DSV expiry and cutoff
   withdrawals run, nobody enters the TG.
 
+## Note 2026-10-21: the activation notice (Slice 3, PR 3e)
+
+`portal.activation-notice` is an `exclusive` queue (retries 5, backoff). The portal's completion
+queues `{ channelId }` with `singletonKey` the channel id **in its own transaction** (pg-boss
+`send` with the transaction's connection), so a committed activation always has its notice
+queued. The worker reads the channel, skips a removed, suspended or already notified one or a
+closed participation, sends with the provider key `activation-notice:<channelId>` and then records
+`notice_sent_at` (`mark_activation_notice_sent`): at least once, never twice at the provider.
+Provider errors fail the job by code (`delivery_unknown`, `delivery_failed`,
+`delivery_unavailable`) for a retry and are never logged. Logs carry the job, its id, the channel
+id and the outcome. Without pg-boss (`JOBS_ENABLED=false`, tests) nothing is queued and the API
+logs a warning with the channel id.
+
 ## Note 2026-10-17: draft projects plan nothing (Slice 2, PR 2e-1)
 
 A project is `draft` until it is activated (Q98). The sweep still dispatches

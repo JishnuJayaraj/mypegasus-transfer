@@ -60,3 +60,16 @@ Not adapters:
   `503 delivery_unavailable` before any code exists. A real EU provider, its AVV and interface
   contract tests are required before real messages. SMS is one participant-selected
   channel, not a default or primary channel.
+
+## As built 2026-10-21: one-time codes and the activation notice (Slice 3, PR 3e)
+
+- A portal one-time code follows the same protocol: `create_one_time_code` commits the challenge
+  `pending`; the API sends after the commit with the challenge id as the idempotency key; then
+  `record_one_time_code_delivery` records the outcome. A definitive failure invalidates the code
+  (unless a newer one superseded it during the send) and answers `503 delivery_failed`; any
+  provider error is an unknown outcome, never logged, and the code stays usable. Without a sender
+  (production) the request answers `503 delivery_unavailable` before a challenge exists.
+- The activation notice carries no secret and goes through the job `portal.activation-notice`
+  (ADR-0011) with the provider key `activation-notice:<channelId>`. The server builds one set of
+  senders for the API and the jobs (`messaging` in `apps/api/src/app.ts`), so the development
+  outbox shows the notice too.

@@ -126,6 +126,27 @@ generator then. No action now.
   means a letter was produced, a sheet or in-person print was handed over, or an in-person
   email/SMS send definitively succeeded. Failed and unknown sends do not claim provision.
 
+## Note 2026-10-21 (Slice 3, PR 3e): the portal activation API
+
+- **Routes:** `POST /portal/activation` (the code; starts the `activating` session and sets the
+  portal cookie), `POST /portal/activation/birth-date`, `POST /portal/activation/delivery-address`,
+  `POST /portal/activation/channel` (`202`: a one-time code sent, or its outcome unknown),
+  `POST /portal/activation/completion` (`201` with `PortalMe` and a new cookie), `GET /portal/me`,
+  `POST /portal/logout` (`{}` body, `204`). The steps answer `ActivationState` (the next step,
+  the code's channel and language, the notice and consent versions). Codes and addresses travel
+  only in request bodies; no response carries a code, a whole address or a hash: `PortalMe`
+  shows the participant's own channels masked (`p…@example.org`, `+49 … 123`).
+- **Problem codes:** 422 `code_invalid` (the one generic answer for any unusable code; the portal
+  cookie is cleared), `knowledge_check_failed`, `one_time_code_invalid`, `before_cutoff`,
+  `step_not_allowed`, `channel_in_use`, `channel_invalid`; a new problem type
+  `too-many-requests` (429, `rate_limited`, with `Retry-After`); 503 `delivery_failed` and
+  `delivery_unavailable`; 401 for a missing, idle, expired or wrong-state session.
+- **Staff side:** `GET /participations/{id}/activation` adds `account` (activation time and
+  identity assurance) and `channels` (kind, verification, consent, notice and removal dates; never
+  the address); the list filter `activation` takes `activated`; issuance refuses
+  `already_activated`.
+- Portal request log lines carry `participationId`, never a code, address or token.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

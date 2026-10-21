@@ -115,10 +115,26 @@ need the proxy CA (`/root/.ccr/README.md`).
 - `apps/web` has capability-driven status, filtering, print and handover views. Codes live only in
   the issuance mutation result and are dropped with the print view; QR generation is client-side
   with pinned `qrcode@1.5.4`. `apps/portal` serves the public, static, personal-data-free Article 14
-  notice page in German and English. Portal code validation and participant sessions are PR 3e.
-- `ACCESS_CODE_SECRET` is a distinct HKDF root for activation-code, delivery-address and later
+  notice page in German and English.
+- `ACCESS_CODE_SECRET` is a distinct HKDF root for activation-code, delivery-address and
   one-time-code HMAC keys. `PORTAL_PUBLIC_URL` supplies the public fragment links. Both are required
   outside development; only HTTPS portal URLs are accepted there.
+
+## Portal activation boundary (Slice 3, PR 3e)
+
+- `packages/domain/src/activation/steps.ts` owns the step machine (D23) and
+  `packages/domain/src/portal` the limits (`limits.ts`, held to the SQL by a drift test), contact
+  normalisation and masking, and the portal API schemas. None performs I/O.
+- `apps/api/src/routes/portal.ts` is the portal's HTTP boundary (`/api/v1/portal/...`), behind
+  `apps/api/src/portal-session.ts` (the `__Host-tp_portal` cookie; `tp_portal` in development)
+  and the in-memory per-IP throttle (`apps/api/src/throttle.ts`). The activation functions lock,
+  count, decide and write; one-time codes are sent after commit with the challenge id as the
+  idempotency key; the completion queues the activation notice in its own transaction.
+- `apps/portal` has `/activate` (the code from the link's fragment, the notice, birth date,
+  delivery address or channel with consent and one-time code) and `/` (greeting, masked channels,
+  logout). Codes and addresses live only in component state.
+- `apps/web` shows the account (how the identity was assured) and the channels' kind, states and
+  dates; never an address.
 
 ## Background jobs
 
@@ -137,6 +153,9 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   `job_run` and evaluates each project in its own `lifecycle.evaluate-project` job through the
   status service as `system`. A run counts as due only by database time (Q96).
   `pnpm jobs:lifecycle [--today YYYY-MM-DD]` runs it once in its own process (dev, CI).
+- **Activation notice** (Slice 3 PR 3e): `portal.activation-notice`, queued by the completion in
+  its own transaction with the channel id as `singletonKey`, sends the notice to the new channel
+  at least once (provider key `activation-notice:<channelId>`) and records `notice_sent_at`.
 
 ## Performance approach (frontend)
 

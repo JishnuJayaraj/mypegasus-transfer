@@ -49,7 +49,7 @@ describe("portal shell", () => {
     expect(
       await screen.findByText("Verbindung zum Server besteht (Version 1.2.3)."),
     ).toBeInTheDocument();
-    expect(calls).toEqual(["/api/v1/health"]);
+    expect(calls).toContain("/api/v1/health");
   });
 
   it("says when the API cannot be reached", async () => {

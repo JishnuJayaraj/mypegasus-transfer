@@ -137,6 +137,15 @@ const statusFunctions = [
   "hand_over_activation_code",
   "revoke_activation_code",
   "record_privacy_notice",
+  // Slice 3 (PR 3e): participant activation and sessions
+  "start_activation",
+  "check_activation_birth_date",
+  "check_activation_delivery_address",
+  "create_one_time_code",
+  "record_one_time_code_delivery",
+  "complete_activation",
+  "end_participant_session",
+  "mark_activation_notice_sent",
 ];
 const helpers = [
   "assert_context",
@@ -169,6 +178,19 @@ const helpers = [
   "assert_activation_actor",
   "keep_privacy_notice_immutable",
   "revoke_codes_at_terminal_status",
+  "apply_status_change",
+  "participant_context",
+  "portal_system_context",
+  "participant_session_live",
+  "activation_code_open",
+  "participation_before_cutoff",
+  "activation_needs_birth_date",
+  "contact_address_valid",
+  "assert_channel_available",
+  "lock_activating_session",
+  "count_activation_failure",
+  "insert_one_time_code",
+  "verify_one_time_code",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -463,6 +485,75 @@ describe("transfer_app and activation evidence", () => {
     ],
     ["call notice immutability trigger", "select keep_privacy_notice_immutable()"],
     ["call terminal-code trigger", "select revoke_codes_at_terminal_status()"],
+  ])("may not %s (42501)", async (_label, statement) => {
+    await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// Slice 3 (PR 3e): accounts, channels, consents, one-time codes and participant sessions are read
+// by the app and written only by the activation functions; of a session, the app may touch
+// `last_seen_at` alone (D29).
+describe("transfer_app and the participant activation tables", () => {
+  it("may select them", async () => {
+    for (const table of [
+      "participant_account",
+      "consent_record",
+      "participant_channel",
+      "one_time_code_challenge",
+      "participant_session",
+    ]) {
+      expect((await app.query(`select * from ${table}`)).rows).toEqual([]);
+    }
+  });
+
+  it("may update a session's last_seen_at", async () => {
+    await expect(
+      app.query("update participant_session set last_seen_at = now()"),
+    ).resolves.toMatchObject({ rowCount: 0 });
+  });
+
+  const values = `'${seedProjectIds.werkNord}', gen_random_uuid()`;
+  it.each([
+    ...writes(
+      "participant_account",
+      "language",
+      `insert into participant_account (project_id, participation_id, activation_code_id, identity_assurance, language)
+       values (${values}, gen_random_uuid(), 'birth_date', 'de')`,
+    ),
+    ...writes(
+      "consent_record",
+      "language",
+      `insert into consent_record (project_id, participation_id, purpose, channel_id, text_version, language, actor_type)
+       values (${values}, 'portal_contact', gen_random_uuid(), 'portal-contact-consent:v1', 'de', 'participant')`,
+    ),
+    ...writes(
+      "participant_channel",
+      "notice_sent_at",
+      `insert into participant_channel (project_id, participation_id, kind, address, verified_by, consent_id)
+       values (${values}, 'email', 'person@example.invalid', 'one_time_code', gen_random_uuid())`,
+    ),
+    ...writes(
+      "one_time_code_challenge",
+      "failed_attempts",
+      `insert into one_time_code_challenge (project_id, participation_id, purpose, kind, address, code_hash, expires_at)
+       values (${values}, 'channel_verification', 'email', 'person@example.invalid', '${"a".repeat(64)}', now())`,
+    ),
+    [
+      "insert into participant_session",
+      `insert into participant_session (token_hash, project_id, participation_id, state)
+       values ('${"a".repeat(64)}', ${values}, 'active')`,
+    ],
+    ["update a session's state", "update participant_session set state = state"],
+    ["end a session", "update participant_session set ended_at = now()"],
+    ["update a session's step-up", "update participant_session set step_up_at = now()"],
+    ["delete from participant_session", "delete from participant_session"],
+    ["truncate participant_session", "truncate participant_session"],
+    [
+      "take a status change as a participant",
+      "select apply_status_change(null, null, null, null, null)",
+    ],
+    ["verify a one-time code directly", "select verify_one_time_code(null, null, null, null)"],
+    ["count an activation failure directly", "select count_activation_failure(null, null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

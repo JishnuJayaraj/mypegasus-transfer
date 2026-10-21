@@ -653,7 +653,21 @@
       "revoke": "Code widerrufen",
       "noticeHandedOver": "Datenschutzhinweis ausgedruckt persönlich übergeben",
       "issuePrint": "Brief oder Aktivierungsblatt in der Teilnehmendenliste ausstellen",
-      "failed": "Die Aktivierungsaktion ist fehlgeschlagen."
+      "failed": "Die Aktivierungsaktion ist fehlgeschlagen.",
+      "activatedAt": "Aktiviert am",
+      "identityAssurance": "Identität gesichert durch",
+      "channels": "Kontaktwege im Portal",
+      "channelLine": "{{kind}}, bestätigt am {{verifiedAt}} {{verifiedBy}}, Einwilligung seit {{consentGivenAt}}.",
+      "noticeSent": "Aktivierungsbenachrichtigung gesendet am {{at}}.",
+      "noticePending": "Aktivierungsbenachrichtigung ausstehend."
+    },
+    "assurance": {
+      "birth_date": "Geburtsdatum",
+      "photo_id": "Lichtbildausweis (kein Geburtsdatum hinterlegt)"
+    },
+    "verifiedBy": {
+      "one_time_code": "per Einmalcode",
+      "activation_link": "über den persönlichen Aktivierungslink"
     }
   },
   "participant": {

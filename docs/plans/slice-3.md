@@ -1,7 +1,7 @@
 # Slice 3 — Auth & roles: plan
 
-Status: approved 2026-10-20 ([round 36](../decisions/2026-10-20-answers-round-36.md)); PRs 3a–3c
-merged and PR 3d implemented 2026-10-21; PRs 3e–3f remain planned. Scope:
+Status: approved 2026-10-20 ([round 36](../decisions/2026-10-20-answers-round-36.md)); PRs 3a–3d
+merged and PR 3e implemented 2026-10-21; PR 3f remains planned. Scope:
 [roadmap](../roadmap.md) Slice 3, [ADR-0007](../adr/0007-auth.md) with its 2026-10-20 amendment,
 [round 35](../decisions/2026-10-20-answers-round-35.md) (Q112–Q120) and round 36 (Q121–Q130).
 
@@ -181,8 +181,8 @@ without tests and generated files: guidance, not a ceiling; a PR stays cohesive.
 | 3b | Staff sessions, OIDC + dev stub, CSRF, `staff_audit_event`, web login/logout (D1–D6) | — | ~1,100 |
 | 3c | Regions, org roles, staff accounts, memberships, assignments, admin and team UI (D7–D11) | 3b | ~1,450 |
 | 3d | Activation codes: issuance (three channels), sheet handover, revoke, delivery outcome, Art. 14 notice delivery and deadline, notice catalog, Mailer/SmsSender mocks, terminal revocation, PL status and print views (D12–D20, D26 codes) | 3c | ~1,750 |
-| 3e | Portal activation: participant sessions, one-time codes for verification, `complete_activation` and the status edges, activation UI, notice job (D21–D23, D25, D26 sessions, D28, D29) | 3d | ~1,400 |
-| 3f | Portal login with one-time code, logout, channel management and consent revocation, lost-access recovery (D24, D27) | 3e | ~1,100 |
+| 3e | Portal activation: participant sessions, one-time codes for verification, `complete_activation` and the status edges, activation UI, logout, notice job (D21–D23, D25, D26 sessions, D28, D29) | 3d | ~1,400 |
+| 3f | Portal login with one-time code, channel management and consent revocation, lost-access recovery (D24, D27) | 3e | ~1,100 |
 
 ## Design
 
@@ -204,8 +204,8 @@ staff):
 | `participant_account` | 3e | `participation_id` PK, `project_id`, `activated_at`, `activation_code_id`, `identity_assurance` (`birth_date`, `photo_id`), `identity_assured_by/at`, `language` | internal | `case_internal` | `personnel_file` |
 | `participant_channel` | 3e | `id`, `project_id`, `participation_id`, `kind` (`email`, `sms`), `address` (normalised), `verified_at`, `verified_by` (`one_time_code`, `activation_link`), `consent_id`, `notice_sent_at`, `suspended_at`, `suspension_reason`, `removed_at`, `removed_reason` (`consent_revoked`, `lost_access_replaced`); unique `(kind, address)` while not removed | confidential | `confidential`, not listable; staff see kind, state and dates only | `personnel_file` (the address and hash erased 30 days after removal, Q122) |
 | `consent_record` | 3e | `id`, `project_id`, `participation_id`, `purpose` (`portal_contact`), `channel_id`, `text_version`, `language`, `given_at`, `ended_at`, `end_reason` (`revoked`, `lost_access_replaced`), actor | confidential | `confidential` | `personnel_file` |
-| `one_time_code_challenge` | 3e | `id`, `project_id`, `participation_id`, `purpose` (`login`, `channel_verification`), `kind`, `address` (normalised), `code_hash`, `delivery_status`, `created_at`, `expires_at`, `failed_attempts`, `consumed_at` | confidential | never served | `access_credential` |
-| `participant_session` | 3e | `token_hash` PK, `project_id`, `participation_id`, `state` (`activating`, `active`), `activation_code_id`, `created_at`, `last_seen_at`, `ended_at`, `end_reason`, `step_up_method`, `step_up_at` | internal | never served to staff | `access_credential` |
+| `one_time_code_challenge` | 3e | `id`, `project_id`, `participation_id`, `purpose` (`login`, `channel_verification`), `kind`, `address` (normalised), `code_hash`, `delivery_status`, `created_at`, `expires_at`, `failed_attempts`, `consumed_at`, `invalidated_at`, `invalidation_reason` (`superseded`, `delivery_failed`) | confidential | never served | `access_credential` |
+| `participant_session` | 3e | `token_hash` PK, `project_id`, `participation_id`, `state` (`activating`, `active`), `activation_code_id`, `created_at`, `last_seen_at`, `ended_at`, `end_reason`, `birth_date_checked_at`, `delivery_address_checked_at` (the activation steps done), `step_up_method`, `step_up_at` | internal | never served to staff | `access_credential` |
 
 Changed: `staff_user` (3b: `oidc_issuer`, `oidc_subject`, unique together, and `deactivated_at`,
 which the 3b login refuses and 3c's `deactivate_staff_user` sets; a unique index on `lower(email)`;

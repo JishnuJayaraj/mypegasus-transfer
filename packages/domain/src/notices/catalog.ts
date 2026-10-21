@@ -4,6 +4,9 @@ export const NoticeLanguage = z.enum(["de", "en"]);
 export type NoticeLanguage = z.infer<typeof NoticeLanguage>;
 
 export const ART14_NOTICE_VERSION = "art14-activation:v1" as const;
+/** The consent text of a portal contact channel (Slice 3 plan D28, Q119, Q125). */
+export const PORTAL_CONTACT_CONSENT_VERSION = "portal-contact-consent:v1" as const;
+export type NoticeVersion = typeof ART14_NOTICE_VERSION | typeof PORTAL_CONTACT_CONSENT_VERSION;
 
 export interface NoticeOrganisation {
   controllerName: string;
@@ -15,14 +18,14 @@ export interface NoticeOrganisation {
 }
 
 export interface NoticeTemplate {
-  version: typeof ART14_NOTICE_VERSION;
+  version: NoticeVersion;
   language: NoticeLanguage;
   title: string;
   text: string;
   sha256: string;
 }
 
-const templates: Record<NoticeLanguage, Omit<NoticeTemplate, "sha256"> & { sha256: string }> = {
+const templates: Record<NoticeLanguage, NoticeTemplate> = {
   de: {
     version: ART14_NOTICE_VERSION,
     language: "de",
@@ -55,16 +58,49 @@ Retention depends on the purpose and applicable statutory duties. In particular,
   },
 };
 
-export const noticeCatalog: readonly NoticeTemplate[] = NoticeLanguage.options.map(
-  (language) => templates[language],
-);
+/**
+ * Consent to the portal contact purpose for one private email or mobile (D28): login codes and
+ * versioned portal notifications. Final wording: DPO review before real data, like the notice.
+ */
+const consentTemplates: Record<NoticeLanguage, NoticeTemplate> = {
+  de: {
+    version: PORTAL_CONTACT_CONSENT_VERSION,
+    language: "de",
+    title: "Einwilligung in den Kontakt über das Teilnehmerportal",
+    text: `Ich willige ein, dass {{controllerName}} die von mir angegebene private E-Mail-Adresse oder Mobilnummer speichert und nutzt, um mir Anmeldecodes für das Teilnehmerportal und Benachrichtigungen aus dem Portal zu senden.
 
-export function art14Notice(language: NoticeLanguage, organisation: NoticeOrganisation) {
-  const template = templates[language];
+Die Angabe ist freiwillig. Ich kann diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen, indem ich den Kontaktweg im Portal entferne oder mich an {{controllerEmail}} wende. Die Rechtmäßigkeit der bis zum Widerruf erfolgten Verarbeitung bleibt unberührt.`,
+    sha256: "356247698c46c89c9dc2a718baaa764d567b5245eb720e0a3c511be9849a9724",
+  },
+  en: {
+    version: PORTAL_CONTACT_CONSENT_VERSION,
+    language: "en",
+    title: "Consent to contact through the participant portal",
+    text: `I consent to {{controllerName}} storing and using the private email address or mobile number I provide to send me login codes for the participant portal and notifications from the portal.
+
+Providing it is voluntary. I can withdraw this consent at any time with effect for the future by removing the contact in the portal or by writing to {{controllerEmail}}. Withdrawal does not affect the lawfulness of processing before it.`,
+    sha256: "c25c5b790d010b933061647ca1f1458f17ccdb0630e775dac6710942f5173a1f",
+  },
+};
+
+export const noticeCatalog: readonly NoticeTemplate[] = [
+  ...NoticeLanguage.options.map((language) => templates[language]),
+  ...NoticeLanguage.options.map((language) => consentTemplates[language]),
+];
+
+const render = (template: NoticeTemplate, organisation: NoticeOrganisation) => {
   const replace = (text: string) =>
     Object.entries(organisation).reduce(
       (rendered, [key, value]) => rendered.replaceAll(`{{${key}}}`, value),
       text,
     );
   return { ...template, title: replace(template.title), text: replace(template.text) };
+};
+
+export function art14Notice(language: NoticeLanguage, organisation: NoticeOrganisation) {
+  return render(templates[language], organisation);
+}
+
+export function portalContactConsent(language: NoticeLanguage, organisation: NoticeOrganisation) {
+  return render(consentTemplates[language], organisation);
 }

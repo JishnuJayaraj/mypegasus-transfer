@@ -18,6 +18,8 @@ consultant/profiler only for assigned participations, the PL and back office in 
 | main | `contacted` | `informed` | user | manual | Consultant/profiler (assigned), PL | — | all |
 | main | `contacted` | `unreachable` | user | manual | Consultant/profiler (assigned), PL | — | all |
 | main | `unreachable` | `contacted` | user | manual | Consultant/profiler (assigned), PL | `before_cutoff` | all |
+| main | `imported` | `contacted` | participant | activation | Participant (own), Participant (own, no birth-date check) | `before_cutoff` | all |
+| main | `unreachable` | `contacted` | participant | activation | Participant (own), Participant (own, no birth-date check) | `before_cutoff` | all |
 | main | `informed` | `active_in_tg` | system | scheduled_entry | system | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
 | main | `informed` | `active_in_tg` | system | scheduled_entry_catchup | system | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
 | main | `informed` | `active_in_tg` | user | reconciliation | PL | `dsv_fully_executed`, `asu_registered_with_proof`, `profiling_done_or_approved_exception`, `tg_start_date` | ta_tg |
@@ -55,7 +57,7 @@ consultant/profiler only for assigned participations, the PL and back office in 
 | `tg_start_date` | main `informed` → `active_in_tg` |
 | `ta_completion` | main `informed` → `ta_completed` |
 | `withdrawal_after_dsv_signed` | main `imported` → `withdrawn`; main `contacted` → `withdrawn`; main `unreachable` → `withdrawn`; main `informed` → `withdrawn` |
-| `before_cutoff` | main `unreachable` → `contacted`; profiling `profiling_declined` → `profiling_accepted`; dsv `dsv_declined` → `dsv_offered`; dsv `dsv_expired` → `dsv_offered` |
+| `before_cutoff` | main `unreachable` → `contacted`; main `imported` → `contacted`; profiling `profiling_declined` → `profiling_accepted`; dsv `dsv_declined` → `dsv_offered`; dsv `dsv_expired` → `dsv_offered` |
 | `entry_wave_assigned` | dsv `not_offered` → `dsv_offered` |
 | `offer_deadline_valid` | dsv `not_offered` → `dsv_offered`; dsv `dsv_declined` → `dsv_offered`; dsv `dsv_expired` → `dsv_offered` |
 | `tl407_signed` | profiling `profiling_in_progress` → `profiling_done` |

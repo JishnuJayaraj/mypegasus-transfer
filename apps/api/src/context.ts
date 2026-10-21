@@ -9,6 +9,15 @@ import { validationProblem } from "./problem";
 import type { Slots } from "./imports/slots";
 import type { SpaRoots } from "./static";
 import type { Oidc } from "./oidc";
+import type { PortalSession } from "./portal-session";
+
+/** Where the API queues the activation notice inside the completion's transaction (D21). */
+export interface ActivationNoticeQueue {
+  enqueue(
+    channelId: string,
+    db: { executeSql(text: string, values?: unknown[]): Promise<{ rows: unknown[] }> },
+  ): Promise<void>;
+}
 
 export interface Deps {
   db: Database;
@@ -25,6 +34,8 @@ export interface Deps {
   mailer?: Mailer | undefined;
   smsSender?: SmsSender | undefined;
   outbox?: DevelopmentOutbox | undefined;
+  /** pg-boss in this process (JOBS_ENABLED); without it no activation notice is queued. */
+  activationNotices?: ActivationNoticeQueue | undefined;
 }
 
 export interface AppEnv {
@@ -33,6 +44,8 @@ export interface AppEnv {
     staffUser: StaffUser | undefined;
     /** When the request's staff session ends (ISO 8601 UTC), behind `requireSession`. */
     sessionExpiresAt: string | undefined;
+    /** The participant's portal session, behind `requirePortalSession`. */
+    participant: PortalSession | undefined;
   };
 }
 

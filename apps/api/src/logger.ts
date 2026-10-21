@@ -10,7 +10,8 @@ export function createLogger(level: string): Logger {
 
 /**
  * One JSON line per request: request id, method, route pattern, status, duration and the
- * staff user id. Never bodies, query strings, cookies or headers (CLAUDE.md rule 9).
+ * staff user id or, on portal routes, the participation id (Slice 3 plan, API). Never bodies,
+ * query strings, cookies or headers (CLAUDE.md rule 9).
  */
 export function requestLogger(logger: Logger): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
@@ -26,6 +27,7 @@ export function requestLogger(logger: Logger): MiddlewareHandler<AppEnv> {
       status: c.res.status,
       durationMs: Math.round(performance.now() - start),
       staffUserId: c.get("staffUser")?.id,
+      participationId: c.get("participant")?.participationId,
     });
   };
 }

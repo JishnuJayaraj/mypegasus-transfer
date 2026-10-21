@@ -21,3 +21,6 @@ export const EvaluateProjectPayload = z
   });
 
 export type EvaluateProject = z.infer<typeof EvaluateProjectPayload>;
+
+/** The activation notice of one channel (D21): its id only; the job reads the rest. */
+export const ActivationNoticePayload = z.strictObject({ channelId: z.uuid() });

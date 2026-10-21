@@ -111,6 +111,39 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // Portal activation (Slice 3 plan D23–D29, Q122, Q123). The account: activation time, code id,
+  // how the identity was assured (staff confirmer for a photo ID) and the language.
+  participant_account: {
+    retentionClass: "personnel_file",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  // Value-free consent proof: purpose, channel id, text version, language, who and when; it stays
+  // with the personnel file after the address is erased (Q122).
+  consent_record: {
+    retentionClass: "personnel_file",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // The verified private email or mobile (`portalChannels`); staff see kind, state and dates only.
+  // The address is erased 30 days after removal (Q122).
+  participant_channel: {
+    retentionClass: "personnel_file",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // One-time codes: a keyed hash and the address they went to, stripped with the credential.
+  one_time_code_challenge: {
+    retentionClass: "access_credential",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // Participant sessions: a token's SHA-256, state, step-ups and times; never served to staff.
+  participant_session: {
+    retentionClass: "access_credential",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Reason codes are confidential (Q66); evidence records get their own class (round 16).
   profiling_exception_request: {
     retentionClass: "participation_record",
@@ -291,6 +324,21 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     original_location: "dsvAmendment",
     document_reference: "dsvAmendment",
   },
+  participant_channel: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    kind: "portalChannels",
+    address: "portalChannels",
+    verified_at: "portalChannels",
+    verified_by: "portalChannels",
+    consent_id: null,
+    notice_sent_at: "portalChannels",
+    suspended_at: "portalChannels",
+    suspension_reason: "portalChannels",
+    removed_at: "portalChannels",
+    removed_reason: "portalChannels",
+  },
   ba_reporting_task: {
     id: null,
     participation_id: null,
@@ -318,6 +366,13 @@ const withoutFields = new Set([
   "participant_assignment",
   "activation_code",
   "privacy_notice_delivery",
+  // Ids, states and dates of the account, consents and sessions; the address a one-time code went
+  // to is a credential's destination (like the in-person hash of `activation_code`), stripped with
+  // it, not the participant's channel.
+  "participant_account",
+  "consent_record",
+  "one_time_code_challenge",
+  "participant_session",
 ]);
 
 const dataClassRank: Record<DataClass, number> = {

@@ -42,6 +42,7 @@ export function testApp(
     mailer?: Deps["mailer"];
     smsSender?: Deps["smsSender"];
     outbox?: Deps["outbox"];
+    activationNotices?: Deps["activationNotices"];
   } = {},
 ) {
   const logs: string[] = [];
@@ -58,6 +59,7 @@ export function testApp(
     mailer: options.mailer,
     smsSender: options.smsSender,
     outbox: options.outbox,
+    activationNotices: options.activationNotices,
   });
   return { app, db, logs };
 }

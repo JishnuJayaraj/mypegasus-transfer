@@ -3808,6 +3808,112 @@
           "current": {
             "$ref": "#/components/schemas/ActivationRecord"
           },
+          "account": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "activatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "identityAssurance": {
+                "type": "string",
+                "enum": [
+                  "birth_date",
+                  "photo_id"
+                ]
+              },
+              "identityAssuredAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "activatedAt",
+              "identityAssurance",
+              "identityAssuredAt"
+            ],
+            "additionalProperties": false
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "sms"
+                  ]
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "verifiedBy": {
+                  "type": "string",
+                  "enum": [
+                    "one_time_code",
+                    "activation_link"
+                  ]
+                },
+                "consentGivenAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "consentEndedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "noticeSentAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "suspendedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "removedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "verifiedAt",
+                "verifiedBy",
+                "consentGivenAt",
+                "consentEndedAt",
+                "noticeSentAt",
+                "suspendedAt",
+                "removedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -3836,6 +3942,8 @@
         "required": [
           "status",
           "current",
+          "account",
+          "channels",
           "capabilities"
         ],
         "additionalProperties": false
@@ -4189,6 +4297,251 @@
         "required": [
           "method",
           "handedOver"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationState": {
+        "type": "object",
+        "properties": {
+          "nextStep": {
+            "$ref": "#/components/schemas/ActivationStep"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "letter",
+              "sheet",
+              "in_person"
+            ]
+          },
+          "deliveryKind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "email",
+              "sms",
+              null
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "art14-activation:v1"
+            ]
+          },
+          "consentVersion": {
+            "type": "string",
+            "enum": [
+              "portal-contact-consent:v1"
+            ]
+          }
+        },
+        "required": [
+          "nextStep",
+          "channel",
+          "deliveryKind",
+          "language",
+          "noticeVersion",
+          "consentVersion"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationStep": {
+        "type": "string",
+        "enum": [
+          "birth_date",
+          "delivery_address",
+          "channel",
+          "one_time_code",
+          "complete"
+        ]
+      },
+      "ActivationCodeInput": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationBirthDateInput": {
+        "type": "object",
+        "properties": {
+          "birthDate": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "birthDate"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationDeliveryAddressInput": {
+        "type": "object",
+        "properties": {
+          "deliveryAddress": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 254
+          }
+        },
+        "required": [
+          "deliveryAddress"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationChannelInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms"
+            ]
+          },
+          "address": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 254
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ],
+            "default": "de"
+          }
+        },
+        "required": [
+          "kind",
+          "address"
+        ],
+        "additionalProperties": false
+      },
+      "PortalMe": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          },
+          "sessionExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "sms"
+                  ]
+                },
+                "maskedAddress": {
+                  "type": "string"
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "kind",
+                "maskedAddress",
+                "verifiedAt"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "firstName",
+          "language",
+          "sessionExpiresAt",
+          "channels"
+        ],
+        "additionalProperties": false
+      },
+      "ActivationCompletionInput": {
+        "type": "object",
+        "properties": {
+          "oneTimeCode": {
+            "type": "string",
+            "pattern": "^[0-9]{6}$"
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 254
+          },
+          "noticeVersion": {
+            "type": "string",
+            "enum": [
+              "art14-activation:v1"
+            ]
+          },
+          "consent": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "consentVersion": {
+            "type": "string",
+            "enum": [
+              "portal-contact-consent:v1"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "noticeVersion",
+          "consent",
+          "consentVersion",
+          "language"
         ],
         "additionalProperties": false
       },
@@ -6523,6 +6876,7 @@
             "schema": {
               "type": "string",
               "enum": [
+                "activated",
                 "none",
                 "printed",
                 "open",
@@ -8737,6 +9091,441 @@
           },
           "422": {
             "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/activation": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Start an activation with a personal code; sets the portal session cookie",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationCodeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The activating session's next step",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/activation/birth-date": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The birth-date step; a wrong date counts on the code, the fifth locks it",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationBirthDateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The next step",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/activation/delivery-address": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "For an in-person code, the email or mobile the link came to, retyped",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationDeliveryAddressInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The next step",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/activation/channel": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Send a one-time code to the private email or mobile the participant chose (committed first)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationChannelInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Sent, or its outcome unknown: the code may still arrive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/activation/completion": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Complete the activation in one transaction; the session becomes active with a new token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivationCompletionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Activated and logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalMe"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/me": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The logged-in participant: greeting, language and channels (masked)",
+        "responses": {
+          "200": {
+            "description": "The participant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalMe"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/logout": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "End the portal session (an active one's logout is audited)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Done"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {

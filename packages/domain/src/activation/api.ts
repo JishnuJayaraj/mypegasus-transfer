@@ -6,8 +6,10 @@ import {
   ActivationDeliveryKind,
   ActivationDeliveryStatus,
   ActivationRevokeReason,
+  ChannelVerification,
 } from "./model";
 import { ActivationStatus } from "./status";
+import { IdentityAssurance } from "./steps";
 
 export const ActivationCapabilities = z.strictObject({
   issueActivationCode: z.boolean(),
@@ -94,10 +96,32 @@ export const ActivationRecord = z
   })
   .meta({ id: "ActivationRecord" });
 
+/** The activated account as staff see it (D29): when, and how the identity was assured. */
+export const ParticipantAccountRecord = z.strictObject({
+  activatedAt: z.iso.datetime(),
+  identityAssurance: IdentityAssurance,
+  identityAssuredAt: z.iso.datetime().nullable(),
+});
+
+/** A participant channel as staff see it (D28, Q123): kind, states and dates, never the address. */
+export const StaffChannelRecord = z.strictObject({
+  id: z.uuid(),
+  kind: ActivationDeliveryKind,
+  verifiedAt: z.iso.datetime(),
+  verifiedBy: ChannelVerification,
+  consentGivenAt: z.iso.datetime(),
+  consentEndedAt: z.iso.datetime().nullable(),
+  noticeSentAt: z.iso.datetime().nullable(),
+  suspendedAt: z.iso.datetime().nullable(),
+  removedAt: z.iso.datetime().nullable(),
+});
+
 export const ParticipationActivation = z
   .strictObject({
     status: ActivationStatus,
     current: ActivationRecord.nullable(),
+    account: ParticipantAccountRecord.nullable(),
+    channels: z.array(StaffChannelRecord),
     capabilities: ActivationCapabilities,
   })
   .meta({ id: "ParticipationActivation" });

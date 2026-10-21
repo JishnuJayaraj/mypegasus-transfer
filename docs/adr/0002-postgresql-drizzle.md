@@ -239,6 +239,35 @@ database holding a removed value. `participation_unmatched_has_no_wave` is gone.
   `record_activation_delivery` records `sent`, `failed` or `unknown`. Only `sent` creates notice
   evidence, `failed` revokes the code, and `unknown` leaves it valid without claiming delivery.
 
+## Amendment 2026-10-21: participant activation and sessions (Slice 3, PR 3e)
+
+- New tables, each with `project_id`: `participant_account` (one per participation),
+  `consent_record`, `participant_channel` (the normalised private address, unique per kind while
+  not removed), `one_time_code_challenge` (a keyed hash and the address it went to, 15 minutes,
+  5 wrong entries) and `participant_session` (a token's SHA-256, `activating` or `active`, the
+  activation steps done, the step-up). `transfer_app` may select them and update
+  `participant_session.last_seen_at` only.
+- The status body moved into the internal `apply_status_change` (no grant), unchanged in
+  behaviour but for the `activation` edge kind; `change_participation_status` keeps its signature,
+  asserts `user` or `system` and delegates. `edge_kind` was recreated with `activation` (an
+  `ADD VALUE` couldn't be used by the same migration transaction).
+- Eight granted functions (`0042_participant_activation_functions.sql`): `start_activation`,
+  `check_activation_birth_date`, `check_activation_delivery_address`, `create_one_time_code`,
+  `record_one_time_code_delivery`, `complete_activation`, `end_participant_session`,
+  `mark_activation_notice_sent`. They lock participation, then code, then session, and repeat
+  every step rule under the locks. A counted failure (a wrong birth date or delivery address, a
+  wrong one-time code) is **returned**, never raised, so its count commits; the fifth locks the
+  code (`activation_code_locked`, actor `system`, job `portal-activation`) or ends the one-time
+  code (`one_time_code_exhausted`). An unusable code returns `NULL` from `start_activation` and
+  counts nothing.
+- `create_one_time_code` serialises an address on a transaction advisory lock and counts its codes
+  of the last hour (login and verification together). `complete_activation` writes the code's use,
+  the consent, the channel, the account, the audit events and the status change, ends the
+  activating sessions and starts the `active` one, all in one transaction; a refusal after the
+  verification rolls the verification back too.
+- `issue_activation_code` refuses an activated account (`already_activated`); the terminal-status
+  trigger also ends the participation's sessions.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:
@@ -261,6 +290,10 @@ Roles and grants:
 - Slice 3 (PR 3d): `transfer_app` has `SELECT` on `activation_code` and
   `privacy_notice_delivery`, and no `INSERT`, `UPDATE` or `DELETE`; the functions above perform
   every write (`0039_activation_codes.sql`, `0040_activation_code_functions.sql`).
+- Slice 3 (PR 3e): `transfer_app` has `SELECT` on `participant_account`, `consent_record`,
+  `participant_channel`, `one_time_code_challenge` and `participant_session`, plus
+  `UPDATE (last_seen_at)` on `participant_session`; the activation functions write the rest
+  (`0041_participant_activation.sql`, `0042_participant_activation_functions.sql`).
 
 Schema:
 - **Data catalog** (`packages/db/src/data-catalog.ts`): every table has a `dataClass`, a

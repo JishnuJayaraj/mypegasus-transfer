@@ -17,6 +17,7 @@ import {
   staffUser,
   activationCode,
   privacyNoticeDelivery,
+  participantAccount,
   desc,
 } from "@transfer/db";
 import {
@@ -142,7 +143,7 @@ export function participationRoutes(deps: Deps) {
 
   async function statesOf(ids: readonly string[], receivedOn: ReadonlyMap<string, string>) {
     if (ids.length === 0) return new Map();
-    const [codes, deliveries] = await Promise.all([
+    const [codes, deliveries, accounts] = await Promise.all([
       db
         .select({
           participationId: activationCode.participationId,
@@ -165,7 +166,12 @@ export function participationRoutes(deps: Deps) {
         })
         .from(privacyNoticeDelivery)
         .where(inArray(privacyNoticeDelivery.participationId, [...ids])),
+      db
+        .select({ participationId: participantAccount.participationId })
+        .from(participantAccount)
+        .where(inArray(participantAccount.participationId, [...ids])),
     ]);
+    const activated = new Set(accounts.map((account) => account.participationId));
     const latest = new Map<string, (typeof codes)[number]>();
     for (const code of codes)
       if (!latest.has(code.participationId)) latest.set(code.participationId, code);
@@ -187,7 +193,7 @@ export function participationRoutes(deps: Deps) {
       const code = latest.get(id);
       result.set(id, {
         activationStatus: activationStatus(
-          false,
+          activated.has(id),
           code
             ? {
                 channel: code.channel,
@@ -397,7 +403,9 @@ export function participationRoutes(deps: Deps) {
       const scope = participationListScope(subject, projectId);
       if (scope.kind === "none") return problem(c, "forbidden");
       const activationPredicate = activationFilter
-        ? sql`coalesce((
+        ? sql`case when exists (
+            select from participant_account pa where pa.participation_id = ${participation.id}
+          ) then 'activated' else coalesce((
             select case
               when ac.used_at is not null then 'used'
               when ac.revoked_at is not null then 'revoked'
@@ -411,7 +419,7 @@ export function participationRoutes(deps: Deps) {
             where ac.participation_id = ${participation.id}
             order by ac.issued_at desc, ac.id desc
             limit 1
-          ), 'none') = ${activationFilter}`
+          ), 'none') end = ${activationFilter}`
         : undefined;
       const noticePredicate = noticeFilter
         ? sql`case

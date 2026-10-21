@@ -70,7 +70,7 @@ export {
 } from "./access/participation-view";
 export { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole } from "./enums";
 export * from "./lifecycle/enums";
-export { edges, type Edge, type EdgeKind } from "./lifecycle/edges";
+export { edges, edgeKinds, type Edge, type EdgeKind } from "./lifecycle/edges";
 export { guardIds, type DatedFact, type GuardFacts, type GuardId } from "./lifecycle/guards";
 export {
   approvedExceptionFact,
@@ -392,16 +392,51 @@ export {
   IdentityCheck,
   IdentityCheckMethod,
   NoticeMethod,
+  ChannelVerification,
+  ConsentPurpose,
+  OneTimeCodePurpose,
+  ParticipantSessionState,
+  StepUpMethod,
 } from "./activation/model";
 export {
+  ActivationStep,
+  IdentityAssurance,
+  identityAssurance,
+  needsBirthDate,
+  nextActivationStep,
+  stepRefusal,
+  type ActivationProgress,
+  type ActivationRequest,
+} from "./activation/steps";
+export {
   ART14_NOTICE_VERSION,
+  PORTAL_CONTACT_CONSENT_VERSION,
   NoticeLanguage,
   art14Notice,
   noticeCatalog,
+  portalContactConsent,
   type NoticeOrganisation,
   type NoticeTemplate,
+  type NoticeVersion,
 } from "./notices/catalog";
-export { normaliseEmail, normaliseMobile } from "./portal/contact";
+export {
+  maskContactAddress,
+  normaliseContact,
+  normaliseEmail,
+  normaliseMobile,
+  type ContactKind,
+} from "./portal/contact";
+export { portalLimits } from "./portal/limits";
+export {
+  ActivationBirthDateInput,
+  ActivationChannelInput,
+  ActivationCodeInput,
+  ActivationCompletionInput,
+  ActivationDeliveryAddressInput,
+  ActivationState,
+  PortalChannel,
+  PortalMe,
+} from "./portal/api";
 export {
   ActivationCapabilities,
   ActivationCodeActionInput,

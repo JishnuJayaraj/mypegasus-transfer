@@ -5,6 +5,9 @@ import {
   and,
   eq,
   inArray,
+  consentRecord,
+  participantAccount,
+  participantChannel,
   participantDetails,
   participantIdentity,
   participation,
@@ -59,6 +62,7 @@ const issuanceCodes = [
   "address_required",
   "identity_not_checked",
   "open_code_exists",
+  "already_activated",
 ] as const;
 
 function refusalIn(error: unknown, codes: readonly string[]) {
@@ -424,6 +428,31 @@ export function activationRoutes(deps: Deps) {
       .where(eq(activationCode.participationId, participationId))
       .orderBy(sql`${activationCode.issuedAt} desc`)
       .limit(1);
+    const [account] = await db
+      .select({
+        activatedAt: utc(participantAccount.activatedAt),
+        identityAssurance: participantAccount.identityAssurance,
+        identityAssuredAt: utc(participantAccount.identityAssuredAt),
+      })
+      .from(participantAccount)
+      .where(eq(participantAccount.participationId, participationId));
+    // D28, Q123: kind, states and dates; the address is never selected for staff.
+    const channels = await db
+      .select({
+        id: participantChannel.id,
+        kind: participantChannel.kind,
+        verifiedAt: utc(participantChannel.verifiedAt),
+        verifiedBy: participantChannel.verifiedBy,
+        consentGivenAt: utc(consentRecord.givenAt),
+        consentEndedAt: utc(consentRecord.endedAt),
+        noticeSentAt: utc(participantChannel.noticeSentAt),
+        suspendedAt: utc(participantChannel.suspendedAt),
+        removedAt: utc(participantChannel.removedAt),
+      })
+      .from(participantChannel)
+      .innerJoin(consentRecord, eq(consentRecord.id, participantChannel.consentId))
+      .where(eq(participantChannel.participationId, participationId))
+      .orderBy(participantChannel.verifiedAt, participantChannel.id);
     const target = projectTarget(access.found.projectId, access.access.regionId, participationId);
     const may = (
       kind:
@@ -445,13 +474,15 @@ export function activationRoutes(deps: Deps) {
         }
       : null;
     return {
-      status: activationStatus(false, snapshot, deps.clock.now().toISOString()),
+      status: activationStatus(account !== undefined, snapshot, deps.clock.now().toISOString()),
       current: current
         ? {
             ...current,
             attemptsLeft: 5 - current.failedAttempts,
           }
         : null,
+      account: account ?? null,
+      channels,
       capabilities: {
         issueActivationCode: may("issueActivationCode"),
         recordHandover: may("recordHandover"),

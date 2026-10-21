@@ -9,8 +9,21 @@ import type {
 } from "./enums";
 import type { GuardId } from "./guards";
 
-/** How a transition happens: the TG entry kinds, or a manual or system step. */
-export type EdgeKind = TgEntryKind | "manual" | "system";
+/**
+ * How a transition happens: the TG entry kinds, a manual or system step, or the participant's own
+ * activation (Slice 3 plan D25), which only `complete_activation` takes.
+ */
+export type EdgeKind = TgEntryKind | "manual" | "system" | "activation";
+
+/** The `edge_kind` values, in the database's order. */
+export const edgeKinds = [
+  "scheduled_entry",
+  "scheduled_entry_catchup",
+  "reconciliation",
+  "manual",
+  "system",
+  "activation",
+] as const satisfies readonly EdgeKind[];
 
 /**
  * One allowed transition for one actor type (plan 5.3). `from: null` is creation. Everything
@@ -56,6 +69,9 @@ export const edges: readonly Edge[] = [
     ["contacted", "informed", "user", "manual"],
     ["contacted", "unreachable", "user", "manual"],
     ["unreachable", "contacted", "user", "manual", ["before_cutoff"]],
+    // A first activation before the cutoff (Q116, Q121); `contacted` itself stays as it is.
+    ["imported", "contacted", "participant", "activation", ["before_cutoff"]],
+    ["unreachable", "contacted", "participant", "activation", ["before_cutoff"]],
     ["informed", "active_in_tg", "system", "scheduled_entry", tgEntry, ["ta_tg"]],
     ["informed", "active_in_tg", "system", "scheduled_entry_catchup", tgEntry, ["ta_tg"]],
     ["informed", "active_in_tg", "user", "reconciliation", tgEntry, ["ta_tg"]],

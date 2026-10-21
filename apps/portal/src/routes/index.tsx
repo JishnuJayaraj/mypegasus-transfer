@@ -1,6 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { InlineNotification, Select, SelectItem, Stack } from "@transfer/ui";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ApiProblemError } from "@transfer/api-client";
+import type { PortalMe } from "@transfer/domain";
+import {
+  Button,
+  InlineNotification,
+  Select,
+  SelectItem,
+  Stack,
+  formatTimestamp,
+} from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { languages } from "../i18n";
 
@@ -8,6 +17,21 @@ export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
   const { t, i18n } = useTranslation();
+  const { api } = Route.useRouteContext();
+  // The logged-in participant, or null without a live session (an idle or expired one too).
+  const me = useQuery({
+    queryKey: ["portal-me"],
+    queryFn: async () => {
+      try {
+        const { data } = await api.GET("/api/v1/portal/me");
+        if (!data) throw new Error("No portal data");
+        return data;
+      } catch (error) {
+        if (error instanceof ApiProblemError && error.status === 401) return null;
+        throw error;
+      }
+    },
+  });
   return (
     <Stack gap={6}>
       <Select
@@ -21,9 +45,48 @@ function Home() {
           <SelectItem key={code} value={code} text={name} lang={code} />
         ))}
       </Select>
-      <h1>{t("home.title")}</h1>
-      <p>{t("home.intro")}</p>
+      {me.data ? (
+        <Participant me={me.data} />
+      ) : (
+        <>
+          <h1>{t("home.title")}</h1>
+          <p>{t("home.intro")}</p>
+          {!me.isPending && <Link to="/activate">{t("home.activate")}</Link>}
+        </>
+      )}
       <ApiStatus />
+    </Stack>
+  );
+}
+
+/** Greeting and the participant's own channels, masked (D28). */
+function Participant({ me }: { me: PortalMe }) {
+  const { t } = useTranslation();
+  const { api } = Route.useRouteContext();
+  const queryClient = useQueryClient();
+  return (
+    <Stack gap={5}>
+      <h1>{t("home.greeting", { name: me.firstName })}</h1>
+      <h2>{t("home.channels")}</h2>
+      <ul className="tp-list">
+        {me.channels.map((channel) => (
+          <li key={channel.id}>
+            {t(channel.kind === "email" ? "home.channelEmail" : "home.channelSms", {
+              address: channel.maskedAddress,
+              at: formatTimestamp(channel.verifiedAt),
+            })}
+          </li>
+        ))}
+      </ul>
+      <Button
+        kind="secondary"
+        onClick={async () => {
+          await api.POST("/api/v1/portal/logout", { body: {} });
+          queryClient.setQueryData(["portal-me"], null);
+        }}
+      >
+        {t("home.logout")}
+      </Button>
     </Stack>
   );
 }

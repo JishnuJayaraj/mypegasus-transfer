@@ -188,16 +188,19 @@ after a photo-ID check; in-person codes record the same check before being sent.
 and revokes the open code atomically. This step does not change lifecycle status.
 
 **Account activation** (Q116, Q121, [round 36](../decisions/2026-10-20-answers-round-36.md),
-planned for Slice 3 PR 3e): a
-participant's first activation moves `imported` or `unreachable` to `contacted` in the same
-transaction (actor `participant`, the only edges a participant takes). Before `informed` it needs
-the participation's cutoff not to have passed, checked with database time at completion; in
-`informed` or `active_in_tg` it changes no status. A terminal status revokes open activation codes
-and ends the participant's sessions.
+as built in Slice 3 PR 3e): a participant's first activation moves `imported` or `unreachable` to
+`contacted` in the same transaction, along the edges of kind `activation` (actor `participant`, the
+only edges a participant takes, each with `before_cutoff`). Before `informed` it needs the
+participation's cutoff not to have passed: checked when the code is accepted and again with
+database time at completion (`before_cutoff`). In `contacted`, `informed` or `active_in_tg` it
+changes no status. Only `complete_activation` takes these edges: it calls the internal
+`apply_status_change`, which holds the status body; the granted `change_participation_status`
+keeps its signature and refuses a participant actor (`actor_not_allowed`). An activated account
+gets no new activation code (`already_activated`; a recovery code comes with PR 3f).
 
-The terminal-status part already built in PR 3d runs in the status transaction: moving to
-`withdrawn`, `ta_completed` or `exited` revokes every open activation code as
-`participation_closed`. Ending participant sessions joins that trigger in PR 3e.
+A terminal status runs in the status transaction: moving to `withdrawn`, `ta_completed` or
+`exited` revokes every open activation code as `participation_closed` and ends the participant's
+sessions (`participation_closed`).
 
 There is no self-registration: `self_registered` and `rejected` (its only path) left the
 lifecycle core in Slice 3 ([round 35](../decisions/2026-10-20-answers-round-35.md)).
