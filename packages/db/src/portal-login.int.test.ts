@@ -310,30 +310,30 @@ describe("start_participant_session (ADR-0007)", () => {
   });
 });
 
-describe("channels (Q123)", () => {
-  async function addChannel(tokenHash: string, address: string, kind = "email") {
-    const codeHash = hex();
-    await call(app, "request_channel_code", {
-      tokenHash,
-      kind,
-      address,
-      codeHash,
-      id: randomUUID(),
-    });
-    const channelId = randomUUID();
-    const consentId = randomUUID();
-    const result = await call(app, "add_participant_channel", {
-      tokenHash,
-      codeHash,
-      channelId,
-      consentId,
-      consentVersion: CONSENT,
-      language: "en",
-      requestId: "req-add",
-    });
-    return { result, channelId, consentId };
-  }
+async function addChannel(tokenHash: string, address: string, kind = "email") {
+  const codeHash = hex();
+  await call(app, "request_channel_code", {
+    tokenHash,
+    kind,
+    address,
+    codeHash,
+    id: randomUUID(),
+  });
+  const channelId = randomUUID();
+  const consentId = randomUUID();
+  const result = await call(app, "add_participant_channel", {
+    tokenHash,
+    codeHash,
+    channelId,
+    consentId,
+    consentVersion: CONSENT,
+    language: "en",
+    requestId: "req-add",
+  });
+  return { result, channelId, consentId };
+}
 
+describe("channels (Q123)", () => {
   it("adds a verified channel with its own consent, audited as the participant", async () => {
     const { participationId, tokenHash } = await activated();
     const { result, channelId, consentId } = await addChannel(tokenHash, "+4915100000000", "sms");

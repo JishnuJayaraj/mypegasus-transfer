@@ -84,16 +84,16 @@ function newOneTimeCode() {
  * login page reads and posts only on a click.
  */
 function loginCodeMessage(language: NoticeLanguage, code: string, link: string) {
-  const minutes = portalLimits.oneTimeCode.validityMinutes;
+  const validity = portalLimits.oneTimeCode.validityMinutes;
   return language === "de"
     ? {
         subject: "Ihr Anmeldecode für das Teilnehmerportal",
-        text: `Ihr Anmeldecode lautet ${code}. Er gilt ${minutes} Minuten. Geben Sie ihn niemandem weiter.`,
+        text: `Ihr Anmeldecode lautet ${code}. Er gilt ${validity} Minuten. Geben Sie ihn niemandem weiter.`,
         link: `Oder öffnen Sie diesen Link und klicken Sie dort auf „Anmelden“: ${link}\n\nWenn Sie keinen Code angefordert haben, können Sie diese Nachricht ignorieren.`,
       }
     : {
         subject: "Your login code for the participant portal",
-        text: `Your login code is ${code}. It is valid for ${minutes} minutes. Do not share it with anyone.`,
+        text: `Your login code is ${code}. It is valid for ${validity} minutes. Do not share it with anyone.`,
         link: `Or open this link and select “Log in” there: ${link}\n\nIf you did not ask for a code, you can ignore this message.`,
       };
 }
@@ -108,6 +108,26 @@ function oneTimeCodeMessage(language: NoticeLanguage, code: string) {
         subject: "Your confirmation code for the participant portal",
         text: `Your confirmation code is ${code}. It is valid for ${portalLimits.oneTimeCode.validityMinutes} minutes. Do not share it with anyone.`,
       };
+}
+
+function rateLimited(c: Context<AppEnv>, retryAfterSeconds: number) {
+  c.header("Retry-After", String(retryAfterSeconds));
+  return problem(c, "too-many-requests", {
+    errors: [{ pointer: "", code: "rate_limited", detail: "Please try again later" }],
+  });
+}
+
+/** 503 before any code exists when no provider is configured (ADR-0006). */
+function deliveryUnavailable(c: Context<AppEnv>) {
+  return problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
+  });
+}
+
+function deliveryFailed(c: Context<AppEnv>) {
+  return problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" }],
+  });
 }
 
 export function portalRoutes(deps: Deps) {
@@ -143,26 +163,6 @@ export function portalRoutes(deps: Deps) {
   function throttled(c: Context<AppEnv>) {
     const taken = throttle.take(clientIp(c));
     return taken.ok ? undefined : rateLimited(c, taken.retryAfterSeconds);
-  }
-
-  function rateLimited(c: Context<AppEnv>, retryAfterSeconds: number) {
-    c.header("Retry-After", String(retryAfterSeconds));
-    return problem(c, "too-many-requests", {
-      errors: [{ pointer: "", code: "rate_limited", detail: "Please try again later" }],
-    });
-  }
-
-  /** 503 before any code exists when no provider is configured (ADR-0006). */
-  function deliveryUnavailable(c: Context<AppEnv>) {
-    return problem(c, "service-unavailable", {
-      errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
-    });
-  }
-
-  function deliveryFailed(c: Context<AppEnv>) {
-    return problem(c, "service-unavailable", {
-      errors: [{ pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" }],
-    });
   }
 
   /**

@@ -513,7 +513,7 @@ Implementation:
       participant runs the activation steps again; completion removes the old channels, ends their
       consents `lost_access_replaced` (never a withdrawal), adds the new channel and consent,
       changes no lifecycle status, and is a login. The account keeps its first identity
-      assurance. If the code expires or is revoked, the channels stay suspended.
+      assurance. The activation notice goes to the new channel. If the code expires or is revoked, the channels stay suspended.
 - **Assisted mode**: staff act on behalf of the participant, audited as `actor` + `onBehalfOf`.
   No session sharing.
 - **No self-registration.** There is no anonymous endpoint that creates participant records;

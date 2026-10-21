@@ -86,6 +86,29 @@ const activationLink = (base: string, code: string) => {
 const noticeLink = (base: string) =>
   new URL(`notice/art14/${ART14_NOTICE_VERSION}`, base.endsWith("/") ? base : `${base}/`).href;
 
+type PrintRow = Awaited<ReturnType<typeof printRow>>;
+
+/** The name and postal address a letter or sheet prints. */
+async function printRow(executor: Pick<Deps["db"], "select">, participationId: string) {
+  const [row] = await executor
+    .select({ p: participation, identity: participantIdentity, details: participantDetails })
+    .from(participation)
+    .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
+    .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
+    .where(eq(participation.id, participationId));
+  return row!;
+}
+
+/** 503 before any code exists when no provider is configured (production has no mock). */
+const deliveryUnavailable = (c: Context) =>
+  problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
+  });
+const deliveryFailed = (c: Context) =>
+  problem(c, "service-unavailable", {
+    errors: [{ pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" }],
+  });
+
 export function activationRoutes(deps: Deps) {
   const { db } = deps;
   const router = createRouter();
@@ -160,19 +183,6 @@ export function activationRoutes(deps: Deps) {
         at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "expiresAt"`,
     );
     return { id, code, expiresAt: result.rows[0]!.expiresAt };
-  }
-
-  type PrintRow = Awaited<ReturnType<typeof printRow>>;
-
-  /** The name and postal address a letter or sheet prints. */
-  async function printRow(executor: Pick<Deps["db"], "select">, participationId: string) {
-    const [row] = await executor
-      .select({ p: participation, identity: participantIdentity, details: participantDetails })
-      .from(participation)
-      .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
-      .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
-      .where(eq(participation.id, participationId));
-    return row!;
   }
 
   /** A letter's or sheet's print data with its code: only in the issuing response (ADR-0007). */
@@ -251,16 +261,6 @@ export function activationRoutes(deps: Deps) {
     );
     return outcome;
   }
-
-  /** 503 before any code exists when no provider is configured (production has no mock). */
-  const deliveryUnavailable = (c: Context) =>
-    problem(c, "service-unavailable", {
-      errors: [{ pointer: "", code: "delivery_unavailable", detail: "No delivery provider" }],
-    });
-  const deliveryFailed = (c: Context) =>
-    problem(c, "service-unavailable", {
-      errors: [{ pointer: "", code: "delivery_failed", detail: "Delivery failed definitively" }],
-    });
 
   router.openapi(
     createRoute({

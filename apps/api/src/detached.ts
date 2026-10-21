@@ -20,7 +20,7 @@ export function createDetached(logger: Logger) {
     },
     /** Resolves once every task started so far has finished. */
     async settle() {
-      await Promise.all([...running]);
+      await Promise.all(running);
     },
   };
 }

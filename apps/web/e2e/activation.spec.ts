@@ -39,7 +39,6 @@ const countTo = async (staff: APIRequestContext, to: string) =>
 // participant logs out and logs in again by code through the email's link.
 test("portal: activate a printed letter, then log out and log in again by code", async ({
   page,
-  baseURL,
 }) => {
   test.slow();
   const owner = createDb(testDatabaseUrls("transfer_e2e").owner);
