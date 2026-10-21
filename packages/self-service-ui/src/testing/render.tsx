@@ -1,13 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { ApiProblemError } from "@transfer/api-client";
-import type { PortalSelfService } from "@transfer/domain";
+import type { PortalSelfService, PortalSensitiveValues } from "@transfer/domain";
 import { createI18n } from "@transfer/ui";
 import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { vi } from "vitest";
 import { SELF_SERVICE_NAMESPACE, selfServiceResources } from "../i18n";
-import type { SelfServiceSource } from "../source";
+import type { SelfServiceSource, StepUpSource } from "../source";
 import { SelfServiceWizard } from "../wizard";
 
 // The wizard over a fake source, for the component tests (synthetic data only).
@@ -26,6 +26,11 @@ export function renderWizard(
     step?: string;
     load?: SelfServiceSource["load"];
     save?: SelfServiceSource["save"];
+    /** The groups' stored values (synthetic). */
+    sensitive?: Partial<Record<"ba_details" | "health", PortalSensitiveValues["values"]>>;
+    loadSensitive?: SelfServiceSource["loadSensitive"];
+    saveSensitive?: SelfServiceSource["saveSensitive"];
+    stepUp?: Partial<StepUpSource>;
   } = {},
 ) {
   let loads = 0;
@@ -44,6 +49,39 @@ export function renderWizard(
           warnings: [],
         })),
     ),
+    loadSensitive: vi.fn<SelfServiceSource["loadSensitive"]>(
+      options.loadSensitive ??
+        (async (group) => ({ group, values: options.sensitive?.[group] ?? {} })),
+    ),
+    saveSensitive: vi.fn<SelfServiceSource["saveSensitive"]>(
+      options.saveSensitive ??
+        (async (_group, input) => ({
+          ...states.at(-1)!,
+          revision: input.revision + 1,
+          warnings: [],
+        })),
+    ),
+    stepUp: {
+      birthDate: vi.fn<StepUpSource["birthDate"]>(
+        options.stepUp?.birthDate ?? (async () => ({ method: "birth_date", done: true })),
+      ),
+      channels: vi.fn<StepUpSource["channels"]>(
+        options.stepUp?.channels ??
+          (async () => [
+            {
+              id: "00000000-0000-4000-8000-0000000000c1",
+              kind: "email",
+              maskedAddress: "e***@example.org",
+            },
+          ]),
+      ),
+      requestCode: vi.fn<StepUpSource["requestCode"]>(
+        options.stepUp?.requestCode ?? (async () => {}),
+      ),
+      verifyCode: vi.fn<StepUpSource["verifyCode"]>(
+        options.stepUp?.verifyCode ?? (async () => ({ method: "photo_id_and_code", done: true })),
+      ),
+    },
   } satisfies SelfServiceSource;
   const i18n = createI18n(
     {

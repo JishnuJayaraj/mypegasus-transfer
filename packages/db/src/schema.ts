@@ -50,6 +50,7 @@ import {
   ChannelRemovalReason,
   ConsentEndReason,
   ParticipantSessionEndReason,
+  SensitiveStepUpMethod,
   edgeKinds,
   portalLimits,
 } from "@transfer/domain";
@@ -58,6 +59,7 @@ import {
   bigint,
   boolean,
   check,
+  customType,
   date,
   foreignKey,
   index,
@@ -365,6 +367,10 @@ export const participantSessionEndReason = pgEnum(
   values(ParticipantSessionEndReason),
 );
 export const stepUpMethod = pgEnum("step_up_method", values(StepUpMethod));
+export const sensitiveStepUpMethod = pgEnum(
+  "sensitive_step_up_method",
+  values(SensitiveStepUpMethod),
+);
 
 const dateColumn = (name: string) => date(name, { mode: "string" });
 const createdAt = () =>
@@ -796,6 +802,104 @@ export const participantProfile = pgTable(
   ],
 );
 
+/** A `pgp_sym_encrypt` ciphertext (ADR-0002, encryption); the runtime role can't select it. */
+const ciphertext = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
+
+/**
+ * The columns of encrypted fields (ADR-0002, encryption; data-protection.md, self-service): each
+ * field's ciphertext and its unencrypted presence (completeness needs only that), the key the row
+ * was written with and when.
+ */
+function encryptedFields<K extends string>(fields: Record<K, string>) {
+  const columns = Object.fromEntries(
+    Object.entries<string>(fields).flatMap(([key, column]) => [
+      [key, ciphertext(column)],
+      [`${key}Present`, boolean(`${column}_present`).notNull().default(false)],
+    ]),
+  ) as { [P in K]: ReturnType<typeof ciphertext> } & {
+    [P in K as `${P}Present`]: ReturnType<typeof boolean>;
+  };
+  return {
+    ...personKeys(),
+    ...columns,
+    keyId: text("key_id").notNull(),
+    createdAt: createdAt(),
+    writtenAt: timestamp("written_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  };
+}
+
+/** Each ciphertext is present exactly when its presence says so; the key id is a fingerprint. */
+function encryptedChecks(
+  table: string,
+  t: Record<string, unknown> & { participationId: unknown; projectId: unknown; keyId: unknown },
+  fields: readonly string[],
+): PgTableExtraConfigValue[] {
+  return [
+    foreignKey({
+      name: `${table}_participation_fk`,
+      columns: [t.participationId, t.projectId] as never,
+      foreignColumns: [participation.id, participation.projectId] as never,
+    }),
+    check(`${table}_key_id`, sql`${t.keyId} ~ '^[0-9a-f]{16}$'`),
+    ...fields.map((key) =>
+      check(
+        `${table}_${key.replaceAll(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)}_present`,
+        sql`(${t[key]} is not null) = ${t[`${key}Present`]}`,
+      ),
+    ),
+  ];
+}
+
+/**
+ * The RV-Nummer (TL 407 field 25), highly confidential, `identifiers`, class
+ * `participation_record` (Q88, Q141). Written and read only by `write_sensitive_fields` and
+ * `read_sensitive_fields` (ADR-0002, encryption).
+ */
+export const participantIdentifierData = pgTable(
+  "participant_identifier_data",
+  encryptedFields({ pensionInsuranceNumber: "pension_insurance_number" }),
+  (t) => encryptedChecks("participant_identifier_data", t, ["pensionInsuranceNumber"]),
+);
+
+/**
+ * Nationality, entry date, residence status and Bürgergeld (TL 407 fields 31–34), highly
+ * confidential, `residence_social`, class `personnel_file` (Q141); like the RV-Nummer.
+ */
+export const participantResidenceSocialData = pgTable(
+  "participant_residence_social_data",
+  encryptedFields({
+    nationality: "nationality",
+    entryToGermanyDate: "entry_to_germany_date",
+    residenceStatus: "residence_status",
+    buergergeld: "buergergeld",
+  }),
+  (t) =>
+    encryptedChecks("participant_residence_social_data", t, [
+      "nationality",
+      "entryToGermanyDate",
+      "residenceStatus",
+      "buergergeld",
+    ]),
+);
+
+/**
+ * The health restrictions and Schwerbehinderung/Gleichstellung yes/no answers (TL 407 fields 36,
+ * 37), special category, `health` and `disability`, class `health_record` (Q141); like the
+ * RV-Nummer, behind the participant's step-up (Q137).
+ */
+export const participantHealthData = pgTable(
+  "participant_health_data",
+  encryptedFields({
+    healthRestrictions: "health_restrictions",
+    severeDisability: "severe_disability",
+  }),
+  (t) => encryptedChecks("participant_health_data", t, ["healthRestrictions", "severeDisability"]),
+);
+
 /**
  * The purposes notice acknowledged (data-protection.md, self-service; Q138): version, language,
  * who (the participant, or staff on their behalf) and when; an acknowledgement, not a consent.
@@ -1181,6 +1285,10 @@ export const participantSession = pgTable(
     deliveryAddressCheckedAt: instant("delivery_address_checked_at"),
     stepUpMethod: stepUpMethod("step_up_method"),
     stepUpAt: instant("step_up_at"),
+    // The step-up before special-category data (ADR-0007, step-up; Q137) and its wrong birth dates.
+    sensitiveStepUpMethod: sensitiveStepUpMethod("sensitive_step_up_method"),
+    sensitiveStepUpAt: instant("sensitive_step_up_at"),
+    stepUpFailures: integer("step_up_failures").notNull().default(0),
   },
   (t) => [
     foreignKey({
@@ -1199,6 +1307,14 @@ export const participantSession = pgTable(
     check(
       "participant_session_step_up",
       sql`(${t.stepUpMethod} is null) = (${t.stepUpAt} is null)`,
+    ),
+    check(
+      "participant_session_sensitive_step_up",
+      sql`(${t.sensitiveStepUpMethod} is null) = (${t.sensitiveStepUpAt} is null) and (${t.state} = 'active' or ${t.sensitiveStepUpMethod} is null)`,
+    ),
+    check(
+      "participant_session_step_up_failures",
+      sql`${t.stepUpFailures} between 0 and ${sql.raw(String(portalLimits.stepUp.birthDateFailures))}`,
     ),
     check(
       "participant_session_activating",
@@ -1756,6 +1872,9 @@ export const tables = [
   participantIdentity,
   participantDetails,
   participantProfile,
+  participantIdentifierData,
+  participantResidenceSocialData,
+  participantHealthData,
   selfServiceNoticeAcknowledgement,
   activationCode,
   privacyNoticeDelivery,

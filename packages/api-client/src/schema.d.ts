@@ -5274,6 +5274,250 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/step-up/birth-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The step-up of a birth-date account: the birth date again; the fifth wrong one ends the session (step_up_failed) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StepUpBirthDateInput"];
+                };
+            };
+            responses: {
+                /** @description Stepped up for this session */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalStepUp"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/step-up/code-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The step-up of a photo-ID account: send a step-up code to one of its channels (committed first) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StepUpCodeRequestInput"];
+                };
+            };
+            responses: {
+                /** @description Sent, or its outcome unknown: the code may still arrive */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/step-up/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The step-up code; a login code never counts. Five wrong entries end the code, not the session */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StepUpCodeInput"];
+                };
+            };
+            responses: {
+                /** @description Stepped up for this session */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalStepUp"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/self-service": {
         parameters: {
             query?: never;
@@ -5363,6 +5607,142 @@ export interface paths {
                 };
                 /** @description Not authenticated */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/self-service/sensitive/{group}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The group's highly confidential or special-category values, decrypted; each field's read is audited. health needs the step-up (403 step_up_required) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    group: "ba_details" | "health";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The values */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalSensitiveValues"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** Save one sensitive group whole, encrypted; each changed field is audited. health needs the step-up (403 step_up_required); 409 stale_revision or notice_required */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    group: "ba_details" | "health";
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SelfServicePageInput"];
+                };
+            };
+            responses: {
+                /** @description Saved; the state, sensitive fields by presence */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalSelfServiceWrite"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5533,6 +5913,81 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["ParticipationSelfService"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/self-service/sensitive/{group}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The group's sensitive fields the viewer may read in normal mode, decrypted; each field's read is audited (sensitive_read). The others are left out */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                    group: "ba_details" | "health";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The readable values */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationSensitiveValues"];
                     };
                 };
                 /** @description Validation failed */
@@ -7154,6 +7609,32 @@ export interface components {
         ChannelRemovalResult: {
             sessionEnded: boolean;
         };
+        PortalStepUp: {
+            method: components["schemas"]["SensitiveStepUpMethod"];
+            done: boolean;
+        };
+        /** @enum {string} */
+        SensitiveStepUpMethod: "birth_date" | "photo_id_and_code";
+        StepUpBirthDateInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            birthDate: string;
+        };
+        StepUpCodeRequestInput: {
+            /** Format: uuid */
+            channelId: string;
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+        };
+        StepUpCodeInput: {
+            oneTimeCode: string;
+        };
         PortalSelfService: {
             revision: number;
             notice: {
@@ -7175,6 +7656,8 @@ export interface components {
             customValues: {
                 [key: string]: string | number | boolean | null;
             };
+            sensitive: components["schemas"]["SensitivePresence"];
+            stepUp: components["schemas"]["PortalStepUp"];
             pages: components["schemas"]["SelfServicePageView"][];
             missing: components["schemas"]["SelfServiceMissingItem"][];
         };
@@ -7271,6 +7754,15 @@ export interface components {
         DrivingLicenceClass: "AM" | "A1" | "A2" | "A" | "B" | "BE" | "C1" | "C1E" | "C" | "CE" | "D1" | "D1E" | "D" | "DE" | "L" | "T";
         /** @enum {string} */
         SelfServiceEmploymentType: "full_time" | "part_time";
+        SensitivePresence: {
+            pensionInsuranceNumber: boolean;
+            nationality: boolean;
+            entryToGermanyDate: boolean;
+            residenceStatus: boolean;
+            buergergeld: boolean;
+            healthRestrictions: boolean;
+            severeDisability: boolean;
+        };
         SelfServicePageView: {
             page: components["schemas"]["SelfServicePage"];
             sensitive: boolean;
@@ -7327,6 +7819,8 @@ export interface components {
             customValues: {
                 [key: string]: string | number | boolean | null;
             };
+            sensitive: components["schemas"]["SensitivePresence"];
+            stepUp: components["schemas"]["PortalStepUp"];
             pages: components["schemas"]["SelfServicePageView"][];
             missing: components["schemas"]["SelfServiceMissingItem"][];
             warnings: components["schemas"]["SelfServiceWarning"][];
@@ -7345,6 +7839,35 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        PortalSensitiveValues: {
+            /** @enum {string} */
+            group: "ba_details" | "health";
+            values: components["schemas"]["SensitiveValues"];
+        };
+        SensitiveValues: {
+            pensionInsuranceNumber?: string | null;
+            nationality?: {
+                /** @enum {string} */
+                kind: "german";
+            } | {
+                /** @enum {string} */
+                kind: "other";
+                country: components["schemas"]["ForeignCountry"];
+            } | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            entryToGermanyDate?: string | null;
+            /** @enum {string|null} */
+            residenceStatus?: "blue_card" | "residence_permit" | "visa" | "settlement_permit" | "permission_to_reside" | "toleration" | null;
+            buergergeld?: boolean | null;
+            healthRestrictions?: boolean | null;
+            severeDisability?: boolean | null;
+        };
+        /** @enum {string} */
+        ForeignCountry: "AD" | "AE" | "AF" | "AG" | "AI" | "AL" | "AM" | "AO" | "AQ" | "AR" | "AS" | "AT" | "AU" | "AW" | "AX" | "AZ" | "BA" | "BB" | "BD" | "BE" | "BF" | "BG" | "BH" | "BI" | "BJ" | "BL" | "BM" | "BN" | "BO" | "BQ" | "BR" | "BS" | "BT" | "BV" | "BW" | "BY" | "BZ" | "CA" | "CC" | "CD" | "CF" | "CG" | "CH" | "CI" | "CK" | "CL" | "CM" | "CN" | "CO" | "CR" | "CU" | "CV" | "CW" | "CX" | "CY" | "CZ" | "DJ" | "DK" | "DM" | "DO" | "DZ" | "EC" | "EE" | "EG" | "EH" | "ER" | "ES" | "ET" | "FI" | "FJ" | "FK" | "FM" | "FO" | "FR" | "GA" | "GB" | "GD" | "GE" | "GF" | "GG" | "GH" | "GI" | "GL" | "GM" | "GN" | "GP" | "GQ" | "GR" | "GS" | "GT" | "GU" | "GW" | "GY" | "HK" | "HM" | "HN" | "HR" | "HT" | "HU" | "ID" | "IE" | "IL" | "IM" | "IN" | "IO" | "IQ" | "IR" | "IS" | "IT" | "JE" | "JM" | "JO" | "JP" | "KE" | "KG" | "KH" | "KI" | "KM" | "KN" | "KP" | "KR" | "KW" | "KY" | "KZ" | "LA" | "LB" | "LC" | "LI" | "LK" | "LR" | "LS" | "LT" | "LU" | "LV" | "LY" | "MA" | "MC" | "MD" | "ME" | "MF" | "MG" | "MH" | "MK" | "ML" | "MM" | "MN" | "MO" | "MP" | "MQ" | "MR" | "MS" | "MT" | "MU" | "MV" | "MW" | "MX" | "MY" | "MZ" | "NA" | "NC" | "NE" | "NF" | "NG" | "NI" | "NL" | "NO" | "NP" | "NR" | "NU" | "NZ" | "OM" | "PA" | "PE" | "PF" | "PG" | "PH" | "PK" | "PL" | "PM" | "PN" | "PR" | "PS" | "PT" | "PW" | "PY" | "QA" | "RE" | "RO" | "RS" | "RU" | "RW" | "SA" | "SB" | "SC" | "SD" | "SE" | "SG" | "SH" | "SI" | "SJ" | "SK" | "SL" | "SM" | "SN" | "SO" | "SR" | "SS" | "ST" | "SV" | "SX" | "SY" | "SZ" | "TC" | "TD" | "TF" | "TG" | "TH" | "TJ" | "TK" | "TL" | "TM" | "TN" | "TO" | "TR" | "TT" | "TV" | "TW" | "TZ" | "UA" | "UG" | "UM" | "US" | "UY" | "UZ" | "VA" | "VC" | "VE" | "VG" | "VI" | "VN" | "VU" | "WF" | "WS" | "YE" | "YT" | "ZA" | "ZM" | "ZW";
         SelfServiceNoticeInput: {
             /** @enum {string} */
             version: "self-service-purposes:v1";
@@ -7456,6 +7979,13 @@ export interface components {
             };
             participantMaintained: ("address" | "phone" | "mobile" | "privateEmail")[];
             missing: components["schemas"]["SelfServiceMissingItem"][];
+        };
+        ParticipationSensitiveValues: {
+            /** Format: uuid */
+            participationId: string;
+            /** @enum {string} */
+            group: "ba_details" | "health";
+            values: components["schemas"]["SensitiveValues"];
         };
         DevStaffUser: {
             /** Format: uuid */

@@ -23,7 +23,8 @@ export const ChannelVerification = z.enum(["one_time_code", "activation_link"]);
 export const ConsentPurpose = z.enum(["portal_contact", "kug200b_profile_access"]);
 /** Where a consent was given: in the portal, or on a signed paper form staff record. */
 export const ConsentSource = z.enum(["portal", "paper_form"]);
-export const OneTimeCodePurpose = z.enum(["login", "channel_verification"]);
+/** A login, a new channel's verification, or the step-up before special-category data (Q137). */
+export const OneTimeCodePurpose = z.enum(["login", "channel_verification", "step_up"]);
 export const ParticipantSessionState = z.enum(["activating", "active"]);
 export const StepUpMethod = z.enum(["birth_date", "one_time_code"]);
 /** Q130, Q123: why a channel was suspended or removed, and why its consent ended. */
@@ -33,7 +34,8 @@ export const ConsentEndReason = z.enum(["revoked", "lost_access_replaced"]);
 /**
  * Why a participant session ended: logout, activation (the activating session gives way to an
  * active one), a newer activating session of the same code, the code locked or revoked, a terminal
- * status, a recovery code issued (Q130), the last channel removed (Q123).
+ * status, a recovery code issued (Q130), the last channel removed (Q123), the fifth wrong birth
+ * date of a step-up (Q137).
  */
 export const ParticipantSessionEndReason = z.enum([
   "logout",
@@ -43,6 +45,7 @@ export const ParticipantSessionEndReason = z.enum([
   "participation_closed",
   "lost_access",
   "no_channel",
+  "step_up_failed",
 ]);
 /** ADR-0007, Q130: how a participant logged in. */
 export const LoginMethod = z.enum(["one_time_code", "recovery_code"]);

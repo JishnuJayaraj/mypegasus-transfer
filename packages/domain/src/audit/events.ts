@@ -122,6 +122,9 @@ export const AuditEventType = z.enum([
   "placement_agentur_set",
   // Slice 4a, written only by `acknowledge_self_service_notice` (Q138)
   "self_service_notice_acknowledged",
+  // Slice 4a, the step-up before special-category data, written only by its functions (Q137)
+  "step_up_completed",
+  "step_up_failed",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -190,6 +193,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "contact_channels_suspended",
   "placement_agentur_set",
   "self_service_notice_acknowledged",
+  "step_up_completed",
+  "step_up_failed",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -756,6 +761,22 @@ export const AuditEvent = z.discriminatedUnion("type", [
       noticeVersion: textVersion,
       language: NoticeLanguage,
     }),
+  }),
+  /**
+   * A participant session stepped up before special-category data (Q137): by birth date, or by a
+   * step-up code (its challenge). Never the date or the code.
+   */
+  event("step_up_completed", {
+    ...ofParticipation,
+    details: z.union([
+      z.strictObject({ method: z.literal("birth_date") }),
+      z.strictObject({ method: z.literal("photo_id_and_code"), challengeId: z.uuid() }),
+    ]),
+  }),
+  /** The fifth wrong birth date of a step-up ended the session (Q137). */
+  event("step_up_failed", {
+    ...ofParticipation,
+    details: z.strictObject({ method: z.literal("birth_date") }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

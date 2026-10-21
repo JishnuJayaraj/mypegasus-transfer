@@ -5,13 +5,13 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds } from "./seed";
 import { call, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
 
-// The SQL side of portalLimits (packages/domain/src/portal/limits.ts; Slice 3 plan D14, D27,
-// D29): the functions and CHECKs hard-code the values, this test holds them to the constants.
+// The SQL side of portalLimits (packages/domain/src/portal/limits.ts; ADR-0007, limits): the
+// functions and CHECKs hard-code the values, this test holds them to the constants.
 const urls = testDatabaseUrls();
 const app = new Client({ connectionString: urls.app });
 const owner = new Client({ connectionString: urls.owner });
 const hex = () => randomBytes(32).toString("hex");
-const { activationCode, oneTimeCode, session } = portalLimits;
+const { activationCode, oneTimeCode, session, stepUp } = portalLimits;
 
 beforeAll(() => Promise.all([app.connect(), owner.connect()]));
 afterAll(() => Promise.all([app.end(), owner.end()]));
@@ -156,5 +156,15 @@ describe("portal limits in SQL", () => {
     await expect(check()).rejects.toMatchObject({ message: "session_invalid" });
     await age(minutes - 1);
     await expect(check()).resolves.toBe("ok");
+  });
+
+  it("end a session at the configured wrong birth date of its step-up (Q137)", async () => {
+    const { rows } = await owner.query(
+      `select p.prosrc, (select pg_get_constraintdef(c.oid) from pg_constraint c
+         where c.conname = 'participant_session_step_up_failures') as "check"
+       from pg_proc p where p.proname = 'fail_step_up'`,
+    );
+    expect(rows[0].prosrc).toContain(`IF n < ${stepUp.birthDateFailures} THEN`);
+    expect(rows[0].check).toContain(`<= ${stepUp.birthDateFailures}`);
   });
 });

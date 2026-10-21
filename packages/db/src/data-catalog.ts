@@ -110,6 +110,23 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // The encrypted self-service fields (ADR-0002, encryption; Q135, Q141): ciphertexts, their
+  // presence, the key id and times; one row per participation, one retention class per table.
+  participant_identifier_data: {
+    retentionClass: "participation_record",
+    dataClass: "highly_confidential",
+    holdsParticipantData: true,
+  },
+  participant_residence_social_data: {
+    retentionClass: "personnel_file",
+    dataClass: "highly_confidential",
+    holdsParticipantData: true,
+  },
+  participant_health_data: {
+    retentionClass: "health_record",
+    dataClass: "special_category",
+    holdsParticipantData: true,
+  },
   // The purposes notice acknowledged (Q138): version, language, actor and time; immutable.
   self_service_notice_acknowledgement: {
     retentionClass: "personnel_file",
@@ -259,6 +276,14 @@ export function checkDataCatalog(
   return problems;
 }
 
+const encryptedKeys = {
+  participation_id: null,
+  project_id: null,
+  key_id: null,
+  created_at: null,
+  written_at: null,
+};
+
 /**
  * The field-catalog key of each column of the tables holding participant fields
  * (data-protection.md, Classification): null for a column that isn't a participant field (keys,
@@ -357,6 +382,31 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     created_at: null,
     updated_at: null,
   },
+  // A ciphertext column stores its field; the presence beside it is metadata (completeness needs
+  // only that, data-protection.md, self-service), like the key id.
+  participant_identifier_data: {
+    ...encryptedKeys,
+    pension_insurance_number: "pensionInsuranceNumber",
+    pension_insurance_number_present: null,
+  },
+  participant_residence_social_data: {
+    ...encryptedKeys,
+    nationality: "nationality",
+    nationality_present: null,
+    entry_to_germany_date: "entryToGermanyDate",
+    entry_to_germany_date_present: null,
+    residence_status: "residenceStatus",
+    residence_status_present: null,
+    buergergeld: "buergergeld",
+    buergergeld_present: null,
+  },
+  participant_health_data: {
+    ...encryptedKeys,
+    health_restrictions: "healthRestrictions",
+    health_restrictions_present: null,
+    severe_disability: "severeDisability",
+    severe_disability_present: null,
+  },
   participation_dsv_amendment: {
     id: null,
     participation_id: null,
@@ -425,19 +475,11 @@ const withoutFields = new Set([
 ]);
 
 /**
- * Fields with a retention class that no table stores yet: the highly confidential and
- * special-category self-service fields, whose encrypted tables come with their own write path
- * (data-protection.md, self-service). Each leaves this list when a column stores it.
+ * Fields with a retention class that no table stores yet, e.g. an encrypted field whose table
+ * comes with its own write path (data-protection.md, self-service). Each leaves this list when a
+ * column stores it; none waits now.
  */
-export const notYetStored: ReadonlySet<string> = new Set([
-  "pensionInsuranceNumber",
-  "nationality",
-  "entryToGermanyDate",
-  "residenceStatus",
-  "buergergeld",
-  "healthRestrictions",
-  "severeDisability",
-]);
+export const notYetStored: ReadonlySet<string> = new Set();
 
 const dataClassRank: Record<DataClass, number> = {
   aggregated: 0,
@@ -450,7 +492,8 @@ const dataClassRank: Record<DataClass, number> = {
 /**
  * Returns one message per problem (data-protection.md, retention; ADR-0008): every table holding
  * participant data classifies all its columns; every field a column stores is catalogued, stored as
- * a plain column (no special-category or highly confidential field without encryption), not above
+ * its catalog entry says (a special-category or highly confidential field only in a ciphertext
+ * column, `bytea`, written by the encryption functions; no other field there), not above
  * the table's data class and of the table's retention class, so a table holds one retention class
  * only (ADR-0008); and every field with a retention class is stored by some column.
  */
@@ -481,15 +524,19 @@ export function checkFieldColumns(
     for (const column of Object.keys(mapping)) {
       if (!names.includes(column)) problems.push(`${name}.${column}: not in the table`);
     }
-    for (const column of names) {
-      const at = `${name}.${column}`;
-      const key = mapping[column];
+    for (const column of config.columns) {
+      const at = `${name}.${column.name}`;
+      const key = mapping[column.name];
       if (key === null) continue;
       const field = fields.find((f) => f.key === key);
+      const encrypted = column.getSQLType() === "bytea";
       if (key === undefined) problems.push(`${at}: not classified`);
       else if (!field) problems.push(`${at}: not a field of the catalog`);
-      else if (field.storage !== "column") problems.push(`${at}: needs encrypted storage`);
-      else if (dataClassRank[field.dataClass] > dataClassRank[entry.dataClass]) {
+      else if (field.storage === "encrypted_column" && !encrypted) {
+        problems.push(`${at}: needs encrypted storage`);
+      } else if (field.storage === "column" && encrypted) {
+        problems.push(`${at}: a ciphertext column for a plain field`);
+      } else if (dataClassRank[field.dataClass] > dataClassRank[entry.dataClass]) {
         problems.push(`${at}: data class above the table's`);
       } else if (field.retentionClass !== entry.retentionClass) {
         problems.push(`${at}: retention class differs`);

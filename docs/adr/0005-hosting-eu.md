@@ -48,6 +48,12 @@ operates a Hetzner cluster in German data centres.
 - [ ] A shared rate limiter for portal code submissions (Q128; in memory per
       process until then) and the client IP behind the ingress (the throttle sees the peer
       address; a trusted forwarded-for header needs the ingress configuration)
+- [ ] **The cluster's Postgres logs no statements and no bind parameters**: `log_statement`
+      `none` or `ddl`, `log_min_duration_statement` off (`-1`) or without parameters, and
+      `log_parameter_max_length` and `log_parameter_max_length_on_error` `0`. The field-encryption
+      key travels as a bind parameter of every encrypted read and write (ADR-0002, field
+      encryption); the same holds for `pg_stat_statements` (normalised queries only) and any
+      connection pooler's logs. `FIELD_ENCRYPTION_KEY` comes from the cluster's secret store.
 - [ ] Every DPO/legal confirmation implemented; if one required a design change, that change
       is built and tested (round 9)
 

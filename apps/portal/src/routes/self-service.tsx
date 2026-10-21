@@ -4,6 +4,7 @@ import {
   SELF_SERVICE_NOTICE_VERSION,
   type PortalSelfService,
   type PortalSelfServiceWrite,
+  type PortalSensitiveValues,
 } from "@transfer/domain";
 import { SelfServiceWizard, type SelfServiceSource } from "@transfer/self-service-ui";
 import { InlineNotification, Stack } from "@transfer/ui";
@@ -19,7 +20,10 @@ export const Route = createFileRoute("/self-service")({
 
 const noData = () => new Error("No portal data");
 
-/** The participant's own wizard routes (data-protection.md, self-service). */
+/**
+ * The participant's own wizard routes (data-protection.md, self-service): the sensitive groups on
+ * their logged routes and the session's step-up (ADR-0007, step-up).
+ */
 function portalSource(api: ApiClient): SelfServiceSource {
   return {
     queryKey: ["portal-self-service"],
@@ -40,6 +44,43 @@ function portalSource(api: ApiClient): SelfServiceSource {
       });
       if (!data) throw noData();
       return data as PortalSelfServiceWrite;
+    },
+    loadSensitive: async (group) => {
+      const { data } = await api.GET("/api/v1/portal/self-service/sensitive/{group}", {
+        params: { path: { group } },
+      });
+      if (!data) throw noData();
+      return data as PortalSensitiveValues;
+    },
+    saveSensitive: async (group, body) => {
+      const { data } = await api.PUT("/api/v1/portal/self-service/sensitive/{group}", {
+        params: { path: { group } },
+        body,
+      });
+      if (!data) throw noData();
+      return data as PortalSelfServiceWrite;
+    },
+    stepUp: {
+      birthDate: async (birthDate) => {
+        const { data } = await api.POST("/api/v1/portal/step-up/birth-date", {
+          body: { birthDate },
+        });
+        if (!data) throw noData();
+        return data;
+      },
+      channels: async () => {
+        const { data } = await api.GET("/api/v1/portal/channels");
+        if (!data) throw noData();
+        return data.channels;
+      },
+      requestCode: async (channelId, language) => {
+        await api.POST("/api/v1/portal/step-up/code-request", { body: { channelId, language } });
+      },
+      verifyCode: async (oneTimeCode) => {
+        const { data } = await api.POST("/api/v1/portal/step-up/code", { body: { oneTimeCode } });
+        if (!data) throw noData();
+        return data;
+      },
     },
   };
 }

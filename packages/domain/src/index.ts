@@ -448,6 +448,16 @@ export {
 } from "./portal/contact";
 export { portalLimits } from "./portal/limits";
 export {
+  PortalStepUp,
+  SensitiveStepUpMethod,
+  StepUpBirthDateInput,
+  StepUpCodeInput,
+  StepUpCodeRequestInput,
+  stepUpDone,
+  stepUpMethodOf,
+  type StepUpFacts,
+} from "./portal/step-up";
+export {
   ActivationBirthDateInput,
   ActivationChannelInput,
   ActivationCodeInput,
@@ -521,7 +531,23 @@ export {
   type WizardPage,
 } from "./self-service/wizard";
 export {
+  completeSensitiveValues,
+  countryCodes,
+  ForeignCountry,
+  groupNeedsStepUp,
+  Nationality,
+  PensionInsuranceNumber,
+  ResidenceStatus,
+  sensitiveFields,
+  sensitiveFieldsOf,
+  sensitiveValueSchemas,
+  sensitiveValuesSchema,
+  type SensitiveField,
+  type SensitiveValues as SensitiveValueMap,
+} from "./self-service/sensitive";
+export {
   ParticipationSelfService,
+  ParticipationSensitiveValues,
   PortalConsent,
   PortalConsents,
   PortalSelfService,
@@ -533,4 +559,7 @@ export {
   SelfServicePageView,
   SelfServiceValues,
   SelfServiceWarning,
+  SensitivePresence,
+  SensitiveValuesView,
+  PortalSensitiveValues,
 } from "./self-service/api";

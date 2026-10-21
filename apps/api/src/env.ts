@@ -11,20 +11,22 @@ const schema = z.object({
   PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(3001),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
-  // Plan 5.9: pg-boss in the API process; tests switch it off and start it themselves.
+  // ADR-0011: pg-boss in the API process; tests switch it off and start it themselves.
   JOBS_ENABLED: z.enum(["true", "false"]).default("true"),
   // The nightly lifecycle run, Berlin local time (round 9).
   JOBS_LIFECYCLE_TIME: z.string().default("04:15"),
-  // Plan 5.8: system, or fixed:<ISO instant> outside production.
+  // ADR-0006: system, or fixed:<ISO instant> outside production.
   CLOCK: z.string().default("system"),
-  // Slice 2 plan 5.8 (S2): templates/ and base-defaults.json; unset, the repo paths.
+  // ADR-0004 (architecture/overview.md, packages/config): templates/ and base-defaults.json;
+  // unset, the repo paths.
   CONFIG_DIR: z.string().optional(),
-  // Staff login with AUTH_MODE=oidc (ADR-0007, Slice 3 D1): all four or none.
+  // Staff login with AUTH_MODE=oidc (ADR-0007, staff sessions): all four or none.
   OIDC_ISSUER: z.url().optional(),
   OIDC_CLIENT_ID: z.string().optional(),
   OIDC_CLIENT_SECRET: z.string().optional(),
   OIDC_REDIRECT_URL: z.url().optional(),
   ACCESS_CODE_SECRET: z.string().min(32).optional(),
+  FIELD_ENCRYPTION_KEY: z.string().min(32).optional(),
   PORTAL_PUBLIC_URL: z.url().optional(),
   MAIL_ADAPTER: z.literal("mock").default("mock"),
   SMS_ADAPTER: z.literal("mock").default("mock"),
@@ -60,6 +62,8 @@ export interface Env {
   /** Set exactly when `authMode` is `oidc`. */
   oidc?: OidcEnv | undefined;
   accessCodeSecret?: string | undefined;
+  /** The root of the encrypted fields' key (ADR-0002, encryption); never logged or returned. */
+  fieldEncryptionKey?: string | undefined;
   portalPublicUrl?: string | undefined;
   mailAdapter?: "mock" | undefined;
   smsAdapter?: "mock" | undefined;
@@ -103,6 +107,9 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   if (!env.ACCESS_CODE_SECRET && env.NODE_ENV !== "development") {
     throw new Error("ACCESS_CODE_SECRET is required outside development");
   }
+  if (!env.FIELD_ENCRYPTION_KEY && env.NODE_ENV !== "development") {
+    throw new Error("FIELD_ENCRYPTION_KEY is required outside development");
+  }
   if (!env.PORTAL_PUBLIC_URL && env.NODE_ENV !== "development") {
     throw new Error("PORTAL_PUBLIC_URL is required outside development");
   }
@@ -128,6 +135,8 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     oidc,
     // Fixed only for synthetic development so a watch restart keeps printed codes usable.
     accessCodeSecret: env.ACCESS_CODE_SECRET ?? "development-access-code-secret-only-0001",
+    // Fixed only for synthetic development so a restart can still read what was written.
+    fieldEncryptionKey: env.FIELD_ENCRYPTION_KEY ?? "development-field-encryption-key-only-0001",
     portalPublicUrl: env.PORTAL_PUBLIC_URL ?? "http://localhost:5174/portal/",
     mailAdapter: env.MAIL_ADAPTER,
     smsAdapter: env.SMS_ADAPTER,

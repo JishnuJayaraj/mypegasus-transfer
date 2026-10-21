@@ -157,6 +157,12 @@ const statusFunctions = [
   "set_placement_agentur",
   "acknowledge_self_service_notice",
   "write_self_service_data",
+  // Slice 4a: the encrypted fields and the step-up (Q135, Q137)
+  "write_sensitive_fields",
+  "read_sensitive_fields",
+  "check_step_up_birth_date",
+  "request_step_up_code",
+  "verify_step_up_code",
 ];
 const helpers = [
   "assert_context",
@@ -206,6 +212,15 @@ const helpers = [
   "lock_active_session",
   "lock_self_service_writer",
   "keep_notice_acknowledgement_immutable",
+  "sensitive_group_fields",
+  "seal_sensitive_value",
+  "open_sensitive_value",
+  "open_sensitive_fields",
+  "sensitive_value_valid",
+  "participant_session_stepped_up",
+  "participant_step_up_method",
+  "record_step_up",
+  "fail_step_up",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -561,6 +576,11 @@ describe("transfer_app and the participant activation tables", () => {
     ["update a session's state", "update participant_session set state = state"],
     ["end a session", "update participant_session set ended_at = now()"],
     ["update a session's step-up", "update participant_session set step_up_at = now()"],
+    [
+      "step up a session itself",
+      "update participant_session set sensitive_step_up_at = now(), sensitive_step_up_method = 'birth_date'",
+    ],
+    ["reset its step-up failures", "update participant_session set step_up_failures = 0"],
     ["delete from participant_session", "delete from participant_session"],
     ["truncate participant_session", "truncate participant_session"],
     [
@@ -571,6 +591,62 @@ describe("transfer_app and the participant activation tables", () => {
     ["count an activation failure directly", "select count_activation_failure(null, null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// ADR-0002, encryption (Q135): the app sees the encrypted tables' presence flags, key ids and
+// times, never a ciphertext, writes them only through write_sensitive_fields and can't reach
+// pgcrypto at all.
+describe("transfer_app and the encrypted self-service tables", () => {
+  const ciphertexts = {
+    participant_identifier_data: ["pension_insurance_number"],
+    participant_residence_social_data: [
+      "nationality",
+      "entry_to_germany_date",
+      "residence_status",
+      "buergergeld",
+    ],
+    participant_health_data: ["health_restrictions", "severe_disability"],
+  };
+
+  it("may select the presence flags, key ids and times", async () => {
+    for (const [table, columns] of Object.entries(ciphertexts)) {
+      const presence = columns.map((c) => `${c}_present`).join(", ");
+      expect(
+        (
+          await app.query(`select participation_id, project_id, ${presence}, key_id, created_at,
+           written_at from ${table}`)
+        ).rows,
+      ).toEqual([]);
+    }
+  });
+
+  it.each(
+    Object.entries(ciphertexts).flatMap(([table, columns]) => [
+      [`select * from ${table}`, `select * from ${table}`],
+      ...columns.map((c) => [`select ${table}.${c}`, `select ${c} from ${table}`]),
+      [
+        `insert into ${table}`,
+        `insert into ${table} (participation_id, project_id, key_id)
+         values (gen_random_uuid(), '${seedProjectIds.werkNord}', '${"a".repeat(16)}')`,
+      ],
+      [`update ${table}`, `update ${table} set key_id = key_id`],
+      [`delete from ${table}`, `delete from ${table}`],
+      [`truncate ${table}`, `truncate ${table}`],
+    ]) as [string, string][],
+  )("may not %s (42501)", async (_label, statement) => {
+    await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
+  });
+
+  it("can't use pgcrypto, which lives in its own schema", async () => {
+    await expect(
+      app.query("select crypto.pgp_sym_decrypt(null::bytea, 'k')"),
+    ).rejects.toMatchObject(permissionDenied);
+    const { rows } = await owner.query(
+      `select e.extname, n.nspname from pg_extension e join pg_namespace n on n.oid = e.extnamespace
+       where e.extname = 'pgcrypto'`,
+    );
+    expect(rows).toEqual([{ extname: "pgcrypto", nspname: "crypto" }]);
   });
 });
 

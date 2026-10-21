@@ -66,10 +66,30 @@ export function wizardState(overrides: Partial<PortalSelfService> = {}): PortalS
     identity: { firstName: "Erika", lastName: "Beispiel", birthDate: "1970-01-01" },
     values: emptyValues,
     customValues: {},
+    sensitive: {
+      pensionInsuranceNumber: false,
+      nationality: false,
+      entryToGermanyDate: false,
+      residenceStatus: false,
+      buergergeld: false,
+      healthRestrictions: false,
+      severeDisability: false,
+    },
+    stepUp: { method: "birth_date", done: false },
     pages: [
       page("personal", [{ key: "gender", required: true }, "maritalStatus"], false),
       page("contact", ["address", "phone", "mobile", "privateEmail"]),
-      page("ba_details", ["pensionInsuranceNumber", "nationality"], false),
+      page(
+        "ba_details",
+        [
+          { key: "pensionInsuranceNumber", required: true },
+          { key: "nationality", required: true },
+          "entryToGermanyDate",
+          "residenceStatus",
+          { key: "buergergeld", required: true },
+        ],
+        false,
+      ),
       page("education", [{ key: "educationHistory", required: true }], false),
       page("work_history", ["workHistory"]),
       page("languages_mobility", ["languageSkills", "drivingLicence", "vehicleAvailable"]),
@@ -80,7 +100,14 @@ export function wizardState(overrides: Partial<PortalSelfService> = {}): PortalS
         "maxCommuteDistance",
         "earliestStartDate",
       ]),
-      page("health", ["healthRestrictions", "severeDisability"], false),
+      page(
+        "health",
+        [
+          { key: "healthRestrictions", required: true },
+          { key: "severeDisability", required: true },
+        ],
+        false,
+      ),
     ],
     missing: [
       {

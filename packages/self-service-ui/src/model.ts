@@ -2,11 +2,14 @@ import { compileFieldSchema, type FieldSchema } from "@transfer/config";
 import {
   isValidIsoDate,
   pageValuesSchema,
+  sensitiveValuesSchema,
   valueIssueCode,
   valueWarnings,
   type ConfidentialPage,
   type PortalSelfService,
+  type PortalSensitiveValues,
   type SelfServicePage,
+  type SensitivePage,
   type WizardPage,
 } from "@transfer/domain";
 import { formatDate, parseDisplayDate } from "@transfer/ui";
@@ -37,6 +40,7 @@ export type DrivingLicenceForm = { none: boolean; classes: string[] };
 export type WorkingTimeForm = { employmentType: string; weeklyHours: string; distribution: string };
 export type JobWishesForm = { desired: string; alternative: string };
 export type DistanceForm = { kind: string; km: string };
+export type NationalityForm = { kind: string; country: string };
 
 let lastRowId = 0;
 /** A row's key in the page, so inputs keep their state when another row is removed. */
@@ -73,11 +77,23 @@ export function customKind(schema: Readonly<Record<string, unknown>>): CustomKin
 const yesNo = (value: unknown) => (typeof value === "boolean" ? (value ? "yes" : "no") : "");
 const orEmpty = (value: unknown) => (value === null || value === undefined ? "" : String(value));
 
-type Values = PortalSelfService["values"];
+type Values = PortalSelfService["values"] & PortalSensitiveValues["values"];
+/** A sensitive group's decrypted values, read on their own logged route. */
+export type SensitiveValues = PortalSensitiveValues["values"];
 
 /** A catalog field's value as its form state. */
 function toForm(key: string, values: Values): unknown {
   switch (key) {
+    case "nationality": {
+      const value = values.nationality;
+      return { kind: value?.kind ?? "", country: value?.kind === "other" ? value.country : "" };
+    }
+    case "entryToGermanyDate":
+      return formatDate(values.entryToGermanyDate);
+    case "buergergeld":
+    case "healthRestrictions":
+    case "severeDisability":
+      return yesNo(values[key]);
     case "address": {
       const value = values.address;
       return {
@@ -145,14 +161,22 @@ function customToForm(schema: Readonly<Record<string, unknown>>, value: unknown)
   return orEmpty(value);
 }
 
-/** The form state of a page from the wizard state. */
-export function pageDraft(page: WizardPage, state: PortalSelfService): Draft {
+/**
+ * The form state of a page from the wizard state; a sensitive page's from its group's values
+ * (data-protection.md, self-service: never in the wizard state).
+ */
+export function pageDraft(
+  page: WizardPage,
+  state: PortalSelfService,
+  sensitive: SensitiveValues = {},
+): Draft {
+  const values = { ...state.values, ...sensitive } as Values;
   return Object.fromEntries(
     page.fields.map((field) => [
       field.key,
       field.custom
         ? customToForm(field.custom.schema, state.customValues[field.key])
-        : toForm(field.key, state.values),
+        : toForm(field.key, values),
     ]),
   );
 }
@@ -205,6 +229,25 @@ const filled = (form: Readonly<Record<string, unknown>>) =>
 /** A catalog field's form state as the API's value (`null` for empty). */
 function fromForm(key: string, form: unknown, c: Converter): unknown {
   switch (key) {
+    case "pensionInsuranceNumber": {
+      // Typed as printed ("65 170839 J 003"): spaces removed, the letter capitalised.
+      const value = (form as string).replaceAll(/\s/g, "").toUpperCase();
+      return value === "" ? null : value;
+    }
+    case "nationality": {
+      const value = form as NationalityForm;
+      if (value.kind === "") return null;
+      if (value.kind !== "other") return { kind: value.kind };
+      return { kind: "other", country: c.choice(value.country, `${key}/country`, true) };
+    }
+    case "residenceStatus":
+      return c.choice(form as string, key);
+    case "entryToGermanyDate":
+      return c.date(form as string, key);
+    case "buergergeld":
+    case "healthRestrictions":
+    case "severeDisability":
+      return c.yesNo(form as string);
     case "gender":
     case "maritalStatus":
       return c.choice(form as string, key);
@@ -324,15 +367,27 @@ export type Submission = {
   warnings: string[];
 };
 
+/** Whether a nationality form is another country's: entry date and residence status apply. */
+export const foreignNationality = (draft: Draft) =>
+  (draft.nationality as NationalityForm | undefined)?.kind === "other";
+
 /** The page's values for its write, with the issues the API would refuse and the warnings. */
 export function pageSubmission(page: WizardPage, draft: Draft): Submission {
   const c = new Converter();
+  // Entry date and residence status are hidden, and sent empty, without another nationality.
+  const hidden = new Set(
+    page.page === "ba_details" && !foreignNationality(draft)
+      ? ["entryToGermanyDate", "residenceStatus"]
+      : [],
+  );
   const values = Object.fromEntries(
     page.fields.map((field) => [
       field.key,
-      field.custom
-        ? customFromForm(field.key, field.custom.schema, draft[field.key] as string, c)
-        : fromForm(field.key, draft[field.key], c),
+      hidden.has(field.key)
+        ? null
+        : field.custom
+          ? customFromForm(field.key, field.custom.schema, draft[field.key] as string, c)
+          : fromForm(field.key, draft[field.key], c),
     ]),
   );
   // A custom field whose schema doesn't compile here is left to the API.
@@ -343,7 +398,10 @@ export function pageSubmission(page: WizardPage, draft: Draft): Submission {
         : [],
     ),
   );
-  const parsed = pageValuesSchema(page.page as ConfidentialPage, compiled).safeParse(values);
+  const schema = page.sensitive
+    ? sensitiveValuesSchema(page.page as SensitivePage)
+    : pageValuesSchema(page.page as ConfidentialPage, compiled);
+  const parsed = schema.safeParse(values);
   const issues = [...c.issues];
   for (const issue of parsed.error?.issues ?? []) {
     const path = issue.path.join("/");
@@ -377,23 +435,18 @@ function rowWarnings(values: Record<string, unknown>): string[] {
 export type Step = "notice" | "overview" | SelfServicePage;
 
 /**
- * The pages the participant fills in here. The highly confidential and special-category pages
- * get their own encrypted path and step-up (data-protection.md, self-service); until then the
- * overview lists them.
+ * Pages without a missing required field (the progress bar, Q140): every page the participant
+ * fills in, the sensitive ones by their fields' presence.
  */
-export const editablePages = (state: PortalSelfService) =>
-  state.pages.filter((page) => !page.sensitive);
-
-/** Pages without a missing required field, of the editable ones (the progress bar). */
 export function progress(state: PortalSelfService) {
-  const pages = editablePages(state);
+  const { pages } = state;
   return { complete: pages.filter((page) => page.complete).length, total: pages.length };
 }
 
 /** Where a returning participant resumes: the notice, the first page with missing items, else the overview. */
 export function resumeStep(state: PortalSelfService): Step {
   if (!state.notice.acknowledged) return "notice";
-  return editablePages(state).find((page) => !page.complete)?.page ?? "overview";
+  return state.pages.find((page) => !page.complete)?.page ?? "overview";
 }
 
 /** The step to show for a requested one: the notice comes first; unknown steps resume. */
@@ -406,13 +459,13 @@ export function currentStep(state: PortalSelfService, requested: string | undefi
 
 /** The page after `page` in the sequence, or the overview after the last one. */
 export function nextStep(state: PortalSelfService, page: SelfServicePage): Step {
-  const pages = editablePages(state);
+  const { pages } = state;
   return pages[pages.findIndex((candidate) => candidate.page === page) + 1]?.page ?? "overview";
 }
 
 /** The page before `page`, if there is one. */
 export function previousStep(state: PortalSelfService, page: SelfServicePage): Step | undefined {
-  const pages = editablePages(state);
+  const { pages } = state;
   const index = pages.findIndex((candidate) => candidate.page === page);
   return index > 0 ? pages[index - 1]!.page : undefined;
 }

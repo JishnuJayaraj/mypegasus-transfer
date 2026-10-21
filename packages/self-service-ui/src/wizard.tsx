@@ -1,9 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { organisation } from "@transfer/config";
 import {
+  groupNeedsStepUp,
   selfServicePurposesNotice,
   type ConfidentialPage,
   type PortalSelfService,
+  type SensitivePage,
   type WizardPage,
 } from "@transfer/domain";
 import {
@@ -29,7 +31,6 @@ import { FieldEditor, Form } from "./fields";
 import { SELF_SERVICE_NAMESPACE } from "./i18n";
 import {
   currentStep,
-  editablePages,
   nextStep,
   pageDraft,
   pageSubmission,
@@ -37,14 +38,18 @@ import {
   progress,
   type Draft,
   type Issue,
+  type SensitiveValues,
   type Step,
 } from "./model";
 import { failureOf, type SelfServiceSource } from "./source";
+import { StepUp } from "./step-up";
 
 // The self-service wizard (regional-variation.md, "Self-service wizard"; data-protection.md,
 // self-service): the purposes notice first, then one page at a time, each saved whole on "Weiter"
 // with the revision read; the overview lists what is still missing. Rendered from the API's page
 // definitions, so requirements, help texts and custom fields follow the participation's chain.
+// A sensitive page reads and writes its group on its own logged routes; the special-category page
+// shows only the step-up until the session has it (ADR-0007, step-up).
 
 type Message = "stale" | "invalid" | "failed" | "closed" | "newVersion";
 
@@ -65,7 +70,7 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
   const { source, onStep } = props;
   const queryClient = useQueryClient();
   const [message, setMessage] = useState<Message>();
-  const [ended, setEnded] = useState(false);
+  const [ended, setEnded] = useState<"expired" | "step_up_failed">();
   const [moved, setMoved] = useState(false);
   const [busy, setBusy] = useState(false);
   // A reload after a conflict starts the page again from what was loaded.
@@ -73,7 +78,14 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
   const query = useQuery({ queryKey: source.queryKey, queryFn: () => source.load(), retry: false });
 
   if (ended || (query.isError && failureOf(query.error).kind === "expired")) {
-    return <>{props.expired}</>;
+    return (
+      <Stack gap={5}>
+        {ended === "step_up_failed" && (
+          <InlineNotification kind="error" title={t("stepUp.ended")} hideCloseButton lowContrast />
+        )}
+        {props.expired}
+      </Stack>
+    );
   }
   if (query.isPending) return <p>{t("loading")}</p>;
   if (query.isError) {
@@ -96,7 +108,7 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
       setMoved(true);
       await query.refetch();
     } catch (error) {
-      if (failureOf(error).kind === "expired") setEnded(true);
+      if (failureOf(error).kind === "expired") setEnded("expired");
       else setMessage("failed");
     } finally {
       setBusy(false);
@@ -105,10 +117,12 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
 
   async function save(page: WizardPage, values: Record<string, unknown>): Promise<Issue[]> {
     try {
-      const { warnings: _, ...next } = await source.save(page.page as ConfidentialPage, {
-        revision: state.revision,
-        values,
-      });
+      const input = { revision: state.revision, values };
+      const { warnings: _, ...next } = page.sensitive
+        ? await source.saveSensitive(page.page as SensitivePage, input)
+        : await source.save(page.page as ConfidentialPage, input);
+      // Decrypted values are read again when the page opens, never kept (data-protection.md).
+      queryClient.removeQueries({ queryKey: [...source.queryKey, "sensitive"] });
       queryClient.setQueryData<PortalSelfService>(source.queryKey, next);
       setMessage(undefined);
       setMoved(true);
@@ -121,7 +135,10 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
           setMessage("invalid");
           return failure.issues;
         case "expired":
-          setEnded(true);
+          setEnded("expired");
+          return [];
+        case "step_up_required":
+          await query.refetch();
           return [];
         case "stale":
           await reload("stale");
@@ -177,8 +194,42 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
         {notification}
         {step === "overview" ? (
           <Overview state={state} onStep={go} />
+        ) : current.sensitive &&
+          groupNeedsStepUp(current.page as SensitivePage) &&
+          !state.stepUp.done &&
+          source.stepUp ? (
+          <StepUp
+            stepUp={source.stepUp}
+            method={state.stepUp.method}
+            language={language}
+            heading={<Heading>{t(`pages.${current.page}`)}</Heading>}
+            onDone={() => void query.refetch()}
+            onEnded={() => setEnded("step_up_failed")}
+            onExpired={() => setEnded("expired")}
+            previous={previousStep(state, current.page)}
+            next={nextStep(state, current.page)}
+            onStep={go}
+          />
         ) : current.sensitive ? (
-          <Placeholder page={current} onStep={go} />
+          <SensitiveStep
+            key={`${step}:${state.revision}:${generation}`}
+            group={current.page as SensitivePage}
+            source={source}
+            onExpired={() => setEnded("expired")}
+            onStepUp={() => void query.refetch()}
+          >
+            {(values) => (
+              <PageStep
+                state={state}
+                page={current}
+                sensitive={values}
+                language={language}
+                onSave={save}
+                onInvalid={() => setMessage("invalid")}
+                onStep={go}
+              />
+            )}
+          </SensitiveStep>
         ) : (
           <PageStep
             key={`${step}:${state.revision}:${generation}`}
@@ -225,9 +276,46 @@ function Progress({ state }: { state: PortalSelfService }) {
   );
 }
 
+/**
+ * Reads a sensitive group on its own logged route each time its page opens; the values live only
+ * in the page's form (never cached).
+ */
+function SensitiveStep(props: {
+  group: SensitivePage;
+  source: SelfServiceSource;
+  onExpired: () => void;
+  onStepUp: () => void;
+  children: (values: SensitiveValues) => ReactNode;
+}) {
+  const { t } = useT();
+  const { source, group } = props;
+  const query = useQuery({
+    queryKey: [...source.queryKey, "sensitive", group],
+    queryFn: () => source.loadSensitive(group),
+    retry: false,
+    gcTime: 0,
+  });
+  const failure = query.isError ? failureOf(query.error).kind : undefined;
+  // Once per failure: the wizard then shows the login or the step-up instead of this page.
+  const { onExpired, onStepUp } = props;
+  const handled = useRef<string>(undefined);
+  useEffect(() => {
+    if (!failure || handled.current === failure) return;
+    handled.current = failure;
+    if (failure === "expired") onExpired();
+    if (failure === "step_up_required") onStepUp();
+  }, [failure, onExpired, onStepUp]);
+  if (query.isPending) return <p>{t("loading")}</p>;
+  if (query.isError) {
+    return <InlineNotification kind="error" title={t("loadFailed")} hideCloseButton />;
+  }
+  return <>{props.children(query.data.values)}</>;
+}
+
 function PageStep(props: {
   state: PortalSelfService;
   page: WizardPage;
+  sensitive?: SensitiveValues;
   language: "de" | "en";
   onSave: (page: WizardPage, values: Record<string, unknown>) => Promise<Issue[]>;
   onInvalid: () => void;
@@ -235,11 +323,11 @@ function PageStep(props: {
 }) {
   const { t } = useT();
   const { state, page } = props;
-  const [draft, setDraft] = useState<Draft>(() => pageDraft(page, state));
+  const [draft, setDraft] = useState<Draft>(() => pageDraft(page, state, props.sensitive));
   const [issues, setIssues] = useState<Issue[]>([]);
   const [busy, setBusy] = useState(false);
   const { warnings } = useMemo(() => pageSubmission(page, draft), [page, draft]);
-  const pages = editablePages(state);
+  const { pages } = state;
   const index = pages.findIndex((candidate) => candidate.page === page.page);
   const previous = previousStep(state, page.page);
 
@@ -283,7 +371,7 @@ function PageStep(props: {
           <Heading>{t(`pages.${page.page}`)}</Heading>
           <p>{t("intro.required")}</p>
           <p>{t("intro.optional")}</p>
-          <p>{t("intro.noDiagnoses")}</p>
+          <p>{t(page.page === "health" ? "intro.yesNoOnly" : "intro.noDiagnoses")}</p>
         </Stack>
         {unplaced.map((issue) => (
           <p key={issue.code} className="tp-error" role="alert">
@@ -308,25 +396,6 @@ function PageStep(props: {
         </div>
       </Stack>
     </CarbonForm>
-  );
-}
-
-/**
- * A highly confidential or special-category page: its own encrypted path and the step-up come
- * separately (data-protection.md, self-service); until then it says so.
- */
-function Placeholder({ page, onStep }: { page: WizardPage; onStep: (step: Step) => void }) {
-  const { t } = useT();
-  return (
-    <Stack gap={5}>
-      <Heading>{t(`pages.${page.page}`)}</Heading>
-      <p>{t("overview.later")}</p>
-      <div className="tp-wizard-actions">
-        <Button kind="secondary" onClick={() => onStep("overview")}>
-          {t("actions.toOverview")}
-        </Button>
-      </div>
-    </Stack>
   );
 }
 
@@ -380,7 +449,6 @@ function Overview({ state, onStep }: { state: PortalSelfService; onStep: (step: 
             <li key={page.page}>
               <Stack gap={3}>
                 <h2>{t(`pages.${page.page}`)}</h2>
-                {page.sensitive && <p>{t("overview.later")}</p>}
                 {missing.length === 0 ? (
                   <p>{t("overview.complete")}</p>
                 ) : (
@@ -393,13 +461,11 @@ function Overview({ state, onStep }: { state: PortalSelfService; onStep: (step: 
                     </ul>
                   </>
                 )}
-                {!page.sensitive && (
-                  <div>
-                    <Button kind="tertiary" size="sm" onClick={() => onStep(page.page)}>
-                      {t("actions.edit", { page: t(`pages.${page.page}`) })}
-                    </Button>
-                  </div>
-                )}
+                <div>
+                  <Button kind="tertiary" size="sm" onClick={() => onStep(page.page)}>
+                    {t("actions.edit", { page: t(`pages.${page.page}`) })}
+                  </Button>
+                </div>
               </Stack>
             </li>
           );

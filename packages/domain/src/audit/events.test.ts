@@ -93,6 +93,8 @@ describe("audit event types (ADR-0002)", () => {
       "contact_channels_suspended",
       "placement_agentur_set",
       "self_service_notice_acknowledged",
+      "step_up_completed",
+      "step_up_failed",
     ]);
   });
 
@@ -144,6 +146,8 @@ describe("audit event types (ADR-0002)", () => {
       "contact_channels_suspended",
       "placement_agentur_set",
       "self_service_notice_acknowledged",
+      "step_up_completed",
+      "step_up_failed",
     ]);
   });
 
@@ -1216,6 +1220,26 @@ describe("self-service events (Q138, Q112)", () => {
       AuditEvent.safeParse({ ...acknowledged, details: { ...acknowledged.details, text: "x" } })
         .success,
     ).toBe(false);
+  });
+
+  it("record a step-up by its method, never the date or the code (Q137)", () => {
+    const stepUp = { ...base, actor: participant };
+    for (const details of [
+      { method: "birth_date" },
+      { method: "photo_id_and_code", challengeId: otherId },
+    ]) {
+      expect(issueCodes({ ...stepUp, type: "step_up_completed", details })).toEqual([]);
+    }
+    expect(
+      issueCodes({ ...stepUp, type: "step_up_failed", details: { method: "birth_date" } }),
+    ).toEqual([]);
+    for (const [type, details] of [
+      ["step_up_completed", { method: "photo_id_and_code" }],
+      ["step_up_completed", { method: "birth_date", birthDate: "1970-01-01" }],
+      ["step_up_failed", { method: "photo_id_and_code" }],
+    ] as const) {
+      expect(AuditEvent.safeParse({ ...stepUp, type, details }).success).toBe(false);
+    }
   });
 
   it("tie a consent's channel to the portal contact purpose", () => {

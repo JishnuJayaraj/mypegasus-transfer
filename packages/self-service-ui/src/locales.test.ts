@@ -4,6 +4,7 @@ import {
   Gender,
   LanguageLevel,
   MaritalStatus,
+  ResidenceStatus,
   SelfServicePage,
   wizardPages,
 } from "@transfer/domain";
@@ -56,6 +57,11 @@ describe("self-service catalogs", () => {
       ...LanguageLevel.options.map((value) => `fields.languageSkills.${value}`),
       ...EmploymentType.options.map((value) => `fields.workingTimePreferences.${value}`),
       ...["km", "nationwide", "international"].map((kind) => `fields.maxCommuteDistance.${kind}`),
+      ...ResidenceStatus.options.map((value) => `fields.residenceStatus.${value}`),
+      ...["kind", "german", "other", "country"].map((key) => `fields.nationality.${key}`),
+      ...["pensionInsuranceNumber", "buergergeld", "healthRestrictions", "severeDisability"].map(
+        (field) => `fields.${field}.hint`,
+      ),
     ];
     expect(expected.filter((key) => !has(key))).toEqual([]);
     // The licence classes are their EU codes, the same in every language.

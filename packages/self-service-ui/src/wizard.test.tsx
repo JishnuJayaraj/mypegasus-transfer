@@ -42,8 +42,8 @@ describe("a page from its definition", () => {
     expect(screen.getByRole("group", { name: "Geschlecht *" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Familienstand" })).toBeInTheDocument();
     expect(screen.getByText("So wie im Ausweis.")).toBeInTheDocument();
-    expect(screen.getByText("Seite 1 von 6")).toBeInTheDocument();
-    expect(screen.getByText("4 von 6 Seiten vollständig")).toBeInTheDocument();
+    expect(screen.getByText("Seite 1 von 8")).toBeInTheDocument();
+    expect(screen.getByText("4 von 8 Seiten vollständig")).toBeInTheDocument();
     expect(screen.getByText(/Mit \* gekennzeichnete Angaben sind Pflichtangaben/)).toBeVisible();
     expect(screen.getByText(/mit Ihrer Beraterin oder Ihrem Berater ergänzen/)).toBeVisible();
     expect(screen.getByText(/keine Diagnosen/)).toBeVisible();
@@ -95,23 +95,26 @@ describe("saving on Weiter", () => {
 
   it("goes from the last page to the overview, which lists what is missing", async () => {
     const user = userEvent.setup();
-    const { steps } = renderWizard([wizardState()], { step: "job_wish" });
-    await heading("Arbeitswunsch");
+    const state = wizardState({ stepUp: { method: "birth_date", done: true } });
+    const { steps, source } = renderWizard([state], { step: "health" });
+    await heading("Gesundheit");
     await user.click(screen.getByRole("button", { name: "Weiter" }));
     await heading("Übersicht");
+    expect(source.saveSensitive).toHaveBeenCalledWith("health", {
+      revision: 3,
+      values: { healthRestrictions: null, severeDisability: null },
+    });
     expect(steps).toEqual(["overview"]);
     const personal = screen.getByRole("heading", { name: "Persönliches" }).closest("li")!;
     expect(within(personal).getByText("Es fehlt noch eine Pflichtangabe:")).toBeInTheDocument();
     expect(within(personal).getByText("Geschlecht")).toBeInTheDocument();
     const contact = screen.getByRole("heading", { name: "Kontakt" }).closest("li")!;
     expect(within(contact).getByText("Vollständig")).toBeInTheDocument();
-    // The sensitive pages are listed with their missing items, without a link yet.
+    // The sensitive pages are listed like the others: missing items by name, never a value.
     const agentur = screen.getByRole("heading", { name: "Angaben für die Agentur" }).closest("li")!;
     expect(within(agentur).getByText("Staatsangehörigkeit")).toBeInTheDocument();
-    expect(within(agentur).getByText(/Diese Angaben können Sie bald hier eintragen/)).toBeVisible();
-    expect(within(agentur).queryByRole("button")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Persönliches bearbeiten" }));
-    await heading("Persönliches");
+    await user.click(screen.getByRole("button", { name: "Angaben für die Agentur bearbeiten" }));
+    await heading("Angaben für die Agentur");
   });
 
   it("enters dates as TT.MM.JJJJ, refuses impossible ones and sends ISO", async () => {
@@ -213,9 +216,9 @@ describe("resume", () => {
       p.page === "personal" ? { ...p, complete: true } : p,
     );
     renderWizard([wizardState({ pages })]);
-    await heading("Schule und Ausbildung");
-    expect(screen.getByText("Seite 3 von 6")).toBeInTheDocument();
-    expect(screen.getByText("5 von 6 Seiten vollständig")).toBeInTheDocument();
+    await heading("Angaben für die Agentur");
+    expect(screen.getByText("Seite 3 von 8")).toBeInTheDocument();
+    expect(screen.getByText("5 von 8 Seiten vollständig")).toBeInTheDocument();
   });
 
   it("says when loading failed or the session ended", async () => {
@@ -343,7 +346,7 @@ describe("custom fields (Weitere Angaben)", () => {
     state.pages.push(customPage(false));
     const { source } = renderWizard([state], { step: "further" });
     await heading("Weitere Angaben");
-    expect(screen.getByText("Seite 7 von 7")).toBeInTheDocument();
+    expect(screen.getByText("Seite 9 von 9")).toBeInTheDocument();
     const number = screen.getByLabelText("Nachweis-Nr. (Beispiel) *");
     expect(screen.getByText("Oben rechts auf dem Nachweis.")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Beispiel ja/nein" })).toBeInTheDocument();
@@ -363,14 +366,181 @@ describe("custom fields (Weitere Angaben)", () => {
   });
 });
 
-describe("the sensitive pages", () => {
-  it("are a placeholder until their own path exists", async () => {
+describe("Angaben für die Agentur (data-protection.md, self-service)", () => {
+  const stored = {
+    pensionInsuranceNumber: "12345678A123",
+    nationality: { kind: "other" as const, country: "PL" },
+    entryToGermanyDate: "2015-09-05",
+    residenceStatus: "settlement_permit" as const,
+    buergergeld: false,
+  };
+
+  it("reads the group on its own route and shows every field", async () => {
+    const { source } = renderWizard([wizardState()], {
+      step: "ba_details",
+      sensitive: { ba_details: stored },
+    });
+    await heading("Angaben für die Agentur");
+    expect(source.loadSensitive).toHaveBeenCalledWith("ba_details");
+    expect(screen.getByLabelText("Rentenversicherungsnummer *")).toHaveValue("12345678A123");
+    expect(screen.getByRole("radio", { name: "Eine andere" })).toBeChecked();
+    expect(screen.getByRole("combobox", { name: "Land" })).toHaveValue("PL");
+    expect(screen.getByRole("option", { name: "Polen" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Einreisedatum")).toHaveValue("05.09.2015");
+    expect(screen.getByRole("combobox", { name: "Aufenthaltsstatus" })).toHaveValue(
+      "settlement_permit",
+    );
+    expect(
+      within(screen.getByRole("group", { name: "Bürgergeld *" })).getByRole("radio", {
+        name: "Nein",
+      }),
+    ).toBeChecked();
+  });
+
+  it("asks entry date and residence status only for another nationality and sends them empty otherwise", async () => {
     const user = userEvent.setup();
-    renderWizard([wizardState()], { step: "health" });
+    const { source } = renderWizard([wizardState()], { step: "ba_details" });
+    await heading("Angaben für die Agentur");
+    expect(screen.queryByLabelText("Einreisedatum")).toBeNull();
+    await user.type(screen.getByLabelText("Rentenversicherungsnummer *"), "12 345678 a 123");
+    await user.click(screen.getByRole("radio", { name: "Eine andere" }));
+    await user.selectOptions(screen.getByRole("combobox", { name: "Land" }), "TR");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Aufenthaltsstatus" }),
+      "residence_permit",
+    );
+    await user.click(screen.getByRole("radio", { name: "Deutsch" }));
+    expect(screen.queryByRole("combobox", { name: "Aufenthaltsstatus" })).toBeNull();
+    await user.click(screen.getByRole("radio", { name: "Ja" }));
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() => expect(source.saveSensitive).toHaveBeenCalledTimes(1));
+    expect(source.saveSensitive).toHaveBeenCalledWith("ba_details", {
+      revision: 3,
+      values: {
+        pensionInsuranceNumber: "12345678A123",
+        nationality: { kind: "german" },
+        entryToGermanyDate: null,
+        residenceStatus: null,
+        buergergeld: true,
+      },
+    });
+    expect(source.save).not.toHaveBeenCalled();
+  });
+
+  it("checks the RV-Nummer's format before saving", async () => {
+    const user = userEvent.setup();
+    const { source } = renderWizard([wizardState()], { step: "ba_details" });
+    await heading("Angaben für die Agentur");
+    await user.type(screen.getByLabelText("Rentenversicherungsnummer *"), "1234");
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(
+      await screen.findByText(/Bitte geben Sie die zwölfstellige Rentenversicherungsnummer ein/),
+    ).toBeInTheDocument();
+    expect(source.saveSensitive).not.toHaveBeenCalled();
+  });
+});
+
+describe("Gesundheit and the step-up (Q137)", () => {
+  it("shows only the step-up until the session has it, then the yes/no questions", async () => {
+    const user = userEvent.setup();
+    const done = wizardState({ stepUp: { method: "birth_date", done: true } });
+    const { source } = renderWizard([wizardState(), done], {
+      step: "health",
+      sensitive: { health: { healthRestrictions: true, severeDisability: null } },
+    });
     await heading("Gesundheit");
-    expect(screen.getByText(/Diese Angaben können Sie bald hier eintragen/)).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Weiter" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Zur Übersicht" }));
+    expect(screen.getByText(/einmal pro Anmeldung nötig/)).toBeVisible();
+    expect(screen.queryByRole("group", { name: /Gesundheitliche Einschränkungen/ })).toBeNull();
+    expect(source.loadSensitive).not.toHaveBeenCalled();
+    await user.type(screen.getByLabelText("Ihr Geburtsdatum"), "01.01.1970");
+    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    expect(source.stepUp.birthDate).toHaveBeenCalledWith("1970-01-01");
+    const restrictions = await screen.findByRole("group", {
+      name: "Gesundheitliche Einschränkungen *",
+    });
+    expect(within(restrictions).getByRole("radio", { name: "Ja" })).toBeChecked();
+    expect(screen.getByText(/nur Ja oder Nein. Bitte nennen Sie keine Diagnosen/)).toBeVisible();
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("says when the birth date is wrong, and ends the view at the fifth", async () => {
+    const user = userEvent.setup();
+    let attempts = 0;
+    renderWizard([wizardState()], {
+      step: "health",
+      stepUp: {
+        birthDate: async () => {
+          attempts += 1;
+          throw refused(422, attempts < 5 ? "knowledge_check_failed" : "step_up_failed");
+        },
+      },
+    });
+    await heading("Gesundheit");
+    const date = screen.getByLabelText("Ihr Geburtsdatum");
+    await user.type(date, "02.01.1970");
+    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    expect(await screen.findByText(/Das Geburtsdatum stimmt nicht/)).toBeInTheDocument();
+    for (let i = 0; i < 4; i += 1) {
+      await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    }
+    expect(await screen.findByText(/fünfmal falsch eingegeben/)).toBeInTheDocument();
+    expect(screen.getByText("Sitzung abgelaufen")).toBeInTheDocument();
+  });
+
+  it("sends a photo-ID account a code to the channel it picks", async () => {
+    const user = userEvent.setup();
+    const state = wizardState({ stepUp: { method: "photo_id_and_code", done: false } });
+    const done = wizardState({ stepUp: { method: "photo_id_and_code", done: true } });
+    const { source } = renderWizard([state, done], {
+      step: "health",
+      stepUp: {
+        channels: async () => [
+          {
+            id: "00000000-0000-4000-8000-0000000000c1",
+            kind: "email",
+            maskedAddress: "e***@example.org",
+          },
+          { id: "00000000-0000-4000-8000-0000000000c2", kind: "sms", maskedAddress: "+49 *** 00" },
+        ],
+      },
+    });
+    await heading("Gesundheit");
+    expect(screen.queryByLabelText("Ihr Geburtsdatum")).toBeNull();
+    await user.click(await screen.findByRole("radio", { name: "+49 *** 00" }));
+    await user.click(screen.getByRole("button", { name: "Code senden" }));
+    expect(source.stepUp.requestCode).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-0000000000c2",
+      "de",
+    );
+    await user.type(await screen.findByLabelText("Bestätigungscode"), "123456");
+    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    expect(source.stepUp.verifyCode).toHaveBeenCalledWith("123456");
+    await screen.findByRole("group", { name: "Gesundheitliche Einschränkungen *" });
+  });
+
+  it("asks for the step-up when reading the group is refused with step_up_required", async () => {
+    const done = wizardState({ stepUp: { method: "birth_date", done: true } });
+    const { source } = renderWizard([done, wizardState()], {
+      step: "health",
+      loadSensitive: async () => Promise.reject(refused(403, "step_up_required")),
+    });
+    expect(await screen.findByLabelText("Ihr Geburtsdatum")).toBeInTheDocument();
+    expect(source.load).toHaveBeenCalledTimes(2);
+  });
+
+  it("may be skipped, and asks again when the API wants the step-up", async () => {
+    const user = userEvent.setup();
+    const done = wizardState({ stepUp: { method: "birth_date", done: true } });
+    const { steps, source } = renderWizard([done, wizardState()], {
+      step: "health",
+      saveSensitive: async () => Promise.reject(refused(403, "step_up_required")),
+    });
+    await heading("Gesundheit");
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    expect(await screen.findByLabelText("Ihr Geburtsdatum")).toBeInTheDocument();
+    expect(source.load).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("button", { name: "Ohne diese Angaben weiter" }));
     await heading("Übersicht");
+    expect(steps).toEqual(["overview"]);
   });
 });
