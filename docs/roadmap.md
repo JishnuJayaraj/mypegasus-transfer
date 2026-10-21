@@ -45,6 +45,7 @@ Config-driven wizard in `apps/portal`, consent records, assisted mode (from `app
 Deferred here from Slice 2: the placement Agentur on participations and its automatic pin (Q36).
 Special-category and highly confidential storage (encryption, separate logged endpoints) comes
 with the first such field (here or Slice 6).
+**Plan:** [`plans/slice-4a.md`](plans/slice-4a.md) (PRs 4a-1 to 4a-5; in review).
 
 ## Slice 4b — Uploads and documents (F5)
 Uploads (storage + virus-scan adapters, mock), file-type allowlist, signed URLs, document
