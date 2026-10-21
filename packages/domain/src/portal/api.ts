@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ActivationChannel, ActivationDeliveryKind } from "../activation/model";
+import { ActivationChannel, ActivationDeliveryKind, ActivationPurpose } from "../activation/model";
 import { ActivationStep } from "../activation/steps";
 import { isoDate } from "../iso-date";
 import {
@@ -20,6 +20,8 @@ export const ActivationCodeInput = z
 export const ActivationState = z
   .strictObject({
     nextStep: ActivationStep,
+    /** `recovery` after lost access (D24): the same steps; the new channel replaces the old ones. */
+    purpose: ActivationPurpose,
     channel: ActivationChannel,
     /** For an `in_person` code: the kind of address the link came to. */
     deliveryKind: ActivationDeliveryKind.nullable(),
@@ -69,13 +71,15 @@ export const ActivationCompletionInput = z
   })
   .meta({ id: "ActivationCompletionInput" });
 
-export const PortalChannel = z.strictObject({
-  id: z.uuid(),
-  kind: ActivationDeliveryKind,
-  /** The participant's own address, masked (`p…@example.org`, `+49 … 123`). */
-  maskedAddress: z.string(),
-  verifiedAt: z.iso.datetime(),
-});
+export const PortalChannel = z
+  .strictObject({
+    id: z.uuid(),
+    kind: ActivationDeliveryKind,
+    /** The participant's own address, masked (`p…@example.org`, `+49 … 123`). */
+    maskedAddress: z.string(),
+    verifiedAt: z.iso.datetime(),
+  })
+  .meta({ id: "PortalChannel" });
 
 /** `GET /portal/me`: the logged-in participant's greeting and channels. */
 export const PortalMe = z
@@ -87,3 +91,56 @@ export const PortalMe = z
   })
   .meta({ id: "PortalMe" });
 export type PortalMe = z.infer<typeof PortalMe>;
+
+// Login, channels (Slice 3 plan, PR 3f; D27, D28). The login answers never say whether an address
+// belongs to an account.
+
+const oneTimeCode = z.string().regex(/^[0-9]{6}$/);
+
+/** `POST /portal/login/code-request`: `202` whether or not the address belongs to an account. */
+export const LoginCodeRequestInput = z
+  .strictObject({
+    kind: ActivationDeliveryKind,
+    address: z.string().min(1).max(254),
+    /** The language of the message: the portal's. */
+    language: NoticeLanguage.default("de"),
+  })
+  .meta({ id: "LoginCodeRequestInput" });
+
+/** `POST /portal/login`: the address again and the code that went to it. */
+export const LoginInput = z
+  .strictObject({
+    kind: ActivationDeliveryKind,
+    address: z.string().min(1).max(254),
+    oneTimeCode,
+  })
+  .meta({ id: "LoginInput" });
+
+/** `GET /portal/channels`: the participant's own channels, masked. */
+export const PortalChannels = z
+  .strictObject({ channels: z.array(PortalChannel) })
+  .meta({ id: "PortalChannels" });
+
+/** `POST /portal/channels`: a one-time code to the new private email or mobile. */
+export const ChannelCodeRequestInput = z
+  .strictObject({
+    kind: ActivationDeliveryKind,
+    address: z.string().min(1).max(254),
+    language: NoticeLanguage.default("de"),
+  })
+  .meta({ id: "ChannelCodeRequestInput" });
+
+/** `POST /portal/channels/verification`: the code, with the consent for the new channel. */
+export const ChannelVerificationInput = z
+  .strictObject({
+    oneTimeCode,
+    consent: z.literal(true),
+    consentVersion: z.literal(PORTAL_CONTACT_CONSENT_VERSION),
+    language: NoticeLanguage,
+  })
+  .meta({ id: "ChannelVerificationInput" });
+
+/** `DELETE /portal/channels/{id}`: whether removing it ended the session (the last one, D28). */
+export const ChannelRemovalResult = z
+  .strictObject({ sessionEnded: z.boolean() })
+  .meta({ id: "ChannelRemovalResult" });

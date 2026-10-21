@@ -180,6 +180,7 @@ describe("portal activation by letter (D22–D25, D28, D29)", () => {
     expect(started.headers.get("cache-control")).toBe("no-store");
     expect(await readJson(started, ActivationState)).toEqual({
       nextStep: "birth_date",
+      purpose: "activation",
       channel: "letter",
       deliveryKind: null,
       language: "de",

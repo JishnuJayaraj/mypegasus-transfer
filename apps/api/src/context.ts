@@ -10,6 +10,7 @@ import type { Slots } from "./imports/slots";
 import type { SpaRoots } from "./static";
 import type { Oidc } from "./oidc";
 import type { PortalSession } from "./portal-session";
+import type { Detached } from "./detached";
 
 /** Where the API queues the activation notice inside the completion's transaction (D21). */
 export interface ActivationNoticeQueue {
@@ -36,6 +37,8 @@ export interface Deps {
   outbox?: DevelopmentOutbox | undefined;
   /** pg-boss in this process (JOBS_ENABLED); without it no activation notice is queued. */
   activationNotices?: ActivationNoticeQueue | undefined;
+  /** Work that outlives its request (login-code sends); the app's own unless one is passed. */
+  detached?: Detached | undefined;
 }
 
 export interface AppEnv {

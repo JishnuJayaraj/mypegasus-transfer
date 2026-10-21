@@ -46,4 +46,36 @@ describe("activation status", () => {
     };
     expect(activationStatus(false, code, "2026-10-20T12:00:00.000Z").code).toBe("expired");
   });
+
+  // D24: an activated account shows its recovery code; an earlier activation code shows nothing.
+  it("derives the state of a recovery code for an activated account", () => {
+    const code = {
+      channel: "letter" as const,
+      issuedAt: "2026-10-01T10:00:00.000Z",
+      expiresAt: "2026-10-31T10:00:00.000Z",
+      deliveryStatus: null,
+      handedOverAt: null,
+      lockedAt: null,
+      revokedAt: null,
+      usedAt: null,
+    };
+    expect(
+      activationStatus(true, { ...code, purpose: "recovery" }, "2026-10-20T12:00:00.000Z"),
+    ).toEqual({
+      account: "activated",
+      code: "open",
+      issuedAt: code.issuedAt,
+      expiresAt: code.expiresAt,
+    });
+    expect(
+      activationStatus(
+        true,
+        { ...code, purpose: "activation", usedAt: "2026-10-02T10:00:00.000Z" },
+        "2026-10-20T12:00:00.000Z",
+      ).code,
+    ).toBe("none");
+    expect(
+      activationStatus(true, { ...code, purpose: "recovery" }, "2026-11-20T12:00:00.000Z").code,
+    ).toBe("expired");
+  });
 });

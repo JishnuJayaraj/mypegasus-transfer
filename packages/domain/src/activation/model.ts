@@ -20,6 +20,26 @@ export const ConsentPurpose = z.enum(["portal_contact"]);
 export const OneTimeCodePurpose = z.enum(["login", "channel_verification"]);
 export const ParticipantSessionState = z.enum(["activating", "active"]);
 export const StepUpMethod = z.enum(["birth_date", "one_time_code"]);
+/** D24, D28: why a channel was suspended or removed, and why its consent ended. */
+export const ChannelSuspensionReason = z.enum(["lost_access"]);
+export const ChannelRemovalReason = z.enum(["consent_revoked", "lost_access_replaced"]);
+export const ConsentEndReason = z.enum(["revoked", "lost_access_replaced"]);
+/**
+ * Why a participant session ended: logout, activation (the activating session gives way to an
+ * active one), a newer activating session of the same code, the code locked or revoked, a terminal
+ * status, a recovery code issued (D24), the last channel removed (D28).
+ */
+export const ParticipantSessionEndReason = z.enum([
+  "logout",
+  "activated",
+  "superseded",
+  "code_closed",
+  "participation_closed",
+  "lost_access",
+  "no_channel",
+]);
+/** D27, D24: how a participant logged in. */
+export const LoginMethod = z.enum(["one_time_code", "recovery_code"]);
 
 export type ActivationPurpose = z.infer<typeof ActivationPurpose>;
 export type ActivationChannel = z.infer<typeof ActivationChannel>;
@@ -33,3 +53,8 @@ export type ConsentPurpose = z.infer<typeof ConsentPurpose>;
 export type OneTimeCodePurpose = z.infer<typeof OneTimeCodePurpose>;
 export type ParticipantSessionState = z.infer<typeof ParticipantSessionState>;
 export type StepUpMethod = z.infer<typeof StepUpMethod>;
+export type ChannelSuspensionReason = z.infer<typeof ChannelSuspensionReason>;
+export type ChannelRemovalReason = z.infer<typeof ChannelRemovalReason>;
+export type ConsentEndReason = z.infer<typeof ConsentEndReason>;
+export type ParticipantSessionEndReason = z.infer<typeof ParticipantSessionEndReason>;
+export type LoginMethod = z.infer<typeof LoginMethod>;

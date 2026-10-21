@@ -146,6 +146,13 @@ const statusFunctions = [
   "complete_activation",
   "end_participant_session",
   "mark_activation_notice_sent",
+  // Slice 3 (PR 3f): portal login, channels, lost-access recovery
+  "request_login_code",
+  "record_login_code_delivery",
+  "start_participant_session",
+  "request_channel_code",
+  "add_participant_channel",
+  "remove_participant_channel",
 ];
 const helpers = [
   "assert_context",
@@ -191,6 +198,8 @@ const helpers = [
   "count_activation_failure",
   "insert_one_time_code",
   "verify_one_time_code",
+  "participant_account_usable",
+  "lock_active_session",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

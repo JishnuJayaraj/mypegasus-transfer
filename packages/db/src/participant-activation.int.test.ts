@@ -150,6 +150,7 @@ describe("start_activation (D22, D23)", () => {
     const { id, codeHash } = await issue(participationId);
     const { result, tokenHash } = await start(codeHash);
     expect(result).toEqual({
+      purpose: "activation",
       channel: "letter",
       deliveryKind: null,
       language: "en",

@@ -30,6 +30,7 @@ import { projectRoutes } from "./routes/projects";
 import { teamRoutes } from "./routes/team";
 import { activationRoutes } from "./routes/activation";
 import { portalRoutes } from "./routes/portal";
+import { createDetached } from "./detached";
 import { mountSpas } from "./static";
 
 export const openApiConfig = {
@@ -85,6 +86,7 @@ export function createApp(deps: Deps) {
     outbox: defaults.outbox,
     mailer: deps.mailer ?? defaults.mailer,
     smsSender: deps.smsSender ?? defaults.smsSender,
+    detached: deps.detached ?? createDetached(logger),
   };
   const app = createRouter();
 

@@ -47,6 +47,20 @@ function targets() {
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
 describe("createShutdown", () => {
+  it("closes the pool only after the detached sends finished (login codes, D27)", async () => {
+    const t = targets();
+    const sent = deferred();
+    const detached = { settle: vi.fn<() => Promise<void>>(() => sent.promise) };
+    const done = createShutdown({ ...t, detached })("SIGTERM");
+    t.http.resolve();
+    t.jobsStopped.resolve();
+    await tick();
+    expect(t.pool.end).not.toHaveBeenCalled();
+    sent.resolve();
+    expect(await done).toBe(true);
+    expect(t.order.at(-1)).toBe("pool:end");
+  });
+
   it("closes the pool only after the HTTP requests drained and pg-boss stopped", async () => {
     const t = targets();
     const done = createShutdown(t)("SIGTERM");

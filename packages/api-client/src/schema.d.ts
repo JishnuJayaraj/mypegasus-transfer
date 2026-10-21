@@ -3671,6 +3671,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/activation-codes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue a recovery code after lost access: ends the sessions and suspends the channels at once */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecoveryCodeInput"];
+                };
+            };
+            responses: {
+                /** @description The new state, with a letter's or sheet's print data; never the code otherwise */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecoveryCodeResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/activation-codes/in-person": {
         parameters: {
             query?: never;
@@ -4511,7 +4607,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Complete the activation in one transaction; the session becomes active with a new token */
+        /** Complete the activation or recovery in one transaction; the session becomes active with a new token */
         post: {
             parameters: {
                 query?: never;
@@ -4525,7 +4621,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Activated and logged in */
+                /** @description Activated (or recovered) and logged in */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -4674,6 +4770,418 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/login/code-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send a login code to a registered address; 202 whether or not the address has an account */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LoginCodeRequestInput"];
+                };
+            };
+            responses: {
+                /** @description Accepted: a code goes out if the address belongs to an account */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Log in with the code sent to the address; sets the portal session cookie */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LoginInput"];
+                };
+            };
+            responses: {
+                /** @description Logged in */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalMe"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participant's own channels, masked */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The channels */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalChannels"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Send a verification code to a new private email or mobile (committed first) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChannelCodeRequestInput"];
+                };
+            };
+            responses: {
+                /** @description Sent, or its outcome unknown: the code may still arrive */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/channels/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add the new channel with the code sent to it and its own consent */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChannelVerificationInput"];
+                };
+            };
+            responses: {
+                /** @description Added; the channels now */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalChannels"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/channels/{channelId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a channel and end its consent; removing the last one ends the participant's sessions */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    channelId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ChannelRemovalResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -5929,6 +6437,28 @@ export interface components {
             /** @default false */
             replaceOpenCode: boolean;
         };
+        RecoveryCodeResult: {
+            item: {
+                /** Format: uuid */
+                activationCodeId: string;
+                /** Format: uuid */
+                participationId: string;
+                firstName: string;
+                lastName: string;
+                address: components["schemas"]["ParticipantAddress"];
+                code: string;
+                /** Format: uri */
+                activationUrl: string;
+                /** Format: date-time */
+                expiresAt: string;
+                noticeVersion: string;
+                /** @enum {string} */
+                noticeLanguage: "de" | "en";
+                noticeTitle: string;
+                noticeText: string;
+            } | null;
+            activation: components["schemas"]["ParticipationActivation"];
+        };
         ParticipationActivation: {
             status: components["schemas"]["ActivationStatus"];
             current: components["schemas"]["ActivationRecord"];
@@ -5971,6 +6501,8 @@ export interface components {
             /** Format: uuid */
             activationCodeId: string;
             /** @enum {string} */
+            purpose: "activation" | "recovery";
+            /** @enum {string} */
             channel: "letter" | "sheet" | "in_person";
             /** @enum {string|null} */
             deliveryKind: "email" | "sms" | null;
@@ -6004,6 +6536,40 @@ export interface components {
             /** Format: date-time */
             usedAt: string | null;
         } | null;
+        RecoveryCodeInput: {
+            /** @enum {string} */
+            purpose: "recovery";
+            /** @enum {string} */
+            channel: "letter" | "sheet";
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+            /** @enum {boolean} */
+            identityVerified: true;
+            /** @default false */
+            replaceOpenCode: boolean;
+        } | {
+            /** @enum {string} */
+            purpose: "recovery";
+            /** @enum {string} */
+            channel: "in_person";
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+            /** @enum {boolean} */
+            identityVerified: true;
+            /** @enum {boolean} */
+            identityChecked: true;
+            /** @enum {string} */
+            deliveryKind: "email" | "sms";
+            deliveryAddress: string;
+            /** @default false */
+            replaceOpenCode: boolean;
+        };
         InPersonActivationCodeInput: {
             /** @enum {string} */
             deliveryKind: "email" | "sms";
@@ -6064,6 +6630,8 @@ export interface components {
         ActivationState: {
             nextStep: components["schemas"]["ActivationStep"];
             /** @enum {string} */
+            purpose: "activation" | "recovery";
+            /** @enum {string} */
             channel: "letter" | "sheet" | "in_person";
             /** @enum {string|null} */
             deliveryKind: "email" | "sms" | null;
@@ -6106,15 +6674,16 @@ export interface components {
             language: "de" | "en";
             /** Format: date-time */
             sessionExpiresAt: string;
-            channels: {
-                /** Format: uuid */
-                id: string;
-                /** @enum {string} */
-                kind: "email" | "sms";
-                maskedAddress: string;
-                /** Format: date-time */
-                verifiedAt: string;
-            }[];
+            channels: components["schemas"]["PortalChannel"][];
+        };
+        PortalChannel: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "email" | "sms";
+            maskedAddress: string;
+            /** Format: date-time */
+            verifiedAt: string;
         };
         ActivationCompletionInput: {
             oneTimeCode?: string;
@@ -6127,6 +6696,47 @@ export interface components {
             consentVersion: "portal-contact-consent:v1";
             /** @enum {string} */
             language: "de" | "en";
+        };
+        LoginCodeRequestInput: {
+            /** @enum {string} */
+            kind: "email" | "sms";
+            address: string;
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+        };
+        LoginInput: {
+            /** @enum {string} */
+            kind: "email" | "sms";
+            address: string;
+            oneTimeCode: string;
+        };
+        PortalChannels: {
+            channels: components["schemas"]["PortalChannel"][];
+        };
+        ChannelCodeRequestInput: {
+            /** @enum {string} */
+            kind: "email" | "sms";
+            address: string;
+            /**
+             * @default de
+             * @enum {string}
+             */
+            language: "de" | "en";
+        };
+        ChannelVerificationInput: {
+            oneTimeCode: string;
+            /** @enum {boolean} */
+            consent: true;
+            /** @enum {string} */
+            consentVersion: "portal-contact-consent:v1";
+            /** @enum {string} */
+            language: "de" | "en";
+        };
+        ChannelRemovalResult: {
+            sessionEnded: boolean;
         };
         DevStaffUser: {
             /** Format: uuid */

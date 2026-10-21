@@ -87,6 +87,10 @@ describe("audit event types (plan 5.4)", () => {
       "activation_code_locked",
       "one_time_code_exhausted",
       "participant_logout",
+      "participant_login",
+      "contact_channel_removed",
+      "consent_ended",
+      "contact_channels_suspended",
     ]);
   });
 
@@ -132,6 +136,10 @@ describe("audit event types (plan 5.4)", () => {
       "activation_code_locked",
       "one_time_code_exhausted",
       "participant_logout",
+      "participant_login",
+      "contact_channel_removed",
+      "consent_ended",
+      "contact_channels_suspended",
     ]);
   });
 
@@ -1059,6 +1067,83 @@ describe("portal activation events (Slice 3 plan D21–D29)", () => {
         actor: participant,
         participationId: null,
         details: {},
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("portal login, channel and recovery events (Slice 3 plan D24, D27, D28)", () => {
+  const participant = { type: "participant", participationId } as const;
+
+  it.each([
+    ["participant_login", participant, null, { method: "one_time_code", channelId: otherId }],
+    [
+      "participant_login",
+      participant,
+      null,
+      { method: "recovery_code", activationCodeId: otherId },
+    ],
+    [
+      "contact_channel_removed",
+      participant,
+      "consent_revoked",
+      { channelId: otherId, kind: "email" },
+    ],
+    [
+      "consent_ended",
+      participant,
+      "lost_access_replaced",
+      { consentId: otherId, channelId: otherId, purpose: "portal_contact" },
+    ],
+    [
+      "contact_channels_suspended",
+      user,
+      "lost_access",
+      { activationCodeId: otherId, channelIds: [otherId] },
+    ],
+    [
+      "contact_channels_suspended",
+      user,
+      "lost_access",
+      { activationCodeId: otherId, channelIds: [] },
+    ],
+  ] as const)("accept %s with ids and codes only", (type, actor, reasonCode, details) => {
+    const event = { ...base, type, actor, details, ...(reasonCode && { reasonCode }) };
+    expect(issueCodes(event)).toEqual([]);
+    expect(AuditEvent.safeParse({ ...event, details: { ...details, address: "x" } }).success).toBe(
+      false,
+    );
+  });
+
+  it("ties the login method to what it names", () => {
+    const login = { ...base, type: "participant_login", actor: participant };
+    expect(issueCodes({ ...login, details: { method: "one_time_code" } })).toEqual([
+      "method_mismatch",
+    ]);
+    expect(
+      issueCodes({
+        ...login,
+        details: { method: "recovery_code", activationCodeId: otherId, channelId: otherId },
+      }),
+    ).toEqual(["method_mismatch"]);
+  });
+
+  it("needs the reason of every removal, end and suspension", () => {
+    expect(
+      AuditEvent.safeParse({
+        ...base,
+        type: "consent_ended",
+        actor: participant,
+        details: { consentId: otherId, channelId: otherId, purpose: "portal_contact" },
+      }).success,
+    ).toBe(false);
+    expect(
+      AuditEvent.safeParse({
+        ...base,
+        type: "contact_channel_removed",
+        actor: participant,
+        reasonCode: "lost_access",
+        details: { channelId: otherId, kind: "sms" },
       }).success,
     ).toBe(false);
   });
