@@ -4,7 +4,7 @@ import { Step } from "../lifecycle/enums";
 import type { ProjectType } from "../project";
 import { ruleAppliesTo, type CompletenessRule, type RulesByStep } from "./rules";
 
-/** Review states of a stored document (process-and-lifecycle.md); document review comes with Slice 4b. */
+/** Review states of a stored document (process-and-lifecycle.md, document review). */
 export const DocumentState = z.enum(["uploaded", "accepted", "rejected"]);
 export type DocumentState = z.infer<typeof DocumentState>;
 

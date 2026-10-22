@@ -4,6 +4,7 @@ import {
   documentFileName,
   documentLimits,
   DocumentMediaType,
+  downloadFileName,
   generatedDocumentFileName,
 } from "./files";
 
@@ -78,6 +79,18 @@ describe("generated file names (Q148)", () => {
     );
     expect(generatedDocumentFileName("cv", "2026-10-22", "image/jpeg")).toBe("cv-2026-10-22.jpg");
     expect(generatedDocumentFileName("cv", "2026-10-22", "image/png")).toBe("cv-2026-10-22.png");
+  });
+});
+
+describe("downloadFileName", () => {
+  it("keeps a name with the detected type's extension, appends it otherwise", () => {
+    const at = "2026-10-22";
+    expect(downloadFileName("Lebenslauf.PDF", "cv", at, "application/pdf")).toBe("Lebenslauf.PDF");
+    expect(downloadFileName("foto.jpeg", "cv", at, "image/jpeg")).toBe("foto.jpeg");
+    expect(downloadFileName("foto.jpg", "cv", at, "image/jpeg")).toBe("foto.jpg");
+    expect(downloadFileName("cv.docx", "cv", at, "application/pdf")).toBe("cv.docx.pdf");
+    expect(downloadFileName("scan.jpg", "cv", at, "image/png")).toBe("scan.jpg.png");
+    expect(downloadFileName(null, "asu_proof", at, "image/png")).toBe("asu_proof-2026-10-22.png");
   });
 });
 

@@ -16,6 +16,8 @@ import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
 import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
 import { AssistedModeEndReason, AssistedModeHow } from "../self-service/assisted";
+import { DocumentSource } from "../documents/api";
+import { DocumentDeleteReason, DocumentReviewReason } from "../documents/state";
 import {
   ActivationChannel,
   ActivationDeliveryKind,
@@ -129,6 +131,11 @@ export const AuditEventType = z.enum([
   // Slice 4a, assisted mode (ADR-0007; Q136), written only by its functions
   "assisted_mode_started",
   "assisted_mode_ended",
+  // Slice 4b, documents (data-protection.md, uploads; Q144, Q146), written only by their functions
+  "document_added",
+  "document_reviewed",
+  "document_deleted",
+  "document_upload_rejected",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -201,6 +208,12 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "step_up_failed",
   "assisted_mode_started",
   "assisted_mode_ended",
+  // Slice 4b: `open_document` writes the opening, the document functions the rest.
+  "document_opened",
+  "document_added",
+  "document_reviewed",
+  "document_deleted",
+  "document_upload_rejected",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -446,6 +459,28 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
   }),
   z.strictObject({ kind: z.literal("audit"), stream: AuditStream }),
 ]);
+
+/** Every document event names its row and type, never its name or content. */
+const ofDocument = { documentId: z.uuid(), documentType: DocumentType };
+
+const documentReviewed = event("document_reviewed", {
+  ...ofParticipation,
+  actor: staffActor,
+  reasonCode: DocumentReviewReason.nullable(),
+  details: z.strictObject({ ...ofDocument, decision: z.enum(["accepted", "rejected"]) }),
+}).superRefine(({ reasonCode, details }, ctx) => {
+  if ((details.decision === "rejected") !== (reasonCode !== null)) issue(ctx, "reason_mismatch");
+});
+
+const documentDeleted = event("document_deleted", {
+  ...ofParticipation,
+  reasonCode: DocumentDeleteReason.nullable(),
+  details: z.strictObject(ofDocument),
+}).superRefine(({ actor, reasonCode }, ctx) => {
+  const staff = actor.type === "user" && actor.onBehalfOf === null;
+  if (!staff && actor.type !== "participant") issue(ctx, "actor_mismatch");
+  if (staff !== (reasonCode !== null)) issue(ctx, "reason_mismatch");
+});
 
 /**
  * A participant's login (ADR-0007): by a one-time code to a channel, or by completing a recovery
@@ -806,6 +841,32 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ assistedModeId: z.uuid(), endReason: AssistedModeEndReason }),
+  }),
+  /**
+   * A document stored (data-protection.md, uploads): its id, type and where it came from; never
+   * the file name, the content or its hash. In assisted mode as actor and `onBehalfOf`.
+   */
+  event("document_added", {
+    ...ofParticipation,
+    details: z.strictObject({ ...ofDocument, source: DocumentSource }),
+  }).superRefine(({ actor, details }, ctx) => {
+    const expected =
+      actor.type === "participant"
+        ? "portal"
+        : actor.type === "user" && actor.onBehalfOf
+          ? "assisted"
+          : "staff";
+    if (actor.type === "system" || details.source !== expected) issue(ctx, "source_mismatch");
+  }),
+  /** Reviewed once and finally by staff in normal mode; a rejection names its reason. */
+  documentReviewed,
+  /** Deleted (the row kept as a tombstone): by staff with a reason, by the participant without. */
+  documentDeleted,
+  /** An upload the scan refused (Q144): nothing was stored; the type and the code only. */
+  event("document_upload_rejected", {
+    ...ofParticipation,
+    reasonCode: z.enum(["file_infected", "file_unscannable"]),
+    details: z.strictObject({ documentType: DocumentType }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;
