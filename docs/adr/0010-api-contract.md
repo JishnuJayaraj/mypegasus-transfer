@@ -218,6 +218,27 @@ generator then. No action now.
   `404` reloads the list), send the bodyless opening with `Content-Type: application/json` and
   then assign `location` to the link: a top-level download, no `blob:`, no CSP change.
 
+## Note 2026-10-22 (Slice 5, PR 5-1): the work list snapshot and the dashboard
+
+- **Routes:** `GET /projects/{id}/worklist` (`Worklist` `{ generatedAt, items: WorklistItem[] }`),
+  `GET /projects/{id}/dashboard` (`ProjectDashboard`: `scope` `project` / `assigned`, `generatedAt`,
+  `counts` per group, each count `{ key, count, filter }` with its `WorklistFilter`) and
+  `POST /projects/{id}/entry-wave-assignments` (`{ waveId, participationIds }`, 1–500 distinct,
+  → `200 { assigned, unchanged }`). The paged `GET /projects/{id}/participations` stays as it is.
+- **The bounded snapshot, an exception to cursor pagination:** the work list answers the viewer's
+  whole scope in one response, evaluated once in one `repeatable read`, read-only transaction (the
+  configuration resolved once per placement Agentur, the guard facts from the `GuardFactsProvider`),
+  at most `worklistMaxRows` (5,000); above it `422 worklist_too_large` until the Slice 9
+  performance pass. No cursor, so no page recomputes the project and nothing is ever partial; the
+  browser filters and searches it. The dashboard counts the same items by the same filters. Both
+  are `Cache-Control: private, no-store`.
+- **Order:** the schema (400) → visibility (404) → the list scope or the operation (403: the PL
+  only for the bulk assignment) → state (422). The bulk assignment refuses `not_ta_tg` and
+  `wave_of_other_project` (`/waveId`) for the whole request, else every refused row at
+  `/participationIds/<i>` with its code (`participation_not_found` for another project's id, the
+  wave codes); a duplicate id is a 400 `duplicate_participation`.
+- **Problem codes:** 422 `worklist_too_large`; the others exist.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

@@ -13,7 +13,7 @@ import {
   TextInput,
   useToast,
 } from "@transfer/ui";
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { worklistQuery, projectTeamQuery, staffDirectoryQuery, useApi } from "../api";
 
@@ -214,8 +214,9 @@ function AddMember({
 /** The project's consultants (Q62): whom participations may be assigned to. */
 export function useConsultants(projectId: string) {
   const { data: team } = useSuspenseQuery(projectTeamQuery(useApi(), projectId));
-  return {
-    consultants: team.members.filter((m) => m.roles.includes("consultant") && !m.deactivated),
-    mayAssign: team.capabilities.assignParticipations,
-  };
+  const consultants = useMemo(
+    () => team.members.filter((m) => m.roles.includes("consultant") && !m.deactivated),
+    [team],
+  );
+  return { consultants, mayAssign: team.capabilities.assignParticipations };
 }

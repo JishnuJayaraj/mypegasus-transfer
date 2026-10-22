@@ -14,7 +14,7 @@ import {
   type WorklistFilter,
 } from "@transfer/domain";
 import { Button, InlineNotification, Select, SelectItem, useToast } from "@transfer/ui";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, useApi, worklistQuery } from "../api";
 import { useCountLabel } from "./worklist-labels";
@@ -30,7 +30,7 @@ const codes = (values: readonly string[], text: (value: string) => string): Opti
  * The work list's filter bar: codes only, kept in the route's search params (data-protection.md,
  * the work list and the dashboard). "Alle" removes the condition.
  */
-export function WorklistFilters({
+export const WorklistFilters = memo(function WorklistFilters({
   filter,
   onChange,
   taTg,
@@ -125,7 +125,7 @@ export function WorklistFilters({
       )}
     </fieldset>
   );
-}
+});
 
 /** A refused row: its index in the request and its code. */
 type Refusal = { index: number | null; code: string };

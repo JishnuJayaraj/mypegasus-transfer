@@ -150,3 +150,73 @@ export async function loggedInAsOwner(
   // Development's cookie name (the e2e server runs with NODE_ENV=development).
   await page.context().addCookies([{ name: "tp_portal", value: token, url: baseURL }]);
 }
+
+/**
+ * `count` participations in `imported` of a seeded project no other spec uses, written as the
+ * owner (a fixture): Personalnummer `<prefix>-0001`…, the names from `names` in turn; with `wave`
+ * the PL first creates the wave W1 through the staff API. Either way `page` then holds the PL's
+ * session. Synthetic data only.
+ */
+export async function worklistParticipations(
+  page: Page,
+  baseURL: string,
+  options: {
+    projectId: string;
+    prefix: string;
+    count: number;
+    names: [string, string][];
+    wave?: boolean;
+  },
+) {
+  const { projectId } = options;
+  const api = page.context().request;
+  const headers = { Origin: baseURL };
+  await ok(
+    api.post("/api/v1/dev/session", {
+      headers,
+      data: { staffUserId: seedStaffUserIds.projectLead },
+    }),
+  );
+  if (options.wave) {
+    await ok(
+      api.post(`/api/v1/projects/${projectId}/entry-waves`, {
+        headers,
+        data: {
+          code: "W1",
+          name: "Welle 1",
+          signingDeadline: "2091-02-15",
+          defaultTgStart: "2091-03-01",
+          defaultTgEnd: "2092-02-29",
+          latestEntryDate: "2091-03-15",
+        },
+      }),
+    );
+  }
+  const owner = createDb(testDatabaseUrls("transfer_e2e").owner);
+  try {
+    await owner.$client.query(
+      `with created as (
+         insert into participation (project_id, status, profiling_status, dsv_status)
+         select $1, 'imported', 'not_started', 'not_offered' from generate_series(1, $2)
+         returning id
+       ), numbered as (
+         select id, row_number() over (order by id) as n from created
+       )
+       insert into participant_identity (participation_id, project_id, personnel_number,
+         first_name, last_name)
+       select id, $1, $3 || '-' || lpad(n::text, 4, '0'),
+         ($4::text[])[1 + (n - 1) % array_length($4::text[], 1)],
+         ($5::text[])[1 + (n - 1) % array_length($5::text[], 1)]
+       from numbered`,
+      [
+        projectId,
+        options.count,
+        options.prefix,
+        options.names.map(([first]) => first),
+        options.names.map(([, last]) => last),
+      ],
+    );
+  } finally {
+    await owner.$client.end();
+  }
+}

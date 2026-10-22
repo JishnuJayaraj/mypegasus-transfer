@@ -24,7 +24,7 @@ import {
   TextInput,
   useToast,
 } from "@transfer/ui";
-import { useDeferredValue, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, projectConfigQuery, useApi, worklistQuery } from "../api";
 import { ActivationPrintView, NoticePrintView } from "./activation-print-view";
@@ -53,7 +53,7 @@ const columns = [
 ] as const;
 
 /** Rows rendered at once; "Weitere anzeigen" adds as many. Filtering covers the whole snapshot. */
-const pageSize = 50;
+const pageSize = 25;
 
 type ListItem = components["schemas"]["WorklistItem"];
 type ActivationPrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
@@ -92,9 +92,13 @@ export function Participants({
   const queryClient = useQueryClient();
   const showToast = useToast();
   const query = useQuery(worklistQuery(api, projectId));
-  // Manual creation is one import row (R32): offered with the import's capability.
+  // Manual creation is one import row (process-and-lifecycle.md, import and manual creation):
+  // offered with the import's capability.
   const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
-  const { data: waves = [] } = useQuery({ ...entryWavesQuery(api, projectId), enabled: taTg });
+  const { data: waves = noWaves } = useQuery({
+    ...entryWavesQuery(api, projectId),
+    enabled: taTg,
+  });
   const [adding, setAdding] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
   const { consultants, mayAssign } = useConsultants(projectId);
@@ -103,12 +107,11 @@ export function Participants({
   const filterKey = JSON.stringify(filter);
   // The selection and the rows shown belong to one filter and search; another starts afresh.
   const [selection, setSelection] = useState({ key: filterKey, ids: new Set<string>() });
-  const selected = selection.key === filterKey ? selection.ids : new Set<string>();
+  const selected = selection.key === filterKey ? selection.ids : noSelection;
   const [shown, setShown] = useState({ key: "", count: pageSize });
   const shownKey = `${filterKey}\u0000${search}`;
   const limit = shown.key === shownKey ? shown.count : pageSize;
   const [print, setPrint] = useState<PrintState | null>(null);
-  const label = useSelfServiceLabel();
 
   const snapshot = query.data;
   const items = useMemo(() => snapshot?.items ?? [], [snapshot]);
@@ -134,87 +137,33 @@ export function Participants({
   }, [items, filter, index, search]);
 
   const setSelected = (ids: Set<string>) => setSelection({ key: filterKey, ids });
-  const toggle = (id: string, on: boolean) => {
-    const next = new Set(selected);
-    if (on) next.add(id);
-    else next.delete(id);
-    setSelected(next);
-  };
+  // Stable, so a keystroke re-renders the table only once its matches change.
+  const toggle = useCallback(
+    (id: string, on: boolean) =>
+      setSelection((current) => {
+        const ids = new Set(current.key === filterKey ? current.ids : []);
+        if (on) ids.add(id);
+        else ids.delete(id);
+        return { key: filterKey, ids };
+      }),
+    [filterKey],
+  );
   const today = snapshot ? berlinDate.format(new Date(snapshot.generatedAt)) : "";
-  const waveCode = new Map(waves.map((wave) => [wave.id, wave.code]));
-  const deadline = (item: ListItem) => {
-    const urgent = mostUrgent(item.deadlines);
-    if (!urgent) return "";
-    const kind = t(`worklist.deadlineKinds.${urgent.kind}`);
-    const days = daysBetween(today, urgent.date);
-    const text =
-      urgent.state === "overdue"
-        ? t("worklist.deadlineOverdue", { kind, date: formatDate(urgent.date) })
-        : days === 0
-          ? t("worklist.deadlineToday", { kind })
-          : t("worklist.deadlineIn", { kind, count: days });
-    return urgent.final ? `${text} (${t("worklist.deadlineFinal")})` : text;
-  };
-  const rows = matches.slice(0, limit).map((item) => ({
-    id: item.id,
-    select: (
-      <Checkbox
-        id={`select-${item.id}`}
-        labelText={t("participants.select", {
-          name: item.personnelNumber ?? t("participants.open"),
-        })}
-        hideLabel
-        checked={selected.has(item.id)}
-        onChange={(_, { checked }) => toggle(item.id, checked)}
-      />
-    ),
-    // The URL carries only the id, never a person's value (R19).
-    personnelNumber: (
-      <RouterLink
-        to="/projects/$projectId/participations/$participationId"
-        params={{ projectId, participationId: item.id }}
-      >
-        {item.personnelNumber ?? t("participants.open")}
-      </RouterLink>
-    ),
-    lastName: item.lastName ?? "",
-    firstName: item.firstName ?? "",
-    status: t(`participants.statuses.${item.status}`),
-    profilingStatus: t(`participants.profilingStatuses.${item.profilingStatus}`),
-    dsvStatus: t(`participants.dsvStatuses.${item.dsvStatus}`),
-    wave: item.entryWaveId ? (waveCode.get(item.entryWaveId) ?? "") : "",
-    consultants: item.consultants.map((c) => c.displayName).join(", "),
-    open:
-      item.actions.length === 0 ? (
-        ""
-      ) : (
-        <>
-          {t("worklist.openCount", { count: item.actions.length })}{" "}
-          <Tag type={item.actions[0]!.state === "rejected" ? "red" : "gray"} size="sm">
-            {`${label(item.actions[0]!.key)} ${t(`worklist.actionStates.${item.actions[0]!.state}`)}`}
-          </Tag>
-        </>
-      ),
-    deadline: deadline(item),
-    portal: t(`worklist.portal.${item.portal}`),
-    activationStatus: t(
-      item.activationStatus.account === "activated"
-        ? "activation.status.activated"
-        : `activation.code.${item.activationStatus.code}`,
-    ),
-    privacyNoticeState: t(`activation.notice.${item.privacyNoticeState.state}`, {
-      dueOn: formatDate(item.privacyNoticeState.dueOn),
-    }),
-  }));
+  const waveCode = useMemo(() => new Map(waves.map((wave) => [wave.id, wave.code])), [waves]);
+  const shownItems = useMemo(() => matches.slice(0, limit), [matches, limit]);
   const selectedItems = items.filter((item) => selected.has(item.id));
   const mayActivate = items.some(
     (item) => item.capabilities.issueActivationCode || item.capabilities.providePrivacyNotice,
   );
   const mayAssignWave = taTg && items.some((item) => item.capabilities.assignEntryWave);
-  const visibleColumns = columns.filter(
-    (key) =>
-      (key !== "select" || mayAssign || mayActivate || mayAssignWave) &&
-      ((key !== "dsvStatus" && key !== "wave") || taTg),
+  const selectable = mayAssign || mayActivate || mayAssignWave;
+  const visibleColumns = useMemo(
+    () =>
+      columns.filter(
+        (key) =>
+          (key !== "select" || selectable) && ((key !== "dsvStatus" && key !== "wave") || taTg),
+      ),
+    [selectable, taTg],
   );
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey });
@@ -387,14 +336,15 @@ export function Participants({
                   }}
                 />
               )}
-              <SimpleTable
-                title={t("participants.title")}
-                columns={visibleColumns.map((key) => ({
-                  key,
-                  header: t(`participants.columns.${key}`),
-                }))}
-                rows={rows}
-                emptyState={items.length === 0 ? t("participants.empty") : t("worklist.noMatches")}
+              <WorklistTable
+                projectId={projectId}
+                items={shownItems}
+                columns={visibleColumns}
+                selected={selected}
+                onToggle={toggle}
+                waveCode={waveCode}
+                today={today}
+                empty={items.length === 0}
               />
               {matches.length > limit && (
                 <>
@@ -415,6 +365,105 @@ export function Participants({
     </section>
   );
 }
+
+const noWaves: components["schemas"]["EntryWave"][] = [];
+const noSelection: ReadonlySet<string> = new Set();
+
+/** The shown rows of the work list; memoized, so typing re-renders it only for new matches. */
+const WorklistTable = memo(function WorklistTable({
+  projectId,
+  items,
+  columns: shownColumns,
+  selected,
+  onToggle,
+  waveCode,
+  today,
+  empty,
+}: {
+  projectId: string;
+  items: ListItem[];
+  columns: readonly (typeof columns)[number][];
+  selected: ReadonlySet<string>;
+  onToggle: (id: string, on: boolean) => void;
+  waveCode: ReadonlyMap<string, string>;
+  today: string;
+  empty: boolean;
+}) {
+  const { t } = useTranslation();
+  const label = useSelfServiceLabel();
+  const deadline = (item: ListItem) => {
+    const urgent = mostUrgent(item.deadlines);
+    if (!urgent) return "";
+    const kind = t(`worklist.deadlineKinds.${urgent.kind}`);
+    const days = daysBetween(today, urgent.date);
+    const text =
+      urgent.state === "overdue"
+        ? t("worklist.deadlineOverdue", { kind, date: formatDate(urgent.date) })
+        : days === 0
+          ? t("worklist.deadlineToday", { kind })
+          : t("worklist.deadlineIn", { kind, count: days });
+    return urgent.final ? `${text} (${t("worklist.deadlineFinal")})` : text;
+  };
+  const rows = items.map((item) => ({
+    id: item.id,
+    select: (
+      <Checkbox
+        id={`select-${item.id}`}
+        labelText={t("participants.select", {
+          name: item.personnelNumber ?? t("participants.open"),
+        })}
+        hideLabel
+        checked={selected.has(item.id)}
+        onChange={(_, { checked }) => onToggle(item.id, checked)}
+      />
+    ),
+    // The URL carries only the id, never a person's value (ADR-0010, pagination).
+    personnelNumber: (
+      <RouterLink
+        to="/projects/$projectId/participations/$participationId"
+        params={{ projectId, participationId: item.id }}
+      >
+        {item.personnelNumber ?? t("participants.open")}
+      </RouterLink>
+    ),
+    lastName: item.lastName ?? "",
+    firstName: item.firstName ?? "",
+    status: t(`participants.statuses.${item.status}`),
+    profilingStatus: t(`participants.profilingStatuses.${item.profilingStatus}`),
+    dsvStatus: t(`participants.dsvStatuses.${item.dsvStatus}`),
+    wave: item.entryWaveId ? (waveCode.get(item.entryWaveId) ?? "") : "",
+    consultants: item.consultants.map((c) => c.displayName).join(", "),
+    open:
+      item.actions.length === 0 ? (
+        ""
+      ) : (
+        <>
+          {t("worklist.openCount", { count: item.actions.length })}{" "}
+          <Tag type={item.actions[0]!.state === "rejected" ? "red" : "gray"} size="sm">
+            {`${label(item.actions[0]!.key)} ${t(`worklist.actionStates.${item.actions[0]!.state}`)}`}
+          </Tag>
+        </>
+      ),
+    deadline: deadline(item),
+    portal: t(`worklist.portal.${item.portal}`),
+    activationStatus: t(
+      item.activationStatus.account === "activated"
+        ? "activation.status.activated"
+        : `activation.code.${item.activationStatus.code}`,
+    ),
+    privacyNoticeState: t(`activation.notice.${item.privacyNoticeState.state}`, {
+      dueOn: formatDate(item.privacyNoticeState.dueOn),
+    }),
+  }));
+  return (
+    <SimpleTable
+      title={t("participants.title")}
+      columns={shownColumns.map((key) => ({ key, header: t(`participants.columns.${key}`) }))}
+      rows={rows}
+      emptyState={empty ? t("participants.empty") : t("worklist.noMatches")}
+    />
+  );
+});
 
 /** "Zuweisen": the selected participations to one consultant of the project (Q62). */
 function BulkAssign({

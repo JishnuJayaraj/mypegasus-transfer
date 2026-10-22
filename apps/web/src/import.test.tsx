@@ -11,7 +11,7 @@ import {
   unpinnedConfig,
 } from "./test-utils";
 
-// Slice 2 plan 5.11 (PR 2g-2): the import wizard.
+// The import wizard (process-and-lifecycle.md, import and manual creation).
 const path = `/api/v1/projects/${project.id}`;
 const token = "a".repeat(64);
 const file = () =>

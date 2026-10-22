@@ -79,6 +79,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
   // The PL logs in with the dev switcher and prints the letter from the participants list.
   await page.goto(`/projects/${projectId}`);
   await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
+  await page.getByRole("tab", { name: "Teilnehmende" }).click();
   await page.getByLabel(`${personnelNumber} auswählen`).check({ force: true });
   await page.getByRole("button", { name: "Aktivierungsbriefe drucken" }).click();
   const printed = page.getByLabel("Aktivierungscode");

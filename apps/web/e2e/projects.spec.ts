@@ -62,7 +62,9 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
 
   // The PL opens the new project and adds an entry wave; a rule the API
   // refuses is shown at its field.
+  // Slice 5: the project opens on "Übersicht"; setup lives in "Einrichtung".
   await firstRow.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await page.getByRole("tab", { name: "Einrichtung" }).click();
   await expect(page.getByText("Es gibt noch keine Eintrittswellen.")).toBeVisible();
   await page.getByRole("button", { name: "Welle anlegen" }).click();
   await page.getByLabel("Kürzel").fill("W1");
@@ -134,12 +136,6 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(
     importSection.getByText("12 angelegt, 0 aktualisiert, 0 unverändert, 0 übersprungen."),
   ).toBeVisible();
-  const participants = page.getByRole("region", { name: "Teilnehmende" });
-  await expect(participants.getByRole("row")).toHaveCount(13);
-  await expect(participants.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
-  await expect(participants.getByRole("cell", { name: "Importiert" }).first()).toBeVisible();
-  await expectAccessible(page);
-
   await importSection.getByRole("button", { name: "Weitere Datei importieren" }).click();
   await importSection
     .getByLabel("Datei auswählen")
@@ -158,7 +154,12 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(
     importSection.getByText("1 angelegt, 2 aktualisiert, 9 unverändert, 0 übersprungen."),
   ).toBeVisible();
+  // The participants are in "Teilnehmende" (Slice 5).
+  await page.getByRole("tab", { name: "Teilnehmende" }).click();
+  const participants = page.getByRole("region", { name: "Teilnehmende" });
   await expect(participants.getByRole("row")).toHaveCount(14);
+  await expect(participants.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
+  await expect(participants.getByRole("cell", { name: "Importiert" }).first()).toBeVisible();
   await expectAccessible(page);
 
   // The PL opens a participant's page, sees the updated address and
@@ -191,7 +192,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
 
   // The PL adds one person by hand, through the import's rules.
   await participants.getByRole("button", { name: "Teilnehmende Person anlegen" }).click();
-  await page.getByLabel("Personalnummer").fill("BSP-0100");
+  await page.getByLabel("Personalnummer", { exact: true }).fill("BSP-0100");
   await page.getByLabel("Nachname").fill("Beispiel");
   await page.getByLabel("Vorname").fill("Bernd");
   await page.getByLabel("Geburtsdatum").fill("01.01.1970");
@@ -204,6 +205,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(participants.getByText("Teilnehmende Person angelegt")).toBeVisible();
   await expect(participants.getByRole("row")).toHaveCount(15);
   await expectAccessible(page);
+  await page.getByRole("tab", { name: "Einrichtung" }).click();
 
   const configuration = page
     .locator("section")
@@ -302,6 +304,11 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByRole("row")).toHaveCount(5);
   // Round 26: the admin reads the project's setup but gets no pin form (only its PL pins).
   await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  // An org role lists no participant: "Übersicht" says so, "Einrichtung" shows the setup.
+  await expect(
+    page.getByText("Sie dürfen die Übersicht dieses Projekts nicht sehen."),
+  ).toBeVisible();
+  await page.getByRole("tab", { name: "Einrichtung" }).click();
   await expect(page.getByText("Keine Blocker.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Als weitere Agentur pinnen" })).toHaveCount(0);
   // … and sees the Agentur-scoped settings without the actions to change them.
@@ -320,6 +327,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
     .poll(async () => (await me(page)).id)
     .toBe(seedStaffUserIds.regionalOperationsManager);
   await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await page.getByRole("tab", { name: "Einrichtung" }).click();
   await expect(page.getByRole("row", { name: /beispielstadt-nord-mobile/ })).toContainText(
     "Andere berechtigte Person",
   );
@@ -346,17 +354,18 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await team.getByRole("button", { name: "Hinzufügen" }).click();
   await expect(team.getByRole("row", { name: /Bernd Beratung/ })).toContainText("Beratung");
   await expectAccessible(page);
-  await page.getByRole("tab", { name: "Projekt" }).click();
+  await page.getByRole("tab", { name: "Teilnehmende" }).click();
   const list = page.getByRole("region", { name: "Teilnehmende" });
   await list.getByLabel("BSP-0001 auswählen").check({ force: true });
   await list.getByLabel("Beraterin oder Berater").selectOption({ label: "Bernd Beratung" });
-  await list.getByRole("button", { name: "Zuweisen (1)" }).click();
+  await list.getByRole("button", { name: "Zuweisen (1)", exact: true }).click();
   await expect(page.getByText("1 Teilnehmende zugewiesen")).toBeVisible();
   await expect(list.getByRole("row", { name: /BSP-0001/ })).toContainText("Bernd Beratung");
   await page.goto("/projects");
   await chooseDevUser(page, "Bernd Beratung · Beratung");
   await expect.poll(async () => (await me(page)).id).toBe(seedStaffUserIds.consultant);
   await page.getByRole("link", { name: "E2E Projekt Ost" }).click();
+  await page.getByRole("tab", { name: "Teilnehmende" }).click();
   const assigned = page.getByRole("region", { name: "Teilnehmende" });
   await expect(assigned.getByRole("row")).toHaveCount(2);
   await expect(assigned.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
