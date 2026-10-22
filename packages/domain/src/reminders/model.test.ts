@@ -53,6 +53,10 @@ describe("the reminder codes (data-protection.md, reminders)", () => {
   });
 });
 
+const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const input = (ids: string[]) =>
+  ReminderRequestInput.safeParse({ kind: "open_items", participationIds: ids }).success;
+
 describe("reminderPolicy (Q155)", () => {
   it("allows the next reminder of a Monday's on the Thursday", () => {
     expect(reminderPolicy.windowDays).toBe(3);
@@ -66,9 +70,6 @@ describe("reminderPolicy (Q155)", () => {
   });
 
   it("takes 1 to 500 distinct participations per request", () => {
-    const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-    const input = (ids: string[]) =>
-      ReminderRequestInput.safeParse({ kind: "open_items", participationIds: ids }).success;
     expect(input([])).toBe(false);
     expect(input([id(1)])).toBe(true);
     expect(input(Array.from({ length: 500 }, (_, n) => id(n)))).toBe(true);

@@ -112,10 +112,10 @@ describe("immutable notice catalog", () => {
   });
 });
 
-describe("the reminder text (data-protection.md, reminders; Q154)", () => {
-  const joined = ({ subject, text, emailNote }: (typeof reminderTemplates)["de"]) =>
-    [subject, text, emailNote].join("\n\n");
+const joined = ({ subject, text, emailNote }: (typeof reminderTemplates)["de"]) =>
+  [subject, text, emailNote].join("\n\n");
 
+describe("the reminder text (data-protection.md, reminders; Q154)", () => {
   it("is immutable in both languages", () => {
     expect(
       Object.values(reminderTemplates).map(({ version, language, sha256 }) => [

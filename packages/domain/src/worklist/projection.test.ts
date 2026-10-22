@@ -127,10 +127,10 @@ const channel = {
   consentEnded: false,
 };
 
-describe("the reminder of a row", () => {
-  const remind = (overrides: Partial<WorklistFacts>, v = viewer()) =>
-    worklistProjection(facts(overrides), snapshot(), project, "2027-03-10", now, v);
+const remind = (overrides: Partial<WorklistFacts>, v = viewer()) =>
+  worklistProjection(facts(overrides), snapshot(), project, "2027-03-10", now, v);
 
+describe("the reminder of a row", () => {
   it("names the channel kind a permitted reminder would go to", () => {
     const item = remind({ channels: [channel] });
     expect(item.portal).toBe("reachable");

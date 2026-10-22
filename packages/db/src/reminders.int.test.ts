@@ -194,7 +194,7 @@ describe("request_reminders", () => {
     });
     const [event] = await events(participationId, ["reminder_queued"]);
     expect(event).toMatchObject({ actor_type: "user" });
-    expect(Object.keys(event.details).sort()).toEqual([
+    expect(Object.keys(event.details).toSorted()).toEqual([
       "batchId",
       "channelKind",
       "kind",
@@ -441,17 +441,17 @@ describe("record_reminder_outcome", () => {
   });
 });
 
-describe("consent v2 (data-protection.md, consent v2)", () => {
-  const upgrade = (tokenHash: string, channelId: string, consentVersion = V2) =>
-    call(app, "upgrade_channel_consent", {
-      tokenHash,
-      channelId,
-      consentId: randomUUID(),
-      consentVersion,
-      language: "de",
-      requestId: "req-up",
-    });
+const upgrade = (tokenHash: string, channelId: string, consentVersion = V2) =>
+  call(app, "upgrade_channel_consent", {
+    tokenHash,
+    channelId,
+    consentId: randomUUID(),
+    consentVersion,
+    language: "de",
+    requestId: "req-up",
+  });
 
+describe("consent v2 (data-protection.md, consent v2)", () => {
   it("supersedes the v1 consent with the participant's v2 in one transaction, once", async () => {
     const { participationId, tokenHash, channelId, consentId } = await activated();
     await makeV1(consentId);
