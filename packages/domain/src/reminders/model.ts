@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { decideAccess, type Subject } from "../access/decide";
 import { addDays, compareIsoDates } from "../dates";
 import type { IsoDate } from "../iso-date";
 import { terminalMainStatuses, type MainStatus } from "../lifecycle/enums";
@@ -23,28 +24,24 @@ export const ReminderStatus = z
 export type ReminderStatus = z.infer<typeof ReminderStatus>;
 
 /** Why a selected participation got no reminder; the request goes on for the others. */
-export const ReminderSkip = z
-  .enum([
-    "no_channel",
-    "consent_required",
-    "reminded_recently",
-    "nothing_open",
-    "participation_closed",
-  ])
-  .meta({ id: "ReminderSkip" });
+export const ReminderSkip = z.enum([
+  "no_channel",
+  "consent_required",
+  "reminded_recently",
+  "nothing_open",
+  "participation_closed",
+]);
 export type ReminderSkip = z.infer<typeof ReminderSkip>;
 
 /** Why a queued reminder was never handed to a provider. */
-export const ReminderCancelReason = z
-  .enum([
-    "channel_unavailable",
-    "consent_ended",
-    "participation_closed",
-    "nothing_open",
-    "requester_no_longer_authorized",
-    "delivery_unavailable",
-  ])
-  .meta({ id: "ReminderCancelReason" });
+export const ReminderCancelReason = z.enum([
+  "channel_unavailable",
+  "consent_ended",
+  "participation_closed",
+  "nothing_open",
+  "requester_no_longer_authorized",
+  "delivery_unavailable",
+]);
 export type ReminderCancelReason = z.infer<typeof ReminderCancelReason>;
 
 /**
@@ -133,4 +130,22 @@ export function reminderEligibility(
  */
 export function consentUpgradeOffered(channel: { live: boolean; consentVersion: string }): boolean {
   return channel.live && channel.consentVersion !== PORTAL_CONTACT_CONSENT_VERSION;
+}
+
+/**
+ * Who reads a participation's reminders ("Nachrichten"; Q156): whoever reads its `case_internal`
+ * data, i.e. the PL, the assigned consultant and back office (data-protection.md, access matrix).
+ */
+export function mayReadReminders(
+  subject: Subject,
+  target: { projectId: string; participationId: string },
+): boolean {
+  return (
+    decideAccess(
+      subject,
+      { kind: "field", ...target, regionId: null, phase: "active", field: "reminderLog" },
+      "read",
+      { kind: "normal" },
+    ).effect === "allow"
+  );
 }

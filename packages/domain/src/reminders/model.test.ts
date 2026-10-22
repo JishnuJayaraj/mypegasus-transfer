@@ -3,6 +3,7 @@ import { reminderConsentVersion } from "../notices/catalog";
 import {
   chooseChannel,
   consentUpgradeOffered,
+  mayReadReminders,
   nextEligibleDate,
   portalReach,
   ReminderCancelReason,
@@ -173,5 +174,26 @@ describe("consentUpgradeOffered (data-protection.md, consent v2)", () => {
     expect(
       consentUpgradeOffered({ live: false, consentVersion: "portal-contact-consent:v1" }),
     ).toBe(false);
+  });
+});
+
+describe("mayReadReminders (Q156)", () => {
+  const projectId = "00000000-0000-4000-9000-000000000001";
+  const participationId = "00000000-0000-4000-a000-000000000001";
+  const staff = (role: "project_lead" | "consultant" | "back_office", assigned = false) => ({
+    kind: "staff" as const,
+    staffUserId: "00000000-0000-4000-8000-000000000003",
+    orgRoles: new Map(),
+    projectRoles: { [projectId]: new Set([role]) },
+    assignedParticipationIds: new Set(assigned ? [participationId] : []),
+  });
+  const reads = (subject: ReturnType<typeof staff>) =>
+    mayReadReminders(subject, { projectId, participationId });
+
+  it("lets the case_internal readers read them", () => {
+    expect(reads(staff("project_lead"))).toBe(true);
+    expect(reads(staff("consultant", true))).toBe(true);
+    expect(reads(staff("back_office"))).toBe(true);
+    expect(reads(staff("consultant"))).toBe(false);
   });
 });

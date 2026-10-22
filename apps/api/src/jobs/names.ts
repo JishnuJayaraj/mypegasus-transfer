@@ -6,6 +6,8 @@ export const jobNames = {
   activationNotice: "portal.activation-notice",
   // Slice 4b: a deleted document's object (data-protection.md, uploads).
   purgeDocument: "documents.purge-object",
+  // Slice 5: one reminder's dispatch (data-protection.md, reminders).
+  sendReminder: "reminders.send",
 } as const;
 
 /** The nightly run is a Berlin local time (round 9). */

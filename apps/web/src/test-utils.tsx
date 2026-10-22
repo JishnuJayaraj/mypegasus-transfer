@@ -155,7 +155,9 @@ export const unpinnedConfig = {
 };
 
 /** A synthetic work list row (`WorklistItem`): nothing open, no deadline, no capability. */
-export const worklistItem = (overrides: object = {}) => ({
+export const worklistItem = (
+  overrides: Record<string, unknown> & { capabilities?: object } = {},
+) => ({
   id: "00000000-0000-4000-a000-000000000001",
   status: "imported",
   profilingStatus: "not_started",
@@ -176,14 +178,17 @@ export const worklistItem = (overrides: object = {}) => ({
   deadlines: [],
   flags: [],
   portal: "not_reachable",
+  reminder: null,
+  ...overrides,
   capabilities: {
     assignEntryWave: false,
     issueActivationCode: false,
     recordHandover: false,
     revokeActivationCode: false,
     providePrivacyNotice: false,
+    remind: { allowed: false, code: null, channel: null },
+    ...overrides.capabilities,
   },
-  ...overrides,
 });
 
 /** The work list's answer at 10:42 Berlin time. */

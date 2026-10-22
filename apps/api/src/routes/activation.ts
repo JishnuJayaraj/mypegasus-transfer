@@ -552,6 +552,7 @@ export function activationRoutes(deps: Deps) {
         verifiedAt: utc(participantChannel.verifiedAt),
         verifiedBy: participantChannel.verifiedBy,
         consentGivenAt: utc(consentRecord.givenAt),
+        consentVersion: consentRecord.textVersion,
         consentEndedAt: utc(consentRecord.endedAt),
         noticeSentAt: utc(participantChannel.noticeSentAt),
         suspendedAt: utc(participantChannel.suspendedAt),

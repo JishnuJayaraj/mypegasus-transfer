@@ -3847,6 +3847,9 @@
           "portal": {
             "$ref": "#/components/schemas/PortalReach"
           },
+          "reminder": {
+            "$ref": "#/components/schemas/WorklistReminder"
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -3864,6 +3867,9 @@
               },
               "providePrivacyNotice": {
                 "type": "boolean"
+              },
+              "remind": {
+                "$ref": "#/components/schemas/RemindCapability"
               }
             },
             "required": [
@@ -3871,7 +3877,8 @@
               "issueActivationCode",
               "recordHandover",
               "revokeActivationCode",
-              "providePrivacyNotice"
+              "providePrivacyNotice",
+              "remind"
             ],
             "additionalProperties": false
           }
@@ -3890,6 +3897,7 @@
           "deadlines",
           "flags",
           "portal",
+          "reminder",
           "capabilities"
         ],
         "additionalProperties": false
@@ -3950,6 +3958,80 @@
         ],
         "additionalProperties": false
       },
+      "WorklistReminder": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "lastRequestedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReminderStatus"
+          }
+        },
+        "required": [
+          "lastRequestedOn",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ReminderStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "dispatching",
+          "sent",
+          "failed",
+          "delivery_unknown",
+          "cancelled"
+        ]
+      },
+      "RemindCapability": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "no_channel",
+              "consent_required",
+              "reminded_recently",
+              "nothing_open",
+              "participation_closed",
+              null
+            ]
+          },
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "email",
+              "sms",
+              null
+            ]
+          }
+        },
+        "required": [
+          "allowed",
+          "code",
+          "channel"
+        ],
+        "additionalProperties": false
+      },
       "EntryWaveAssignmentsResult": {
         "type": "object",
         "properties": {
@@ -3988,6 +4070,202 @@
         "required": [
           "waveId",
           "participationIds"
+        ],
+        "additionalProperties": false
+      },
+      "ReminderRequestResult": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queued": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "channel": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "sms"
+                  ]
+                }
+              },
+              "required": [
+                "participationId",
+                "channel"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "no_channel",
+                    "consent_required",
+                    "reminded_recently",
+                    "nothing_open",
+                    "participation_closed"
+                  ]
+                }
+              },
+              "required": [
+                "participationId",
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "batchId",
+          "queued",
+          "skipped"
+        ],
+        "additionalProperties": false
+      },
+      "ReminderRequestInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ReminderKind"
+          },
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        },
+        "required": [
+          "kind",
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
+      "ReminderKind": {
+        "type": "string",
+        "enum": [
+          "open_items"
+        ]
+      },
+      "ReminderPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReminderRecord"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "ReminderRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ReminderKind"
+          },
+          "messageVersion": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "email",
+              "sms"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "requestedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReminderStatus"
+          },
+          "cancelReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "channel_unavailable",
+              "consent_ended",
+              "participation_closed",
+              "nothing_open",
+              "requester_no_longer_authorized",
+              "delivery_unavailable",
+              null
+            ]
+          },
+          "outcomeAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "messageVersion",
+          "language",
+          "channel",
+          "requestedAt",
+          "requestedOn",
+          "status",
+          "cancelReason",
+          "outcomeAt"
         ],
         "additionalProperties": false
       },
@@ -4608,6 +4886,9 @@
                   "type": "string",
                   "format": "date-time"
                 },
+                "consentVersion": {
+                  "type": "string"
+                },
                 "consentEndedAt": {
                   "type": [
                     "string",
@@ -4643,6 +4924,7 @@
                 "verifiedAt",
                 "verifiedBy",
                 "consentGivenAt",
+                "consentVersion",
                 "consentEndedAt",
                 "noticeSentAt",
                 "suspendedAt",
@@ -5201,7 +5483,7 @@
           "consentVersion": {
             "type": "string",
             "enum": [
-              "portal-contact-consent:v1"
+              "portal-contact-consent:v2"
             ]
           }
         },
@@ -5353,13 +5635,17 @@
           "verifiedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "consentUpgrade": {
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "kind",
           "maskedAddress",
-          "verifiedAt"
+          "verifiedAt",
+          "consentUpgrade"
         ],
         "additionalProperties": false
       },
@@ -5390,7 +5676,7 @@
           "consentVersion": {
             "type": "string",
             "enum": [
-              "portal-contact-consent:v1"
+              "portal-contact-consent:v2"
             ]
           },
           "language": {
@@ -5527,7 +5813,7 @@
           "consentVersion": {
             "type": "string",
             "enum": [
-              "portal-contact-consent:v1"
+              "portal-contact-consent:v2"
             ]
           },
           "language": {
@@ -5555,6 +5841,52 @@
         },
         "required": [
           "sessionEnded"
+        ],
+        "additionalProperties": false
+      },
+      "ConsentUpgradeResult": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "enum": [
+              "upgraded",
+              "already_current"
+            ]
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "additionalProperties": false
+      },
+      "ConsentUpgradeInput": {
+        "type": "object",
+        "properties": {
+          "consent": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "consentVersion": {
+            "type": "string",
+            "enum": [
+              "portal-contact-consent:v2"
+            ]
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "de",
+              "en"
+            ]
+          }
+        },
+        "required": [
+          "consent",
+          "consentVersion",
+          "language"
         ],
         "additionalProperties": false
       },
@@ -7028,6 +7360,7 @@
             "enum": [
               "revoked",
               "lost_access_replaced",
+              "superseded",
               null
             ]
           }
@@ -11863,6 +12196,207 @@
         }
       }
     },
+    "/api/v1/projects/{projectId}/reminders": {
+      "post": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Remind up to 500 participations of their open items (the PL or the assigned consultant); each is queued or skipped with a code",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReminderRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The queued reminders and the skipped participations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderRequestResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/reminders": {
+      "get": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "The participation's reminders, newest first (cursor); for whoever reads its case data",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of reminders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{projectId}/members": {
       "get": {
         "tags": [
@@ -14498,6 +15032,97 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ChannelRemovalResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/channels/{channelId}/consent-upgrade": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Give consent v2 for one of the participant's own channels (voluntary; the address isn't verified again)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "channelId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentUpgradeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upgraded, or already v2",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentUpgradeResult"
                 }
               }
             }

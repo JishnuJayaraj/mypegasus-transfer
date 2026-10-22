@@ -145,12 +145,16 @@ export function worklistProjection(
     project.waves.map((w) => w.id),
     viewer.may("assignEntryWave"),
   );
-  const actions = terminalMainStatuses.has(current.status)
-    ? []
-    : participantActions(facts.completeness, viewer.knows);
+  const closed = terminalMainStatuses.has(current.status);
+  const actions = closed ? [] : participantActions(facts.completeness, viewer.knows);
   const portal = portalReach(facts.channels);
+  // A reminder asks for every action of the participant's own, whoever requests it.
   const eligibility = reminderEligibility(
-    { status: current.status, actionCount: actions.length, portal },
+    {
+      status: current.status,
+      actionCount: closed ? 0 : participantActions(facts.completeness, () => true).length,
+      portal,
+    },
     facts.lastReminder?.requestedOn ?? null,
     today,
   );

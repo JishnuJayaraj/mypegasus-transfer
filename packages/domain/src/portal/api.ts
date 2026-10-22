@@ -78,6 +78,8 @@ export const PortalChannel = z
     /** The participant's own address, masked (`p…@example.org`, `+49 … 123`). */
     maskedAddress: z.string(),
     verifiedAt: z.iso.datetime(),
+    /** Its consent is an earlier version: "Meine Kontaktwege" offers v2 (data-protection.md). */
+    consentUpgrade: z.boolean(),
   })
   .meta({ id: "PortalChannel" });
 

@@ -3,10 +3,12 @@ import {
   and,
   asc,
   consentRecord,
+  desc,
   eq,
   inArray,
   participantChannel,
   participantIdentity,
+  participantReminder,
   participation,
   profilingExceptionRequest,
   project,
@@ -17,12 +19,14 @@ import {
 import {
   mayListField,
   mayPerformOperation,
+  mayRemind,
   participationListScope,
   staffSelfServiceAccess,
   worklistMaxRows,
   worklistProjection,
   type EntryWave,
-  type PortalChannelFacts,
+  type ReminderChannelFacts,
+  type ReminderStatus,
   type StaffUser,
   type WorklistItem,
   type WorklistProject,
@@ -33,6 +37,7 @@ import type { GuardFactsProvider } from "./guard-facts";
 import { consultantsOf, listStatesOf } from "./list-states";
 import { loadSelfServiceRecords } from "./self-service";
 import { exceptionOf } from "./status-service";
+import { utc } from "../sql";
 
 // The work list snapshot (data-protection.md, the work list and the dashboard): the viewer's
 // whole authorized scope of a project, evaluated once per request in one read-only snapshot of
@@ -83,7 +88,7 @@ export async function loadWorklist(
   return db.transaction(
     async (tx) => {
       const [found] = await tx
-        .select({ type: project.type })
+        .select({ type: project.type, status: project.status })
         .from(project)
         .where(eq(project.id, projectId));
       const waves: EntryWave[] = await tx
@@ -114,11 +119,12 @@ export async function loadWorklist(
       if (rows.length > worklistMaxRows) return { kind: "too_large" as const };
       const ids = rows.map(({ p }) => p.id);
       const requestIds = rows.flatMap(({ p }) => p.profilingExceptionRequestId ?? []);
-      const [consultants, states, records, channels, requests] = [
+      const [consultants, states, records, channels, reminders, requests] = [
         await consultantsOf(tx, ids),
         await listStatesOf(tx, clock, ids, new Map(rows.map((r) => [r.p.id, r.receivedOn]))),
         await loadSelfServiceRecords(tx, release, projectId, ids),
         await channelsOf(tx, ids),
+        await lastRemindersOf(tx, ids),
         requestIds.length
           ? await tx
               .select()
@@ -155,6 +161,7 @@ export async function loadWorklist(
                 customFieldKeys: Object.keys(record.wizard.customFields),
               },
               channels: channels.get(p.id) ?? [],
+              lastReminder: reminders.get(p.id) ?? null,
             },
             {
               current: {
@@ -182,6 +189,7 @@ export async function loadWorklist(
               lists: (field) => mayListField(subject, projectId, p.id, field),
               knows,
               may: (kind) => mayPerformOperation(subject, { kind }, target).ok,
+              remind: found!.status === "active" && mayRemind(subject, target).ok,
             },
           ),
         );
@@ -198,13 +206,16 @@ export async function loadWorklist(
   );
 }
 
-/** Each participation's channels: liveness and consent only, never an address. */
+/** Each participation's channels: kind, verification, liveness and consent, never an address. */
 async function channelsOf(db: Pick<Database, "select">, ids: readonly string[]) {
-  const byParticipation = new Map<string, PortalChannelFacts[]>();
+  const byParticipation = new Map<string, ReminderChannelFacts[]>();
   if (ids.length === 0) return byParticipation;
   const rows = await db
     .select({
       participationId: participantChannel.participationId,
+      id: participantChannel.id,
+      kind: participantChannel.kind,
+      verifiedAt: utc(participantChannel.verifiedAt),
       live: sql<boolean>`${participantChannel.removedAt} is null and ${participantChannel.suspendedAt} is null`,
       consentVersion: consentRecord.textVersion,
       consentEnded: sql<boolean>`${consentRecord.endedAt} is not null`,
@@ -218,5 +229,27 @@ async function channelsOf(db: Pick<Database, "select">, ids: readonly string[]) 
       channel,
     ]);
   }
+  return byParticipation;
+}
+
+/** Each participation's latest reminder: its Berlin request date and status. */
+async function lastRemindersOf(db: Pick<Database, "selectDistinctOn">, ids: readonly string[]) {
+  const byParticipation = new Map<string, { requestedOn: string; status: ReminderStatus }>();
+  if (ids.length === 0) return byParticipation;
+  const rows = await db
+    .selectDistinctOn([participantReminder.participationId], {
+      participationId: participantReminder.participationId,
+      requestedOn: participantReminder.requestedOn,
+      status: participantReminder.status,
+    })
+    .from(participantReminder)
+    .where(inArray(participantReminder.participationId, [...ids]))
+    .orderBy(
+      participantReminder.participationId,
+      desc(participantReminder.requestedAt),
+      desc(participantReminder.id),
+    );
+  for (const { participationId, ...reminder } of rows)
+    byParticipation.set(participationId, reminder);
   return byParticipation;
 }

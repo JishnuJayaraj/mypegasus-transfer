@@ -127,7 +127,7 @@ const completion = (verification: { oneTimeCode: string } | { deliveryAddress: s
   ...verification,
   noticeVersion: "art14-activation:v1",
   consent: true,
-  consentVersion: "portal-contact-consent:v1",
+  consentVersion: "portal-contact-consent:v2",
   language: "de",
 });
 
@@ -185,7 +185,7 @@ describe("portal activation by letter (D22–D25, D28, D29)", () => {
       deliveryKind: null,
       language: "de",
       noticeVersion: "art14-activation:v1",
-      consentVersion: "portal-contact-consent:v1",
+      consentVersion: "portal-contact-consent:v2",
     });
     expect(browser.cookie).toMatch(/^__Host-tp_portal=/);
     const activatingCookie = browser.cookie;

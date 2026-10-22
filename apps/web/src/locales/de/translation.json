@@ -541,7 +541,8 @@
       "wave": "Welle",
       "open": "Offen",
       "deadline": "Frist",
-      "portal": "Portal"
+      "portal": "Portal",
+      "reminded": "Erinnert"
     },
     "statuses": {
       "imported": "Importiert",
@@ -670,7 +671,8 @@
       "noticePending": "Aktivierungsbenachrichtigung ausstehend.",
       "purpose": "Zweck",
       "suspended": "Gesperrt seit {{at}} (Zugangsverlust).",
-      "removed": "Entfernt am {{at}}."
+      "removed": "Entfernt am {{at}}.",
+      "consentVersion": "Einwilligung: {{version}}"
     },
     "assurance": {
       "birth_date": "Geburtsdatum",
@@ -904,7 +906,8 @@
       "label": "Bereiche",
       "overview": "Übersicht",
       "selfService": "Selbstauskunft",
-      "documents": "Unterlagen"
+      "documents": "Unterlagen",
+      "messages": "Nachrichten"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -1340,5 +1343,85 @@
     },
     "noWave": "Ohne Welle",
     "noFlags": "Keine Hinweise."
+  },
+  "reminders": {
+    "open_one": "Erinnern ({{count}})",
+    "open_other": "Erinnern ({{count}})",
+    "title": "An offene Punkte erinnern",
+    "countsLabel": "Ausgewählte Teilnehmende",
+    "counts": {
+      "email_one": "{{count}} per E-Mail",
+      "email_other": "{{count}} per E-Mail",
+      "sms_one": "{{count}} per SMS",
+      "sms_other": "{{count}} per SMS",
+      "recently_one": "{{count}} kürzlich erinnert (wieder ab {{date}})",
+      "recently_other": "{{count}} kürzlich erinnert (wieder ab {{date}})",
+      "noUsableChannel_one": "{{count}} ohne Kontaktweg: Kein für Erinnerungen nutzbarer Kontaktweg.",
+      "noUsableChannel_other": "{{count}} ohne Kontaktweg: Kein für Erinnerungen nutzbarer Kontaktweg.",
+      "nothingOpen_one": "{{count}} nichts offen",
+      "nothingOpen_other": "{{count}} nichts offen",
+      "closed_one": "{{count}} abgeschlossen",
+      "closed_other": "{{count}} abgeschlossen"
+    },
+    "previewIntro": "Die Teilnehmenden erhalten diesen festen Text in der Sprache ihres Portals (Deutsch oder Englisch), ohne Namen oder Einzelheiten:",
+    "preview": "Vorschau der Erinnerung",
+    "portalUrl": "[Adresse des Teilnehmerportals]",
+    "send": "Senden",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "sent_one": "{{count}} Erinnerung gesendet",
+    "sent_other": "{{count}} Erinnerungen gesendet",
+    "failed": "Die Erinnerungen konnten nicht gesendet werden. Es wurde nichts gesendet.",
+    "unavailable": "Erinnerungen können derzeit nicht versendet werden. Es wurde nichts gesendet.",
+    "result": {
+      "queued_one": "{{count}} Erinnerung wird gesendet ({{email}} per E-Mail, {{sms}} per SMS).",
+      "queued_other": "{{count}} Erinnerungen werden gesendet ({{email}} per E-Mail, {{sms}} per SMS).",
+      "no_usable_channel_one": "{{count}}: Kein für Erinnerungen nutzbarer Kontaktweg.",
+      "no_usable_channel_other": "{{count}}: Kein für Erinnerungen nutzbarer Kontaktweg.",
+      "reminded_recently_one": "{{count}}: kürzlich erinnert",
+      "reminded_recently_other": "{{count}}: kürzlich erinnert",
+      "nothing_open_one": "{{count}}: nichts offen",
+      "nothing_open_other": "{{count}}: nichts offen",
+      "participation_closed_one": "{{count}}: abgeschlossen",
+      "participation_closed_other": "{{count}}: abgeschlossen"
+    },
+    "status": {
+      "queued": "geplant",
+      "dispatching": "wird gesendet",
+      "sent": "gesendet",
+      "failed": "nicht zustellbar",
+      "delivery_unknown": "Zustellung unklar",
+      "cancelled": "nicht gesendet"
+    },
+    "cancelReasons": {
+      "channel_unavailable": "Kontaktweg nicht mehr verfügbar",
+      "consent_ended": "Einwilligung beendet",
+      "participation_closed": "abgeschlossen",
+      "nothing_open": "nichts mehr offen",
+      "requester_no_longer_authorized": "Absender nicht mehr berechtigt",
+      "delivery_unavailable": "kein Versanddienst"
+    },
+    "kinds": {
+      "open_items": "Erinnerung an offene Punkte"
+    },
+    "channels": {
+      "email": "E-Mail",
+      "sms": "SMS"
+    },
+    "tab": {
+      "title": "Nachrichten",
+      "empty": "Noch keine Nachrichten.",
+      "more": "Mehr laden",
+      "team": "Team",
+      "forbidden": "Sie dürfen die Nachrichten dieser Person nicht sehen.",
+      "failed": "Die Nachrichten konnten nicht geladen werden.",
+      "columns": {
+        "requestedAt": "Zeitpunkt",
+        "kind": "Nachricht",
+        "channel": "Kanal",
+        "state": "Status",
+        "by": "Durch"
+      }
+    }
   }
 }

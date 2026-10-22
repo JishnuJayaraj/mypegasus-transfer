@@ -27,3 +27,6 @@ export const ActivationNoticePayload = z.strictObject({ channelId: z.uuid() });
 
 /** A deleted document's purge: its id only; the job reads the rest. */
 export const PurgeDocumentPayload = z.strictObject({ documentId: z.uuid() });
+
+/** One reminder's dispatch (data-protection.md, reminders): its id only; the job reads the rest. */
+export const SendReminderPayload = z.strictObject({ reminderId: z.uuid() });

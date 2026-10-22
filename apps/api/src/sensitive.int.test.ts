@@ -142,7 +142,7 @@ async function activated() {
     oneTimeCode: lastCode(),
     noticeVersion: "art14-activation:v1",
     consent: true,
-    consentVersion: "portal-contact-consent:v1",
+    consentVersion: "portal-contact-consent:v2",
     language: "de",
   });
   expect(done.status).toBe(201);

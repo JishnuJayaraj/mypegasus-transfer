@@ -53,6 +53,7 @@ export function testApp(
     virusScanner?: Deps["virusScanner"];
     uploadSlots?: Deps["uploadSlots"];
     documentPurges?: Deps["documentPurges"];
+    reminders?: Deps["reminders"];
   } = {},
 ) {
   const logs: string[] = [];
@@ -75,6 +76,7 @@ export function testApp(
     virusScanner: options.virusScanner,
     uploadSlots: options.uploadSlots,
     documentPurges: options.documentPurges,
+    reminders: options.reminders,
     detached,
   });
   return { app, db, logs, detached };

@@ -673,6 +673,7 @@ export { matchesSearch, searchKey } from "./worklist/search";
 export {
   chooseChannel,
   consentUpgradeOffered,
+  mayReadReminders,
   nextEligibleDate,
   PortalReach,
   portalReach,

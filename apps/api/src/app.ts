@@ -26,6 +26,7 @@ import { importRoutes } from "./routes/imports";
 import { meRoutes } from "./routes/me";
 import { participationRoutes } from "./routes/participations";
 import { worklistRoutes } from "./routes/worklist";
+import { reminderRoutes } from "./routes/reminders";
 import { projectConfigRoutes } from "./routes/project-config";
 import { projectRoutes } from "./routes/projects";
 import { teamRoutes } from "./routes/team";
@@ -156,6 +157,7 @@ export function createApp(deps: Deps) {
   api.route("/", importRoutes(runtimeDeps));
   api.route("/", participationRoutes(runtimeDeps));
   api.route("/", worklistRoutes(runtimeDeps));
+  api.route("/", reminderRoutes(runtimeDeps));
   api.route("/", teamRoutes(runtimeDeps));
   api.route("/", adminRoutes(runtimeDeps));
   api.route("/", activationRoutes(runtimeDeps));

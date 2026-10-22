@@ -21,6 +21,7 @@ import type { Detached } from "./detached";
 import type { DocumentFiles } from "./documents/files";
 import type { DocumentPurgeQueue } from "./documents/purge";
 import type { GuardFactsProvider } from "./participations/guard-facts";
+import type { ReminderQueue } from "./reminders/send";
 
 /** Where the API queues the activation notice inside the completion's transaction (ADR-0011). */
 export interface ActivationNoticeQueue {
@@ -60,6 +61,8 @@ export interface Deps {
   facts?: GuardFactsProvider | undefined;
   /** pg-boss in this process; without it the purge runs after the response (`detached`). */
   documentPurges?: DocumentPurgeQueue | undefined;
+  /** pg-boss in this process; without it each reminder's job runs after the commit (`detached`). */
+  reminders?: ReminderQueue | undefined;
 }
 
 export interface AppEnv {
