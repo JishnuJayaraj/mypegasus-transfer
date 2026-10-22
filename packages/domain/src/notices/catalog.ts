@@ -4,8 +4,20 @@ export const NoticeLanguage = z.enum(["de", "en"]);
 export type NoticeLanguage = z.infer<typeof NoticeLanguage>;
 
 export const ART14_NOTICE_VERSION = "art14-activation:v1" as const;
-/** The consent text of a portal contact channel (ADR-0007, Q119, Q125). */
-export const PORTAL_CONTACT_CONSENT_VERSION = "portal-contact-consent:v1" as const;
+/**
+ * The first consent text of a portal contact channel (ADR-0007, Q119, Q125): still the evidence of
+ * the channels that gave it; no new channel records it (data-protection.md, consent v2).
+ */
+export const PORTAL_CONTACT_CONSENT_V1 = "portal-contact-consent:v1" as const;
+/**
+ * The consent every new channel records (data-protection.md, consent v2; Q154): login codes and
+ * operational notifications such as reminders, never advertising.
+ */
+export const PORTAL_CONTACT_CONSENT_VERSION = "portal-contact-consent:v2" as const;
+/** The only consent version under which a channel receives a reminder (Q154). */
+export const reminderConsentVersion = PORTAL_CONTACT_CONSENT_VERSION;
+/** The reminder's fixed text (data-protection.md, reminders; Q154). */
+export const PORTAL_REMINDER_VERSION = "portal-reminder:v1" as const;
 /**
  * The purposes notice before the first wizard page (data-protection.md, self-service; Q138): an
  * acknowledgement, not a consent.
@@ -13,6 +25,7 @@ export const PORTAL_CONTACT_CONSENT_VERSION = "portal-contact-consent:v1" as con
 export const SELF_SERVICE_NOTICE_VERSION = "self-service-purposes:v1" as const;
 export type NoticeVersion =
   | typeof ART14_NOTICE_VERSION
+  | typeof PORTAL_CONTACT_CONSENT_V1
   | typeof PORTAL_CONTACT_CONSENT_VERSION
   | typeof SELF_SERVICE_NOTICE_VERSION;
 
@@ -70,9 +83,9 @@ Retention depends on the purpose and applicable statutory duties. In particular,
  * Consent to the portal contact purpose for one private email or mobile (Q123): login codes and
  * versioned portal notifications. Final wording: DPO review before real data, like the notice.
  */
-const consentTemplates: Record<NoticeLanguage, NoticeTemplate> = {
+const consentV1Templates: Record<NoticeLanguage, NoticeTemplate> = {
   de: {
-    version: PORTAL_CONTACT_CONSENT_VERSION,
+    version: PORTAL_CONTACT_CONSENT_V1,
     language: "de",
     title: "Einwilligung in den Kontakt über das Teilnehmerportal",
     text: `Ich willige ein, dass {{controllerName}} die von mir angegebene private E-Mail-Adresse oder Mobilnummer speichert und nutzt, um mir Anmeldecodes für das Teilnehmerportal und Benachrichtigungen aus dem Portal zu senden.
@@ -81,7 +94,7 @@ Die Angabe ist freiwillig. Ich kann diese Einwilligung jederzeit mit Wirkung fü
     sha256: "356247698c46c89c9dc2a718baaa764d567b5245eb720e0a3c511be9849a9724",
   },
   en: {
-    version: PORTAL_CONTACT_CONSENT_VERSION,
+    version: PORTAL_CONTACT_CONSENT_V1,
     language: "en",
     title: "Consent to contact through the participant portal",
     text: `I consent to {{controllerName}} storing and using the private email address or mobile number I provide to send me login codes for the participant portal and notifications from the portal.
@@ -90,6 +103,82 @@ Providing it is voluntary. I can withdraw this consent at any time with effect f
     sha256: "c25c5b790d010b933061647ca1f1458f17ccdb0630e775dac6710942f5173a1f",
   },
 };
+
+/**
+ * Consent v2 (data-protection.md, consent v2; Q154): login codes and operational notifications
+ * from the portal, such as a reminder that something is open; never advertising; voluntary and
+ * revocable. Final wording: DPO review before real data (Q132).
+ */
+const consentTemplates: Record<NoticeLanguage, NoticeTemplate> = {
+  de: {
+    version: PORTAL_CONTACT_CONSENT_VERSION,
+    language: "de",
+    title: "Einwilligung in den Kontakt über das Teilnehmerportal",
+    text: `Ich willige ein, dass {{controllerName}} die von mir angegebene private E-Mail-Adresse oder Mobilnummer speichert und nutzt, um mir Anmeldecodes für das Teilnehmerportal und Benachrichtigungen zur Nutzung des Portals zu senden, zum Beispiel eine Erinnerung, dass dort noch etwas offen ist. Für Werbung wird der Kontaktweg nicht genutzt.
+
+Die Angabe ist freiwillig. Ich kann diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen, indem ich den Kontaktweg im Portal entferne oder mich an {{controllerEmail}} wende. Die Rechtmäßigkeit der bis zum Widerruf erfolgten Verarbeitung bleibt unberührt.`,
+    sha256: "1551a38f2fd27b03d521a740430771a2eae339eb3fac0ee4b9409ddece294d7f",
+  },
+  en: {
+    version: PORTAL_CONTACT_CONSENT_VERSION,
+    language: "en",
+    title: "Consent to contact through the participant portal",
+    text: `I consent to {{controllerName}} storing and using the private email address or mobile number I provide to send me login codes for the participant portal and notifications about using the portal, for example a reminder that something is still open there. The contact is never used for advertising.
+
+Providing it is voluntary. I can withdraw this consent at any time with effect for the future by removing the contact in the portal or by writing to {{controllerEmail}}. Withdrawal does not affect the lawfulness of processing before it.`,
+    sha256: "ae97ab9ab27f1d4be9fd38dcadfc7cbcb5223c002e476527aeb2e4b653403308",
+  },
+};
+
+/**
+ * The reminder (data-protection.md, reminders; Q154): a fixed generic text whose only placeholder
+ * is the plain portal URL; no name, project, employer, Personalnummer, deadline or item. The
+ * SHA-256 covers subject, text and the email-only note joined by blank lines. Final wording with
+ * the DPO (Q132).
+ */
+export interface ReminderTemplate {
+  version: typeof PORTAL_REMINDER_VERSION;
+  language: NoticeLanguage;
+  subject: string;
+  text: string;
+  emailNote: string;
+  sha256: string;
+}
+
+export const reminderTemplates: Readonly<Record<NoticeLanguage, ReminderTemplate>> = {
+  de: {
+    version: PORTAL_REMINDER_VERSION,
+    language: "de",
+    subject: "Im Teilnehmerportal ist noch etwas offen",
+    text: "In Ihrem Teilnehmerportal ist noch etwas offen. Bitte melden Sie sich an und prüfen Sie Ihre Angaben oder Unterlagen: {{portalUrl}}",
+    emailNote: "Diese Nachricht enthält aus Datenschutzgründen keine weiteren Einzelheiten.",
+    sha256: "6c179e836430938b1333586603061c8857d84a9d1aae5daad5d9a00e541cc61c",
+  },
+  en: {
+    version: PORTAL_REMINDER_VERSION,
+    language: "en",
+    subject: "Something is still open in the participant portal",
+    text: "Something is still open in your participant portal. Please sign in and review your information or documents: {{portalUrl}}",
+    emailNote: "For privacy reasons, this message contains no further details.",
+    sha256: "ee71cfb6dd4f9dbc5cce04d02401274a8bb0b37dc140ef1f095a2f62f01f658c",
+  },
+};
+
+/**
+ * The reminder as it is sent: by email the subject and the text with the note, by SMS the text
+ * alone; plain text with the portal URL as given (no token, id or tracking parameter).
+ */
+export function reminderMessage(
+  language: NoticeLanguage,
+  kind: "email" | "sms",
+  portalUrl: string,
+): { subject?: string; text: string } {
+  const template = reminderTemplates[language];
+  const text = template.text.replace("{{portalUrl}}", portalUrl);
+  return kind === "email"
+    ? { subject: template.subject, text: `${text}\n\n${template.emailNote}` }
+    : { text };
+}
 
 /**
  * What the self-service data is for, per phase, and on which legal basis (data-protection.md,
@@ -127,8 +216,9 @@ Details not marked as required can also be added with your counsellor. Your righ
 
 export const noticeCatalog: readonly NoticeTemplate[] = [
   ...NoticeLanguage.options.map((language) => templates[language]),
-  ...NoticeLanguage.options.map((language) => consentTemplates[language]),
+  ...NoticeLanguage.options.map((language) => consentV1Templates[language]),
   ...NoticeLanguage.options.map((language) => purposesTemplates[language]),
+  ...NoticeLanguage.options.map((language) => consentTemplates[language]),
 ];
 
 const render = (template: NoticeTemplate, organisation: NoticeOrganisation) => {
@@ -144,6 +234,7 @@ export function art14Notice(language: NoticeLanguage, organisation: NoticeOrgani
   return render(templates[language], organisation);
 }
 
+/** The consent a channel records now (v2); v1 stays in the catalog as evidence only. */
 export function portalContactConsent(language: NoticeLanguage, organisation: NoticeOrganisation) {
   return render(consentTemplates[language], organisation);
 }

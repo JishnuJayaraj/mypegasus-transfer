@@ -243,3 +243,13 @@ export function mayPerformOperation(
         : undefined;
   return staffPermission(actor, target, allows, otherParty);
 }
+
+/**
+ * Who may request a reminder (data-protection.md, reminders; Q153): a current PL of the project,
+ * or the consultant currently assigned to the participation. No other role, never the system or a
+ * participant; assisted mode and break-glass grant nothing here (the API refuses them before).
+ */
+export function mayRemind(actor: Actor, target: PermissionTarget): Permission {
+  if (actor.kind !== "staff") return no("actor_not_allowed");
+  return staffPermission(actor, target, (role) => role === "project_lead" || role === "consultant");
+}

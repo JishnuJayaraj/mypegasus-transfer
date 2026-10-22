@@ -82,7 +82,7 @@ async function activated(address = "erika@example.invalid") {
       tokenHash: activating,
       newTokenHash: tokenHash,
       noticeVersion: "art14-activation:v1",
-      consentVersion: "portal-contact-consent:v1",
+      consentVersion: "portal-contact-consent:v2",
       language: "de",
       channelId: randomUUID(),
       consentId: randomUUID(),

@@ -17,6 +17,15 @@ import {
 import { PrivacyNoticeState } from "../privacy/notice-state";
 import { AgenturKey } from "../projects/agentur-settings";
 import { AssignedConsultant } from "../projects/team";
+import { RemindCapability, WorklistReminder } from "../reminders/api";
+import {
+  chooseChannel,
+  PortalReach,
+  portalReach,
+  reminderEligibility,
+  type ReminderChannelFacts,
+  type ReminderStatus,
+} from "../reminders/model";
 import { participantActions, ParticipantAction, type ActionFacts } from "./actions";
 import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
 
@@ -26,41 +35,13 @@ import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
 /** The PRD's 2,000 participations with headroom; a larger project gets no snapshot (a 422). */
 export const worklistMaxRows = 5000;
 
-/** The consent a channel needs to receive reminders (data-protection.md, portal contact). */
-export const reachableConsentVersion = "portal-contact-consent:v2";
-
-/**
- * `reachable`: a live channel with a live consent of the reminders' version;
- * `consent_required`: a live channel, none with that consent; `not_reachable`: no live channel.
- */
-export const PortalReach = z
-  .enum(["reachable", "consent_required", "not_reachable"])
-  .meta({ id: "PortalReach" });
-export type PortalReach = z.infer<typeof PortalReach>;
-
-/** A channel the participant registered: never its address. */
-export type PortalChannelFacts = {
-  /** Verified, neither removed nor suspended. */
-  live: boolean;
-  /** The channel's consent: its version and whether it has ended. */
-  consentVersion: string;
-  consentEnded: boolean;
-};
-
-export function portalReach(channels: readonly PortalChannelFacts[]): PortalReach {
-  const live = channels.filter((channel) => channel.live);
-  if (live.some((c) => !c.consentEnded && c.consentVersion === reachableConsentVersion)) {
-    return "reachable";
-  }
-  return live.length > 0 ? "consent_required" : "not_reachable";
-}
-
 export const WorklistCapabilities = z.strictObject({
   assignEntryWave: z.boolean(),
   issueActivationCode: z.boolean(),
   recordHandover: z.boolean(),
   revokeActivationCode: z.boolean(),
   providePrivacyNotice: z.boolean(),
+  remind: RemindCapability,
 });
 
 /**
@@ -86,6 +67,8 @@ export const WorklistItem = z
     deadlines: z.array(Deadline),
     flags: z.array(LifecycleFlag),
     portal: PortalReach,
+    /** The latest reminder requested for the participation, whatever its outcome. */
+    reminder: WorklistReminder.nullable(),
     capabilities: WorklistCapabilities,
   })
   .meta({ id: "WorklistItem" });
@@ -110,7 +93,8 @@ export type WorklistFacts = Pick<
 > & {
   person: Record<"personnelNumber" | "lastName" | "firstName", string | null>;
   completeness: ActionFacts;
-  channels: readonly PortalChannelFacts[];
+  channels: readonly ReminderChannelFacts[];
+  lastReminder: { requestedOn: IsoDate; status: ReminderStatus } | null;
 };
 
 export type WorklistProject = PlannerProject & { id: string };
@@ -123,7 +107,9 @@ export type WorklistViewer = {
   /** Whether a self-service field may be named (the "Selbstauskunft" tab's rule). */
   knows: (key: string) => boolean;
   /** The operation's permission; the domain's preconditions follow. */
-  may: (operation: keyof WorklistItem["capabilities"]) => boolean;
+  may: (operation: Exclude<keyof WorklistItem["capabilities"], "remind">) => boolean;
+  /** `mayRemind` in an active project; the reminder rules follow. */
+  remind: boolean;
 };
 
 /**
@@ -159,6 +145,20 @@ export function worklistProjection(
     project.waves.map((w) => w.id),
     viewer.may("assignEntryWave"),
   );
+  const actions = terminalMainStatuses.has(current.status)
+    ? []
+    : participantActions(facts.completeness, viewer.knows);
+  const portal = portalReach(facts.channels);
+  const eligibility = reminderEligibility(
+    { status: current.status, actionCount: actions.length, portal },
+    facts.lastReminder?.requestedOn ?? null,
+    today,
+  );
+  const remind = !viewer.remind
+    ? { allowed: false, code: null, channel: null }
+    : eligibility === "ok"
+      ? { allowed: true, code: null, channel: chooseChannel(facts.channels)!.kind }
+      : { allowed: false, code: eligibility, channel: null };
   return {
     id: facts.id,
     ...current,
@@ -168,18 +168,20 @@ export function worklistProjection(
     consultants: facts.consultants,
     activationStatus: facts.activationStatus,
     privacyNoticeState: facts.privacyNoticeState,
-    actions: terminalMainStatuses.has(current.status)
-      ? []
-      : participantActions(facts.completeness, viewer.knows),
+    actions,
     deadlines: deadlinesOf({ snapshot, project, privacyNotice: facts.privacyNoticeState }, today),
     flags: remainingFlags(lifecycleFlags(snapshot, project, today)),
-    portal: portalReach(facts.channels),
+    portal,
+    reminder: facts.lastReminder
+      ? { lastRequestedOn: facts.lastReminder.requestedOn, status: facts.lastReminder.status }
+      : null,
     capabilities: {
       assignEntryWave: wave.allowed,
       issueActivationCode: viewer.may("issueActivationCode"),
       recordHandover: viewer.may("recordHandover"),
       revokeActivationCode: viewer.may("revokeActivationCode"),
       providePrivacyNotice: viewer.may("providePrivacyNotice"),
+      remind,
     },
   };
 }

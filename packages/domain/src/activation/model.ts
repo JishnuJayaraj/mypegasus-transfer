@@ -27,10 +27,14 @@ export const ConsentSource = z.enum(["portal", "paper_form"]);
 export const OneTimeCodePurpose = z.enum(["login", "channel_verification", "step_up"]);
 export const ParticipantSessionState = z.enum(["activating", "active"]);
 export const StepUpMethod = z.enum(["birth_date", "one_time_code"]);
-/** Q130, Q123: why a channel was suspended or removed, and why its consent ended. */
+/**
+ * Q130, Q123: why a channel was suspended or removed, and why its consent ended; `superseded`: the
+ * participant gave consent v2 for the same channel (data-protection.md, consent v2), never a
+ * withdrawal.
+ */
 export const ChannelSuspensionReason = z.enum(["lost_access"]);
 export const ChannelRemovalReason = z.enum(["consent_revoked", "lost_access_replaced"]);
-export const ConsentEndReason = z.enum(["revoked", "lost_access_replaced"]);
+export const ConsentEndReason = z.enum(["revoked", "lost_access_replaced", "superseded"]);
 /**
  * Why a participant session ended: logout, activation (the activating session gives way to an
  * active one), a newer activating session of the same code, the code locked or revoked, a terminal

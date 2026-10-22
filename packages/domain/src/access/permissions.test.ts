@@ -8,6 +8,7 @@ import type { Subject } from "./decide";
 import {
   mayPerformOperation,
   mayPerformTransition,
+  mayRemind,
   OperationKind,
   type Actor,
   type Operation,
@@ -349,5 +350,18 @@ describe("team and region operations (Q126)", () => {
     expect(result(mayPerformOperation(actors.PL!, region, { ...target, projectId: "x" }))).toBe(
       "not_member",
     );
+  });
+});
+
+describe("mayRemind (Q153)", () => {
+  it("lets the PL and the assigned consultant remind, nobody else", () => {
+    expect(allowed((actor) => mayRemind(actor, target))).toBe("PL C");
+  });
+
+  it("refuses an unassigned consultant and anyone outside the project", () => {
+    expect(result(mayRemind(staff(["consultant"]), target))).toBe("not_assigned");
+    expect(result(mayRemind(staff(["back_office"]), target))).toBe("role_not_allowed");
+    expect(result(mayRemind(staff([]), target))).toBe("not_member");
+    expect(result(mayRemind({ kind: "system" }, target))).toBe("actor_not_allowed");
   });
 });

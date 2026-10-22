@@ -93,7 +93,7 @@ async function activated(address: string) {
     tokenHash: activating,
     newTokenHash: tokenHash,
     noticeVersion: "art14-activation:v1",
-    consentVersion: "portal-contact-consent:v1",
+    consentVersion: "portal-contact-consent:v2",
     language: "de",
     channelId,
     consentId: randomUUID(),

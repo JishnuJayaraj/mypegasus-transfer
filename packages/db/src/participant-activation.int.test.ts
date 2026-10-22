@@ -19,7 +19,7 @@ const owner = new Client({ connectionString: urls.owner });
 const failsWith = (message: string) => ({ code: "P0001", message });
 const hex = () => randomBytes(32).toString("hex");
 const NOTICE = "art14-activation:v1";
-const CONSENT = "portal-contact-consent:v1";
+const CONSENT = "portal-contact-consent:v2";
 
 beforeAll(() => Promise.all([app.connect(), owner.connect()]));
 afterAll(() => Promise.all([app.end(), owner.end()]));

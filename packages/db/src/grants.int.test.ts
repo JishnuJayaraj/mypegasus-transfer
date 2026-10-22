@@ -174,6 +174,11 @@ const statusFunctions = [
   "review_document",
   "delete_document",
   "record_document_purged",
+  // Slice 5: reminders and consent v2 (data-protection.md, reminders)
+  "request_reminders",
+  "claim_reminder_dispatch",
+  "record_reminder_outcome",
+  "upgrade_channel_consent",
 ];
 const helpers = [
   "assert_context",
@@ -240,6 +245,9 @@ const helpers = [
   "document_staff_roles",
   "current_document_policy",
   "lock_document_actor",
+  "reminder_requester_allowed",
+  "reminder_job_context",
+  "settle_reminder",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -842,6 +850,14 @@ describe("transfer_app and the document tables", () => {
     ["select a link", "select token_hash from document_link"],
     ["find the actor directly", "select lock_document_actor(null, null, null, false)"],
     ["read roles directly", "select document_staff_roles(null, null)"],
+    // Reminders (data-protection.md, reminders): selected, never written but by the functions.
+    ...writes(
+      "participant_reminder",
+      "status",
+      `insert into participant_reminder (id, project_id, participation_id, batch_id, kind, message_version, language, channel_id, channel_kind, consent_id, requested_by, requested_on)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), 'open_items', 'portal-reminder:v1', 'de', gen_random_uuid(), 'email', gen_random_uuid(), gen_random_uuid(), current_date)`,
+    ),
+    ["settle a reminder directly", "select settle_reminder(null, null, null, null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

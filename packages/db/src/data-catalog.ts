@@ -209,6 +209,14 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // Reminders (data-protection.md, reminders; Q156): ids, codes, versions and times; never an
+  // address, a text or a provider response. Non-signers with the 90-day deletion, otherwise the
+  // end of the 3rd calendar year after exit; the channel keeps its own erasure rule.
+  participant_reminder: {
+    retentionClass: "personnel_file",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // The document type catalog per version (classes, file names, roles): no personal data.
   document_type_policy: {
     retentionClass: "reference_data",
@@ -495,6 +503,25 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     reported_on: "baReportingTask",
     channel: "baReportingTask",
     reference: "baReportingTask",
+  },
+  participant_reminder: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    batch_id: null,
+    channel_id: null,
+    consent_id: null,
+    requested_by: null,
+    kind: "reminderLog",
+    message_version: "reminderLog",
+    language: "reminderLog",
+    channel_kind: "reminderLog",
+    requested_at: "reminderLog",
+    requested_on: "reminderLog",
+    status: "reminderLog",
+    cancel_reason: "reminderLog",
+    claimed_at: "reminderLog",
+    outcome_at: "reminderLog",
   },
 };
 

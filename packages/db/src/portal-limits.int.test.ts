@@ -114,7 +114,7 @@ describe("portal limits in SQL", () => {
           tokenHash,
           newTokenHash: hex(),
           noticeVersion: "art14-activation:v1",
-          consentVersion: "portal-contact-consent:v1",
+          consentVersion: "portal-contact-consent:v2",
           language: "de",
           channelId: randomUUID(),
           consentId: randomUUID(),

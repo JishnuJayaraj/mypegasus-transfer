@@ -36,6 +36,7 @@ import {
   LoginMethod,
 } from "../activation/model";
 import { IdentityAssurance } from "../activation/steps";
+import { ReminderCancelReason, ReminderKind } from "../reminders/model";
 import { NoticeLanguage } from "../notices/catalog";
 import {
   contactFields,
@@ -136,6 +137,9 @@ export const AuditEventType = z.enum([
   "document_reviewed",
   "document_deleted",
   "document_upload_rejected",
+  // Slice 5, reminders (data-protection.md, reminders), written only by their functions
+  "reminder_queued",
+  "reminder_delivery",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -214,6 +218,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "document_reviewed",
   "document_deleted",
   "document_upload_rejected",
+  "reminder_queued",
+  "reminder_delivery",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -867,6 +873,37 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     reasonCode: z.enum(["file_infected", "file_unscannable"]),
     details: z.strictObject({ documentType: DocumentType }),
+  }),
+  /**
+   * A reminder queued by a PL or the assigned consultant (data-protection.md, reminders): ids and
+   * codes only, never the address or the text.
+   */
+  event("reminder_queued", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      reminderId: z.uuid(),
+      batchId: z.uuid(),
+      kind: ReminderKind,
+      channelKind: ActivationDeliveryKind,
+    }),
+  }),
+  /**
+   * A reminder's final state, recorded by its job: a cancellation names its reason (the reason
+   * code), nothing else does; never a provider response or error.
+   */
+  event("reminder_delivery", {
+    ...ofParticipation,
+    actor: z.strictObject({ type: z.literal("system"), job: systemJob }),
+    reasonCode: ReminderCancelReason.nullable(),
+    details: z.strictObject({
+      reminderId: z.uuid(),
+      outcome: z.enum(["sent", "failed", "delivery_unknown", "cancelled"]),
+    }),
+  }).superRefine(({ reasonCode, details }, ctx) => {
+    if ((details.outcome === "cancelled") !== (reasonCode !== null)) {
+      issue(ctx, "reason_mismatch");
+    }
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

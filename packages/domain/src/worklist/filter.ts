@@ -3,7 +3,8 @@ import { ActivationCodeState } from "../activation/status";
 import { DsvStatus, LifecycleFlag, MainStatus, ProfilingStatus } from "../lifecycle/enums";
 import { PrivacyNoticeState } from "../privacy/notice-state";
 import { DeadlineKind, DeadlineState } from "./deadlines";
-import { PortalReach, type WorklistItem } from "./projection";
+import { PortalReach } from "../reminders/model";
+import type { WorklistItem } from "./projection";
 
 /** An activated account, else the state of the latest code (like the paged list's filter). */
 export const ActivationFilter = z.enum(["activated", ...ActivationCodeState.options]);

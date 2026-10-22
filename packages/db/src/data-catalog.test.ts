@@ -94,6 +94,7 @@ describe("data catalog", () => {
       // Slice 4b (Q145, Q147): a document's class is its type's, per row.
       document: entry("by_document_type", "confidential", true),
       document_link: entry("access_credential", "internal", true),
+      participant_reminder: entry("personnel_file", "internal", true),
       document_type_policy: entry("reference_data", "internal"),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
