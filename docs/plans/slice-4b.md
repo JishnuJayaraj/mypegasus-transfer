@@ -1,6 +1,9 @@
 # Slice 4b — Uploads and documents (F5)
 
-Status: **proposed**, awaiting approval (no implementation before it).
+Status: **approved** 2026-10-22 by the product owner (PR #74): D16 agreed; `personnel_file` for
+the three types as a provisional decision (Q145 stays `assumed`); base64 JSON, the synchronous
+scan, file encryption, downloads and the production refusal with mocks accepted for this slice.
+Next: PR 4b-1.
 Roadmap: uploads with storage and virus-scan adapters (mocks), a file-type allowlist, signed URLs,
 document records with a retention class. Builds on the document-type catalog
 (`packages/domain/src/documents/catalog.ts`, Q87 B), `decideAccess` for documents
