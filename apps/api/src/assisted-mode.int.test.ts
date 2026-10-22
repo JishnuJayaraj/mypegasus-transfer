@@ -252,6 +252,11 @@ describe("the assisted routes (Q136)", () => {
     ]);
     expect(Object.keys(state.sensitive)).toEqual(["healthRestrictions", "severeDisability"]);
     expect(state.missing.map((m) => m.key)).not.toContain("pensionInsuranceNumber");
+    // "Unterlagen" with the types the PL reads in assisted mode.
+    expect(state.pages.at(-1)).toMatchObject({
+      page: "documents",
+      documentTypes: ["cv", "participant_upload", "qualification_certificate"],
+    });
     await expectProblem(await mode.get("/sensitive/ba_details"), 403, "forbidden");
     await expectProblem(
       await mode.put("/sensitive/ba_details", { revision: 0, values: baDetails }),
@@ -278,6 +283,8 @@ describe("the assisted routes (Q136)", () => {
       "severeDisability",
     ]);
     expect(state.pages.map((p) => p.page)).toContain("ba_details");
+    // No right on the participant's own documents: no "Unterlagen".
+    expect(state.pages.map((p) => p.page)).not.toContain("documents");
     expect(state.sensitive).not.toHaveProperty("healthRestrictions");
     const hidden = await mode.put("/sensitive/health", {
       revision: 0,

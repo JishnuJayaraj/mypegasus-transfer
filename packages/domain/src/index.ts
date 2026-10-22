@@ -565,6 +565,7 @@ export {
   selfServiceMissing,
   selfServiceWizard,
   SensitivePage,
+  wizardDocumentTypes,
   wizardPages,
   wizardSteps,
   type CustomFieldDefinition,

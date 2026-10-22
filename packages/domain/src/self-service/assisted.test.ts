@@ -151,7 +151,7 @@ describe("the wizard restricted to what a viewer sees", () => {
   };
 
   it("hides fields, their missing items and pages left empty", () => {
-    expect(restrictWizard(wizard, withoutHealth)).toEqual({
+    expect(restrictWizard(wizard, withoutHealth, [])).toEqual({
       pages: [
         page("personal", ["gender", "maritalStatus"], false),
         page("health", ["severeDisability"], true),
@@ -161,6 +161,39 @@ describe("the wizard restricted to what a viewer sees", () => {
   });
 
   it("leaves a fully visible wizard as it is", () => {
-    expect(restrictWizard(wizard, () => true)).toEqual(wizard);
+    expect(restrictWizard(wizard, () => true, [])).toEqual(wizard);
+  });
+
+  const documents: WizardPage = {
+    page: "documents",
+    sensitive: false,
+    complete: false,
+    fields: [],
+    documentTypes: ["cv", "qualification_certificate"],
+  };
+  const missingCv = { ...missing("cv"), kind: "document" } as const;
+  const withDocuments = {
+    pages: [...wizard.pages, documents],
+    missing: [...wizard.missing, missingCv],
+  };
+
+  it("keeps the documents page with the types the viewer reads, and their missing items", () => {
+    expect(restrictWizard(withDocuments, () => true, ["cv", "qualification_certificate"])).toEqual(
+      withDocuments,
+    );
+    expect(restrictWizard(withDocuments, () => true, ["qualification_certificate"])).toEqual({
+      pages: [
+        ...wizard.pages,
+        { ...documents, complete: true, documentTypes: ["qualification_certificate"] },
+      ],
+      missing: wizard.missing,
+    });
+  });
+
+  it("drops the documents page for a viewer who reads none of its types", () => {
+    expect(restrictWizard(withDocuments, () => true, ["asu_proof"])).toEqual({
+      pages: wizard.pages,
+      missing: wizard.missing,
+    });
   });
 });

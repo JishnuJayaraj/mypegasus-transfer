@@ -10,6 +10,7 @@ import {
   selfServiceMissing,
   selfServiceWizard,
   SensitivePage,
+  wizardDocumentTypes,
   wizardPages,
   type WizardInput,
 } from "./wizard";
@@ -18,7 +19,7 @@ const required = (field: string, extra: Partial<CompletenessRule> = {}) =>
   ({ id: `r-${field}`, kind: "required", field, basis: "ba_form", ...extra }) as CompletenessRule;
 
 describe("the wizard pages (Q140)", () => {
-  it("follow TL 407 section B, the special-category page last before the custom fields", () => {
+  it("follow TL 407 section B, the special-category page before the custom fields, then the documents", () => {
     expect(wizardPages.map((p) => p.page)).toEqual([
       "personal",
       "contact",
@@ -29,7 +30,14 @@ describe("the wizard pages (Q140)", () => {
       "job_wish",
       "health",
       "further",
+      "documents",
     ]);
+  });
+
+  it("put the participant's own document types on the documents page, which writes no values", () => {
+    expect(wizardDocumentTypes).toEqual(["cv", "participant_upload", "qualification_certificate"]);
+    expect(wizardPages.at(-1)).toEqual({ page: "documents", fields: [] });
+    expect(ConfidentialPage.options).not.toContain("documents");
   });
 
   it("list self-service catalog fields, each on one page", () => {
@@ -194,6 +202,7 @@ describe("selfServiceWizard", () => {
       ["languages_mobility", true, false],
       ["job_wish", true, false],
       ["health", true, true],
+      ["documents", true, false],
     ]);
   });
 
@@ -208,7 +217,7 @@ describe("selfServiceWizard", () => {
     const { pages, missing } = selfServiceWizard(
       input({ customFields: { "custom.nr": custom, "custom.a": custom } }),
     );
-    expect(pages.at(-1)).toEqual({
+    expect(pages.find((p) => p.page === "further")).toEqual({
       page: "further",
       sensitive: false,
       complete: false,
@@ -236,6 +245,44 @@ describe("selfServiceWizard", () => {
     });
     expect(fields.find((f) => f.key === "phone")!.helpText).toEqual({ en: "Landline" });
     expect(fields.find((f) => f.key === "mobile")).toEqual({ key: "mobile", required: false });
+  });
+});
+
+const documentsPage = (wizard: ReturnType<typeof selfServiceWizard>) =>
+  wizard.pages.find((p) => p.page === "documents")!;
+
+describe("the documents page (regional-variation.md, self-service wizard)", () => {
+  const cvRule: CompletenessRule = { id: "r-cv", kind: "documentPresent", documentType: "cv" };
+  const withCv = (documents: WizardInput["documents"]) =>
+    selfServiceWizard(input({ rules: { ...rules, data_collection: [cvRule] }, documents }));
+
+  it("has one section per own type, no fields, and is complete without a document rule", () => {
+    const wizard = selfServiceWizard(input());
+    expect(documentsPage(wizard)).toEqual({
+      page: "documents",
+      sensitive: false,
+      complete: true,
+      fields: [],
+      documentTypes: ["cv", "participant_upload", "qualification_certificate"],
+    });
+    // another type's rule (asu_proof) is not the participant's to fix
+    expect(wizard.missing.filter((item) => item.kind === "document")).toEqual([]);
+  });
+
+  it("is incomplete while a document item of its types is missing", () => {
+    const missing = withCv({});
+    expect(documentsPage(missing).complete).toBe(false);
+    expect(missing.missing).toContainEqual({
+      step: "data_collection",
+      ruleId: "r-cv",
+      kind: "document",
+      key: "cv",
+      reason: "missing",
+    });
+    expect(documentsPage(withCv({ cv: ["uploaded"] })).complete).toBe(true);
+    const rejected = withCv({ cv: ["rejected"] });
+    expect(documentsPage(rejected).complete).toBe(false);
+    expect(rejected.missing.find((item) => item.key === "cv")?.reason).toBe("not_accepted");
   });
 });
 

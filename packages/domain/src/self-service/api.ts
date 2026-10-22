@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ConsentEndReason, ConsentPurpose, ConsentSource } from "../activation/model";
+import { DocumentType } from "../documents/catalog";
 import { isoDate } from "../iso-date";
 import { Step } from "../lifecycle/enums";
 import { NoticeLanguage, SELF_SERVICE_NOTICE_VERSION } from "../notices/catalog";
@@ -79,6 +80,8 @@ export const SelfServicePageView = z
     sensitive: z.boolean(),
     complete: z.boolean(),
     fields: z.array(SelfServiceFieldView),
+    /** Only on "Unterlagen" (`documents`): one section per type, uploaded on the documents routes. */
+    documentTypes: z.array(DocumentType).optional(),
   })
   .meta({ id: "SelfServicePageView" });
 

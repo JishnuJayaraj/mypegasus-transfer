@@ -9386,9 +9386,10 @@ export interface components {
             sensitive: boolean;
             complete: boolean;
             fields: components["schemas"]["SelfServiceField"][];
+            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate")[];
         };
         /** @enum {string} */
-        SelfServicePage: "personal" | "contact" | "ba_details" | "education" | "work_history" | "languages_mobility" | "job_wish" | "health" | "further";
+        SelfServicePage: "personal" | "contact" | "ba_details" | "education" | "work_history" | "languages_mobility" | "job_wish" | "health" | "further" | "documents";
         SelfServiceField: {
             key: string;
             required: boolean;

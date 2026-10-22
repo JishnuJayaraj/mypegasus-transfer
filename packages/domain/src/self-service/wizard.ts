@@ -6,13 +6,14 @@ import {
   type MissingItem,
 } from "../completeness/engine";
 import { ruleAppliesTo, type RulesByStep } from "../completeness/rules";
+import { documentTypeCatalog, type DocumentType } from "../documents/catalog";
 import type { Step } from "../lifecycle/enums";
 import type { ProjectType } from "../project";
 import { contactFields, selfServiceValueSchemas, type SelfServiceField } from "./values";
 
 // The self-service wizard (regional-variation.md, "Self-service wizard"; Q140). The pages and the
 // fields on them are code, in the order of TL 407 section B (ba-forms.md) with the special-category
-// page last, behind its step-up; which fields are required, the custom fields of the final page
+// page last, behind its step-up, then the participant's documents; which fields are required, the custom fields of the final page
 // and the help texts come from the participation's resolved chain. Pure: the API loads the values
 // and the resolution.
 
@@ -27,6 +28,7 @@ export const SelfServicePage = z
     "job_wish",
     "health",
     "further",
+    "documents",
   ])
   .meta({ id: "SelfServicePage" });
 export type SelfServicePage = z.infer<typeof SelfServicePage>;
@@ -35,16 +37,21 @@ export type SelfServicePage = z.infer<typeof SelfServicePage>;
 export const SensitivePage = SelfServicePage.extract(["ba_details", "health"]);
 export type SensitivePage = z.infer<typeof SensitivePage>;
 
-/** The pages `PUT /portal/self-service/pages/{page}` writes. */
-export const ConfidentialPage = SelfServicePage.exclude(SensitivePage.options).meta({
-  id: "SelfServiceConfidentialPage",
-});
+/**
+ * The pages `PUT /portal/self-service/pages/{page}` writes: not the sensitive ones, and not
+ * "Unterlagen" (`documents`), which has no fields and adds documents on their own routes.
+ */
+export const ConfidentialPage = SelfServicePage.exclude([
+  ...SensitivePage.options,
+  "documents",
+]).meta({ id: "SelfServiceConfidentialPage" });
 export type ConfidentialPage = z.infer<typeof ConfidentialPage>;
 
 /**
  * Each page's catalog fields. "Weitere Angaben" (`further`) holds the chain's confidential custom
- * fields instead. Not on any page: `unemploymentPeriod` (Q85, the profiler records it) and
- * `qualifications` (no TL 407 section B field; certificates are uploads).
+ * fields instead, "Unterlagen" (`documents`) none: one section per `wizardDocumentTypes`. Not on any
+ * page: `unemploymentPeriod` (Q85, the profiler records it) and `qualifications` (no TL 407
+ * section B field; certificates are uploads).
  */
 export const wizardPages: readonly { page: SelfServicePage; fields: readonly string[] }[] = [
   { page: "personal", fields: ["gender", "maritalStatus"] },
@@ -74,7 +81,18 @@ export const wizardPages: readonly { page: SelfServicePage; fields: readonly str
   },
   { page: "health", fields: ["healthRestrictions", "severeDisability"] },
   { page: "further", fields: [] },
+  { page: "documents", fields: [] },
 ];
+
+/**
+ * The sections of "Unterlagen", in catalog order: the types the participant adds themselves
+ * (data-protection.md, documents; Q142, Q146 *assumed*).
+ */
+export const wizardDocumentTypes: readonly DocumentType[] = documentTypeCatalog.types
+  .filter(
+    (entry) => entry.operations !== "undecided" && entry.operations.add.includes("participant"),
+  )
+  .map((entry) => entry.type);
 
 const fieldsOf = (page: SelfServicePage) => wizardPages.find((p) => p.page === page)!.fields;
 
@@ -142,9 +160,14 @@ export type WizardField = {
 export type WizardPage = {
   page: SelfServicePage;
   sensitive: boolean;
-  /** No required field of the page is missing (the progress bar counts these). */
+  /**
+   * No required field of the page is missing, on "Unterlagen" no document item of its types (the
+   * progress bar counts these).
+   */
   complete: boolean;
   fields: WizardField[];
+  /** Only on "Unterlagen": its sections. */
+  documentTypes?: DocumentType[];
 };
 
 /** The missing items of the wizard's steps: codes only (process-and-lifecycle.md, profiling). */
@@ -160,7 +183,8 @@ export function selfServiceMissing(input: Omit<WizardInput, "customFields" | "he
 /**
  * The pages with their fields, which are required now, help texts (`self_service.<field>`) and
  * whether each page is complete; the "further" page only when the chain has custom fields. The
- * missing items are those a participant can fix: fields on a page.
+ * missing items are those a participant can fix: fields on a page and documents of their own types
+ * (a template's `documentPresent` rule; none in the base defaults).
  */
 export function selfServiceWizard(input: WizardInput): {
   pages: WizardPage[];
@@ -176,13 +200,19 @@ export function selfServiceWizard(input: WizardInput): {
   );
   const customKeys = Object.keys(input.customFields).toSorted();
   const onPage = new Set([...wizardPages.flatMap((p) => p.fields), ...customKeys]);
-  const missing = selfServiceMissing(input).filter(
-    (item) => item.kind === "field" && onPage.has(item.key),
+  const ownTypes = new Set<string>(wizardDocumentTypes);
+  const missing = selfServiceMissing(input).filter((item) =>
+    item.kind === "field" ? onPage.has(item.key) : ownTypes.has(item.key),
   );
   const missingKeys = new Set(missing.map((item) => item.key));
   const pages = wizardPages
     .filter(({ page }) => page !== "further" || customKeys.length > 0)
     .map(({ page, fields }): WizardPage => {
+      if (page === "documents") {
+        const documentTypes = [...wizardDocumentTypes];
+        const complete = documentTypes.every((type) => !missingKeys.has(type));
+        return { page, sensitive: false, complete, fields: [], documentTypes };
+      }
       const keys = page === "further" ? customKeys : fields;
       return {
         page,

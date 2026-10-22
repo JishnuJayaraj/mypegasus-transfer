@@ -180,6 +180,7 @@ describe("GET /portal/self-service (Q140)", () => {
       ["languages_mobility", false],
       ["job_wish", false],
       ["health", true],
+      ["documents", false],
     ]);
     expect(required(body)).toEqual([
       "gender",
@@ -218,6 +219,13 @@ describe("GET /portal/self-service (Q140)", () => {
     const body = await state(browser);
     expect(required(body)).toEqual(expect.arrayContaining(["mobile", "privateEmail"]));
     expect(body.pages.at(-1)).toEqual({
+      page: "documents",
+      sensitive: false,
+      complete: true,
+      fields: [],
+      documentTypes: ["cv", "participant_upload", "qualification_certificate"],
+    });
+    expect(body.pages.at(-2)).toEqual({
       page: "further",
       sensitive: false,
       complete: false,
@@ -365,7 +373,7 @@ describe("PUT /portal/self-service/pages/{page} (Q140)", () => {
     expect(await errorsOf(res)).toEqual([
       { code: "unknown_field", pointer: "/values/nationality" },
     ]);
-    for (const page of ["health", "ba_details"]) {
+    for (const page of ["health", "ba_details", "documents"]) {
       await expectProblem(
         await save(browser, page, { healthRestrictions: true }, 0),
         400,
