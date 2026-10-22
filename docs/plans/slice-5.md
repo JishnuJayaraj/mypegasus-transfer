@@ -5,7 +5,8 @@ recorded in [round 39](../decisions/2026-10-22-answers-round-39.md); this revisi
 required amendments (deadlines, the search snapshot, the dispatch check, audit redaction in the
 database, appointments as Slice 5b, two UX details) and, after the second review, the final Q154
 contract: every reminder needs a live `portal-contact-consent:v2` (D11, D18). Nothing is
-implemented before approval. Next: PR 5-1.
+implemented before approval. PR 5-1 is merged; PR 5-2 builds the reminders and consent v2. Next:
+PR 5-3.
 Roadmap: funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines;
 deferred here from Slice 2: bulk entry-wave assignment and the audit history UI (the runtime role
 can't read `audit_event` yet). Builds on the participant list
@@ -356,13 +357,14 @@ is deleted.
 | 5-1 | `GET /projects/{id}/dashboard` | `ProjectDashboard`: tiles and counts (D4), each with its `filter`; the next dates per wave with their counts; `scope` (`project` / `assigned`); `private, no-store`; `403` without a list scope |
 | 5-1 | `GET /projects/{id}/worklist` | `Worklist` `{ generatedAt, items: WorklistItem[] }`: the whole authorized scope (D6); `private, no-store`; `422 worklist_too_large` |
 | 5-1 | `POST /projects/{id}/entry-wave-assignments` | `{ waveId, participationIds }` → `200 { assigned, unchanged }`; `422` with `errors[]` at `/participationIds/<i>` per refused row |
-| 5-2 | `POST /projects/{id}/reminders` | `{ kind, participationIds }` → `201 { batchId, queued, skipped: [{ participationId, code }] }` |
+| 5-2 | `POST /projects/{id}/reminders` | `{ kind, participationIds }` → `201 { batchId, queued: [{ participationId, channel }], skipped: [{ participationId, code }] }` |
 | 5-2 | `GET /participations/{id}/reminders` | the reminders, newest first (cursor); for `case_internal` readers |
 | 5-2 | `POST /portal/channels/{channelId}/consent-upgrade` | the participant only: `{ consentVersion: "portal-contact-consent:v2", language }` → `200 { result: "upgraded" \| "already_current" }`; `404` for a channel that isn't the session's own live one |
 | 5-3 | `GET /participations/{id}/history` | `HistoryPage`, newest first, an opaque cursor |
 
 `WorklistItem` (5-2) adds `reminder: { lastRequestedOn, status } | null` and `capabilities.remind`
-(`{ allowed, code }`). New codes: 422 `worklist_too_large`, 503 `jobs_unavailable`; the others
+(`{ allowed, code, channel }`; `channel` gives the dialog its per-channel counts). New codes:
+422 `worklist_too_large`, 503 `jobs_unavailable`; the others
 exist (`project_not_active`, `participation_not_found`, `not_ta_tg`, the wave codes,
 `delivery_unavailable`). `GET /portal/me` marks each own channel `consentUpgrade: true` while its
 consent is v1; staff channel views show the consent version beside kind and state (never the

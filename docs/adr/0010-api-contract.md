@@ -239,6 +239,27 @@ generator then. No action now.
   wave codes); a duplicate id is a 400 `duplicate_participation`.
 - **Problem codes:** 422 `worklist_too_large`; the others exist.
 
+## Note 2026-10-22 (Slice 5, PR 5-2): reminders and consent v2
+
+- **Routes:** `POST /projects/{id}/reminders` (`{ kind: "open_items", participationIds }`, 1–500
+  distinct → `201 { batchId, queued: [{ participationId, channel }], skipped: [{ participationId,
+  code }] }`; skips are data, not problems), `GET /participations/{id}/reminders` (`ReminderPage`,
+  newest first, an opaque cursor, `private, no-store`; for whoever reads the participation's
+  `case_internal` data, else `403`), `POST /portal/channels/{channelId}/consent-upgrade` (the
+  participant only: `{ consent: true, consentVersion: "portal-contact-consent:v2", language }` →
+  `200 { result: "upgraded" | "already_current" }`; `404` for a channel that isn't the session's
+  own live one). `WorklistItem` adds `reminder` (`{ lastRequestedOn, status }` or null) and
+  `capabilities.remind` (`{ allowed, code, channel }`: `code` the skip a permitted reminder would
+  get, null when the viewer may not remind; `channel` the kind it would go to). `PortalChannel`
+  adds `consentUpgrade`; the staff channel record adds `consentVersion`.
+- **Order:** the schema (400, a duplicate id `duplicate_participation`) → visibility (404; a
+  participation the viewer can't see, a consultant's unassigned one included, is
+  `422 participation_not_found` at `/participationIds/<i>`) → permission (`403`: back office and
+  every role but the PL and the assigned consultant) → state (`422 project_not_active`) →
+  `503 jobs_unavailable` / `503 delivery_unavailable` (production only), all before anything is
+  written.
+- **Problem codes:** 503 `jobs_unavailable`; the others exist.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

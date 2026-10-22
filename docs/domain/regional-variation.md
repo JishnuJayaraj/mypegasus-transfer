@@ -32,7 +32,7 @@ Do **not** build a generic workflow engine. Only the edges are configurable.
 | `leadTimeDays` | how many days before TG start the submission must arrive | Q2 |
 | `rejectsOutdatedFormVersions` | does the Agentur reject old form versions? | Q2 |
 | Additional required fields/documents per step | rare; e.g. an extra certificate | |
-| Reminder rules, deadlines, help texts | | |
+| Reminder rules, deadlines, help texts | none for reminders: one policy everywhere (Q152, Q155) | |
 
 Per **project** (not per Agentur): signing deadline, `latestEntryDate`, default TG start/end, the
 contractual deadline rule (`deadlineRule`, from the Sozialplan/DSV, Q69), project overrides.
@@ -119,7 +119,9 @@ Participation
   (version 3 adds the self-service rule `beispielstadt-nord-private-email` in `profiling` and
   `self_service.*` help texts), `beispielstadt-sued/1.json`: fictional Agenturen with
   `sample: true`, never a real Agentur's rules. `@transfer/config/load` reads a pinned version and checks its path.
-- Reminder rules are left to Slice 5; deadlines are entry-wave data (above).
+- **No regional reminder rules** (Q152, Q155): reminders are manual and follow one domain
+  constant, `reminderPolicy` (3 Berlin calendar days between requests, 1–500 per request), in
+  every Agentur; data-protection.md, "Reminders". Deadlines are entry-wave data (above).
 
 - The **Step enum** in `packages/domain` is the single vocabulary for steps, used by both the
   lifecycle guards and the config.

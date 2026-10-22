@@ -145,6 +145,23 @@ job, its id, the document id and the outcome. The worker runs only where a store
 with `NODE_ENV=production` yet, Q149). Without pg-boss (`JOBS_ENABLED=false`: tests, e2e) the API
 runs the same handler after the response (`detached.ts`).
 
+## Note 2026-10-22: reminders (Slice 5, PR 5-2)
+
+`reminders.send` is an `exclusive` queue (retries 5, backoff). The request queues `{ reminderId }`
+with `singletonKey` the reminder id **in its own transaction**, so rows, `reminder_queued` and
+jobs commit together or not at all. The worker: no sender for the queued kind → `cancelled`
+(`delivery_unavailable`) before any claim; otherwise one transaction locks the participation
+(`lock_participation`), evaluates the participant's actions and calls `claim_reminder_dispatch`;
+a refused claim ends the job. After the commit it sends the fixed text with the provider key
+`reminder:<reminderId>`: `sent` and a definitive `failed` are recorded and final; an error or an
+unknown outcome fails the job for a retry, which repeats the claim (a claim that now fails settles
+`delivery_unknown` without another send); the last attempt's error records `delivery_unknown`.
+Logs carry the job, its id, the reminder id and the outcome; never an address, text, name or
+provider error. Without pg-boss (`JOBS_ENABLED=false`: tests, e2e) the API runs the handler once
+after the commit (`detached.ts`), as the last attempt; with `NODE_ENV=production` the route
+answers `503 jobs_unavailable` without pg-boss and `503 delivery_unavailable` without both
+senders, before writing anything.
+
 ## Note 2026-10-17: draft projects plan nothing (Slice 2, PR 2e-1)
 
 A project is `draft` until it is activated (Q98). The sweep still dispatches
