@@ -14,7 +14,8 @@ import { expect } from "./helpers";
 // shares one client IP and its throttle (10 per 15 minutes, Q128), and activation.spec.ts spends
 // five of them on the activation and the login it tests. The other specs set their participant up
 // here, as the owner (a test fixture, like activateAsOwner), and spend only what they test:
-// self-service.spec.ts its login (2), sensitive.spec.ts its step-up (2). Synthetic data only.
+// self-service.spec.ts its login (2), sensitive.spec.ts its step-up (2), assisted.spec.ts none.
+// Synthetic data only.
 
 const ok = async (response: Promise<{ ok(): boolean; status(): number }>) =>
   expect((await response).ok()).toBe(true);
@@ -22,12 +23,18 @@ const ok = async (response: Promise<{ ok(): boolean; status(): number }>) =>
 /**
  * An activated participant of `projectId` (born 01.01.1970, the birth-date assurance) with a
  * verified private email `address`, as a letter's activation leaves them. The PL issues the letter
- * and, with `agenturKey`, places the participation through the staff API first.
+ * and, with `agenturKey`, places the participation through the staff API first; with
+ * `oldEmploymentEndDate` the import brought the Austrittsdatum too.
  */
 export async function activatedParticipant(
   page: Page,
   baseURL: string,
-  options: { projectId: string; address: string; agenturKey?: string },
+  options: {
+    projectId: string;
+    address: string;
+    agenturKey?: string;
+    oldEmploymentEndDate?: string;
+  },
 ) {
   const { projectId, address } = options;
   const participationId = randomUUID();
@@ -56,6 +63,7 @@ export async function activatedParticipant(
       addressPostalCode: "10115",
       addressCity: "Berlin",
       addressCountry: "DE",
+      oldEmploymentEndDate: options.oldEmploymentEndDate ?? null,
     });
 
     const api = page.context().request;
@@ -112,18 +120,29 @@ export async function activatedParticipant(
 
 /**
  * Logs the browser in as a login code would (a session without a step-up of its own): the
- * session row as the owner and its cookie, without a code submission.
+ * session row as the owner and its cookie, without a code submission. `afterActivation` is the
+ * session that follows an activation with the birth-date step, which counts as stepped up
+ * (ADR-0007, step-up).
  */
-export async function loggedInAsOwner(page: Page, baseURL: string, participationId: string) {
+export async function loggedInAsOwner(
+  page: Page,
+  baseURL: string,
+  participationId: string,
+  options: { afterActivation?: boolean } = {},
+) {
   const token = randomBytes(32).toString("base64url");
   const owner = createDb(testDatabaseUrls("transfer_e2e").owner);
   try {
     await owner.$client.query(
       `insert into participant_session (token_hash, project_id, participation_id, state,
          step_up_method, step_up_at)
-       select $1, project_id, id, 'active', 'one_time_code', now()
+       select $1, project_id, id, 'active', $3::step_up_method, now()
        from participation where id = $2`,
-      [createHash("sha256").update(token).digest("hex"), participationId],
+      [
+        createHash("sha256").update(token).digest("hex"),
+        participationId,
+        options.afterActivation ? "birth_date" : "one_time_code",
+      ],
     );
   } finally {
     await owner.$client.end();

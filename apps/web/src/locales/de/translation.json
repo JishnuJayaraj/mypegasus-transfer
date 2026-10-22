@@ -893,6 +893,51 @@
       "assign": "Zuweisen",
       "unassign": "Zuweisung von {{name}} aufheben",
       "failed": "Die Zuweisung konnte nicht geändert werden."
+    },
+    "tabs": {
+      "label": "Bereiche",
+      "overview": "Übersicht",
+      "selfService": "Selbstauskunft"
+    },
+    "selfService": {
+      "loading": "Die Selbstauskunft wird geladen …",
+      "forbidden": "Sie dürfen die Selbstauskunft dieser Person nicht sehen.",
+      "failed": "Die Selbstauskunft konnte nicht geladen werden.",
+      "notice": "Hinweise zu den Zwecken",
+      "noticeAcknowledged": "Bestätigt am {{at}}",
+      "noticeOpen": "Noch nicht bestätigt",
+      "missing": "Fehlende Angaben",
+      "missingNone": "Keine fehlenden Angaben.",
+      "given": "angegeben",
+      "absent": "fehlt",
+      "show": "Anzeigen",
+      "showLabel": "{{field}} anzeigen",
+      "showHint": "Jedes Anzeigen einer besonders geschützten Angabe wird protokolliert.",
+      "showFailed": "Die Angabe konnte nicht angezeigt werden.",
+      "custom": "Weitere Angaben",
+      "maintained": "Von der Person gepflegt: {{fields}}"
+    },
+    "assisted": {
+      "start": "Assistierte Erfassung starten",
+      "intro": "Wenn die Person anwesend ist oder am Telefon um Unterstützung bittet, können Sie ihre Angaben gemeinsam mit ihr erfassen.",
+      "confirm": "Die Person ist anwesend oder am Telefon und hat um Unterstützung gebeten",
+      "how": "Wie nimmt die Person teil?",
+      "in_person": "Vor Ort",
+      "phone": "Am Telefon",
+      "submit": "Starten",
+      "cancel": "Abbrechen",
+      "failed": "Die assistierte Erfassung konnte nicht gestartet werden.",
+      "closed": "Die Teilnahme ist abgeschlossen; Angaben können nicht mehr erfasst werden.",
+      "region": "Assistierte Erfassung",
+      "banner": "Assistierte Erfassung für {{name}} ({{how}})",
+      "end": "Beenden",
+      "endFailed": "Die assistierte Erfassung konnte nicht beendet werden.",
+      "ended": "Die assistierte Erfassung ist beendet.",
+      "back": "Zurück zur Person",
+      "howInline": {
+        "in_person": "vor Ort",
+        "phone": "am Telefon"
+      }
     }
   },
   "manual": {

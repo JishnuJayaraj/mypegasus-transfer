@@ -59,12 +59,16 @@ export type Failure =
 /**
  * What a refused request means for the wizard (ADR-0010 problems): `409 stale_revision` and
  * `notice_required` reload, `403 step_up_required` asks for the step-up, a `422` names codes at
- * `/values/...`, a `401` is an ended session.
+ * `/values/...`, a `401` is an ended session and so is a `403 assisted_mode_required` (staff whose
+ * assisted mode ended).
  */
 export function failureOf(error: unknown): Failure {
   if (!(error instanceof ApiProblemError)) return { kind: "failed" };
   const errors = error.problem.errors ?? [];
   if (error.status === 401) return { kind: "expired" };
+  if (error.status === 403 && errors[0]?.code === "assisted_mode_required") {
+    return { kind: "expired" };
+  }
   if (error.status === 403 && errors[0]?.code === "step_up_required") {
     return { kind: "step_up_required" };
   }

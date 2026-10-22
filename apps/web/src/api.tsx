@@ -150,6 +150,18 @@ export const participationQuery = (api: ApiClient, participationId: string) =>
       ),
   });
 
+/** The "Selbstauskunft" tab: normal mode, values the viewer reads, presence, missing items. */
+export const participationSelfServiceQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "self-service"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/self-service", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 export const participationActivationQuery = (api: ApiClient, participationId: string) =>
   queryOptions({
     queryKey: ["participations", participationId, "activation"],

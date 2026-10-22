@@ -11,10 +11,5 @@ export {
   type Step,
   type WizardState,
 } from "./model";
-export {
-  failureOf,
-  type Failure,
-  type SelfServiceSource,
-  type WizardWrite,
-} from "./source";
+export { failureOf, type Failure, type SelfServiceSource, type WizardWrite } from "./source";
 export { SelfServiceWizard, type SelfServiceWizardProps } from "./wizard";

@@ -275,8 +275,14 @@ body {
   padding-block: $spacing-04;
   padding-inline: $spacing-05;
   margin-block-end: $spacing-06;
-  background: theme.$notification-background-info;
+  background: theme.$layer-01;
   border-inline-start: 3px solid theme.$support-info;
+}
+
+.tp-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-04;
 }
 
 .tp-assisted-wizard {
