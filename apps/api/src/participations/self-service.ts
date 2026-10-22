@@ -3,6 +3,7 @@ import {
   and,
   document,
   eq,
+  inArray,
   isNull,
   participantDetails,
   participantHealthData,
@@ -71,13 +72,9 @@ function validatorOf(schema: FieldSchema) {
   return validator;
 }
 
-/** One participation's self-service record, or undefined when it doesn't exist. */
-export async function loadSelfService(
-  db: Db,
-  release: Release,
-  participationId: string,
-): Promise<SelfServiceRecord | undefined> {
-  const [row] = await db
+/** The participation with its self-service rows; the sensitive values only as presence. */
+const selectRecords = (db: Db) =>
+  db
     .select({
       id: participation.id,
       projectId: participation.projectId,
@@ -114,21 +111,82 @@ export async function loadSelfService(
         eq(acknowledgement.participationId, participation.id),
         eq(acknowledgement.noticeVersion, SELF_SERVICE_NOTICE_VERSION),
       ),
-    )
-    .where(eq(participation.id, participationId));
-  if (!row) return undefined;
-  const { identity, details, profile } = row;
-  const snapshot = (await projectSnapshot(db, release, row.projectId))!;
-  // Completeness counts live documents only (process-and-lifecycle.md, document review).
+    );
+
+type Row = Awaited<ReturnType<typeof selectRecords>>[number];
+type Documents = Partial<Record<DocumentType, DocumentState[]>>;
+type Snapshot = NonNullable<Awaited<ReturnType<typeof projectSnapshot>>>;
+
+/** The live documents' states by type, per participation (process-and-lifecycle.md, document review). */
+async function liveDocuments(db: Db, participationIds: readonly string[]) {
   const live = await db
-    .select({ type: document.type, reviewState: document.reviewState })
+    .select({
+      participationId: document.participationId,
+      type: document.type,
+      reviewState: document.reviewState,
+    })
     .from(document)
-    .where(and(eq(document.participationId, participationId), isNull(document.deletedAt)));
-  const documents: Partial<Record<DocumentType, DocumentState[]>> = {};
-  for (const { type, reviewState } of live) {
+    .where(
+      and(inArray(document.participationId, [...participationIds]), isNull(document.deletedAt)),
+    );
+  const byParticipation = new Map<string, Documents>();
+  for (const { participationId, type, reviewState } of live) {
+    const documents = byParticipation.get(participationId) ?? {};
     (documents[type] ??= []).push(documentState({ reviewState, deletedAt: null })!);
+    byParticipation.set(participationId, documents);
   }
-  const { config } = resolveForParticipation({
+  return byParticipation;
+}
+
+/** One participation's self-service record, or undefined when it doesn't exist. */
+export async function loadSelfService(
+  db: Db,
+  release: Release,
+  participationId: string,
+): Promise<SelfServiceRecord | undefined> {
+  const [row] = await selectRecords(db).where(eq(participation.id, participationId));
+  if (!row) return undefined;
+  const snapshot = (await projectSnapshot(db, release, row.projectId))!;
+  const documents = (await liveDocuments(db, [participationId])).get(participationId) ?? {};
+  return recordOf(row, snapshot, documents, resolveForParticipation);
+}
+
+/**
+ * The records of `participationIds` of one project, for the work list: one query each for the
+ * rows and the live documents, the configuration resolved once per placement Agentur.
+ */
+export async function loadSelfServiceRecords(
+  db: Db,
+  release: Release,
+  projectId: string,
+  participationIds: readonly string[],
+): Promise<Map<string, SelfServiceRecord>> {
+  if (participationIds.length === 0) return new Map();
+  const rows = await selectRecords(db).where(
+    and(eq(participation.projectId, projectId), inArray(participation.id, [...participationIds])),
+  );
+  const snapshot = (await projectSnapshot(db, release, projectId))!;
+  const documents = await liveDocuments(db, participationIds);
+  const configs = new Map<string | null, ReturnType<typeof resolveForParticipation>>();
+  const resolve: typeof resolveForParticipation = (input) => {
+    let resolved = configs.get(input.placementAgenturKey);
+    if (!resolved)
+      configs.set(input.placementAgenturKey, (resolved = resolveForParticipation(input)));
+    return resolved;
+  };
+  return new Map(
+    rows.map((row) => [row.id, recordOf(row, snapshot, documents.get(row.id) ?? {}, resolve)]),
+  );
+}
+
+function recordOf(
+  row: Row,
+  snapshot: Snapshot,
+  documents: Documents,
+  resolve: typeof resolveForParticipation,
+): SelfServiceRecord {
+  const { identity, details, profile } = row;
+  const { config } = resolve({
     ...snapshot.input,
     placementAgenturKey: row.placementAgenturKey,
   });

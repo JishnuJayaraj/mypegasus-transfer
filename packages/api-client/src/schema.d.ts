@@ -2575,6 +2575,268 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's dashboard: exact counts of distinct participations in the viewer's scope, each with its work list filter */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProjectDashboard"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/worklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The work list: every participation of the viewer's scope in one snapshot (no cursor), at most 5,000 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The snapshot */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Worklist"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/entry-wave-assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign one wave to up to 500 participations (the PL), all or nothing; those already in it stay */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EntryWaveAssignmentsInput"];
+                };
+            };
+            responses: {
+                /** @description The assigned and unchanged participations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EntryWaveAssignmentsResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -8797,6 +9059,123 @@ export interface components {
         };
         SetPlacementAgenturInput: {
             agenturKey: string;
+        };
+        ProjectDashboard: {
+            /** @enum {string} */
+            scope: "project" | "assigned";
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            generatedAt: string;
+            counts: {
+                tiles: components["schemas"]["DashboardCount"][];
+                statuses: components["schemas"]["DashboardCount"][];
+                profilingStatuses: components["schemas"]["DashboardCount"][];
+                dsvStatuses: components["schemas"]["DashboardCount"][];
+                waves: components["schemas"]["DashboardCount"][];
+                activation: components["schemas"]["DashboardCount"][];
+                notice: components["schemas"]["DashboardCount"][];
+                deadlines: components["schemas"]["DashboardCount"][];
+                flags: components["schemas"]["DashboardCount"][];
+                portal: components["schemas"]["DashboardCount"][];
+            };
+        };
+        DashboardCount: {
+            key: string;
+            count: number;
+            filter: components["schemas"]["WorklistFilter"];
+        };
+        WorklistFilter: {
+            /** @enum {string} */
+            status?: "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "ta_completed" | "exited";
+            /** @enum {string} */
+            profilingStatus?: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
+            /** @enum {string} */
+            dsvStatus?: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
+            wave?: string | "none";
+            consultant?: string | "none";
+            /** @enum {string} */
+            activation?: "activated" | "none" | "printed" | "open" | "delivery_unknown" | "expired" | "locked" | "revoked" | "used";
+            /** @enum {string} */
+            notice?: "provided" | "due" | "overdue";
+            /** @enum {string} */
+            actions?: "any" | "fields" | "documents" | "rejected_documents" | "none";
+            deadlineKind?: components["schemas"]["DeadlineKind"];
+            deadlineState?: components["schemas"]["DeadlineState"];
+            flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any";
+            portal?: components["schemas"]["PortalReach"];
+        };
+        /** @enum {string} */
+        DeadlineKind: "offer_deadline" | "tg_start" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
+        /** @enum {string} */
+        DeadlineState: "upcoming" | "overdue";
+        /** @enum {string} */
+        PortalReach: "reachable" | "consent_required" | "not_reachable";
+        Worklist: {
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            generatedAt: string;
+            items: components["schemas"]["WorklistItem"][];
+        };
+        WorklistItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "imported" | "contacted" | "unreachable" | "informed" | "active_in_tg" | "withdrawn" | "ta_completed" | "exited";
+            /** @enum {string} */
+            profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
+            /** @enum {string} */
+            dsvStatus: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
+            /** Format: uuid */
+            entryWaveId: string | null;
+            placementAgenturKey: string | null;
+            personnelNumber?: string;
+            lastName?: string;
+            firstName?: string;
+            consultants: components["schemas"]["AssignedConsultant"][];
+            activationStatus: components["schemas"]["ActivationStatus"];
+            privacyNoticeState: components["schemas"]["PrivacyNoticeState"];
+            actions: components["schemas"]["ParticipantAction"][];
+            deadlines: components["schemas"]["Deadline"][];
+            flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
+            portal: components["schemas"]["PortalReach"];
+            capabilities: {
+                assignEntryWave: boolean;
+                issueActivationCode: boolean;
+                recordHandover: boolean;
+                revokeActivationCode: boolean;
+                providePrivacyNotice: boolean;
+            };
+        };
+        ParticipantAction: {
+            /** @enum {string} */
+            kind: "field" | "document";
+            key: string;
+            /** @enum {string} */
+            state: "missing" | "rejected";
+        };
+        Deadline: {
+            kind: components["schemas"]["DeadlineKind"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
+            state: components["schemas"]["DeadlineState"];
+            final?: boolean;
+        };
+        EntryWaveAssignmentsResult: {
+            assigned: number;
+            unchanged: number;
+        };
+        EntryWaveAssignmentsInput: {
+            /** Format: uuid */
+            waveId: string;
+            participationIds: string[];
         };
         ProjectTeam: {
             members: components["schemas"]["ProjectMember"][];

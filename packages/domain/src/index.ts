@@ -5,6 +5,7 @@ export {
   asuDueDate,
   asuDueDateDefaults,
   compareIsoDates,
+  daysBetween,
   laterIsoDate,
   type AsuDueDateParams,
 } from "./dates";
@@ -37,6 +38,8 @@ export {
   DsvAmendmentView,
   SetParticipationDatesRefusal,
   AssignEntryWaveInput,
+  EntryWaveAssignmentsInput,
+  EntryWaveAssignmentsResult,
   AssignEntryWaveRefusal,
   ParticipantAddress,
   ParticipationDetail,
@@ -91,6 +94,7 @@ export {
 export {
   cutoffFinalReminderDays,
   cutoffWarningDays,
+  latestEntryCutoff,
   lifecycleFlags,
   planSystemTransitions,
   projectFlags,
@@ -622,3 +626,43 @@ export {
   SensitiveValuesView,
   PortalSensitiveValues,
 } from "./self-service/api";
+export { ParticipantAction, participantActions, type ActionFacts } from "./worklist/actions";
+export {
+  Deadline,
+  DeadlineKind,
+  deadlinesOf,
+  DeadlineState,
+  deadlineWarningDays,
+  mostUrgent,
+  remainingFlags,
+  type DeadlineFacts,
+} from "./worklist/deadlines";
+export {
+  ActionsFilter,
+  ActivationFilter,
+  activationOf,
+  matchesWorklistFilter,
+  WorklistFilter,
+} from "./worklist/filter";
+export {
+  DashboardCount,
+  DashboardGroup,
+  funnelFilters,
+  ProjectDashboard,
+  projectFunnel,
+  type FunnelProject,
+} from "./worklist/funnel";
+export {
+  PortalReach,
+  portalReach,
+  reachableConsentVersion,
+  Worklist,
+  WorklistItem,
+  worklistMaxRows,
+  worklistProjection,
+  type PortalChannelFacts,
+  type WorklistFacts,
+  type WorklistProject,
+  type WorklistViewer,
+} from "./worklist/projection";
+export { matchesSearch, searchKey } from "./worklist/search";

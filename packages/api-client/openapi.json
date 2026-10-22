@@ -3442,6 +3442,555 @@
         ],
         "additionalProperties": false
       },
+      "ProjectDashboard": {
+        "type": "object",
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "project",
+              "assigned"
+            ]
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "tiles": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "statuses": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "profilingStatuses": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "dsvStatuses": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "waves": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "activation": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "notice": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "deadlines": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "flags": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              },
+              "portal": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
+              }
+            },
+            "required": [
+              "tiles",
+              "statuses",
+              "profilingStatuses",
+              "dsvStatuses",
+              "waves",
+              "activation",
+              "notice",
+              "deadlines",
+              "flags",
+              "portal"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "scope",
+          "generatedAt",
+          "counts"
+        ],
+        "additionalProperties": false
+      },
+      "DashboardCount": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "filter": {
+            "$ref": "#/components/schemas/WorklistFilter"
+          }
+        },
+        "required": [
+          "key",
+          "count",
+          "filter"
+        ],
+        "additionalProperties": false
+      },
+      "WorklistFilter": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "imported",
+              "contacted",
+              "unreachable",
+              "informed",
+              "active_in_tg",
+              "withdrawn",
+              "ta_completed",
+              "exited"
+            ]
+          },
+          "profilingStatus": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "profiling_accepted",
+              "profiling_in_progress",
+              "profiling_done",
+              "profiling_declined"
+            ]
+          },
+          "dsvStatus": {
+            "type": "string",
+            "enum": [
+              "not_offered",
+              "dsv_offered",
+              "dsv_signed",
+              "dsv_declined",
+              "dsv_expired"
+            ]
+          },
+          "wave": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "none"
+                ]
+              }
+            ]
+          },
+          "consultant": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "none"
+                ]
+              }
+            ]
+          },
+          "activation": {
+            "type": "string",
+            "enum": [
+              "activated",
+              "none",
+              "printed",
+              "open",
+              "delivery_unknown",
+              "expired",
+              "locked",
+              "revoked",
+              "used"
+            ]
+          },
+          "notice": {
+            "type": "string",
+            "enum": [
+              "provided",
+              "due",
+              "overdue"
+            ]
+          },
+          "actions": {
+            "type": "string",
+            "enum": [
+              "any",
+              "fields",
+              "documents",
+              "rejected_documents",
+              "none"
+            ]
+          },
+          "deadlineKind": {
+            "$ref": "#/components/schemas/DeadlineKind"
+          },
+          "deadlineState": {
+            "$ref": "#/components/schemas/DeadlineState"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "tg_start_missed",
+                  "cutoff_warning",
+                  "cutoff_final_reminder",
+                  "conflict_dsv_signed_profiling_declined",
+                  "dsv_never_offered",
+                  "informed_without_wave_at_cutoff",
+                  "profiling_exception_deadline_missed",
+                  "profiling_declined_after_entry"
+                ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "any"
+                ]
+              }
+            ]
+          },
+          "portal": {
+            "$ref": "#/components/schemas/PortalReach"
+          }
+        },
+        "additionalProperties": false
+      },
+      "DeadlineKind": {
+        "type": "string",
+        "enum": [
+          "offer_deadline",
+          "tg_start",
+          "latest_entry_cutoff",
+          "privacy_notice",
+          "profiling_exception"
+        ]
+      },
+      "DeadlineState": {
+        "type": "string",
+        "enum": [
+          "upcoming",
+          "overdue"
+        ]
+      },
+      "PortalReach": {
+        "type": "string",
+        "enum": [
+          "reachable",
+          "consent_required",
+          "not_reachable"
+        ]
+      },
+      "Worklist": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorklistItem"
+            }
+          }
+        },
+        "required": [
+          "generatedAt",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "WorklistItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "imported",
+              "contacted",
+              "unreachable",
+              "informed",
+              "active_in_tg",
+              "withdrawn",
+              "ta_completed",
+              "exited"
+            ]
+          },
+          "profilingStatus": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "profiling_accepted",
+              "profiling_in_progress",
+              "profiling_done",
+              "profiling_declined"
+            ]
+          },
+          "dsvStatus": {
+            "type": "string",
+            "enum": [
+              "not_offered",
+              "dsv_offered",
+              "dsv_signed",
+              "dsv_declined",
+              "dsv_expired"
+            ]
+          },
+          "entryWaveId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "placementAgenturKey": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "personnelNumber": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "consultants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignedConsultant"
+            }
+          },
+          "activationStatus": {
+            "$ref": "#/components/schemas/ActivationStatus"
+          },
+          "privacyNoticeState": {
+            "$ref": "#/components/schemas/PrivacyNoticeState"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ParticipantAction"
+            }
+          },
+          "deadlines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Deadline"
+            }
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tg_start_missed",
+                "cutoff_warning",
+                "cutoff_final_reminder",
+                "conflict_dsv_signed_profiling_declined",
+                "dsv_never_offered",
+                "informed_without_wave_at_cutoff",
+                "profiling_exception_deadline_missed",
+                "profiling_declined_after_entry"
+              ]
+            }
+          },
+          "portal": {
+            "$ref": "#/components/schemas/PortalReach"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "assignEntryWave": {
+                "type": "boolean"
+              },
+              "issueActivationCode": {
+                "type": "boolean"
+              },
+              "recordHandover": {
+                "type": "boolean"
+              },
+              "revokeActivationCode": {
+                "type": "boolean"
+              },
+              "providePrivacyNotice": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "assignEntryWave",
+              "issueActivationCode",
+              "recordHandover",
+              "revokeActivationCode",
+              "providePrivacyNotice"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "profilingStatus",
+          "dsvStatus",
+          "entryWaveId",
+          "placementAgenturKey",
+          "consultants",
+          "activationStatus",
+          "privacyNoticeState",
+          "actions",
+          "deadlines",
+          "flags",
+          "portal",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "ParticipantAction": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "field",
+              "document"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "rejected"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "Deadline": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/DeadlineKind"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "state": {
+            "$ref": "#/components/schemas/DeadlineState"
+          },
+          "final": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "date",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "EntryWaveAssignmentsResult": {
+        "type": "object",
+        "properties": {
+          "assigned": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unchanged": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "assigned",
+          "unchanged"
+        ],
+        "additionalProperties": false
+      },
+      "EntryWaveAssignmentsInput": {
+        "type": "object",
+        "properties": {
+          "waveId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        },
+        "required": [
+          "waveId",
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
       "ProjectTeam": {
         "type": "object",
         "properties": {
@@ -11030,6 +11579,269 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/dashboard": {
+      "get": {
+        "tags": [
+          "worklist"
+        ],
+        "summary": "The project's dashboard: exact counts of distinct participations in the viewer's scope, each with its work list filter",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectDashboard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/worklist": {
+      "get": {
+        "tags": [
+          "worklist"
+        ],
+        "summary": "The work list: every participation of the viewer's scope in one snapshot (no cursor), at most 5,000",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Worklist"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/entry-wave-assignments": {
+      "post": {
+        "tags": [
+          "worklist"
+        ],
+        "summary": "Assign one wave to up to 500 participations (the PL), all or nothing; those already in it stay",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryWaveAssignmentsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The assigned and unchanged participations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryWaveAssignmentsResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
             "content": {
               "application/problem+json": {
                 "schema": {

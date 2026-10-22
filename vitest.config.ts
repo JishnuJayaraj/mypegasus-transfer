@@ -30,6 +30,7 @@ export default defineConfig({
           "packages/domain/src/notices/**",
           "packages/domain/src/privacy/**",
           "packages/domain/src/self-service/**",
+          "packages/domain/src/worklist/**",
           "packages/config/src/**",
         ].map((glob) => [glob, { lines: 100, functions: 100, branches: 100, statements: 100 }]),
       ),

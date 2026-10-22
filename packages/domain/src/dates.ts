@@ -63,6 +63,11 @@ export function addMonths(date: IsoDate, months: number): IsoDate {
   return format({ ...target, day: Math.min(day, daysInMonth(target.year, target.month)) });
 }
 
+/** The calendar days from `from` to `to`: negative when `to` lies before `from`. */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return toDayNumber(parse(to)) - toDayNumber(parse(from));
+}
+
 /** ISO dates sort as strings; negative, zero or positive like `Array.prototype.sort`. */
 export function compareIsoDates(a: IsoDate, b: IsoDate): number {
   return a < b ? -1 : a > b ? 1 : 0;

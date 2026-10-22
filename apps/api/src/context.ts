@@ -20,6 +20,7 @@ import type { PortalSession } from "./portal-session";
 import type { Detached } from "./detached";
 import type { DocumentFiles } from "./documents/files";
 import type { DocumentPurgeQueue } from "./documents/purge";
+import type { GuardFactsProvider } from "./participations/guard-facts";
 
 /** Where the API queues the activation notice inside the completion's transaction (ADR-0011). */
 export interface ActivationNoticeQueue {
@@ -55,6 +56,8 @@ export interface Deps {
   documentFiles?: DocumentFiles | undefined;
   /** The upload gate (2 at once, 4 waiting ≤ 20 s); the process's own unless a test's. */
   uploadSlots?: Slots | undefined;
+  /** The dated guard facts (the nightly sweep's provider); fail closed unless one is given. */
+  facts?: GuardFactsProvider | undefined;
   /** pg-boss in this process; without it the purge runs after the response (`detached`). */
   documentPurges?: DocumentPurgeQueue | undefined;
 }

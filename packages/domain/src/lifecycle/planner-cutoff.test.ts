@@ -7,7 +7,7 @@ import {
   type LifecycleFlag,
   type MainStatus,
 } from "./enums";
-import { lifecycleFlags, planSystemTransitions, projectFlags } from "./planner";
+import { latestEntryCutoff, lifecycleFlags, planSystemTransitions, projectFlags } from "./planner";
 import { wave } from "./testing/context";
 import { project, replay, snapshot, state, window } from "./testing/planner";
 
@@ -123,6 +123,22 @@ describe("cutoff withdrawals (AC-9, Q70, Q84)", () => {
         secondaryReasons: ["declined_profiling"],
       },
     ]);
+  });
+});
+
+const cutoffOf = (c: Combination, type = project.type) =>
+  latestEntryCutoff(
+    snapshot({ current: state(c.status, c.profiling, c.dsv), wave: c.hasWave ? noStart : null }),
+    { type, waves: [noStart] },
+  );
+
+describe("the latest entry cutoff as a deadline", () => {
+  it("applies exactly where the cutoff warns before it", () => {
+    for (const c of combinations()) {
+      const warned = plan(c, "2027-04-28").flags.includes("cutoff_warning");
+      expect(cutoffOf(c)).toBe(warned ? "2027-04-30" : null);
+      expect(cutoffOf(c, "ta_only")).toBeNull();
+    }
   });
 });
 

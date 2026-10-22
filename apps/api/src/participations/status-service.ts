@@ -71,6 +71,15 @@ export class DatesRefusal extends Error {
   }
 }
 
+/** A refused batch: each refused row's index in the request and its code; nothing was written. */
+export class BulkRefusal extends Error {
+  override readonly name = "BulkRefusal";
+
+  constructor(readonly rows: readonly { index: number; code: string }[]) {
+    super("bulk_refused");
+  }
+}
+
 export type StatusServiceErrorKind = "not_found" | "forbidden" | "stale" | "domain" | "integrity";
 
 /** A refusal with a stable code (and the failed guards), never a value. */
@@ -533,6 +542,68 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
             sql`assign_entry_wave(p_id => ${input.participationId}::uuid,
               p_wave_id => ${input.waveId}::uuid, p_context => ${audit(actor, correlation)})`,
           ),
+        };
+      });
+    },
+
+    /**
+     * The same wave for several participations of one project, all or nothing
+     * (process-and-lifecycle.md, assigning a wave): under the exclusive project lock, every
+     * participation through the checks of `assignEntryWave` first; any refusal writes nothing and
+     * names every refused index. A participation already in the wave stays as it is (`unchanged`).
+     */
+    assignEntryWaves(
+      actor: ServiceActor,
+      input: { projectId: string; waveId: string; participationIds: readonly string[] },
+      correlation: Correlation = {},
+    ): Promise<{ assigned: number; unchanged: number }> {
+      return transaction(async (tx) => {
+        await tx.execute(sql`select lock_project_setup(${input.projectId}::uuid)`);
+        const wave = await selectFirst(
+          tx
+            .select({ id: projectEntryWave.id, projectId: projectEntryWave.projectId })
+            .from(projectEntryWave)
+            .where(eq(projectEntryWave.id, input.waveId)),
+        );
+        const [found] = await tx
+          .select({ type: project.type })
+          .from(project)
+          .where(eq(project.id, input.projectId));
+        if (found?.type !== "ta_tg") return fail("domain", "not_ta_tg");
+        // An unknown wave is as foreign as another project's (fail safe).
+        if (wave?.projectId !== input.projectId) return fail("domain", "wave_of_other_project");
+        const inProject = new Set(
+          (
+            await tx
+              .select({ id: participation.id })
+              .from(participation)
+              .where(eq(participation.projectId, input.projectId))
+          ).map(({ id }) => id),
+        );
+        const refused: { index: number; code: string }[] = [];
+        const changes: string[] = [];
+        for (const [index, participationId] of input.participationIds.entries()) {
+          if (!inProject.has(participationId)) {
+            refused.push({ index, code: "participation_not_found" });
+            continue;
+          }
+          const loaded = await load(tx, participationId, actor);
+          permitOperation(actor, { kind: "assignEntryWave" }, loaded);
+          const result = assignEntryWave(loaded.context, { projectId: input.projectId, wave });
+          if (result.ok) changes.push(participationId);
+          else if (result.code !== "wave_unchanged") refused.push({ index, code: result.code });
+        }
+        if (refused.length > 0) throw new BulkRefusal(refused);
+        for (const participationId of changes) {
+          await call(
+            tx,
+            sql`assign_entry_wave(p_id => ${participationId}::uuid,
+              p_wave_id => ${input.waveId}::uuid, p_context => ${audit(actor, correlation)})`,
+          );
+        }
+        return {
+          assigned: changes.length,
+          unchanged: input.participationIds.length - changes.length,
         };
       });
     },

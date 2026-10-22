@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { addDays, addMonths, asuDueDate, compareIsoDates, laterIsoDate } from "./dates";
+import {
+  addDays,
+  addMonths,
+  asuDueDate,
+  compareIsoDates,
+  daysBetween,
+  laterIsoDate,
+} from "./dates";
+
+describe("daysBetween", () => {
+  it("counts calendar days, across a DST change, a leap day and a year", () => {
+    expect(daysBetween("2026-10-24", "2026-10-26")).toBe(2);
+    expect(daysBetween("2028-02-28", "2028-03-01")).toBe(2);
+    expect(daysBetween("2026-12-31", "2027-01-01")).toBe(1);
+    expect(daysBetween("2027-01-01", "2026-12-31")).toBe(-1);
+    expect(daysBetween("2027-01-01", "2027-01-01")).toBe(0);
+  });
+});
 
 describe("addDays", () => {
   it.each([
