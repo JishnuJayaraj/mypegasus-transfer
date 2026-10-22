@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { decideAccess, type AccessAction, type AccessMode, type Subject } from "../access/decide";
 import type { MissingItem } from "../completeness/engine";
+import type { DocumentType } from "../documents/catalog";
 import { sensitiveFields, type SensitiveField } from "./sensitive";
 import type { WizardPage } from "./wizard";
 
@@ -100,19 +101,28 @@ export const sensitiveFieldsWhere = (admits: (key: string) => boolean): Sensitiv
 /**
  * The wizard as a viewer may see it: fields they can't see are left out (a page left without
  * fields too), and so are their missing items; a page is complete when none of its shown fields
- * is missing.
+ * is missing. "Unterlagen" keeps the document types the viewer reads in the mode (`documentTypes`),
+ * and is left out without any.
  */
 export function restrictWizard(
   wizard: { pages: readonly WizardPage[]; missing: readonly MissingItem[] },
   visible: (key: string) => boolean,
+  documentTypes: readonly DocumentType[],
 ): { pages: WizardPage[]; missing: MissingItem[] } {
-  const missing = wizard.missing.filter((item) => visible(item.key));
+  const readable = new Set<string>(documentTypes);
+  const missing = wizard.missing.filter((item) =>
+    item.kind === "document" ? readable.has(item.key) : visible(item.key),
+  );
   const missingKeys = new Set(missing.map((item) => item.key));
-  const pages = wizard.pages
-    .map((page) => {
-      const fields = page.fields.filter((field) => visible(field.key));
-      return { ...page, fields, complete: fields.every((field) => !missingKeys.has(field.key)) };
-    })
-    .filter((page) => page.fields.length > 0);
+  const pages = wizard.pages.flatMap((page) => {
+    if (page.documentTypes) {
+      const types = page.documentTypes.filter((type) => readable.has(type));
+      const complete = types.every((type) => !missingKeys.has(type));
+      return types.length > 0 ? [{ ...page, complete, documentTypes: types }] : [];
+    }
+    const fields = page.fields.filter((field) => visible(field.key));
+    const complete = fields.every((field) => !missingKeys.has(field.key));
+    return fields.length > 0 ? [{ ...page, fields, complete }] : [];
+  });
   return { pages, missing };
 }

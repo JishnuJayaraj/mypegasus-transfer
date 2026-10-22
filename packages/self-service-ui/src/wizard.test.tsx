@@ -1,8 +1,8 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { customPage, page, wizardState } from "./testing/fixtures";
-import { refused, renderWizard } from "./testing/render";
+import { customPage, documentsPage, page, wizardState } from "./testing/fixtures";
+import { emptyDocuments, fakeDocuments, refused, renderWizard } from "./testing/render";
 
 // The self-service wizard over a fake source (regional-variation.md, "Self-service wizard";
 // data-protection.md, self-service). Synthetic values only.
@@ -542,6 +542,97 @@ describe("Gesundheit and the step-up (Q137)", () => {
     await user.click(screen.getByRole("button", { name: "Ohne diese Angaben weiter" }));
     await heading("Übersicht");
     expect(steps).toEqual(["overview"]);
+  });
+});
+
+describe("Unterlagen (regional-variation.md, self-service wizard)", () => {
+  const missingCv = {
+    step: "data_collection",
+    ruleId: "r-cv",
+    kind: "document",
+    key: "cv",
+    reason: "missing",
+  } as const;
+  const withDocuments = (complete = true) => {
+    const state = wizardState();
+    return wizardState({
+      pages: [...state.pages, documentsPage(complete)],
+      missing: complete ? state.missing : [...state.missing, missingCv],
+    });
+  };
+
+  it("follows the last page, saves nothing on Weiter and leads to the overview", async () => {
+    const user = userEvent.setup();
+    const state = wizardState({ stepUp: { method: "birth_date", done: true } });
+    const both = { ...state, pages: [...state.pages, documentsPage()] };
+    const { steps, source } = renderWizard([both], { step: "health" });
+    await heading("Gesundheit");
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await heading("Unterlagen");
+    expect(screen.getByText("Seite 9 von 9")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Lebenslauf" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Lebenslauf hochladen")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Weiter" }));
+    await heading("Übersicht");
+    expect(steps).toEqual(["documents", "overview"]);
+    expect(source.save).not.toHaveBeenCalled();
+    expect(source.saveSensitive).toHaveBeenCalledTimes(1);
+  });
+
+  it("reads the wizard again after an upload (the page may be complete now)", async () => {
+    const documents = fakeDocuments();
+    documents.upload.mockResolvedValue({
+      id: "00000000-0000-4000-d000-000000000001",
+      type: "cv",
+      mediaType: "application/pdf",
+      sizeBytes: 1200,
+      fileName: "lebenslauf.pdf",
+      addedAt: "2026-10-22T08:15:00.000Z",
+      addedBy: "participant",
+      onBehalf: false,
+      review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
+      capabilities: { open: true, review: false, delete: true },
+    });
+    const { source } = renderWizard([withDocuments(false), withDocuments()], {
+      step: "documents",
+      documents,
+    });
+    await heading("Unterlagen");
+    expect(await screen.findByText("Diese Unterlage wird noch benötigt.")).toBeInTheDocument();
+    await userEvent.upload(
+      screen.getByLabelText("Lebenslauf hochladen"),
+      new File(["%PDF-1.7"], "lebenslauf.pdf"),
+    );
+    expect(await screen.findByText("Die Datei wurde hochgeladen.")).toBeInTheDocument();
+    await waitFor(() => expect(source.load).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByText("Diese Unterlage wird noch benötigt.")).toBeNull(),
+    );
+  });
+
+  it("lists a missing document on the overview by its type", async () => {
+    renderWizard([withDocuments(false)], { step: "overview" });
+    await heading("Übersicht");
+    const documents = screen.getByRole("heading", { name: "Unterlagen" }).closest("li")!;
+    expect(within(documents).getByText("Lebenslauf")).toBeInTheDocument();
+  });
+
+  it("hands an ended session to the app", async () => {
+    const documents = fakeDocuments();
+    documents.list.mockRejectedValue(refused(401, "unauthenticated"));
+    renderWizard([withDocuments()], { step: "documents", documents });
+    expect(await screen.findByText("Sitzung abgelaufen")).toBeVisible();
+  });
+
+  it("speaks English", async () => {
+    const { i18n } = renderWizard([withDocuments()], {
+      step: "documents",
+      documents: fakeDocuments({ ...emptyDocuments(), addableTypes: [] }),
+    });
+    await act(() => i18n.changeLanguage("en"));
+    await heading("Documents");
+    expect(await screen.findByRole("region", { name: "CV" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Upload CV")).toBeNull();
   });
 });
 

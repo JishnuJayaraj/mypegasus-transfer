@@ -78,6 +78,7 @@ function Participant({ me }: { me: PortalMe }) {
           // Nothing of the participant stays in the cache after logout.
           queryClient.removeQueries({ queryKey: ["portal-self-service"] });
           queryClient.removeQueries({ queryKey: ["portal-consents"] });
+          queryClient.removeQueries({ queryKey: ["portal-documents"] });
           queryClient.setQueryData(["portal-me"], null);
         }}
       >

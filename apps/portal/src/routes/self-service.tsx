@@ -2,11 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ApiClient } from "@transfer/api-client";
 import {
   SELF_SERVICE_NOTICE_VERSION,
+  type DocumentList,
   type PortalSelfService,
   type PortalSelfServiceWrite,
   type PortalSensitiveValues,
 } from "@transfer/domain";
-import { SelfServiceWizard, type SelfServiceSource } from "@transfer/self-service-ui";
+import {
+  SelfServiceWizard,
+  type DocumentSource,
+  type SelfServiceSource,
+} from "@transfer/self-service-ui";
 import { InlineNotification, Stack } from "@transfer/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -19,6 +24,41 @@ export const Route = createFileRoute("/self-service")({
 });
 
 const noData = () => new Error("No portal data");
+
+/**
+ * The participant's documents in "Unterlagen" (data-protection.md, documents): their own
+ * routes; they delete what they added themselves while it isn't accepted (the capabilities say).
+ */
+function portalDocuments(api: ApiClient): DocumentSource {
+  return {
+    queryKey: ["portal-documents"],
+    list: async () => {
+      const { data } = await api.GET("/api/v1/portal/documents");
+      if (!data) throw noData();
+      return data as DocumentList;
+    },
+    upload: async (body) => {
+      const { data } = await api.POST("/api/v1/portal/documents", { body });
+      if (!data) throw noData();
+      return data;
+    },
+    open: async (documentId) => {
+      const { data } = await api.POST("/api/v1/portal/documents/{documentId}/opening", {
+        params: { path: { documentId } },
+        // No body, but the API takes JSON only (ADR-0010).
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!data) throw noData();
+      return data;
+    },
+    remove: async (documentId) => {
+      const { response } = await api.DELETE("/api/v1/portal/documents/{documentId}", {
+        params: { path: { documentId } },
+      });
+      if (!response.ok) throw noData();
+    },
+  };
+}
 
 /**
  * The participant's own wizard routes (data-protection.md, self-service): the sensitive groups on
@@ -82,6 +122,7 @@ function portalSource(api: ApiClient): SelfServiceSource {
         return data;
       },
     },
+    documents: portalDocuments(api),
   };
 }
 

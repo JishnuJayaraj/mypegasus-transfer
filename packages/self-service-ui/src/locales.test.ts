@@ -1,4 +1,7 @@
 import {
+  DocumentReviewReason,
+  DocumentReviewState,
+  DocumentType,
   DrivingLicenceClass,
   EmploymentType,
   Gender,
@@ -6,11 +9,13 @@ import {
   MaritalStatus,
   ResidenceStatus,
   SelfServicePage,
+  wizardDocumentTypes,
   wizardPages,
 } from "@transfer/domain";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { documentErrorCodes } from "./documents";
 import de from "./locales/de.json";
 import en from "./locales/en.json";
 
@@ -62,6 +67,15 @@ describe("self-service catalogs", () => {
       ...["pensionInsuranceNumber", "buergergeld", "healthRestrictions", "severeDisability"].map(
         (field) => `fields.${field}.hint`,
       ),
+      // "Unterlagen": every type (the staff app labels missing items with them), state, reason
+      // and refusal code
+      ...DocumentType.options.map((type) => `documents.types.${type}`),
+      ...wizardDocumentTypes.map((type) => `documents.hints.${type}`),
+      ...DocumentReviewState.options.map((state) => `documents.states.${state}`),
+      ...DocumentReviewReason.options.map((reason) => `documents.reasons.${reason}`),
+      ...documentErrorCodes.map((code) => `documents.messages.${code}`),
+      ...["missing", "not_accepted"].map((reason) => `documents.missing.${reason}`),
+      ...["participant", "staff"].map((by) => `documents.addedBy.${by}`),
     ];
     expect(expected.filter((key) => !has(key))).toEqual([]);
     // The licence classes are their EU codes, the same in every language.

@@ -175,6 +175,12 @@ generator then. No action now.
   decoded file is at most 10 MB (10,485,760 bytes); the body of the three upload routes at most
   **14 MB**, every other route keeps 100 kB (`413` above). An API process handles at most two
   uploads at once, up to four more wait ≤ 20 s, else `503` `upload_busy` with `Retry-After: 10`.
+  Not chosen: multipart (a second body parser and an exception to JSON-only and strict schemas)
+  and a direct signed upload to the object store (CSP `connect-src` to the store's origin, a
+  public store endpoint, the provider would see plaintext, and nothing would be scanned before it
+  is stored); nor an asynchronous scan job (a pending state, a quarantine and purge of unscanned
+  objects, polling in both apps, completeness over unscanned files): a stored file is always a
+  clean one.
 - **Routes:** `GET`/`POST /portal/documents`, `POST /portal/documents/{documentId}/opening`,
   `DELETE /portal/documents/{documentId}`; `GET`/`POST /participations/{id}/documents`,
   `POST …/documents/{documentId}/opening`, `POST …/documents/{documentId}/review`
@@ -206,6 +212,11 @@ generator then. No action now.
   `NODE_ENV=production` until the S3 store and ClamAV exist, Q149).
 - **Logs:** an upload logs the request id, participation id, type, a size bucket and the outcome;
   the download's route is logged as its pattern, never the token.
+- **The clients (PR 4b-3):** the portal's "Unterlagen", the staff tab "Unterlagen" and the
+  assisted page read the file into base64 in memory, check the size against `limits.maxBytes`
+  before sending, map each code above to a message (an ended session or mode ends the view, a
+  `404` reloads the list), send the bodyless opening with `Content-Type: application/json` and
+  then assign `location` to the link: a top-level download, no `blob:`, no CSP change.
 
 ## Conventions as built (Slices 0–2)
 
@@ -234,7 +245,8 @@ Errors (`apps/api/src/problem.ts`, `app.ts`, `database-errors.ts`, `packages/dom
   manifest, or an invalid stored template snapshot, is a 500 too.
 
 Requests:
-- `POST`, `PUT` and `PATCH` need `application/json` (415). CSRF: see the Slice 3 note below.
+- `POST`, `PUT` and `PATCH` need `application/json` (415), also without a body (the openings):
+  the client names the type, the API never exempts an empty body. CSRF: see the Slice 3 note below.
 - Bodies are strict: an unknown field is a 400 `unrecognized_keys` at its pointer, so
   server-owned values (creator, approver, confirmer, hashes, a new project's Project Agentur) never
   come from the client. Action routes (activation, withdrawal) take an empty strict object.

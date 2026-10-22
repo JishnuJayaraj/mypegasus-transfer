@@ -8,6 +8,7 @@ import type {
   SensitiveValuesView,
 } from "@transfer/domain";
 import type { z } from "zod";
+import type { DocumentSource } from "./documents";
 import type { Issue, WizardState } from "./model";
 
 type PageInput = { revision: number; values: Record<string, unknown> };
@@ -45,6 +46,8 @@ export interface SelfServiceSource {
   saveSensitive(group: SensitivePage, input: PageInput): Promise<WizardWrite>;
   /** Absent where no step-up applies: staff in assisted mode need none. */
   stepUp?: StepUpSource;
+  /** The documents of "Unterlagen". */
+  documents: DocumentSource;
 }
 
 export type Failure =

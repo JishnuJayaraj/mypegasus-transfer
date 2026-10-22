@@ -6,7 +6,7 @@ import {
   type AssistedSelfService,
   type AssistedSelfServiceWrite,
 } from "@transfer/domain";
-import type { SelfServiceSource } from "@transfer/self-service-ui";
+import type { DocumentSource, SelfServiceSource } from "@transfer/self-service-ui";
 import {
   Button,
   Checkbox,
@@ -25,6 +25,47 @@ import { useApi } from "../api";
 // sees in it, and `403 assisted_mode_required` once it has ended (the wizard then shows `expired`).
 
 const noData = () => new Error("No assisted-mode data");
+const jsonHeaders = { "Content-Type": "application/json" };
+
+/**
+ * "Unterlagen" in assisted mode (ADR-0007, documents in assisted mode): list, add on the
+ * participant's behalf and open; review and deletion stay on the tab "Unterlagen".
+ */
+function assistedDocuments(
+  api: ApiClient,
+  participationId: string,
+  assistedModeId: string,
+): DocumentSource {
+  const query = { assistedModeId };
+  return {
+    queryKey: ["assisted-documents", participationId, assistedModeId],
+    list: async () => {
+      const { data } = await api.GET(
+        "/api/v1/participations/{participationId}/assisted/documents",
+        { params: { path: { participationId }, query } },
+      );
+      if (!data) throw noData();
+      return data;
+    },
+    upload: async (body) => {
+      const { data } = await api.POST(
+        "/api/v1/participations/{participationId}/assisted/documents",
+        { params: { path: { participationId }, query }, body },
+      );
+      if (!data) throw noData();
+      return data;
+    },
+    open: async (documentId) => {
+      const { data } = await api.POST(
+        "/api/v1/participations/{participationId}/assisted/documents/{documentId}/opening",
+        // No body, but the API takes JSON only (ADR-0010).
+        { params: { path: { participationId, documentId }, query }, headers: jsonHeaders },
+      );
+      if (!data) throw noData();
+      return data;
+    },
+  };
+}
 
 /** The wizard's source in assisted mode: the staff routes, no step-up. */
 export function assistedSource(
@@ -73,6 +114,7 @@ export function assistedSource(
       if (!data) throw noData();
       return data as AssistedSelfServiceWrite;
     },
+    documents: assistedDocuments(api, participationId, assistedModeId),
   };
 }
 

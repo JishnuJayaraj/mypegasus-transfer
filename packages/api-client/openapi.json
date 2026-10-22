@@ -5694,6 +5694,23 @@
             "items": {
               "$ref": "#/components/schemas/SelfServiceField"
             }
+          },
+          "documentTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "tl407_signed_scan",
+                "kug200b_signed_scan",
+                "dsv_signed_scan",
+                "dsv_cancellation",
+                "asu_proof",
+                "profiling_exception_evidence",
+                "cv",
+                "participant_upload",
+                "qualification_certificate"
+              ]
+            }
           }
         },
         "required": [
@@ -5715,7 +5732,8 @@
           "languages_mobility",
           "job_wish",
           "health",
-          "further"
+          "further",
+          "documents"
         ]
       },
       "SelfServiceField": {

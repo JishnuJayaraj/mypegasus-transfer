@@ -74,7 +74,8 @@
     "languages_mobility": "Sprachen und Mobilität",
     "job_wish": "Arbeitswunsch",
     "health": "Gesundheit",
-    "further": "Weitere Angaben"
+    "further": "Weitere Angaben",
+    "documents": "Unterlagen"
   },
   "options": {
     "yes": "Ja",
@@ -234,5 +235,82 @@
     "rateLimited": "Zu viele Versuche. Bitte warten Sie einige Minuten und versuchen Sie es dann noch einmal.",
     "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
     "skip": "Ohne diese Angaben weiter"
+  },
+  "documents": {
+    "loadFailed": "Ihre Unterlagen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "intro": "Hier können Sie Unterlagen für Ihre Beratung hochladen, zum Beispiel Ihren Lebenslauf oder Zeugnisse. Sie können das auch später tun.",
+    "formats": "Erlaubt sind PDF, JPG und PNG, höchstens {{max}} je Datei.",
+    "noHealth": "Bitte laden Sie hier keine Gesundheitsunterlagen hoch: keine Diagnosen, keine Atteste und keine ärztlichen Bescheinigungen.",
+    "types": {
+      "tl407_signed_scan": "Profiling-Bogen (unterschrieben)",
+      "kug200b_signed_scan": "Arbeitsuchendmeldung (unterschrieben)",
+      "dsv_signed_scan": "Vertrag (unterschrieben)",
+      "dsv_cancellation": "Aufhebung des Vertrags",
+      "asu_proof": "Nachweis der Arbeitsuchendmeldung",
+      "profiling_exception_evidence": "Nachweis zur Ausnahme vom Profiling",
+      "cv": "Lebenslauf",
+      "participant_upload": "Sonstige Unterlagen",
+      "qualification_certificate": "Zeugnisse und Nachweise"
+    },
+    "hints": {
+      "cv": "Ihr aktueller Lebenslauf.",
+      "participant_upload": "Zum Beispiel ein Anschreiben oder eine Bescheinigung Ihres Arbeitgebers.",
+      "qualification_certificate": "Schul-, Ausbildungs- und Arbeitszeugnisse, Zertifikate von Weiterbildungen."
+    },
+    "missing": {
+      "missing": "Diese Unterlage wird noch benötigt.",
+      "not_accepted": "Diese Unterlage wird noch benötigt: Bitte laden Sie sie noch einmal hoch."
+    },
+    "none": "Noch keine Unterlage.",
+    "upload": "{{type}} hochladen",
+    "busy": "Die Datei wird hochgeladen und geprüft …",
+    "facts": "{{size}} · hinzugefügt am {{at}} {{by}}",
+    "addedBy": {
+      "participant": "von Ihnen",
+      "staff": "vom Beratungsteam"
+    },
+    "states": {
+      "unreviewed": "hochgeladen",
+      "accepted": "angenommen",
+      "rejected": "abgelehnt",
+      "rejectedBecause": "abgelehnt: {{reason}}"
+    },
+    "reasons": {
+      "unreadable": "nicht lesbar",
+      "wrong_document": "falsche Unterlage",
+      "incomplete": "unvollständig"
+    },
+    "open": "Öffnen",
+    "openLabel": "{{name}} öffnen",
+    "deleteLabel": "{{name}} löschen",
+    "delete": {
+      "action": "Löschen",
+      "title": "Unterlage löschen?",
+      "text": "„{{name}}“ wird gelöscht. Das lässt sich nicht rückgängig machen.",
+      "confirm": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "messages": {
+      "uploaded": "Die Datei wurde hochgeladen.",
+      "deleted": "Die Unterlage wurde gelöscht.",
+      "gone": "Diese Unterlage gibt es nicht mehr.",
+      "forbidden": "Das ist hier nicht erlaubt.",
+      "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+      "document_type_not_supported": "Diese Art von Unterlage kann hier nicht hochgeladen werden.",
+      "file_empty": "Die Datei ist leer.",
+      "file_too_large": "Datei zu groß (höchstens {{max}}).",
+      "file_type_not_allowed": "Nur PDF, JPG oder PNG.",
+      "file_infected": "Die Datei wurde nicht angenommen, weil sie Schadsoftware enthalten könnte.",
+      "file_unscannable": "Die Datei konnte nicht geprüft werden, zum Beispiel weil sie mit einem Passwort geschützt ist. Bitte laden Sie eine Datei ohne Passwort hoch.",
+      "file_name_invalid": "Der Dateiname ist zu lang oder ungültig. Bitte benennen Sie die Datei um.",
+      "document_limit": "Es sind schon zu viele Unterlagen gespeichert. Bitte löschen Sie zuerst eine.",
+      "document_reviewed": "Diese Unterlage wurde bereits geprüft.",
+      "document_accepted": "Eine angenommene Unterlage kann nicht mehr gelöscht werden.",
+      "participation_closed": "Ihre Teilnahme ist abgeschlossen. Unterlagen können nicht mehr hinzugefügt werden.",
+      "rate_limited": "In der letzten Stunde wurden zu viele Dateien hochgeladen. Bitte versuchen Sie es später erneut.",
+      "upload_busy": "Gerade werden viele Dateien hochgeladen. Bitte versuchen Sie es in einer Minute erneut.",
+      "scan_unavailable": "Die Prüfung der Datei ist gerade nicht möglich. Bitte versuchen Sie es später erneut.",
+      "storage_unavailable": "Unterlagen können gerade nicht gespeichert oder geöffnet werden. Bitte versuchen Sie es später erneut."
+    }
   }
 }

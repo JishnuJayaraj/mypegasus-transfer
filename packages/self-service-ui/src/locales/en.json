@@ -74,7 +74,8 @@
     "languages_mobility": "Languages and mobility",
     "job_wish": "Job wishes",
     "health": "Health",
-    "further": "Further details"
+    "further": "Further details",
+    "documents": "Documents"
   },
   "options": {
     "yes": "Yes",
@@ -234,5 +235,82 @@
     "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
     "failed": "That did not work. Please try again.",
     "skip": "Continue without these details"
+  },
+  "documents": {
+    "loadFailed": "Your documents could not be loaded. Please try again.",
+    "intro": "Here you can upload documents for your counselling, for example your CV or certificates. You can also do this later.",
+    "formats": "PDF, JPG and PNG are allowed, at most {{max}} per file.",
+    "noHealth": "Please do not upload health documents here: no diagnoses, no sick notes and no medical certificates.",
+    "types": {
+      "tl407_signed_scan": "Profiling form (signed)",
+      "kug200b_signed_scan": "Job-seeker registration (signed)",
+      "dsv_signed_scan": "Contract (signed)",
+      "dsv_cancellation": "Cancellation of the contract",
+      "asu_proof": "Proof of job-seeker registration",
+      "profiling_exception_evidence": "Evidence for the profiling exception",
+      "cv": "CV",
+      "participant_upload": "Other documents",
+      "qualification_certificate": "Certificates and references"
+    },
+    "hints": {
+      "cv": "Your current CV.",
+      "participant_upload": "For example a cover letter or a certificate from your employer.",
+      "qualification_certificate": "School, training and employment references, certificates of further training."
+    },
+    "missing": {
+      "missing": "This document is still needed.",
+      "not_accepted": "This document is still needed: please upload it again."
+    },
+    "none": "No document yet.",
+    "upload": "Upload {{type}}",
+    "busy": "The file is being uploaded and checked …",
+    "facts": "{{size}} · added on {{at}} {{by}}",
+    "addedBy": {
+      "participant": "by you",
+      "staff": "by the counselling team"
+    },
+    "states": {
+      "unreviewed": "uploaded",
+      "accepted": "accepted",
+      "rejected": "rejected",
+      "rejectedBecause": "rejected: {{reason}}"
+    },
+    "reasons": {
+      "unreadable": "not readable",
+      "wrong_document": "wrong document",
+      "incomplete": "incomplete"
+    },
+    "open": "Open",
+    "openLabel": "Open {{name}}",
+    "deleteLabel": "Delete {{name}}",
+    "delete": {
+      "action": "Delete",
+      "title": "Delete document?",
+      "text": "“{{name}}” will be deleted. This cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "messages": {
+      "uploaded": "The file has been uploaded.",
+      "deleted": "The document has been deleted.",
+      "gone": "This document no longer exists.",
+      "forbidden": "This is not allowed here.",
+      "failed": "That did not work. Please try again.",
+      "document_type_not_supported": "This kind of document cannot be uploaded here.",
+      "file_empty": "The file is empty.",
+      "file_too_large": "File too large (at most {{max}}).",
+      "file_type_not_allowed": "Only PDF, JPG or PNG.",
+      "file_infected": "The file was not accepted because it might contain malware.",
+      "file_unscannable": "The file could not be checked, for example because it is password-protected. Please upload a file without a password.",
+      "file_name_invalid": "The file name is too long or invalid. Please rename the file.",
+      "document_limit": "Too many documents are stored already. Please delete one first.",
+      "document_reviewed": "This document has already been reviewed.",
+      "document_accepted": "An accepted document can no longer be deleted.",
+      "participation_closed": "Your participation has ended. Documents can no longer be added.",
+      "rate_limited": "Too many files were uploaded in the last hour. Please try again later.",
+      "upload_busy": "Many files are being uploaded right now. Please try again in a minute.",
+      "scan_unavailable": "The file cannot be checked right now. Please try again later.",
+      "storage_unavailable": "Documents cannot be stored or opened right now. Please try again later."
+    }
   }
 }

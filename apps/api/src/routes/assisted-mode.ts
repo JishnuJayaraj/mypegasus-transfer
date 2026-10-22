@@ -13,6 +13,7 @@ import {
   mayPerformOperation,
   pageValuesSchema,
   ParticipationSensitiveValues,
+  readableDocumentTypes,
   restrictWizard,
   SELF_SERVICE_NOTICE_VERSION,
   SelfServiceNoticeInput,
@@ -24,6 +25,7 @@ import {
   StartAssistedModeInput,
   terminalMainStatuses,
   valueWarnings,
+  type DocumentType,
   type SensitiveField,
   type StaffUser,
 } from "@transfer/domain";
@@ -80,10 +82,18 @@ function readRefused(c: Context<AppEnv>, error: unknown) {
 /** The wizard as the role sees it in assisted mode: hidden fields left out everywhere. */
 function assistedState(
   record: SelfServiceRecord,
-  visible: (key: string) => boolean,
-  assistedModeId: string,
+  mode: {
+    visible: (key: string) => boolean;
+    documentTypes: DocumentType[];
+    assistedModeId: string;
+  },
 ) {
-  const { pages, missing } = restrictWizard(selfServiceWizard(record.wizard), visible);
+  const { visible, assistedModeId } = mode;
+  const { pages, missing } = restrictWizard(
+    selfServiceWizard(record.wizard),
+    visible,
+    mode.documentTypes,
+  );
   const pick = <T extends object>(values: T) =>
     Object.fromEntries(Object.entries(values).filter(([key]) => visible(key))) as Partial<T>;
   return {
@@ -161,12 +171,17 @@ export function assistedModeRoutes(deps: Deps) {
       return { ok: false, response: problem(c, "forbidden") } as const;
     }
     const context = assistedContext(user.id, participationId, c.get("requestId"));
-    return { ok: true, user, visible, context, assistedModeId } as const;
+    // "Unterlagen" shows the document types the role reads in assisted mode.
+    const documentTypes = readableDocumentTypes(found.subject, found.target, {
+      kind: "assisted",
+      onBehalfOf: participationId,
+    });
+    return { ok: true, user, visible, documentTypes, context, assistedModeId } as const;
   }
 
-  async function stateOf(participationId: string, visible: (key: string) => boolean, id: string) {
+  async function stateOf(participationId: string, mode: Parameters<typeof assistedState>[1]) {
     const record = (await loadSelfService(db, release, participationId))!;
-    return assistedState(record, visible, id);
+    return assistedState(record, mode);
   }
 
   router.openapi(
@@ -278,7 +293,7 @@ export function assistedModeRoutes(deps: Deps) {
       const mode = await assisted(c, participationId, c.req.valid("query").assistedModeId);
       if (!mode.ok) return mode.response;
       c.header("Cache-Control", "no-store");
-      return c.json(await stateOf(participationId, mode.visible, mode.assistedModeId), 200);
+      return c.json(await stateOf(participationId, mode), 200);
     },
   );
 
@@ -333,7 +348,7 @@ export function assistedModeRoutes(deps: Deps) {
       } catch (error) {
         return refused(c, error);
       }
-      const after = await stateOf(participationId, mode.visible, mode.assistedModeId);
+      const after = await stateOf(participationId, mode);
       return c.json({ ...after, warnings: valueWarnings(parsed.data) }, 200);
     },
   );
@@ -427,7 +442,7 @@ export function assistedModeRoutes(deps: Deps) {
       } catch (error) {
         return refused(c, error);
       }
-      const after = await stateOf(participationId, mode.visible, mode.assistedModeId);
+      const after = await stateOf(participationId, mode);
       return c.json({ ...after, warnings: [] }, 200);
     },
   );

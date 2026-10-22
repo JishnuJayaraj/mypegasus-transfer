@@ -79,6 +79,10 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   assisted-mode.tsx`) calls the assisted routes with the mode's id and has no `stepUp`; its state
   leaves out the fields the role can't see (`WizardState`), and an ended mode (`403
   assisted_mode_required`) shows the app's "ended" view like an expired portal session.
+  From Slice 4b the source has `documents` (a `DocumentSource`: `list`, `upload`, `open`,
+  `remove?`) for the page "Unterlagen" (`DocumentsPage`); the assisted one has no `remove`. The
+  package also exports the helpers the staff tab "Unterlagen" reuses (`readFileAsBase64`,
+  `formatFileSize`, `documentFailureOf`, `DOCUMENT_ACCEPT`).
 - `packages/config`: regional configuration: the Zod-authored layer model (base defaults,
   Agentur templates, project overrides) exported as JSON Schema, the custom-field profile, the
   two-level resolver with provenance and blockers, pinned template loading

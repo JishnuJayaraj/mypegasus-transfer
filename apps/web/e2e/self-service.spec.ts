@@ -65,7 +65,7 @@ test("portal: the self-service wizard saves pages, resumes and shows the progres
 
   // Persönliches, saved on "Weiter".
   await expect(page.getByRole("heading", { level: 1, name: "Persönliches" })).toBeVisible();
-  await expect(page.getByText("0 von 9 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("1 von 10 Seiten vollständig")).toBeVisible();
   await expect(page.getByRole("group", { name: "Geschlecht *" })).toBeVisible();
   await expectAccessible(page);
   await page.getByText("Weiblich", { exact: true }).click();
@@ -74,7 +74,7 @@ test("portal: the self-service wizard saves pages, resumes and shows the progres
 
   // Kontakt: the imported address, names read-only; the Agentur requires mobile and email.
   await expect(page.getByRole("heading", { level: 1, name: "Kontakt" })).toBeVisible();
-  await expect(page.getByText("1 von 9 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("2 von 10 Seiten vollständig")).toBeVisible();
   await expect(page.getByLabel("Straße und Hausnummer")).toHaveValue("Musterweg 1");
   await expect(page.getByText("Erika Beispiel")).toBeVisible();
   await expect(
@@ -90,7 +90,7 @@ test("portal: the self-service wizard saves pages, resumes and shows the progres
   // The sensitive pages are in the sequence (sensitive.spec.ts fills them).
   const agentur = page.getByRole("heading", { level: 1, name: "Angaben für die Agentur" });
   await expect(agentur).toBeVisible();
-  await expect(page.getByText("2 von 9 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("3 von 10 Seiten vollständig")).toBeVisible();
 
   // A reload keeps the page; coming back resumes at the first page with missing items.
   await page.reload();
@@ -98,7 +98,7 @@ test("portal: the self-service wizard saves pages, resumes and shows the progres
   await page.goto("/portal/");
   await page.getByRole("link", { name: "Meine Angaben" }).click();
   await expect(agentur).toBeVisible();
-  await expect(page.getByText("2 von 9 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("3 von 10 Seiten vollständig")).toBeVisible();
   await page.getByRole("button", { name: "Zurück" }).click();
   await expect(page.getByLabel("Mobilnummer *")).toHaveValue("0171 3920000");
 
@@ -108,8 +108,11 @@ test("portal: the self-service wizard saves pages, resumes and shows the progres
   await expect(custom).toBeVisible();
   await custom.fill("ZN-4711");
   await page.getByRole("button", { name: "Weiter" }).click();
+  // Unterlagen (documents.spec.ts uploads there), complete without a document rule.
+  await expect(page.getByRole("heading", { level: 1, name: "Unterlagen" })).toBeVisible();
+  await page.getByRole("button", { name: "Weiter" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
-  await expect(page.getByText("3 von 9 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("4 von 10 Seiten vollständig")).toBeVisible();
   await expectAccessible(page);
 
   // English, then the consents.

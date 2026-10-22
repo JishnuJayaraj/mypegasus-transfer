@@ -35,6 +35,7 @@ import { ParticipationDatesForm } from "../../components/participation-dates-for
 import { PlacementAgentur } from "../../components/placement-agentur";
 import { RecoveryPanel } from "../../components/recovery";
 import { RouteError } from "../../components/route-error";
+import { DocumentsTab } from "../../components/documents-tab";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -43,12 +44,13 @@ type Detail = components["schemas"]["ParticipationDetail"];
 type FieldKey = keyof typeof de.participant.fields;
 const RouterLink = createLink(Link);
 
-/** The tab shown: the overview, or "Selbstauskunft" (e.g. after assisted mode ended). */
-type Search = { tab?: "self-service" };
+/** The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended) or "Unterlagen". */
+const tabs = [undefined, "self-service", "documents"] as const;
+type Search = { tab?: Exclude<(typeof tabs)[number], undefined> };
 
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
   validateSearch: (search: Record<string, unknown>): Search =>
-    search.tab === "self-service" ? { tab: "self-service" } : {},
+    search.tab === "self-service" || search.tab === "documents" ? { tab: search.tab } : {},
   loader: async ({ context: { api, queryClient }, params: { projectId, participationId } }) => {
     const [project, detail] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
@@ -87,7 +89,7 @@ function ParticipationError(props: ErrorComponentProps) {
 /**
  * One participant (process-and-lifecycle.md; data-protection.md, access matrix): person, contact,
  * status, placement Agentur, wave and contractual dates; the tab "Selbstauskunft" with what the
- * participant answered and assisted mode. The API sends only what the viewer may read: an absent
+ * participant answered and assisted mode; the tab "Unterlagen" with their documents. The API sends only what the viewer may read: an absent
  * field isn't shown, a field without a value shows a dash. Actions follow the API's capabilities.
  */
 function ParticipationPage() {
@@ -119,17 +121,16 @@ function ParticipationPage() {
         />
       ))}
       <Tabs
-        selectedIndex={tab === "self-service" ? 1 : 0}
-        onChange={({ selectedIndex }) =>
-          void navigate({
-            search: selectedIndex === 1 ? { tab: "self-service" } : {},
-            replace: true,
-          })
-        }
+        selectedIndex={tabs.indexOf(tab)}
+        onChange={({ selectedIndex }) => {
+          const next = tabs[selectedIndex];
+          void navigate({ search: next ? { tab: next } : {}, replace: true });
+        }}
       >
         <TabList aria-label={t("participant.tabs.label")}>
           <Tab>{t("participant.tabs.overview")}</Tab>
           <Tab>{t("participant.tabs.selfService")}</Tab>
+          <Tab>{t("participant.tabs.documents")}</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -173,6 +174,10 @@ function ParticipationPage() {
           <TabPanel>
             {/* Loaded only when shown: the tab reads the participant's self-service data. */}
             {tab === "self-service" && <SelfServiceTab detail={detail} projectId={projectId} />}
+          </TabPanel>
+          <TabPanel>
+            {/* Loaded only when shown, like "Selbstauskunft". */}
+            {tab === "documents" && <DocumentsTab detail={detail} />}
           </TabPanel>
         </TabPanels>
       </Tabs>
