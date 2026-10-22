@@ -461,6 +461,11 @@ const refused = (status: number, ...errors: { code: string; pointer?: string }[]
 describe("refusals", () => {
   it("maps the API's problems", () => {
     expect(failureOf(refused(401))).toEqual({ kind: "expired" });
+    // Staff whose assisted mode ended (ADR-0007, assisted mode).
+    expect(failureOf(refused(403, { code: "assisted_mode_required" }))).toEqual({
+      kind: "expired",
+    });
+    expect(failureOf(refused(403, { code: "other" }))).toEqual({ kind: "failed" });
     expect(failureOf(refused(409, { code: "stale_revision", pointer: "" }))).toEqual({
       kind: "stale",
     });

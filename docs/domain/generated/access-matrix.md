@@ -15,7 +15,7 @@ there is one; participants' other fields are `never`. Not shown: staff without a
 project are `not_member`, org roles outside their region `out_of_region`; participants reach
 only their own participation and have no modes (every other mode is `never` for them).
 `open_document` on a field, audit or aggregate resource and `write` on an aggregate are
-`not_applicable`. Unknown access is denied: `undecided` names the open question (D10).
+`not_applicable`. Unknown access is denied: `undecided` names the open question.
 
 ## Fields
 
@@ -43,8 +43,8 @@ only their own participation and have no modes (every other mode is `never` for 
 | Consultant/profiler (assigned) | `confidential` | yes | yes | yes |
 | Consultant/profiler (assigned) | `health` | yes · sensitive_read | no: not_in_list_payloads | yes · sensitive_write |
 | Consultant/profiler (assigned) | `disability` | yes · sensitive_read | no: not_in_list_payloads | yes · sensitive_write |
-| Consultant/profiler (assigned) | `identifiers` | yes · sensitive_read | no: not_in_list_payloads | no: undecided (Q65) |
-| Consultant/profiler (assigned) | `residence_social` | yes · sensitive_read | no: not_in_list_payloads | no: undecided (Q65) |
+| Consultant/profiler (assigned) | `identifiers` | yes · sensitive_read | no: not_in_list_payloads | no: needs_assisted_mode |
+| Consultant/profiler (assigned) | `residence_social` | yes · sensitive_read | no: not_in_list_payloads | no: needs_assisted_mode |
 | Consultant/profiler (assigned) | `profiling_assessment` | yes · sensitive_read | no: not_in_list_payloads | yes · sensitive_write |
 | Consultant/profiler (assigned) | `absence` | absence_only | no: not_in_list_payloads | no: never |
 | Consultant/profiler (not assigned) | `case_internal` | no: not_assigned | no: not_assigned | no: not_assigned |
@@ -56,7 +56,7 @@ only their own participation and have no modes (every other mode is `never` for 
 | Consultant/profiler (not assigned) | `profiling_assessment` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `absence` | no: not_assigned | no: not_assigned | no: not_assigned |
 | PL | `case_internal` | yes | yes | no: via_domain_operation |
-| PL | `confidential` | yes | yes | no: undecided (Q65) |
+| PL | `confidential` | yes | yes | no: needs_assisted_mode |
 | PL | `health` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode |
 | PL | `disability` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode |
 | PL | `identifiers` | no: never | no: not_in_list_payloads | no: never |
@@ -64,11 +64,11 @@ only their own participation and have no modes (every other mode is `never` for 
 | PL | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
 | PL | `absence` | absence_only | no: not_in_list_payloads | no: never |
 | Back office | `case_internal` | yes | yes | no: via_domain_operation |
-| Back office | `confidential` | yes | yes | no: undecided (Q65) |
+| Back office | `confidential` | yes | yes | no: needs_assisted_mode |
 | Back office | `health` | no: never | no: not_in_list_payloads | no: never |
 | Back office | `disability` | yes · sensitive_read | no: not_in_list_payloads | yes · sensitive_write |
 | Back office | `identifiers` | yes · sensitive_read | no: not_in_list_payloads | yes · sensitive_write |
-| Back office | `residence_social` | yes · sensitive_read | no: not_in_list_payloads | no: undecided (Q65) |
+| Back office | `residence_social` | yes · sensitive_read | no: not_in_list_payloads | no: needs_assisted_mode |
 | Back office | `profiling_assessment` | no: never | no: not_in_list_payloads | no: never |
 | Back office | `absence` | type_and_dates | no: not_in_list_payloads | yes |
 | Regional operations manager | `case_internal` | no: never | no: never | no: never |
@@ -102,11 +102,15 @@ Only the staff cells that differ from normal mode.
 
 | Subject | Key | Action | Normal mode | This mode |
 | --- | --- | --- | --- | --- |
-| PL | `confidential` | `write` | no: undecided (Q65) | yes |
+| Consultant/profiler (assigned) | `identifiers` | `write` | no: needs_assisted_mode | yes · sensitive_write |
+| Consultant/profiler (assigned) | `residence_social` | `write` | no: needs_assisted_mode | yes · sensitive_write |
+| PL | `confidential` | `write` | no: needs_assisted_mode | yes |
 | PL | `health` | `read` | no: needs_assisted_mode | yes · sensitive_read |
 | PL | `health` | `write` | no: needs_assisted_mode | yes · sensitive_write |
 | PL | `disability` | `read` | no: needs_assisted_mode | yes · sensitive_read |
 | PL | `disability` | `write` | no: needs_assisted_mode | yes · sensitive_write |
+| Back office | `confidential` | `write` | no: needs_assisted_mode | yes |
+| Back office | `residence_social` | `write` | no: needs_assisted_mode | yes · sensitive_write |
 
 ### Active phase, break-glass mode
 
@@ -528,12 +532,9 @@ The same in every mode.
 ## Undecided cells
 
 **Q65**: write permissions, pending the DPO and PL review
-([open-questions.md](../../open-questions.md)).
+([open-questions.md](../../open-questions.md)). Q136 decided the staff writes of self-service
+fields: in assisted mode only. Staff writes of a category's other fields outside a domain
+operation (e.g. the IBAN by a consultant, the birth date by back office) stay `undecided`;
+the rows above sample self-service fields, so they don't show here.
 
-| Question | Subject | Key | Action | Phase and mode |
-| --- | --- | --- | --- | --- |
-| Q65 | Consultant/profiler (assigned) | `identifiers` | `write` | active normal, active assisted, active break_glass |
-| Q65 | Consultant/profiler (assigned) | `residence_social` | `write` | active normal, active assisted, active break_glass |
-| Q65 | PL | `confidential` | `write` | active normal, active break_glass |
-| Q65 | Back office | `confidential` | `write` | active normal, active assisted, active break_glass |
-| Q65 | Back office | `residence_social` | `write` | active normal, active assisted, active break_glass |
+No sampled cell is undecided.

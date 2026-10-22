@@ -2949,6 +2949,9 @@
               },
               "setPlacementAgentur": {
                 "type": "boolean"
+              },
+              "startAssistedMode": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -2959,7 +2962,8 @@
               "recordHandover",
               "revokeActivationCode",
               "providePrivacyNotice",
-              "setPlacementAgentur"
+              "setPlacementAgentur",
+              "startAssistedMode"
             ],
             "additionalProperties": false
           },
@@ -6843,6 +6847,12 @@
               ]
             }
           },
+          "customLabels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "participantMaintained": {
             "type": "array",
             "items": {
@@ -6853,6 +6863,39 @@
                 "mobile",
                 "privateEmail"
               ]
+            }
+          },
+          "sensitive": {
+            "type": "object",
+            "properties": {
+              "pensionInsuranceNumber": {
+                "type": "boolean"
+              },
+              "nationality": {
+                "type": "boolean"
+              },
+              "entryToGermanyDate": {
+                "type": "boolean"
+              },
+              "residenceStatus": {
+                "type": "boolean"
+              },
+              "buergergeld": {
+                "type": "boolean"
+              },
+              "healthRestrictions": {
+                "type": "boolean"
+              },
+              "severeDisability": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "sensitiveReadable": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SensitiveFieldKey"
             }
           },
           "missing": {
@@ -6869,10 +6912,25 @@
           "notice",
           "values",
           "customValues",
+          "customLabels",
           "participantMaintained",
+          "sensitive",
+          "sensitiveReadable",
           "missing"
         ],
         "additionalProperties": false
+      },
+      "SensitiveFieldKey": {
+        "type": "string",
+        "enum": [
+          "pensionInsuranceNumber",
+          "nationality",
+          "entryToGermanyDate",
+          "residenceStatus",
+          "buergergeld",
+          "healthRestrictions",
+          "severeDisability"
+        ]
       },
       "ParticipationSensitiveValues": {
         "type": "object",
@@ -6896,6 +6954,951 @@
           "participationId",
           "group",
           "values"
+        ],
+        "additionalProperties": false
+      },
+      "AssistedMode": {
+        "type": "object",
+        "properties": {
+          "assistedModeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "how": {
+            "$ref": "#/components/schemas/AssistedModeHow"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "assistedModeId",
+          "participationId",
+          "how",
+          "startedAt"
+        ],
+        "additionalProperties": false
+      },
+      "AssistedModeHow": {
+        "type": "string",
+        "enum": [
+          "in_person",
+          "phone"
+        ]
+      },
+      "StartAssistedModeInput": {
+        "type": "object",
+        "properties": {
+          "confirmed": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "how": {
+            "$ref": "#/components/schemas/AssistedModeHow"
+          }
+        },
+        "required": [
+          "confirmed",
+          "how"
+        ],
+        "additionalProperties": false
+      },
+      "AssistedSelfService": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notice": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "enum": [
+                  "self-service-purposes:v1"
+                ]
+              },
+              "acknowledged": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "version",
+              "acknowledged"
+            ],
+            "additionalProperties": false
+          },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "firstName": {
+                "type": "string"
+              },
+              "lastName": {
+                "type": "string"
+              },
+              "birthDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "firstName",
+              "lastName",
+              "birthDate"
+            ],
+            "additionalProperties": false
+          },
+          "customValues": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServicePageView"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceMissingItem"
+            }
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assistedModeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "values": {
+            "type": "object",
+            "properties": {
+              "gender": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "male",
+                  "female",
+                  "diverse",
+                  "not_specified",
+                  null
+                ]
+              },
+              "maritalStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "single",
+                  "married",
+                  null
+                ]
+              },
+              "address": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "street": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "postalCode": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "DE"
+                    ]
+                  }
+                },
+                "required": [
+                  "street",
+                  "postalCode",
+                  "city",
+                  "country"
+                ],
+                "additionalProperties": false
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mobile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "privateEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 254
+              },
+              "educationHistory": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/EducationRow"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "workHistory": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/WorkRow"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "languageSkills": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "german": {
+                    "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                  },
+                  "others": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "language": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 60
+                        },
+                        "level": {
+                          "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                        }
+                      },
+                      "required": [
+                        "language",
+                        "level"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 9
+                  }
+                },
+                "required": [
+                  "german",
+                  "others"
+                ],
+                "additionalProperties": false
+              },
+              "drivingLicence": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DrivingLicenceClass"
+                    },
+                    "minItems": 1,
+                    "maxItems": 16
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "vehicleAvailable": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "workingTimePreferences": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "employmentType": {
+                    "$ref": "#/components/schemas/SelfServiceEmploymentType"
+                  },
+                  "weeklyHours": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 60
+                  },
+                  "distribution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "employmentType",
+                  "weeklyHours",
+                  "distribution"
+                ],
+                "additionalProperties": false
+              },
+              "jobWishes": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "desired": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "alternative": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "desired",
+                  "alternative"
+                ],
+                "additionalProperties": false
+              },
+              "desiredWorkLocations": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "maxCommuteDistance": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "km"
+                        ]
+                      },
+                      "km": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "km"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "nationwide"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "international"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "earliestStartDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "sensitive": {
+            "type": "object",
+            "properties": {
+              "pensionInsuranceNumber": {
+                "type": "boolean"
+              },
+              "nationality": {
+                "type": "boolean"
+              },
+              "entryToGermanyDate": {
+                "type": "boolean"
+              },
+              "residenceStatus": {
+                "type": "boolean"
+              },
+              "buergergeld": {
+                "type": "boolean"
+              },
+              "healthRestrictions": {
+                "type": "boolean"
+              },
+              "severeDisability": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "revision",
+          "notice",
+          "identity",
+          "customValues",
+          "pages",
+          "missing",
+          "participationId",
+          "assistedModeId",
+          "values",
+          "sensitive"
+        ],
+        "additionalProperties": false
+      },
+      "AssistedSelfServiceWrite": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "notice": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "enum": [
+                  "self-service-purposes:v1"
+                ]
+              },
+              "acknowledged": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "version",
+              "acknowledged"
+            ],
+            "additionalProperties": false
+          },
+          "identity": {
+            "type": "object",
+            "properties": {
+              "firstName": {
+                "type": "string"
+              },
+              "lastName": {
+                "type": "string"
+              },
+              "birthDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "firstName",
+              "lastName",
+              "birthDate"
+            ],
+            "additionalProperties": false
+          },
+          "customValues": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServicePageView"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceMissingItem"
+            }
+          },
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assistedModeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "values": {
+            "type": "object",
+            "properties": {
+              "gender": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "male",
+                  "female",
+                  "diverse",
+                  "not_specified",
+                  null
+                ]
+              },
+              "maritalStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "single",
+                  "married",
+                  null
+                ]
+              },
+              "address": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "street": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "postalCode": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "DE"
+                    ]
+                  }
+                },
+                "required": [
+                  "street",
+                  "postalCode",
+                  "city",
+                  "country"
+                ],
+                "additionalProperties": false
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mobile": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "privateEmail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 254
+              },
+              "educationHistory": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/EducationRow"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "workHistory": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/WorkRow"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              },
+              "languageSkills": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "german": {
+                    "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                  },
+                  "others": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "language": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 60
+                        },
+                        "level": {
+                          "$ref": "#/components/schemas/SelfServiceLanguageLevel"
+                        }
+                      },
+                      "required": [
+                        "language",
+                        "level"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 9
+                  }
+                },
+                "required": [
+                  "german",
+                  "others"
+                ],
+                "additionalProperties": false
+              },
+              "drivingLicence": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "none"
+                    ]
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/DrivingLicenceClass"
+                    },
+                    "minItems": 1,
+                    "maxItems": 16
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "vehicleAvailable": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "workingTimePreferences": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "employmentType": {
+                    "$ref": "#/components/schemas/SelfServiceEmploymentType"
+                  },
+                  "weeklyHours": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 60
+                  },
+                  "distribution": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "employmentType",
+                  "weeklyHours",
+                  "distribution"
+                ],
+                "additionalProperties": false
+              },
+              "jobWishes": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "desired": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  },
+                  "alternative": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "required": [
+                  "desired",
+                  "alternative"
+                ],
+                "additionalProperties": false
+              },
+              "desiredWorkLocations": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "maxCommuteDistance": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "km"
+                        ]
+                      },
+                      "km": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 1000
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "km"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "nationwide"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "international"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "earliestStartDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "sensitive": {
+            "type": "object",
+            "properties": {
+              "pensionInsuranceNumber": {
+                "type": "boolean"
+              },
+              "nationality": {
+                "type": "boolean"
+              },
+              "entryToGermanyDate": {
+                "type": "boolean"
+              },
+              "residenceStatus": {
+                "type": "boolean"
+              },
+              "buergergeld": {
+                "type": "boolean"
+              },
+              "healthRestrictions": {
+                "type": "boolean"
+              },
+              "severeDisability": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": false
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SelfServiceWarning"
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "notice",
+          "identity",
+          "customValues",
+          "pages",
+          "missing",
+          "participationId",
+          "assistedModeId",
+          "values",
+          "sensitive",
+          "warnings"
         ],
         "additionalProperties": false
       },
@@ -13106,7 +14109,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "The group's sensitive fields the viewer may read in normal mode, decrypted; each field's read is audited (sensitive_read). The others are left out",
+        "summary": "The group's sensitive fields the viewer may read in normal mode (or the one `field`), decrypted; each field's read is audited (sensitive_read). The others are left out",
         "parameters": [
           {
             "schema": {
@@ -13128,6 +14131,14 @@
             "required": true,
             "name": "group",
             "in": "path"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SensitiveFieldKey"
+            },
+            "required": false,
+            "name": "field",
+            "in": "query"
           }
         ],
         "responses": {
@@ -13173,6 +14184,652 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/assisted-mode": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Open assisted mode after the confirmation (the person is present or on the phone and asked for help) and how; bound to this staff session, audited (assisted_mode_started)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartAssistedModeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Opened; every assisted request names its id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistedMode"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "End this staff session's assisted mode for the participation (\"Beenden\"), audited (assisted_mode_ended); none live is no error",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Ended, or none was live"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/assisted/self-service": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The wizard in assisted mode: pages, values, sensitive presence and missing items the role sees there; 403 assisted_mode_required without a live mode of this session",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "assistedModeId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The wizard state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistedSelfService"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/assisted/self-service/pages/{page}": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Save one confidential page whole on the participant's behalf (actor and onBehalfOf); 409 stale_revision or notice_required",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "$ref": "#/components/schemas/SelfServiceConfidentialPage"
+            },
+            "required": true,
+            "name": "page",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "assistedModeId",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServicePageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the state, with warnings on what was saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistedSelfServiceWrite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/assisted/self-service/sensitive/{group}": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The group's sensitive fields the role sees in assisted mode, decrypted; each field's read is audited (sensitive_read). The others are left out",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ba_details",
+                "health"
+              ]
+            },
+            "required": true,
+            "name": "group",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "assistedModeId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationSensitiveValues"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Save the group's fields the role sees in assisted mode, encrypted; the others keep their values. Each changed field is audited (sensitive_write); 409 stale_revision or notice_required",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ba_details",
+                "health"
+              ]
+            },
+            "required": true,
+            "name": "group",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "assistedModeId",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServicePageInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the state, sensitive fields by presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistedSelfServiceWrite"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/assisted/self-service/notice": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Acknowledge the purposes notice shown to the participant, on their behalf (not a consent); once per version",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "assistedModeId",
+            "in": "query"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelfServiceNoticeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Acknowledged"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

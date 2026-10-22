@@ -7,7 +7,7 @@ import type { AppEnv, Deps } from "./context";
 import type { Env } from "./env";
 import { problem } from "./problem";
 
-// The server-side staff session store (ADR-0007; Slice 3 plan D1–D3). The cookie carries 32
+// The server-side staff session store (ADR-0007, staff sessions). The cookie carries 32
 // random bytes; `staff_session` keeps only their SHA-256, so a database read gives no live
 // session. Both login modes start sessions here; the functions write them with their audit events.
 
@@ -101,8 +101,16 @@ export function requireSession({ db, env }: Deps): MiddlewareHandler<AppEnv> {
     const { expiresAt, ...user } = session;
     c.set("staffUser", user);
     c.set("sessionExpiresAt", expiresAt);
+    c.set("staffSessionHash", tokenHash!);
     await next();
   };
+}
+
+/** The hash of the request's live staff session, in a route behind `requireSession`. */
+export function sessionHash(c: Context<AppEnv>) {
+  const hash = c.get("staffSessionHash");
+  if (!hash) throw new Error("sessionHash() used in a route without requireSession");
+  return hash;
 }
 
 /** The session user in a route behind `requireSession`. */

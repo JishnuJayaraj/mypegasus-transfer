@@ -193,7 +193,8 @@ describe("acknowledge_self_service_notice (Q138)", () => {
     ["a malformed version", { noticeVersion: "purposes" }, "invalid_argument"],
     ["no session", { tokenHash: null }, "session_invalid"],
     ["another session", { tokenHash: hex() }, "session_invalid"],
-    ["a staff context", { context: pl }, "actor_not_allowed"],
+    // Staff act only on the participant's behalf in assisted mode (assisted-mode.int.test.ts).
+    ["a staff context outside assisted mode", { context: pl }, "invalid_actor"],
   ])("refuses %s", async (_, args, code) => {
     const p = await activated();
     await expect(acknowledge(p, args)).rejects.toMatchObject(failsWith(code));
@@ -350,14 +351,14 @@ describe("write_self_service_data (Q140)", () => {
     await expect(write(p, page, values, 0)).rejects.toMatchObject(failsWith("invalid_argument"));
   });
 
-  it("refuses a closed participation, a dead or activating session and a staff context", async () => {
+  it("refuses a closed participation, a dead or activating session and staff outside assisted mode", async () => {
     const p = await activated();
     await acknowledge(p);
     await expect(write(p, "personal", {}, 0, { tokenHash: p.activating })).rejects.toMatchObject(
       failsWith("session_invalid"),
     );
     await expect(write(p, "personal", {}, 0, { context: pl })).rejects.toMatchObject(
-      failsWith("actor_not_allowed"),
+      failsWith("invalid_actor"),
     );
     const other = await activated("other@example.invalid");
     await expect(write(p, "personal", {}, 0, { tokenHash: other.tokenHash })).rejects.toMatchObject(

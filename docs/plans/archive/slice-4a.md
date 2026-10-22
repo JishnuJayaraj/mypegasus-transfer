@@ -1,6 +1,9 @@
 # Slice 4a — Self-service wizard and consent (F5)
 
-Status: **plan for review.** Decisions come from [round 38](../decisions/2026-10-21-answers-round-38.md)
+Status: approved; **done**: PRs 4a-1 to 4a-4 merged, PR 4a-5 implemented 2026-10-22; archived.
+History, not the source of the rules: those live in ADR-0002/0004/0005/0007,
+`docs/domain/data-protection.md`, `regional-variation.md` and `process-and-lifecycle.md`.
+Decisions come from [round 38](../../decisions/2026-10-21-answers-round-38.md)
 (Q133–Q141); the rules they set move to `docs/domain/` and the ADRs in the PRs that build them.
 Builds on Slice 3: activated accounts, portal sessions, one-time codes, channels and their
 `portal_contact` consents (`apps/api/src/routes/portal.ts`, `portal-session.ts`,

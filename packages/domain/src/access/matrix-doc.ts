@@ -25,7 +25,8 @@ const code = (value: string) => `\`${value}\``;
 const table = (head: string[], rows: string[][]) =>
   [head, head.map(() => "---"), ...rows].map((r) => `| ${r.join(" | ")} |`).join("\n");
 
-function text(d: Decision): string {
+/** A decision as a matrix cell shows it. */
+export function cellText(d: Decision): string {
   if (d.effect === "deny") {
     return "question" in d ? `no: undecided (${d.question})` : `no: ${d.because}`;
   }
@@ -52,7 +53,13 @@ const kinds: { kind: Kind; resource: (key: string, phase: AccessPhase) => Resour
   },
 ];
 
-type Cell = { label: string; staff: boolean; key: string; action: AccessAction; text: string };
+export type Cell = {
+  label: string;
+  staff: boolean;
+  key: string;
+  action: AccessAction;
+  text: string;
+};
 
 function cells(index: number, phase: AccessPhase, mode: Mode): Cell[] {
   const { kind, resource } = kinds[index]!;
@@ -63,7 +70,7 @@ function cells(index: number, phase: AccessPhase, mode: Mode): Cell[] {
         staff: subject.kind === "staff",
         key,
         action,
-        text: text(decideAccess(subject, resource(key, phase), action, accessModes[mode])),
+        text: cellText(decideAccess(subject, resource(key, phase), action, accessModes[mode])),
       })),
     ),
   );
@@ -95,7 +102,9 @@ function audit(): string {
   const rows = accessProfiles.flatMap(({ label, subject }) =>
     AuditStream.options.map((stream) => {
       const decide = (actor: string, phase: AccessPhase, mode: Mode) =>
-        text(decideAccess(subject, sampleAudit(stream, actor, phase), "read", accessModes[mode]));
+        cellText(
+          decideAccess(subject, sampleAudit(stream, actor, phase), "read", accessModes[mode]),
+        );
       return [
         label,
         code(stream),
@@ -120,29 +129,49 @@ function audit(): string {
 function aggregates(): string {
   const rows = accessProfiles.map(({ label, subject }) => [
     label,
-    text(decideAccess(subject, sampleAggregate(), "read", accessModes.normal)),
+    cellText(decideAccess(subject, sampleAggregate(), "read", accessModes.normal)),
   ]);
   return table(["Subject", "`read`, `list`"], rows);
 }
 
-function undecided(): string {
+/** An undecided cell found: its question, subject, key and action, and in which phase and mode. */
+export type UndecidedCell = {
+  question: string;
+  label: string;
+  key: string;
+  action: AccessAction;
+  where: string;
+};
+
+/** The undecided cells, one row per subject, key and action with every phase and mode. */
+export function undecidedTable(found: readonly UndecidedCell[]): string {
+  if (found.length === 0) return "No sampled cell is undecided.";
   const rows = new Map<string, string[]>();
-  kinds.forEach((_, index) => {
-    for (const phase of phases) {
-      for (const mode of modes) {
-        for (const c of cells(index, phase, mode)) {
-          const question = /undecided \((Q\d+)\)/.exec(c.text)?.[1];
-          if (!question) continue;
-          const key = [question, c.label, code(c.key), code(c.action)].join(" | ");
-          rows.set(key, [...(rows.get(key) ?? []), `${phase} ${mode}`]);
-        }
-      }
-    }
-  });
+  for (const c of found) {
+    const key = [c.question, c.label, code(c.key), code(c.action)].join(" | ");
+    rows.set(key, [...(rows.get(key) ?? []), c.where]);
+  }
   return table(
     ["Question", "Subject", "Key", "Action", "Phase and mode"],
     [...rows].map(([key, where]) => [...key.split(" | "), where.join(", ")]),
   );
+}
+
+/** The cell as an undecided one (in `where`), or nothing when it is decided. */
+export function asUndecided(c: Cell, where: string): UndecidedCell[] {
+  const question = /undecided \((Q\d+)\)/.exec(c.text)?.[1];
+  return question ? [{ question, label: c.label, key: c.key, action: c.action, where }] : [];
+}
+
+function undecided(): string {
+  const found = kinds.flatMap((_, index) =>
+    phases.flatMap((phase) =>
+      modes.flatMap((mode) =>
+        cells(index, phase, mode).flatMap((c) => asUndecided(c, `${phase} ${mode}`)),
+      ),
+    ),
+  );
+  return undecidedTable(found);
 }
 
 /** docs/domain/generated/access-matrix.md, written by `pnpm generate`. */
@@ -168,7 +197,7 @@ there is one; participants' other fields are \`never\`. Not shown: staff without
 project are \`not_member\`, org roles outside their region \`out_of_region\`; participants reach
 only their own participation and have no modes (every other mode is \`never\` for them).
 \`open_document\` on a field, audit or aggregate resource and \`write\` on an aggregate are
-\`not_applicable\`. Unknown access is denied: \`undecided\` names the open question (D10).
+\`not_applicable\`. Unknown access is denied: \`undecided\` names the open question.
 
 ${personSections.join("\n\n")}
 
@@ -189,7 +218,10 @@ ${aggregates()}
 ## Undecided cells
 
 **Q65**: write permissions, pending the DPO and PL review
-([open-questions.md](../../open-questions.md)).
+([open-questions.md](../../open-questions.md)). Q136 decided the staff writes of self-service
+fields: in assisted mode only. Staff writes of a category's other fields outside a domain
+operation (e.g. the IBAN by a consultant, the birth date by back office) stay \`undecided\`;
+the rows above sample self-service fields, so they don't show here.
 
 ${undecided()}
 `;

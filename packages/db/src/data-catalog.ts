@@ -178,6 +178,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // Assisted mode (Q136): which staff session opened the wizard for a participation, how and
+  // when; ids, a session hash, a code and times. It ends with the staff session.
+  assisted_mode: {
+    retentionClass: "access_credential",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Reason codes are confidential (Q66); evidence records get their own class (round 16).
   profiling_exception_request: {
     retentionClass: "participation_record",
@@ -472,6 +479,7 @@ const withoutFields = new Set([
   "one_time_code_challenge",
   "participant_session",
   "self_service_notice_acknowledgement",
+  "assisted_mode",
 ]);
 
 /**

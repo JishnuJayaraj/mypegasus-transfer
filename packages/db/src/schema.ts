@@ -1,6 +1,8 @@
 import {
   ActorType,
   AmendmentOriginalLocation,
+  AssistedModeEndReason,
+  AssistedModeHow,
   AuditEventType,
   BaReportingKind,
   BaReportingStatus,
@@ -370,6 +372,11 @@ export const stepUpMethod = pgEnum("step_up_method", values(StepUpMethod));
 export const sensitiveStepUpMethod = pgEnum(
   "sensitive_step_up_method",
   values(SensitiveStepUpMethod),
+);
+export const assistedModeHow = pgEnum("assisted_mode_how", values(AssistedModeHow));
+export const assistedModeEndReason = pgEnum(
+  "assisted_mode_end_reason",
+  values(AssistedModeEndReason),
 );
 
 const dateColumn = (name: string) => date(name, { mode: "string" });
@@ -898,6 +905,50 @@ export const participantHealthData = pgTable(
     severeDisability: "severe_disability",
   }),
   (t) => encryptedChecks("participant_health_data", t, ["healthRestrictions", "severeDisability"]),
+);
+
+/**
+ * Assisted mode (ADR-0007, assisted mode; Q136): a staff user opened the participant's wizard
+ * after confirming the person is present or on the phone and asked for help, and how. Bound to the
+ * staff session (its hash, never the token): no expiry of its own, it ends with "Beenden" or with
+ * the session (ending a session ends its assisted modes; an expired one has none live). At most
+ * one live per session and participation. Internal, `case_internal`, class `access_credential`.
+ * Written only by `start_assisted_mode`, `end_assisted_mode` and the staff session's end.
+ */
+export const assistedMode = pgTable(
+  "assisted_mode",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    staffUserId: uuid("staff_user_id")
+      .notNull()
+      .references(() => staffUser.id),
+    staffSessionHash: text("staff_session_hash")
+      .notNull()
+      .references(() => staffSession.tokenHash),
+    how: assistedModeHow("how").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true, mode: "string" }),
+    endReason: assistedModeEndReason("end_reason"),
+  },
+  (t) => [
+    foreignKey({
+      name: "assisted_mode_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("assisted_mode_staff_session_idx").on(t.staffSessionHash),
+    uniqueIndex("assisted_mode_live_unique")
+      .on(t.staffSessionHash, t.participationId)
+      .where(sql`${t.endedAt} is null`),
+    check("assisted_mode_ended", sql`(${t.endedAt} is null) = (${t.endReason} is null)`),
+    check("assisted_mode_ended_after_start", sql`${t.endedAt} >= ${t.startedAt}`),
+  ],
 );
 
 /**
@@ -1883,6 +1934,7 @@ export const tables = [
   participantChannel,
   oneTimeCodeChallenge,
   participantSession,
+  assistedMode,
   lifecycleEdge,
   auditEvent,
   jobRun,

@@ -12,7 +12,7 @@ import type { Oidc } from "./oidc";
 import type { PortalSession } from "./portal-session";
 import type { Detached } from "./detached";
 
-/** Where the API queues the activation notice inside the completion's transaction (D21). */
+/** Where the API queues the activation notice inside the completion's transaction (ADR-0011). */
 export interface ActivationNoticeQueue {
   enqueue(
     channelId: string,
@@ -24,11 +24,11 @@ export interface Deps {
   db: Database;
   env: Env;
   logger: Logger;
-  /** The only source of the current time (ADR-0006, plan 5.8). */
+  /** The only source of the current time (ADR-0006). */
   clock: Clock;
   /** The built SPAs to serve (production image, `pnpm start`); Vite serves them in dev. */
   spa?: SpaRoots | undefined;
-  /** The parse-worker slots of the import (R43); the process's own by default, a test's own. */
+  /** The parse-worker slots of the import (ADR-0003); the process's own by default, a test's own. */
   importSlots?: Slots | undefined;
   /** The OIDC client (AUTH_MODE=oidc); built from the environment unless a test injects one. */
   oidc?: Oidc | undefined;
@@ -47,6 +47,8 @@ export interface AppEnv {
     staffUser: StaffUser | undefined;
     /** When the request's staff session ends (ISO 8601 UTC), behind `requireSession`. */
     sessionExpiresAt: string | undefined;
+    /** The SHA-256 of the staff session's token, behind `requireSession` (assisted mode). */
+    staffSessionHash: string | undefined;
     /** The participant's portal session, behind `requirePortalSession`. */
     participant: PortalSession | undefined;
   };

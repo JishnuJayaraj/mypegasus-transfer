@@ -40,6 +40,11 @@ export const SensitivePresence = z
   .meta({ id: "SensitivePresence" });
 export type SensitivePresence = z.infer<typeof SensitivePresence>;
 
+/** A highly confidential or special-category field's key. */
+export const SensitiveFieldKey = z
+  .enum(sensitiveFields as [SensitiveField, ...SensitiveField[]])
+  .meta({ id: "SensitiveFieldKey" });
+
 /** The decrypted values of one sensitive group; `null` where nothing is recorded. */
 export const SensitiveValuesView = z
   .strictObject(
@@ -158,6 +163,9 @@ export type PortalSensitiveValues = z.infer<typeof PortalSensitiveValues>;
  * in normal mode (data-protection.md, access matrix), a logged read; the others are left out, not
  * shown empty.
  */
+/** One field of the group instead of all the viewer may read (each read is logged). */
+export const ParticipationSensitiveQuery = z.object({ field: SensitiveFieldKey.optional() });
+
 export const ParticipationSensitiveValues = z
   .strictObject({ participationId: z.uuid(), group: SensitivePage, values: SensitiveValuesView })
   .meta({ id: "ParticipationSensitiveValues" });
@@ -205,8 +213,42 @@ export const ParticipationSelfService = z
     }),
     values: SelfServiceValues.partial(),
     customValues: CustomValues,
+    /** The German labels of the chain's custom fields the viewer reads, by key. */
+    customLabels: z.record(z.string(), z.string()),
     participantMaintained: z.array(z.enum(contactFields)),
+    /**
+     * Whether each sensitive field the viewer may know about is given (the "Selbstauskunft" tab):
+     * presence only; the others are left out.
+     */
+    sensitive: SensitivePresence.partial(),
+    /** The sensitive fields the viewer may read in normal mode, each a logged read. */
+    sensitiveReadable: z.array(SensitiveFieldKey),
     missing: z.array(SelfServiceMissingItem),
   })
   .meta({ id: "ParticipationSelfService" });
 export type ParticipationSelfService = z.infer<typeof ParticipationSelfService>;
+
+/**
+ * `GET /participations/{id}/assisted/self-service` (ADR-0007, assisted mode; Q136): the wizard as
+ * the staff user's role sees it in assisted mode. Fields the role can't see are left out of the
+ * pages, the values, the presence and the missing items, never shown empty. No step-up for staff.
+ */
+export const AssistedSelfService = PortalSelfService.omit({
+  values: true,
+  sensitive: true,
+  stepUp: true,
+})
+  .extend({
+    participationId: z.uuid(),
+    assistedModeId: z.uuid(),
+    values: SelfServiceValues.partial(),
+    sensitive: SensitivePresence.partial(),
+  })
+  .meta({ id: "AssistedSelfService" });
+export type AssistedSelfService = z.infer<typeof AssistedSelfService>;
+
+/** The assisted state after a page or group write, with the warnings on what was saved. */
+export const AssistedSelfServiceWrite = AssistedSelfService.extend({
+  warnings: z.array(SelfServiceWarning),
+}).meta({ id: "AssistedSelfServiceWrite" });
+export type AssistedSelfServiceWrite = z.infer<typeof AssistedSelfServiceWrite>;

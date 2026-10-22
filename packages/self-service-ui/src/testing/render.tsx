@@ -1,12 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { ApiProblemError } from "@transfer/api-client";
-import type { PortalSelfService, PortalSensitiveValues } from "@transfer/domain";
+import type { PortalSensitiveValues } from "@transfer/domain";
 import { createI18n } from "@transfer/ui";
 import { useState } from "react";
 import { I18nextProvider } from "react-i18next";
 import { vi } from "vitest";
 import { SELF_SERVICE_NAMESPACE, selfServiceResources } from "../i18n";
+import type { WizardState } from "../model";
 import type { SelfServiceSource, StepUpSource } from "../source";
 import { SelfServiceWizard } from "../wizard";
 
@@ -21,7 +22,7 @@ export const refused = (status: number, code: string, pointer = "") =>
   });
 
 export function renderWizard(
-  states: PortalSelfService[],
+  states: WizardState[],
   options: {
     step?: string;
     load?: SelfServiceSource["load"];
@@ -31,6 +32,8 @@ export function renderWizard(
     loadSensitive?: SelfServiceSource["loadSensitive"];
     saveSensitive?: SelfServiceSource["saveSensitive"];
     stepUp?: Partial<StepUpSource>;
+    /** A source without a step-up, as staff in assisted mode have. */
+    noStepUp?: boolean;
   } = {},
 ) {
   let loads = 0;
@@ -91,11 +94,12 @@ export function renderWizard(
     "de",
     ["de", "en"],
   );
+  const { stepUp: _, ...withoutStepUp } = source;
   function Harness() {
     const [step, setStep] = useState(options.step);
     return (
       <SelfServiceWizard
-        source={source}
+        source={options.noStepUp ? withoutStepUp : source}
         step={step}
         onStep={(next) => {
           steps.push(next);

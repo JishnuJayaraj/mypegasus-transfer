@@ -546,7 +546,22 @@ export {
   type SensitiveValues as SensitiveValueMap,
 } from "./self-service/sensitive";
 export {
+  AssistedModeEndReason,
+  AssistedModeHow,
+  AssistedModeQuery,
+  AssistedModeView,
+  assistedFieldAccess,
+  restrictWizard,
+  sensitiveFieldsWhere,
+  staffSelfServiceAccess,
+  StartAssistedModeInput,
+  type AccessTarget,
+} from "./self-service/assisted";
+export {
+  AssistedSelfService,
+  AssistedSelfServiceWrite,
   ParticipationSelfService,
+  ParticipationSensitiveQuery,
   ParticipationSensitiveValues,
   PortalConsent,
   PortalConsents,
@@ -559,6 +574,7 @@ export {
   SelfServicePageView,
   SelfServiceValues,
   SelfServiceWarning,
+  SensitiveFieldKey,
   SensitivePresence,
   SensitiveValuesView,
   PortalSensitiveValues,

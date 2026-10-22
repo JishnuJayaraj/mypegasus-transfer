@@ -15,6 +15,7 @@
     "@tanstack/react-router": "1.170.44",
     "@transfer/api-client": "workspace:*",
     "@transfer/domain": "workspace:*",
+    "@transfer/self-service-ui": "workspace:*",
     "@transfer/ui": "workspace:*",
     "i18next": "26.4.6",
     "qrcode": "1.5.4",

@@ -12,6 +12,11 @@ import {
   Select,
   SelectItem,
   SimpleTable,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
   TextInput,
 } from "@transfer/ui";
 import { useState, type ReactNode } from "react";
@@ -30,6 +35,7 @@ import { ParticipationDatesForm } from "../../components/participation-dates-for
 import { PlacementAgentur } from "../../components/placement-agentur";
 import { RecoveryPanel } from "../../components/recovery";
 import { RouteError } from "../../components/route-error";
+import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
 
@@ -37,7 +43,12 @@ type Detail = components["schemas"]["ParticipationDetail"];
 type FieldKey = keyof typeof de.participant.fields;
 const RouterLink = createLink(Link);
 
+/** The tab shown: the overview, or "Selbstauskunft" (e.g. after assisted mode ended). */
+type Search = { tab?: "self-service" };
+
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
+  validateSearch: (search: Record<string, unknown>): Search =>
+    search.tab === "self-service" ? { tab: "self-service" } : {},
   loader: async ({ context: { api, queryClient }, params: { projectId, participationId } }) => {
     const [project, detail] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
@@ -75,13 +86,15 @@ function ParticipationError(props: ErrorComponentProps) {
 
 /**
  * One participant (process-and-lifecycle.md; data-protection.md, access matrix): person, contact,
- * status, placement Agentur, wave and contractual dates. The API sends only what the viewer may
- * read: an absent field isn't shown, a field without a value shows a dash. Actions follow the
- * API's capabilities.
+ * status, placement Agentur, wave and contractual dates; the tab "Selbstauskunft" with what the
+ * participant answered and assisted mode. The API sends only what the viewer may read: an absent
+ * field isn't shown, a field without a value shows a dash. Actions follow the API's capabilities.
  */
 function ParticipationPage() {
   const { t } = useTranslation();
   const { projectId, participationId } = Route.useParams();
+  const { tab } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const api = useApi();
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
   const { data: detail } = useSuspenseQuery(participationQuery(api, participationId));
@@ -105,42 +118,64 @@ function ParticipationPage() {
           hideCloseButton
         />
       ))}
-      <Facts
-        title={t("participant.person")}
-        rows={[
-          ["personnelNumber", person.personnelNumber],
-          ["lastName", person.lastName],
-          ["firstName", person.firstName],
-          ["birthDate", date(person.birthDate)],
-          ["oldEmploymentEndDate", date(person.oldEmploymentEndDate)],
-        ]}
-      />
-      <Facts
-        title={t("participant.contact")}
-        rows={[
-          ["address", address(person.address)],
-          ["phone", person.phone],
-          ["mobile", person.mobile],
-          ["privateEmail", person.privateEmail],
-          ["workEmail", person.workEmail],
-        ]}
-      />
-      {person.workEmail !== undefined && <p>{t("participant.workEmailHint")}</p>}
-      <Facts
-        title={t("participant.status")}
-        rows={[
-          ["status", t(`participants.statuses.${detail.status}`)],
-          ["profilingStatus", t(`participants.profilingStatuses.${detail.profilingStatus}`)],
-          ["dsvStatus", t(`participants.dsvStatuses.${detail.dsvStatus}`)],
-          ["tgEntryDate", date(dates.tgEntryDate)],
-          ["exitDate", date(dates.exitDate)],
-          ["withdrawnOn", date(dates.withdrawnOn)],
-        ]}
-      />
-      <PlacementAgentur detail={detail} projectId={projectId} />
-      <Assignments detail={detail} projectId={projectId} />
-      <ActivationPanel detail={detail} projectId={projectId} />
-      {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
+      <Tabs
+        selectedIndex={tab === "self-service" ? 1 : 0}
+        onChange={({ selectedIndex }) =>
+          void navigate({
+            search: selectedIndex === 1 ? { tab: "self-service" } : {},
+            replace: true,
+          })
+        }
+      >
+        <TabList aria-label={t("participant.tabs.label")}>
+          <Tab>{t("participant.tabs.overview")}</Tab>
+          <Tab>{t("participant.tabs.selfService")}</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <Facts
+              title={t("participant.person")}
+              rows={[
+                ["personnelNumber", person.personnelNumber],
+                ["lastName", person.lastName],
+                ["firstName", person.firstName],
+                ["birthDate", date(person.birthDate)],
+                ["oldEmploymentEndDate", date(person.oldEmploymentEndDate)],
+              ]}
+            />
+            <Facts
+              title={t("participant.contact")}
+              rows={[
+                ["address", address(person.address)],
+                ["phone", person.phone],
+                ["mobile", person.mobile],
+                ["privateEmail", person.privateEmail],
+                ["workEmail", person.workEmail],
+              ]}
+            />
+            {person.workEmail !== undefined && <p>{t("participant.workEmailHint")}</p>}
+            <Facts
+              title={t("participant.status")}
+              rows={[
+                ["status", t(`participants.statuses.${detail.status}`)],
+                ["profilingStatus", t(`participants.profilingStatuses.${detail.profilingStatus}`)],
+                ["dsvStatus", t(`participants.dsvStatuses.${detail.dsvStatus}`)],
+                ["tgEntryDate", date(dates.tgEntryDate)],
+                ["exitDate", date(dates.exitDate)],
+                ["withdrawnOn", date(dates.withdrawnOn)],
+              ]}
+            />
+            <PlacementAgentur detail={detail} projectId={projectId} />
+            <Assignments detail={detail} projectId={projectId} />
+            <ActivationPanel detail={detail} projectId={projectId} />
+            {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
+          </TabPanel>
+          <TabPanel>
+            {/* Loaded only when shown: the tab reads the participant's self-service data. */}
+            {tab === "self-service" && <SelfServiceTab detail={detail} projectId={projectId} />}
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </>
   );
 }

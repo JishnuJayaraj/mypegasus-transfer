@@ -182,6 +182,7 @@ const options = {
     revokeActivationCode: false,
     providePrivacyNotice: true,
     setPlacementAgentur: true,
+    startAssistedMode: true,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
@@ -219,6 +220,7 @@ describe("participationDetail", () => {
         revokeActivationCode: false,
         providePrivacyNotice: true,
         setPlacementAgentur: true,
+        startAssistedMode: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });

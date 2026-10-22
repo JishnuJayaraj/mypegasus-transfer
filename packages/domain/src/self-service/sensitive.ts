@@ -92,11 +92,15 @@ const foreignOnly = ["entryToGermanyDate", "residenceStatus"] as const;
 /**
  * The values a group write carries: each of the group's fields, `null` or absent for empty (the
  * group is saved whole). Unknown keys are refused; entry date and residence status need the
- * nationality "other".
+ * nationality "other". Staff in assisted mode write the group's fields their role sees (`fields`,
+ * Q136); the others are unknown keys to them.
  */
-export function sensitiveValuesSchema(group: SensitivePage) {
+export function sensitiveValuesSchema(
+  group: SensitivePage,
+  fields: readonly SensitiveField[] = sensitiveFieldsOf(group),
+) {
   const shape = Object.fromEntries(
-    sensitiveFieldsOf(group).map((key) => [key, sensitiveValueSchemas[key].nullable().optional()]),
+    fields.map((key) => [key, sensitiveValueSchemas[key].nullable().optional()]),
   );
   return z.strictObject(shape).superRefine((values, ctx) => {
     if (group !== "ba_details") return;
@@ -110,12 +114,13 @@ export function sensitiveValuesSchema(group: SensitivePage) {
   });
 }
 
-/** Every field of the group, `null` where the write left it empty. */
+/** Every field of the group (or of `fields`), `null` where the write left it empty. */
 export function completeSensitiveValues(
   group: SensitivePage,
   values: Readonly<Record<string, unknown>>,
+  fields: readonly SensitiveField[] = sensitiveFieldsOf(group),
 ): Partial<SensitiveValues> {
-  return Object.fromEntries(sensitiveFieldsOf(group).map((key) => [key, values[key] ?? null]));
+  return Object.fromEntries(fields.map((key) => [key, values[key] ?? null]));
 }
 
 /**

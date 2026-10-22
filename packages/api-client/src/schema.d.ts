@@ -5968,10 +5968,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The group's sensitive fields the viewer may read in normal mode, decrypted; each field's read is audited (sensitive_read). The others are left out */
+        /** The group's sensitive fields the viewer may read in normal mode (or the one `field`), decrypted; each field's read is audited (sensitive_read). The others are left out */
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    field?: components["schemas"]["SensitiveFieldKey"];
+                };
                 header?: never;
                 path: {
                     participationId: string;
@@ -6030,6 +6032,562 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/assisted-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Open assisted mode after the confirmation (the person is present or on the phone and asked for help) and how; bound to this staff session, audited (assisted_mode_started) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartAssistedModeInput"];
+                };
+            };
+            responses: {
+                /** @description Opened; every assisted request names its id */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AssistedMode"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** End this staff session's assisted mode for the participation ("Beenden"), audited (assisted_mode_ended); none live is no error */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Ended, or none was live */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/assisted/self-service": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The wizard in assisted mode: pages, values, sensitive presence and missing items the role sees there; 403 assisted_mode_required without a live mode of this session */
+        get: {
+            parameters: {
+                query: {
+                    assistedModeId: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The wizard state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AssistedSelfService"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/assisted/self-service/pages/{page}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save one confidential page whole on the participant's behalf (actor and onBehalfOf); 409 stale_revision or notice_required */
+        put: {
+            parameters: {
+                query: {
+                    assistedModeId: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                    page: components["schemas"]["SelfServiceConfidentialPage"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SelfServicePageInput"];
+                };
+            };
+            responses: {
+                /** @description Saved; the state, with warnings on what was saved */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AssistedSelfServiceWrite"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/assisted/self-service/sensitive/{group}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The group's sensitive fields the role sees in assisted mode, decrypted; each field's read is audited (sensitive_read). The others are left out */
+        get: {
+            parameters: {
+                query: {
+                    assistedModeId: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                    group: "ba_details" | "health";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The values */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationSensitiveValues"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** Save the group's fields the role sees in assisted mode, encrypted; the others keep their values. Each changed field is audited (sensitive_write); 409 stale_revision or notice_required */
+        put: {
+            parameters: {
+                query: {
+                    assistedModeId: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                    group: "ba_details" | "health";
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SelfServicePageInput"];
+                };
+            };
+            responses: {
+                /** @description Saved; the state, sensitive fields by presence */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AssistedSelfServiceWrite"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/assisted/self-service/notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Acknowledge the purposes notice shown to the participant, on their behalf (not a consent); once per version */
+        post: {
+            parameters: {
+                query: {
+                    assistedModeId: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SelfServiceNoticeInput"];
+                };
+            };
+            responses: {
+                /** @description Acknowledged */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7028,6 +7586,7 @@ export interface components {
                 revokeActivationCode: boolean;
                 providePrivacyNotice: boolean;
                 setPlacementAgentur: boolean;
+                startAssistedMode: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -7977,15 +8536,230 @@ export interface components {
             customValues: {
                 [key: string]: string | number | boolean | null;
             };
+            customLabels: {
+                [key: string]: string;
+            };
             participantMaintained: ("address" | "phone" | "mobile" | "privateEmail")[];
+            sensitive: {
+                pensionInsuranceNumber?: boolean;
+                nationality?: boolean;
+                entryToGermanyDate?: boolean;
+                residenceStatus?: boolean;
+                buergergeld?: boolean;
+                healthRestrictions?: boolean;
+                severeDisability?: boolean;
+            };
+            sensitiveReadable: components["schemas"]["SensitiveFieldKey"][];
             missing: components["schemas"]["SelfServiceMissingItem"][];
         };
+        /** @enum {string} */
+        SensitiveFieldKey: "pensionInsuranceNumber" | "nationality" | "entryToGermanyDate" | "residenceStatus" | "buergergeld" | "healthRestrictions" | "severeDisability";
         ParticipationSensitiveValues: {
             /** Format: uuid */
             participationId: string;
             /** @enum {string} */
             group: "ba_details" | "health";
             values: components["schemas"]["SensitiveValues"];
+        };
+        AssistedMode: {
+            /** Format: uuid */
+            assistedModeId: string;
+            /** Format: uuid */
+            participationId: string;
+            how: components["schemas"]["AssistedModeHow"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            startedAt: string;
+        };
+        /** @enum {string} */
+        AssistedModeHow: "in_person" | "phone";
+        StartAssistedModeInput: {
+            /** @enum {boolean} */
+            confirmed: true;
+            how: components["schemas"]["AssistedModeHow"];
+        };
+        AssistedSelfService: {
+            revision: number;
+            notice: {
+                /** @enum {string} */
+                version: "self-service-purposes:v1";
+                acknowledged: boolean;
+            };
+            identity: {
+                firstName: string;
+                lastName: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                birthDate: string | null;
+            };
+            customValues: {
+                [key: string]: string | number | boolean | null;
+            };
+            pages: components["schemas"]["SelfServicePageView"][];
+            missing: components["schemas"]["SelfServiceMissingItem"][];
+            /** Format: uuid */
+            participationId: string;
+            /** Format: uuid */
+            assistedModeId: string;
+            values: {
+                /** @enum {string|null} */
+                gender?: "male" | "female" | "diverse" | "not_specified" | null;
+                /** @enum {string|null} */
+                maritalStatus?: "single" | "married" | null;
+                address?: {
+                    street: string;
+                    postalCode: string;
+                    city: string;
+                    /** @enum {string} */
+                    country: "DE";
+                } | null;
+                phone?: string | null;
+                mobile?: string | null;
+                privateEmail?: string | null;
+                educationHistory?: components["schemas"]["EducationRow"][] | null;
+                workHistory?: components["schemas"]["WorkRow"][] | null;
+                languageSkills?: {
+                    german: components["schemas"]["SelfServiceLanguageLevel"];
+                    others: {
+                        language: string;
+                        level: components["schemas"]["SelfServiceLanguageLevel"];
+                    }[];
+                } | null;
+                drivingLicence?: "none" | components["schemas"]["DrivingLicenceClass"][] | null;
+                vehicleAvailable?: boolean | null;
+                workingTimePreferences?: {
+                    employmentType: components["schemas"]["SelfServiceEmploymentType"];
+                    weeklyHours: number | null;
+                    distribution: string | null;
+                } | null;
+                jobWishes?: {
+                    desired: string;
+                    alternative: string | null;
+                } | null;
+                desiredWorkLocations?: string | null;
+                maxCommuteDistance?: {
+                    /** @enum {string} */
+                    kind: "km";
+                    km: number;
+                } | {
+                    /** @enum {string} */
+                    kind: "nationwide";
+                } | {
+                    /** @enum {string} */
+                    kind: "international";
+                } | null;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                earliestStartDate?: string | null;
+            };
+            sensitive: {
+                pensionInsuranceNumber?: boolean;
+                nationality?: boolean;
+                entryToGermanyDate?: boolean;
+                residenceStatus?: boolean;
+                buergergeld?: boolean;
+                healthRestrictions?: boolean;
+                severeDisability?: boolean;
+            };
+        };
+        AssistedSelfServiceWrite: {
+            revision: number;
+            notice: {
+                /** @enum {string} */
+                version: "self-service-purposes:v1";
+                acknowledged: boolean;
+            };
+            identity: {
+                firstName: string;
+                lastName: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                birthDate: string | null;
+            };
+            customValues: {
+                [key: string]: string | number | boolean | null;
+            };
+            pages: components["schemas"]["SelfServicePageView"][];
+            missing: components["schemas"]["SelfServiceMissingItem"][];
+            /** Format: uuid */
+            participationId: string;
+            /** Format: uuid */
+            assistedModeId: string;
+            values: {
+                /** @enum {string|null} */
+                gender?: "male" | "female" | "diverse" | "not_specified" | null;
+                /** @enum {string|null} */
+                maritalStatus?: "single" | "married" | null;
+                address?: {
+                    street: string;
+                    postalCode: string;
+                    city: string;
+                    /** @enum {string} */
+                    country: "DE";
+                } | null;
+                phone?: string | null;
+                mobile?: string | null;
+                privateEmail?: string | null;
+                educationHistory?: components["schemas"]["EducationRow"][] | null;
+                workHistory?: components["schemas"]["WorkRow"][] | null;
+                languageSkills?: {
+                    german: components["schemas"]["SelfServiceLanguageLevel"];
+                    others: {
+                        language: string;
+                        level: components["schemas"]["SelfServiceLanguageLevel"];
+                    }[];
+                } | null;
+                drivingLicence?: "none" | components["schemas"]["DrivingLicenceClass"][] | null;
+                vehicleAvailable?: boolean | null;
+                workingTimePreferences?: {
+                    employmentType: components["schemas"]["SelfServiceEmploymentType"];
+                    weeklyHours: number | null;
+                    distribution: string | null;
+                } | null;
+                jobWishes?: {
+                    desired: string;
+                    alternative: string | null;
+                } | null;
+                desiredWorkLocations?: string | null;
+                maxCommuteDistance?: {
+                    /** @enum {string} */
+                    kind: "km";
+                    km: number;
+                } | {
+                    /** @enum {string} */
+                    kind: "nationwide";
+                } | {
+                    /** @enum {string} */
+                    kind: "international";
+                } | null;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                earliestStartDate?: string | null;
+            };
+            sensitive: {
+                pensionInsuranceNumber?: boolean;
+                nationality?: boolean;
+                entryToGermanyDate?: boolean;
+                residenceStatus?: boolean;
+                buergergeld?: boolean;
+                healthRestrictions?: boolean;
+                severeDisability?: boolean;
+            };
+            warnings: components["schemas"]["SelfServiceWarning"][];
         };
         DevStaffUser: {
             /** Format: uuid */

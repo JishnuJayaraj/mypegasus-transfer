@@ -95,6 +95,8 @@ describe("audit event types (ADR-0002)", () => {
       "self_service_notice_acknowledged",
       "step_up_completed",
       "step_up_failed",
+      "assisted_mode_started",
+      "assisted_mode_ended",
     ]);
   });
 
@@ -148,6 +150,8 @@ describe("audit event types (ADR-0002)", () => {
       "self_service_notice_acknowledged",
       "step_up_completed",
       "step_up_failed",
+      "assisted_mode_started",
+      "assisted_mode_ended",
     ]);
   });
 
@@ -1160,6 +1164,41 @@ describe("portal login, channel and recovery events (Q130, ADR-0007, Q123)", () 
         details: { channelId: otherId, kind: "sms" },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("assisted mode (Q136, ADR-0007)", () => {
+  const started = {
+    ...base,
+    type: "assisted_mode_started",
+    details: { assistedModeId: otherId, how: "phone" },
+  };
+  const ended = {
+    ...base,
+    type: "assisted_mode_ended",
+    details: { assistedModeId: otherId, endReason: "staff_session_ended" },
+  };
+
+  it("records who opened it for whom, how, and why it ended; codes only", () => {
+    expect(issueCodes(started)).toEqual([]);
+    expect(issueCodes({ ...started, details: { ...started.details, how: "in_person" } })).toEqual(
+      [],
+    );
+    expect(issueCodes(ended)).toEqual([]);
+    expect(issueCodes({ ...ended, details: { ...ended.details, endReason: "ended" } })).toEqual([]);
+  });
+
+  it("is a staff user's own action on a participation, without free text", () => {
+    for (const bad of [
+      { ...started, details: { ...started.details, how: "video" } },
+      { ...started, details: { ...started.details, note: "asked for help" } },
+      { ...started, actor: { ...user, onBehalfOf: participationId } },
+      { ...started, actor: { type: "participant", participationId } },
+      { ...started, participationId: null },
+      { ...ended, details: { ...ended.details, endReason: "timeout" } },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
   });
 });
 

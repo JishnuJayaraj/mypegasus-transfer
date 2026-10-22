@@ -1,7 +1,7 @@
 # Decisions — 2026-10-21, round 38 (Slice 4a planning, Q133–Q140)
 
 The product owner answered the questions raised while planning
-[Slice 4a](../plans/slice-4a.md). These are pilot answers in the placeholder roles of rounds 32–37:
+[Slice 4a](../plans/archive/slice-4a.md). These are pilot answers in the placeholder roles of rounds 32–37:
 no external Legal, BA or DPO confirmation is involved and none blocks development on synthetic
 data. The 🔒 rows stay `assumed` until the DPO confirms them before the pilot; Q134 is
 `confirmed`.

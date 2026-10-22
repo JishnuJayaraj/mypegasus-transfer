@@ -2,7 +2,7 @@
 
 Each slice is one branch and one PR (or a short series). Each ends with something a PL could
 click through in a demo. Write a plan in `docs/plans/<slice>.md` before implementing; a finished slice's plan moves to
-`docs/plans/archive/`. Slices 0–3 are done.
+`docs/plans/archive/`. Slices 0–4a are done.
 
 ## Slice 0 — Walking skeleton
 Monorepo (pnpm), Vite 8 web app, Hono API, Postgres + Drizzle migration, Carbon shell
@@ -45,7 +45,10 @@ Config-driven wizard in `apps/portal`, consent records, assisted mode (from `app
 Deferred here from Slice 2: the placement Agentur on participations and its automatic pin (Q36).
 Special-category and highly confidential storage (encryption, separate logged endpoints) comes
 with the first such field (here or Slice 6).
-**Plan:** [`plans/slice-4a.md`](plans/slice-4a.md) (PRs 4a-1 to 4a-5; in review).
+**Done** 2026-10-22 (PRs 4a-1 to 4a-5): plan archived in
+[`plans/archive/slice-4a.md`](plans/archive/slice-4a.md); its rules live in ADR-0002, ADR-0004,
+ADR-0005, ADR-0007, `domain/data-protection.md`, `domain/regional-variation.md` and
+`domain/process-and-lifecycle.md`.
 
 ## Slice 4b — Uploads and documents (F5)
 Uploads (storage + virus-scan adapters, mock), file-type allowlist, signed URLs, document

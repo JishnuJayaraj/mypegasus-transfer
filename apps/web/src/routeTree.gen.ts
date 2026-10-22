@@ -17,6 +17,7 @@ import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
 import { Route as ProjectsProjectIdParticipationsParticipationIdRouteImport } from './routes/projects/$projectId_.participations.$participationId'
+import { Route as ProjectsProjectIdParticipationsParticipationIdAssistedRouteImport } from './routes/projects/$projectId_.participations.$participationId_.assisted'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,6 +60,12 @@ const ProjectsProjectIdParticipationsParticipationIdRoute =
     path: '/projects/$projectId/participations/$participationId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ProjectsProjectIdParticipationsParticipationIdAssistedRoute =
+  ProjectsProjectIdParticipationsParticipationIdAssistedRouteImport.update({
+    id: '/projects/$projectId_/participations/$participationId_/assisted',
+    path: '/projects/$projectId/participations/$participationId/assisted',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -69,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/projects/new': typeof ProjectsNewRoute
   '/projects/': typeof ProjectsIndexRoute
   '/projects/$projectId/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
+  '/projects/$projectId/participations/$participationId/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -79,6 +87,7 @@ export interface FileRoutesByTo {
   '/projects/new': typeof ProjectsNewRoute
   '/projects': typeof ProjectsIndexRoute
   '/projects/$projectId/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
+  '/projects/$projectId/participations/$participationId/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -90,6 +99,7 @@ export interface FileRoutesById {
   '/projects/new': typeof ProjectsNewRoute
   '/projects/': typeof ProjectsIndexRoute
   '/projects/$projectId_/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
+  '/projects/$projectId_/participations/$participationId_/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -102,6 +112,7 @@ export interface FileRouteTypes {
     | '/projects/new'
     | '/projects/'
     | '/projects/$projectId/participations/$participationId'
+    | '/projects/$projectId/participations/$participationId/assisted'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
     | '/projects/new'
     | '/projects'
     | '/projects/$projectId/participations/$participationId'
+    | '/projects/$projectId/participations/$participationId/assisted'
   id:
     | '__root__'
     | '/'
@@ -122,6 +134,7 @@ export interface FileRouteTypes {
     | '/projects/new'
     | '/projects/'
     | '/projects/$projectId_/participations/$participationId'
+    | '/projects/$projectId_/participations/$participationId_/assisted'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -133,6 +146,7 @@ export interface RootRouteChildren {
   ProjectsNewRoute: typeof ProjectsNewRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   ProjectsProjectIdParticipationsParticipationIdRoute: typeof ProjectsProjectIdParticipationsParticipationIdRoute
+  ProjectsProjectIdParticipationsParticipationIdAssistedRoute: typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -193,6 +207,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdParticipationsParticipationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId_/participations/$participationId_/assisted': {
+      id: '/projects/$projectId_/participations/$participationId_/assisted'
+      path: '/projects/$projectId/participations/$participationId/assisted'
+      fullPath: '/projects/$projectId/participations/$participationId/assisted'
+      preLoaderRoute: typeof ProjectsProjectIdParticipationsParticipationIdAssistedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -206,6 +227,8 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsIndexRoute: ProjectsIndexRoute,
   ProjectsProjectIdParticipationsParticipationIdRoute:
     ProjectsProjectIdParticipationsParticipationIdRoute,
+  ProjectsProjectIdParticipationsParticipationIdAssistedRoute:
+    ProjectsProjectIdParticipationsParticipationIdAssistedRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

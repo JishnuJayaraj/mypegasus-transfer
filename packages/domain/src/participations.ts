@@ -217,6 +217,11 @@ export const ParticipationDetail = z
       providePrivacyNotice: z.boolean(),
       /** Set the placement Agentur (the PL or back office, while not terminal, Q139). */
       setPlacementAgentur: z.boolean(),
+      /**
+       * Open the wizard in assisted mode (the PL, the assigned consultant, back office; while not
+       * terminal, Q136).
+       */
+      startAssistedMode: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({

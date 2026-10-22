@@ -544,3 +544,37 @@ describe("Gesundheit and the step-up (Q137)", () => {
     expect(steps).toEqual(["overview"]);
   });
 });
+
+describe("staff in assisted mode (ADR-0007, assisted mode)", () => {
+  it("open Gesundheit without a step-up and show only the fields the role sees", async () => {
+    const { stepUp: _, ...base } = wizardState();
+    const staffState = {
+      ...base,
+      sensitive: { severeDisability: true },
+      pages: [page("health", [{ key: "severeDisability", required: true }])],
+    };
+    const { source } = renderWizard([staffState], {
+      step: "health",
+      noStepUp: true,
+      sensitive: { health: { severeDisability: true } },
+    });
+    await heading("Gesundheit");
+    const disability = await screen.findByRole("group", {
+      name: "Schwerbehinderung oder Gleichstellung *",
+    });
+    expect(within(disability).getByRole("radio", { name: "Ja" })).toBeChecked();
+    expect(screen.queryByRole("group", { name: /Gesundheitliche Einschränkungen/ })).toBeNull();
+    expect(screen.queryByLabelText("Ihr Geburtsdatum")).toBeNull();
+    expect(source.loadSensitive).toHaveBeenCalledWith("health");
+  });
+
+  it("show the app's ended view once the mode has ended", async () => {
+    renderWizard([wizardState()], {
+      noStepUp: true,
+      load: async () => {
+        throw refused(403, "assisted_mode_required");
+      },
+    });
+    expect(await screen.findByText("Sitzung abgelaufen")).toBeVisible();
+  });
+});

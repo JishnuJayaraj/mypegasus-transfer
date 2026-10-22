@@ -6,7 +6,7 @@ import type { RegionScope, Subject } from "./decide";
 
 /**
  * Who may take a lifecycle edge or perform an operation (data-protection.md, access matrix; Q60
- * confirmed, Q80 *assumed*, round 10 §6, rounds 11–13). The status service (PR 1g) checks this and
+ * confirmed, Q80 *assumed*, round 10 §6, rounds 11–13). The status service checks this and
  * the lifecycle rules (`canTransition`, the operations) before it calls a status function; nothing
  * callable from outside bypasses either.
  */
@@ -69,6 +69,8 @@ export const OperationKind = z.enum([
   "providePrivacyNotice",
   // Slice 4a: the placement Agentur (Q139)
   "setPlacementAgentur",
+  // Slice 4a: the wizard on the participant's behalf (Q136, ADR-0007)
+  "startAssistedMode",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -153,6 +155,8 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   providePrivacyNotice: ["project_lead", "back_office"],
   // The placement Agentur (Q139): the PL or back office of the project; never a consultant.
   setPlacementAgentur: ["project_lead", "back_office"],
+  // Assisted mode (Q136): the PL, the assigned consultant and back office of the project.
+  startAssistedMode: ["project_lead", "consultant", "back_office"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

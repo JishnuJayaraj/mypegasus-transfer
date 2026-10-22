@@ -85,6 +85,7 @@ const detail = {
     revokeActivationCode: false,
     providePrivacyNotice: false,
     setPlacementAgentur: false,
+    startAssistedMode: false,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 };

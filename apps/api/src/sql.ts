@@ -11,9 +11,13 @@ export async function callFunction(db: Pick<Database, "execute">, query: ReturnT
 }
 
 /**
- * The `audit_context` of a staff user acting in a request (never assisted mode here); no request
- * for the seed.
+ * The `audit_context` of a staff user acting in a request for themselves; no request for the seed.
  */
 export const auditContext = (staffUserId: string, requestId: string | null) =>
   sql`row('user'::actor_type, ${staffUserId}::uuid, null::uuid, null::text, null::uuid,
     ${requestId}::text, null::text)::audit_context`;
+
+/** A staff user acting on behalf of a participant in assisted mode (ADR-0007): actor + onBehalfOf. */
+export const assistedContext = (staffUserId: string, participationId: string, requestId: string) =>
+  sql`row('user'::actor_type, ${staffUserId}::uuid, null::uuid, null::text,
+    ${participationId}::uuid, ${requestId}::text, null::text)::audit_context`;
