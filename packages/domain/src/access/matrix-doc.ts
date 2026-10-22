@@ -102,7 +102,9 @@ function audit(): string {
   const rows = accessProfiles.flatMap(({ label, subject }) =>
     AuditStream.options.map((stream) => {
       const decide = (actor: string, phase: AccessPhase, mode: Mode) =>
-        cellText(decideAccess(subject, sampleAudit(stream, actor, phase), "read", accessModes[mode]));
+        cellText(
+          decideAccess(subject, sampleAudit(stream, actor, phase), "read", accessModes[mode]),
+        );
       return [
         label,
         code(stream),

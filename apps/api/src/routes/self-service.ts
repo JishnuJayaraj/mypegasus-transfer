@@ -8,6 +8,7 @@ import {
   decideAccess,
   pageValuesSchema,
   ParticipationSelfService,
+  ParticipationSensitiveQuery,
   ParticipationSensitiveValues,
   PortalConsents,
   PortalSelfService,
@@ -20,7 +21,9 @@ import {
   selfServiceValueSchemas,
   selfServiceWizard,
   sensitiveFieldsOf,
+  sensitiveFieldsWhere,
   SensitivePage,
+  staffSelfServiceAccess,
   sensitiveValuesSchema,
   valueIssueCode,
   valueWarnings,
@@ -76,13 +79,13 @@ function portalState(record: SelfServiceRecord, stepUp: PortalStepUp) {
 }
 
 /** Field keys as a Postgres array literal (a JS array would expand into a list). */
-const textArray = (keys: readonly string[]) => `{${keys.join(",")}}`;
+export const textArray = (keys: readonly string[]) => `{${keys.join(",")}}`;
 
 /** Where a page value is in the body, as a domain problem's field. */
 const at = (path: PropertyKey[]) => ["values", ...path.map(String)].join("/");
 
 /** Each issue's code and location under `/values`, never the value (ADR-0010). */
-const valueIssues = (issues: readonly z.core.$ZodIssue[]) =>
+export const valueIssues = (issues: readonly z.core.$ZodIssue[]) =>
   issues.flatMap((issue) => {
     if (issue.code === "unrecognized_keys") {
       return issue.keys.map((key) => ({ code: "unknown_field", field: at([...issue.path, key]) }));
@@ -91,7 +94,7 @@ const valueIssues = (issues: readonly z.core.$ZodIssue[]) =>
   });
 
 /** 409 with the code (a stale revision, the notice not acknowledged). */
-const conflict = (c: Context<AppEnv>, code: string) =>
+export const conflict = (c: Context<AppEnv>, code: string) =>
   problem(c, "conflict", { errors: [{ pointer: "", code, detail: "Read the state again" }] });
 
 /** 403 until the session's step-up before special-category data (Q137). */
@@ -376,47 +379,42 @@ export function selfServiceRoutes(deps: Deps) {
   );
 
   /**
-   * The staff projection (data-protection.md, access matrix, normal mode): undefined for no
-   * participation or a hidden project (404), null when the viewer may read no confidential
-   * self-service field (403).
+   * The staff projection (data-protection.md, self-service, the "Selbstauskunft" tab): undefined
+   * for no participation or a hidden project (404), null when the viewer may read no confidential
+   * self-service field (403). Values the viewer reads in normal mode; whether each sensitive field
+   * the viewer may know about is given, and which of them they may read (a logged read on its own
+   * route); missing items as codes, for the fields the viewer may know about.
    */
   async function staffView(user: StaffUser, participationId: string) {
     const record = await loadSelfService(db, release, participationId);
     if (!record) return undefined;
     const { subject, visible, regionId } = await projectAccess(db, user, record.projectId);
     if (!visible) return undefined;
-    const readable = (key: string) =>
-      decideAccess(
-        subject,
-        {
-          kind: "field",
-          projectId: record.projectId,
-          regionId,
-          participationId,
-          phase: "active",
-          // A custom field is confidential at most (regional-variation.md, custom fields).
-          field: key.startsWith("custom.") ? "gender" : key,
-        },
-        "read",
-        { kind: "normal" },
-      ).effect === "allow";
+    const { reads, knows } = staffSelfServiceAccess(subject, {
+      projectId: record.projectId,
+      regionId,
+      participationId,
+    });
     const fields = Object.keys(selfServiceValueSchemas) as SelfServiceField[];
     // All confidential: no value here needs a logged read (decideAccess names none).
-    const shown = fields.filter(readable);
+    const shown = fields.filter(reads);
     if (shown.length === 0) return null;
+    const known = sensitiveFieldsWhere(knows);
     return {
       participationId,
       revision: record.revision,
       updatedAt: record.updatedAt,
       notice: { version: SELF_SERVICE_NOTICE_VERSION, acknowledgedAt: record.acknowledgedAt },
       values: Object.fromEntries(shown.map((key) => [key, record.values[key]])),
-      customValues: readable("custom.") ? record.customValues : {},
+      customValues: reads("custom.") ? record.customValues : {},
       participantMaintained: contactFields.filter((key) =>
         record.participantMaintained.includes(key),
       ),
-      // Codes only; a field the viewer may not read isn't named either.
+      sensitive: Object.fromEntries(known.map((key) => [key, record.sensitive[key]])),
+      sensitiveReadable: sensitiveFieldsWhere(reads),
+      // Codes only; a field the viewer may not know about isn't named either.
       missing: selfServiceMissing(record.wizard).filter(
-        (item) => item.kind === "document" || readable(item.key),
+        (item) => item.kind === "document" || knows(item.key),
       ),
     };
   }
@@ -450,9 +448,9 @@ export function selfServiceRoutes(deps: Deps) {
       path: "/participations/{participationId}/self-service/sensitive/{group}",
       tags: ["participations"],
       summary:
-        "The group's sensitive fields the viewer may read in normal mode, decrypted; each field's read is audited (sensitive_read). The others are left out",
+        "The group's sensitive fields the viewer may read in normal mode (or the one `field`), decrypted; each field's read is audited (sensitive_read). The others are left out",
       middleware: [requireSession(deps)],
-      request: { params: ParticipationGroupParams },
+      request: { params: ParticipationGroupParams, query: ParticipationSensitiveQuery },
       responses: {
         200: json(ParticipationSensitiveValues, "The readable values"),
         ...problemResponses("validation-error", "unauthenticated", "forbidden", "not-found"),
@@ -461,6 +459,14 @@ export function selfServiceRoutes(deps: Deps) {
     async (c) => {
       const user = sessionUser(c);
       const { participationId, group } = c.req.valid("param");
+      const { field: only } = c.req.valid("query");
+      if (only !== undefined && !sensitiveFieldsOf(group).includes(only)) {
+        return problem(c, "validation-error", {
+          errors: [
+            { parameter: "field", code: "unknown_field", detail: "Not a field of the group" },
+          ],
+        });
+      }
       const [found] = await db
         .select({ projectId: participation.projectId })
         .from(participation)
@@ -469,7 +475,7 @@ export function selfServiceRoutes(deps: Deps) {
       const { subject, visible, regionId } = await projectAccess(db, user, found.projectId);
       if (!visible) return problem(c, "not-found");
       // Normal mode (data-protection.md, access matrix): each allowed read is a logged one.
-      const readable = sensitiveFieldsOf(group).filter(
+      const readable = (only === undefined ? sensitiveFieldsOf(group) : [only]).filter(
         (field) =>
           decideAccess(
             subject,

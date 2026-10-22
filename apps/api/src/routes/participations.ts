@@ -267,7 +267,8 @@ export function participationRoutes(deps: Deps) {
         | "assignEntryWave"
         | "setParticipationDates"
         | "assignParticipations"
-        | "setPlacementAgentur",
+        | "setPlacementAgentur"
+        | "startAssistedMode",
     ) => mayPerformOperation(subject, { kind }, target).ok;
     const waves = await db
       .select({ id: projectEntryWave.id })
@@ -394,6 +395,8 @@ export function participationRoutes(deps: Deps) {
           assignParticipations: permitted("assignParticipations"),
           ...activationCapabilities(subject, p.projectId, regionId, participationId),
           setPlacementAgentur: setPlacement,
+          // Assisted mode (Q136): not for a terminal participation; no account needed.
+          startAssistedMode: placementAgenturCapability(p.status, permitted("startAssistedMode")),
         },
         refusals: {
           assignEntryWave: assignment.refusal,

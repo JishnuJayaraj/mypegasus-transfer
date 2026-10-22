@@ -2,13 +2,13 @@ import { ApiProblemError } from "@transfer/api-client";
 import type {
   ConfidentialPage,
   NoticeLanguage,
-  PortalSelfService,
   PortalSelfServiceWrite,
-  PortalSensitiveValues,
   PortalStepUp,
   SensitivePage,
+  SensitiveValuesView,
 } from "@transfer/domain";
-import type { Issue } from "./model";
+import type { z } from "zod";
+import type { Issue, WizardState } from "./model";
 
 type PageInput = { revision: number; values: Record<string, unknown> };
 
@@ -26,20 +26,24 @@ export interface StepUpSource {
   verifyCode(oneTimeCode: string): Promise<PortalStepUp>;
 }
 
+/** The state after a write, with the warnings on what was saved. */
+export type WizardWrite = WizardState & Pick<PortalSelfServiceWrite, "warnings">;
+
 /**
- * Where the wizard reads and writes: the portal's own routes for the participant, later the
- * assisted-mode routes for staff (ADR-0007). Each call throws the API client's problem on refusal.
- * A sensitive group is read and written on its own logged routes, never with the wizard state.
+ * Where the wizard reads and writes: the portal's own routes for the participant, the
+ * assisted-mode routes for staff (ADR-0007, assisted mode). Each call throws the API client's
+ * problem on refusal. A sensitive group is read and written on its own logged routes, never with
+ * the wizard state.
  */
 export interface SelfServiceSource {
   /** The query key of the wizard state (one per participant view). */
   queryKey: readonly unknown[];
-  load(): Promise<PortalSelfService>;
+  load(): Promise<WizardState>;
   acknowledge(language: NoticeLanguage): Promise<void>;
-  save(page: ConfidentialPage, input: PageInput): Promise<PortalSelfServiceWrite>;
-  loadSensitive(group: SensitivePage): Promise<PortalSensitiveValues>;
-  saveSensitive(group: SensitivePage, input: PageInput): Promise<PortalSelfServiceWrite>;
-  /** Absent where no step-up applies. */
+  save(page: ConfidentialPage, input: PageInput): Promise<WizardWrite>;
+  loadSensitive(group: SensitivePage): Promise<{ values: z.infer<typeof SensitiveValuesView> }>;
+  saveSensitive(group: SensitivePage, input: PageInput): Promise<WizardWrite>;
+  /** Absent where no step-up applies: staff in assisted mode need none. */
   stepUp?: StepUpSource;
 }
 

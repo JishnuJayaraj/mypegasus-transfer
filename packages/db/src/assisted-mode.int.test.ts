@@ -2,7 +2,14 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
-import { auditContext, call, changeStatus, pl, resetTestDatabase, testDatabaseUrls } from "./testing";
+import {
+  auditContext,
+  call,
+  changeStatus,
+  pl,
+  resetTestDatabase,
+  testDatabaseUrls,
+} from "./testing";
 
 // Assisted mode (ADR-0007, assisted mode; data-protection.md, access matrix; Q136) as transfer_app
 // calls it: bound to the staff session, the roles' rights in the encrypted groups, actor and
@@ -244,9 +251,10 @@ describe("start_assisted_mode and end_assisted_mode (Q136)", () => {
     expect(await end(lead, participationId)).toBe(true);
     expect(await end(lead, participationId)).toBe(false);
     expect(
-      (await events(participationId, ["assisted_mode_started", "assisted_mode_ended"])).map(
-        (e) => [e.event_type, e.details],
-      ),
+      (await events(participationId, ["assisted_mode_started", "assisted_mode_ended"])).map((e) => [
+        e.event_type,
+        e.details,
+      ]),
     ).toEqual([
       ["assisted_mode_started", { assistedModeId: first, how: "phone" }],
       ["assisted_mode_ended", { assistedModeId: first, endReason: "ended" }],
@@ -339,19 +347,21 @@ describe("writes and reads in assisted mode (Q136)", () => {
     };
     expect(await writePage(lead, participationId, "contact", contact, 0)).toBe(1);
     expect(
-      await one(`select participant_maintained from participant_details where participation_id = $1`, [
-        participationId,
-      ]),
+      await one(
+        `select participant_maintained from participant_details where participation_id = $1`,
+        [participationId],
+      ),
     ).toEqual({ participant_maintained: ["address", "mobile"] });
     const written = await events(participationId, [
       "self_service_notice_acknowledged",
       "participant_data_changed",
     ]);
-    expect(written.map((e) => [e.actor_type, e.actor_staff_user_id, e.on_behalf_of_participation_id]))
-      .toEqual([
-        ["user", seedStaffUserIds.projectLead, participationId],
-        ["user", seedStaffUserIds.projectLead, participationId],
-      ]);
+    expect(
+      written.map((e) => [e.actor_type, e.actor_staff_user_id, e.on_behalf_of_participation_id]),
+    ).toEqual([
+      ["user", seedStaffUserIds.projectLead, participationId],
+      ["user", seedStaffUserIds.projectLead, participationId],
+    ]);
     expect(written[1].details).toEqual({ fields: ["address", "mobile"] });
     expect(
       await one(

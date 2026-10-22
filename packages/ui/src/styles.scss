@@ -28,6 +28,7 @@
 @use "@carbon/react/scss/components/select";
 @use "@carbon/react/scss/components/notification";
 @use "@carbon/react/scss/components/loading";
+@use "@carbon/react/scss/components/modal";
 @use "@carbon/react/scss/components/stack";
 @use "@carbon/react/scss/components/tabs";
 @use "@carbon/react/scss/components/tag";
@@ -261,6 +262,25 @@ body {
 .tp-notice-text {
   margin-block-start: $spacing-06;
   line-height: 1.45;
+}
+
+// Assisted mode (staff app): the wizard opened on a participant's behalf; the banner names whom
+// and ends it.
+.tp-assisted-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-05;
+  padding-block: $spacing-04;
+  padding-inline: $spacing-05;
+  margin-block-end: $spacing-06;
+  background: theme.$notification-background-info;
+  border-inline-start: 3px solid theme.$support-info;
+}
+
+.tp-assisted-wizard {
+  max-inline-size: 40rem;
 }
 
 @media print {

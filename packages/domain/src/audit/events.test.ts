@@ -1185,9 +1185,7 @@ describe("assisted mode (Q136, ADR-0007)", () => {
       [],
     );
     expect(issueCodes(ended)).toEqual([]);
-    expect(issueCodes({ ...ended, details: { ...ended.details, endReason: "ended" } })).toEqual(
-      [],
-    );
+    expect(issueCodes({ ...ended, details: { ...ended.details, endReason: "ended" } })).toEqual([]);
   });
 
   it("is a staff user's own action on a participation, without free text", () => {

@@ -4,7 +4,6 @@ import {
   groupNeedsStepUp,
   selfServicePurposesNotice,
   type ConfidentialPage,
-  type PortalSelfService,
   type SensitivePage,
   type WizardPage,
 } from "@transfer/domain";
@@ -40,6 +39,7 @@ import {
   type Issue,
   type SensitiveValues,
   type Step,
+  type WizardState,
 } from "./model";
 import { failureOf, type SelfServiceSource } from "./source";
 import { StepUp } from "./step-up";
@@ -123,7 +123,7 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
         : await source.save(page.page as ConfidentialPage, input);
       // Decrypted values are read again when the page opens, never kept (data-protection.md).
       queryClient.removeQueries({ queryKey: [...source.queryKey, "sensitive"] });
-      queryClient.setQueryData<PortalSelfService>(source.queryKey, next);
+      queryClient.setQueryData<WizardState>(source.queryKey, next);
       setMessage(undefined);
       setMoved(true);
       onStep(nextStep(next, page.page));
@@ -196,6 +196,7 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
           <Overview state={state} onStep={go} />
         ) : current.sensitive &&
           groupNeedsStepUp(current.page as SensitivePage) &&
+          state.stepUp &&
           !state.stepUp.done &&
           source.stepUp ? (
           <StepUp
@@ -263,7 +264,7 @@ function Heading({ children }: { children: ReactNode }) {
   );
 }
 
-function Progress({ state }: { state: PortalSelfService }) {
+function Progress({ state }: { state: WizardState }) {
   const { t } = useT();
   const { complete, total } = progress(state);
   return (
@@ -313,7 +314,7 @@ function SensitiveStep(props: {
 }
 
 function PageStep(props: {
-  state: PortalSelfService;
+  state: WizardState;
   page: WizardPage;
   sensitive?: SensitiveValues;
   language: "de" | "en";
@@ -400,7 +401,7 @@ function PageStep(props: {
 }
 
 /** Names and birth date come from the import: shown, never edited here (Q112). */
-function Identity({ state }: { state: PortalSelfService }) {
+function Identity({ state }: { state: WizardState }) {
   const { t } = useT();
   const { firstName, lastName, birthDate } = state.identity;
   return (
@@ -423,7 +424,7 @@ function Identity({ state }: { state: PortalSelfService }) {
 }
 
 /** Every page with what is still missing on it (codes as labels), and a way back to it. */
-function Overview({ state, onStep }: { state: PortalSelfService; onStep: (step: Step) => void }) {
+function Overview({ state, onStep }: { state: WizardState; onStep: (step: Step) => void }) {
   const { t, i18n } = useT();
   const language = i18n.resolvedLanguage === "en" ? "en" : "de";
   const labelOf = (page: WizardPage, key: string) => {

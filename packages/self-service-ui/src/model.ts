@@ -8,6 +8,7 @@ import {
   type ConfidentialPage,
   type PortalSelfService,
   type PortalSensitiveValues,
+  type PortalStepUp,
   type SelfServicePage,
   type SensitivePage,
   type WizardPage,
@@ -76,6 +77,17 @@ export function customKind(schema: Readonly<Record<string, unknown>>): CustomKin
 
 const yesNo = (value: unknown) => (typeof value === "boolean" ? (value ? "yes" : "no") : "");
 const orEmpty = (value: unknown) => (value === null || value === undefined ? "" : String(value));
+
+/**
+ * The wizard state the wizard renders: the portal's (`PortalSelfService`) or the assisted-mode
+ * one, where fields the staff role can't see are left out and no step-up applies.
+ */
+export type WizardState = Omit<PortalSelfService, "values" | "sensitive" | "stepUp"> & {
+  values: Partial<PortalSelfService["values"]>;
+  sensitive: Partial<PortalSelfService["sensitive"]>;
+  /** The participant session's step-up; absent for staff. */
+  stepUp?: PortalStepUp;
+};
 
 type Values = PortalSelfService["values"] & PortalSensitiveValues["values"];
 /** A sensitive group's decrypted values, read on their own logged route. */
@@ -167,7 +179,7 @@ function customToForm(schema: Readonly<Record<string, unknown>>, value: unknown)
  */
 export function pageDraft(
   page: WizardPage,
-  state: PortalSelfService,
+  state: WizardState,
   sensitive: SensitiveValues = {},
 ): Draft {
   const values = { ...state.values, ...sensitive } as Values;
@@ -438,19 +450,19 @@ export type Step = "notice" | "overview" | SelfServicePage;
  * Pages without a missing required field (the progress bar, Q140): every page the participant
  * fills in, the sensitive ones by their fields' presence.
  */
-export function progress(state: PortalSelfService) {
+export function progress(state: WizardState) {
   const { pages } = state;
   return { complete: pages.filter((page) => page.complete).length, total: pages.length };
 }
 
 /** Where a returning participant resumes: the notice, the first page with missing items, else the overview. */
-export function resumeStep(state: PortalSelfService): Step {
+export function resumeStep(state: WizardState): Step {
   if (!state.notice.acknowledged) return "notice";
   return state.pages.find((page) => !page.complete)?.page ?? "overview";
 }
 
 /** The step to show for a requested one: the notice comes first; unknown steps resume. */
-export function currentStep(state: PortalSelfService, requested: string | undefined): Step {
+export function currentStep(state: WizardState, requested: string | undefined): Step {
   if (!state.notice.acknowledged) return "notice";
   if (requested === "overview") return "overview";
   const page = state.pages.find((candidate) => candidate.page === requested);
@@ -458,13 +470,13 @@ export function currentStep(state: PortalSelfService, requested: string | undefi
 }
 
 /** The page after `page` in the sequence, or the overview after the last one. */
-export function nextStep(state: PortalSelfService, page: SelfServicePage): Step {
+export function nextStep(state: WizardState, page: SelfServicePage): Step {
   const { pages } = state;
   return pages[pages.findIndex((candidate) => candidate.page === page) + 1]?.page ?? "overview";
 }
 
 /** The page before `page`, if there is one. */
-export function previousStep(state: PortalSelfService, page: SelfServicePage): Step | undefined {
+export function previousStep(state: WizardState, page: SelfServicePage): Step | undefined {
   const { pages } = state;
   const index = pages.findIndex((candidate) => candidate.page === page);
   return index > 0 ? pages[index - 1]!.page : undefined;

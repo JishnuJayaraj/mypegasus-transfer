@@ -36,9 +36,7 @@ it("renders every subject, key and undecided cell (docs/domain/generated/access-
   expect(doc).toContain(
     "| Consultant/profiler (assigned) | `tl407_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |",
   );
-  expect(doc).toContain(
-    "| PL | `confidential` | `write` | no: needs_assisted_mode | yes |",
-  );
+  expect(doc).toContain("| PL | `confidential` | `write` | no: needs_assisted_mode | yes |");
   // The sampled self-service fields are decided (Q136); Q65 holds for the others.
   expect(part("## Undecided cells")).toContain("No sampled cell is undecided.");
   expect(doc.endsWith("\n")).toBe(true);
@@ -46,10 +44,22 @@ it("renders every subject, key and undecided cell (docs/domain/generated/access-
 
 it("lists an undecided cell once, with every phase and mode it is undecided in", () => {
   const text = cellText({ effect: "deny", because: "undecided", question: "Q65" });
-  const rendered = { label: "PL", staff: true, key: "confidential", action: "write", text } as const;
+  const rendered = {
+    label: "PL",
+    staff: true,
+    key: "confidential",
+    action: "write",
+    text,
+  } as const;
   expect(asUndecided({ ...rendered, text: "no: never" }, "active normal")).toEqual([]);
-  const [cell] = asUndecided(rendered, "active normal");
-  expect(cell).toEqual({ question: "Q65", label: "PL", key: "confidential", action: "write", where: "active normal" });
+  const cell = asUndecided(rendered, "active normal")[0]!;
+  expect(cell).toEqual({
+    question: "Q65",
+    label: "PL",
+    key: "confidential",
+    action: "write",
+    where: "active normal",
+  });
   expect(
     undecidedTable([
       { ...cell, where: "active normal" },

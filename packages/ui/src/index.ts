@@ -11,6 +11,7 @@ export {
   InlineNotification,
   Link,
   Loading,
+  Modal,
   ProgressBar,
   RadioButton,
   RadioButtonGroup,

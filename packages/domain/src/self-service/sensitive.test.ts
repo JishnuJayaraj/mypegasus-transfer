@@ -150,9 +150,9 @@ describe("a group write", () => {
 
   it("takes only the fields a role sees in assisted mode (Q136)", () => {
     const disability = ["severeDisability"] as const;
-    expect(sensitiveValuesSchema("health", disability).safeParse({ severeDisability: true })).toEqual(
-      { success: true, data: { severeDisability: true } },
-    );
+    expect(
+      sensitiveValuesSchema("health", disability).safeParse({ severeDisability: true }),
+    ).toEqual({ success: true, data: { severeDisability: true } });
     expect(
       sensitiveValuesSchema("health", disability).safeParse({ healthRestrictions: true }).success,
     ).toBe(false);

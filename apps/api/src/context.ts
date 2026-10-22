@@ -12,7 +12,7 @@ import type { Oidc } from "./oidc";
 import type { PortalSession } from "./portal-session";
 import type { Detached } from "./detached";
 
-/** Where the API queues the activation notice inside the completion's transaction (D21). */
+/** Where the API queues the activation notice inside the completion's transaction (ADR-0011). */
 export interface ActivationNoticeQueue {
   enqueue(
     channelId: string,
@@ -47,6 +47,8 @@ export interface AppEnv {
     staffUser: StaffUser | undefined;
     /** When the request's staff session ends (ISO 8601 UTC), behind `requireSession`. */
     sessionExpiresAt: string | undefined;
+    /** The SHA-256 of the staff session's token, behind `requireSession` (assisted mode). */
+    staffSessionHash: string | undefined;
     /** The participant's portal session, behind `requirePortalSession`. */
     participant: PortalSession | undefined;
   };

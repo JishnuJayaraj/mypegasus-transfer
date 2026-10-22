@@ -31,6 +31,7 @@ import { teamRoutes } from "./routes/team";
 import { activationRoutes } from "./routes/activation";
 import { portalRoutes } from "./routes/portal";
 import { selfServiceRoutes } from "./routes/self-service";
+import { assistedModeRoutes } from "./routes/assisted-mode";
 import { createDetached } from "./detached";
 import { mountSpas } from "./static";
 
@@ -131,6 +132,7 @@ export function createApp(deps: Deps) {
   api.route("/", activationRoutes(runtimeDeps));
   api.route("/", portalRoutes(runtimeDeps));
   api.route("/", selfServiceRoutes(runtimeDeps));
+  api.route("/", assistedModeRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 
