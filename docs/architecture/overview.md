@@ -87,11 +87,15 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   merged; `pnpm lint` checks against `origin/main`, in CI the PR's base) and their generated
   `manifest.json`. It also owns `organisation.json`, the validated controller and DPO details
   interpolated into immutable Article 14 notice templates (synthetic values in the repository).
-- `packages/adapters`: interfaces + implementations behind them (ADR-0006). Only `Clock` so far
-  (system, manual, Berlin dates and run times), plus `Mailer` and `SmsSender` contracts and their
-  idempotent last-100 development outbox. Real mail/SMS providers, pdf, storage, virus scan and
-  export come with the slices that need them.
-- `packages/forms` (Slice 4b): official BA form templates (blank PDF, field map, manifest),
+- `packages/adapters`: interfaces + implementations behind them (ADR-0006). `Clock` (system,
+  manual, Berlin dates and run times); `Mailer` and `SmsSender` contracts and their idempotent
+  last-100 development outbox; `FileStorage` (memory for tests, filesystem under `STORAGE_DIR`
+  for development and e2e, one shared contract test) and `VirusScanner` (a mock: EICAR infected,
+  an encrypted PDF unscannable) from Slice 4b. None of the mocks is wired in production. Real
+  mail/SMS providers, S3 storage, ClamAV, pdf and export come with the slices that need them.
+  The API encrypts document files before they reach the store (`apps/api/src/
+  document-encryption.ts`, `DOCUMENT_ENCRYPTION_KEY`).
+- `packages/forms` (Slice 6): official BA form templates (blank PDF, field map, manifest),
   ADR-0009.
 - `fixtures/`: synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV
   import).

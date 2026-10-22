@@ -181,20 +181,56 @@ whose read must be logged; such fields come with their separate logged endpoints
 | `employment_contract` | signed DSV and its cancellation | highly confidential, encrypted |
 | `absence` | sub-status periods | payroll records; not in lists until Q85 |
 
-**Documents** *(assumed, Q87 B)*: a versioned document-type catalog
-(`packages/domain/src/documents/catalog.ts`) gives each type its category, class, retention
-class, the roles that may use it and participant visibility. Reading a document gives its
-metadata; the file only through an explicit, logged opening (`document_opened`). Existing
-documents never change: signed ones are immutable, and adding a document or a new version is a
-document operation. Signed documents aren't in the MVP portal (Q67).
+**Documents** *(assumed, Q87 B, Q142–Q148)*: a versioned document-type catalog
+(`packages/domain/src/documents/catalog.ts`, version 2) gives each type its category, class,
+retention class, the roles that may use it, participant visibility, whether the original file
+name is kept, and who may add, review and delete it. Reading a document gives its metadata; the
+file only through an explicit, logged opening (`document_opened`). Existing documents never
+change: signed ones are immutable, and adding a document or a new version is a document
+operation. Signed documents aren't in the MVP portal (Q67).
 
-| Document type | Who may open it |
-|---|---|
-| Signed TL 407, Kug 200b | assigned profiler, PL |
-| Signed DSV, DSV cancellation | PL, back office |
-| ASU proof | assigned profiler; PL metadata, the file only through break-glass |
-| Profiling-exception evidence | assigned profiler; PL only in assisted mode or through break-glass; regional operations manager "evidence present" (metadata) only |
-| CV and general uploads, qualification certificates | the participant (own), assigned consultant, PL; back office for certificates only when funding or settlement needs it (not before Slice 8) |
+| Document type | Who may open it | Retention class |
+|---|---|---|
+| Signed TL 407, Kug 200b | assigned profiler, PL | `evidence_set` |
+| Signed DSV, DSV cancellation | PL, back office | `personnel_file` |
+| ASU proof | assigned profiler; PL metadata, the file only through break-glass | `participation_record` |
+| Profiling-exception evidence | assigned profiler; PL only in assisted mode or through break-glass; regional operations manager "evidence present" (metadata) only | `participation_record` |
+| CV (`cv`, Lebenslauf; catalog version 2, Q142), other uploads, qualification certificates | the participant (own), assigned consultant, PL; back office for certificates only when funding or settlement needs it (not before Slice 8) | `personnel_file` (Q145; version 1 had `participation_record`: they aren't BA evidence; a funded qualification's certificate may need a longer class, Slice 8) |
+
+**Document operations** *(assumed, Q146; the Q65 document cells)*: `mayAddDocument`,
+`mayReviewDocument` and `mayDeleteDocument` (`packages/domain/src/access/document-operations.ts`)
+beside `decideAccess`, whose `write` on a document stays `via_domain_operation`; the generated
+access matrix has the table "Document operations".
+- For the CV, other uploads and qualification certificates: the participant adds in the portal;
+  the assigned consultant and the PL add in normal mode as themselves and in assisted mode as
+  actor + `onBehalfOf`; back office none. The participant sees every document of these types in
+  their participation, whoever added it.
+- Review (accept, or reject with `unreadable`, `wrong_document`, `incomplete`) by the assigned
+  consultant or the PL in normal mode, once and final. Deletion by the participant (what they
+  added, while not accepted, no reason) or the assigned consultant or the PL (any, in normal
+  mode, with `wrong_person`, `wrong_file`, `duplicate` or `participant_request`). No replacement
+  in place: a new upload is a new document. Break-glass never adds, reviews or deletes.
+- Signed documents are never deleted (`immutable`; the retention job only). The other types'
+  operations stay `undecided` (Q65) until their slice: the signed scans, ASU proof and
+  exception evidence with Slice 6, the DSV scan and cancellation with Slice 7.
+
+**File names** *(assumed, Q148)*: kept only for the CV, other uploads and certificates, as
+confidential metadata: NFC, path parts and control characters (including bidirectional
+controls) dropped, trimmed, 1–200 characters (`documentFileName`). Shown to whoever reads the
+document's metadata, never in an audit entry, log, object key or error; the download of another
+type is named `<type>-<date>.<ext>`.
+
+**Document files** *(assumed, Q143, Q149)*: PDF, JPEG or PNG, told apart by their magic bytes
+(`detectFileType`), never by the extension or the client's MIME type; at most 10 MB, 50 live
+documents and 20 uploads an hour per participation (`documentLimits`). Every file is encrypted by
+the API before it reaches the store (`apps/api/src/document-encryption.ts`): AES-256-GCM under a
+random 256-bit data key per document, wrapped (AES-256-GCM) under a key derived (HKDF,
+`document-encryption:v1`) from `DOCUMENT_ENCRYPTION_KEY`, a root of its own (the store and its
+backups are another trust domain than the database); a 64-bit key id per row; the additional
+data binds the format version, document id, participation id and type, so an object copied to
+another row fails. The object is `TPD1 | nonce | ciphertext | tag` under the key
+`documents/<documentId>`: no name, project or person in a key. The store and its operator never
+see plaintext.
 
 Generated reports and exports become a resource of their own with the reporting slice; every
 generation and download is logged.
@@ -222,7 +258,8 @@ evidence.
 **`append_evidence_correction`**, targeting a document or a field. Who may request it is an
 explicit correction-authority table (`packages/domain/src/access/corrections.ts`), separate from
 who may open a document; requesting grants no read access.
-- Documents: PL for TL 407, Kug 200b, ASU proof, exception evidence, uploads and certificates;
+- Documents: PL for TL 407, Kug 200b, ASU proof, exception evidence, CVs, uploads and
+  certificates;
   PL or back office for the DSV and its cancellation.
 - Fields (round 13), only those retained in the evidence set: PL for `firstName`, `lastName`,
   `birthDate`, `personnelNumber`, `profilingSessions` (one session per correction, never the
@@ -648,8 +685,8 @@ Implementation:
 5. **No real data in development, tests, cloud coding sessions or screenshots.** Synthetic data
    only (`pnpm db:seed`, `fixtures/`).
 6. **Logs, error reports and job payloads contain no personal data.** Use IDs only.
-7. **Uploads**: virus scan (adapter), file-type allowlist, size limit, stored outside the web
-   root, signed short-lived URLs.
+7. **Uploads**: virus scan (adapter), file-type allowlist, size limit, encrypted before storage,
+   stored outside the web root, signed short-lived URLs (documents, "Document files" above).
 8. **Participant rights**: export of own data and deletion requests (admin workflow in the MVP),
    subject to the retention duties above.
 9. **Exports**: no Steuer-ID, SV-Nummer or IBAN in the payroll export unless back office
