@@ -37,8 +37,8 @@ operates a Hetzner cluster in German data centres.
 - [ ] **AVV chain signed** for the cluster (TG ↔ operator ↔ Hetzner, or TG ↔ Hetzner) —
       **blocking**. The product owner operates the cluster and owns the AVV chain (Q32).
 - [ ] Data-sharing clause in the customer contract (Q14)
-- [ ] No `assumed`/`verify` items left in data protection, retention or legal deadlines
-      (`open-questions.md`, rows marked 🔒)
+- [ ] No `assumed`/`verify`/`accepted` items left in data protection, retention or legal
+      deadlines (`open-questions.md`, rows marked 🔒)
 - [ ] **Row-level security per project enabled** on all tables with participant data (they
       carry `project_id` from the start, ADR-0002)
 - [ ] Backup and restore tested; backup retention ≤ 30 days
@@ -60,6 +60,11 @@ operates a Hetzner cluster in German data centres.
       ≤ 30 days so a purge takes effect (ADR-0008); a ClamAV scanner in the cluster with its
       adapter and contract test; `DOCUMENT_ENCRYPTION_KEY` from the secret store. Until then the
       API answers uploads and openings `503 storage_unavailable` in production.
+- [ ] **Works council and staff information for the audit history** (Q157): co-determination
+      under §87(1)(6) BetrVG checked for the named history of case actions ("Verlauf"), and staff
+      informed that case actions are attributable and what the history may be used for (case
+      reconstruction, correction, compliance, a concrete incident; never rankings or routine
+      monitoring)
 - [ ] Every DPO/legal confirmation implemented; if one required a design change, that change
       is built and tested (round 9)
 
