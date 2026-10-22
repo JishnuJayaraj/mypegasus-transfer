@@ -596,6 +596,18 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 | Submission to Agentur | assigned PL | TL 407 submission status and channel per participant |
 | DSV | PL / back office | DSV track, signatures of all three parties, scan, original location |
 
+### Document review *(assumed, Q146; Slice 4b)*
+
+A stored document is `uploaded` until it is reviewed once: the assigned consultant or the PL, in
+normal mode, accepts it or rejects it with `unreadable`, `wrong_document` or `incomplete`. The
+review is final (a second one is refused, `document_reviewed`); a wrong or rejected document is
+replaced by a new upload, never in place. Completeness rules (`documentPresent`) count the live
+documents of a type: an `uploaded` or `accepted` one satisfies a rule, `accepted: true` needs an
+accepted one, a rejected one alone gives `not_accepted`, none gives `missing`; a deleted document
+counts nothing. A terminal participation takes no upload (`participation_closed`); staff
+deletions stay possible (a wrong-person upload). Who adds, reviews and deletes is in
+data-protection.md (document operations).
+
 ### Import and manual creation (Q103, Q104)
 
 Both run under the PL's `importParticipations` capability, also in a draft project, and create

@@ -54,6 +54,12 @@ operates a Hetzner cluster in German data centres.
       key travels as a bind parameter of every encrypted read and write (ADR-0002, field
       encryption); the same holds for `pg_stat_statements` (normalised queries only) and any
       connection pooler's logs. `FIELD_ENCRYPTION_KEY` comes from the cluster's secret store.
+- [ ] **Document storage and scanning** (Q149): an S3-compatible store in a German location
+      under the AVV chain (Hetzner Object Storage, or MinIO in the cluster) with its adapter and
+      contract test; the bucket without public access, object versions and backups kept
+      ≤ 30 days so a purge takes effect (ADR-0008); a ClamAV scanner in the cluster with its
+      adapter and contract test; `DOCUMENT_ENCRYPTION_KEY` from the secret store. Until then the
+      API answers uploads and openings `503 storage_unavailable` in production.
 - [ ] Every DPO/legal confirmation implemented; if one required a design change, that change
       is built and tested (round 9)
 
@@ -74,3 +80,6 @@ operates a Hetzner cluster in German data centres.
   most two, with up to eight requests waiting (ADR-0003, ADR-0010), each holding about 13 MB (the
   8 MB body and the 5 MB decoded file). Two workers, the waiting requests and the API itself are
   budgeted under 1 GiB per pod; the pod's memory limit is set with the cluster deployment.
+- **Uploads per API pod** (Slice 4b): at most two at once, up to four waiting (ADR-0010), each
+  holding up to about 14 MB of body, 10 MB decoded and 10 MB ciphertext while it is scanned,
+  encrypted and stored: about 200 MB at the peak, within the same 1 GiB budget beside the import.
