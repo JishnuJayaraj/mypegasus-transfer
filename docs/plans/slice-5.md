@@ -3,8 +3,9 @@
 Status: **revised** 2026-10-22 after the product owner's review of PR #78 (not yet approved):
 the accepted decisions are recorded in [round 39](../decisions/2026-10-22-answers-round-39.md);
 this revision adds the required amendments (deadlines, the search snapshot, the dispatch check,
-audit redaction in the database, appointments as Slice 5b, two UX details). Nothing is
-implemented before approval.
+audit redaction in the database, appointments as Slice 5b, two UX details) and, after the second
+review, the final Q154 contract: every reminder needs a live `portal-contact-consent:v2` (D11,
+D18). Nothing is implemented before approval.
 Roadmap: funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines;
 deferred here from Slice 2: bulk entry-wave assignment and the audit history UI (the runtime role
 can't read `audit_event` yet). Builds on the participant list
@@ -97,7 +98,7 @@ entry Slice 5b.
 - **D7. Filters** (codes only, in the URL): main status, profiling and DSV status, wave (or
   `none`), consultant (or `none`), activation and notice state, actions (`any`, `fields`,
   `documents`, `rejected_documents`, `none`), `deadlineKind`, `deadlineState`, flag, portal
-  (`reachable`, `not_reachable`); all defined in the domain (`WorklistFilter`) and applied by
+  (`reachable`, `consent_required`, `not_reachable`; D11); all defined in the domain (`WorklistFilter`) and applied by
   `matchesWorklistFilter`, the predicate of D2.
 - **D8. Bulk entry-wave assignment** (deferred from Slice 2): `POST
   /projects/{id}/entry-wave-assignments` `{ waveId, participationIds }` (1–500 distinct), PL only,
@@ -122,12 +123,16 @@ entry Slice 5b.
   (`requester_no_longer_authorized`). Reminder records and their audit events are never used for
   staff rankings, productivity metrics or general performance monitoring.
 - **D11. Channel and consent** (Q154): only a channel the participant registered, verified, not
-  removed or suspended, with a live `portal_contact` consent; never imported contact data, the
-  work email, postal data, a destination from staff, or another channel after queuing. With
-  several live channels: the most recently verified email, else the most recently verified mobile,
-  the channel id breaking a tie. The channel id and kind, the account's language and the text
-  version are fixed when the reminder is queued; if that channel becomes unavailable the reminder
-  is cancelled, never rerouted. `reachable` on the work list means "has such a channel".
+  removed or suspended, whose consent is live with purpose `portal_contact`, version exactly
+  `portal-contact-consent:v2` and `ended_at` null. A channel with a v1 consent stays valid for
+  login codes but receives no reminder (D18). Never imported contact data, the work email, postal
+  data, a destination from staff, or another channel after queuing. Among the eligible channels:
+  the most recently verified email, else the most recently verified mobile, the channel id
+  breaking a tie. The channel id and kind, its consent id, the account's language and the text
+  version are fixed when the reminder is queued; if that channel or consent stops being eligible
+  the reminder is cancelled, never rerouted. `reachable` on the work list means "has an eligible
+  channel"; the portal filter adds `consent_required` (a live channel, none with a live v2
+  consent).
 - **D12. One kind, a fixed generic text** (Q154): `open_items`, only when the participant has a
   participant action (D3). `portal-reminder:v1`, immutable with fixed SHA-256 tests in the notice
   catalog, final wording with the DPO (Q132):
@@ -140,24 +145,23 @@ entry Slice 5b.
 
   The URL is the plain `PORTAL_PUBLIC_URL`: no token, participant id, campaign parameter or
   tracking redirect; plain-text mail, no pixel, no analytics beyond the provider's outcome. The
-  consent must name operational portal notifications, be revocable and exclude advertising:
-  `portal-contact-consent:v2` (de/en) says so and is the version new consents record. v1 already
-  names "Benachrichtigungen aus dem Portal" and is revocable, so a v1 consent (synthetic data only
-  so far) still covers reminders (a reading for the owner to confirm). Removing the last channel
-  warns that portal login is then no longer possible and that help in person, by phone or by
-  letter remains (the portal's existing warning, new copy).
+  consent that permits it is `portal-contact-consent:v2` (D18). Removing the last channel warns
+  that portal login is then no longer possible and that help in person, by phone or by letter
+  remains (the portal's existing warning, new copy).
 - **D13. Queued atomically, checked again under current state before dispatch** (Q154, Q155):
   - **Request:** the API evaluates the selection's actions (TypeScript) and calls
     `request_reminders`, which checks authority, the project, each participation's status, the
-    channel and the window, picks the channel and writes the rows `queued` with one
-    `reminder_queued` each; in the same transaction the API sends one `reminders.send` job per
-    queued reminder through pg-boss on the transaction's connection. A failed enqueue rolls back
-    rows, events and jobs alike: nothing is queued without its job.
+    channel and its v2 consent (D11) and the window, picks the channel and writes the rows
+    `queued` with one `reminder_queued` each; in the same transaction the API sends one
+    `reminders.send` job per queued reminder through pg-boss on the transaction's connection. A
+    failed enqueue rolls back rows, events and jobs alike: nothing is queued without its job.
   - **Dispatch claim:** the worker opens a transaction, locks the participation
     (`lock_participation`: the participant's writes and the team changes serialise with it),
     loads the actions' facts and evaluates them, then calls `claim_reminder_dispatch` with that
-    verdict; the function locks the channel and consent rows and rechecks the channel, the
-    consent, the participation's status, the requester's authority and the verdict. It marks the
+    verdict; the function locks the queued channel and its queued consent row and rechecks
+    exactly them (the channel live, the channel still pointing to that consent, the consent live
+    with version `portal-contact-consent:v2`), the participation's status, the requester's
+    authority and the verdict. It marks the
     reminder `dispatching` or cancels it (`channel_unavailable`, `consent_ended`,
     `participation_closed`, `nothing_open`, `requester_no_longer_authorized`), audited. The
     guarantee: **no dispatch when the invalidating change committed before the claim**; a change
@@ -182,7 +186,10 @@ entry Slice 5b.
   participant detail is readable by whoever reads the participation's `case_internal` data: the
   PL, the assigned consultant and back office.
 - **D15. Bulk sending skips per row and refuses only for the request as a whole.** Skipped with a
-  code: `no_channel`, `reminded_recently`, `nothing_open`, `participation_closed`. Refused as a
+  code: `no_channel` (no live verified channel), `consent_required` (a live channel, none with a
+  live v2 consent), `reminded_recently`, `nothing_open`, `participation_closed`. Staff see both
+  channel codes as the one generic text "Kein für Erinnerungen nutzbarer Kontaktweg." (counted
+  apart only in the result's codes). Refused as a
   whole: visibility (D10), `403`, `project_not_active`, duplicates, `503`. The work list's
   capability `remind` (with its code) gives the dialog its counts before sending; the database
   decides again.
@@ -209,17 +216,41 @@ entry Slice 5b.
     never returned in a history).
   - The API's cursor is opaque (base64url of the position), whatever the function uses inside.
 - **D17. The participant detail gets the tabs "Nachrichten" (D14) and "Verlauf" (D16).**
+- **D18. Consent v2 and the voluntary upgrade** (Q154, final):
+  - `portal-contact-consent:v2` (de/en, immutable, SHA-256 tests): consent to the stored private
+    email or mobile being used for login codes and operational notifications from the portal,
+    such as reminders that something is open; no advertising; voluntary and revocable by removing
+    the channel or writing to the controller. Final wording with the DPO (Q132).
+  - **New channels:** from 5-2 on, activation, recovery and adding a channel record v2 only:
+    `complete_activation`, the recovery completion and `add_participant_channel` are replaced to
+    accept `portal-contact-consent:v2` and refuse v1.
+  - **Existing v1 channels:** no migration converts v1 evidence into v2. "Meine Kontaktwege" in
+    the portal offers a voluntary, non-blocking upgrade per v1 channel (the v2 text, "Zustimmen",
+    "Später"). Declining or dismissing it removes no channel, ends no session and doesn't affect
+    login; the offer comes back on the next visit to the page and nowhere else. The verified
+    address isn't verified again. Staff can't give v2 on a participant's behalf: there is no
+    staff or assisted route, and the function refuses any actor but the participant's live active
+    session.
+  - **Atomic upgrade** `upgrade_channel_consent(session, channel, consent id, version, language)`:
+    locks the participation (`lock_participation`), then the channel, then its current consent;
+    refuses a channel that isn't the session's own live channel (`channel_not_found`) and any
+    version but v2; returns `already_current` (no write) when the channel's consent is already v2;
+    otherwise ends the v1 consent with the new `ConsentEndReason` `superseded` (never `revoked`),
+    inserts the participant-given v2 consent, points `participant_channel.consent_id` to it and
+    writes `consent_ended` and `consent_given` in the same transaction.
 
 ## PRs
 
 One planned PR = one branch, each based on `main` after its predecessor merged (none stacked);
 about 1,500 changed production lines is a soft limit, not a target. 5-3 needs neither 5-1 nor
-5-2, but its projection table must cover every event type, so it follows 5-2.
+5-2, but its projection table must cover every event type, so it follows 5-2. 5-2 grows to about
+1,650 lines with the v2 consent (D18): it stays one PR because v2 exists only as the reminders'
+eligibility rule; if the owner prefers, D18 can go first as its own PR based on `main`.
 
 | PR | Scope | Est. lines |
 |---|---|---|
 | 5-1 | Dashboard and work list (D1–D8): the projection, actions, deadlines, funnel and filters in the domain; the worklist snapshot and dashboard routes, bulk wave assignment; the tabs "Übersicht" and "Teilnehmende" with filters, the in-memory search and the wave action | ~1,450 |
-| 5-2 | Reminders (D9–D15): policy, texts and consent v2; `participant_reminder`, `request_reminders`, `claim_reminder_dispatch`, `record_reminder_outcome`, grants and events; the job; the routes; "Erinnern", the column and the tab "Nachrichten" | ~1,500 |
+| 5-2 | Reminders (D9–D15, D18): policy and texts; consent v2 for new channels and the voluntary upgrade; `participant_reminder`, `request_reminders`, `claim_reminder_dispatch`, `record_reminder_outcome`, `upgrade_channel_consent`, grants and events; the job; the routes; "Erinnern", the column, the tab "Nachrichten" and the portal's upgrade notice | ~1,650 |
 | 5-3 | Audit history (D16, D17): the projection and knowledge tables in the domain, `audit_event_projection`, `role_field_knowledge`, `audit_history`, the route and the tab "Verlauf"; archive this plan | ~1,100 |
 
 ## Design
@@ -237,16 +268,19 @@ about 1,500 changed production lines is a soft limit, not a target. 5-3 needs ne
 
 5-2, `src/reminders/`:
 - `ReminderKind` (`open_items`); `ReminderStatus` (`queued`, `dispatching`, `sent`, `failed`,
-  `delivery_unknown`, `cancelled`); `ReminderSkip` (`no_channel`, `reminded_recently`,
-  `nothing_open`, `participation_closed`); `ReminderCancelReason` (`channel_unavailable`,
-  `consent_ended`, `participation_closed`, `nothing_open`, `requester_no_longer_authorized`,
-  `delivery_unavailable`).
+  `delivery_unknown`, `cancelled`); `ReminderSkip` (`no_channel`, `consent_required`,
+  `reminded_recently`, `nothing_open`, `participation_closed`); `ReminderCancelReason`
+  (`channel_unavailable`, `consent_ended`, `participation_closed`, `nothing_open`,
+  `requester_no_longer_authorized`, `delivery_unavailable`).
 - `reminderPolicy` (3 Berlin days from the last queued request; 1–500 per request);
   `nextEligibleDate(lastQueuedOn)`; `mayRemind(subject, target)` beside `mayPerformOperation`;
   `chooseChannel(channels)` (D11); `reminderEligibility(item, lastQueuedOn, today)` → `ok` or a
   skip code (the capability; the database decides again).
-- Notice catalog: `portal-reminder:v1` (D12) and `portal-contact-consent:v2`, each de/en with its
-  SHA-256; the reminder's only placeholder is the portal URL.
+- Notice catalog: `portal-reminder:v1` (D12) and `portal-contact-consent:v2` (D18), each de/en
+  with its SHA-256; the reminder's only placeholder is the portal URL;
+  `PORTAL_CONTACT_CONSENT_VERSION` becomes v2 and `reminderConsentVersion` names the only
+  version a reminder accepts. `ConsentEndReason` adds `superseded`;
+  `consentUpgradeOffered(channel)` (a live channel whose consent is v1).
 - Audit events (reserved): `reminder_queued` (reminder and batch id, kind, channel kind),
   `reminder_delivery` (reminder id, outcome, cancel reason).
 
@@ -267,7 +301,7 @@ about 1,500 changed production lines is a soft limit, not a target. 5-3 needs ne
 
 | Table | Holds | dataClass / accessCategory | retentionClass |
 |---|---|---|---|
-| `participant_reminder` | id, project, participation, `batch_id`, `kind`, `message_version`, `language`, `channel_id` (FK `participant_channel`), `channel_kind`, `requested_by` (staff id), `requested_at`, `requested_on` (Berlin date, for the window), `status`, `cancel_reason`, `claimed_at`, `outcome_at`; nothing else (D14) | internal / `case_internal` | `personnel_file` (Q156: non-signers with the 90-day deletion of the operational file, otherwise the end of the 3rd calendar year after exit; a legal hold extends only the affected rows; the channel's address is erased under its own rule and the reminder keeps the value-free channel id) |
+| `participant_reminder` | id, project, participation, `batch_id`, `kind`, `message_version`, `language`, `channel_id` (FK `participant_channel`), `channel_kind`, `consent_id` (the v2 consent it was queued under), `requested_by` (staff id), `requested_at`, `requested_on` (Berlin date, for the window), `status`, `cancel_reason`, `claimed_at`, `outcome_at`; nothing else (D14) | internal / `case_internal` | `personnel_file` (Q156: non-signers with the 90-day deletion of the operational file, otherwise the end of the 3rd calendar year after exit; a legal hold extends only the affected rows; the channel's address is erased under its own rule and the reminder keeps the value-free channel id) |
 
 5-3:
 
@@ -287,17 +321,22 @@ is deleted.
   participation the reminder id or a skip code. Exclusive project lock; refuses
   `project_not_active`, `participation_not_found` (another project's id, or for a consultant one
   not assigned to them), `actor_not_allowed` (any other role, assisted mode); per row
-  `participation_closed`, `no_channel`, `reminded_recently` (database Berlin date). The API passes
+  `participation_closed`, `no_channel`, `consent_required`, `reminded_recently` (database Berlin
+  date). The API passes
   only participations with a participant action and skips the rest `nothing_open` itself. Picks
-  and stores the channel and language (D11); writes `queued` and `reminder_queued`.
+  and stores the channel, its consent and the language (D11); writes `queued` and
+  `reminder_queued`.
 - `claim_reminder_dispatch(reminder, has_actions, job id)` → `dispatching`, `settled` (the job
-  stops) or the cancel reason. Under `lock_participation`, with the channel and consent rows
-  `FOR SHARE`, it rechecks D13; from `dispatching` (a retry) a failed check settles
-  `delivery_unknown`.
+  stops) or the cancel reason. Under `lock_participation`, with the queued channel and consent
+  rows `FOR SHARE`, it rechecks D13 against exactly those ids and the v2 version; from
+  `dispatching` (a retry) a failed check settles `delivery_unknown`.
 - `record_reminder_outcome(reminder, outcome, cancel reason, job id)`: system actor; once per
   reminder (the same outcome again is a no-op, another `reminder_settled`); `reminder_delivery`.
-- Grants: `transfer_app` selects `participant_reminder` and writes none; `EXECUTE` on the three;
-  `record_audit_event` refuses the two event types.
+- `upgrade_channel_consent` (D18); `complete_activation`, the recovery completion and
+  `add_participant_channel` replaced to accept v2 only; the enum `consent_end_reason` adds
+  `superseded` (compared as text in the same migration, ADR-0002).
+- Grants: `transfer_app` selects `participant_reminder` and writes none; `EXECUTE` on the four new
+  functions; `record_audit_event` refuses the two reminder event types.
 
 5-3:
 - `audit_history(staff session hash, participation, before seq, limit)` → the projected rows (seq,
@@ -319,12 +358,15 @@ is deleted.
 | 5-1 | `POST /projects/{id}/entry-wave-assignments` | `{ waveId, participationIds }` → `200 { assigned, unchanged }`; `422` with `errors[]` at `/participationIds/<i>` per refused row |
 | 5-2 | `POST /projects/{id}/reminders` | `{ kind, participationIds }` → `201 { batchId, queued, skipped: [{ participationId, code }] }` |
 | 5-2 | `GET /participations/{id}/reminders` | the reminders, newest first (cursor); for `case_internal` readers |
+| 5-2 | `POST /portal/channels/{channelId}/consent-upgrade` | the participant only: `{ consentVersion: "portal-contact-consent:v2", language }` → `200 { result: "upgraded" \| "already_current" }`; `404` for a channel that isn't the session's own live one |
 | 5-3 | `GET /participations/{id}/history` | `HistoryPage`, newest first, an opaque cursor |
 
 `WorklistItem` (5-2) adds `reminder: { lastRequestedOn, status } | null` and `capabilities.remind`
 (`{ allowed, code }`). New codes: 422 `worklist_too_large`, 503 `jobs_unavailable`; the others
 exist (`project_not_active`, `participation_not_found`, `not_ta_tg`, the wave codes,
-`delivery_unavailable`). Skips are data in the `201`, not problems. Order as in ADR-0010: schema →
+`delivery_unavailable`). `GET /portal/me` marks each own channel `consentUpgrade: true` while its
+consent is v1; staff channel views show the consent version beside kind and state (never the
+address). Skips are data in the `201`, not problems. Order as in ADR-0010: schema →
 visibility (404, or `participation_not_found` for ids in a body) → permission 403 → state 422.
 
 ### Jobs (5-2)
@@ -341,10 +383,13 @@ never an address, text, name or provider error.
   actions and the first as tags, with the self-service labels), "Frist" (the most urgent,
   "überschritten seit …" or "in n Tagen"), "Portal"; "Alle Treffer auswählen"; the bulk action
   "Eintrittswelle zuweisen" with the refusal text of D8.
-- 5-2: bulk "Erinnern": counts from the rows' capabilities ("per E-Mail", "per SMS", "nicht
-  erreichbar", "kürzlich erinnert (wieder ab …)", "nichts offen"), the fixed text as preview,
+- 5-2: bulk "Erinnern": counts from the rows' capabilities ("per E-Mail", "per SMS", "Kein für
+  Erinnerungen nutzbarer Kontaktweg." for both `no_channel` and `consent_required`, "kürzlich
+  erinnert (wieder ab …)", "nichts offen"), the fixed text as preview,
   "Senden", then the result per code; the column "Erinnert"; the detail tab "Nachrichten" (date,
-  kind, E-Mail/SMS, status or cancel reason, "Team").
+  kind, E-Mail/SMS, status or cancel reason, "Team"). Portal (de/en): in "Meine Kontaktwege" a
+  notice per v1 channel with the v2 text, "Zustimmen" and "Später" (D18); activation, recovery and
+  "Kontaktweg hinzufügen" show v2.
 - 5-3: the detail tab "Verlauf": Zeitpunkt (Berlin), Ereignis, Änderung (von → nach), Grund,
   wirksam am, durch; "Mehr laden".
 - Every button by its capability (ADR-0010, capabilities).
@@ -392,9 +437,9 @@ never an address, text, name or provider error.
   (Chromium in CI); the recorded requests show one worklist request and none carrying the term.
 
 **5-2**
-- Domain tests: eligibility per skip code; Monday → Thursday and the window across a DST change;
-  the channel choice (two emails, email vs. mobile, the id tie-break); the texts' SHA-256 and the
-  single placeholder.
+- Domain tests: eligibility per skip code (`no_channel` vs. `consent_required`); Monday →
+  Thursday and the window across a DST change; the channel choice (two emails, email vs. mobile,
+  the id tie-break); the texts' SHA-256 and the single placeholder.
 - Integration: rows, events and jobs commit together and an enqueue failure leaves none; skips
   are enforced in the function with the API bypassed; a consultant naming a hidden participation
   gets `participation_not_found`, back office `403`; `NODE_ENV=production` without a sender or
@@ -402,14 +447,27 @@ never an address, text, name or provider error.
   before the claim (channel removed, consent ended, participation closed, the wizard completed,
   the consultant unassigned); no reroute to another channel; a retry after an unknown outcome
   sends with the same key and settles `delivery_unknown` when its claim now fails; a definitive
-  failure is final; the runtime role can't write `participant_reminder`.
+  failure is final; the runtime role can't write `participant_reminder`. Consent v2: a channel
+  with a v1 consent is skipped `consent_required` and still gets login codes; activation,
+  recovery and a new channel record v2 and refuse v1; the upgrade ends v1 `superseded` (never
+  `revoked`), inserts v2, repoints the channel and writes `consent_ended` and `consent_given` in
+  one transaction, answers `already_current` without a write the second time, refuses another
+  participant's channel and any staff or assisted actor, and asks for no new verification; no
+  migration changes an existing consent's version; a reminder queued under a consent that is
+  ended before the claim is cancelled `consent_ended`.
 - Log capture: no address, text, name or provider error in logs, job payloads, errors or audit
   details.
-- Component tests: the dialog's counts, the result per code, "Nachrichten" for each role.
+- Component tests: the dialog's counts, the result per code (both channel codes as the one
+  generic text), "Nachrichten" for each role; the portal's upgrade notice ("Zustimmen" upgrades,
+  "Später" leaves the channel, session and login as they are), de/en.
 - e2e `reminders.spec.ts` (no code submission: `activatedParticipant`, `loggedInAsOwner`; CSP
-  check): an activated participant with open items and one without an account → one sent, one
-  skipped `no_channel`; the development outbox holds exactly the fixed German text with the plain
-  portal URL and none of the participant's data; a second request is skipped `reminded_recently`;
+  check): an activated participant (v2) with open items, one without an account and one whose
+  channel still has a v1 consent (a v1 consent row written by an owner fixture in
+  `participants.ts`, since activations record v2) → one sent, one skipped `no_channel`, one
+  `consent_required`; the v1 participant accepts the upgrade in "Meine Kontaktwege" (a skip
+  queues nothing, so no window applies) and the PL's next reminder reaches them; the development
+  outbox holds exactly the fixed German text with the plain portal URL and none of the
+  participant's data; a second request is skipped `reminded_recently`;
   the participant follows the link into the portal.
 
 **5-3**
@@ -434,8 +492,9 @@ never an address, text, name or provider error.
   an exception to cursor pagination, codes), `architecture/overview.md` (the project page's tabs).
 - 5-2: ADR-0002 (`participant_reminder`, the functions, grants), ADR-0006 (reminder delivery as
   built), ADR-0011 (`reminders.send`, the claim), ADR-0010 (routes, codes), `data-protection.md`
-  (reminders: who, channel and consent, the text, no monitoring use, the retention row, consent
-  v2), `regional-variation.md` (no regional reminder rules, Q152).
+  (reminders: who, channel and consent, the text, no monitoring use, the retention row; consent
+  v2, the upgrade and `superseded`), ADR-0007 (consent v2 at activation, recovery and new
+  channels), `regional-variation.md` (no regional reminder rules, Q152).
 - 5-3: ADR-0002 (the reference tables, `audit_history`, grants), ADR-0010 (the history route),
   `data-protection.md` ("Audit metadata" as built, the purposes of the history, Q157), the
   generated access matrix ("Audit history"), `roadmap.md` (Slice 5 done); this plan moves to

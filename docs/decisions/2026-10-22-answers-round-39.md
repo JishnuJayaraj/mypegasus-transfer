@@ -115,6 +115,31 @@ Staff see only email/SMS and the outcome, never the destination.
   and exclude advertising. Removing the last channel warns that portal login will no longer be
   possible; assisted and offline service remains available.
 
+### Final amendment after the second review: consent v2 only
+
+Every reminder requires a live `portal-contact-consent:v2` for the selected channel; v1 is not
+reminder-eligible. v1 could plausibly cover reminders, but relying on that reading brings no
+benefit while no real participants exist; explicit v2 consent is clearer and safer.
+
+1. **Eligibility:** the selected channel references a live consent with purpose `portal_contact`,
+   version exactly `portal-contact-consent:v2` and `ended_at` null. A v1 channel stays valid for
+   login codes but can't receive Slice 5 reminders. No migration silently converts v1 evidence
+   into v2 consent.
+2. **New channels:** once 5-2 is deployed, activations, recoveries and newly added channels record
+   only v2.
+3. **Existing v1 channels:** a voluntary, non-blocking upgrade in the participant's contact
+   settings. Declining or dismissing it removes no channel, ends no session and doesn't prevent
+   login. Staff can't accept v2 on a participant's behalf. The already verified destination isn't
+   verified again.
+4. **Atomic upgrade:** lock participation → channel → current consent; end v1 with the new
+   `ConsentEndReason` `superseded`, never `revoked`; insert the participant-given v2 consent and
+   point `participant_channel.consent_id` to it; write `consent_ended` and `consent_given` in the
+   same transaction; return `already_current` idempotently when the channel already uses v2.
+5. **Result codes:** `no_channel` (no live verified channel), `consent_required` (a live channel,
+   none with a live v2 consent); staff-facing copy for either stays generic: "Kein für
+   Erinnerungen nutzbarer Kontaktweg." Dispatch rechecks the exact queued channel and consent id
+   and the v2 version.
+
 ## Q156 — Reminder classification and retention
 
 Reminder metadata is internal `case_internal` data under `personnel_file`. It stores identifiers,
