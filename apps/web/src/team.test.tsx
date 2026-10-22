@@ -12,6 +12,8 @@ import {
   staffUsers,
   team,
   unpinnedConfig,
+  worklist,
+  worklistItem,
 } from "./test-utils";
 
 // Teams, assignments and the project's region (Q62, Q126): what the PL and the global admin are
@@ -19,25 +21,8 @@ import {
 const path = `/api/v1/projects/${project.id}`;
 const participationId = "00000000-0000-4000-a000-000000000001";
 const backOffice = { id: "00000000-0000-4000-8000-000000000005", displayName: "Birgit Backoffice" };
-const item = (id: string, personnelNumber: string, consultants: object[] = []) => ({
-  id,
-  status: "imported",
-  profilingStatus: "not_started",
-  dsvStatus: "not_offered",
-  entryWaveId: null,
-  personnelNumber,
-  lastName: "Mustermann",
-  firstName: "Erika",
-  consultants,
-  activationStatus: { account: "not_activated", code: "none", issuedAt: null, expiresAt: null },
-  privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
-  activationCapabilities: {
-    issueActivationCode: false,
-    recordHandover: false,
-    revokeActivationCode: false,
-    providePrivacyNotice: false,
-  },
-});
+const item = (id: string, personnelNumber: string, consultants: object[] = []) =>
+  worklistItem({ id, personnelNumber, lastName: "Mustermann", consultants });
 
 function setup(routes: Parameters<typeof mockApi>[0] = {}, me = staffUsers[1]) {
   return mockApi({
@@ -47,9 +32,9 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, me = staffUsers[1]) {
     [`GET ${path}/entry-waves`]: () => json({ items: [], nextCursor: null }),
     [`GET ${path}/config`]: () => json(unpinnedConfig),
     "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
-    [`GET ${path}/participations`]: () =>
-      json({
-        items: [
+    [`GET ${path}/worklist`]: () =>
+      json(
+        worklist([
           item(participationId, "BSP-0001", [
             {
               staffUserId: consultant.id,
@@ -58,9 +43,8 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, me = staffUsers[1]) {
             },
           ]),
           item("00000000-0000-4000-a000-000000000002", "BSP-0002"),
-        ],
-        nextCursor: null,
-      }),
+        ]),
+      ),
     ...routes,
   });
 }
@@ -174,7 +158,7 @@ describe("assignments (Q62)", () => {
     const { api, calls } = setup({
       [`POST ${path}/assignments`]: () => json({ assigned: 1 }),
     });
-    renderApp(`/projects/${project.id}`, api);
+    renderApp(`/projects/${project.id}?tab=participants`, api);
     await screen.findByRole("cell", { name: "BSP-0001" });
     const list = within(
       document.querySelector<HTMLElement>('[aria-labelledby="project-participants"]')!,
@@ -203,7 +187,7 @@ describe("assignments (Q62)", () => {
       [`GET ${path}/members`]: () =>
         json({ ...team, capabilities: { ...team.capabilities, assignParticipations: false } }),
     });
-    renderApp(`/projects/${project.id}`, api);
+    renderApp(`/projects/${project.id}?tab=participants`, api);
     expect(await screen.findByRole("cell", { name: "BSP-0001" })).toBeInTheDocument();
     expect(screen.queryByLabelText("BSP-0002 auswählen")).toBeNull();
     expect(screen.queryByRole("button", { name: /Zuweisen/ })).toBeNull();

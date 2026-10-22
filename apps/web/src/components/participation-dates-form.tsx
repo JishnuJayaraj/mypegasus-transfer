@@ -15,7 +15,7 @@ import {
 } from "@transfer/ui";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { participantsQuery, participationQuery, useApi } from "../api";
+import { worklistQuery, participationQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
 
 type Detail = components["schemas"]["ParticipationDetail"];
@@ -67,7 +67,7 @@ export function ParticipationDatesForm({ detail }: { detail: Detail }) {
     onSuccess: async (updated) => {
       queryClient.setQueryData(participationQuery(api, detail.id).queryKey, updated);
       await queryClient.invalidateQueries({
-        queryKey: participantsQuery(api, detail.projectId).queryKey,
+        queryKey: worklistQuery(api, detail.projectId).queryKey,
       });
       showToast({ title: t("participant.dates.saved") });
       setOpen(false);

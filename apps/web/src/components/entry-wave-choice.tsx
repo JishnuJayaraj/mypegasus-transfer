@@ -12,7 +12,7 @@ import {
 } from "@transfer/ui";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { entryWavesQuery, participantsQuery, participationQuery, useApi } from "../api";
+import { entryWavesQuery, worklistQuery, participationQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
 
 type Detail = components["schemas"]["ParticipationDetail"];
@@ -48,7 +48,7 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
       queryClient.setQueryData(participationQuery(api, detail.id).queryKey, updated);
       // The list shows the wave, the wave table its number of participations.
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey }),
+        queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
         queryClient.invalidateQueries({ queryKey: entryWavesQuery(api, projectId).queryKey }),
       ]);
       showToast({ title: t("participant.waveAssigned"), subtitle: updated.entryWave?.code });

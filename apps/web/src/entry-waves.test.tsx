@@ -40,7 +40,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, waves = [w1]) {
     [`GET ${path}/entry-waves`]: () => json({ items: waves, nextCursor: null }),
     ...routes,
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=setup`, api);
   return calls;
 }
 
@@ -65,6 +65,7 @@ describe("project page", () => {
     });
     renderApp("/projects", api);
     await userEvent.click(await screen.findByRole("link", { name: "Restrukturierung Werk Nord" }));
+    await userEvent.click(await screen.findByRole("tab", { name: "Einrichtung" }));
     expect(await screen.findByText("Es gibt noch keine Eintrittswellen.")).toBeInTheDocument();
   });
 
@@ -73,7 +74,7 @@ describe("project page", () => {
       ...loggedIn,
       [`GET ${path}`]: () => json({ ...project, type: "ta_only" }),
     });
-    renderApp(`/projects/${project.id}`, api);
+    renderApp(`/projects/${project.id}?tab=setup`, api);
     expect(
       await screen.findByText("Nur Projekte mit Transfergesellschaft haben Eintrittswellen."),
     ).toBeInTheDocument();

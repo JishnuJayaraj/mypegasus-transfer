@@ -628,6 +628,7 @@ export {
 } from "./self-service/api";
 export { ParticipantAction, participantActions, type ActionFacts } from "./worklist/actions";
 export {
+  compareUrgency,
   Deadline,
   DeadlineKind,
   deadlinesOf,

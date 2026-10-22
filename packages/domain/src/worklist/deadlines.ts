@@ -98,19 +98,16 @@ function profilingExceptionDeadline(s: ParticipationSnapshot, today: IsoDate): I
   return addMonths(entry, profilingExceptionDeadlineMonths);
 }
 
-/**
- * The deadline a row shows: the oldest overdue one, else the earliest upcoming one; a tie by kind
- * in `DeadlineKind`'s order.
- */
+/** Most urgent first: overdue before upcoming, then the older date, then `DeadlineKind`'s order. */
+export function compareUrgency(a: Deadline, b: Deadline): number {
+  const overdue = (d: Deadline) => (d.state === "overdue" ? 0 : 1);
+  const kind = (d: Deadline) => DeadlineKind.options.indexOf(d.kind);
+  return overdue(a) - overdue(b) || a.date.localeCompare(b.date) || kind(a) - kind(b);
+}
+
+/** The deadline a row shows: the oldest overdue one, else the earliest upcoming one. */
 export function mostUrgent(deadlines: readonly Deadline[]): Deadline | null {
-  const rank = (d: Deadline) =>
-    [d.state === "overdue" ? 0 : 1, d.date, DeadlineKind.options.indexOf(d.kind)] as const;
-  return (
-    deadlines.toSorted((a, b) => {
-      const [x, y] = [rank(a), rank(b)];
-      return x[0] - y[0] || x[1].localeCompare(y[1]) || x[2] - y[2];
-    })[0] ?? null
-  );
+  return deadlines.toSorted(compareUrgency)[0] ?? null;
 }
 
 /** The planner's flags without those a deadline represents, so a cutoff is counted once. */

@@ -23,7 +23,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   entryWavesQuery,
-  participantsQuery,
+  worklistQuery,
   participationActivationQuery,
   participationQuery,
   projectQuery,
@@ -108,7 +108,7 @@ function ParticipationPage() {
   const name = [person.lastName, person.firstName].filter(Boolean).join(", ");
   return (
     <>
-      <RouterLink to="/projects/$projectId" params={{ projectId }}>
+      <RouterLink to="/projects/$projectId" params={{ projectId }} search={{ tab: "participants" }}>
         {t("participant.back", { project: project.name })}
       </RouterLink>
       <PageHeader title={name || t("participant.title")} />
@@ -212,7 +212,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
         queryKey: participationActivationQuery(api, detail.id).queryKey,
       }),
       queryClient.invalidateQueries({ queryKey: participationQuery(api, detail.id).queryKey }),
-      queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey }),
+      queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
     ]);
   };
   const send = useMutation({
@@ -467,7 +467,11 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
             </Button>
           )}
         {detail.capabilities.issueActivationCode && status.account !== "activated" && (
-          <RouterLink to="/projects/$projectId" params={{ projectId }}>
+          <RouterLink
+            to="/projects/$projectId"
+            params={{ projectId }}
+            search={{ tab: "participants" }}
+          >
             {t("activation.detail.issuePrint")}
           </RouterLink>
         )}
@@ -492,7 +496,7 @@ function Assignments({ detail, projectId }: { detail: Detail; projectId: string 
     setFailed(false);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: participationQuery(api, detail.id).queryKey }),
-      queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey }),
+      queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
     ]);
   };
   const assign = useMutation({

@@ -115,6 +115,44 @@ body {
   }
 }
 
+// The dashboard's tiles: each one a link to the work list with its filter (Slice 5).
+.tp-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: $spacing-05;
+  margin-block: $spacing-05 $spacing-07;
+  padding: 0;
+  list-style: none;
+
+  a {
+    display: block;
+    block-size: 100%;
+    padding: $spacing-05;
+    background: theme.$layer-01;
+    color: theme.$text-primary;
+    text-decoration: none;
+  }
+
+  a:hover,
+  a:focus {
+    background: theme.$layer-hover-01;
+  }
+
+  strong {
+    display: block;
+    font-size: 2rem;
+    line-height: 1.25;
+  }
+}
+
+// The work list's filter bar and search (Slice 5).
+.tp-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: $spacing-05;
+  margin-block: $spacing-05;
+}
+
 // Label/value pairs, such as a participant's data (Slice 2, PR 2h-1).
 .tp-facts {
   display: grid;

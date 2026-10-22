@@ -3,13 +3,7 @@ import { type components } from "@transfer/api-client";
 import { Button, InlineNotification, useToast } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  entryWavesQuery,
-  participantsQuery,
-  projectConfigQuery,
-  projectQuery,
-  useApi,
-} from "../api";
+import { entryWavesQuery, worklistQuery, projectConfigQuery, projectQuery, useApi } from "../api";
 import { ImportWizard } from "./import-wizard";
 
 type Result = components["schemas"]["ImportResult"];
@@ -35,7 +29,7 @@ export function ImportSection({ projectId }: { projectId: string }) {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: projectConfigQuery(api, projectId).queryKey }),
       queryClient.invalidateQueries({ queryKey: projectQuery(api, projectId).queryKey }),
-      queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey }),
+      queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
       queryClient.invalidateQueries({ queryKey: entryWavesQuery(api, projectId).queryKey }),
     ]);
 

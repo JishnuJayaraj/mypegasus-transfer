@@ -37,11 +37,11 @@ function setup(post: Parameters<typeof mockApi>[0][string], config: object = unp
     [`GET ${path}`]: () => json(project),
     [`GET ${path}/entry-waves`]: () => json({ items: [wave], nextCursor: null }),
     [`GET ${path}/config`]: () => json(config),
-    [`GET ${path}/participations`]: () => json({ items: [], nextCursor: null }),
+    [`GET ${path}/worklist`]: () => json({ generatedAt: "2026-10-22T08:42:00.000Z", items: [] }),
     "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
     [`POST ${path}/participations`]: post,
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=participants`, api);
   return calls;
 }
 
