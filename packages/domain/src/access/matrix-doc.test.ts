@@ -37,8 +37,21 @@ it("renders every subject, key and undecided cell (docs/domain/generated/access-
     "| Consultant/profiler (assigned) | `tl407_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |",
   );
   expect(doc).toContain("| PL | `confidential` | `write` | no: needs_assisted_mode | yes |");
-  // The sampled self-service fields are decided (Q136); Q65 holds for the others.
-  expect(part("## Undecided cells")).toContain("No sampled cell is undecided.");
+  const operations = part("## Document operations");
+  expect(firstTable(part("### Normal mode", operations))).toHaveLength(
+    profiles * DocumentType.options.length,
+  );
+  expect(doc).toContain("| PL | `cv` | yes | yes | yes |");
+  expect(doc).toContain("| Back office | `cv` | no: role_not_allowed | no: role_not_allowed |");
+  expect(doc).toContain("| PL | `cv` | `review` | yes | no: mode_not_allowed |");
+  // The sampled self-service fields are decided (Q136); Q65 holds for the others and for the
+  // operations of the document types later slices wire.
+  const undecided = rows(part("## Undecided cells"));
+  expect(undecided.length).toBeGreaterThan(0);
+  expect(undecided.every((row) => row.includes("any phase normal, any phase assisted"))).toBe(true);
+  expect(
+    undecided.some((row) => /`(cv|participant_upload|qualification_certificate)`/.test(row)),
+  ).toBe(false);
   expect(doc.endsWith("\n")).toBe(true);
 });
 
@@ -52,6 +65,7 @@ it("lists an undecided cell once, with every phase and mode it is undecided in",
     text,
   } as const;
   expect(asUndecided({ ...rendered, text: "no: never" }, "active normal")).toEqual([]);
+  expect(undecidedTable([])).toBe("No sampled cell is undecided.");
   const cell = asUndecided(rendered, "active normal")[0]!;
   expect(cell).toEqual({
     question: "Q65",

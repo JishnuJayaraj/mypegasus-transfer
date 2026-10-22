@@ -30,6 +30,7 @@ export const documentCorrectionAuthority: Readonly<
   dsv_cancellation: either,
   asu_proof: pl,
   profiling_exception_evidence: pl,
+  cv: pl,
   participant_upload: pl,
   qualification_certificate: pl,
 };

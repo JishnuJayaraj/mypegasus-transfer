@@ -276,6 +276,7 @@ describe("mayPerformOperation (Q60, Q80)", () => {
       dsv_cancellation: "PL BO",
       asu_proof: "PL",
       profiling_exception_evidence: "PL",
+      cv: "PL",
       participant_upload: "PL",
       qualification_certificate: "PL",
     });

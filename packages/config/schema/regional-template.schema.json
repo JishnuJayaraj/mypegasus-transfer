@@ -183,6 +183,7 @@
                         "dsv_cancellation",
                         "asu_proof",
                         "profiling_exception_evidence",
+                        "cv",
                         "participant_upload",
                         "qualification_certificate"
                       ]
@@ -491,6 +492,7 @@
                         "dsv_cancellation",
                         "asu_proof",
                         "profiling_exception_evidence",
+                        "cv",
                         "participant_upload",
                         "qualification_certificate"
                       ]
@@ -933,6 +935,7 @@
                         "dsv_cancellation",
                         "asu_proof",
                         "profiling_exception_evidence",
+                        "cv",
                         "participant_upload",
                         "qualification_certificate"
                       ]

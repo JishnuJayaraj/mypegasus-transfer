@@ -1,5 +1,6 @@
 import { assertRunTime, createClock } from "@transfer/adapters";
 import { randomBytes } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 const schema = z.object({
@@ -30,6 +31,15 @@ const schema = z.object({
   PORTAL_PUBLIC_URL: z.url().optional(),
   MAIL_ADAPTER: z.literal("mock").default("mock"),
   SMS_ADAPTER: z.literal("mock").default("mock"),
+  // Document files (ADR-0006): their own HKDF root (`document-encryption:v1`), the store and
+  // the scanner. `mock` is the value `.env` files copied before Slice 4b hold: the filesystem.
+  DOCUMENT_ENCRYPTION_KEY: z.string().min(32).optional(),
+  STORAGE_ADAPTER: z
+    .enum(["filesystem", "memory", "mock"])
+    .default("filesystem")
+    .transform((value) => (value === "mock" ? "filesystem" : value)),
+  STORAGE_DIR: z.string().optional(),
+  VIRUS_SCAN_ADAPTER: z.literal("mock").default("mock"),
 });
 
 /** The route the identity provider returns to (routes/auth.ts). */
@@ -67,6 +77,13 @@ export interface Env {
   portalPublicUrl?: string | undefined;
   mailAdapter?: "mock" | undefined;
   smsAdapter?: "mock" | undefined;
+  /** The root of the document files' key (document-encryption.ts); never logged or returned. */
+  documentEncryptionKey: string;
+  /** Neither storage nor scanner is wired with `NODE_ENV=production` before the pilot (Q149). */
+  storageAdapter: "filesystem" | "memory";
+  /** The filesystem store's directory; outside the web root. */
+  storageDir: string;
+  virusScanAdapter: "mock";
 }
 
 export interface OidcEnv {
@@ -110,6 +127,9 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   if (!env.FIELD_ENCRYPTION_KEY && env.NODE_ENV !== "development") {
     throw new Error("FIELD_ENCRYPTION_KEY is required outside development");
   }
+  if (!env.DOCUMENT_ENCRYPTION_KEY && env.NODE_ENV !== "development") {
+    throw new Error("DOCUMENT_ENCRYPTION_KEY is required outside development");
+  }
   if (!env.PORTAL_PUBLIC_URL && env.NODE_ENV !== "development") {
     throw new Error("PORTAL_PUBLIC_URL is required outside development");
   }
@@ -140,6 +160,13 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     portalPublicUrl: env.PORTAL_PUBLIC_URL ?? "http://localhost:5174/portal/",
     mailAdapter: env.MAIL_ADAPTER,
     smsAdapter: env.SMS_ADAPTER,
+    // Fixed only for synthetic development so a restart can still open what was stored.
+    documentEncryptionKey:
+      env.DOCUMENT_ENCRYPTION_KEY ?? "development-document-encryption-key-only-0001",
+    storageAdapter: env.STORAGE_ADAPTER,
+    storageDir:
+      env.STORAGE_DIR ?? fileURLToPath(new URL("../../../.data/documents", import.meta.url)),
+    virusScanAdapter: env.VIRUS_SCAN_ADAPTER,
   };
 }
 

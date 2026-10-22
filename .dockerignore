@@ -12,6 +12,7 @@
 docs
 fixtures
 real-data
+.data
 .env
 .env.*
 !.env.example

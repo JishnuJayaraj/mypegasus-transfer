@@ -1,6 +1,6 @@
 # ADR-0006: Ports & adapters for external services
 
-- Status: Accepted (amended 2026-10-15)
+- Status: Accepted (amended 2026-10-22)
 - Date: 2026-10-15
 
 ## Decision
@@ -86,3 +86,33 @@ Not adapters:
 - A channel verification code (`request_channel_code`) is sent in the request like the
   activation's, and its outcome recorded by `record_one_time_code_delivery`.
 - A recovery code in person is sent like a first in-person code (`record_activation_delivery`).
+
+## As built 2026-10-22: document storage and virus scan (Slice 4b, PR 4b-1)
+
+- `FileStorage` (`packages/adapters/src/storage`): `put(key, bytes)` (replaces an object under
+  the same key), `get(key)` (`FileNotFound` when missing), `delete(key)` (a missing key
+  succeeds, so the purge job can retry). Keys are lower-case segments of letters, digits and
+  hyphens (`documents/<documentId>`); anything else (`..`, an absolute path, a name) is a
+  `RangeError` that never repeats the key. `MemoryFileStorage` serves tests;
+  `FilesystemFileStorage` serves development and e2e under `STORAGE_DIR` (default
+  `.data/documents` in the repo, git-ignored, outside the web root), directories `0700`, files
+  `0600`, written to a temporary file and renamed. One contract test
+  (`storage/testing/contract.ts`) runs against both; a real adapter runs it too.
+- `VirusScanner` (`packages/adapters/src/virus-scan`): `scan(bytes)` → `clean`, `infected` or
+  `unscannable`; `ScannerUnavailable` when it can't be reached (the upload is refused, nothing
+  stored). `MockVirusScanner` answers `infected` for the EICAR test file, `unscannable` for a
+  PDF with `/Encrypt`, `clean` otherwise, and throws when `available` is false. The EICAR test
+  string is never committed: tests assemble it at runtime, the mock knows only its distinctive
+  part.
+- **File encryption is not an adapter's job.** The API encrypts every file before `put`
+  (`apps/api/src/document-encryption.ts`; data-protection.md, document files): AES-256-GCM with
+  a data key per document, wrapped under an HKDF key (`document-encryption:v1`) from
+  `DOCUMENT_ENCRYPTION_KEY` (required outside development), so no store, provider or backup
+  ever holds plaintext, and a real S3 adapter needs no server-side encryption to be safe.
+- Environment: `STORAGE_ADAPTER` (`filesystem` or `memory`; `mock`, the value of older `.env`
+  files, reads as `filesystem`), `STORAGE_DIR`, `VIRUS_SCAN_ADAPTER` (`mock` only).
+- **Production wiring:** like the mail and SMS mocks, neither the storage nor the mock scanner is
+  wired with `NODE_ENV=production`; uploads and openings answer `503 storage_unavailable` there
+  (from PR 4b-2) until an S3-compatible store (Hetzner Object Storage or MinIO in the cluster,
+  no public access, versions and backups kept ≤ 30 days) and a ClamAV scanner exist with their
+  contract tests and AVV chain (pre-pilot, Q149).

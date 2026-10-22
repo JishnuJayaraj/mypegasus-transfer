@@ -48,6 +48,7 @@ dsv_signed_scan              never never never unass meta   meta  never never ne
 dsv_cancellation             never never never unass meta   meta  never never never
 asu_proof                    never never meta  unass meta   never never never never
 profiling_exception_evidence never never meta  unass assist never meta  never never
+cv                           meta  meta  meta  unass meta   never never never never
 participant_upload           meta  meta  meta  unass meta   never never never never
 qualification_certificate    meta  meta  meta  unass meta   never never never never`;
 
@@ -58,6 +59,7 @@ dsv_signed_scan              never  never  never  unass opened opened never neve
 dsv_cancellation             never  never  never  unass opened opened never never never
 asu_proof                    never  never  opened unass bg     never  never never never
 profiling_exception_evidence never  never  opened unass assist never  never never never
+cv                           opened opened opened unass opened never  never never never
 participant_upload           opened opened opened unass opened never  never never never
 qualification_certificate    opened opened opened unass opened never  never never never`;
 
@@ -68,6 +70,7 @@ dsv_signed_scan              never never never unass imm   imm   never never nev
 dsv_cancellation             never never never unass imm   imm   never never never
 asu_proof                    never never op    unass op    never never never never
 profiling_exception_evidence never never op    unass op    never never never never
+cv                           op    op    op    unass op    never never never never
 participant_upload           op    op    op    unass op    never never never never
 qualification_certificate    op    op    op    unass op    never never never never`;
 

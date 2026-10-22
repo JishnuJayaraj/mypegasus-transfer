@@ -8,6 +8,8 @@ coverage/
 playwright-report/
 test-results/
 real-data/
+# Local document store (FilesystemFileStorage, STORAGE_DIR): encrypted synthetic files only
+.data/
 .claude/settings.local.json
 .tsbuild/
 *.tsbuildinfo
