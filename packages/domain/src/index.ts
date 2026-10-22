@@ -297,9 +297,32 @@ export {
   documentTypeCatalog,
   documentTypeEntry,
   type AccessRole,
+  type DocumentOperations,
   type DocumentRight,
   type DocumentTypeEntry,
 } from "./documents/catalog";
+export {
+  detectFileType,
+  documentFileName,
+  documentLimits,
+  DocumentMediaType,
+  generatedDocumentFileName,
+} from "./documents/files";
+export {
+  DocumentDeleteReason,
+  DocumentReviewReason,
+  DocumentReviewState,
+  documentState,
+} from "./documents/state";
+export {
+  mayAddDocument,
+  mayDeleteDocument,
+  mayReviewDocument,
+  type DocumentOperation,
+  type DocumentPermission,
+  type DocumentPermissionDenial,
+  type DocumentTarget,
+} from "./access/document-operations";
 export {
   CompletenessRule,
   isLocked,

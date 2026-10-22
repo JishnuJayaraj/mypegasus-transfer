@@ -171,7 +171,7 @@ const denialRank: PermissionDenial[] = [
 ];
 
 /** Allowed if any role the staff member holds allows it; else the most telling denial. */
-function staffPermission(
+export function staffPermission(
   subject: Extract<Subject, { kind: "staff" }>,
   target: PermissionTarget,
   allows: (role: Role) => boolean,

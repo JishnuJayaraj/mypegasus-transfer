@@ -8,9 +8,17 @@ import {
   type Resource,
 } from "./decide";
 import {
+  mayAddDocument,
+  mayDeleteDocument,
+  mayReviewDocument,
+  type DocumentOperation,
+  type DocumentPermission,
+} from "./document-operations";
+import {
   accessModes,
   accessProfiles,
   fieldCategories,
+  sample,
   sampleAggregate,
   sampleAudit,
   sampleDocument,
@@ -57,7 +65,7 @@ export type Cell = {
   label: string;
   staff: boolean;
   key: string;
-  action: AccessAction;
+  action: AccessAction | DocumentOperation;
   text: string;
 };
 
@@ -76,26 +84,35 @@ function cells(index: number, phase: AccessPhase, mode: Mode): Cell[] {
   );
 }
 
-function section(index: number, phase: AccessPhase, mode: Mode): string {
-  const { kind } = kinds[index]!;
-  const heading = `### ${phase === "active" ? "Active" : "Evidence-set"} phase, ${mode.replace("_", "-")} mode`;
-  const current = cells(index, phase, mode);
+/** The full table in normal mode; in another mode only the staff cells that differ from it. */
+function modeTable(mode: Mode, current: Cell[], normal: Cell[], columns: string[]): string {
   if (mode === "normal") {
     const rows = [];
-    for (let i = 0; i < current.length; i += kind.actions.length) {
-      const row = current.slice(i, i + kind.actions.length);
+    for (let i = 0; i < current.length; i += columns.length - 2) {
+      const row = current.slice(i, i + columns.length - 2);
       rows.push([row[0]!.label, code(row[0]!.key), ...row.map((c) => c.text)]);
     }
-    return `${heading}\n\n${table(["Subject", "Key", ...kind.actions.map(code)], rows)}`;
+    return table(columns, rows);
   }
-  const normal = cells(index, phase, "normal");
-  const changed = current
-    .filter((c, i) => c.staff && c.text !== normal[i]!.text)
-    .map((c) => [c.label, code(c.key), code(c.action), normal[current.indexOf(c)]!.text, c.text]);
+  const changed = current.flatMap((c, i) =>
+    c.staff && c.text !== normal[i]!.text
+      ? [[c.label, code(c.key), code(c.action), normal[i]!.text, c.text]]
+      : [],
+  );
   const body = changed.length
-    ? table(["Subject", "Key", "Action", "Normal mode", "This mode"], changed)
+    ? table([...columns.slice(0, 2), "Action", "Normal mode", "This mode"], changed)
     : "No cell differs from normal mode.";
-  return `${heading}\n\nOnly the staff cells that differ from normal mode.\n\n${body}`;
+  return `Only the staff cells that differ from normal mode.\n\n${body}`;
+}
+
+const modeName = (mode: Mode) => mode.replace("_", "-");
+
+function section(index: number, phase: AccessPhase, mode: Mode): string {
+  const { kind } = kinds[index]!;
+  const heading = `### ${phase === "active" ? "Active" : "Evidence-set"} phase, ${modeName(mode)} mode`;
+  const columns = ["Subject", "Key", ...kind.actions.map(code)];
+  const body = modeTable(mode, cells(index, phase, mode), cells(index, phase, "normal"), columns);
+  return `${heading}\n\n${body}`;
 }
 
 function audit(): string {
@@ -134,12 +151,53 @@ function aggregates(): string {
   return table(["Subject", "`read`, `list`"], rows);
 }
 
+/** A document operation as a matrix cell shows it. */
+export function permissionText(p: DocumentPermission): string {
+  if (p.ok) return "yes";
+  return "question" in p ? `no: undecided (${p.question})` : `no: ${p.because}`;
+}
+
+const documentOperations: DocumentOperation[] = ["add", "review", "delete"];
+const operationTarget = {
+  projectId: sample.projectId,
+  regionId: sample.regionId,
+  participationId: sample.participationId,
+};
+
+/** One cell per subject, document type and operation; the participant deletes their own upload. */
+function operationCells(mode: Mode): Cell[] {
+  const check = {
+    add: mayAddDocument,
+    review: mayReviewDocument,
+    delete: (...args: Parameters<typeof mayAddDocument>) =>
+      mayDeleteDocument(...args, { addedByParticipant: true, accepted: false }),
+  };
+  return accessProfiles.flatMap(({ label, subject }) =>
+    DocumentType.options.flatMap((key) =>
+      documentOperations.map((action) => ({
+        label,
+        staff: subject.kind === "staff",
+        key,
+        action,
+        text: permissionText(check[action](subject, key, operationTarget, accessModes[mode])),
+      })),
+    ),
+  );
+}
+
+function operationSection(mode: Mode): string {
+  const columns = ["Subject", "Type", ...documentOperations.map(code)];
+  const body = modeTable(mode, operationCells(mode), operationCells("normal"), columns);
+  const heading = { normal: "Normal", assisted: "Assisted", break_glass: "Break-glass" }[mode];
+  return `### ${heading} mode\n\n${body}`;
+}
+
 /** An undecided cell found: its question, subject, key and action, and in which phase and mode. */
 export type UndecidedCell = {
   question: string;
   label: string;
   key: string;
-  action: AccessAction;
+  action: AccessAction | DocumentOperation;
   where: string;
 };
 
@@ -171,7 +229,10 @@ function undecided(): string {
       ),
     ),
   );
-  return undecidedTable(found);
+  const operations = modes.flatMap((mode) =>
+    operationCells(mode).flatMap((c) => asUndecided(c, `any phase ${mode}`)),
+  );
+  return undecidedTable([...found, ...operations]);
 }
 
 /** docs/domain/generated/access-matrix.md, written by `pnpm generate`. */
@@ -201,6 +262,21 @@ only their own participation and have no modes (every other mode is \`never\` fo
 
 ${personSections.join("\n\n")}
 
+## Document operations
+
+Who may add, review and delete a document (Q146, *assumed*; \`mayAddDocument\`,
+\`mayReviewDocument\`, \`mayDeleteDocument\`), which the document functions check again; the
+access matrix above answers \`write\` with \`via_domain_operation\` for them. Staff add in
+normal mode as themselves or in assisted mode on the participant's behalf (actor +
+\`onBehalfOf\`), review and delete in normal mode only; break-glass never writes. The
+participant's \`delete\` is sampled on their own upload, not yet accepted: one added by staff is
+\`added_by_staff\`, an accepted one \`document_accepted\`; staff delete any document of the type
+with a reason code. Signed documents are never deleted (\`immutable\`: the retention job only).
+A type whose slice hasn't decided its operations is \`undecided\` (Q65) for the roles that may
+open it.
+
+${modes.map(operationSection).join("\n\n")}
+
 ## Audit metadata
 
 Filtered projections (Q87 A), the same in every mode in the active phase; \`list\` as \`read\`
@@ -221,7 +297,10 @@ ${aggregates()}
 ([open-questions.md](../../open-questions.md)). Q136 decided the staff writes of self-service
 fields: in assisted mode only. Staff writes of a category's other fields outside a domain
 operation (e.g. the IBAN by a consultant, the birth date by back office) stay \`undecided\`;
-the rows above sample self-service fields, so they don't show here.
+the rows above sample self-service fields, so they don't show here. Q146 decided the operations
+of the participant's own documents (\`cv\`, \`participant_upload\`,
+\`qualification_certificate\`); the other types' operations stay \`undecided\` until their
+slice (Slices 6 and 7).
 
 ${undecided()}
 `;

@@ -121,6 +121,7 @@ status functions, and the rest isn't evidence-set data.
 | document | `dsv_cancellation` | PL, Back office |
 | document | `asu_proof` | PL |
 | document | `profiling_exception_evidence` | PL |
+| document | `cv` | PL |
 | document | `participant_upload` | PL |
 | document | `qualification_certificate` | PL |
 | field | `tgStart` | PL, Back office |
