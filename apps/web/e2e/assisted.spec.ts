@@ -124,6 +124,8 @@ test("slice 4a: placement Agentur, the participant's wizard, assisted mode by ph
   await page.getByRole("button", { name: "Weiter" }).click();
   await page.getByLabel("Zusatznachweis-Nr. (Beispiel) *").fill("ZN-4711");
   await page.getByRole("button", { name: "Weiter" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Unterlagen" })).toBeVisible();
+  await page.getByRole("button", { name: "Weiter" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
   const jobWish = page
     .getByRole("listitem")

@@ -44,7 +44,7 @@ test("portal: the participant answers the sensitive pages, Gesundheit after the 
   await expect(
     page.getByRole("heading", { level: 1, name: "Schule und Ausbildung" }),
   ).toBeVisible();
-  await expect(page.getByText("2 von 8 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("3 von 9 Seiten vollständig")).toBeVisible();
 
   // Back to it: the values are read again on their own route.
   await page.getByRole("button", { name: "Zurück" }).click();
@@ -74,10 +74,13 @@ test("portal: the participant answers the sensitive pages, Gesundheit after the 
     .getByText("Nein", { exact: true })
     .click();
   await page.getByRole("button", { name: "Weiter" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Unterlagen" })).toBeVisible();
+  await page.getByRole("button", { name: "Weiter" }).click();
 
-  // The overview: both sensitive pages complete (Kontakt was, with the imported address).
+  // The overview: both sensitive pages complete (Kontakt was, with the imported address, and
+  // Unterlagen without a document rule).
   await expect(page.getByRole("heading", { level: 1, name: "Übersicht" })).toBeVisible();
-  await expect(page.getByText("3 von 8 Seiten vollständig")).toBeVisible();
+  await expect(page.getByText("4 von 9 Seiten vollständig")).toBeVisible();
   for (const name of ["Angaben für die Agentur", "Gesundheit"]) {
     const item = page.getByRole("listitem").filter({ has: page.getByRole("heading", { name }) });
     await expect(item.getByText("Vollständig")).toBeVisible();
