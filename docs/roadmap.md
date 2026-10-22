@@ -67,6 +67,12 @@ Funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), dead
 Deferred here from Slice 2: bulk entry-wave assignment; the audit history UI (until then the
 runtime role can't read `audit_event`).
 
+## Slice 5b — Info events and appointments (F4)
+Placed in round 39 (Q158): info events and consultation slots; participant self-booking and
+cancellation; attendance; invitations and their message logging; attendance driving the
+authorised `informed` workflow; overdue appointments joining the work list of Slice 5. Only
+appointment polish stays in v1.1.
+
 ## Slice 6 — Profiling & forms (F6)
 Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` registry with TL 407 + Kug 200b (ADR-0009), PDF adapter (pdf-lib +
@@ -87,6 +93,7 @@ Participant file, coaching notes, goals/tasks, qualification plan, applications,
 ## Slice 9 — Reporting (F10) + hardening
 Project report, monthly customer report, exports, accessibility pass, performance pass,
 security review, backup/restore, deployment manifests (`deploy/`).
+The participant-list export of F7 follows the contract of Q159 (round 39).
 
 ## Pre-pilot gate
 Before any real data (pilot: one project in Nürnberg on the Hetzner cluster): all items of the
