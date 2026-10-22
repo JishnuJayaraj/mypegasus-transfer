@@ -134,6 +134,17 @@ Provider errors fail the job by code (`delivery_unknown`, `delivery_failed`,
 id and the outcome. Without pg-boss (`JOBS_ENABLED=false`, tests) nothing is queued and the API
 logs a warning with the channel id.
 
+## Note 2026-10-22: the document purge (Slice 4b, PR 4b-2)
+
+`documents.purge-object` is an `exclusive` queue (retries 10, backoff). A deletion queues
+`{ documentId }` with `singletonKey` the document id **in its own transaction**, so a committed
+tombstone always has its purge queued. The worker reads nothing but the id: it skips a document
+that isn't deleted (its object is never purged), deletes `documents/<documentId>` (a missing
+object succeeds) and records `purged_at` (`record_document_purged`, idempotent). Logs carry the
+job, its id, the document id and the outcome. The worker runs only where a store is wired (none
+with `NODE_ENV=production` yet, Q149). Without pg-boss (`JOBS_ENABLED=false`: tests, e2e) the API
+runs the same handler after the response (`detached.ts`).
+
 ## Note 2026-10-17: draft projects plan nothing (Slice 2, PR 2e-1)
 
 A project is `draft` until it is activated (Q98). The sweep still dispatches

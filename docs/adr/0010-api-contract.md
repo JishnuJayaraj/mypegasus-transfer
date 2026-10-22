@@ -168,6 +168,45 @@ generator then. No action now.
   `ActivationRecord` and `ActivationState` carry `purpose`; for an activated account
   `ActivationStatus.code` shows a recovery code's state.
 
+## Note 2026-10-22 (Slice 4b, PR 4b-2): documents
+
+- **Upload transport:** base64 in JSON, as the import: `POST` with `{ type, fileName, content }`
+  (`DocumentUploadInput`, strict; no MIME type: the type is detected from the content). The
+  decoded file is at most 10 MB (10,485,760 bytes); the body of the three upload routes at most
+  **14 MB**, every other route keeps 100 kB (`413` above). An API process handles at most two
+  uploads at once, up to four more wait ≤ 20 s, else `503` `upload_busy` with `Retry-After: 10`.
+- **Routes:** `GET`/`POST /portal/documents`, `POST /portal/documents/{documentId}/opening`,
+  `DELETE /portal/documents/{documentId}`; `GET`/`POST /participations/{id}/documents`,
+  `POST …/documents/{documentId}/opening`, `POST …/documents/{documentId}/review`
+  (`{ decision, reasonCode? }`), `DELETE …/documents/{documentId}?reasonCode=` (strict query);
+  `GET`/`POST /participations/{id}/assisted/documents?assistedModeId=` and
+  `POST …/assisted/documents/{documentId}/opening?assistedModeId=` (403 `assisted_mode_required`
+  without a live mode); `GET /document-content/{token}`. Lists are `DocumentList` (the live
+  documents of the types the viewer may read, oldest first, `addableTypes`, `limits`); a document
+  is `Document` (metadata, review, `capabilities` `open` / `review` / `delete`), never content, a
+  hash or a key.
+- **Order:** the participation's visibility (404, also for an unassigned consultant and for a
+  document of another participation or a type the viewer can't read), the type
+  (`document_type_not_supported`), the operation's permission (403), the store, the file name
+  (400 `file_name_invalid`), the gate, then the file and the function's refusals.
+- **The opening and the download (Q147):** `POST …/opening` answers `201`
+  `{ url: "/api/v1/document-content/<token>", expiresAt }` (`no-store`), audited
+  `document_opened`. The browser navigates to the URL with the session that asked (portal or
+  staff cookie); within 60 s the `GET` answers the file as `attachment` (`Content-Disposition`
+  with an ASCII fallback and the UTF-8 name, the detected type's extension appended when the
+  kept name lacks it), `Content-Type` the detected type, `X-Content-Type-Options: nosniff`,
+  `Cache-Control: no-store`, `Content-Security-Policy: default-src 'none'; sandbox`. Any other
+  session, a dead link or a deleted document is a `404`.
+- **Problem codes:** 422 `document_type_not_supported`, `file_empty`, `file_too_large`,
+  `file_type_not_allowed`, `file_infected`, `file_unscannable` (at `/content`), `document_limit`,
+  `document_reviewed` (a second review), `document_accepted` (the participant deleting an
+  accepted one), `participation_closed`; 400 `reason_code_mismatch` (a rejection without a reason
+  or an acceptance with one); 429 `rate_limited` (20 uploads an hour, `Retry-After`); 503
+  `upload_busy`, `scan_unavailable` (`Retry-After: 30`) and `storage_unavailable` (always with
+  `NODE_ENV=production` until the S3 store and ClamAV exist, Q149).
+- **Logs:** an upload logs the request id, participation id, type, a size bucket and the outcome;
+  the download's route is logged as its pattern, never the token.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

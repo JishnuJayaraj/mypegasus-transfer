@@ -304,6 +304,7 @@ export {
 export {
   detectFileType,
   documentFileName,
+  downloadFileName,
   documentLimits,
   DocumentMediaType,
   generatedDocumentFileName,
@@ -314,6 +315,24 @@ export {
   DocumentReviewState,
   documentState,
 } from "./documents/state";
+export {
+  DocumentCapabilities,
+  DocumentContentParams,
+  DocumentDeleteQuery,
+  DocumentList,
+  DocumentOpening,
+  DocumentReviewInput,
+  DocumentSource,
+  DocumentUploadInput,
+  DocumentView,
+  uploadableDocumentTypes,
+} from "./documents/api";
+export {
+  addableDocumentTypes,
+  documentCapabilities,
+  documentsHidden,
+  readableDocumentTypes,
+} from "./documents/view";
 export {
   mayAddDocument,
   mayDeleteDocument,

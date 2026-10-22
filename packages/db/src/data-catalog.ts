@@ -34,9 +34,18 @@ export const retentionPeriods = {
   // their hashes and addresses, 30 days after use, expiry, lock, revocation or end; a legal hold
   // never keeps a secret usable.
   access_credential: "unset",
+  // The BA evidence set (ADR-0008, stage two; Q3, Q64): signed TL 407 and Kug 200b scans; follows
+  // the funding's retention, set by Slice 7.
+  evidence_set: "unset",
   // No personal data: the retention job never touches it.
   reference_data: "never",
 } as const;
+
+/**
+ * The class of a table whose rows carry their own (ADR-0008, per item): `document`, each row its
+ * type's class from the document type catalog, in its `retention_class` column.
+ */
+export const perRowRetention = "by_document_type";
 
 export const dataCatalog: Record<string, CatalogEntry> = {
   project: { retentionClass: "project_master", dataClass: "internal", holdsParticipantData: false },
@@ -185,6 +194,27 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // Documents (data-protection.md, uploads and documents; Q145): the metadata of an encrypted file
+  // in the store (type, media type, size, the kept file name, who added and reviewed it, a deletion's
+  // tombstone), its wrapped key and content hash, which the runtime role can't select; each row of
+  // its type's class.
+  document: {
+    retentionClass: perRowRetention,
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // Opening links (Q147): a token's SHA-256, the document, the session's kind and hash, expiry.
+  document_link: {
+    retentionClass: "access_credential",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  // The document type catalog per version (classes, file names, roles): no personal data.
+  document_type_policy: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
   // Reason codes are confidential (Q66); evidence records get their own class (round 16).
   profiling_exception_request: {
     retentionClass: "participation_record",
@@ -269,6 +299,15 @@ export function checkDataCatalog(
     const entry = catalog[config.name];
     if (!entry) {
       problems.push(`${config.name}: missing from the data catalog`);
+    } else if (entry.retentionClass === perRowRetention) {
+      if (!config.columns.some((column) => column.name === "retention_class")) {
+        problems.push(`${config.name}: a class per row needs a retention_class column`);
+      }
+      if (entry.holdsParticipantData && !isProjectScoped(config)) {
+        problems.push(
+          `${config.name}: holds participant data but has no project_id uuid not null FK to project`,
+        );
+      }
     } else if (!Object.hasOwn(retentionPeriods, entry.retentionClass)) {
       problems.push(`${config.name}: unknown retention class ${entry.retentionClass}`);
     } else if (entry.holdsParticipantData && !isProjectScoped(config)) {
@@ -480,6 +519,9 @@ const withoutFields = new Set([
   "participant_session",
   "self_service_notice_acknowledgement",
   "assisted_mode",
+  // Documents aren't fields: their files and metadata are classified by the document type catalog.
+  "document",
+  "document_link",
 ]);
 
 /**

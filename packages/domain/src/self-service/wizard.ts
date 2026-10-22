@@ -128,6 +128,8 @@ export type WizardInput = {
   helpTexts: { de: Readonly<Record<string, string>>; en: Readonly<Record<string, string>> };
   /** Values by field key; a sensitive field's presence as `true` or `null`. */
   fields: CompletenessFacts["fields"];
+  /** The states of the live documents by type (`documentState`); a deleted one counts nothing. */
+  documents: CompletenessFacts["documents"];
 };
 
 export type WizardField = {
@@ -150,7 +152,7 @@ export function selfServiceMissing(input: Omit<WizardInput, "customFields" | "he
   const { byStep } = evaluateCompleteness(input.rules, {
     projectType: input.projectType,
     fields: input.fields,
-    documents: {},
+    documents: input.documents,
   });
   return wizardSteps.flatMap((step) => byStep[step].missing);
 }

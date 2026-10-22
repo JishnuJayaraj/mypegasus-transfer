@@ -61,3 +61,23 @@ export function generatedDocumentFileName(
 ): string {
   return `${type}-${date}.${extensions[mediaType]}`;
 }
+
+/**
+ * The name a download is saved under (data-protection.md, uploads): the kept file name, with the
+ * detected type's extension appended unless it already ends with it (so `lebenslauf.docx` holding
+ * a PDF is saved as `lebenslauf.docx.pdf`, never under a misleading extension); else the generated
+ * name.
+ */
+export function downloadFileName(
+  fileName: string | null,
+  type: DocumentType,
+  date: IsoDate,
+  mediaType: DocumentMediaType,
+): string {
+  if (fileName === null) return generatedDocumentFileName(type, date, mediaType);
+  const lower = fileName.toLowerCase();
+  const own = mediaType === "image/jpeg" ? ["jpg", "jpeg"] : [extensions[mediaType]];
+  return own.some((ext) => lower.endsWith(`.${ext}`))
+    ? fileName
+    : `${fileName}.${extensions[mediaType]}`;
+}

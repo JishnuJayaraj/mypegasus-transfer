@@ -1,5 +1,12 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import type { Clock, DevelopmentOutbox, Mailer, SmsSender } from "@transfer/adapters";
+import type {
+  Clock,
+  DevelopmentOutbox,
+  FileStorage,
+  Mailer,
+  SmsSender,
+  VirusScanner,
+} from "@transfer/adapters";
 import type { Database } from "@transfer/db";
 import type { StaffUser } from "@transfer/domain";
 import type { Logger } from "pino";
@@ -11,6 +18,8 @@ import type { SpaRoots } from "./static";
 import type { Oidc } from "./oidc";
 import type { PortalSession } from "./portal-session";
 import type { Detached } from "./detached";
+import type { DocumentFiles } from "./documents/files";
+import type { DocumentPurgeQueue } from "./documents/purge";
 
 /** Where the API queues the activation notice inside the completion's transaction (ADR-0011). */
 export interface ActivationNoticeQueue {
@@ -39,6 +48,15 @@ export interface Deps {
   activationNotices?: ActivationNoticeQueue | undefined;
   /** Work that outlives its request (login-code sends); the app's own unless one is passed. */
   detached?: Detached | undefined;
+  /** The document store and scanner (ADR-0006); the environment's unless given; none in production. */
+  fileStorage?: FileStorage | undefined;
+  virusScanner?: VirusScanner | undefined;
+  /** Resolved by `createApp` from the two above and the environment. */
+  documentFiles?: DocumentFiles | undefined;
+  /** The upload gate (2 at once, 4 waiting ≤ 20 s); the process's own unless a test's. */
+  uploadSlots?: Slots | undefined;
+  /** pg-boss in this process; without it the purge runs after the response (`detached`). */
+  documentPurges?: DocumentPurgeQueue | undefined;
 }
 
 export interface AppEnv {

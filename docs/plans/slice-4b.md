@@ -119,8 +119,14 @@ pure building blocks, the persistent path and the UI.
 | PR | Scope | Est. lines |
 |---|---|---|
 | 4b-1 | Building blocks (D2, D4, D6, D11, D12, D16): catalog v2, document permissions and the generated matrix, file detection and limits, file-name rules, `FileStorage` and `VirusScanner` with their mocks, the document cipher, env | ~800 |
-| 4b-2 | Documents in the database and API (D1, D3, D5, D7–D10, D15): tables, functions, grants, audit events, portal/staff/assisted/content routes, the upload gate, the purge job, completeness facts (D13 data) | ~1,400 |
+| 4b-2 | Documents in the database and API (D1, D3, D5, D7–D10, D15): tables, functions, grants, audit events, portal/staff/assisted/content routes, the upload gate, the purge job, completeness facts (D13 data) | ~1,400 (built: ~2,200, see below) |
 | 4b-3 | The UI (D13, D14): the documents page in `@transfer/self-service-ui`, the portal wizard page, the staff tab, the assisted page, de/en; the slice e2e; archive the plan | ~1,200 |
+
+**4b-2 came to about 2,200 changed lines** excluding tests and generated code (the hand-written
+SQL ~480, the routes' OpenAPI declarations ~500, the upload/opening service ~410), above the
+estimate and the 1,500-line guideline. It stays one PR: the functions and the API are one concern
+(the functions have no caller but these routes), so a database-only PR would ship unused
+functions and a stacked API PR; the product owner may still ask for a split at review.
 
 ## Design
 

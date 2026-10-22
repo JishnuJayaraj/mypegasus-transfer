@@ -21,7 +21,7 @@ const tokenPattern = /^[A-Za-z0-9_-]{43}$/;
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
 /** The SHA-256 of the request's well-formed session token, if it carries one. */
-function cookieTokenHash(c: Context, env: Env) {
+export function cookieTokenHash(c: Context, env: Env) {
   const token = getCookie(c, staffCookieName(env));
   return token !== undefined && tokenPattern.test(token) ? hashToken(token) : null;
 }

@@ -21,3 +21,8 @@ export const auditContext = (staffUserId: string, requestId: string | null) =>
 export const assistedContext = (staffUserId: string, participationId: string, requestId: string) =>
   sql`row('user'::actor_type, ${staffUserId}::uuid, null::uuid, null::text,
     ${participationId}::uuid, ${requestId}::text, null::text)::audit_context`;
+
+/** The participant's audit context (ADR-0002): the participation acts for itself. */
+export const participantContext = (participationId: string, requestId: string) =>
+  sql`row('participant'::actor_type, null::uuid, ${participationId}::uuid, null::text, null::uuid,
+    ${requestId}::text, null::text)::audit_context`;

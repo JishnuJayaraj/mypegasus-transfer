@@ -138,6 +138,7 @@ const input = (overrides: Partial<WizardInput> = {}): WizardInput => ({
   customFields: {},
   helpTexts: { de: {}, en: {} },
   fields: {},
+  documents: {},
   ...overrides,
 });
 
@@ -238,6 +239,9 @@ describe("selfServiceWizard", () => {
   });
 });
 
+const missingDoc = (documents: WizardInput["documents"]) =>
+  selfServiceMissing(input({ documents })).filter((item) => item.kind === "document");
+
 describe("selfServiceMissing", () => {
   it("reports every missing item of the two steps, for staff", () => {
     expect(selfServiceMissing(input()).map((item) => item.ruleId)).toEqual([
@@ -247,6 +251,19 @@ describe("selfServiceMissing", () => {
       "r-gender",
       "r-nationality",
       "r-doc",
+    ]);
+  });
+
+  it("counts the live documents' states (process-and-lifecycle.md, document review)", () => {
+    expect(missingDoc({ asu_proof: ["uploaded"] })).toEqual([]);
+    expect(missingDoc({ asu_proof: ["rejected"] })).toEqual([
+      {
+        step: "profiling",
+        ruleId: "r-doc",
+        kind: "document",
+        key: "asu_proof",
+        reason: "not_accepted",
+      },
     ]);
   });
 });

@@ -1,6 +1,6 @@
 import { getTableConfig, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { fieldCatalog, fieldEntry } from "@transfer/domain";
+import { documentTypeCatalog, fieldCatalog, fieldEntry } from "@transfer/domain";
 import {
   checkDataCatalog,
   checkFieldColumns,
@@ -91,6 +91,10 @@ describe("data catalog", () => {
       participant_session: entry("access_credential", "internal", true),
       // Slice 4a (Q136)
       assisted_mode: entry("access_credential", "internal", true),
+      // Slice 4b (Q145, Q147): a document's class is its type's, per row.
+      document: entry("by_document_type", "confidential", true),
+      document_link: entry("access_credential", "internal", true),
+      document_type_policy: entry("reference_data", "internal"),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),
@@ -121,8 +125,33 @@ describe("data catalog", () => {
       health_record: "unset",
       audit_log: "unset",
       access_credential: "unset",
+      evidence_set: "unset",
       reference_data: "never",
     });
+  });
+
+  it("knows the class of every document type, and keeps a class per row only beside its column", () => {
+    for (const { retentionClass } of documentTypeCatalog.types) {
+      expect(Object.keys(retentionPeriods)).toContain(retentionClass);
+    }
+    const withoutColumn = {
+      ...dataCatalog,
+      project: { ...dataCatalog.project!, retentionClass: "by_document_type" },
+    };
+    expect(checkDataCatalog(tables, withoutColumn)).toEqual([
+      "project: a class per row needs a retention_class column",
+    ]);
+    const unscoped = pgTable("fixture_rows", {
+      id: uuid("id").primaryKey(),
+      retentionClass: text("retention_class"),
+    });
+    const catalog = {
+      ...dataCatalog,
+      fixture_rows: { ...participantEntry, retentionClass: "by_document_type" },
+    };
+    expect(checkDataCatalog([...tables, unscoped], catalog)).toEqual([
+      "fixture_rows: holds participant data but has no project_id uuid not null FK to project",
+    ]);
   });
 
   it("fails for an unknown retention class", () => {

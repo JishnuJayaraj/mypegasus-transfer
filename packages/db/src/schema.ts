@@ -55,6 +55,12 @@ import {
   SensitiveStepUpMethod,
   edgeKinds,
   portalLimits,
+  DocumentType,
+  DocumentMediaType,
+  DocumentReviewState,
+  DocumentReviewReason,
+  DocumentDeleteReason,
+  documentLimits,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -374,6 +380,12 @@ export const sensitiveStepUpMethod = pgEnum(
   values(SensitiveStepUpMethod),
 );
 export const assistedModeHow = pgEnum("assisted_mode_how", values(AssistedModeHow));
+export const documentType = pgEnum("document_type", values(DocumentType));
+export const documentMediaType = pgEnum("document_media_type", values(DocumentMediaType));
+export const documentReviewState = pgEnum("document_review_state", values(DocumentReviewState));
+export const documentReviewReason = pgEnum("document_review_reason", values(DocumentReviewReason));
+export const documentDeleteReason = pgEnum("document_delete_reason", values(DocumentDeleteReason));
+export const documentSessionKind = pgEnum("document_session_kind", ["staff", "participant"]);
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1375,6 +1387,148 @@ export const participantSession = pgTable(
 );
 
 /**
+ * The document-type catalog per version as the functions apply it (data-protection.md, documents;
+ * Q142, Q145, Q146, Q148): retention class, whether the file name is kept, signed, and who may add,
+ * review, delete and open (`participant` and project roles; empty while the type's operations are
+ * undecided, Q65). Reference data written only by the migrations; a drift test holds it equal to
+ * the domain's `documentTypeCatalog`.
+ */
+export const documentTypePolicy = pgTable(
+  "document_type_policy",
+  {
+    type: documentType("type").notNull(),
+    catalogVersion: integer("catalog_version").notNull(),
+    retentionClass: text("retention_class").notNull(),
+    fileName: boolean("file_name").notNull(),
+    signed: boolean("signed").notNull(),
+    addRoles: text("add_roles").array().notNull(),
+    reviewRoles: text("review_roles").array().notNull(),
+    deleteRoles: text("delete_roles").array().notNull(),
+    openRoles: text("open_roles").array().notNull(),
+  },
+  (t) => [
+    primaryKey({ name: "document_type_policy_pkey", columns: [t.type, t.catalogVersion] }),
+    unique("document_type_policy_retention_unique").on(t.type, t.catalogVersion, t.retentionClass),
+  ],
+);
+
+/**
+ * A document (data-protection.md, uploads and documents; Q143–Q148): the metadata of one encrypted
+ * file in the store under `documents/<id>`, never its content. Its retention class is its type's
+ * (a composite FK to the policy of its catalog version), so retention is per row (ADR-0008).
+ * `content_sha256` (integrity; the evidence fingerprint later) and `wrapped_key` are never
+ * selected by the runtime role, only returned by `document_link_content`. Reviewed once; a
+ * deletion keeps the row as a tombstone (type, dates, who by kind, reason; the file name erased)
+ * and the purge job records `purged_at`. Written only by the document functions.
+ */
+export const document = pgTable(
+  "document",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    type: documentType("type").notNull(),
+    catalogVersion: integer("catalog_version").notNull(),
+    retentionClass: text("retention_class").notNull(),
+    mediaType: documentMediaType("media_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    contentSha256: text("content_sha256").notNull(),
+    fileName: text("file_name"),
+    keyId: text("key_id").notNull(),
+    wrappedKey: ciphertext("wrapped_key").notNull(),
+    addedBy: actorType("added_by").notNull(),
+    addedByStaffUserId: uuid("added_by_staff_user_id").references(() => staffUser.id),
+    addedOnBehalf: boolean("added_on_behalf").notNull(),
+    addedAt: instant("added_at").notNull().defaultNow(),
+    reviewState: documentReviewState("review_state").notNull().default("unreviewed"),
+    reviewReason: documentReviewReason("review_reason"),
+    reviewedBy: uuid("reviewed_by").references(() => staffUser.id),
+    reviewedAt: instant("reviewed_at"),
+    deletedAt: instant("deleted_at"),
+    deletedBy: actorType("deleted_by"),
+    deletedByStaffUserId: uuid("deleted_by_staff_user_id").references(() => staffUser.id),
+    deleteReason: documentDeleteReason("delete_reason"),
+    purgedAt: instant("purged_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "document_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "document_policy_fk",
+      columns: [t.type, t.catalogVersion, t.retentionClass],
+      foreignColumns: [
+        documentTypePolicy.type,
+        documentTypePolicy.catalogVersion,
+        documentTypePolicy.retentionClass,
+      ],
+    }),
+    index("document_participation_idx").on(t.participationId, t.addedAt),
+    check(
+      "document_size",
+      sql`${t.sizeBytes} between 1 and ${sql.raw(String(documentLimits.maxBytes))}`,
+    ),
+    check("document_content_sha256", sql`${t.contentSha256} ~ '^[0-9a-f]{64}$'`),
+    check("document_key_id", sql`${t.keyId} ~ '^[0-9a-f]{16}$'`),
+    // nonce | data key | tag (document-encryption.ts)
+    check("document_wrapped_key", sql`octet_length(${t.wrappedKey}) = 60`),
+    check("document_file_name", sql`char_length(${t.fileName}) between 1 and 200`),
+    check(
+      "document_added_by",
+      sql`${t.addedBy} in ('participant', 'user') and (${t.addedBy} = 'user') = (${t.addedByStaffUserId} is not null) and (${t.addedBy} = 'user' or not ${t.addedOnBehalf})`,
+    ),
+    check(
+      "document_review",
+      sql`(${t.reviewState} = 'rejected') = (${t.reviewReason} is not null) and (${t.reviewState} = 'unreviewed') = (${t.reviewedAt} is null) and (${t.reviewedAt} is null) = (${t.reviewedBy} is null)`,
+    ),
+    check(
+      "document_deleted",
+      sql`(${t.deletedAt} is null) = (${t.deletedBy} is null) and (${t.deletedBy} is null or ${t.deletedBy} in ('participant', 'user')) and coalesce(${t.deletedBy} = 'user', false) = (${t.deletedByStaffUserId} is not null) and coalesce(${t.deletedBy} = 'user', false) = (${t.deleteReason} is not null) and (${t.deletedAt} is null or ${t.fileName} is null)`,
+    ),
+    check("document_purged", sql`${t.purgedAt} is null or ${t.deletedAt} is not null`),
+  ],
+);
+
+/**
+ * An opening's link (Q147): the SHA-256 of 32 random bytes, never the token; bound to the session
+ * that asked (kind and hash), valid 60 s, reusable within them. Internal, class
+ * `access_credential` (Q122). Written only by `open_document`, read only by
+ * `document_link_content`: the runtime role has no privilege on it.
+ */
+export const documentLink = pgTable(
+  "document_link",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => document.id),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    sessionKind: documentSessionKind("session_kind").notNull(),
+    sessionHash: text("session_hash").notNull(),
+    expiresAt: instant("expires_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    foreignKey({
+      name: "document_link_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("document_link_document_idx").on(t.documentId),
+    check("document_link_token_hash", sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check("document_link_session_hash", sql`${t.sessionHash} ~ '^[0-9a-f]{64}$'`),
+    check("document_link_expires", sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+);
+
+/**
  * A fully executed DSV amendment of a contractual date change (process-and-lifecycle.md, "DSV
  * amendment"; round 32): operational evidence, not the contract (the signed original stays on
  * paper). Written only by `set_participation_dates`; a trigger refuses every update and deletion.
@@ -1935,6 +2089,9 @@ export const tables = [
   oneTimeCodeChallenge,
   participantSession,
   assistedMode,
+  documentTypePolicy,
+  document,
+  documentLink,
   lifecycleEdge,
   auditEvent,
   jobRun,

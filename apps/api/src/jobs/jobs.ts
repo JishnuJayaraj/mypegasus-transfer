@@ -10,7 +10,14 @@ import { evaluateProject } from "./evaluate-project";
 import { runLifecycleSweep } from "./lifecycle-sweep";
 import { jobNames, timeZone } from "./names";
 import type { ActivationNoticeQueue } from "../context";
-import { ActivationNoticePayload, EvaluateProjectPayload, SweepPayload } from "./payloads";
+import {
+  ActivationNoticePayload,
+  EvaluateProjectPayload,
+  PurgeDocumentPayload,
+  SweepPayload,
+} from "./payloads";
+import type { FileStorage } from "@transfer/adapters";
+import { purgeDocumentObject, type DocumentPurgeQueue } from "../documents/purge";
 import { sendActivationNotice, type ActivationNoticeDeps } from "./activation-notice";
 
 export { jobNames, timeZone } from "./names";
@@ -23,7 +30,8 @@ export { jobNames, timeZone } from "./names";
  * second job for the same project and day is refused while one is queued or active. pg-boss
  * deduplicates keys only on `stately` and `exclusive` queues (spike S2). Failures retry with
  * backoff (plan 5.9). `portal.activation-notice` is `exclusive` per channel id (Slice 3 plan D21):
- * the completion queues it in its own transaction, at least once.
+ * the completion queues it in its own transaction, at least once. `documents.purge-object` is
+ * `exclusive` per document id: the deletion queues it in its own transaction.
  */
 const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "exclusive" }> = {
   [jobNames.lifecycleSweep]: {
@@ -47,6 +55,13 @@ const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "excl
     retryBackoff: true,
     expireInSeconds: 5 * 60,
   },
+  [jobNames.purgeDocument]: {
+    policy: "exclusive",
+    retryLimit: 10,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 5 * 60,
+  },
 };
 
 /** `HH:MM` (Berlin) as a daily cron expression; 02:00–02:59 is refused (round 9). */
@@ -66,6 +81,8 @@ export type WorkDeps = {
   dispatchPollMs?: number;
   /** The senders and the portal URL of the activation notice (D21). */
   notices?: Omit<ActivationNoticeDeps, "db" | "logger">;
+  /** The document store the purge job deletes from; none in production yet (Q149). */
+  storage?: FileStorage | undefined;
 };
 
 export type JobsOptions = {
@@ -170,6 +187,17 @@ async function startWorkers(
       }
     });
   }
+  const { storage } = deps;
+  if (storage) {
+    await boss.work(jobNames.purgeDocument, { pollingIntervalSeconds }, async (jobs) => {
+      for (const job of jobs) {
+        await runJob(logger, job, async () => {
+          const { documentId } = PurgeDocumentPayload.parse(job.data);
+          await purgeDocumentObject({ db, storage, logger }, documentId, job.id);
+        });
+      }
+    });
+  }
   await boss.work(jobNames.lifecycleSweep, { pollingIntervalSeconds }, async (jobs) => {
     for (const job of jobs) {
       await runJob(logger, job, async () => {
@@ -186,6 +214,15 @@ export function activationNoticeQueue(boss: PgBoss): ActivationNoticeQueue {
   return {
     async enqueue(channelId, db) {
       await boss.send(jobNames.activationNotice, { channelId }, { singletonKey: channelId, db });
+    },
+  };
+}
+
+/** Queues a deleted document's purge in the caller's transaction: `singletonKey` the document. */
+export function documentPurgeQueue(boss: PgBoss): DocumentPurgeQueue {
+  return {
+    async enqueue(documentId, db) {
+      await boss.send(jobNames.purgeDocument, { documentId }, { singletonKey: documentId, db });
     },
   };
 }

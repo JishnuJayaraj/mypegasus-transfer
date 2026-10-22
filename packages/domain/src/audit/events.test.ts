@@ -97,6 +97,10 @@ describe("audit event types (ADR-0002)", () => {
       "step_up_failed",
       "assisted_mode_started",
       "assisted_mode_ended",
+      "document_added",
+      "document_reviewed",
+      "document_deleted",
+      "document_upload_rejected",
     ]);
   });
 
@@ -152,6 +156,12 @@ describe("audit event types (ADR-0002)", () => {
       "step_up_failed",
       "assisted_mode_started",
       "assisted_mode_ended",
+      // Documents (Slice 4b): only the document functions write them, the opening included.
+      "document_opened",
+      "document_added",
+      "document_reviewed",
+      "document_deleted",
+      "document_upload_rejected",
     ]);
   });
 
@@ -1196,6 +1206,77 @@ describe("assisted mode (Q136, ADR-0007)", () => {
       { ...started, actor: { type: "participant", participationId } },
       { ...started, participationId: null },
       { ...ended, details: { ...ended.details, endReason: "timeout" } },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
+  });
+});
+
+describe("documents (data-protection.md, uploads; Q144, Q146)", () => {
+  const participant = { type: "participant", participationId } as const;
+  const assisted = { ...user, onBehalfOf: participationId };
+  const ofDocument = { documentId: otherId, documentType: "cv" };
+  const added = { ...base, type: "document_added", details: { ...ofDocument, source: "staff" } };
+  const reviewed = {
+    ...base,
+    type: "document_reviewed",
+    reasonCode: "unreadable",
+    details: { ...ofDocument, decision: "rejected" },
+  };
+  const deleted = {
+    ...base,
+    type: "document_deleted",
+    reasonCode: "wrong_person",
+    details: ofDocument,
+  };
+  const rejected = {
+    ...base,
+    type: "document_upload_rejected",
+    reasonCode: "file_infected",
+    details: { documentType: "cv" },
+  };
+
+  it("records the document's id, type and source, codes only", () => {
+    expect(issueCodes(added)).toEqual([]);
+    expect(
+      issueCodes({ ...added, actor: participant, details: { ...ofDocument, source: "portal" } }),
+    ).toEqual([]);
+    expect(
+      issueCodes({ ...added, actor: assisted, details: { ...ofDocument, source: "assisted" } }),
+    ).toEqual([]);
+    expect(
+      issueCodes({
+        ...reviewed,
+        reasonCode: null,
+        details: { ...ofDocument, decision: "accepted" },
+      }),
+    ).toEqual([]);
+    expect(issueCodes(reviewed)).toEqual([]);
+    expect(issueCodes(deleted)).toEqual([]);
+    expect(issueCodes({ ...deleted, actor: participant, reasonCode: null })).toEqual([]);
+    expect(issueCodes(rejected)).toEqual([]);
+    expect(issueCodes({ ...rejected, actor: assisted, reasonCode: "file_unscannable" })).toEqual(
+      [],
+    );
+  });
+
+  it("refuses a wrong source, a reason that doesn't fit and any file name", () => {
+    expect(issueCodes({ ...added, actor: participant })).toEqual(["source_mismatch"]);
+    expect(issueCodes({ ...added, actor: assisted })).toEqual(["source_mismatch"]);
+    const seedJob = { type: "system", job: "seed" };
+    expect(issueCodes({ ...added, actor: seedJob })).toEqual(["source_mismatch"]);
+    expect(issueCodes({ ...reviewed, reasonCode: null })).toEqual(["reason_mismatch"]);
+    expect(issueCodes({ ...deleted, reasonCode: null })).toEqual(["reason_mismatch"]);
+    expect(issueCodes({ ...deleted, actor: participant })).toEqual(["reason_mismatch"]);
+    expect(issueCodes({ ...deleted, actor: assisted })).toEqual([
+      "actor_mismatch",
+      "reason_mismatch",
+    ]);
+    for (const bad of [
+      { ...added, details: { ...added.details, fileName: "Lebenslauf.pdf" } },
+      { ...reviewed, actor: assisted },
+      { ...rejected, reasonCode: "file_too_large" },
+      { ...rejected, participationId: null },
     ]) {
       expect(AuditEvent.safeParse(bad).success).toBe(false);
     }

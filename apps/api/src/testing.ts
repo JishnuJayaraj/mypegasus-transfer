@@ -49,6 +49,10 @@ export function testApp(
     smsSender?: Deps["smsSender"];
     outbox?: Deps["outbox"];
     activationNotices?: Deps["activationNotices"];
+    fileStorage?: Deps["fileStorage"];
+    virusScanner?: Deps["virusScanner"];
+    uploadSlots?: Deps["uploadSlots"];
+    documentPurges?: Deps["documentPurges"];
   } = {},
 ) {
   const logs: string[] = [];
@@ -67,6 +71,10 @@ export function testApp(
     smsSender: options.smsSender,
     outbox: options.outbox,
     activationNotices: options.activationNotices,
+    fileStorage: options.fileStorage,
+    virusScanner: options.virusScanner,
+    uploadSlots: options.uploadSlots,
+    documentPurges: options.documentPurges,
     detached,
   });
   return { app, db, logs, detached };

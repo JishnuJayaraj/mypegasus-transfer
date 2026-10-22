@@ -5,7 +5,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createApp, messaging } from "./app";
 import { loadDotEnv, parseEnv } from "./env";
-import { activationNoticeQueue, startJobs } from "./jobs/jobs";
+import { activationNoticeQueue, documentPurgeQueue, startJobs } from "./jobs/jobs";
+import { documentFiles } from "./documents/files";
 import { failClosedFacts } from "./participations/guard-facts";
 import { createLogger } from "./logger";
 import { createShutdown } from "./shutdown";
@@ -21,6 +22,8 @@ const clock = createClock({ CLOCK: env.clock, NODE_ENV: env.nodeEnv });
 const senders = messaging({ env, clock, logger });
 // Login-code sends finish after their response (ADR-0007); shutdown waits for them.
 const detached = createDetached(logger);
+// One store and scanner for the API and the purge job; none in production yet (Q149).
+const files = documentFiles(env);
 // pg-boss in this process (D7) as the runtime role, before listening: a schema `db:migrate`
 // hasn't installed fails the start (plan 5.9).
 const jobs = env.jobsEnabled
@@ -38,6 +41,7 @@ const jobs = env.jobsEnabled
           smsSender: senders.smsSender,
           portalPublicUrl: env.portalPublicUrl!,
         },
+        storage: files?.storage,
       },
     })
   : undefined;
@@ -59,6 +63,9 @@ const server = serve(
       ...senders,
       detached,
       activationNotices: jobs ? activationNoticeQueue(jobs.boss) : undefined,
+      fileStorage: files?.storage,
+      virusScanner: files?.scanner,
+      documentPurges: jobs ? documentPurgeQueue(jobs.boss) : undefined,
     }).fetch,
     port: env.port,
   },
