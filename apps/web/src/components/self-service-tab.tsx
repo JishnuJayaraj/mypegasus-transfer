@@ -80,7 +80,7 @@ function useWizardText() {
 }
 
 /** A field's label: the wizard's, else the staff app's, else its key (a code); a document type's. */
-function useLabel() {
+export function useSelfServiceLabel() {
   const { t, i18n } = useTranslation();
   const wizardText = useWizardText();
   return (key: string): string => {
@@ -96,7 +96,7 @@ function useLabel() {
 /** The missing items per step, as labels. */
 function Missing({ view }: { view: View }) {
   const { t } = useTranslation();
-  const label = useLabel();
+  const label = useSelfServiceLabel();
   const steps = [...new Set(view.missing.map((item) => item.step))];
   return (
     <section className="tp-section" aria-label={t("participant.selfService.missing")}>
@@ -125,7 +125,7 @@ function Missing({ view }: { view: View }) {
 function PageFacts({ page, view }: { page: SelfServicePage; view: View }) {
   const { t } = useTranslation();
   const ts = useWizardText();
-  const label = useLabel();
+  const label = useSelfServiceLabel();
   const sensitive = SensitivePage.safeParse(page).success;
   const keys = (wizardPages.find((p) => p.page === page)?.fields ?? []).filter((key) =>
     sensitive ? key in view.sensitive : key in view.values,
@@ -173,7 +173,7 @@ function SensitiveValue(props: { view: View; group: SensitivePage; field: Sensit
   const { t } = useTranslation();
   const ts = useWizardText();
   const api = useApi();
-  const label = useLabel();
+  const label = useSelfServiceLabel();
   const { view, group, field } = props;
   const [shown, setShown] = useState<string>();
   const [failed, setFailed] = useState(false);

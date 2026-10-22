@@ -145,7 +145,7 @@ export function lifecycleFlags(
   today: IsoDate,
 ): LifecycleFlag[] {
   const flags: LifecycleFlag[] = [];
-  const { status, profilingStatus, dsvStatus } = s.current;
+  const { status, profilingStatus } = s.current;
   const tgStart = effectiveTgStart(s.participation, s.wave);
   if (status === "informed" && tgStart !== null && tgStart < today) flags.push("tg_start_missed");
 
@@ -153,15 +153,10 @@ export function lifecycleFlags(
   if (latest !== null && today > latest) {
     const outcome = cutoffOutcome(s);
     if (outcome?.kind === "flag") flags.push(outcome.flag);
-  } else if (latest !== null) {
-    // Warned as it will be at the cutoff: an open offer will have expired by then, since its
-    // deadline is no later than the latest entry date (Q69).
-    const atCutoff = dsvStatus === "dsv_offered" ? "dsv_expired" : dsvStatus;
+  } else if (latest !== null && cutoffOutcome(atCutoff(s))) {
     const cutoff = addDays(latest, 1);
-    if (cutoffOutcome({ ...s, current: { ...s.current, dsvStatus: atCutoff } })) {
-      if (today >= addDays(cutoff, -cutoffWarningDays)) flags.push("cutoff_warning");
-      if (today >= addDays(cutoff, -cutoffFinalReminderDays)) flags.push("cutoff_final_reminder");
-    }
+    if (today >= addDays(cutoff, -cutoffWarningDays)) flags.push("cutoff_warning");
+    if (today >= addDays(cutoff, -cutoffFinalReminderDays)) flags.push("cutoff_final_reminder");
   }
 
   if (status === "active_in_tg") {
@@ -185,6 +180,30 @@ export function projectFlags(project: PlannerProject): ProjectFlag[] {
   const missing =
     project.waves.length === 0 || project.waves.some((w) => w.latestEntryDate === null);
   return project.type === "ta_tg" && missing ? ["latest_entry_date_missing"] : [];
+}
+
+/**
+ * The applicable latest entry date while the cutoff would withdraw or flag the participation
+ * (process-and-lifecycle.md, system withdrawal at the final admission cutoff), else null: the
+ * condition of the cutoff warnings.
+ */
+export function latestEntryCutoff(
+  s: ParticipationSnapshot,
+  project: PlannerProject,
+): IsoDate | null {
+  const latest = latestEntryDateFor(s, project);
+  if (latest === null) return null;
+  return cutoffOutcome(atCutoff(s)) ? latest : null;
+}
+
+/**
+ * The state as it will be at the cutoff: an open offer will have expired by then, since its
+ * deadline is no later than the latest entry date (Q69).
+ */
+function atCutoff(s: ParticipationSnapshot): ParticipationSnapshot {
+  const { dsvStatus } = s.current;
+  const dsv = dsvStatus === "dsv_offered" ? "dsv_expired" : dsvStatus;
+  return { ...s, current: { ...s.current, dsvStatus: dsv } };
 }
 
 /** The participation's wave cutoff, or the project's final entry date without a wave (Q84). */

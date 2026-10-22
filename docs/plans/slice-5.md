@@ -1,11 +1,11 @@
 # Slice 5 — PL dashboard (F7) and reminders (F4 basics)
 
-Status: **revised** 2026-10-22 after the product owner's review of PR #78 (not yet approved):
-the accepted decisions are recorded in [round 39](../decisions/2026-10-22-answers-round-39.md);
-this revision adds the required amendments (deadlines, the search snapshot, the dispatch check,
-audit redaction in the database, appointments as Slice 5b, two UX details) and, after the second
-review, the final Q154 contract: every reminder needs a live `portal-contact-consent:v2` (D11,
-D18). Nothing is implemented before approval.
+Status: **approved** 2026-10-22 by the product owner (PR #78): the accepted decisions are
+recorded in [round 39](../decisions/2026-10-22-answers-round-39.md); this revision adds the
+required amendments (deadlines, the search snapshot, the dispatch check, audit redaction in the
+database, appointments as Slice 5b, two UX details) and, after the second review, the final Q154
+contract: every reminder needs a live `portal-contact-consent:v2` (D11, D18). Nothing is
+implemented before approval. Next: PR 5-1.
 Roadmap: funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines;
 deferred here from Slice 2: bulk entry-wave assignment and the audit history UI (the runtime role
 can't read `audit_event` yet). Builds on the participant list

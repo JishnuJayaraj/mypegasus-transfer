@@ -1,5 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { WorklistFilter } from "@transfer/domain";
 import {
   Add,
   Button,
@@ -26,12 +27,34 @@ import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
 import { ImportSection } from "../../components/import-section";
 import { Participants } from "../../components/participants";
+import { ProjectDashboard } from "../../components/project-dashboard";
 import { ProjectRegion } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
 import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
 
+/** The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Einrichtung", "Team". */
+const tabs = [undefined, "participants", "setup", "team"] as const;
+type ProjectTab = Exclude<(typeof tabs)[number], undefined>;
+export type ProjectSearch = WorklistFilter & { tab?: ProjectTab };
+
+/**
+ * The tab and the work list's code filters (data-protection.md, the work list): an unknown tab,
+ * key or value is dropped, so a stale link still opens. Never a name or a search term.
+ */
+function projectSearch(search: Record<string, unknown>): ProjectSearch {
+  const tab = tabs.find((value) => value !== undefined && value === search.tab);
+  const filter = Object.fromEntries(
+    Object.entries(WorklistFilter.shape).flatMap(([key, schema]) => {
+      const parsed = schema.safeParse(search[key]);
+      return parsed.success && parsed.data !== undefined ? [[key, parsed.data]] : [];
+    }),
+  ) as WorklistFilter;
+  return { ...filter, ...(tab && { tab }) };
+}
+
 export const Route = createFileRoute("/projects/$projectId")({
+  validateSearch: projectSearch,
   loader: async ({ context: { api, queryClient }, params: { projectId } }) => {
     const [project] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
@@ -48,7 +71,10 @@ export const Route = createFileRoute("/projects/$projectId")({
 function ProjectPage() {
   const { t } = useTranslation();
   const { projectId } = Route.useParams();
+  const { tab, ...filter } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const { data: project } = useSuspenseQuery(projectQuery(useApi(), projectId));
+  const taTg = project.type === "ta_tg";
   return (
     <>
       <PageHeader title={project.name} />
@@ -60,26 +86,51 @@ function ProjectPage() {
         ].join(" · ")}
       </p>
       <ProjectRegion projectId={projectId} />
-      <Tabs>
+      <Tabs
+        selectedIndex={tabs.indexOf(tab)}
+        onChange={({ selectedIndex }) => {
+          const next = tabs[selectedIndex];
+          void navigate({ search: next ? { tab: next } : {} });
+        }}
+      >
         <TabList aria-label={t("projectDetail.tabs")}>
           <Tab>{t("projectDetail.overview")}</Tab>
+          <Tab>{t("projectDetail.participants")}</Tab>
+          <Tab>{t("projectDetail.setup")}</Tab>
           <Tab>{t("team.title")}</Tab>
         </TabList>
+        {/* Each tab loads its data only when shown. */}
         <TabPanels>
           <TabPanel>
-            <ProjectSetup projectId={projectId} />
-            <AgenturSettings projectId={projectId} />
-            {project.type === "ta_tg" ? (
-              <EntryWaves projectId={projectId} />
-            ) : (
-              <p>{t("waveForm.errors.not_ta_tg")}</p>
-            )}
-            <ImportSection projectId={projectId} />
-            <Participants projectId={projectId} />
+            {tab === undefined && <ProjectDashboard projectId={projectId} taTg={taTg} />}
           </TabPanel>
           <TabPanel>
-            <ProjectTeam projectId={projectId} />
+            {tab === "participants" && (
+              <Participants
+                projectId={projectId}
+                taTg={taTg}
+                filter={filter}
+                onFilterChange={(next) =>
+                  void navigate({ search: { ...next, tab: "participants" }, replace: true })
+                }
+              />
+            )}
           </TabPanel>
+          <TabPanel>
+            {tab === "setup" && (
+              <>
+                <ProjectSetup projectId={projectId} />
+                <AgenturSettings projectId={projectId} />
+                {taTg ? (
+                  <EntryWaves projectId={projectId} />
+                ) : (
+                  <p>{t("waveForm.errors.not_ta_tg")}</p>
+                )}
+                <ImportSection projectId={projectId} />
+              </>
+            )}
+          </TabPanel>
+          <TabPanel>{tab === "team" && <ProjectTeam projectId={projectId} />}</TabPanel>
         </TabPanels>
       </Tabs>
     </>

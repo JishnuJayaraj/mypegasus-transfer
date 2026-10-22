@@ -90,7 +90,9 @@
       "actions": "Aktionen"
     },
     "tabs": "Projektbereiche",
-    "overview": "Projekt"
+    "overview": "Übersicht",
+    "participants": "Teilnehmende",
+    "setup": "Einrichtung"
   },
   "waveForm": {
     "createTitle": "Neue Eintrittswelle",
@@ -521,7 +523,7 @@
   },
   "participants": {
     "title": "Teilnehmende",
-    "empty": "Es gibt noch keine Teilnehmenden. Importieren Sie eine Datei, um sie anzulegen.",
+    "empty": "Es gibt noch keine Teilnehmenden. Importieren Sie eine Datei unter „Einrichtung“, um sie anzulegen.",
     "more": "Weitere laden",
     "forbidden": "Sie dürfen die Teilnehmenden dieses Projekts nicht sehen.",
     "failed": "Die Teilnehmenden konnten nicht geladen werden.",
@@ -535,7 +537,11 @@
       "select": "Auswahl",
       "consultants": "Beratung",
       "activationStatus": "Aktivierung",
-      "privacyNoticeState": "Datenschutzhinweis"
+      "privacyNoticeState": "Datenschutzhinweis",
+      "wave": "Welle",
+      "open": "Offen",
+      "deadline": "Frist",
+      "portal": "Portal"
     },
     "statuses": {
       "imported": "Importiert",
@@ -1196,5 +1202,143 @@
       "region_unchanged": "Es gibt keine Änderung.",
       "failed": "Die Region konnte nicht gespeichert werden."
     }
+  },
+  "worklist": {
+    "loading": "Wird geladen…",
+    "tooLarge": "Das Projekt hat mehr Teilnehmende, als diese Liste auf einmal zeigen kann.",
+    "asOf": "Stand {{time}}",
+    "search": "Name oder Personalnummer suchen",
+    "searchHelper": "Die Suche läuft nur in diesem Browser; der Suchbegriff wird nicht gesendet.",
+    "matches_one": "{{count}} Treffer",
+    "matches_other": "{{count}} Treffer",
+    "noMatches": "Keine Teilnehmenden entsprechen der Suche und den Filtern.",
+    "selectAll": "Alle Treffer auswählen",
+    "clearSelection": "Auswahl aufheben",
+    "selected_one": "{{count}} ausgewählt",
+    "selected_other": "{{count}} ausgewählt",
+    "showMore": "Weitere anzeigen",
+    "shownOf": "{{shown}} von {{count}} angezeigt",
+    "filters": {
+      "title": "Filter",
+      "all": "Alle",
+      "reset": "Filter zurücksetzen",
+      "status": "Status",
+      "profilingStatus": "Profiling",
+      "dsvStatus": "DSV",
+      "wave": "Welle",
+      "consultant": "Beratung",
+      "activation": "Aktivierungsstatus",
+      "notice": "Datenschutzhinweis",
+      "actions": "Offene Punkte",
+      "deadlineKind": "Frist",
+      "deadlineState": "Fristlage",
+      "flag": "Hinweis",
+      "portal": "Portal",
+      "none": "Ohne",
+      "noWave": "Ohne Welle",
+      "noConsultant": "Nicht zugewiesen",
+      "anyFlag": "Mit Hinweis"
+    },
+    "actionsFilter": {
+      "any": "Mit offenen Angaben oder Unterlagen",
+      "fields": "Offene Angaben",
+      "documents": "Offene Unterlagen",
+      "rejected_documents": "Abgelehnte Unterlagen",
+      "none": "Nichts offen"
+    },
+    "actionStates": {
+      "missing": "fehlt",
+      "rejected": "abgelehnt"
+    },
+    "openCount_one": "{{count}} offen",
+    "openCount_other": "{{count}} offen",
+    "nothingOpen": "Nichts offen",
+    "deadlineKinds": {
+      "offer_deadline": "DSV-Angebotsfrist",
+      "tg_start": "TG-Beginn",
+      "latest_entry_cutoff": "Letzter Eintritt",
+      "privacy_notice": "Datenschutzhinweis",
+      "profiling_exception": "Profiling nach Ausnahme"
+    },
+    "deadlineStates": {
+      "upcoming": "In 14 Tagen",
+      "overdue": "Überschritten"
+    },
+    "deadlineOverdue": "{{kind}}: überschritten seit {{date}}",
+    "deadlineToday": "{{kind}}: heute",
+    "deadlineIn_one": "{{kind}}: in {{count}} Tag",
+    "deadlineIn_other": "{{kind}}: in {{count}} Tagen",
+    "deadlineFinal": "letzte Erinnerung",
+    "flags": {
+      "conflict_dsv_signed_profiling_declined": "DSV unterschrieben, Profiling abgelehnt",
+      "dsv_never_offered": "DSV nie angeboten",
+      "informed_without_wave_at_cutoff": "Informiert ohne Welle",
+      "profiling_declined_after_entry": "Profiling nach Eintritt abgelehnt",
+      "tg_start_missed": "TG-Beginn verpasst",
+      "cutoff_warning": "Stichtag naht",
+      "cutoff_final_reminder": "Stichtag in 3 Tagen",
+      "profiling_exception_deadline_missed": "Profiling-Frist verpasst"
+    },
+    "portal": {
+      "reachable": "Erreichbar",
+      "consent_required": "Einwilligung fehlt",
+      "not_reachable": "Nicht erreichbar"
+    },
+    "wave": {
+      "title": "Eintrittswelle zuweisen",
+      "choose": "Eintrittswelle",
+      "chooseWave": "Welle wählen",
+      "assign": "Eintrittswelle zuweisen ({{count}})",
+      "done": "{{assigned}} zugewiesen, {{unchanged}} unverändert",
+      "refused": "Keine Zuweisung vorgenommen",
+      "refusedRows": "Diese Teilnehmenden verhindern die Zuweisung:",
+      "row": "{{name}}: {{reason}}",
+      "failed": "Die Zuweisung ist fehlgeschlagen. Es wurde nichts zugewiesen.",
+      "participation_not_found": "Die Person gehört nicht zu diesem Projekt oder ist Ihnen nicht zugänglich."
+    },
+    "noticeStates": {
+      "provided": "Bereitgestellt",
+      "due": "Fällig",
+      "overdue": "Überfällig"
+    }
+  },
+  "dashboard": {
+    "title": "Übersicht",
+    "forbidden": "Sie dürfen die Übersicht dieses Projekts nicht sehen.",
+    "failed": "Die Übersicht konnte nicht geladen werden.",
+    "scopeAssigned": "Gezählt werden die Ihnen zugewiesenen Teilnehmenden.",
+    "count": "Anzahl",
+    "showList": "{{count}}, in der Liste zeigen",
+    "tiles": {
+      "participations": "Teilnehmende",
+      "open_actions": "mit offenen Angaben oder Unterlagen",
+      "deadline_upcoming": "Frist in 14 Tagen",
+      "deadline_overdue": "Frist überschritten",
+      "flags": "Hinweise",
+      "not_reachable": "nicht erreichbar"
+    },
+    "groups": {
+      "statuses": "Status",
+      "profilingStatuses": "Profiling",
+      "dsvStatuses": "DSV",
+      "waves": "Nach Welle",
+      "activation": "Aktivierung",
+      "notice": "Datenschutzhinweis",
+      "deadlines": "Fristen",
+      "flags": "Hinweise",
+      "portal": "Portal"
+    },
+    "columns": {
+      "label": "Bezeichnung",
+      "count": "Anzahl",
+      "kind": "Frist",
+      "upcoming": "In 14 Tagen",
+      "overdue": "Überschritten",
+      "latestEntryDate": "Letzter Eintritt",
+      "signingDeadline": "Unterschriftsfrist",
+      "defaultTgStart": "TG-Beginn"
+    },
+    "noWave": "Ohne Welle",
+    "noFlags": "Keine Hinweise."
   }
 }

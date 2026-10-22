@@ -198,9 +198,22 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   its own transaction with the channel id as `singletonKey`, sends the notice to the new channel
   at least once (provider key `activation-notice:<channelId>`) and records `notice_sent_at`.
 
+## The project page (Slice 5, PR 5-1)
+
+- The tabs "Übersicht" (the dashboard), "Teilnehmende" (the work list), "Einrichtung" (project
+  setup, Agentur settings, waves, import) and "Team"; the tab and the work list's code filters
+  are the route's search params (`?tab=participants&status=informed`), never a person's value.
+  Each tab loads its data only while shown.
+- One snapshot per project (`worklistQuery`, `GET /projects/{id}/worklist`) feeds the work list;
+  its query key is the prefix of every participant query of the project, so a change to a
+  participation refreshes the list and the dashboard alike. The domain's `WorklistFilter`,
+  `matchesWorklistFilter`, `searchKey` and `mostUrgent` run in the browser as on the server.
+
 ## Performance approach (frontend)
 
 - Route-level code splitting + TanStack Router preloading on hover/intent.
 - TanStack Query cache with sensible stale times; optimistic updates for simple edits.
-- Virtualised tables for large participant lists.
+- The work list filters and searches its whole snapshot in memory and renders 25 matching rows
+  at a time ("Weitere anzeigen"), so a keystroke over 2,000 participations stays under 100 ms
+  without a virtualised table.
 - Keep Carbon imports per-component to keep bundles small.

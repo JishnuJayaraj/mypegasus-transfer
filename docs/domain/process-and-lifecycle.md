@@ -114,6 +114,11 @@ Agentur".
     keeps its wave (`individual_dates_set`, in the domain and the database function), so a wave
     change never silently changes individual contractual dates. A wave change creates no DSV
     amendment and no BA reporting task.
+  - **Bulk assignment** (Slice 5): the PL assigns one wave to 1–500 participations of the work
+    list, all or nothing, under the exclusive project lock: every participation passes the same
+    checks first, then each gets `assign_entry_wave` (one `entry_wave_assigned` each). Any refusal
+    assigns none and names every refused row's index and code; a participation already in the
+    wave stays as it is (`unchanged`).
 
 ## Project checklist (project-level BA steps) *(provisional, Q16, Q52)*
 
@@ -160,6 +165,34 @@ with profiling** (round 4). So a participation has:
   `informed_without_wave_at_cutoff`), and the compliance flags, only while `active_in_tg`:
   `profiling_declined_after_entry`, `profiling_exception_deadline_missed`. Project flag:
   `latest_entry_date_missing` (a `ta_tg` project without waves or with a wave lacking one).
+- **Deadline warnings** (Slice 5; Q151; `deadlinesOf`, `packages/domain/src/worklist/`): the
+  work list and the dashboard list every applicable deadline of a participation as
+  `{ kind, date, state }`. They inform, never guard. `upcoming` from 14 calendar days before the
+  date up to the date itself, `overdue` from the day after (deadlines are inclusive, Q69); a date
+  further away isn't listed. The kinds, in their tie order:
+
+  | Kind | Applies while | Date | Replaces the flags |
+  |---|---|---|---|
+  | `offer_deadline` | `dsv_offered` | the effective offer deadline | — |
+  | `tg_start` | `informed` | the effective TG start | `tg_start_missed` |
+  | `latest_entry_cutoff` | the cutoff would withdraw or flag it, as it will be at the cutoff (`latestEntryCutoff`, the warning's condition) | the applicable latest entry date (the wave's, else the project's final one, Q84) | `cutoff_warning`, `cutoff_final_reminder` |
+  | `privacy_notice` | the Article 14 notice isn't provided (Q124; any status, *assumed*, Q160) | its due date | — |
+  | `profiling_exception` | `active_in_tg` under an approved exception, profiling neither done nor declined | entry + 1 month (Q74) | `profiling_exception_deadline_missed` |
+
+  `latest_entry_cutoff` carries `final: true` from 3 days before the cutoff while it is upcoming
+  (Q78). A flag a deadline replaces is never listed beside it, so a cutoff counts once; the flags
+  that stay flags are `conflict_dsv_signed_profiling_declined`, `dsv_never_offered`,
+  `informed_without_wave_at_cutoff` and `profiling_declined_after_entry`. A row shows its most
+  urgent deadline: the oldest overdue one, else the earliest upcoming one, a tie by kind order.
+  The ASU due date joins with Slice 6 (Q1).
+- **Participant actions** (Slice 5; Q151; `participantActions`): what the participant still has
+  to do in the portal, from the wizard's steps (`data_collection`, `profiling`) of the
+  participation's own resolved chain: one action per missing field on a wizard page (custom fields
+  included) that the viewer may know about (the "Selbstauskunft" tab's rule), then one per
+  document type of the participant's own types: `missing` when a rule needs a live document and
+  there is none, `rejected` when every live document of the type is rejected (a required type
+  never counts as both). An upload waiting for its review asks nothing of the participant. A
+  terminal participation has no actions (*assumed*, Q160). Codes only, never a value.
 
 ### Main status
 

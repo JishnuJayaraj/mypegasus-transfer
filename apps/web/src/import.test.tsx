@@ -11,7 +11,7 @@ import {
   unpinnedConfig,
 } from "./test-utils";
 
-// Slice 2 plan 5.11, 5.13 (PR 2g-2): the import wizard and the participant list.
+// The import wizard (process-and-lifecycle.md, import and manual creation).
 const path = `/api/v1/projects/${project.id}`;
 const token = "a".repeat(64);
 const file = () =>
@@ -66,27 +66,6 @@ const issue = (row: number, code: string, severity = "error", target: string | n
 });
 
 const wavesPage = { items: [], nextCursor: null };
-const participant = (n: number, extra: object = {}) => ({
-  id: `00000000-0000-4000-a000-0000000000${String(n).padStart(2, "0")}`,
-  status: "imported",
-  profilingStatus: "not_started",
-  dsvStatus: "not_offered",
-  entryWaveId: null,
-  consultants: [],
-  activationStatus: { account: "not_activated", code: "none", issuedAt: null, expiresAt: null },
-  privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
-  activationCapabilities: {
-    issueActivationCode: false,
-    recordHandover: false,
-    revokeActivationCode: false,
-    providePrivacyNotice: false,
-  },
-  personnelNumber: `BSP-000${n}`,
-  lastName: "Mustermann",
-  firstName: "Erika",
-  ...extra,
-});
-
 function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = unpinnedConfig) {
   const { api, calls } = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
@@ -94,11 +73,11 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = unpi
     [`GET ${path}`]: () => json(project),
     [`GET ${path}/entry-waves`]: () => json(wavesPage),
     [`GET ${path}/config`]: () => json(config),
-    [`GET ${path}/participations`]: () => json({ items: [], nextCursor: null }),
+    [`GET ${path}/worklist`]: () => json({ generatedAt: "2026-10-22T08:42:00.000Z", items: [] }),
     "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
     ...routes,
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=setup`, api);
   return calls;
 }
 
@@ -152,8 +131,10 @@ describe("the import wizard", () => {
       previewToken: token,
       decisions: { confirmWarnings: false, possibleDuplicates: {} },
     });
-    // The new participants are read again.
-    expect(calls.filter((c) => c.key === `GET ${path}/participations`).length).toBeGreaterThan(1);
+    // The work list reads the new participants when it is shown.
+    await userEvent.click(screen.getByRole("tab", { name: "Teilnehmende" }));
+    expect(await screen.findByText(/Es gibt noch keine Teilnehmenden/)).toBeInTheDocument();
+    expect(calls.some((c) => c.key === `GET ${path}/worklist`)).toBe(true);
   });
 
   it("sends the whole-import country and the header row the PL chose", async () => {
@@ -393,40 +374,5 @@ describe("the import wizard", () => {
         /nicht für künftige Importe gespeichert \(etwa weil die Überschriftenzeile/,
       ),
     ).toBeInTheDocument();
-  });
-});
-
-describe("the participant list", () => {
-  it("shows the participations page by page", async () => {
-    setup({
-      [`GET ${path}/participations`]: ({ query }) =>
-        json(
-          query.get("cursor")
-            ? {
-                items: [participant(2, { lastName: "Musterfrau", status: "contacted" })],
-                nextCursor: null,
-              }
-            : { items: [participant(1)], nextCursor: "next" },
-        ),
-    });
-    const section = await screen.findByRole("region", { name: "Teilnehmende" });
-    expect(await within(section).findByText("BSP-0001")).toBeInTheDocument();
-    expect(within(section).getByText("Importiert")).toBeInTheDocument();
-    await userEvent.click(within(section).getByRole("button", { name: "Weitere laden" }));
-    expect(await within(section).findByText("Musterfrau")).toBeInTheDocument();
-    expect(within(section).getByText("Kontaktiert")).toBeInTheDocument();
-    expect(within(section).queryByRole("button", { name: "Weitere laden" })).toBeNull();
-  });
-
-  it("says so when the API refuses the list, and when there is nobody", async () => {
-    setup({ [`GET ${path}/participations`]: () => problem(403, "forbidden") });
-    expect(
-      await screen.findByText("Sie dürfen die Teilnehmenden dieses Projekts nicht sehen."),
-    ).toBeInTheDocument();
-  });
-
-  it("says that there is nobody yet", async () => {
-    setup();
-    expect(await screen.findByText(/Es gibt noch keine Teilnehmenden/)).toBeInTheDocument();
   });
 });

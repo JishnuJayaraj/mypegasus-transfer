@@ -86,7 +86,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, initial: object = bef
     [`POST ${path}/config/pins/${nord}/migration-preview`]: () => json(preview),
     ...routes,
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=setup`, api);
   return calls;
 }
 const action = "Agentur Nord (Beispiel) migrieren";
@@ -250,7 +250,7 @@ describe("template migration with review", () => {
     ["a pin without a newer version", config(2, [])],
   ])("isn't offered to %s", async (_label, initial) => {
     setup({}, initial);
-    expect(await screen.findByText("Einrichtung")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: action })).toBeNull();
     const setupSection = screen.getByRole("region", { name: "Einrichtung" });
     expect(within(setupSection).queryByRole("columnheader", { name: "Aktionen" })).toBeNull();

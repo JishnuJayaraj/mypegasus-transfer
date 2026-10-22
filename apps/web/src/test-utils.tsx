@@ -48,7 +48,7 @@ export function renderApp(path: string, api: ReturnType<typeof mockApi>["api"]) 
     createMemoryHistory({ initialEntries: [path] }),
   );
   render(<RouterProvider router={router} />);
-  return { router };
+  return { router, queryClient };
 }
 
 /**
@@ -153,3 +153,38 @@ export const unpinnedConfig = {
     setProjectRegion: true,
   },
 };
+
+/** A synthetic work list row (`WorklistItem`): nothing open, no deadline, no capability. */
+export const worklistItem = (overrides: object = {}) => ({
+  id: "00000000-0000-4000-a000-000000000001",
+  status: "imported",
+  profilingStatus: "not_started",
+  dsvStatus: "not_offered",
+  entryWaveId: null,
+  placementAgenturKey: null,
+  personnelNumber: "BSP-0001",
+  lastName: "Beispiel",
+  firstName: "Erika",
+  consultants: [],
+  activationStatus: { account: "not_activated", code: "none", issuedAt: null, expiresAt: null },
+  privacyNoticeState: {
+    state: "provided",
+    dueOn: "2026-11-15",
+    providedAt: "2026-10-16T08:00:00.000Z",
+  },
+  actions: [],
+  deadlines: [],
+  flags: [],
+  portal: "not_reachable",
+  capabilities: {
+    assignEntryWave: false,
+    issueActivationCode: false,
+    recordHandover: false,
+    revokeActivationCode: false,
+    providePrivacyNotice: false,
+  },
+  ...overrides,
+});
+
+/** The work list's answer at 10:42 Berlin time. */
+export const worklist = (items: object[]) => ({ generatedAt: "2026-10-22T08:42:00.000Z", items });

@@ -129,6 +129,9 @@ test("slice 4b: upload in the portal, refusal, review on the tab, deletion", asy
   await expect(certificateRow.getByText("abgelehnt: nicht lesbar")).toBeVisible();
   // Reviewed once and finally: no second review.
   await expect(certificateRow.getByRole("button", { name: /ablehnen$/ })).toHaveCount(0);
+  // Axe only once the dialog has faded out: mid-transition its colours are blended, and axe
+  // reports a contrast violation for text nobody can see any more.
+  await expect(reject).toBeHidden();
   await expectAccessible(page);
 
   // 3. The participant sees it rejected, deletes it after the confirmation.

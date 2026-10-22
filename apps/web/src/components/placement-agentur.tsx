@@ -11,7 +11,7 @@ import {
 } from "@transfer/ui";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { participantsQuery, participationQuery, useApi } from "../api";
+import { worklistQuery, participationQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
 
 type Detail = components["schemas"]["ParticipationDetail"];
@@ -53,7 +53,7 @@ export function PlacementAgentur({ detail, projectId }: { detail: Detail; projec
     },
     onSuccess: async (updated) => {
       queryClient.setQueryData(participationQuery(api, detail.id).queryKey, updated);
-      await queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey });
+      await queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey });
       showToast({
         title: t("participant.placementAgentur.saved"),
         subtitle: updated.placementAgenturKey ?? undefined,

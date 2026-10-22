@@ -148,6 +148,22 @@
   provision. Consultants and org administrators have no such case operation. The list and detail
   expose only derived status, dates and channel kinds; printable codes are returned once in a
   no-store response, and staff never retrieve an in-person destination or either keyed hash.
+- **The work list and the dashboard (Slice 5; Q150, accepted):** the project's tabs
+  "Übersicht" and "Teilnehmende" show one snapshot of the viewer's whole list scope
+  (`participationListScope`, recalculated on every request): the PL and back office the project,
+  an assigned consultant their currently assigned participations; an unassigned consultant and the
+  org roles get `403`. Rows carry only the listable person fields (Personalnummer, names), codes
+  and dates: the participant actions name only fields the viewer may know about, presence never a
+  value; the portal column says whether the participant has a live channel and a live consent of
+  the reminders' version (`portal-contact-consent:v2`), never an address. The dashboard's counts
+  are exact, values below five included, because every count is the identically scoped list a
+  click away; no Slice 5 aggregate leaves the application, and the n < 5 rule applies wherever an
+  aggregate is disclosed outside that scope (the customer report). Aggregates of health,
+  disability or other sensitive categories need a decision of their own. Both responses are
+  `Cache-Control: private, no-store` and never enter analytics or telemetry. The name search runs
+  in the browser over the snapshot (case and diacritics folded, `ß` as `ss`); the term is never
+  sent, never in a URL, a query key, a log or browser storage, and the snapshot stays in memory.
+  Only the code filters sit in the URL.
 - **Customer**: no login in the MVP (Q47). See the next section.
 
 ### Resources, categories and the generated matrix *(assumed, round 11)*

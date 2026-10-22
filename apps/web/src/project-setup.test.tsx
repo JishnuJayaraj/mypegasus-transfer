@@ -79,7 +79,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = unpi
     "GET /api/v1/config/templates": () => json({ items: catalog, nextCursor: null }),
     ...routes,
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=setup`, api);
   return calls;
 }
 
@@ -173,7 +173,7 @@ describe("project setup", () => {
         capabilities: { pinTemplate: false, setProjectAgentur: false },
       };
       const calls = setup({}, readOnly);
-      expect(await screen.findByText("Einrichtung")).toBeInTheDocument();
+      expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
       expect(screen.queryByLabelText("Agentur")).toBeNull();
       expect(screen.queryByRole("button", { name: /pinnen|festlegen/ })).toBeNull();
       expect(calls.some((c) => c.key === "GET /api/v1/config/templates")).toBe(false);
@@ -314,7 +314,7 @@ describe("project activation", () => {
     ["an active project", activeConfig],
   ])("isn't offered to %s", async (_label, config) => {
     setup({}, config);
-    expect(await screen.findByText("Einrichtung")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aktivieren" })).toBeNull();
     expect(screen.queryByText("Projekt aktivieren")).toBeNull();
   });

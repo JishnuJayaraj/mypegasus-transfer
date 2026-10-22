@@ -1,7 +1,16 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { json, mockApi, project, renderApp, staffUsers, unpinnedConfig } from "./test-utils";
+import {
+  json,
+  mockApi,
+  project,
+  renderApp,
+  staffUsers,
+  unpinnedConfig,
+  worklist,
+  worklistItem,
+} from "./test-utils";
 
 vi.mock("qrcode", () => ({
   default: { toDataURL: () => Promise.resolve("data:image/png;base64,cXJjb2Rl") },
@@ -9,30 +18,23 @@ vi.mock("qrcode", () => ({
 
 const path = `/api/v1/projects/${project.id}`;
 const participationId = "00000000-0000-4000-a000-000000000001";
-const item = (code: "none" | "printed" | "open" = "none") => ({
-  id: participationId,
-  status: "imported",
-  profilingStatus: "not_started",
-  dsvStatus: "not_offered",
-  entryWaveId: null,
-  personnelNumber: "BSP-0001",
-  lastName: "Beispiel",
-  firstName: "Erika",
-  consultants: [],
-  activationStatus: {
-    account: "not_activated",
-    code,
-    issuedAt: code === "none" ? null : "2026-10-21T10:00:00.000Z",
-    expiresAt: code === "none" ? null : "2026-11-20T10:00:00.000Z",
-  },
-  privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
-  activationCapabilities: {
-    issueActivationCode: true,
-    recordHandover: true,
-    revokeActivationCode: true,
-    providePrivacyNotice: true,
-  },
-});
+const item = (code: "none" | "printed" | "open" = "none") =>
+  worklistItem({
+    activationStatus: {
+      account: "not_activated",
+      code,
+      issuedAt: code === "none" ? null : "2026-10-21T10:00:00.000Z",
+      expiresAt: code === "none" ? null : "2026-11-20T10:00:00.000Z",
+    },
+    privacyNoticeState: { state: "due", dueOn: "2026-11-15", providedAt: null },
+    capabilities: {
+      assignEntryWave: false,
+      issueActivationCode: true,
+      recordHandover: true,
+      revokeActivationCode: true,
+      providePrivacyNotice: true,
+    },
+  });
 const printItem = {
   activationCodeId: "00000000-0000-4000-c000-000000000001",
   participationId,
@@ -61,24 +63,26 @@ function setup(code: "none" | "printed" | "open" = "none") {
     [`GET ${path}/entry-waves`]: () => json({ items: [], nextCursor: null }),
     [`GET ${path}/config`]: () => json(unpinnedConfig),
     "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
-    [`GET ${path}/participations`]: () => json({ items: [item(code)], nextCursor: null }),
+    [`GET ${path}/worklist`]: () => json(worklist([item(code)])),
     [`POST ${path}/activation-codes`]: () => json({ items: [printItem] }, 201),
     [`POST /api/v1/participations/${participationId}/activation-codes/handover`]: () => json({}),
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=participants`, api);
   return calls;
 }
 
 describe("activation-code staff views", () => {
-  it("shows activation and notice state, filters on the server, and prints an ephemeral letter", async () => {
+  it("shows activation and notice state, filters in the snapshot, and prints an ephemeral letter", async () => {
     const calls = setup();
     expect(await screen.findByRole("cell", { name: "Kein Code" })).toBeInTheDocument();
-    expect(screen.getByRole("cell", { name: "Fällig bis 2026-11-15" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Fällig bis 15.11.2026" })).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText("Aktivierungsstatus"), "printed");
+    expect(
+      await screen.findByText("Keine Teilnehmenden entsprechen der Suche und den Filtern."),
+    ).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText("Aktivierungsstatus"), "none");
-    await waitFor(() => {
-      const request = calls.filter((call) => call.key === `GET ${path}/participations`).at(-1);
-      expect(request).toBeDefined();
-    });
+    expect(await screen.findByRole("cell", { name: "Kein Code" })).toBeInTheDocument();
+    expect(calls.filter((call) => call.key === `GET ${path}/worklist`)).toHaveLength(1);
     await userEvent.click(screen.getByLabelText("BSP-0001 auswählen"));
     await userEvent.click(screen.getByRole("button", { name: "Aktivierungsbriefe drucken" }));
     expect(await screen.findByText("0123-4567-89AB")).toBeInTheDocument();

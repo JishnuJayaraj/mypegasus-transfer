@@ -100,41 +100,28 @@ export const projectsQuery = (api: ApiClient) =>
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 
-/** The project's participations, page by page; 403 for those who may not list them (data-protection.md). */
-export type ParticipationFilters = {
-  activation?:
-    | "none"
-    | "printed"
-    | "open"
-    | "delivery_unknown"
-    | "expired"
-    | "locked"
-    | "revoked"
-    | "used";
-  privacyNotice?: "provided" | "due" | "overdue";
-};
+/**
+ * The work list: the viewer's whole scope of the project in one snapshot, kept in memory only
+ * (data-protection.md, the work list and the dashboard). Its key is the prefix of every
+ * participant query of the project, so a change to a participation refreshes the list and the
+ * dashboard alike. No filter or search term is ever part of a key.
+ */
+export const worklistQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "participations"],
+    queryFn: () =>
+      unwrap(api.GET("/api/v1/projects/{projectId}/worklist", { params: { path: { projectId } } })),
+    retry: false,
+  });
 
-export const participantsQuery = (
-  api: ApiClient,
-  projectId: string,
-  filters: ParticipationFilters = {},
-) =>
-  infiniteQueryOptions({
-    queryKey:
-      Object.keys(filters).length === 0
-        ? ["projects", projectId, "participations"]
-        : ["projects", projectId, "participations", filters],
-    queryFn: ({ pageParam }) =>
+/** The dashboard's counts of the same scope. */
+export const dashboardQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "participations", "dashboard"],
+    queryFn: () =>
       unwrap(
-        api.GET("/api/v1/projects/{projectId}/participations", {
-          params: {
-            path: { projectId },
-            query: { limit: 50, ...filters, ...(pageParam && { cursor: pageParam }) },
-          },
-        }),
+        api.GET("/api/v1/projects/{projectId}/dashboard", { params: { path: { projectId } } }),
       ),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
   });
 

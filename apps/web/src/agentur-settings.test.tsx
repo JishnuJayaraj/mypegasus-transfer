@@ -54,7 +54,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, config: object = base
     "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
     ...routes,
   });
-  renderApp(`/projects/${project.id}`, api);
+  renderApp(`/projects/${project.id}?tab=setup`, api);
   return calls;
 }
 

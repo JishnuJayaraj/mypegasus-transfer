@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AssignedConsultant } from "./projects/team";
+import { AssignedConsultant, assignmentLimit } from "./projects/team";
 import { page } from "./api";
 import { isoDate } from "./iso-date";
 import {
@@ -237,6 +237,29 @@ export const AssignEntryWaveInput = z
   .strictObject({ waveId: z.uuid() })
   .meta({ id: "AssignEntryWaveInput" });
 export type AssignEntryWaveInput = z.infer<typeof AssignEntryWaveInput>;
+
+/**
+ * `POST /projects/{id}/entry-wave-assignments`: one wave for 1–500 distinct participations, all
+ * or nothing (process-and-lifecycle.md, assigning a wave).
+ */
+export const EntryWaveAssignmentsInput = z
+  .strictObject({
+    waveId: z.uuid(),
+    participationIds: z.array(z.uuid()).min(1).max(assignmentLimit),
+  })
+  .refine(({ participationIds }) => new Set(participationIds).size === participationIds.length, {
+    message: "A participation is named twice",
+    path: ["participationIds"],
+    params: { code: "duplicate_participation" },
+  })
+  .meta({ id: "EntryWaveAssignmentsInput" });
+export type EntryWaveAssignmentsInput = z.infer<typeof EntryWaveAssignmentsInput>;
+
+/** The participations moved to the wave, and those already in it. */
+export const EntryWaveAssignmentsResult = z
+  .strictObject({ assigned: z.int().min(0), unchanged: z.int().min(0) })
+  .meta({ id: "EntryWaveAssignmentsResult" });
+export type EntryWaveAssignmentsResult = z.infer<typeof EntryWaveAssignmentsResult>;
 
 export const ParticipationListQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),

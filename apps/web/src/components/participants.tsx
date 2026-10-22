@@ -1,34 +1,37 @@
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { createLink } from "@tanstack/react-router";
+import {
+  compareUrgency,
+  daysBetween,
+  matchesSearch,
+  matchesWorklistFilter,
+  mostUrgent,
+  searchKey,
+  type WorklistFilter,
+} from "@transfer/domain";
 import {
   Add,
   Button,
   Checkbox,
+  formatDate,
   InlineNotification,
   Link,
   Select,
   SelectItem,
   SimpleTable,
+  Tag,
+  TextInput,
   useToast,
 } from "@transfer/ui";
-import { useState } from "react";
+import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  entryWavesQuery,
-  participantsQuery,
-  projectConfigQuery,
-  type ParticipationFilters,
-  useApi,
-} from "../api";
+import { entryWavesQuery, projectConfigQuery, useApi, worklistQuery } from "../api";
 import { ActivationPrintView, NoticePrintView } from "./activation-print-view";
 import { ManualParticipationForm } from "./manual-participation-form";
+import { useSelfServiceLabel } from "./self-service-tab";
 import { useConsultants } from "./team";
+import { BulkWave, WorklistFilters } from "./worklist-tools";
 
 const RouterLink = createLink(Link);
 
@@ -40,93 +43,133 @@ const columns = [
   "status",
   "profilingStatus",
   "dsvStatus",
+  "wave",
   "consultants",
+  "open",
+  "deadline",
+  "portal",
   "activationStatus",
   "privacyNoticeState",
 ] as const;
 
-type ListItem = components["schemas"]["ParticipationListItem"];
+/** Rows rendered at once; "Weitere anzeigen" adds as many. Filtering covers the whole snapshot. */
+const pageSize = 25;
+
+type ListItem = components["schemas"]["WorklistItem"];
 type ActivationPrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
 type PrivacyNoticePrintItem = components["schemas"]["PrivacyNoticeBatchResult"]["items"][number];
 type PrintState =
   | { kind: "letter" | "sheet"; items: ActivationPrintItem[] }
   | { kind: "notice"; items: PrivacyNoticePrintItem[] };
 
+const berlinTime = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const berlinDate = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" });
+
 /**
- * The project's participations (Slice 2 plan 5.13, AC-33): the person fields the API lists for
- * this viewer and the three statuses, page by page. The API decides who sees them; a 403 reads as
- * "not allowed", never as an empty list. Each row opens the participant's page. The PL selects
- * rows and assigns them to a consultant of the project (Q62).
+ * "Teilnehmende", the work list (data-protection.md, the work list and the dashboard): the
+ * viewer's whole scope as one snapshot, filtered by the route's code filters and searched by name
+ * in memory. The search term stays in this component's state: never in a request, the URL, a
+ * query key or browser storage. Until the snapshot is there nothing is searchable and no empty
+ * state shows. A 403 reads as "not allowed", never as an empty list.
  */
-export function Participants({ projectId }: { projectId: string }) {
+export function Participants({
+  projectId,
+  taTg,
+  filter,
+  onFilterChange,
+}: {
+  projectId: string;
+  taTg: boolean;
+  filter: WorklistFilter;
+  onFilterChange: (filter: WorklistFilter) => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const [filters, setFilters] = useState<ParticipationFilters>({});
-  const query = useInfiniteQuery(participantsQuery(api, projectId, filters));
-  // Manual creation is one import row (R32): offered with the import's capability.
+  const query = useQuery(worklistQuery(api, projectId));
+  // Manual creation is one import row (process-and-lifecycle.md, import and manual creation):
+  // offered with the import's capability.
   const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
+  const { data: waves = noWaves } = useQuery({
+    ...entryWavesQuery(api, projectId),
+    enabled: taTg,
+  });
   const [adding, setAdding] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
   const { consultants, mayAssign } = useConsultants(projectId);
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [term, setTerm] = useState("");
+  const search = useDeferredValue(term);
+  const filterKey = JSON.stringify(filter);
+  // The selection and the rows shown belong to one filter and search; another starts afresh.
+  const [selection, setSelection] = useState({ key: filterKey, ids: new Set<string>() });
+  const selected = selection.key === filterKey ? selection.ids : noSelection;
+  const [shown, setShown] = useState({ key: "", count: pageSize });
+  const shownKey = `${filterKey}\u0000${search}`;
+  const limit = shown.key === shownKey ? shown.count : pageSize;
   const [print, setPrint] = useState<PrintState | null>(null);
-  const toggle = (id: string, on: boolean) =>
-    setSelected((current) => {
-      const next = new Set(current);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
-  const rows = (query.data?.pages ?? []).flatMap((page) =>
-    page.items.map((item) => ({
-      id: item.id,
-      select: (
-        <Checkbox
-          id={`select-${item.id}`}
-          labelText={t("participants.select", {
-            name: item.personnelNumber ?? t("participants.open"),
-          })}
-          hideLabel
-          checked={selected.has(item.id)}
-          onChange={(_, { checked }) => toggle(item.id, checked)}
-        />
+
+  const snapshot = query.data;
+  const items = useMemo(() => snapshot?.items ?? [], [snapshot]);
+  const index = useMemo(
+    () =>
+      new Map(
+        items.map((item) => [
+          item.id,
+          searchKey([item.personnelNumber, item.lastName, item.firstName].join(" ")),
+        ]),
       ),
-      // The URL carries only the id, never a person's value (R19).
-      personnelNumber: (
-        <RouterLink
-          to="/projects/$projectId/participations/$participationId"
-          params={{ projectId, participationId: item.id }}
-        >
-          {item.personnelNumber ?? t("participants.open")}
-        </RouterLink>
-      ),
-      lastName: item.lastName ?? "",
-      firstName: item.firstName ?? "",
-      status: t(`participants.statuses.${item.status}`),
-      profilingStatus: t(`participants.profilingStatuses.${item.profilingStatus}`),
-      dsvStatus: t(`participants.dsvStatuses.${item.dsvStatus}`),
-      consultants: item.consultants.map((c) => c.displayName).join(", "),
-      activationStatus: t(
-        item.activationStatus.account === "activated"
-          ? "activation.status.activated"
-          : `activation.code.${item.activationStatus.code}`,
-      ),
-      privacyNoticeState: t(`activation.notice.${item.privacyNoticeState.state}`, {
-        dueOn: item.privacyNoticeState.dueOn,
-      }),
-    })),
+    [items],
   );
-  const items = (query.data?.pages ?? []).flatMap((page) => page.items);
+  const matches = useMemo(() => {
+    const filtered = items.filter(
+      (item) => matchesWorklistFilter(item, filter) && matchesSearch(index.get(item.id)!, search),
+    );
+    // A deadline filter shows the most urgent first (the dashboard's drill-down); a stable sort.
+    if (filter.deadlineKind === undefined && filter.deadlineState === undefined) return filtered;
+    return filtered.toSorted((a, b) =>
+      compareUrgency(mostUrgent(a.deadlines)!, mostUrgent(b.deadlines)!),
+    );
+  }, [items, filter, index, search]);
+
+  const setSelected = (ids: Set<string>) => setSelection({ key: filterKey, ids });
+  // Stable, so a keystroke re-renders the table only once its matches change.
+  const toggle = useCallback(
+    (id: string, on: boolean) =>
+      setSelection((current) => {
+        const ids = new Set(current.key === filterKey ? current.ids : []);
+        if (on) ids.add(id);
+        else ids.delete(id);
+        return { key: filterKey, ids };
+      }),
+    [filterKey],
+  );
+  const today = snapshot ? berlinDate.format(new Date(snapshot.generatedAt)) : "";
+  const waveCode = useMemo(() => new Map(waves.map((wave) => [wave.id, wave.code])), [waves]);
+  const shownItems = useMemo(() => matches.slice(0, limit), [matches, limit]);
   const selectedItems = items.filter((item) => selected.has(item.id));
   const mayActivate = items.some(
-    (item) =>
-      item.activationCapabilities.issueActivationCode ||
-      item.activationCapabilities.providePrivacyNotice,
+    (item) => item.capabilities.issueActivationCode || item.capabilities.providePrivacyNotice,
   );
-  const shown = mayAssign || mayActivate ? columns : columns.filter((key) => key !== "select");
+  const mayAssignWave = taTg && items.some((item) => item.capabilities.assignEntryWave);
+  const selectable = mayAssign || mayActivate || mayAssignWave;
+  const visibleColumns = useMemo(
+    () =>
+      columns.filter(
+        (key) =>
+          (key !== "select" || selectable) && ((key !== "dsvStatus" && key !== "wave") || taTg),
+      ),
+    [selectable, taTg],
+  );
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey });
+  const loading = snapshot === undefined;
+  const problem = query.error instanceof ApiProblemError ? query.error.status : null;
+
   if (print) {
     return print.kind === "notice" ? (
       <NoticePrintView items={print.items} onClose={() => setPrint(null)} />
@@ -142,11 +185,7 @@ export function Participants({ projectId }: { projectId: string }) {
                   key={item.activationCodeId}
                   item={item}
                   projectId={projectId}
-                  onChanged={() =>
-                    queryClient.invalidateQueries({
-                      queryKey: participantsQuery(api, projectId).queryKey,
-                    })
-                  }
+                  onChanged={() => void refresh()}
                 />
               ))
             : undefined
@@ -157,9 +196,7 @@ export function Participants({ projectId }: { projectId: string }) {
               items={print.items}
               onDone={() => {
                 setPrint(null);
-                void queryClient.invalidateQueries({
-                  queryKey: participantsQuery(api, projectId).queryKey,
-                });
+                void refresh();
               }}
             />
           ) : undefined
@@ -196,9 +233,7 @@ export function Participants({ projectId }: { projectId: string }) {
             setCreated(detail.id);
             showToast({ title: t("manual.created") });
             await Promise.all([
-              queryClient.invalidateQueries({
-                queryKey: participantsQuery(api, projectId).queryKey,
-              }),
+              refresh(),
               queryClient.invalidateQueries({ queryKey: entryWavesQuery(api, projectId).queryKey }),
             ]);
           }}
@@ -217,58 +252,218 @@ export function Participants({ projectId }: { projectId: string }) {
           </Button>
         )
       )}
-      {forbidden ? (
+      {problem === 403 ? (
         <p role="alert">{t("participants.forbidden")}</p>
+      ) : problem === 422 ? (
+        <p role="alert">{t("worklist.tooLarge")}</p>
       ) : query.isError ? (
         <p role="alert">{t("participants.failed")}</p>
       ) : (
         <>
-          {mayAssign && (
-            <BulkAssign
-              projectId={projectId}
-              consultants={consultants}
-              selected={[...selected]}
-              onAssigned={() => setSelected(new Set())}
-            />
-          )}
-          <ParticipationFiltersView
-            filters={filters}
-            onChange={(next) => {
-              setSelected(new Set());
-              setFilters(next);
-            }}
+          <WorklistFilters
+            filter={filter}
+            onChange={onFilterChange}
+            taTg={taTg}
+            waves={waves}
+            consultants={consultants}
           />
-          {mayActivate && (
-            <BulkActivation
-              projectId={projectId}
-              selected={selectedItems}
-              onPrinted={(result) => {
-                setSelected(new Set());
-                setPrint(result);
-              }}
+          <div className="tp-bulk-actions">
+            <TextInput
+              id="worklist-search"
+              labelText={t("worklist.search")}
+              helperText={t("worklist.searchHelper")}
+              autoComplete="off"
+              spellCheck={false}
+              disabled={loading}
+              value={term}
+              onChange={(event) => setTerm(event.target.value)}
             />
-          )}
-          <SimpleTable
-            title={t("participants.title")}
-            columns={shown.map((key) => ({ key, header: t(`participants.columns.${key}`) }))}
-            rows={rows}
-            emptyState={query.isPending ? "" : t("participants.empty")}
-          />
-          {query.hasNextPage && (
-            <Button
-              className="tp-load-more"
-              kind="tertiary"
-              disabled={query.isFetchingNextPage}
-              onClick={() => query.fetchNextPage()}
-            >
-              {t("participants.more")}
-            </Button>
+          </div>
+          {loading ? (
+            <p aria-live="polite">{t("worklist.loading")}</p>
+          ) : (
+            <>
+              <p aria-live="polite">
+                {[
+                  t("worklist.matches", { count: matches.length }),
+                  t("worklist.asOf", { time: berlinTime.format(new Date(snapshot.generatedAt)) }),
+                  ...(selected.size > 0 ? [t("worklist.selected", { count: selected.size })] : []),
+                ].join(" · ")}
+              </p>
+              {visibleColumns.includes("select") && (
+                <div className="tp-bulk-actions">
+                  <Button
+                    kind="tertiary"
+                    size="sm"
+                    disabled={query.isFetching || matches.length === 0}
+                    onClick={() => setSelected(new Set(matches.map((item) => item.id)))}
+                  >
+                    {t("worklist.selectAll")}
+                  </Button>
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    disabled={selected.size === 0}
+                    onClick={() => setSelected(new Set())}
+                  >
+                    {t("worklist.clearSelection")}
+                  </Button>
+                </div>
+              )}
+              {mayAssign && (
+                <BulkAssign
+                  projectId={projectId}
+                  consultants={consultants}
+                  selected={[...selected]}
+                  onAssigned={() => setSelected(new Set())}
+                />
+              )}
+              {mayAssignWave && (
+                <BulkWave
+                  projectId={projectId}
+                  waves={waves}
+                  selected={selectedItems}
+                  onAssigned={() => setSelected(new Set())}
+                />
+              )}
+              {mayActivate && (
+                <BulkActivation
+                  projectId={projectId}
+                  selected={selectedItems}
+                  onPrinted={(result) => {
+                    setSelected(new Set());
+                    setPrint(result);
+                  }}
+                />
+              )}
+              <WorklistTable
+                projectId={projectId}
+                items={shownItems}
+                columns={visibleColumns}
+                selected={selected}
+                onToggle={toggle}
+                waveCode={waveCode}
+                today={today}
+                empty={items.length === 0}
+              />
+              {matches.length > limit && (
+                <>
+                  <p>{t("worklist.shownOf", { shown: limit, count: matches.length })}</p>
+                  <Button
+                    className="tp-load-more"
+                    kind="tertiary"
+                    onClick={() => setShown({ key: shownKey, count: limit + pageSize })}
+                  >
+                    {t("worklist.showMore")}
+                  </Button>
+                </>
+              )}
+            </>
           )}
         </>
       )}
     </section>
   );
 }
+
+const noWaves: components["schemas"]["EntryWave"][] = [];
+const noSelection: ReadonlySet<string> = new Set();
+
+/** The shown rows of the work list; memoized, so typing re-renders it only for new matches. */
+const WorklistTable = memo(function WorklistTable({
+  projectId,
+  items,
+  columns: shownColumns,
+  selected,
+  onToggle,
+  waveCode,
+  today,
+  empty,
+}: {
+  projectId: string;
+  items: ListItem[];
+  columns: readonly (typeof columns)[number][];
+  selected: ReadonlySet<string>;
+  onToggle: (id: string, on: boolean) => void;
+  waveCode: ReadonlyMap<string, string>;
+  today: string;
+  empty: boolean;
+}) {
+  const { t } = useTranslation();
+  const label = useSelfServiceLabel();
+  const deadline = (item: ListItem) => {
+    const urgent = mostUrgent(item.deadlines);
+    if (!urgent) return "";
+    const kind = t(`worklist.deadlineKinds.${urgent.kind}`);
+    const days = daysBetween(today, urgent.date);
+    const text =
+      urgent.state === "overdue"
+        ? t("worklist.deadlineOverdue", { kind, date: formatDate(urgent.date) })
+        : days === 0
+          ? t("worklist.deadlineToday", { kind })
+          : t("worklist.deadlineIn", { kind, count: days });
+    return urgent.final ? `${text} (${t("worklist.deadlineFinal")})` : text;
+  };
+  const rows = items.map((item) => ({
+    id: item.id,
+    select: (
+      <Checkbox
+        id={`select-${item.id}`}
+        labelText={t("participants.select", {
+          name: item.personnelNumber ?? t("participants.open"),
+        })}
+        hideLabel
+        checked={selected.has(item.id)}
+        onChange={(_, { checked }) => onToggle(item.id, checked)}
+      />
+    ),
+    // The URL carries only the id, never a person's value (ADR-0010, pagination).
+    personnelNumber: (
+      <RouterLink
+        to="/projects/$projectId/participations/$participationId"
+        params={{ projectId, participationId: item.id }}
+      >
+        {item.personnelNumber ?? t("participants.open")}
+      </RouterLink>
+    ),
+    lastName: item.lastName ?? "",
+    firstName: item.firstName ?? "",
+    status: t(`participants.statuses.${item.status}`),
+    profilingStatus: t(`participants.profilingStatuses.${item.profilingStatus}`),
+    dsvStatus: t(`participants.dsvStatuses.${item.dsvStatus}`),
+    wave: item.entryWaveId ? (waveCode.get(item.entryWaveId) ?? "") : "",
+    consultants: item.consultants.map((c) => c.displayName).join(", "),
+    open:
+      item.actions.length === 0 ? (
+        ""
+      ) : (
+        <>
+          {t("worklist.openCount", { count: item.actions.length })}{" "}
+          <Tag type={item.actions[0]!.state === "rejected" ? "red" : "gray"} size="sm">
+            {`${label(item.actions[0]!.key)} ${t(`worklist.actionStates.${item.actions[0]!.state}`)}`}
+          </Tag>
+        </>
+      ),
+    deadline: deadline(item),
+    portal: t(`worklist.portal.${item.portal}`),
+    activationStatus: t(
+      item.activationStatus.account === "activated"
+        ? "activation.status.activated"
+        : `activation.code.${item.activationStatus.code}`,
+    ),
+    privacyNoticeState: t(`activation.notice.${item.privacyNoticeState.state}`, {
+      dueOn: formatDate(item.privacyNoticeState.dueOn),
+    }),
+  }));
+  return (
+    <SimpleTable
+      title={t("participants.title")}
+      columns={shownColumns.map((key) => ({ key, header: t(`participants.columns.${key}`) }))}
+      rows={rows}
+      emptyState={empty ? t("participants.empty") : t("worklist.noMatches")}
+    />
+  );
+});
 
 /** "Zuweisen": the selected participations to one consultant of the project (Q62). */
 function BulkAssign({
@@ -300,7 +495,7 @@ function BulkAssign({
       setRefused(false);
       onAssigned();
       showToast({ title: t("participants.assigned", { count: assigned }) });
-      await queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey });
+      await queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey });
     },
     onError: () => setRefused(true),
   });
@@ -335,65 +530,6 @@ function BulkAssign({
   );
 }
 
-function ParticipationFiltersView({
-  filters,
-  onChange,
-}: {
-  filters: ParticipationFilters;
-  onChange: (filters: ParticipationFilters) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="tp-bulk-actions">
-      <Select
-        id="activation-filter"
-        labelText={t("activation.filters.activation")}
-        value={filters.activation ?? ""}
-        onChange={(event) =>
-          onChange({
-            ...filters,
-            activation: (event.target.value || undefined) as ParticipationFilters["activation"],
-          })
-        }
-      >
-        <SelectItem value="" text={t("activation.filters.all")} />
-        <SelectItem value="activated" text={t("activation.status.activated")} />
-        {(
-          [
-            "none",
-            "printed",
-            "open",
-            "delivery_unknown",
-            "expired",
-            "locked",
-            "revoked",
-            "used",
-          ] as const
-        ).map((state) => (
-          <SelectItem key={state} value={state} text={t(`activation.code.${state}`)} />
-        ))}
-      </Select>
-      <Select
-        id="notice-filter"
-        labelText={t("activation.filters.notice")}
-        value={filters.privacyNotice ?? ""}
-        onChange={(event) =>
-          onChange({
-            ...filters,
-            privacyNotice: (event.target.value ||
-              undefined) as ParticipationFilters["privacyNotice"],
-          })
-        }
-      >
-        <SelectItem value="" text={t("activation.filters.all")} />
-        {(["provided", "due", "overdue"] as const).map((state) => (
-          <SelectItem key={state} value={state} text={t(`activation.notice.${state}`)} />
-        ))}
-      </Select>
-    </div>
-  );
-}
-
 function BulkActivation({
   projectId,
   selected,
@@ -414,14 +550,12 @@ function BulkActivation({
     ["printed", "open", "delivery_unknown"].includes(item.activationStatus.code),
   );
   const mayIssue =
-    selected.length > 0 &&
-    selected.every((item) => item.activationCapabilities.issueActivationCode);
+    selected.length > 0 && selected.every((item) => item.capabilities.issueActivationCode);
   const mayNotice =
-    selected.length > 0 &&
-    selected.every((item) => item.activationCapabilities.providePrivacyNotice);
+    selected.length > 0 && selected.every((item) => item.capabilities.providePrivacyNotice);
   const ids = selected.map(({ id }) => id);
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: participantsQuery(api, projectId).queryKey });
+    queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey });
   const issue = async (kind: "letter" | "sheet") => {
     setPending(true);
     setFailed(false);
