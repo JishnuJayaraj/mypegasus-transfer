@@ -89,16 +89,16 @@ function staffWith(roles: ("consultant" | "project_lead" | "back_office")[], ass
   } as const;
 }
 
-describe("the staff view in normal mode (data-protection.md, self-service)", () => {
-  const view = (key: string) => {
-    const access = staffSelfServiceAccess(profile(key), target);
-    return {
-      reads: sensitiveFieldsWhere(access.reads),
-      knows: sensitiveFieldsWhere(access.knows),
-      confidential: access.reads("gender") && access.reads("custom.beispiel_nr"),
-    };
+const view = (key: string) => {
+  const access = staffSelfServiceAccess(profile(key), target);
+  return {
+    reads: sensitiveFieldsWhere(access.reads),
+    knows: sensitiveFieldsWhere(access.knows),
+    confidential: access.reads("gender") && access.reads("custom.beispiel_nr"),
   };
+};
 
+describe("the staff view in normal mode (data-protection.md, self-service)", () => {
   it("lets the assigned consultant read every sensitive field (a logged read)", () => {
     expect(view("consultant")).toEqual({
       reads: sensitiveFields,
@@ -129,15 +129,18 @@ describe("the staff view in normal mode (data-protection.md, self-service)", () 
   });
 });
 
+const page = (name: WizardPage["page"], keys: string[], complete = true): WizardPage => ({
+  page: name,
+  sensitive: name === "health" || name === "ba_details",
+  complete,
+  fields: keys.map((key) => ({ key, required: true })),
+});
+const missing = (key: string) =>
+  ({ step: "profiling", ruleId: `r-${key}`, kind: "field", key, reason: "missing" }) as const;
+const visible = (key: string) => !["nationality", "pensionInsuranceNumber"].includes(key);
+const withoutHealth = (key: string) => visible(key) && key !== "healthRestrictions";
+
 describe("the wizard restricted to what a viewer sees", () => {
-  const page = (name: WizardPage["page"], keys: string[], complete = true): WizardPage => ({
-    page: name,
-    sensitive: name === "health" || name === "ba_details",
-    complete,
-    fields: keys.map((key) => ({ key, required: true })),
-  });
-  const missing = (key: string) =>
-    ({ step: "profiling", ruleId: `r-${key}`, kind: "field", key, reason: "missing" }) as const;
   const wizard = {
     pages: [
       page("personal", ["gender", "maritalStatus"], false),
@@ -148,8 +151,6 @@ describe("the wizard restricted to what a viewer sees", () => {
   };
 
   it("hides fields, their missing items and pages left empty", () => {
-    const visible = (key: string) => !["nationality", "pensionInsuranceNumber"].includes(key);
-    const withoutHealth = (key: string) => visible(key) && key !== "healthRestrictions";
     expect(restrictWizard(wizard, withoutHealth)).toEqual({
       pages: [
         page("personal", ["gender", "maritalStatus"], false),

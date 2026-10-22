@@ -129,14 +129,16 @@ describe("list payloads (data-protection.md, CLAUDE.md rule 9)", () => {
   });
 });
 
+/** The category's self-service field (the sampled one), or another field of the category. */
+const selfService = (category: AccessCategory) => field(category);
+const keyed = (category: AccessCategory, key: string) => ({ ...field(category), field: key });
+
 describe("assisted mode (Q136)", () => {
   const assisted = accessModes.assisted;
   const other = { kind: "assisted", onBehalfOf: "participation-b" } as const;
   const pl = profile("project_lead");
   const backOffice = profile("back_office");
   const consultant = profile("consultant");
-  const selfService = (category: AccessCategory) => field(category);
-  const keyed = (category: AccessCategory, key: string) => ({ ...field(category), field: key });
 
   it("lets the PL read and write health and disability for that participant only", () => {
     for (const category of ["health", "disability"] as const) {

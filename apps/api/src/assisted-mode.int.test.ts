@@ -368,24 +368,23 @@ describe("the assisted routes (Q136)", () => {
   });
 });
 
-describe("the staff view in normal mode (the 'Selbstauskunft' tab)", () => {
-  async function filled() {
-    const id = await person();
-    await assign(id);
-    const mode = await opened(staff.consultant, id);
-    await mode.put("/sensitive/ba_details", { revision: 0, values: baDetails });
-    await mode.put("/sensitive/health", {
-      revision: 1,
-      values: { healthRestrictions: true, severeDisability: null },
-    });
-    return id;
-  }
-  const view = async (who: { Cookie: string }, id: string) =>
-    readJson(
-      await send(who, "GET", `/participations/${id}/self-service`),
-      ParticipationSelfService,
-    );
+/** A participant whose BA details and health answers the consultant gave in assisted mode. */
+async function filled() {
+  const id = await person();
+  await assign(id);
+  const mode = await opened(staff.consultant, id);
+  await mode.put("/sensitive/ba_details", { revision: 0, values: baDetails });
+  await mode.put("/sensitive/health", {
+    revision: 1,
+    values: { healthRestrictions: true, severeDisability: null },
+  });
+  return id;
+}
+/** The tab's projection as `who` gets it. */
+const view = async (who: { Cookie: string }, id: string) =>
+  readJson(await send(who, "GET", `/participations/${id}/self-service`), ParticipationSelfService);
 
+describe("the staff view in normal mode (the 'Selbstauskunft' tab)", () => {
   it("shows presence per role and which fields each may read, never a value", async () => {
     const id = await filled();
     const consultant = await view(staff.consultant, id);
