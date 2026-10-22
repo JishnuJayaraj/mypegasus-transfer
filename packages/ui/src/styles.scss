@@ -279,10 +279,16 @@ body {
   border-inline-start: 3px solid theme.$support-info;
 }
 
+// "angegeben" with its "Anzeigen" (staff app): the small button doesn't widen the row.
 .tp-inline-actions {
   display: inline-flex;
   align-items: center;
   gap: $spacing-04;
+
+  .cds--btn {
+    min-block-size: 0;
+    padding-block: 0;
+  }
 }
 
 .tp-assisted-wizard {

@@ -8536,6 +8536,9 @@ export interface components {
             customValues: {
                 [key: string]: string | number | boolean | null;
             };
+            customLabels: {
+                [key: string]: string;
+            };
             participantMaintained: ("address" | "phone" | "mobile" | "privateEmail")[];
             sensitive: {
                 pensionInsuranceNumber?: boolean;

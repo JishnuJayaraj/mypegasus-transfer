@@ -61,7 +61,7 @@ export const entryWavesQuery = (api: ApiClient, projectId: string) =>
     },
   });
 
-/** The project's pins and blockers (Slice 2 plan 5.12). */
+/** The project's pins and blockers (regional-variation.md). */
 export const projectConfigQuery = (api: ApiClient, projectId: string) =>
   queryOptions({
     queryKey: ["projects", projectId, "config"],
@@ -100,7 +100,7 @@ export const projectsQuery = (api: ApiClient) =>
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 
-/** The project's participations, page by page (Slice 2 plan 5.12); 403 for those who may not list them. */
+/** The project's participations, page by page; 403 for those who may not list them (data-protection.md). */
 export type ParticipationFilters = {
   activation?:
     | "none"
@@ -138,7 +138,7 @@ export const participantsQuery = (
     retry: false,
   });
 
-/** One participation with the fields the viewer may read (Slice 2 plan, "Planned in PR 2h"). */
+/** One participation with the fields the viewer may read (data-protection.md, "Participation detail"). */
 export const participationQuery = (api: ApiClient, participationId: string) =>
   queryOptions({
     queryKey: ["participations", participationId],

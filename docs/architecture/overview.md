@@ -75,7 +75,10 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   `SelfServiceSource` the app supplies, so it holds no route and no staff code; Oxlint forbids it
   Carbon directly, app code and `@transfer/staff-*`. The sensitive groups go through the source's
   own calls (`loadSensitive`, `saveSensitive`) and the portal's step-up (`stepUp`), never through
-  the wizard state (PR 4a-4).
+  the wizard state. The staff app's source (assisted mode, `apps/web/src/components/
+  assisted-mode.tsx`) calls the assisted routes with the mode's id and has no `stepUp`; its state
+  leaves out the fields the role can't see (`WizardState`), and an ended mode (`403
+  assisted_mode_required`) shows the app's "ended" view like an expired portal session.
 - `packages/config`: regional configuration: the Zod-authored layer model (base defaults,
   Agentur templates, project overrides) exported as JSON Schema, the custom-field profile, the
   two-level resolver with provenance and blockers, pinned template loading

@@ -213,6 +213,8 @@ export const ParticipationSelfService = z
     }),
     values: SelfServiceValues.partial(),
     customValues: CustomValues,
+    /** The German labels of the chain's custom fields the viewer reads, by key. */
+    customLabels: z.record(z.string(), z.string()),
     participantMaintained: z.array(z.enum(contactFields)),
     /**
      * Whether each sensitive field the viewer may know about is given (the "Selbstauskunft" tab):

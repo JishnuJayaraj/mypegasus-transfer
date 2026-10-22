@@ -97,6 +97,14 @@
   the next business day from audit metadata, without access to participant details. The DPO
   gets periodic reports and immediate escalation of suspicious access, but is not the
   operational approver.
+- **Assisted mode** *(assumed, Q136; ADR-0007)*: the PL, the assigned consultant and back office
+  open the participant's wizard after confirming the person is present or on the phone and asked
+  for help (`in_person`/`phone`, audited `assisted_mode_started`, bound to the staff session).
+  They see and write exactly what the matrix gives their role in mode `assisted`: the PL
+  confidential data, health and disability, never identifiers or residence/social data; the
+  assigned consultant every self-service field; back office confidential data, disability,
+  identifiers and residence/social data, never health; an unassigned consultant nothing. A field
+  the role can't see is hidden, never shown empty. Writes are actor + `onBehalfOf`.
 - **Four-eyes** *(assumed, Q63, Q80)*: actor and reviewer are always different staff users.
   Break-glass and reconciliations of a TG entry are **reviewed after the fact** (next business
   day). A profiling exception needs **approval before** it can satisfy the TG entry guard.
@@ -251,6 +259,9 @@ and highly confidential data only; ordinary person-data writes are `participant_
 | Regional admin / Admin | configuration only, no case data |
 
 - Assisted writes are recorded as actor + `onBehalfOf`.
+- **Self-service fields** (Q136): staff write them only in assisted mode (above), never in normal
+  mode (`needs_assisted_mode`). Staff writes of a category's other fields outside a domain
+  operation (e.g. a consultant's IBAN, back office's birth date) stay `undecided` (Q65).
 - **Signed or submitted documents are immutable**; corrections create a new version or a
   correction record.
 - Sensitive writes and corrections are audited.
@@ -313,7 +324,16 @@ and highly confidential data only; ordinary person-data writes are `participant_
   access matrix lets the viewer read (confidential: the assigned consultant, the PL, back office;
   an unassigned consultant and the org roles get a `403`), the maintained contact fields, the
   notice acknowledgement and the missing items of the data-collection and profiling steps as
-  codes, only for fields the viewer may read. Nothing on it needs a logged read.
+  codes, for the fields the viewer may know about (below). Nothing on it needs a logged read.
+- **The tab "Selbstauskunft"** (staff app, normal mode): the confidential answers the viewer
+  reads, by wizard page; the highly confidential and special-category answers only as "angegeben
+  / fehlt" (`sensitive`, presence) for the fields the viewer may know about: those they read in
+  normal mode or see in assisted mode or through break-glass (so the PL sees whether health and
+  disability are given, never the value). "Anzeigen" appears for the fields the viewer may read
+  in normal mode (`sensitiveReadable`: the assigned consultant all, back office all but health)
+  and reads that one field on `GET …/self-service/sensitive/{group}?field=…`, a logged read
+  (`sensitive_read`), never cached. The missing items of the data-collection and profiling steps
+  are listed per step as labels; custom fields by their German label (`customLabels`).
 - **Highly confidential and special-category answers (Q135, Q141):** encrypted in the database
   (ADR-0002, field encryption), one table per access category and retention class:
 
@@ -337,7 +357,13 @@ and highly confidential data only; ordinary person-data writes are `participant_
   on `GET /api/v1/participations/{id}/self-service/sensitive/{group}` in normal mode exactly the
   fields the matrix gives them (the assigned consultant all; back office identifiers,
   residence_social and disability; the PL none without assisted mode or break-glass), each read
-  logged; the others are left out, not shown empty. Staff write in assisted mode (PR 4a-5).
+  logged (`field` narrows it to one); the others are left out, not shown empty. In assisted mode
+  staff read and write on `GET`/`PUT /api/v1/participations/{id}/assisted/self-service/
+  sensitive/{group}` the group's fields their role sees there (a write leaves the others as they
+  are), each field audited with actor and `onBehalfOf`; no step-up for staff.
+- **Assisted mode records** (`assisted_mode`, ADR-0007): the staff session's hash, the staff
+  user, the participation, how and when it started and ended; class internal, `case_internal`,
+  retention `access_credential`. No value of the participant's is on it.
 - **Step-up (Q129, Q137):** before the health and disability answers, once per portal session: a
   birth-date account enters its birth date again (the session after an activation with that step
   counts; the fifth wrong one ends the session, audited `step_up_failed`), a photo-ID account a

@@ -6847,6 +6847,12 @@
               ]
             }
           },
+          "customLabels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
           "participantMaintained": {
             "type": "array",
             "items": {
@@ -6906,6 +6912,7 @@
           "notice",
           "values",
           "customValues",
+          "customLabels",
           "participantMaintained",
           "sensitive",
           "sensitiveReadable",

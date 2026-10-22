@@ -76,7 +76,8 @@ const selfService = (overrides: object = {}) => ({
   updatedAt: "2026-10-21T09:00:00.000000Z",
   notice: { version: "self-service-purposes:v1", acknowledgedAt: "2026-10-21T08:00:00.000000Z" },
   values,
-  customValues: {},
+  customValues: { "custom.beispiel_nr": "ZN-4711" },
+  customLabels: { "custom.beispiel_nr": "Nachweis-Nr. (Beispiel)" },
   participantMaintained: ["mobile"],
   sensitive: {
     pensionInsuranceNumber: true,
@@ -180,6 +181,9 @@ describe("the 'Selbstauskunft' tab", () => {
     expect(within(personal).getByText("Weiblich")).toBeInTheDocument();
     const contact = screen.getByRole("region", { name: "Kontakt" });
     expect(within(contact).getByText("Von der Person gepflegt: Mobilnummer")).toBeInTheDocument();
+    const custom = screen.getByRole("region", { name: "Weitere Angaben" });
+    expect(within(custom).getByText("Nachweis-Nr. (Beispiel)")).toBeInTheDocument();
+    expect(within(custom).getByText("ZN-4711")).toBeInTheDocument();
     const missing = screen.getByRole("region", { name: "Fehlende Angaben" });
     expect(within(missing).getByRole("heading", { name: "Profiling" })).toBeInTheDocument();
     expect(within(missing).getByText("Familienstand")).toBeInTheDocument();

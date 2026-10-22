@@ -134,7 +134,7 @@ function PageFacts({ page, view }: { page: SelfServicePage; view: View }) {
   return (
     <section className="tp-section" aria-label={title}>
       <h2>{title}</h2>
-      {sensitive && <p className="tp-hint">{t("participant.selfService.showHint")}</p>}
+      {sensitive && <p>{t("participant.selfService.showHint")}</p>}
       <dl className="tp-facts">
         {keys.map((key) => (
           <div key={key}>
@@ -209,7 +209,7 @@ function SensitiveValue(props: { view: View; group: SensitivePage; field: Sensit
   );
 }
 
-/** The chain's custom fields the participant answered, by key. */
+/** The chain's custom fields the participant answered, by their labels. */
 function CustomFacts({ view }: { view: View }) {
   const { t } = useTranslation();
   const entries = Object.entries(view.customValues);
@@ -220,7 +220,7 @@ function CustomFacts({ view }: { view: View }) {
       <dl className="tp-facts">
         {entries.map(([key, value]) => (
           <div key={key}>
-            <dt>{key}</dt>
+            <dt>{view.customLabels[key] ?? key}</dt>
             <dd>{value === null ? "—" : String(value)}</dd>
           </div>
         ))}

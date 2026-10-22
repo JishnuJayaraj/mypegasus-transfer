@@ -407,6 +407,11 @@ export function selfServiceRoutes(deps: Deps) {
       notice: { version: SELF_SERVICE_NOTICE_VERSION, acknowledgedAt: record.acknowledgedAt },
       values: Object.fromEntries(shown.map((key) => [key, record.values[key]])),
       customValues: reads("custom.") ? record.customValues : {},
+      customLabels: reads("custom.")
+        ? Object.fromEntries(
+            Object.entries(record.wizard.customFields).map(([key, field]) => [key, field.label.de]),
+          )
+        : {},
       participantMaintained: contactFields.filter((key) =>
         record.participantMaintained.includes(key),
       ),

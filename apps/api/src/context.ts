@@ -24,11 +24,11 @@ export interface Deps {
   db: Database;
   env: Env;
   logger: Logger;
-  /** The only source of the current time (ADR-0006, plan 5.8). */
+  /** The only source of the current time (ADR-0006). */
   clock: Clock;
   /** The built SPAs to serve (production image, `pnpm start`); Vite serves them in dev. */
   spa?: SpaRoots | undefined;
-  /** The parse-worker slots of the import (R43); the process's own by default, a test's own. */
+  /** The parse-worker slots of the import (ADR-0003); the process's own by default, a test's own. */
   importSlots?: Slots | undefined;
   /** The OIDC client (AUTH_MODE=oidc); built from the environment unless a test injects one. */
   oidc?: Oidc | undefined;
