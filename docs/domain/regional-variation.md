@@ -213,10 +213,21 @@ Participation
   birth date shown read-only), `ba_details` (RV-Nummer, nationality, entry date, residence status,
   Bürgergeld), `education`, `work_history`, `languages_mobility` (languages, driving licence,
   vehicle), `job_wish` (working time, desired job and alternative, locations, distance, earliest
-  start), `health` (health restrictions, Schwerbehinderung/Gleichstellung) and `further`
-  ("Weitere Angaben", only when the chain has custom fields). `ba_details` and `health` hold the
-  highly confidential and special-category fields and are written on their own encrypted path,
-  never through the page writes. There is no page keyword in the template schema.
+  start), `health` (health restrictions, Schwerbehinderung/Gleichstellung), `further`
+  ("Weitere Angaben", only when the chain has custom fields) and `documents` ("Unterlagen",
+  Slice 4b). `ba_details` and `health` hold the highly confidential and special-category fields
+  and are written on their own encrypted path, never through the page writes. There is no page
+  keyword in the template schema.
+- **"Unterlagen"** (`documents`) has no fields and no page write: one section per document type
+  the participant adds themselves (`wizardDocumentTypes`: `cv`, `participant_upload`,
+  `qualification_certificate`; data-protection.md, documents), each document added, opened and
+  deleted at once on the documents routes (ADR-0010). Which document a participation needs is
+  configuration like any requirement: a template's `documentPresent` rule of the
+  `data_collection` or `profiling` step (none in the base defaults). The page is complete when no
+  document item of its types is missing; a rejected document is `not_accepted` until a new
+  upload replaces it. Other types (signed scans, ASU proof, exception evidence) are staff
+  documents of their slices, never on this page. In assisted mode the page shows the types the
+  role reads there and is left out without any (back office).
 - **Value sets** (`packages/domain/src/self-service/values.ts`) are the form's (TL 407 08/2025):
   e.g. gender `male`/`female`/`diverse`/`not_specified`, Familienstand `single`/`married`,
   language levels `basic`/`extended`/`business_fluent` with German first, the EU driving licence
@@ -236,8 +247,9 @@ Participation
   data) and the **help texts**: `self_service.<field>`, the field key keeping its case
   (`self_service.educationHistory`, `self_service.custom.<key>`).
 - **Completeness is derived per participation** (codes only): the wizard shows the missing items a
-  participant can fix (fields on a page), staff see every missing item of the two steps they may
-  read (`selfServiceMissing`). A page is complete when none of its required fields is missing.
+  participant can fix (fields on a page, documents of the types on "Unterlagen"), staff see every
+  missing item of the two steps they may read (`selfServiceMissing`). A page is complete when none
+  of its required fields (on "Unterlagen": documents) is missing.
 - **The UI renders the pages from this definition** (`@transfer/self-service-ui`, both SPAs): a
   required field carries `*`, help texts show under their field, custom fields are entered by
   their field schema's type (text, number, date `TT.MM.JJJJ`, yes/no, a list for `enum`) and

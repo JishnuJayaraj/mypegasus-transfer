@@ -53,6 +53,10 @@ ADR-0005, ADR-0007, `domain/data-protection.md`, `domain/regional-variation.md` 
 ## Slice 4b — Uploads and documents (F5)
 Uploads (storage + virus-scan adapters, mock), file-type allowlist, signed URLs, document
 records with retention class.
+**Done** 2026-10-22 (PRs 4b-1 to 4b-3): plan archived in
+[`plans/archive/slice-4b.md`](plans/archive/slice-4b.md); its rules live in ADR-0002, ADR-0005,
+ADR-0006, ADR-0007, ADR-0010, ADR-0011, `domain/data-protection.md`,
+`domain/regional-variation.md` and `domain/process-and-lifecycle.md`.
 
 ## ~~Slice 4c — QR registration and matching~~
 Dropped in round 35: personal activation codes (Slice 3) replace the project QR, so there is no
