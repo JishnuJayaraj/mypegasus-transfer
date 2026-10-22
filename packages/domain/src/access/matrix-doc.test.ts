@@ -65,6 +65,7 @@ it("lists an undecided cell once, with every phase and mode it is undecided in",
     text,
   } as const;
   expect(asUndecided({ ...rendered, text: "no: never" }, "active normal")).toEqual([]);
+  expect(undecidedTable([])).toBe("No sampled cell is undecided.");
   const cell = asUndecided(rendered, "active normal")[0]!;
   expect(cell).toEqual({
     question: "Q65",
