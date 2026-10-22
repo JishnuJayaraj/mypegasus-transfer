@@ -64,7 +64,7 @@ export function SelfServiceTab({ detail, projectId }: { detail: Detail; projectI
       </dl>
       <Missing view={view} />
       {wizardPages
-        .filter(({ page }) => page !== "further")
+        .filter(({ page }) => page !== "further" && page !== "documents")
         .map(({ page }) => (
           <PageFacts key={page} page={page} view={view} />
         ))}
@@ -79,13 +79,15 @@ function useWizardText() {
   return (key: string): string => t(key as never);
 }
 
-/** A field's label: the wizard's, else the staff app's, else its key (a code). */
+/** A field's label: the wizard's, else the staff app's, else its key (a code); a document type's. */
 function useLabel() {
   const { t, i18n } = useTranslation();
   const wizardText = useWizardText();
   return (key: string): string => {
     const wizard = `fields.${key}.label`;
     if (i18n.exists(wizard, { ns: SELF_SERVICE_NAMESPACE })) return wizardText(wizard);
+    const document = `documents.types.${key}`;
+    if (i18n.exists(document, { ns: SELF_SERVICE_NAMESPACE })) return wizardText(document);
     const staff = `participant.fields.${key}`;
     return i18n.exists(staff) ? t(staff as never) : key;
   };

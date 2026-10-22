@@ -5,7 +5,12 @@ import { SelfServiceWizard } from "@transfer/self-service-ui";
 import { InlineNotification, Link, Stack } from "@transfer/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { participationQuery, participationSelfServiceQuery, useApi } from "../../api";
+import {
+  participationDocumentsQuery,
+  participationQuery,
+  participationSelfServiceQuery,
+  useApi,
+} from "../../api";
 import { AssistedBanner, assistedSource } from "../../components/assisted-mode";
 
 const RouterLink = createLink(Link);
@@ -59,8 +64,12 @@ function AssistedPage() {
     );
     if (!response.ok) throw new Error("Ending assisted mode failed");
     queryClient.removeQueries({ queryKey: source.queryKey });
+    queryClient.removeQueries({ queryKey: source.documents.queryKey });
     await queryClient.invalidateQueries({
       queryKey: participationSelfServiceQuery(api, participationId).queryKey,
+    });
+    await queryClient.invalidateQueries({
+      queryKey: participationDocumentsQuery(api, participationId).queryKey,
     });
     await navigate({
       to: "/projects/$projectId/participations/$participationId",

@@ -897,7 +897,8 @@
     "tabs": {
       "label": "Bereiche",
       "overview": "Übersicht",
-      "selfService": "Selbstauskunft"
+      "selfService": "Selbstauskunft",
+      "documents": "Unterlagen"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -937,6 +938,77 @@
       "howInline": {
         "in_person": "vor Ort",
         "phone": "am Telefon"
+      }
+    },
+    "documents": {
+      "title": "Unterlagen",
+      "loading": "Unterlagen werden geladen …",
+      "failed": "Die Unterlagen konnten nicht geladen werden.",
+      "empty": "Noch keine Unterlagen.",
+      "columns": {
+        "type": "Art",
+        "file": "Datei",
+        "size": "Größe",
+        "added": "Hinzugefügt am / von",
+        "state": "Status",
+        "actions": "Aktionen"
+      },
+      "added": "{{at}} · {{by}}",
+      "addedBy": {
+        "participant": "Teilnehmer·in",
+        "staff": "Team",
+        "assisted": "Team (assistiert)"
+      },
+      "open": "Öffnen",
+      "openLabel": "{{name}} öffnen",
+      "accept": "Annehmen",
+      "acceptLabel": "{{name}} annehmen",
+      "reject": "Ablehnen",
+      "rejectLabel": "{{name}} ablehnen",
+      "rejectTitle": "Unterlage ablehnen",
+      "delete": "Löschen",
+      "deleteLabel": "{{name}} löschen",
+      "deleteTitle": "Unterlage löschen?",
+      "deleteText": "„{{name}}“ wird gelöscht: Die Datei wird entfernt; dass es sie gab, wann und warum sie gelöscht wurde, bleibt festgehalten.",
+      "deleteReasons": {
+        "wrong_person": "Falsche Person",
+        "wrong_file": "Falsche Datei",
+        "duplicate": "Doppelt",
+        "participant_request": "Auf Wunsch der Person"
+      },
+      "reason": "Grund",
+      "chooseReason": "Grund wählen",
+      "cancel": "Abbrechen",
+      "add": "Unterlagen hinzufügen",
+      "addHint": "Zum Beispiel ein Zeugnis, das die Person auf Papier mitgebracht hat. PDF, JPG oder PNG, höchstens 10 MB. Keine Gesundheitsunterlagen.",
+      "addType": "Art der Unterlage",
+      "addFile": "Datei auswählen",
+      "busy": "Die Datei wird hochgeladen und geprüft …",
+      "messages": {
+        "uploaded": "Die Unterlage wurde hinzugefügt.",
+        "accepted": "Die Unterlage wurde angenommen.",
+        "rejected": "Die Unterlage wurde abgelehnt.",
+        "deleted": "Die Unterlage wurde gelöscht.",
+        "gone": "Diese Unterlage gibt es nicht mehr.",
+        "forbidden": "Dafür fehlt Ihnen die Berechtigung.",
+        "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+        "codes": {
+          "document_type_not_supported": "Diese Art von Unterlage kann hier nicht hinzugefügt werden.",
+          "file_empty": "Die Datei ist leer.",
+          "file_too_large": "Datei zu groß (höchstens {{max}}).",
+          "file_type_not_allowed": "Nur PDF, JPG oder PNG.",
+          "file_infected": "Die Datei wurde nicht angenommen, weil sie Schadsoftware enthalten könnte.",
+          "file_unscannable": "Die Datei konnte nicht geprüft werden (z. B. passwortgeschützt).",
+          "file_name_invalid": "Der Dateiname ist zu lang oder ungültig.",
+          "document_limit": "Die Höchstzahl an Unterlagen ist erreicht. Bitte zuerst eine löschen.",
+          "document_reviewed": "Diese Unterlage wurde bereits geprüft.",
+          "document_accepted": "Eine angenommene Unterlage kann die Person nicht mehr löschen.",
+          "participation_closed": "Die Teilnahme ist abgeschlossen: keine neuen Unterlagen.",
+          "rate_limited": "Zu viele Uploads in der letzten Stunde. Bitte später erneut versuchen.",
+          "upload_busy": "Gerade laufen viele Uploads. Bitte in einer Minute erneut versuchen.",
+          "scan_unavailable": "Die Virenprüfung ist gerade nicht erreichbar. Bitte später erneut versuchen.",
+          "storage_unavailable": "Der Dokumentenspeicher ist gerade nicht verfügbar."
+        }
       }
     }
   },

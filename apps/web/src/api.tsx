@@ -162,6 +162,17 @@ export const participationSelfServiceQuery = (api: ApiClient, participationId: s
       ),
   });
 
+export const participationDocumentsQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "documents"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/documents", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 export const participationActivationQuery = (api: ApiClient, participationId: string) =>
   queryOptions({
     queryKey: ["participations", participationId, "activation"],
