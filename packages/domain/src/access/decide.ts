@@ -9,9 +9,10 @@ import { ProjectRole, type OrgRole } from "../enums";
 import { fieldEntry, type AccessCategory } from "../fields/catalog";
 
 /**
- * The field-level access matrix (plan 5.6, data-protection.md, round 11; *assumed*, Q28, Q49,
- * Q51, Q61–Q65, Q80, Q87). Pure: the API (Slice 3) passes the subject, the resource and the
- * mode, and writes the audit entry the decision names. Unknown access is denied (D10).
+ * The field-level access matrix (data-protection.md, round 11; *assumed*, Q28, Q49, Q51,
+ * Q61–Q65, Q80, Q87, Q136). Pure: the API passes the subject, the resource and the mode, and
+ * writes the audit entry the decision names. Unknown access is denied: an open cell is
+ * `undecided` with its question (the generated access matrix lists them).
  */
 export type RegionScope = { regionIds: ReadonlySet<string> | "all" };
 
@@ -20,7 +21,7 @@ export type Subject =
       kind: "staff";
       staffUserId: string;
       orgRoles: ReadonlyMap<OrgRole, RegionScope>;
-      /** Zero or more roles per project; permissions are the union (D6, Q61). */
+      /** Zero or more roles per project; permissions are the union (Q61). */
       projectRoles: Readonly<Record<string, ReadonlySet<ProjectRole>>>;
       /** As profiler/consultant (Q62). */
       assignedParticipationIds: ReadonlySet<string>;
@@ -31,7 +32,7 @@ export type Subject =
 export type AccessPhase = "active" | "evidence_set";
 
 /**
- * Filtered audit projections (Q87 A): Slice 3 maps each event type to a stream. `review` holds
+ * Filtered audit projections (Q87 A): each event type belongs to one stream. `review` holds
  * the events awaiting or recording a regional operations manager's approval or review;
  * `security` sensitive reads, document openings, break-glass and exports.
  */
@@ -64,7 +65,7 @@ export type AccessMode =
 
 export type AccessView = "full" | "metadata_only" | "absence_only" | "type_and_dates";
 
-/** The question behind an `undecided` cell (D10). */
+/** The question behind an `undecided` cell. */
 export type AccessQuestion = "Q65";
 
 export type DenyReason =
@@ -99,14 +100,17 @@ export type Decision =
   | { effect: "deny"; because: "undecided"; question: AccessQuestion };
 
 type ReadRight = AccessView | "assisted_or_break_glass" | "never";
+/**
+ * `self_service_assisted`: staff write a self-service field in assisted mode only (Q136,
+ * ADR-0007); their writes of the category's other fields stay open (Q65).
+ */
 type WriteRight =
   | "yes"
   | "self_service"
   | "assisted_only"
-  | "assisted_else_Q65"
+  | "self_service_assisted"
   | "via_domain_operation"
-  | "never"
-  | AccessQuestion;
+  | "never";
 
 /** Field read/write per role and category in the active phase; a missing cell is never/never. */
 const fieldRights: Record<
@@ -127,24 +131,24 @@ const fieldRights: Record<
     confidential: "full/yes",
     health: "full/yes",
     disability: "full/yes",
-    identifiers: "full/Q65",
-    residence_social: "full/Q65",
+    identifiers: "full/self_service_assisted",
+    residence_social: "full/self_service_assisted",
     profiling_assessment: "full/yes",
     absence: "absence_only/never",
   },
   project_lead: {
     case_internal: "full/via_domain_operation",
-    confidential: "full/assisted_else_Q65",
+    confidential: "full/self_service_assisted",
     health: "assisted_or_break_glass/assisted_only",
     disability: "assisted_or_break_glass/assisted_only",
     absence: "absence_only/never",
   },
   back_office: {
     case_internal: "full/via_domain_operation",
-    confidential: "full/Q65",
+    confidential: "full/self_service_assisted",
     disability: "full/yes",
     identifiers: "full/yes",
-    residence_social: "full/Q65",
+    residence_social: "full/self_service_assisted",
     absence: "type_and_dates/yes",
   },
   regional_operations_manager: {},
@@ -250,8 +254,11 @@ function fieldDecision(role: AccessRole, request: Request<FieldResource>): Decis
       return fieldEntry(resource.field).selfService ? allowed : deny("never");
     }
     if (write === "assisted_only") return assisted ? allowed : deny("needs_assisted_mode");
-    if (write === "assisted_else_Q65") return assisted ? allowed : deny("undecided", "Q65");
-    return write === "Q65" ? deny("undecided", write) : deny(write);
+    if (write === "self_service_assisted") {
+      if (!fieldEntry(resource.field).selfService) return deny("undecided", "Q65");
+      return assisted ? allowed : deny("needs_assisted_mode");
+    }
+    return deny(write);
   }
   if (read === "never") return deny("never");
   if (read !== "assisted_or_break_glass") {
@@ -368,7 +375,7 @@ const denyRank: DenyReason[] = [
   "not_applicable",
 ];
 
-/** The union of the roles (D6): the most permissive allow, else the most actionable denial. */
+/** The union of the roles (Q61): the most permissive allow, else the most actionable denial. */
 function union(decisions: Decision[]): Decision {
   const rank = (d: Decision) =>
     d.effect === "allow"

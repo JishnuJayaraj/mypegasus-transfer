@@ -147,4 +147,15 @@ describe("a group write", () => {
     });
     expect(completeSensitiveValues("ba_details", baDetails)).toEqual(baDetails);
   });
+
+  it("takes only the fields a role sees in assisted mode (Q136)", () => {
+    const disability = ["severeDisability"] as const;
+    expect(sensitiveValuesSchema("health", disability).safeParse({ severeDisability: true })).toEqual(
+      { success: true, data: { severeDisability: true } },
+    );
+    expect(
+      sensitiveValuesSchema("health", disability).safeParse({ healthRestrictions: true }).success,
+    ).toBe(false);
+    expect(completeSensitiveValues("health", {}, disability)).toEqual({ severeDisability: null });
+  });
 });

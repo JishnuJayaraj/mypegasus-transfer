@@ -15,6 +15,7 @@ import { BaReportingKind } from "../projects/participation-dates";
 import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
 import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
+import { AssistedModeEndReason, AssistedModeHow } from "../self-service/assisted";
 import {
   ActivationChannel,
   ActivationDeliveryKind,
@@ -125,6 +126,9 @@ export const AuditEventType = z.enum([
   // Slice 4a, the step-up before special-category data, written only by its functions (Q137)
   "step_up_completed",
   "step_up_failed",
+  // Slice 4a, assisted mode (ADR-0007; Q136), written only by its functions
+  "assisted_mode_started",
+  "assisted_mode_ended",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -195,6 +199,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "self_service_notice_acknowledged",
   "step_up_completed",
   "step_up_failed",
+  "assisted_mode_started",
+  "assisted_mode_ended",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -261,6 +267,13 @@ export const AuditActor = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("system"), job: systemJob }),
 ]);
 export type AuditActor = z.infer<typeof AuditActor>;
+
+/** A staff user acting for themselves. */
+const staffActor = z.strictObject({
+  type: z.literal("user"),
+  staffUserId: z.uuid(),
+  onBehalfOf: z.null(),
+});
 
 const common = {
   projectId: z.uuid(),
@@ -777,6 +790,22 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("step_up_failed", {
     ...ofParticipation,
     details: z.strictObject({ method: z.literal("birth_date") }),
+  }),
+  /**
+   * A staff user opened assisted mode for the participant after the confirmation (Q136): how, as
+   * a code; the staff user's own action, so not on behalf of anyone. What they then read and write
+   * is audited as actor and `onBehalfOf`.
+   */
+  event("assisted_mode_started", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ assistedModeId: z.uuid(), how: AssistedModeHow }),
+  }),
+  /** It ended: "Beenden", or with the staff session it was bound to. */
+  event("assisted_mode_ended", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ assistedModeId: z.uuid(), endReason: AssistedModeEndReason }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

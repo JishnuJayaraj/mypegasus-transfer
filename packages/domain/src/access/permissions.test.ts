@@ -178,6 +178,7 @@ const operations: Record<OperationKind, string> = {
   revokeActivationCode: "PL BO",
   providePrivacyNotice: "PL BO",
   setPlacementAgentur: "PL BO",
+  startAssistedMode: "PL C BO",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {
@@ -220,6 +221,13 @@ describe("mayPerformOperation (Q60, Q80)", () => {
   it.each(Object.entries(operations))("%s: %s", (kind, who) => {
     const op = operation(kind as OperationKind);
     expect(allowed((actor) => mayPerformOperation(actor, op, target))).toBe(who);
+  });
+
+  it("lets only the assigned consultant open assisted mode among consultants (Q136)", () => {
+    const unassigned = staff(["consultant"]);
+    expect(result(mayPerformOperation(unassigned, operation("startAssistedMode"), target))).toBe(
+      "not_assigned",
+    );
   });
 
   it("never lets the regional operations manager decide or review their own case (four eyes)", () => {

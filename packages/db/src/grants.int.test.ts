@@ -163,6 +163,9 @@ const statusFunctions = [
   "check_step_up_birth_date",
   "request_step_up_code",
   "verify_step_up_code",
+  // Slice 4a: assisted mode (Q136)
+  "start_assisted_mode",
+  "end_assisted_mode",
 ];
 const helpers = [
   "assert_context",
@@ -221,6 +224,11 @@ const helpers = [
   "participant_step_up_method",
   "record_step_up",
   "fail_step_up",
+  "assisted_mode_roles",
+  "assisted_sensitive_fields",
+  "lock_assisted_mode",
+  "close_assisted_mode",
+  "end_assisted_modes_of_session",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -763,5 +771,28 @@ describe("transfer_app and the saved import mappings", () => {
   ])("may not %s (42501)", async (_label, sql) => {
     await owner.query(insert(hmac("c")));
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// Slice 4a: assisted mode (ADR-0007, Q136) is read by the app and written only by its functions
+// and the staff session's end.
+describe("transfer_app and assisted_mode", () => {
+  it("may select it", async () => {
+    expect((await app.query("select * from assisted_mode")).rows).toEqual([]);
+  });
+
+  it.each([
+    ...writes(
+      "assisted_mode",
+      "how",
+      `insert into assisted_mode (id, project_id, participation_id, staff_user_id, staff_session_hash, how)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(),
+         '${seedStaffUserIds.projectLead}', '${"a".repeat(64)}', 'phone')`,
+    ),
+    ["end a mode itself", "update assisted_mode set ended_at = now(), end_reason = 'ended'"],
+    ["find a live mode directly", "select lock_assisted_mode(null, null, null)"],
+    ["close a mode directly", "select close_assisted_mode(null, null, null)"],
+  ])("may not %s (42501)", async (_label, statement) => {
+    await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });
 });

@@ -89,6 +89,8 @@ describe("data catalog", () => {
       participant_channel: entry("personnel_file", "confidential", true),
       one_time_code_challenge: entry("access_credential", "confidential", true),
       participant_session: entry("access_credential", "internal", true),
+      // Slice 4a (Q136)
+      assisted_mode: entry("access_credential", "internal", true),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),

@@ -102,7 +102,7 @@ describe("resource kinds (round 11)", () => {
   });
 });
 
-describe("list payloads (AC-26)", () => {
+describe("list payloads (data-protection.md, CLAUDE.md rule 9)", () => {
   it("never lists special-category, highly confidential or absence data (Q85)", () => {
     const unlisted = [...personResources("active"), ...personResources("evidence_set")].filter(
       (r) => !["case_internal", "confidential"].includes(categoryOf(r)),
@@ -129,10 +129,14 @@ describe("list payloads (AC-26)", () => {
   });
 });
 
-describe("assisted mode", () => {
+describe("assisted mode (Q136)", () => {
   const assisted = accessModes.assisted;
   const other = { kind: "assisted", onBehalfOf: "participation-b" } as const;
   const pl = profile("project_lead");
+  const backOffice = profile("back_office");
+  const consultant = profile("consultant");
+  const selfService = (category: AccessCategory) => field(category);
+  const keyed = (category: AccessCategory, key: string) => ({ ...field(category), field: key });
 
   it("lets the PL read and write health and disability for that participant only", () => {
     for (const category of ["health", "disability"] as const) {
@@ -140,20 +144,77 @@ describe("assisted mode", () => {
       expect(decide(pl, field(category), "write", assisted)).toBe("allow full sensitive_write");
       expect(decide(pl, field(category), "read", other)).toBe("deny needs_assisted_mode");
     }
-    expect(decide(pl, field("confidential"), "write", assisted)).toBe("allow full");
     const evidenceDoc = doc("profiling_exception_evidence");
     expect(decide(pl, evidenceDoc, "open_document", assisted)).toBe("allow full document_opened");
     expect(decide(pl, evidenceDoc, "read", assisted)).toBe("allow metadata_only");
   });
 
+  it("lets the PL write confidential self-service fields, never identifiers or residence_social", () => {
+    expect(decide(pl, selfService("confidential"), "write", assisted)).toBe("allow full");
+    expect(decide(pl, selfService("confidential"), "write")).toBe("deny needs_assisted_mode");
+    expect(decide(pl, selfService("confidential"), "write", other)).toBe(
+      "deny needs_assisted_mode",
+    );
+    for (const category of ["identifiers", "residence_social"] as const) {
+      for (const action of ["read", "write"] as const) {
+        expect(decide(pl, selfService(category), action, assisted)).toBe("deny never");
+      }
+    }
+  });
+
+  it("lets the assigned consultant write every self-service field", () => {
+    for (const category of fieldCategories) {
+      const resource = selfService(category);
+      if (!fieldEntry(resource.field).selfService) continue;
+      expect(decide(consultant, resource, "read", assisted)).toMatch(/^allow full/);
+      expect(decide(consultant, resource, "write", assisted)).toMatch(/^allow full/);
+    }
+    expect(decide(consultant, identifiers("pensionInsuranceNumber"), "write", assisted)).toBe(
+      "allow full sensitive_write",
+    );
+    expect(decide(consultant, selfService("residence_social"), "write")).toBe(
+      "deny needs_assisted_mode",
+    );
+  });
+
+  it("lets back office write confidential, disability, identifiers and residence_social, never health", () => {
+    expect(decide(backOffice, selfService("confidential"), "write", assisted)).toBe("allow full");
+    expect(decide(backOffice, selfService("residence_social"), "write", assisted)).toBe(
+      "allow full sensitive_write",
+    );
+    expect(decide(backOffice, selfService("residence_social"), "write")).toBe(
+      "deny needs_assisted_mode",
+    );
+    for (const category of ["disability", "identifiers"] as const) {
+      expect(decide(backOffice, selfService(category), "write", assisted)).toBe(
+        "allow full sensitive_write",
+      );
+    }
+    expect(decide(backOffice, field("health"), "read", assisted)).toBe("deny never");
+    expect(decide(backOffice, field("health"), "write", assisted)).toBe("deny never");
+  });
+
+  it("leaves staff writes of fields the participant doesn't answer to Q65", () => {
+    expect(decide(consultant, identifiers("iban"), "write", assisted)).toBe("deny undecided Q65");
+    expect(decide(consultant, identifiers("iban"), "write")).toBe("deny undecided Q65");
+    expect(decide(backOffice, keyed("confidential", "birthDate"), "write", assisted)).toBe(
+      "deny undecided Q65",
+    );
+    expect(decide(pl, keyed("confidential", "birthDate"), "write", assisted)).toBe(
+      "deny undecided Q65",
+    );
+  });
+
   it("widens nothing else", () => {
-    expect(decide(profile("back_office"), field("health"), "read", assisted)).toBe("deny never");
-    expect(decide(pl, field("identifiers"), "write", assisted)).toBe("deny never");
     expect(decide(pl, doc("asu_proof"), "open_document", assisted)).toBe("deny needs_break_glass");
+    expect(decide(profile("consultant_unassigned"), field("confidential"), "write", assisted)).toBe(
+      "deny not_assigned",
+    );
+    expect(decide(profile("admin"), field("confidential"), "write", assisted)).toBe("deny never");
   });
 });
 
-describe("break-glass (AC-27, Q63)", () => {
+describe("break-glass (Q63)", () => {
   const pl = profile("project_lead");
 
   it("gives the PL health and disability reads as one audited, flagged grant", () => {
@@ -283,7 +344,7 @@ describe("evidence-set phase (Q64, rounds 11–12)", () => {
   });
 });
 
-describe("role union and assignment (AC-24, D6, Q61, Q62)", () => {
+describe("role union and assignment (Q61, Q62)", () => {
   it("shows section C to a PL who is also profiler only for assigned participants", () => {
     const both = staff(["project_lead", "consultant"], { assigned: [sample.participationId] });
     expect(decide(both, field("profiling_assessment"), "read")).toBe("allow full sensitive_read");
@@ -321,7 +382,10 @@ describe("role union and assignment (AC-24, D6, Q61, Q62)", () => {
       "allow full sensitive_read",
     );
     expect(decide(staff(["consultant", "back_office"]), field("residence_social"), "write")).toBe(
-      "deny undecided Q65",
+      "deny needs_assisted_mode",
+    );
+    expect(decide(staff(["consultant", "back_office"]), identifiers("iban"), "write")).toBe(
+      "allow full sensitive_write",
     );
   });
 
@@ -373,7 +437,7 @@ describe("audit projections (Q87 A)", () => {
   });
 });
 
-describe("org roles (AC-25, Q57, Q80)", () => {
+describe("org roles (Q57, Q80)", () => {
   it("shows the regional operations manager its review events and aggregates, in its region", () => {
     const own = rom([sample.regionId]);
     expect(decide(own, sampleAudit("review", null), "read")).toBe("allow full");

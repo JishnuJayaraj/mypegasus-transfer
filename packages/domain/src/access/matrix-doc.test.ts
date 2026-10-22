@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { DocumentType } from "../documents/catalog";
 import { AuditStream } from "./decide";
-import { renderAccessMatrixDoc } from "./matrix-doc";
+import { asUndecided, cellText, renderAccessMatrixDoc, undecidedTable } from "./matrix-doc";
 import { accessProfiles, fieldCategories } from "./profiles";
 
 const rows = (text: string) =>
@@ -37,8 +37,23 @@ it("renders every subject, key and undecided cell (docs/domain/generated/access-
     "| Consultant/profiler (assigned) | `tl407_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |",
   );
   expect(doc).toContain(
-    "| Q65 | PL | `confidential` | `write` | active normal, active break_glass |",
+    "| PL | `confidential` | `write` | no: needs_assisted_mode | yes |",
   );
-  expect(rows(part("## Undecided cells")).every((r) => r.startsWith("| Q65 |"))).toBe(true);
+  // The sampled self-service fields are decided (Q136); Q65 holds for the others.
+  expect(part("## Undecided cells")).toContain("No sampled cell is undecided.");
   expect(doc.endsWith("\n")).toBe(true);
+});
+
+it("lists an undecided cell once, with every phase and mode it is undecided in", () => {
+  const text = cellText({ effect: "deny", because: "undecided", question: "Q65" });
+  const rendered = { label: "PL", staff: true, key: "confidential", action: "write", text } as const;
+  expect(asUndecided({ ...rendered, text: "no: never" }, "active normal")).toEqual([]);
+  const [cell] = asUndecided(rendered, "active normal");
+  expect(cell).toEqual({ question: "Q65", label: "PL", key: "confidential", action: "write", where: "active normal" });
+  expect(
+    undecidedTable([
+      { ...cell, where: "active normal" },
+      { ...cell, where: "active break_glass" },
+    ]).split("\n")[2],
+  ).toBe("| Q65 | PL | `confidential` | `write` | active normal, active break_glass |");
 });

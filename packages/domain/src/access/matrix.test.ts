@@ -13,11 +13,11 @@ import {
 } from "./profiles";
 import { cell } from "./testing/cell";
 
-// Active phase, normal mode: data-protection.md's read matrix and write table, plan 5.6 and
-// round 11, restated by hand. Columns: participant (birth-date check passed), participant (no
+// Active phase, normal mode: data-protection.md's read matrix and write table and round 11,
+// restated by hand. Columns: participant (birth-date check passed), participant (no
 // check), consultant (assigned), consultant (not assigned), PL, back office, regional
 // operations manager, regional admin, admin. Field rows use a self-service field where the
-// category has one (participant writes, Q65).
+// category has one (participant writes, Q65); staff write those in assisted mode only (Q136).
 //   yes = full view, sr/sw = sensitive_read/sensitive_write, meta = metadata only,
 //   opened = full view, document_opened, abs = "abwesend" + dates, type = type + dates
 const fieldRead = `
@@ -32,11 +32,11 @@ absence              type  type  abs   unass abs    type  never never never`;
 
 const fieldWrite = `
 case_internal        never never op    unass op     op    never never never
-confidential         yes   yes   yes   unass Q65    Q65   never never never
+confidential         yes   yes   yes   unass assist assist never never never
 health               sw    check sw    unass assist never never never never
 disability           sw    check sw    unass assist sw    never never never
-identifiers          sw    sw    Q65   unass never  sw    never never never
-residence_social     sw    sw    Q65   unass never  Q65   never never never
+identifiers          sw    sw    assist unass never sw    never never never
+residence_social     sw    sw    assist unass never assist never never never
 profiling_assessment never never sw    unass never  never never never never
 absence              never never never unass never  yes   never never never`;
 
@@ -97,7 +97,6 @@ const codes: Record<string, string> = {
   bg: "deny needs_break_glass",
   op: "deny via_domain_operation",
   imm: "deny immutable",
-  Q65: "deny undecided Q65",
 };
 
 function cases(table: string, action: AccessAction, resource: (row: string) => Resource) {
@@ -121,7 +120,7 @@ const rows = (table: string) =>
 const field = (row: string) => sampleField(AccessCategory.parse(row), "active");
 const document = (row: string) => sampleDocument(DocumentType.parse(row), "active");
 
-describe("access matrix, active phase, normal mode (AC-23)", () => {
+describe("access matrix, active phase, normal mode (data-protection.md)", () => {
   it("restates every field category, document type and audit stream", () => {
     expect(rows(fieldRead)).toEqual(fieldCategories);
     expect(rows(fieldWrite)).toEqual(fieldCategories);
