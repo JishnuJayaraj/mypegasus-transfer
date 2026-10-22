@@ -166,6 +166,14 @@ const statusFunctions = [
   // Slice 4a: assisted mode (Q136)
   "start_assisted_mode",
   "end_assisted_mode",
+  // Slice 4b: documents (data-protection.md, uploads)
+  "add_document",
+  "record_document_upload_rejected",
+  "open_document",
+  "document_link_content",
+  "review_document",
+  "delete_document",
+  "record_document_purged",
 ];
 const helpers = [
   "assert_context",
@@ -229,6 +237,9 @@ const helpers = [
   "lock_assisted_mode",
   "close_assisted_mode",
   "end_assisted_modes_of_session",
+  "document_staff_roles",
+  "current_document_policy",
+  "lock_document_actor",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -792,6 +803,45 @@ describe("transfer_app and assisted_mode", () => {
     ["end a mode itself", "update assisted_mode set ended_at = now(), end_reason = 'ended'"],
     ["find a live mode directly", "select lock_assisted_mode(null, null, null)"],
     ["close a mode directly", "select close_assisted_mode(null, null, null)"],
+  ])("may not %s (42501)", async (_label, statement) => {
+    await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// Slice 4b: documents (ADR-0002, documents; Q147) are written only by their functions; the runtime
+// role never selects the wrapped key or the content hash and has no privilege on the links.
+describe("transfer_app and the document tables", () => {
+  it("selects the policy and the document metadata", async () => {
+    expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
+      { n: 9 },
+    ]);
+    expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
+  });
+
+  it.each([
+    ...writes(
+      "document",
+      "size_bytes",
+      `insert into document (id, project_id, participation_id, type, catalog_version, retention_class, media_type, size_bytes, content_sha256, key_id, wrapped_key, added_by, added_on_behalf)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), 'cv', 2, 'personnel_file', 'application/pdf', 1, '${"0".repeat(64)}', '${"0".repeat(16)}', '\\x00', 'participant', false)`,
+    ),
+    ...writes(
+      "document_type_policy",
+      "file_name",
+      "insert into document_type_policy select type, 3, retention_class, file_name, signed, add_roles, review_roles, delete_roles, open_roles from document_type_policy",
+    ),
+    ...writes(
+      "document_link",
+      "expires_at",
+      `insert into document_link (token_hash, document_id, project_id, participation_id, session_kind, session_hash, expires_at)
+       values ('${"a".repeat(64)}', gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), 'staff', '${"b".repeat(64)}', now() + interval '1 minute')`,
+    ),
+    ["select a wrapped key", "select wrapped_key from document"],
+    ["select a content hash", "select content_sha256 from document"],
+    ["select everything of a document", "select * from document"],
+    ["select a link", "select token_hash from document_link"],
+    ["find the actor directly", "select lock_document_actor(null, null, null, false)"],
+    ["read roles directly", "select document_staff_roles(null, null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });
