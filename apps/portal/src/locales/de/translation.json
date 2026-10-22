@@ -115,11 +115,18 @@
     "confirmRemove": "Kontaktweg entfernen",
     "cancel": "Abbrechen",
     "removeOne": "Ihre Einwilligung für diesen Kontaktweg endet. Wir senden dorthin keine Codes und Nachrichten mehr.",
-    "removeLast": "Das ist Ihr letzter Kontaktweg. Wenn Sie ihn entfernen, werden Sie abgemeldet und können sich erst wieder anmelden, wenn Ihre Transfergesellschaft Ihnen einen neuen Zugangscode gibt.",
+    "removeLast": "Das ist Ihr letzter Kontaktweg. Wenn Sie ihn entfernen, werden Sie abgemeldet und können sich im Teilnehmerportal nicht mehr anmelden. Ihre Transfergesellschaft hilft Ihnen weiterhin persönlich, telefonisch oder per Brief und gibt Ihnen bei Bedarf einen neuen Zugangscode.",
     "loggedOut": "Der Kontaktweg ist entfernt und Sie sind abgemeldet. Für einen neuen Zugang wenden Sie sich an Ihre Transfergesellschaft.",
     "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich neu an.",
     "add": "Kontaktweg hinzufügen",
-    "confirmAdd": "Kontaktweg hinzufügen"
+    "confirmAdd": "Kontaktweg hinzufügen",
+    "upgrade": {
+      "title": "Neue Einwilligung für diesen Kontaktweg",
+      "intro": "Wir haben den Text der Einwilligung erweitert: Über diesen Kontaktweg können wir Sie auch erinnern, wenn im Portal etwas offen ist. Ihre Zustimmung ist freiwillig. Wenn Sie nicht zustimmen, bleibt alles wie bisher und Sie können sich weiter anmelden.",
+      "agree": "Zustimmen",
+      "later": "Später",
+      "done": "Danke, Ihre Einwilligung ist gespeichert."
+    }
   },
   "consents": {
     "title": "Ihre Einwilligungen",
@@ -141,7 +148,8 @@
     },
     "endReason": {
       "revoked": "widerrufen",
-      "lost_access_replaced": "Zugang wiederhergestellt, Kontaktweg ersetzt"
+      "lost_access_replaced": "Zugang wiederhergestellt, Kontaktweg ersetzt",
+      "superseded": "durch die neue Einwilligung ersetzt"
     }
   }
 }

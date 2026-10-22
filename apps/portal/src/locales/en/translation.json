@@ -115,11 +115,18 @@
     "confirmRemove": "Remove contact",
     "cancel": "Cancel",
     "removeOne": "Your consent for this contact ends. We will no longer send codes or messages there.",
-    "removeLast": "This is your last contact. If you remove it, you will be logged out and can only log in again once your transfer company gives you a new access code.",
+    "removeLast": "This is your last contact. If you remove it, you will be logged out and can no longer log in to the participant portal. Your transfer company will still help you in person, by phone or by letter, and can give you a new access code if you need one.",
     "loggedOut": "The contact is removed and you are logged out. For new access, please contact your transfer company.",
     "expired": "Your session has expired. Please log in again.",
     "add": "Add a contact",
-    "confirmAdd": "Add contact"
+    "confirmAdd": "Add contact",
+    "upgrade": {
+      "title": "New consent for this contact",
+      "intro": "We have extended the consent text: through this contact we can also remind you when something is open in the portal. Agreeing is voluntary. If you don't agree, nothing changes and you can still log in.",
+      "agree": "Agree",
+      "later": "Later",
+      "done": "Thank you, your consent is saved."
+    }
   },
   "consents": {
     "title": "Your consents",
@@ -141,7 +148,8 @@
     },
     "endReason": {
       "revoked": "withdrawn",
-      "lost_access_replaced": "access recovered, contact replaced"
+      "lost_access_replaced": "access recovered, contact replaced",
+      "superseded": "replaced by the new consent"
     }
   }
 }

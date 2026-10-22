@@ -325,6 +325,14 @@ body {
   line-height: 1.45;
 }
 
+// The portal's offer of a new consent for one channel (data-protection.md, consent v2).
+.tp-consent-offer {
+  padding: $spacing-05;
+  border-inline-start: 3px solid theme.$support-info;
+  background: theme.$layer-01;
+  line-height: 1.45;
+}
+
 // Assisted mode (staff app): the wizard opened on a participant's behalf; the banner names whom
 // and ends it.
 .tp-assisted-banner {

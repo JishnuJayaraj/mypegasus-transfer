@@ -13,6 +13,7 @@ const sms = {
   id: "00000000-0000-4000-8000-000000000002",
   kind: "sms",
   maskedAddress: "+49 … 678",
+  consentUpgrade: false,
   verifiedAt: "2026-10-21T11:00:00.000Z",
 };
 const emailId = me.channels[0]!.id;
@@ -47,7 +48,7 @@ describe("channels (Q123)", () => {
         body: {
           oneTimeCode: "123456",
           consent: true,
-          consentVersion: "portal-contact-consent:v1",
+          consentVersion: "portal-contact-consent:v2",
           language: "de",
         },
       },
@@ -81,6 +82,8 @@ describe("channels (Q123)", () => {
     });
     await user.click(await screen.findByRole("button", { name: "Entfernen" }));
     expect(screen.getByText(/Das ist Ihr letzter Kontaktweg/)).toBeInTheDocument();
+    // Login ends with it; help in person, by phone or by letter remains (data-protection.md).
+    expect(screen.getByText(/persönlich, telefonisch oder per Brief/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Abbrechen" }));
     expect(screen.queryByText(/Das ist Ihr letzter Kontaktweg/)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Entfernen" }));
@@ -125,5 +128,49 @@ describe("the portal home with login (ADR-0007, Q123)", () => {
       "href",
       "/portal/channels",
     );
+  });
+});
+
+describe("the consent v2 offer (data-protection.md, consent v2)", () => {
+  const v1 = { ...me.channels[0]!, consentUpgrade: true };
+
+  it("upgrades the channel with 'Zustimmen'", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderPortal("/portal/channels", {
+      "GET /api/v1/portal/channels": () => json({ channels: [v1, sms] }),
+      [`POST /api/v1/portal/channels/${emailId}/consent-upgrade`]: () =>
+        json({ result: "upgraded" }),
+    });
+    const offer = await screen.findByRole("region", {
+      name: "Neue Einwilligung für diesen Kontaktweg",
+    });
+    expect(
+      within(offer).getByText(/Erinnerung, dass dort noch etwas offen ist/),
+    ).toBeInTheDocument();
+    // Only the v1 channel is offered the upgrade.
+    expect(screen.getAllByRole("region", { name: /Neue Einwilligung/ })).toHaveLength(1);
+    await user.click(within(offer).getByRole("button", { name: "Zustimmen" }));
+    expect(
+      await screen.findByText("Danke, Ihre Einwilligung ist gespeichert."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: /Neue Einwilligung/ })).toBeNull();
+    expect(calls.at(-1)).toEqual({
+      path: `/api/v1/portal/channels/${emailId}/consent-upgrade`,
+      body: { consent: true, consentVersion: "portal-contact-consent:v2", language: "de" },
+    });
+  });
+
+  it("leaves channel, session and login as they are with 'Später', in English too", async () => {
+    await i18n.changeLanguage("en");
+    const user = userEvent.setup();
+    const { calls } = renderPortal("/portal/channels", {
+      "GET /api/v1/portal/channels": () => json({ channels: [v1] }),
+    });
+    const offer = await screen.findByRole("region", { name: "New consent for this contact" });
+    expect(within(offer).getByText(/never used for advertising/)).toBeInTheDocument();
+    await user.click(within(offer).getByRole("button", { name: "Later" }));
+    expect(screen.queryByRole("region", { name: "New consent for this contact" })).toBeNull();
+    expect(screen.getByText(/e…@example.org/)).toBeInTheDocument();
+    expect(calls.map((call) => call.path)).toEqual(["/api/v1/portal/channels"]);
   });
 });
