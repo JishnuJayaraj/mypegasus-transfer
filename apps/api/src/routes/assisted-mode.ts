@@ -54,7 +54,7 @@ const PageParams = z.object({ participationId: z.uuid(), page: ConfidentialPage 
 const GroupParams = z.object({ participationId: z.uuid(), group: SensitivePage });
 
 /** 403 without a live assisted mode of this staff session and participation. */
-const assistedModeRequired = (c: Context<AppEnv>) =>
+export const assistedModeRequired = (c: Context<AppEnv>) =>
   problem(c, "forbidden", {
     errors: [{ pointer: "", code: "assisted_mode_required", detail: "Start assisted mode first" }],
   });
@@ -100,6 +100,30 @@ function assistedState(
   };
 }
 
+/** Whether the mode is live: of this staff session and participation, not ended, its session live. */
+export async function liveAssistedMode(
+  db: Deps["db"],
+  assistedModeId: string,
+  participationId: string,
+  staffSessionHash: string,
+): Promise<boolean> {
+  const [live] = await db
+    .select({ id: assistedMode.id })
+    .from(assistedMode)
+    .innerJoin(staffSession, eq(staffSession.tokenHash, assistedMode.staffSessionHash))
+    .where(
+      and(
+        eq(assistedMode.id, assistedModeId),
+        eq(assistedMode.participationId, participationId),
+        eq(assistedMode.staffSessionHash, staffSessionHash),
+        isNull(assistedMode.endedAt),
+        isNull(staffSession.endedAt),
+        sql`${staffSession.expiresAt} > now()`,
+      ),
+    );
+  return live !== undefined;
+}
+
 export function assistedModeRoutes(deps: Deps) {
   const { db } = deps;
   const router = createRouter();
@@ -128,21 +152,9 @@ export function assistedModeRoutes(deps: Deps) {
     const user = sessionUser(c);
     const found = await access(user, participationId);
     if (!found) return { ok: false, response: problem(c, "not-found") } as const;
-    const [live] = await db
-      .select({ id: assistedMode.id })
-      .from(assistedMode)
-      .innerJoin(staffSession, eq(staffSession.tokenHash, assistedMode.staffSessionHash))
-      .where(
-        and(
-          eq(assistedMode.id, assistedModeId),
-          eq(assistedMode.participationId, participationId),
-          eq(assistedMode.staffSessionHash, sessionHash(c)),
-          isNull(assistedMode.endedAt),
-          isNull(staffSession.endedAt),
-          sql`${staffSession.expiresAt} > now()`,
-        ),
-      );
-    if (!live) return { ok: false, response: assistedModeRequired(c) } as const;
+    if (!(await liveAssistedMode(db, assistedModeId, participationId, sessionHash(c)))) {
+      return { ok: false, response: assistedModeRequired(c) } as const;
+    }
     const visible = assistedFieldAccess(found.subject, found.target);
     // A role lost since the start (e.g. the assignment ended) sees nothing any more.
     if (!confidentialFieldsOf("personal").some(visible)) {

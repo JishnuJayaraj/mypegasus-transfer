@@ -43,7 +43,7 @@ import { portalSession, portalStepUp, requirePortalSession } from "../portal-ses
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
 import { requireSession, sessionUser } from "../session";
-import { auditContext, utc } from "../sql";
+import { auditContext, participantContext, utc } from "../sql";
 
 // Self-service data (data-protection.md, self-service; Q112, Q135, Q138, Q140): the participant's
 // wizard in the portal and the staff's normal-mode projection. A highly confidential or
@@ -56,11 +56,6 @@ const PageParams = z.object({ page: ConfidentialPage });
 const GroupParams = z.object({ group: SensitivePage });
 const ParticipationParams = z.object({ participationId: z.uuid() });
 const ParticipationGroupParams = z.object({ participationId: z.uuid(), group: SensitivePage });
-
-/** The participant's audit context (ADR-0002): the participation acts for itself. */
-const participantContext = (participationId: string, requestId: string) =>
-  sql`row('participant'::actor_type, null::uuid, ${participationId}::uuid, null::text, null::uuid,
-    ${requestId}::text, null::text)::audit_context`;
 
 /** The wizard state the portal shows: sensitive fields by presence only. */
 function portalState(record: SelfServiceRecord, stepUp: PortalStepUp) {

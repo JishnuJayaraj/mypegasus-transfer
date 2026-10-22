@@ -1,7 +1,9 @@
 import { compileFieldSchema, resolveForParticipation, type FieldSchema } from "@transfer/config";
 import {
   and,
+  document,
   eq,
+  isNull,
   participantDetails,
   participantHealthData,
   participantIdentifierData,
@@ -13,8 +15,12 @@ import {
   type Database,
 } from "@transfer/db";
 import {
+  documentState,
   SELF_SERVICE_NOTICE_VERSION,
+  type CompletenessFacts,
   type ContactField,
+  type DocumentState,
+  type DocumentType,
   type CustomFieldDefinition,
   type SelfServiceValueMap,
   type SensitivePresence,
@@ -113,6 +119,15 @@ export async function loadSelfService(
   if (!row) return undefined;
   const { identity, details, profile } = row;
   const snapshot = (await projectSnapshot(db, release, row.projectId))!;
+  // Completeness counts live documents only (process-and-lifecycle.md, document review).
+  const live = await db
+    .select({ type: document.type, reviewState: document.reviewState })
+    .from(document)
+    .where(and(eq(document.participationId, participationId), isNull(document.deletedAt)));
+  const documents: Partial<Record<DocumentType, DocumentState[]>> = {};
+  for (const { type, reviewState } of live) {
+    (documents[type] ??= []).push(documentState({ reviewState, deletedAt: null })!);
+  }
   const { config } = resolveForParticipation({
     ...snapshot.input,
     placementAgenturKey: row.placementAgenturKey,
@@ -200,6 +215,7 @@ export async function loadSelfService(
         ...sensitiveFacts,
         ...customValues,
       },
+      documents: documents satisfies CompletenessFacts["documents"],
     },
     customValidators: new Map(custom.map(([key, schema]) => [key, validatorOf(schema)])),
   };

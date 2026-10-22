@@ -62,3 +62,10 @@ export class Slots {
 
 /** The process's slots for the parse worker (R43). */
 export const parseSlots = new Slots({ running: 2, waiting: 8, waitMs: 20_000 });
+
+/**
+ * The upload gate (ADR-0010, documents): like the import, an API process handles at most two uploads
+ * at once (each holds a decoded file of up to 10 MB and its ciphertext), up to four wait ≤ 20 s;
+ * the routes answer `upload_busy` otherwise.
+ */
+export const uploadSlots = new Slots({ running: 2, waiting: 4, waitMs: 20_000 });

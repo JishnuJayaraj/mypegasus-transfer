@@ -4,6 +4,8 @@ export const jobNames = {
   evaluateProject: "lifecycle.evaluate-project",
   // Slice 3 plan D21: the notice that goes to a newly activated channel.
   activationNotice: "portal.activation-notice",
+  // Slice 4b: a deleted document's object (data-protection.md, uploads).
+  purgeDocument: "documents.purge-object",
 } as const;
 
 /** The nightly run is a Berlin local time (round 9). */

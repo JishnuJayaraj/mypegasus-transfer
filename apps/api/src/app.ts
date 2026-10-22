@@ -33,6 +33,8 @@ import { portalRoutes } from "./routes/portal";
 import { selfServiceRoutes } from "./routes/self-service";
 import { assistedModeRoutes } from "./routes/assisted-mode";
 import { createDetached } from "./detached";
+import { documentFiles } from "./documents/files";
+import { documentRoutes } from "./routes/documents";
 import { mountSpas } from "./static";
 
 export const openApiConfig = {
@@ -40,9 +42,20 @@ export const openApiConfig = {
   info: { title: "Transfer Platform API", version: packageJson.version },
 };
 
-/** Bodies are 100 kB, except the two import routes, which carry a base64 file (ADR-0010, uploads). */
-const bodyLimits = { default: 100 * 1024, imports: 8 * 1024 * 1024 } as const;
+/**
+ * Bodies are 100 kB, except the two import routes and the three upload routes, which carry a
+ * base64 file (ADR-0010, uploads).
+ */
+const bodyLimits = {
+  default: 100 * 1024,
+  imports: 8 * 1024 * 1024,
+  uploads: 14 * 1024 * 1024,
+} as const;
 const IMPORT_PATH = /^\/api\/v1\/projects\/[^/]+\/imports(\/preview)?$/;
+const UPLOAD_PATH =
+  /^\/api\/v1\/(portal\/documents|participations\/[^/]+\/(assisted\/)?documents)$/;
+/** A document download (Q147): its own, strictest headers. */
+const DOCUMENT_CONTENT_PATH = /^\/api\/v1\/document-content\//;
 
 const JSON_CONTENT_TYPE = /^application\/json\s*(;|$)/i;
 
@@ -64,6 +77,9 @@ const contentSecurityPolicy = {
   formAction: ["'self'"],
   frameAncestors: ["'none'"],
 };
+
+/** A download is never rendered from our origin (Q147): no source at all, sandboxed. */
+const downloadSecurityPolicy = { defaultSrc: ["'none'"], sandbox: [] as string[] };
 
 /**
  * The senders: the mocks on a shared development outbox outside production. The mocks report
@@ -89,11 +105,16 @@ export function createApp(deps: Deps) {
     mailer: deps.mailer ?? defaults.mailer,
     smsSender: deps.smsSender ?? defaults.smsSender,
     detached: deps.detached ?? createDetached(logger),
+    documentFiles: documentFiles(env, { storage: deps.fileStorage, scanner: deps.virusScanner }),
   };
   const app = createRouter();
 
   app.use(requestLogger(logger));
-  app.use(secureHeaders({ contentSecurityPolicy }));
+  const pageHeaders = secureHeaders({ contentSecurityPolicy });
+  const downloadHeaders = secureHeaders({ contentSecurityPolicy: downloadSecurityPolicy });
+  app.use((c, next) =>
+    (DOCUMENT_CONTENT_PATH.test(c.req.path) ? downloadHeaders : pageHeaders)(c, next),
+  );
   app.use("/api/*", originCheck(env.appOrigins));
   const limits = Object.fromEntries(
     Object.entries(bodyLimits).map(([name, maxSize]) => [
@@ -101,9 +122,15 @@ export function createApp(deps: Deps) {
       bodyLimit({ maxSize, onError: (c) => problem(c, "payload-too-large") }),
     ]),
   ) as Record<keyof typeof bodyLimits, ReturnType<typeof bodyLimit>>;
-  app.use("/api/*", (c, next) =>
-    limits[IMPORT_PATH.test(c.req.path) ? "imports" : "default"](c, next),
-  );
+  app.use("/api/*", (c, next) => {
+    const path = c.req.path;
+    const limit = IMPORT_PATH.test(path)
+      ? "imports"
+      : UPLOAD_PATH.test(path)
+        ? "uploads"
+        : "default";
+    return limits[limit](c, next);
+  });
   app.use("/api/*", async (c, next) => {
     if (["POST", "PUT", "PATCH"].includes(c.req.method)) {
       if (!JSON_CONTENT_TYPE.test(c.req.header("content-type") ?? "")) {
@@ -133,6 +160,7 @@ export function createApp(deps: Deps) {
   api.route("/", portalRoutes(runtimeDeps));
   api.route("/", selfServiceRoutes(runtimeDeps));
   api.route("/", assistedModeRoutes(runtimeDeps));
+  api.route("/", documentRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 
