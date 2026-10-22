@@ -28,6 +28,10 @@ export const testEnv: Env = {
   portalPublicUrl: "https://portal.test/portal/",
   mailAdapter: "mock",
   smsAdapter: "mock",
+  documentEncryptionKey: "test-document-encryption-key-test-document-encryption-key",
+  storageAdapter: "memory",
+  storageDir: "unused",
+  virusScanAdapter: "mock",
 };
 
 export const origin = testEnv.appOrigins[0]!;
