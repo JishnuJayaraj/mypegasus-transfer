@@ -145,6 +145,69 @@ describe("Meine Angaben", () => {
     ]);
   });
 
+  it("lists, uploads and deletes documents on the portal's own routes (Unterlagen)", async () => {
+    const user = userEvent.setup();
+    const cv = {
+      id: "00000000-0000-4000-d000-000000000001",
+      type: "cv",
+      mediaType: "application/pdf",
+      sizeBytes: 1200,
+      fileName: "lebenslauf.pdf",
+      addedAt: "2026-10-22T08:15:00.000Z",
+      addedBy: "participant",
+      onBehalf: false,
+      review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
+      capabilities: { open: true, review: false, delete: true },
+    };
+    let documents: (typeof cv)[] = [];
+    const documentsPage = {
+      page: "documents",
+      sensitive: false,
+      complete: true,
+      fields: [],
+      documentTypes: ["cv", "participant_upload", "qualification_certificate"],
+    };
+    const { calls } = renderPortal("/portal/self-service?step=documents", {
+      "GET /api/v1/portal/self-service": () => {
+        const base = state(true, 1);
+        return json({ ...base, pages: [...base.pages, documentsPage] });
+      },
+      "GET /api/v1/portal/documents": () =>
+        json({
+          documents,
+          addableTypes: ["cv", "participant_upload", "qualification_certificate"],
+          limits: { maxBytes: 10 * 1024 * 1024, maxLiveDocuments: 50, maxUploadsPerHour: 20 },
+        }),
+      "POST /api/v1/portal/documents": () => {
+        documents = [cv];
+        return json(cv, 201);
+      },
+      "DELETE /api/v1/portal/documents/00000000-0000-4000-d000-000000000001": () => {
+        documents = [];
+        return new Response(null, { status: 204 });
+      },
+    });
+    await screen.findByRole("heading", { level: 1, name: "Unterlagen" });
+    await user.upload(
+      await screen.findByLabelText("Lebenslauf hochladen"),
+      new File(["%PDF-1.7"], "lebenslauf.pdf"),
+    );
+    expect(await screen.findByText("lebenslauf.pdf")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "lebenslauf.pdf löschen" }));
+    const dialog = screen.getByRole("dialog", { name: "Unterlage löschen?" });
+    await user.click(within(dialog).getByRole("button", { name: "Löschen" }));
+    expect(await screen.findByText("Die Unterlage wurde gelöscht.")).toBeInTheDocument();
+    expect(calls.filter((call) => call.path.startsWith("/api/v1/portal/documents"))).toEqual(
+      expect.arrayContaining([
+        {
+          path: "/api/v1/portal/documents",
+          body: { type: "cv", fileName: "lebenslauf.pdf", content: btoa("%PDF-1.7") },
+        },
+        { path: "/api/v1/portal/documents/00000000-0000-4000-d000-000000000001" },
+      ]),
+    );
+  });
+
   it("sends an expired session to the login", async () => {
     renderPortal("/portal/self-service", {
       "GET /api/v1/portal/self-service": () => problem(401, "unauthenticated"),

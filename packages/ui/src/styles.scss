@@ -250,6 +250,29 @@ body {
   }
 }
 
+// "Unterlagen" (Slice 4b): a section per type, its documents as a list of cards.
+.tp-documents h2 {
+  @include type.type-style("heading-03");
+}
+
+.tp-document-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+
+  > li {
+    padding-block: $spacing-04;
+    padding-inline: $spacing-05;
+    background: theme.$layer-01;
+    border-inline-start: 3px solid theme.$border-subtle;
+  }
+}
+
+.tp-document-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .tp-error {
   color: theme.$text-error;
 }

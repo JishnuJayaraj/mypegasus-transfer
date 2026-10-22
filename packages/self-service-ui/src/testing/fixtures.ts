@@ -54,6 +54,15 @@ export const customPage = (complete = true): WizardPage => ({
   ],
 });
 
+/** "Unterlagen": no fields, one section per own type. */
+export const documentsPage = (complete = true): WizardPage => ({
+  page: "documents",
+  sensitive: false,
+  complete,
+  fields: [],
+  documentTypes: ["cv", "participant_upload", "qualification_certificate"],
+});
+
 const emptyValues = Object.fromEntries(
   Object.keys(selfServiceValueSchemas).map((key) => [key, null]),
 ) as PortalSelfService["values"];

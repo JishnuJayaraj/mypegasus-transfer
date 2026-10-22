@@ -26,6 +26,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { DocumentsPage } from "./documents-page";
 import { FieldEditor, Form } from "./fields";
 import { SELF_SERVICE_NAMESPACE } from "./i18n";
 import {
@@ -49,7 +50,8 @@ import { StepUp } from "./step-up";
 // with the revision read; the overview lists what is still missing. Rendered from the API's page
 // definitions, so requirements, help texts and custom fields follow the participation's chain.
 // A sensitive page reads and writes its group on its own logged routes; the special-category page
-// shows only the step-up until the session has it (ADR-0007, step-up).
+// shows only the step-up until the session has it (ADR-0007, step-up). "Unterlagen" has no fields:
+// its documents are added, opened and deleted on their own routes, each at once.
 
 type Message = "stale" | "invalid" | "failed" | "closed" | "newVersion";
 
@@ -194,6 +196,15 @@ export function SelfServiceWizard(props: SelfServiceWizardProps) {
         {notification}
         {step === "overview" ? (
           <Overview state={state} onStep={go} />
+        ) : current.page === "documents" ? (
+          <DocumentsStep
+            state={state}
+            page={current}
+            source={source}
+            onChanged={() => void query.refetch()}
+            onExpired={() => setEnded("expired")}
+            onStep={go}
+          />
         ) : current.sensitive &&
           groupNeedsStepUp(current.page as SensitivePage) &&
           state.stepUp &&
@@ -400,6 +411,48 @@ function PageStep(props: {
   );
 }
 
+/** "Unterlagen": the documents page between the step buttons; nothing to save on "Weiter". */
+function DocumentsStep(props: {
+  state: WizardState;
+  page: WizardPage;
+  source: SelfServiceSource;
+  onChanged: () => void;
+  onExpired: () => void;
+  onStep: (step: Step) => void;
+}) {
+  const { t } = useT();
+  const { state, page } = props;
+  const index = state.pages.findIndex((candidate) => candidate.page === page.page);
+  const previous = previousStep(state, page.page);
+  return (
+    <Stack gap={6}>
+      <Stack gap={3}>
+        <p className="tp-hint">
+          {t("progress.step", { current: index + 1, total: state.pages.length })}
+        </p>
+        <Heading>{t(`pages.${page.page}`)}</Heading>
+      </Stack>
+      <DocumentsPage
+        source={props.source.documents}
+        types={page.documentTypes ?? []}
+        missing={state.missing.filter((item) => item.kind === "document")}
+        onChanged={props.onChanged}
+        onExpired={props.onExpired}
+      />
+      <div className="tp-wizard-actions">
+        {previous && (
+          <Button kind="secondary" onClick={() => props.onStep(previous)}>
+            {t("actions.back")}
+          </Button>
+        )}
+        <Button onClick={() => props.onStep(nextStep(state, page.page))}>
+          {t("actions.next")}
+        </Button>
+      </div>
+    </Stack>
+  );
+}
+
 /** Names and birth date come from the import: shown, never edited here (Q112). */
 function Identity({ state }: { state: WizardState }) {
   const { t } = useT();
@@ -423,11 +476,18 @@ function Identity({ state }: { state: WizardState }) {
   );
 }
 
+/** Whether a missing item is on the page: a field of it, or a document of its types. */
+const onPage = (page: WizardPage, item: WizardState["missing"][number]) =>
+  item.kind === "document"
+    ? (page.documentTypes ?? []).some((type) => type === item.key)
+    : page.fields.some((field) => field.key === item.key);
+
 /** Every page with what is still missing on it (codes as labels), and a way back to it. */
 function Overview({ state, onStep }: { state: WizardState; onStep: (step: Step) => void }) {
   const { t, i18n } = useT();
   const language = i18n.resolvedLanguage === "en" ? "en" : "de";
   const labelOf = (page: WizardPage, key: string) => {
+    if (page.documentTypes) return t(`documents.types.${key}`);
     const custom = page.fields.find((field) => field.key === key)?.custom;
     return custom ? (custom.label[language] ?? custom.label.de) : t(`fields.${key}.label`);
   };
@@ -440,11 +500,7 @@ function Overview({ state, onStep }: { state: WizardState; onStep: (step: Step) 
       <ul className="tp-overview">
         {state.pages.map((page) => {
           const missing = [
-            ...new Set(
-              state.missing
-                .filter((item) => page.fields.some((field) => field.key === item.key))
-                .map((item) => item.key),
-            ),
+            ...new Set(state.missing.filter((item) => onPage(page, item)).map((item) => item.key)),
           ];
           return (
             <li key={page.page}>
