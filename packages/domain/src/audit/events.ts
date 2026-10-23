@@ -37,6 +37,12 @@ import {
 } from "../activation/model";
 import { IdentityAssurance } from "../activation/steps";
 import { ReminderCancelReason, ReminderKind } from "../reminders/model";
+import {
+  AppointmentCancelReason,
+  AppointmentKind,
+  BookingCancelReason,
+  BookingOrigin,
+} from "../appointments/model";
 import { NoticeLanguage } from "../notices/catalog";
 import {
   contactFields,
@@ -143,6 +149,12 @@ export const AuditEventType = z.enum([
   // Slice 5, opening a participation's audit history (data-protection.md, audit metadata; Q157),
   // written only by `audit_history`
   "audit_history_opened",
+  // Slice 5b, appointments (data-protection.md, appointments), written only by their functions
+  "appointment_created",
+  "appointment_changed",
+  "appointment_cancelled",
+  "appointment_booked",
+  "appointment_booking_cancelled",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -224,6 +236,11 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "reminder_queued",
   "reminder_delivery",
   "audit_history_opened",
+  "appointment_created",
+  "appointment_changed",
+  "appointment_cancelled",
+  "appointment_booked",
+  "appointment_booking_cancelled",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -511,6 +528,77 @@ const participantLogin = event("participant_login", {
   ) {
     issue(ctx, "method_mismatch");
   }
+});
+
+/**
+ * An appointment event names the appointment and, for a booking, its kind and start as written
+ * then (Q168: the history never depends on the current appointment row); never the title or the
+ * venue (Q166).
+ */
+const ofBooking = {
+  bookingId: z.uuid(),
+  appointmentId: z.uuid(),
+  appointmentKind: AppointmentKind,
+  startsAt: z.iso.datetime(),
+};
+
+/** The fields an appointment change names; never their text (Q166). */
+const AppointmentField = z.enum([
+  "startsAt",
+  "endsAt",
+  "bookingClosesAt",
+  "capacity",
+  "title",
+  "venue",
+  "audienceWaveId",
+  "hostStaffUserId",
+]);
+
+const appointmentChanged = event("appointment_changed", {
+  ...ofProject,
+  actor: staffActor,
+  details: z.strictObject({
+    appointmentId: z.uuid(),
+    version: z.int().min(2),
+    fields: z.array(AppointmentField).min(1),
+    hostStaffUserId: z.uuid().optional(),
+  }),
+}).superRefine(({ details }, ctx) => {
+  if (details.fields.includes("hostStaffUserId") !== (details.hostStaffUserId !== undefined)) {
+    issue(ctx, "host_mismatch");
+  }
+});
+
+/** Staff book as themselves (origin `staff`), the participant in the portal (Slice 5b, later). */
+const appointmentBooked = event("appointment_booked", {
+  ...ofParticipation,
+  details: z.strictObject({ ...ofBooking, origin: BookingOrigin }),
+}).superRefine(({ actor, details }, ctx) => {
+  const staff = actor.type === "user" && actor.onBehalfOf === null;
+  const expected = actor.type === "participant" ? "participant" : staff ? "staff" : null;
+  if (expected === null || (details.origin === "participant") !== (expected === "participant")) {
+    issue(ctx, "origin_mismatch");
+  }
+});
+
+/**
+ * A booking cancelled: by the participant, by staff, with its appointment (the organizer), or by
+ * the system when the participation became terminal.
+ */
+const appointmentBookingCancelled = event("appointment_booking_cancelled", {
+  ...ofParticipation,
+  reasonCode: BookingCancelReason,
+  details: z.strictObject(ofBooking),
+}).superRefine(({ actor, reasonCode }, ctx) => {
+  const by =
+    actor.type === "participant"
+      ? ["participant_cancelled"]
+      : actor.type === "system"
+        ? ["participation_closed"]
+        : actor.onBehalfOf === null
+          ? ["staff_cancelled", "appointment_cancelled"]
+          : [];
+  if (!by.includes(reasonCode)) issue(ctx, "reason_mismatch");
 });
 
 /**
@@ -915,5 +1003,34 @@ export const AuditEvent = z.discriminatedUnion("type", [
    * history itself.
    */
   event("audit_history_opened", { ...ofParticipation, actor: staffActor, details: noDetails }),
+  /**
+   * An appointment created by the PL or a consultant (their own slot): its id, kind, times,
+   * capacity and, where set, host and wave; project-level, in no participation's history.
+   */
+  event("appointment_created", {
+    ...ofProject,
+    actor: staffActor,
+    details: z.strictObject({
+      appointmentId: z.uuid(),
+      kind: AppointmentKind,
+      startsAt: z.iso.datetime(),
+      endsAt: z.iso.datetime(),
+      bookingClosesAt: z.iso.datetime(),
+      capacity: z.int().min(1).max(500),
+      hostStaffUserId: z.uuid().optional(),
+      audienceWaveId: z.uuid().optional(),
+    }),
+  }),
+  /** The changed keys and the new version; a new host by id. */
+  appointmentChanged,
+  /** Cancelled by the organizer with a closed reason; `correction` is the PL's later correction. */
+  event("appointment_cancelled", {
+    ...ofProject,
+    actor: staffActor,
+    reasonCode: AppointmentCancelReason,
+    details: z.strictObject({ appointmentId: z.uuid(), correction: z.boolean() }),
+  }),
+  appointmentBooked,
+  appointmentBookingCancelled,
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

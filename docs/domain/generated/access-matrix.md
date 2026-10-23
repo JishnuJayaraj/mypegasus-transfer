@@ -762,6 +762,11 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `reminder_queued` | `case` | no | no | `kind`, `channelKind` |
 | `reminder_delivery` | `case` | no | yes | `outcome` |
 | `audit_history_opened` | `security` | no | no | — |
+| `appointment_created` | project-level | no | no | — |
+| `appointment_changed` | project-level | no | no | — |
+| `appointment_cancelled` | project-level | no | no | — |
+| `appointment_booked` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt`, `origin` |
+| `appointment_booking_cancelled` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
 
 ## Aggregates
 

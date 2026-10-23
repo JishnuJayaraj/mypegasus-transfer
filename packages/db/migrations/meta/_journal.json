@@ -414,6 +414,20 @@
       "when": 1792742633692,
       "tag": "0058_audit_history_function",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1792753040779,
+      "tag": "0059_appointments",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1792753049464,
+      "tag": "0060_appointment_functions",
+      "breakpoints": true
     }
   ]
 }

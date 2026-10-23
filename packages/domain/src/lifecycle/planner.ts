@@ -38,6 +38,9 @@ export type ParticipationSnapshot = {
   facts: GuardFacts;
 };
 
+/** What the cutoff rules read of a participation: its statuses and its wave. */
+export type CutoffSnapshot = Pick<ParticipationSnapshot, "current" | "wave">;
+
 /** A change for the status service to apply as `system`; `effectiveDate` may lie in the past. */
 export type PlannedChange = {
   track: Track;
@@ -187,10 +190,7 @@ export function projectFlags(project: PlannerProject): ProjectFlag[] {
  * (process-and-lifecycle.md, system withdrawal at the final admission cutoff), else null: the
  * condition of the cutoff warnings.
  */
-export function latestEntryCutoff(
-  s: ParticipationSnapshot,
-  project: PlannerProject,
-): IsoDate | null {
+export function latestEntryCutoff(s: CutoffSnapshot, project: PlannerProject): IsoDate | null {
   const latest = latestEntryDateFor(s, project);
   if (latest === null) return null;
   return cutoffOutcome(atCutoff(s)) ? latest : null;
@@ -200,20 +200,20 @@ export function latestEntryCutoff(
  * The state as it will be at the cutoff: an open offer will have expired by then, since its
  * deadline is no later than the latest entry date (Q69).
  */
-function atCutoff(s: ParticipationSnapshot): ParticipationSnapshot {
+function atCutoff<T extends CutoffSnapshot>(s: T): T {
   const { dsvStatus } = s.current;
   const dsv = dsvStatus === "dsv_offered" ? "dsv_expired" : dsvStatus;
   return { ...s, current: { ...s.current, dsvStatus: dsv } };
 }
 
 /** The participation's wave cutoff, or the project's final entry date without a wave (Q84). */
-function latestEntryDateFor(s: ParticipationSnapshot, project: PlannerProject): IsoDate | null {
+function latestEntryDateFor(s: CutoffSnapshot, project: PlannerProject): IsoDate | null {
   if (project.type !== "ta_tg") return null;
   return s.wave ? s.wave.latestEntryDate : projectFinalEntryDate(project.waves);
 }
 
 /** What the cutoff does to this state (plan 5.3, rules 3 and 5; Q56, Q70, Q84). */
-function cutoffOutcome(s: ParticipationSnapshot): CutoffOutcome {
+function cutoffOutcome(s: CutoffSnapshot): CutoffOutcome {
   const { status, profilingStatus: profiling, dsvStatus: dsv } = s.current;
   if (!cutoffStatuses.has(status)) return null;
   // Cases the system doesn't resolve: the PL clarifies them.

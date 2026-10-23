@@ -489,6 +489,63 @@ rules.
   tables, `EXECUTE` on `audit_history`; `audit_history_details` has none; `transfer_app` still has
   no privilege on `audit_event`.
 
+## Amendment 2026-10-23: appointments and staff bookings (Slice 5b, PR 5b-1)
+
+Migrations `0059_appointments.sql` (generated) and `0060_appointment_functions.sql` (hand-written,
+the 0058 hardening); process-and-lifecycle.md and data-protection.md ("Appointments") hold the
+rules.
+- **`appointment`** (`project_master`, `internal`): id, project, kind, host (staff id, a
+  consultation only), audience wave (a composite FK to the project's wave, an info event only),
+  start, end, public cutoff, capacity, title, venue, status, closed cancel reason, `cancelled_at`,
+  creator, `created_at`, `version`; `CHECK`s for the times (end after start, cutoff 0–14 days
+  before the start), capacity 1–500, the texts (trimmed, lengths, no control characters), host and
+  audience by kind and the cancellation columns. **`appointment_booking`** (`personnel_file`,
+  `case_internal`, the field `appointmentBookings`): id, project, participation (composite FK),
+  appointment (composite FK), origin, status, closed cancel reason, `booked_by` (null exactly for
+  the participant), `booked_at`, `cancelled_by` (exactly for a staff or organizer cancellation),
+  `cancelled_at`; the partial unique index `(appointment_id, participation_id) WHERE status =
+  'booked'` backs `already_booked`. `transfer_app` selects both and writes neither.
+- **The lock order.** Every function takes the project's advisory lock first: shared through
+  `lock_participation` when it touches one participation, exclusive (`lock_project_setup`) when it
+  changes an appointment. Then always: participation rows (in UUID order) → the appointment row →
+  booking rows (in id order); never an appointment before a participation. One host's slots
+  serialise across projects on an advisory lock of the host (`assert_host_free`), taken after the
+  project lock.
+
+  | Operation | Project lock | Then |
+  |---|---|---|
+  | `book_appointment`, `cancel_appointment_booking` | shared (`lock_participation`) | the participation → the appointment `FOR UPDATE` (capacity, overlaps) → the booking |
+  | `create_appointment`, `update_appointment`, `change_appointment_host`, `cancel_appointment` | exclusive | the participations of its live bookings in UUID order → the appointment → its bookings in id order; the host lock for a slot's times or host |
+  | a terminal status (`apply_status_change`) | shared (held) | the participation (held) → its booking rows in id order; no appointment lock (a freed seat only lowers a count) |
+
+  Integration tests race the last seat, the same booking twice, two projects creating
+  overlapping slots of one host (Q171), and a booking, an appointment
+  cancellation and a terminal transition together (no deadlock, no live booking left on a
+  cancelled appointment).
+- **Functions** (`SECURITY DEFINER`, staff context in normal mode only, `actor_not_allowed`
+  otherwise): `create_appointment(context, project, id, kind, host, wave, start, end, cutoff,
+  capacity, title, venue)` (the PL any, a consultant their own slot, in a draft or active
+  project, Q170; `host_not_allowed`, `not_ta_tg`, `wave_of_other_project`, `starts_in_past`, `host_overlap`);
+  `update_appointment(context, id, version, the whole new state)` (`stale_version`,
+  `appointment_cancelled`, `appointment_in_use` for times, cutoff or audience after any booking,
+  `starts_in_past`, `capacity_below_bookings`, `host_overlap`, `appointment_unchanged`);
+  `change_appointment_host(context, id, version, host)` (the PL, before the start; also
+  `not_consultation`, `appointment_started`, `host_not_responsible`); `cancel_appointment(context,
+  id, reason)` (every live booking `appointment_cancelled`; returns their number);
+  `book_appointment(context, appointment, participation, id)` (origin `staff`; the PL or the
+  assigned consultant; an active project only, `project_not_active`; the domain's refusals in its order, `after_cutoff` through
+  `participation_before_cutoff`); `cancel_appointment_booking(context, booking)` (`staff_cancelled`;
+  `booking_cancelled`, `appointment_started`).
+- **The terminal cancellation** is the trigger `participation_terminal_cancel_bookings` beside the
+  code revocation: in the status function's transaction, the live bookings of appointments that
+  haven't started end `participation_closed`, audited as the system
+  (`terminal-booking-cancellation`).
+- **Events:** `appointment_created`, `appointment_changed`, `appointment_cancelled` (project-level),
+  `appointment_booked`, `appointment_booking_cancelled` (`case`, need their participation), each
+  with its `audit_event_projection` row; ids, codes and times only (`startsAt` as written), never
+  the title or venue. All five are reserved (`record_audit_event` refuses them). Grants: `SELECT` on
+  both tables, `EXECUTE` on the six functions; the helpers have none.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

@@ -97,6 +97,9 @@ describe("auditProjection (data-protection.md, audit metadata; Q157)", () => {
         "import_confirmed",
         "project_member_added",
         "project_member_removed",
+        "appointment_created",
+        "appointment_changed",
+        "appointment_cancelled",
       ].toSorted(),
     );
     for (const type of projectLevel) {

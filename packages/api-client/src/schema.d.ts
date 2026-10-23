@@ -3019,6 +3019,850 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's appointments, upcoming or past (cursor), with the viewer's count view and capabilities; for its members */
+        get: {
+            parameters: {
+                query?: {
+                    period?: "upcoming" | "past";
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of appointments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppointmentPage"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create an info event (the PL) or a consultation slot (the PL for any host, a consultant their own) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AppointmentInput"];
+                };
+            };
+            responses: {
+                /** @description The new appointment */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Appointment"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{appointmentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One appointment with the viewer's count view and capabilities */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The appointment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Appointment"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change an appointment (version); times, cutoff and audience only while it has had no booking */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AppointmentChangeInput"];
+                };
+            };
+            responses: {
+                /** @description The changed appointment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Appointment"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/appointments/{appointmentId}/host": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change a future slot's host (the PL): a PL or consultant who may list every live booking */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AppointmentHostInput"];
+                };
+            };
+            responses: {
+                /** @description The appointment with its new host */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Appointment"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{appointmentId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an appointment with a closed reason, also after its start; every live booking is cancelled with it */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AppointmentCancelInput"];
+                };
+            };
+            responses: {
+                /** @description The cancelled appointment */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Appointment"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{appointmentId}/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The appointment's bookings of the participations the viewer may list (live first) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The bookings the viewer may list */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AppointmentBookingList"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Book a participation (the PL, the assigned consultant): until the start, also after the public cutoff; with the booking's warnings */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BookingInput"];
+                };
+            };
+            responses: {
+                /** @description The booking and its warnings */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BookingResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointment-bookings/{bookingId}/cancellation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a live booking until the start (the PL, the assigned consultant) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            responses: {
+                /** @description Cancelled */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participant tab "Termine": the bookings and the upcoming appointments in the participation's audience or host rule */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The bookings and bookable appointments */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationAppointments"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/history": {
         parameters: {
             query?: never;
@@ -9595,6 +10439,246 @@ export interface components {
             /** Format: date-time */
             outcomeAt: string | null;
         };
+        AppointmentPage: {
+            items: components["schemas"]["Appointment"][];
+            nextCursor: string | null;
+            capabilities: {
+                createInfoEvent: boolean;
+                createConsultation: boolean;
+                chooseHost: boolean;
+            };
+        };
+        Appointment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            kind: components["schemas"]["AppointmentKind"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            startsAt: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            endsAt: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            bookingClosesAt: string;
+            capacity: number;
+            title: string | null;
+            venue: string;
+            /** Format: uuid */
+            hostStaffUserId: string | null;
+            /** Format: uuid */
+            audienceWaveId: string | null;
+            status: components["schemas"]["AppointmentStatus"];
+            /** @enum {string|null} */
+            cancelReason: "organiser_unavailable" | "too_few_bookings" | "did_not_take_place" | "created_in_error" | "other" | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            cancelledAt: string | null;
+            inUse: boolean;
+            version: number;
+            bookings: components["schemas"]["BookingCounts"];
+            needsResolution: number | null;
+            capabilities: components["schemas"]["AppointmentCapabilities"];
+        };
+        /** @enum {string} */
+        AppointmentKind: "info_event" | "consultation";
+        /** @enum {string} */
+        AppointmentStatus: "scheduled" | "cancelled";
+        BookingCounts: {
+            /** @enum {string} */
+            scope: "all";
+            booked: number;
+            availability: components["schemas"]["SeatAvailability"];
+        } | {
+            /** @enum {string} */
+            scope: "own";
+            own: number;
+            availability: components["schemas"]["SeatAvailability"];
+        } | {
+            /** @enum {string} */
+            scope: "availability";
+            availability: components["schemas"]["SeatAvailability"];
+        };
+        /** @enum {string} */
+        SeatAvailability: "available" | "full";
+        AppointmentCapabilities: {
+            change: boolean;
+            changeHost: boolean;
+            cancel: boolean;
+            book: boolean;
+        };
+        AppointmentInput: {
+            kind: components["schemas"]["AppointmentKind"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            startsAt: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            endsAt: string;
+            /** @default 1 */
+            bookingCutoffDays: number;
+            capacity: number;
+            /** @default null */
+            title: string | null;
+            venue: string;
+            /**
+             * Format: uuid
+             * @default null
+             */
+            hostStaffUserId: string | null;
+            /**
+             * Format: uuid
+             * @default null
+             */
+            audienceWaveId: string | null;
+        };
+        AppointmentChangeInput: {
+            expectedVersion: number;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            startsAt?: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            endsAt?: string;
+            bookingCutoffDays?: number;
+            capacity?: number;
+            title?: string | null;
+            venue?: string;
+            /** Format: uuid */
+            audienceWaveId?: string | null;
+        };
+        AppointmentHostInput: {
+            expectedVersion: number;
+            /** Format: uuid */
+            hostStaffUserId: string;
+        };
+        AppointmentCancelInput: {
+            /** @enum {string} */
+            reason: "organiser_unavailable" | "too_few_bookings" | "did_not_take_place" | "created_in_error" | "other";
+        };
+        AppointmentBookingList: {
+            items: components["schemas"]["AppointmentBooking"][];
+        };
+        AppointmentBooking: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            participationId: string;
+            personnelNumber: string | null;
+            lastName: string | null;
+            firstName: string | null;
+            status: components["schemas"]["BookingStatus"];
+            origin: components["schemas"]["BookingOrigin"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            bookedAt: string;
+            /** @enum {string|null} */
+            cancelReason: "participant_cancelled" | "staff_cancelled" | "appointment_cancelled" | "participation_closed" | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            cancelledAt: string | null;
+            needsResolution: boolean | null;
+            capabilities: {
+                cancel: boolean;
+            };
+        };
+        /** @enum {string} */
+        BookingStatus: "booked" | "cancelled";
+        /** @enum {string} */
+        BookingOrigin: "participant" | "staff" | "walk_in";
+        BookingResult: {
+            /** Format: uuid */
+            bookingId: string;
+            warnings: components["schemas"]["BookingWarning"][];
+        };
+        BookingWarning: {
+            /** @enum {string} */
+            code: "beyond_upcoming_cutoff";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            latestEntryDate: string;
+        };
+        BookingInput: {
+            /** Format: uuid */
+            participationId: string;
+        };
+        ParticipationAppointments: {
+            bookings: {
+                /** Format: uuid */
+                id: string;
+                appointment: components["schemas"]["AppointmentSummary"];
+                status: components["schemas"]["BookingStatus"];
+                origin: components["schemas"]["BookingOrigin"];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                bookedAt: string;
+                /** @enum {string|null} */
+                cancelReason: "participant_cancelled" | "staff_cancelled" | "appointment_cancelled" | "participation_closed" | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                cancelledAt: string | null;
+                capabilities: {
+                    cancel: boolean;
+                };
+            }[];
+            bookable: {
+                appointment: components["schemas"]["AppointmentSummary"];
+                availability: components["schemas"]["SeatAvailability"];
+                /** @enum {string|null} */
+                code: "appointment_cancelled" | "appointment_started" | "booking_closed" | "participation_closed" | "not_in_audience" | "host_not_responsible" | "already_booked" | "info_event_limit" | "booking_overlap" | "appointment_full" | "after_cutoff" | null;
+                warnings: components["schemas"]["BookingWarning"][];
+            }[];
+            capabilities: {
+                book: boolean;
+            };
+        };
+        AppointmentSummary: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["AppointmentKind"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            startsAt: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            endsAt: string;
+            title: string | null;
+            venue: string;
+            status: components["schemas"]["AppointmentStatus"];
+        };
         HistoryPage: {
             items: components["schemas"]["HistoryEntry"][];
             nextCursor: string | null;
@@ -9625,7 +10709,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
