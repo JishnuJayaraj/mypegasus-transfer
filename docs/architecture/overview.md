@@ -215,6 +215,34 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - From PR 5-2 the work list's bulk "Erinnern" counts the selected rows by their
   `capabilities.remind` before sending, the column "Erinnert" shows the latest reminder, and the
   participant page has the tab "Nachrichten" (`apps/web/src/components/reminders.tsx`).
+- **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende", "mit
+  offenen Angaben oder Unterlagen", "Frist in 14 Tagen", "Frist überschritten", "Hinweise", "nicht
+  erreichbar") and tables per status, track, wave, activation and notice state, deadline kind and
+  state and flag. Each count is defined as a `WorklistFilter` (`projectFunnel`, `funnelFilters`)
+  and links to the work list with that filter, so a count and its drill-down are one predicate
+  (a domain test holds `count = items.filter(filter).length`). Tables and tiles, no chart library
+  (the CSP forbids inline styles).
+- **Loading the work list:** until the snapshot has arrived the list says "Wird geladen…", the
+  search field and "Alle Treffer auswählen" are disabled and no empty state is shown; a refetch
+  after a bulk action keeps the previous snapshot visible with its time ("Stand 10:42") and keeps
+  "Alle Treffer auswählen" disabled until it is complete. The search field has
+  `autocomplete="off"`.
+- **A refused bulk wave assignment** says "Keine Zuweisung vorgenommen" first, then lists the
+  refused rows by Personalnummer with their reasons (all or nothing,
+  process-and-lifecycle.md).
+
+## The participant page
+
+- The tabs "Übersicht", "Selbstauskunft", "Unterlagen", "Nachrichten" and "Verlauf", the tab in
+  the route's search param (`?tab=history`); each tab other than the overview loads its data only
+  while shown, so opening "Verlauf" (an audited opening, data-protection.md) happens only when the
+  user chooses it.
+- "Verlauf" (PR 5-3, `apps/web/src/components/history.tsx`): Zeitpunkt (Berlin), Ereignis,
+  Änderung (von → nach; the wave codes from the project's waves, field names, document types,
+  dates), Grund, Wirksam am, Durch (the name, "Ehemaliges Teammitglied", "Teilnehmer·in",
+  "System", "(assistiert)"), "Mehr laden" with the API's opaque cursor. Every event type's label
+  is in the i18n catalog (a test holds it to `HistoryEventType`); a code without a label shows as
+  the code.
 
 ## Performance approach (frontend)
 

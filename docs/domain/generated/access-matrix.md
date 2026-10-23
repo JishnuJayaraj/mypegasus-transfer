@@ -678,6 +678,91 @@ is left, the operational streams need break-glass; the review queue stays open (
 | Admin | `security` | no: never | no: never | no: never | no: never |
 | Admin | `review` | no: never | no: never | no: never | no: never |
 
+## Audit history
+
+A participation's tab "Verlauf" (Q157, *accepted*; the per-type readings Q161, *assumed*): the
+function `audit_history` returns only these rows, and of each only what its event type shows.
+A consultant's streams apply while assigned; several roles are the union (Q61). Field keys in
+`fields` are kept only for the categories the viewer's roles may know. `security`,
+`review` and project-level events are never in a history; opening one writes
+`audit_history_opened` (`security`). Generated from `auditProjection`,
+`historyStreams` and `roleFieldKnowledge` (`packages/domain/src/audit/history.ts`).
+
+| Project role | Streams | Own events only | Field keys of |
+| --- | --- | --- | --- |
+| `project_lead` | `case`, `profiling`, `dsv` | — | `case_internal`, `confidential`, `health`, `disability`, `absence` |
+| `consultant` | `case`, `profiling` | `dsv`, `payroll` | `case_internal`, `confidential`, `health`, `disability`, `identifiers`, `residence_social`, `profiling_assessment`, `absence` |
+| `back_office` | `dsv`, `payroll` | — | `case_internal`, `confidential`, `disability`, `identifiers`, `residence_social`, `absence` |
+
+| Event type | Stream | Change | Reason | Detail keys |
+| --- | --- | --- | --- | --- |
+| `participation_created` | `case` | yes | no | — |
+| `status_changed` (`status`) | `case` | yes | yes | `entryKind`, `secondaryReasons` |
+| `status_changed` (`profiling_status`) | `profiling` | yes | no | — |
+| `status_changed` (`dsv_status`) | `dsv` | yes | no | `offerDeadline` |
+| `entry_wave_assigned` | `case` | no | no | `waveId`, `previousWaveId` |
+| `profiling_exception_requested` | `profiling` | no | yes | — |
+| `profiling_exception_approved` | `profiling` | no | no | — |
+| `profiling_exception_rejected` | `profiling` | no | no | — |
+| `profiling_exception_revoked` | `profiling` | no | no | — |
+| `profiling_exception_superseded` | `profiling` | no | yes | — |
+| `end_reason_corrected` | `case` | yes | no | `secondaryReasons` |
+| `sensitive_read` | `security` | no | no | — |
+| `sensitive_write` | `security` | no | no | — |
+| `break_glass_access` | `security` | no | no | — |
+| `document_opened` | `security` | no | no | — |
+| `warning_confirmed` | `case` | no | yes | — |
+| `export_created` | `security` | no | no | — |
+| `config_override_changed` | project-level | no | no | — |
+| `review_recorded` | `review` | no | no | — |
+| `clarification_requested` | `review` | no | no | — |
+| `project_created` | project-level | no | no | — |
+| `project_changed` | project-level | no | no | — |
+| `entry_wave_created` | project-level | no | no | — |
+| `entry_wave_changed` | project-level | no | no | — |
+| `config_template_pinned` | project-level | no | no | — |
+| `rule_relaxation_requested` | project-level | no | no | — |
+| `rule_relaxation_approved` | project-level | no | no | — |
+| `rule_relaxation_rejected` | project-level | no | no | — |
+| `rule_relaxation_withdrawn` | project-level | no | no | — |
+| `project_activated` | project-level | no | no | — |
+| `participant_data_changed` | `case` | no | no | `fields` |
+| `import_confirmed` | project-level | no | no | — |
+| `participation_created_manually` | `case` | no | no | — |
+| `participation_dates_changed` | `dsv` | no | no | `oldTgStart`, `newTgStart`, `oldTgEnd`, `newTgEnd`, `reportingKinds` |
+| `project_member_added` | project-level | no | no | — |
+| `project_member_removed` | project-level | no | no | — |
+| `participant_assigned` | `case` | no | no | — |
+| `participant_unassigned` | `case` | no | yes | — |
+| `activation_code_issued` | `case` | no | no | `purpose`, `channel`, `deliveryKind` |
+| `activation_code_delivery` | `case` | no | no | `outcome` |
+| `activation_code_handed_over` | `case` | no | no | `method` |
+| `activation_code_revoked` | `case` | no | yes | — |
+| `privacy_notice_provided` | `case` | no | no | `method` |
+| `participant_activated` | `case` | no | no | — |
+| `consent_given` | `case` | no | no | `purpose`, `textVersion` |
+| `contact_channel_added` | `case` | no | no | `kind` |
+| `activation_code_locked` | `security` | no | no | — |
+| `one_time_code_exhausted` | `security` | no | no | — |
+| `participant_logout` | `security` | no | no | — |
+| `participant_login` | `security` | no | no | — |
+| `contact_channel_removed` | `case` | no | yes | `kind` |
+| `consent_ended` | `case` | no | yes | `purpose` |
+| `contact_channels_suspended` | `security` | no | no | — |
+| `placement_agentur_set` | `case` | no | no | `agenturKey`, `previousAgenturKey` |
+| `self_service_notice_acknowledged` | `case` | no | no | `noticeVersion` |
+| `step_up_completed` | `security` | no | no | — |
+| `step_up_failed` | `security` | no | no | — |
+| `assisted_mode_started` | `security` | no | no | — |
+| `assisted_mode_ended` | `security` | no | no | — |
+| `document_added` | `case` | no | no | `documentType`, `source` |
+| `document_reviewed` | `case` | no | yes | `documentType`, `decision` |
+| `document_deleted` | `case` | no | yes | `documentType` |
+| `document_upload_rejected` | `security` | no | no | — |
+| `reminder_queued` | `case` | no | no | `kind`, `channelKind` |
+| `reminder_delivery` | `case` | no | yes | `outcome` |
+| `audit_history_opened` | `security` | no | no | — |
+
 ## Aggregates
 
 The same in every mode.

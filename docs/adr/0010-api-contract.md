@@ -260,6 +260,24 @@ generator then. No action now.
   written.
 - **Problem codes:** 503 `jobs_unavailable`; the others exist.
 
+## Note 2026-10-23 (Slice 5, PR 5-3): the audit history
+
+- **Route:** `GET /participations/{id}/history` (`HistoryPage` `{ items: HistoryEntry[],
+  nextCursor }`, newest first, `limit` 1–100, default 50, `private, no-store`). A `HistoryEntry`
+  is `{ occurredAt, type, actor: { kind, name, assisted, job }, change: { field, from, to } | null,
+  reasonCode, effectiveDate, details }`; `type` is a `HistoryEventType`, the event types a history
+  can show.
+- **The database decides what is shown** (data-protection.md, the audit history): the route calls
+  `audit_history` and validates each row against its type's projection (a row with more is a
+  500), localizes nothing and removes nothing.
+- **The cursor** is base64url of the function's position (the last row's sequence number),
+  opaque to the client; a full page carries one, so the last may be empty. An undecodable cursor
+  is a 400 `invalid_cursor`. Only the first page (no cursor) is audited as an opening.
+- **Order:** the schema (400) → visibility (404: an unknown participation or a project the viewer
+  can't see) → permission (403: no history stream for the viewer's project roles, e.g. an
+  unassigned consultant) → the function, whose refusals map `unauthenticated` → 401,
+  `not_member` and `not_assigned` → 403, `participation_not_found` → 404.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

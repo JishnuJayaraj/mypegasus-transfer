@@ -341,6 +341,41 @@ read. Participants: no audit-log UI in the MVP (data-subject export). Admins: no
 the evidence set is left, the operational projections need break-glass; the review queue stays
 open to the regional operations manager, who reviews those break-glass actions (round 12).
 
+**The audit history as built** *(Slice 5, PR 5-3; Q157 accepted, the per-type readings Q161
+assumed)*: the participant page's tab "Verlauf" shows one participation's history, newest first,
+100 rows a page at most.
+- *Who sees which rows:* the PL `case`, `profiling` and `dsv`; the assigned consultant `case`,
+  `profiling` and only the `dsv` and `payroll` rows they acted in themselves; back office `dsv`
+  and `payroll`; several roles get the union (Q61). An unassigned consultant, admins, regional
+  admins, the regional operations manager and participants get no history (the regional review is
+  a view of its own). `historyStreams` derives the streams from `decideAccess`.
+- *Never shown:* `security` and `review` events (logins, logouts, one-time codes, step-ups,
+  sensitive reads and writes, document openings, refused uploads, break-glass, exports, assisted
+  mode, session and credential events, reviews) and project-level events. Each event type's
+  stream and what it shows are the domain's `auditProjection`; the generated access matrix has
+  the table "Audit history".
+- *Redacted in the database:* `transfer_app` has no privilege on `audit_event`. The function
+  `audit_history` is the authorization boundary: it resolves the staff user from the live
+  session, reloads the memberships and the assignment, applies the row predicates and returns
+  `field`, `from`, `to` and the reason code only where the type shows them, and of the details only
+  the allowed keys. The field keys of a person-data change stay only for the categories the
+  viewer's roles may know (in normal or assisted mode: the "Selbstauskunft" tab's rule). The API
+  validates each row against the projection and localizes; it removes nothing.
+- *Actor:* the staff member's current display name, also after deactivation, since case actions
+  are attributable (Q157); "Ehemaliges Teammitglied" once the name isn't retained (the
+  pseudonymised account, Q59); "Teilnehmer·in", "System", "(assistiert)" for assisted mode. Names
+  aren't searchable or exportable here.
+- *Purposes:* case reconstruction, correction, compliance and the investigation of a concrete
+  incident; never staff rankings, productivity metrics or routine behavioural monitoring. Named
+  technical action records can monitor employees, so deployment needs the works council's check
+  under §87(1)(6) BetrVG and the staff informed that case actions are attributable (pre-pilot
+  gate, ADR-0005).
+- *Opening* the first page writes `audit_history_opened` (viewer, participation, time; a
+  `security` event, never shown in a history); later pages write nothing.
+- The reference tables `audit_event_projection`, `role_field_knowledge` and
+  `field_access_category` hold no personal data (`reference_data`); the history's events are
+  `audit_log` (three years, the participation reference pseudonymised when the record is deleted).
+
 **Evidence set** *(assumed, Q87 C, round 12)*: access is the intersection of the role's
 active-phase entitlement (in any mode) and break-glass, with the active view; lists never.
 Immutable through field and document writes. Of the raw files, only what the evidence set

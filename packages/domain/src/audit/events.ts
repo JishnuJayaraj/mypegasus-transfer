@@ -140,6 +140,9 @@ export const AuditEventType = z.enum([
   // Slice 5, reminders (data-protection.md, reminders), written only by their functions
   "reminder_queued",
   "reminder_delivery",
+  // Slice 5, opening a participation's audit history (data-protection.md, audit metadata; Q157),
+  // written only by `audit_history`
+  "audit_history_opened",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -220,6 +223,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "document_upload_rejected",
   "reminder_queued",
   "reminder_delivery",
+  "audit_history_opened",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -905,5 +909,11 @@ export const AuditEvent = z.discriminatedUnion("type", [
       issue(ctx, "reason_mismatch");
     }
   }),
+  /**
+   * A staff user opened the participation's audit history (data-protection.md, audit metadata;
+   * Q157): who, which participation and when, nothing else. A security event, never shown in a
+   * history itself.
+   */
+  event("audit_history_opened", { ...ofParticipation, actor: staffActor, details: noDetails }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

@@ -50,7 +50,7 @@ export type AccessTarget = { projectId: string; regionId: string | null; partici
  * participant (regional-variation.md, custom fields), so it is decided as a confidential
  * self-service field of the profile.
  */
-const matrixField = (key: string) => (key.startsWith("custom.") ? "gender" : key);
+export const matrixField = (key: string) => (key.startsWith("custom.") ? "gender" : key);
 
 function allows(
   subject: Subject,

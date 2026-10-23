@@ -66,6 +66,10 @@ self-registration, matching or 30-day cleanup.
 Funnel, "what's missing", filters, bulk reminder (mail/SMS adapters, mock), deadlines.
 Deferred here from Slice 2: bulk entry-wave assignment; the audit history UI (until then the
 runtime role can't read `audit_event`).
+**Done** 2026-10-23 (PRs 5-1 to 5-3): plan archived in
+[`plans/archive/slice-5.md`](plans/archive/slice-5.md); its rules live in ADR-0002, ADR-0006,
+ADR-0007, ADR-0010, ADR-0011, `domain/data-protection.md`, `domain/process-and-lifecycle.md`,
+`domain/regional-variation.md` and `architecture/overview.md`.
 
 ## Slice 5b — Info events and appointments (F4)
 Placed in round 39 (Q158): info events and consultation slots; participant self-booking and

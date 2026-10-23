@@ -1,6 +1,6 @@
 # Decisions — 2026-10-22, round 39 (Slice 5 planning, Q150–Q159)
 
-The product owner reviewed [the Slice 5 plan](../plans/slice-5.md) (PR #78). Like rounds 32–38,
+The product owner reviewed [the Slice 5 plan](../plans/archive/slice-5.md) (PR #78). Like rounds 32–38,
 these are pilot answers in the placeholder roles: no external DPO, legal or works-council
 confirmation is involved yet, and none blocks development or testing on synthetic data.
 
