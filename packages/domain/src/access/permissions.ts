@@ -253,3 +253,42 @@ export function mayRemind(actor: Actor, target: PermissionTarget): Permission {
   if (actor.kind !== "staff") return no("actor_not_allowed");
   return staffPermission(actor, target, (role) => role === "project_lead" || role === "consultant");
 }
+
+/** An appointment as the permissions see it (process-and-lifecycle.md, appointments). */
+export type AppointmentScope = {
+  kind: "info_event" | "consultation";
+  hostStaffUserId: string | null;
+};
+
+/**
+ * Who creates, changes and cancels an appointment (data-protection.md, appointments; Q162): a
+ * current PL of the project any appointment, a consultant of the project only their own slots
+ * (a consultation they host). Changing the host is the PL's alone (`"host"`). Org roles, back
+ * office, participants and the system none; assisted mode and break-glass grant nothing (the
+ * staff routes have neither).
+ */
+export function mayManageAppointment(
+  actor: Actor,
+  appointment: AppointmentScope,
+  target: Pick<PermissionTarget, "projectId">,
+  change: "manage" | "host" = "manage",
+): Permission {
+  if (actor.kind !== "staff") return no("actor_not_allowed");
+  const roles = actor.projectRoles[target.projectId] ?? new Set<ProjectRole>();
+  const ownSlot =
+    change === "manage" &&
+    appointment.kind === "consultation" &&
+    appointment.hostStaffUserId === actor.staffUserId;
+  if (roles.has("project_lead") || (ownSlot && roles.has("consultant"))) return ok;
+  return no(roles.size > 0 || actor.orgRoles.size > 0 ? "role_not_allowed" : "not_member");
+}
+
+/**
+ * Who books or cancels a booking for a participation (data-protection.md, appointments; Q62,
+ * Q162): a current PL of the project, or the consultant currently assigned to it. Back office
+ * reads bookings and books none; org roles, participants and the system nothing here.
+ */
+export function mayBookFor(actor: Actor, target: PermissionTarget): Permission {
+  if (actor.kind !== "staff") return no("actor_not_allowed");
+  return staffPermission(actor, target, (role) => role === "project_lead" || role === "consultant");
+}

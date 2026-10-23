@@ -118,6 +118,18 @@ export const auditProjection: {
   reminder_queued: shown("case", { details: ["kind", "channelKind"] }),
   reminder_delivery: shown("case", { reason: true, details: ["outcome"] }),
   audit_history_opened: security,
+  // Appointments (Q168): the appointment's own events are project-level; a booking shows its
+  // appointment, kind, start as written and origin, a cancellation its reason too.
+  appointment_created: projectLevel,
+  appointment_changed: projectLevel,
+  appointment_cancelled: projectLevel,
+  appointment_booked: shown("case", {
+    details: ["appointmentId", "appointmentKind", "startsAt", "origin"],
+  }),
+  appointment_booking_cancelled: shown("case", {
+    reason: true,
+    details: ["appointmentId", "appointmentKind", "startsAt"],
+  }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

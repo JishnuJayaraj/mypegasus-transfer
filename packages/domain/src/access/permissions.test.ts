@@ -8,6 +8,8 @@ import type { Subject } from "./decide";
 import {
   mayPerformOperation,
   mayPerformTransition,
+  mayBookFor,
+  mayManageAppointment,
   mayRemind,
   OperationKind,
   type Actor,
@@ -363,5 +365,64 @@ describe("mayRemind (Q153)", () => {
     expect(result(mayRemind(staff(["back_office"]), target))).toBe("role_not_allowed");
     expect(result(mayRemind(staff([]), target))).toBe("not_member");
     expect(result(mayRemind({ kind: "system" }, target))).toBe("actor_not_allowed");
+  });
+});
+
+describe("mayManageAppointment (Q162)", () => {
+  const event = { kind: "info_event", hostStaffUserId: null } as const;
+  const ownSlot = { kind: "consultation", hostStaffUserId: "staff-a" } as const;
+  const otherSlot = { kind: "consultation", hostStaffUserId: "staff-b" } as const;
+
+  it("lets the PL manage every appointment and change any host", () => {
+    for (const appointment of [event, ownSlot, otherSlot]) {
+      expect(allowed((actor) => mayManageAppointment(actor, appointment, target))).toContain("PL");
+      expect(allowed((actor) => mayManageAppointment(actor, appointment, target, "host"))).toBe(
+        "PL",
+      );
+    }
+  });
+
+  it("lets a consultant manage their own slots only, never an info event or a host", () => {
+    // Assignment plays no part: a slot isn't a participation.
+    const consultant = staff(["consultant"]);
+    expect(result(mayManageAppointment(consultant, ownSlot, target))).toBe("ok");
+    expect(result(mayManageAppointment(consultant, otherSlot, target))).toBe("role_not_allowed");
+    expect(result(mayManageAppointment(consultant, event, target))).toBe("role_not_allowed");
+    expect(result(mayManageAppointment(consultant, ownSlot, target, "host"))).toBe(
+      "role_not_allowed",
+    );
+  });
+
+  it("refuses back office, org roles, non-members, participants and the system", () => {
+    expect(allowed((actor) => mayManageAppointment(actor, event, target))).toBe("PL");
+    expect(result(mayManageAppointment(staff(["back_office"]), event, target))).toBe(
+      "role_not_allowed",
+    );
+    expect(
+      result(mayManageAppointment(staff([], { org: "admin", regions: "all" }), event, target)),
+    ).toBe("role_not_allowed");
+    expect(result(mayManageAppointment(staff([]), ownSlot, target))).toBe("not_member");
+    const elsewhere: Actor = {
+      ...(staff(["project_lead"]) as Subject & { kind: "staff" }),
+      projectRoles: {},
+    };
+    expect(result(mayManageAppointment(elsewhere, event, target))).toBe("not_member");
+    expect(result(mayManageAppointment(participant, event, target))).toBe("actor_not_allowed");
+  });
+});
+
+describe("mayBookFor (Q62, Q162)", () => {
+  it("lets the PL and the assigned consultant book, nobody else", () => {
+    expect(allowed((actor) => mayBookFor(actor, target))).toBe("PL C");
+  });
+
+  it("refuses an unassigned consultant, back office and anyone outside the project", () => {
+    expect(result(mayBookFor(staff(["consultant"]), target))).toBe("not_assigned");
+    expect(result(mayBookFor(staff(["back_office"]), target))).toBe("role_not_allowed");
+    expect(result(mayBookFor(staff([], { org: "regional_admin" }), target))).toBe(
+      "role_not_allowed",
+    );
+    expect(result(mayBookFor(staff([]), target))).toBe("not_member");
+    expect(result(mayBookFor({ kind: "system" }, target))).toBe("actor_not_allowed");
   });
 });

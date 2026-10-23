@@ -104,6 +104,11 @@ describe("audit event types (ADR-0002)", () => {
       "reminder_queued",
       "reminder_delivery",
       "audit_history_opened",
+      "appointment_created",
+      "appointment_changed",
+      "appointment_cancelled",
+      "appointment_booked",
+      "appointment_booking_cancelled",
     ]);
   });
 
@@ -170,6 +175,12 @@ describe("audit event types (ADR-0002)", () => {
       "reminder_delivery",
       // The history's opening (Q157): only `audit_history` writes it.
       "audit_history_opened",
+      // Appointments (Slice 5b): only the appointment functions write them.
+      "appointment_created",
+      "appointment_changed",
+      "appointment_cancelled",
+      "appointment_booked",
+      "appointment_booking_cancelled",
     ]);
   });
 
@@ -1467,5 +1478,117 @@ describe("the audit history's opening (data-protection.md, audit metadata; Q157)
     ]) {
       expect(AuditEvent.safeParse(bad).success).toBe(false);
     }
+  });
+});
+
+describe("appointments (data-protection.md, appointments; Q168)", () => {
+  const participant = { type: "participant", participationId } as const;
+  const terminal = { type: "system", job: "terminal-booking-cancellation" } as const;
+  const startsAt = "2091-02-10T09:00:00.000Z";
+  const ofProject = { ...base, participationId: null };
+  const created = {
+    ...ofProject,
+    type: "appointment_created",
+    details: {
+      appointmentId: otherId,
+      kind: "consultation",
+      startsAt,
+      endsAt: "2091-02-10T10:00:00.000Z",
+      bookingClosesAt: "2091-02-09T09:00:00.000Z",
+      capacity: 1,
+      hostStaffUserId: staffUserId,
+    },
+  };
+  const changed = {
+    ...ofProject,
+    type: "appointment_changed",
+    details: { appointmentId: otherId, version: 2, fields: ["venue", "capacity"] },
+  };
+  const cancelled = {
+    ...ofProject,
+    type: "appointment_cancelled",
+    reasonCode: "too_few_bookings",
+    details: { appointmentId: otherId, correction: false },
+  };
+  const ofBooking = {
+    bookingId: otherId,
+    appointmentId: otherId,
+    appointmentKind: "info_event",
+    startsAt,
+  };
+  const booked = {
+    ...base,
+    type: "appointment_booked",
+    details: { ...ofBooking, origin: "staff" },
+  };
+  const bookingCancelled = {
+    ...base,
+    type: "appointment_booking_cancelled",
+    reasonCode: "staff_cancelled",
+    details: ofBooking,
+  };
+
+  it("records the appointment's own events at project level, never its title or venue", () => {
+    expect(issueCodes(created)).toEqual([]);
+    expect(issueCodes(changed)).toEqual([]);
+    expect(issueCodes(cancelled)).toEqual([]);
+    for (const bad of [
+      { ...created, details: { ...created.details, venue: "Kantine" } },
+      { ...changed, details: { ...changed.details, title: "Info" } },
+      { ...created, participationId },
+      { ...cancelled, reasonCode: "free text" },
+      { ...cancelled, actor: terminal },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("names a new host exactly when the host changed", () => {
+    const host = { ...changed, details: { ...changed.details, fields: ["hostStaffUserId"] } };
+    expect(issueCodes(host)).toEqual(["host_mismatch"]);
+    expect(issueCodes({ ...host, details: { ...host.details, hostStaffUserId: otherId } })).toEqual(
+      [],
+    );
+    expect(
+      issueCodes({ ...changed, details: { ...changed.details, hostStaffUserId: otherId } }),
+    ).toEqual(["host_mismatch"]);
+  });
+
+  it("records a booking with its appointment, kind and start as written, by its origin", () => {
+    expect(issueCodes(booked)).toEqual([]);
+    expect(
+      issueCodes({
+        ...booked,
+        actor: participant,
+        details: { ...ofBooking, origin: "participant" },
+      }),
+    ).toEqual([]);
+    expect(issueCodes({ ...booked, actor: participant })).toEqual(["origin_mismatch"]);
+    expect(issueCodes({ ...booked, details: { ...ofBooking, origin: "participant" } })).toEqual([
+      "origin_mismatch",
+    ]);
+    expect(issueCodes({ ...booked, actor: terminal })).toEqual(["origin_mismatch"]);
+    expect(issueCodes({ ...booked, actor: { ...user, onBehalfOf: participationId } })).toEqual([
+      "origin_mismatch",
+    ]);
+    expect(AuditEvent.safeParse({ ...booked, participationId: null }).success).toBe(false);
+  });
+
+  it("ties a booking's cancellation reason to its actor", () => {
+    expect(issueCodes(bookingCancelled)).toEqual([]);
+    expect(issueCodes({ ...bookingCancelled, reasonCode: "appointment_cancelled" })).toEqual([]);
+    expect(
+      issueCodes({ ...bookingCancelled, actor: terminal, reasonCode: "participation_closed" }),
+    ).toEqual([]);
+    expect(
+      issueCodes({ ...bookingCancelled, actor: participant, reasonCode: "participant_cancelled" }),
+    ).toEqual([]);
+    expect(issueCodes({ ...bookingCancelled, actor: terminal })).toEqual(["reason_mismatch"]);
+    expect(issueCodes({ ...bookingCancelled, reasonCode: "participant_cancelled" })).toEqual([
+      "reason_mismatch",
+    ]);
+    expect(
+      issueCodes({ ...bookingCancelled, actor: { ...user, onBehalfOf: participationId } }),
+    ).toEqual(["reason_mismatch"]);
   });
 });
