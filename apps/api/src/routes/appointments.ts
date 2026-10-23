@@ -29,6 +29,10 @@ import {
   mayManageAppointment,
   mayRecordAttendance,
   mayResolveAppointmentItem,
+  missedBookings,
+  missedResolutionRefusal,
+  MissedResolutionInput,
+  followUpRefusal,
   needsResolution,
   ParticipationAppointments,
   terminalMainStatuses,
@@ -59,6 +63,7 @@ import {
   type AppointmentViewer,
 } from "../appointments/service";
 import { invitationRefusal, requestInvitations } from "../appointments/invitations";
+import { itemBookingsOf } from "../appointments/items";
 import { createNoticeWriter } from "../appointments/notices";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
@@ -92,6 +97,9 @@ const fieldOf: Record<string, string> = {
   audience_mismatch: "audienceWaveId",
   participation_not_found: "participationId",
   information_delivery_unconfirmed: "informationDelivered",
+  follow_up_not_found: "followUpOf",
+  follow_up_kind_mismatch: "followUpOf",
+  follow_up_not_missed: "followUpOf",
 };
 const refused = (c: Context<AppEnv>, code: string) =>
   domainProblem(c, [{ code, field: fieldOf[code] ?? null }]);
@@ -138,6 +146,12 @@ const stateCodes = new Set([
   "already_escalated",
   // Invitations (data-protection.md, invitations)
   "booking_closed",
+  // The work list's missed appointments (process-and-lifecycle.md, appointments)
+  "follow_up_not_found",
+  "follow_up_kind_mismatch",
+  "follow_up_not_missed",
+  "already_resolved",
+  "not_missed",
 ]);
 
 /** The refusal of a write function as a problem; undefined for anything else (a 500). */
@@ -679,7 +693,7 @@ export function appointmentRoutes(deps: Deps) {
     async (c) => {
       const user = sessionUser(c);
       const { appointmentId } = c.req.valid("param");
-      const { participationId } = c.req.valid("json");
+      const { participationId, followUpOf } = c.req.valid("json");
       const found = await access(c, user, appointmentId);
       if (found.response) return found.response;
       const { row, viewer } = found;
@@ -711,13 +725,24 @@ export function appointmentRoutes(deps: Deps) {
         today: clock.today(),
       });
       if (eligibility.code !== "ok") return refused(c, eligibility.code);
+      // A consultation following up the participation's missed one (process-and-lifecycle.md,
+      // appointments: the work list).
+      if (followUpOf) {
+        const items = (await itemBookingsOf(db, row.projectId, [participationId], false)).get(
+          participationId,
+        )!;
+        const followed = items.find((item) => item.id === followUpOf);
+        const code = followed ? followUpRefusal(followed, items, row.kind) : "follow_up_not_found";
+        if (code) return refused(c, code);
+      }
       const bookingId = randomUUID();
       const done = await write(c, () =>
         call(
           db,
           sql`book_appointment(p_context => ${auditContext(user.id, c.get("requestId"))},
             p_appointment_id => ${appointmentId}::uuid,
-            p_participation_id => ${participationId}::uuid, p_id => ${bookingId}::uuid)`,
+            p_participation_id => ${participationId}::uuid, p_id => ${bookingId}::uuid,
+            p_follow_up_of => ${followUpOf ?? null}::uuid)`,
         ),
       );
       if (!done.ok) return done.response;
@@ -866,6 +891,14 @@ export function appointmentRoutes(deps: Deps) {
         ),
         participationLiveBookings(db, participationId),
       ]);
+      // The work list's missed appointments (process-and-lifecycle.md, appointments).
+      const items = (await itemBookingsOf(db, facts.projectId, [participationId], false)).get(
+        participationId,
+      )!;
+      const missed = terminalMainStatuses.has(facts.status)
+        ? new Set<string>()
+        : missedBookings(items);
+      const mayResolve = mayResolveAppointmentItem(viewer.subject, target, "missed").ok;
       const counts = await liveBookingsOf(
         db,
         upcoming.map((row) => row.id),
@@ -930,6 +963,9 @@ export function appointmentRoutes(deps: Deps) {
               cancelReason: booking.cancelReason,
               cancelledAt: booking.cancelledAt,
               ...fields,
+              followUpOf: items.find((item) => item.id === booking.id)!.followUpOf,
+              missedResolution: items.find((item) => item.id === booking.id)!.missedResolution,
+              missed: missed.has(booking.id) ? { followUp: mayBook, resolve: mayResolve } : null,
               capabilities: {
                 cancel:
                   mayBook &&
@@ -1094,6 +1130,66 @@ export function appointmentRoutes(deps: Deps) {
       } catch (error) {
         return attendanceProblem(c, error);
       }
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/appointment-bookings/{bookingId}/missed-resolution",
+      tags: ["appointments"],
+      summary:
+        '"Keine weitere Nachverfolgung" on a missed appointment (the PL, the assigned consultant): a closed reason, once, while the participation is open',
+      middleware,
+      request: {
+        params: BookingParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: MissedResolutionInput } },
+        },
+      },
+      responses: {
+        204: { description: "Resolved" },
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { bookingId } = c.req.valid("param");
+      const found = await bookingAccess(c, user, bookingId);
+      if (found.response) return found.response;
+      const { booking, row, viewer } = found;
+      const { participationId } = booking;
+      const target = projectTarget(row.projectId, viewer.regionId, participationId);
+      if (!mayResolveAppointmentItem(viewer.subject, target, "missed").ok) {
+        return problem(c, "forbidden");
+      }
+      const items = (await itemBookingsOf(db, row.projectId, [participationId], false)).get(
+        participationId,
+      )!;
+      const code = missedResolutionRefusal(
+        items.find((item) => item.id === bookingId)!,
+        items,
+        booking.participationStatus,
+      );
+      if (code) return refused(c, code);
+      const done = await write(c, () =>
+        call(
+          db,
+          sql`resolve_missed_appointment(p_context => ${auditContext(user.id, c.get("requestId"))},
+            p_booking_id => ${bookingId}::uuid,
+            p_reason => ${c.req.valid("json").reason}::missed_resolution)`,
+        ),
+      );
+      if (!done.ok) return done.response;
+      return c.body(null, 204);
     },
   );
 

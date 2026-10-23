@@ -54,6 +54,7 @@ import {
   AttendanceConflictResolution,
 } from "../appointments/attendance";
 import { NoticeLanguage } from "../notices/catalog";
+import { MissedResolution } from "../worklist/appointments";
 import {
   contactFields,
   selfServiceValueSchemas,
@@ -174,6 +175,9 @@ export const AuditEventType = z.enum([
   "attendance_conflict_resolved",
   // Slice 5b, messages (data-protection.md, messages: follow-up), written only by its function
   "appointment_notice_followed_up",
+  // Slice 5b, the work list's missed appointments (process-and-lifecycle.md, appointments: the
+  // work list), written only by its function
+  "missed_appointment_resolved",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -266,6 +270,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "attendance_conflict_escalated",
   "attendance_conflict_resolved",
   "appointment_notice_followed_up",
+  "missed_appointment_resolved",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -594,16 +599,24 @@ const appointmentChanged = event("appointment_changed", {
   }
 });
 
-/** Staff book as themselves (origin `staff`), the participant in the portal (Slice 5b, later). */
+/**
+ * Staff book as themselves (origin `staff`), the participant in the portal; staff may link a
+ * consultation as the follow-up of a missed one (`followUpOf`, its booking; absent before 5b-4).
+ */
 const appointmentBooked = event("appointment_booked", {
   ...ofParticipation,
-  details: z.strictObject({ ...ofBooking, origin: BookingOrigin }),
+  details: z.strictObject({
+    ...ofBooking,
+    origin: BookingOrigin,
+    followUpOf: z.uuid().nullable().optional(),
+  }),
 }).superRefine(({ actor, details }, ctx) => {
   const staff = actor.type === "user" && actor.onBehalfOf === null;
   const expected = actor.type === "participant" ? "participant" : staff ? "staff" : null;
   if (expected === null || (details.origin === "participant") !== (expected === "participant")) {
     issue(ctx, "origin_mismatch");
   }
+  if (details.followUpOf && details.origin !== "staff") issue(ctx, "follow_up_mismatch");
 });
 
 /**
@@ -1165,6 +1178,13 @@ export const AuditEvent = z.discriminatedUnion("type", [
       appointmentId: z.uuid(),
       method: NoticeFollowUpMethod,
     }),
+  }),
+  /** No further follow-up of a missed appointment, with the closed reason (Q167). */
+  event("missed_appointment_resolved", {
+    ...ofParticipation,
+    actor: staffActor,
+    reasonCode: MissedResolution,
+    details: z.strictObject(ofBooking),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

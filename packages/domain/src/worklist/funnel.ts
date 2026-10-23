@@ -2,6 +2,7 @@ import { z } from "zod";
 import { DsvStatus, LifecycleFlag, MainStatus, ProfilingStatus } from "../lifecycle/enums";
 import { PrivacyNoticeState } from "../privacy/notice-state";
 import type { ProjectType } from "../project";
+import { AppointmentFilter } from "./appointments";
 import { DeadlineKind, DeadlineState, remainingFlags } from "./deadlines";
 import { ActivationFilter, matchesWorklistFilter, WorklistFilter } from "./filter";
 import { PortalReach } from "../reminders/model";
@@ -27,6 +28,7 @@ export const DashboardGroup = z.enum([
   "deadlines",
   "flags",
   "portal",
+  "appointments",
 ]);
 export type DashboardGroup = z.infer<typeof DashboardGroup>;
 
@@ -55,7 +57,7 @@ const each = <T extends string>(values: readonly T[], filter: (value: T) => Work
 /**
  * Each count's key and filter, by group: the tiles, the three tracks (DSV only in `ta_tg`), the
  * waves and "ohne Welle" (`ta_tg`), activation, notice, deadline kind × state, the flags that stay
- * flags, the portal.
+ * flags, the portal, the appointments ("Termine": a next booking, the two unions, each item kind).
  */
 export function funnelFilters(project: FunnelProject): Record<DashboardGroup, Entry[]> {
   const taTg = project.type === "ta_tg";
@@ -67,6 +69,8 @@ export function funnelFilters(project: FunnelProject): Record<DashboardGroup, En
       { key: "deadline_overdue", filter: { deadlineState: "overdue" } },
       { key: "flags", filter: { flag: "any" } },
       { key: "not_reachable", filter: { portal: "not_reachable" } },
+      { key: "appointments_overdue", filter: { appointment: "overdue" } },
+      { key: "appointments_to_resolve", filter: { appointment: "to_resolve" } },
     ],
     statuses: each(MainStatus.options, (status) => ({ status })),
     profilingStatuses: each(ProfilingStatus.options, (profilingStatus) => ({ profilingStatus })),
@@ -82,6 +86,7 @@ export function funnelFilters(project: FunnelProject): Record<DashboardGroup, En
     ),
     flags: each(remainingFlags(LifecycleFlag.options), (flag) => ({ flag })),
     portal: each(PortalReach.options, (portal) => ({ portal })),
+    appointments: each(AppointmentFilter.options, (appointment) => ({ appointment })),
   };
 }
 

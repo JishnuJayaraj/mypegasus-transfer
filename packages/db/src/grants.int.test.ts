@@ -196,6 +196,8 @@ const statusFunctions = [
   // Slice 5b: invitations, organizer notices and their follow-up (data-protection.md, messages)
   "request_invitations",
   "record_notice_follow_up",
+  // Slice 5b: the work list's missed appointments (process-and-lifecycle.md, appointments)
+  "resolve_missed_appointment",
 ];
 const helpers = [
   "assert_context",
@@ -288,6 +290,7 @@ const helpers = [
   "appointment_booking_refusal",
   "queue_appointment_message",
   "queue_appointment_notice",
+  "booking_missed",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -934,6 +937,13 @@ describe("transfer_app and the document tables", () => {
       "queue an organizer's notice directly",
       "select queue_appointment_notice(null, null, null, null, null)",
     ],
+    // The work list (process-and-lifecycle.md, appointments): written by the functions only.
+    [
+      "update a missed appointment's resolution",
+      "update appointment_booking set missed_resolution = 'no_longer_needed', missed_resolved_by = gen_random_uuid(), missed_resolved_at = now()",
+    ],
+    ["update a booking's follow-up link", "update appointment_booking set follow_up_of = null"],
+    ["check a missed booking directly", "select booking_missed(null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

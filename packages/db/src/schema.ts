@@ -73,6 +73,7 @@ import {
   BookingOrigin,
   BookingStatus,
   BookingCancelReason,
+  MissedResolution,
   Attendance,
   AttendanceAfterCloseReason,
   AttendanceConflictResolution,
@@ -426,6 +427,7 @@ export const attendanceConflictResolution = pgEnum(
   "attendance_conflict_resolution",
   values(AttendanceConflictResolution),
 );
+export const missedResolution = pgEnum("missed_resolution", values(MissedResolution));
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1742,6 +1744,12 @@ export const appointmentBooking = pgTable(
     /** An absence superseded by the PL's `did_not_take_place` correction (Q164). */
     attendanceSupersededBy: uuid("attendance_superseded_by").references(() => staffUser.id),
     attendanceSupersededAt: instant("attendance_superseded_at"),
+    /** A consultation staff link as the follow-up of the participation's missed one (Q167). */
+    followUpOf: uuid("follow_up_of"),
+    /** No further follow-up of a missed appointment: the closed reason, who, when (Q167). */
+    missedResolution: missedResolution("missed_resolution"),
+    missedResolvedBy: uuid("missed_resolved_by").references(() => staffUser.id),
+    missedResolvedAt: instant("missed_resolved_at"),
   },
   (t) => [
     foreignKey({
@@ -1759,6 +1767,22 @@ export const appointmentBooking = pgTable(
       .where(sql`${t.status} = 'booked'`),
     index("appointment_booking_participation_idx").on(t.participationId),
     index("appointment_booking_appointment_idx").on(t.appointmentId),
+    // A follow-up is of the same participation: the composite key makes it so.
+    unique("appointment_booking_id_participation_unique").on(t.id, t.participationId),
+    foreignKey({
+      name: "appointment_booking_follow_up_fk",
+      columns: [t.followUpOf, t.participationId],
+      foreignColumns: [t.id, t.participationId],
+    }),
+    index("appointment_booking_follow_up_idx").on(t.followUpOf),
+    check(
+      "appointment_booking_follow_up",
+      sql`${t.followUpOf} is null or (${t.followUpOf} <> ${t.id} and ${t.origin} = 'staff')`,
+    ),
+    check(
+      "appointment_booking_missed",
+      sql`(${t.missedResolution} is null) = (${t.missedResolvedBy} is null) and (${t.missedResolution} is null) = (${t.missedResolvedAt} is null) and (${t.missedResolution} is null or ${t.attendance} = 'absent')`,
+    ),
     check(
       "appointment_booking_cancelled",
       sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null) and (${t.status} = 'cancelled') = (${t.cancelledAt} is not null)`,

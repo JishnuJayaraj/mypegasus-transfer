@@ -3519,6 +3519,12 @@
                 "items": {
                   "$ref": "#/components/schemas/DashboardCount"
                 }
+              },
+              "appointments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
               }
             },
             "required": [
@@ -3531,7 +3537,8 @@
               "notice",
               "deadlines",
               "flags",
-              "portal"
+              "portal",
+              "appointments"
             ],
             "additionalProperties": false
           }
@@ -3691,6 +3698,9 @@
           },
           "portal": {
             "$ref": "#/components/schemas/PortalReach"
+          },
+          "appointment": {
+            "$ref": "#/components/schemas/AppointmentFilter"
           }
         },
         "additionalProperties": false
@@ -3718,6 +3728,19 @@
           "reachable",
           "consent_required",
           "not_reachable"
+        ]
+      },
+      "AppointmentFilter": {
+        "type": "string",
+        "enum": [
+          "upcoming",
+          "overdue",
+          "to_resolve",
+          "attendance_missing",
+          "missed",
+          "notice_undelivered",
+          "needs_resolution",
+          "attendance_conflict"
         ]
       },
       "Worklist": {
@@ -3850,6 +3873,9 @@
           "reminder": {
             "$ref": "#/components/schemas/WorklistReminder"
           },
+          "appointments": {
+            "$ref": "#/components/schemas/WorklistAppointments"
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -3923,6 +3949,7 @@
           "flags",
           "portal",
           "reminder",
+          "appointments",
           "capabilities"
         ],
         "additionalProperties": false
@@ -4016,6 +4043,87 @@
           "failed",
           "delivery_unknown",
           "cancelled"
+        ]
+      },
+      "WorklistAppointments": {
+        "type": "object",
+        "properties": {
+          "next": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "kind": {
+                "$ref": "#/components/schemas/AppointmentKind"
+              },
+              "startsAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "kind",
+              "startsAt"
+            ],
+            "additionalProperties": false
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentItem"
+            }
+          }
+        },
+        "required": [
+          "next",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "AppointmentKind": {
+        "type": "string",
+        "enum": [
+          "info_event",
+          "consultation"
+        ]
+      },
+      "AppointmentItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AppointmentItemKind"
+          },
+          "appointmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "appointmentKind": {
+            "$ref": "#/components/schemas/AppointmentKind"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "kind",
+          "appointmentId",
+          "appointmentKind",
+          "startsAt"
+        ],
+        "additionalProperties": false
+      },
+      "AppointmentItemKind": {
+        "type": "string",
+        "enum": [
+          "attendance_missing",
+          "missed",
+          "notice_undelivered",
+          "needs_resolution",
+          "attendance_conflict"
         ]
       },
       "RemindCapability": {
@@ -4547,13 +4655,6 @@
           "capabilities"
         ],
         "additionalProperties": false
-      },
-      "AppointmentKind": {
-        "type": "string",
-        "enum": [
-          "info_event",
-          "consultation"
-        ]
       },
       "AppointmentStatus": {
         "type": "string",
@@ -5102,6 +5203,10 @@
           "participationId": {
             "type": "string",
             "format": "uuid"
+          },
+          "followUpOf": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -5215,6 +5320,44 @@
                     null
                   ]
                 },
+                "followUpOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "missedResolution": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "participant_declined",
+                    "information_delivered_otherwise",
+                    "no_longer_needed",
+                    null
+                  ]
+                },
+                "missed": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "followUp": {
+                      "type": "boolean"
+                    },
+                    "resolve": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "followUp",
+                    "resolve"
+                  ],
+                  "additionalProperties": false
+                },
                 "capabilities": {
                   "$ref": "#/components/schemas/BookingCapabilities"
                 }
@@ -5234,6 +5377,9 @@
                 "superseded",
                 "conflict",
                 "conflictResolution",
+                "followUpOf",
+                "missedResolution",
+                "missed",
                 "capabilities"
               ],
               "additionalProperties": false
@@ -5474,6 +5620,23 @@
           "escalated",
           "information_delivered_otherwise"
         ]
+      },
+      "MissedResolutionInput": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "participant_declined",
+              "information_delivered_otherwise",
+              "no_longer_needed"
+            ]
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
       },
       "InvitationRequestResult": {
         "type": "object",
@@ -5752,7 +5915,8 @@
           "information_delivery_confirmed",
           "attendance_conflict_escalated",
           "attendance_conflict_resolved",
-          "appointment_notice_followed_up"
+          "appointment_notice_followed_up",
+          "missed_appointment_resolved"
         ]
       },
       "HistoryActor": {
@@ -15509,6 +15673,100 @@
         "responses": {
           "204": {
             "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointment-bookings/{bookingId}/missed-resolution": {
+      "post": {
+        "tags": [
+          "appointments"
+        ],
+        "summary": "\"Keine weitere Nachverfolgung\" on a missed appointment (the PL, the assigned consultant): a closed reason, once, while the participation is open",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "bookingId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MissedResolutionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Resolved"
           },
           "400": {
             "description": "Validation failed",

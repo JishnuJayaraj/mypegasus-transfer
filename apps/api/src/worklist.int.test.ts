@@ -205,7 +205,7 @@ describe("GET /projects/{id}/worklist", () => {
     ]);
   });
 
-  it("answers 2,000 synthetic participations in under a second", async () => {
+  it("answers 2,000 synthetic participations with bookings in under a second", async () => {
     await owner.$client.query(
       `with created as (
          insert into participation (project_id, status, profiling_status, dsv_status)
@@ -216,12 +216,36 @@ describe("GET /projects/{id}/worklist", () => {
        select id, $1, 'SYN-' || row_number() over (), 'Vorname', 'Nachname' from created`,
       [werkNord],
     );
+    // Four past info events of 500 seats, every participation booked once, every other one
+    // recorded absent: each row has an appointment item (process-and-lifecycle.md, appointments).
+    await owner.$client.query(
+      `with events as (
+         insert into appointment (id, project_id, kind, starts_at, ends_at, booking_closes_at, capacity, venue, created_by)
+         select gen_random_uuid(), $1, 'info_event', '2091-01-10T09:00:00Z'::timestamptz + n * interval '1 day',
+           '2091-01-10T11:00:00Z'::timestamptz + n * interval '1 day', '2091-01-09T09:00:00Z'::timestamptz,
+           500, 'Raum 1', $2
+         from generate_series(0, 3) n
+         returning id, extract(day from starts_at at time zone 'UTC')::int - 10 as n
+       ), people as (
+         select id, row_number() over (order by id) - 1 as n from participation where project_id = $1
+       )
+       insert into appointment_booking (id, project_id, participation_id, appointment_id, origin, booked_by,
+         attendance, attendance_recorded_by, attendance_recorded_at)
+       select gen_random_uuid(), $1, people.id, events.id, 'staff', $2,
+         case when people.n % 2 = 0 then 'absent'::attendance end,
+         case when people.n % 2 = 0 then $2::uuid end,
+         case when people.n % 2 = 0 then now() end
+       from people join events on events.n = people.n % 4`,
+      [werkNord, projectLead],
+    );
     const timings: number[] = [];
     for (let run = 0; run < 3; run++) {
       const started = performance.now();
       const res = await worklist();
       expect(res.status).toBe(200);
-      expect((await readJson(res, Worklist)).items).toHaveLength(2000);
+      const { items } = await readJson(res, Worklist);
+      expect(items).toHaveLength(2000);
+      expect(items.every((item) => item.appointments.items.length === 1)).toBe(true);
       timings.push(performance.now() - started);
     }
     // oxlint-disable-next-line no-console -- the timings go into the PR (the performance criterion)

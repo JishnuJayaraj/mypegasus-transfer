@@ -26,6 +26,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   },
   channels: [],
   lastReminder: null,
+  appointments: { bookings: [], notices: [], closedAt: null },
   ...overrides,
 });
 const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({
@@ -66,6 +67,7 @@ describe("worklistProjection", () => {
       flags: [],
       portal: "not_reachable",
       reminder: null,
+      appointments: { next: null, items: [] },
       capabilities: {
         assignEntryWave: true,
         issueActivationCode: true,
@@ -166,6 +168,45 @@ describe("the invitation of a row (data-protection.md, invitations)", () => {
     expect(remind({ channels: [channel] }, viewer({ remind: false })).capabilities.invite).toEqual({
       allowed: false,
       channel: null,
+    });
+  });
+});
+
+describe("the appointments of a row (process-and-lifecycle.md, appointments: the work list)", () => {
+  it("projects the next booking and the items at the snapshot's time", () => {
+    const booking = {
+      id: "00000000-0000-4000-8000-0000000000b1",
+      appointmentId: "00000000-0000-4000-8000-0000000000b2",
+      appointmentKind: "info_event" as const,
+      appointmentStatus: "scheduled" as const,
+      startsAt: "2027-03-08T09:00:00.000Z",
+      endsAt: "2027-03-08T10:00:00.000Z",
+      status: "booked" as const,
+      attendance: null,
+      followUpOf: null,
+      missedResolution: null,
+      conflict: null,
+      hostMayList: null,
+    };
+    const next = {
+      ...booking,
+      id: "00000000-0000-4000-8000-0000000000b3",
+      startsAt: "2027-03-12T09:00:00.000Z",
+      endsAt: "2027-03-12T10:00:00.000Z",
+    };
+    const item = remind({
+      appointments: { bookings: [booking, next], notices: [], closedAt: null },
+    });
+    expect(item.appointments).toEqual({
+      next: { kind: "info_event", startsAt: "2027-03-12T09:00:00.000Z" },
+      items: [
+        {
+          kind: "attendance_missing",
+          appointmentId: booking.appointmentId,
+          appointmentKind: "info_event",
+          startsAt: booking.startsAt,
+        },
+      ],
     });
   });
 });

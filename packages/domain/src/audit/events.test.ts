@@ -115,6 +115,7 @@ describe("audit event types (ADR-0002)", () => {
       "attendance_conflict_escalated",
       "attendance_conflict_resolved",
       "appointment_notice_followed_up",
+      "missed_appointment_resolved",
     ]);
   });
 
@@ -195,6 +196,8 @@ describe("audit event types (ADR-0002)", () => {
       "attendance_conflict_resolved",
       // Messages (Slice 5b): only `record_notice_follow_up` writes it.
       "appointment_notice_followed_up",
+      // The work list (Slice 5b): only `resolve_missed_appointment` writes it.
+      "missed_appointment_resolved",
     ]);
   });
 
@@ -1655,6 +1658,31 @@ describe("appointments (data-protection.md, appointments; Q168)", () => {
       "origin_mismatch",
     ]);
     expect(AuditEvent.safeParse({ ...booked, participationId: null }).success).toBe(false);
+  });
+
+  it("links a staff booking as a missed consultation's follow-up, never a participant's", () => {
+    const followUp = { ...booked, details: { ...booked.details, followUpOf: otherId } };
+    expect(issueCodes(followUp)).toEqual([]);
+    expect(issueCodes({ ...booked, details: { ...booked.details, followUpOf: null } })).toEqual([]);
+    expect(
+      issueCodes({
+        ...followUp,
+        actor: participant,
+        details: { ...followUp.details, origin: "participant" },
+      }),
+    ).toEqual(["follow_up_mismatch"]);
+  });
+
+  it("resolves a missed appointment by staff with a closed reason", () => {
+    const resolved = {
+      ...base,
+      type: "missed_appointment_resolved",
+      reasonCode: "participant_declined",
+      details: ofBooking,
+    };
+    expect(issueCodes(resolved)).toEqual([]);
+    expect(AuditEvent.safeParse({ ...resolved, reasonCode: "other" }).success).toBe(false);
+    expect(AuditEvent.safeParse({ ...resolved, actor: terminal }).success).toBe(false);
   });
 
   it("ties a booking's cancellation reason to its actor", () => {

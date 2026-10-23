@@ -4244,6 +4244,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/appointment-bookings/{bookingId}/missed-resolution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Keine weitere Nachverfolgung" on a missed appointment (the PL, the assigned consultant): a closed reason, once, while the participation is open */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MissedResolutionInput"];
+                };
+            };
+            responses: {
+                /** @description Resolved */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/appointments/{appointmentId}/invitations": {
         parameters: {
             query?: never;
@@ -10972,6 +11066,7 @@ export interface components {
                 deadlines: components["schemas"]["DashboardCount"][];
                 flags: components["schemas"]["DashboardCount"][];
                 portal: components["schemas"]["DashboardCount"][];
+                appointments: components["schemas"]["DashboardCount"][];
             };
         };
         DashboardCount: {
@@ -10998,6 +11093,7 @@ export interface components {
             deadlineState?: components["schemas"]["DeadlineState"];
             flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any";
             portal?: components["schemas"]["PortalReach"];
+            appointment?: components["schemas"]["AppointmentFilter"];
         };
         /** @enum {string} */
         DeadlineKind: "offer_deadline" | "tg_start" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
@@ -11005,6 +11101,8 @@ export interface components {
         DeadlineState: "upcoming" | "overdue";
         /** @enum {string} */
         PortalReach: "reachable" | "consent_required" | "not_reachable";
+        /** @enum {string} */
+        AppointmentFilter: "upcoming" | "overdue" | "to_resolve" | "attendance_missing" | "missed" | "notice_undelivered" | "needs_resolution" | "attendance_conflict";
         Worklist: {
             /**
              * Format: date-time
@@ -11036,6 +11134,7 @@ export interface components {
             flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
             portal: components["schemas"]["PortalReach"];
             reminder: components["schemas"]["WorklistReminder"];
+            appointments: components["schemas"]["WorklistAppointments"];
             capabilities: {
                 assignEntryWave: boolean;
                 issueActivationCode: boolean;
@@ -11079,6 +11178,32 @@ export interface components {
         } | null;
         /** @enum {string} */
         ReminderStatus: "queued" | "dispatching" | "sent" | "failed" | "delivery_unknown" | "cancelled";
+        WorklistAppointments: {
+            next: {
+                kind: components["schemas"]["AppointmentKind"];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                startsAt: string;
+            } | null;
+            items: components["schemas"]["AppointmentItem"][];
+        };
+        /** @enum {string} */
+        AppointmentKind: "info_event" | "consultation";
+        AppointmentItem: {
+            kind: components["schemas"]["AppointmentItemKind"];
+            /** Format: uuid */
+            appointmentId: string;
+            appointmentKind: components["schemas"]["AppointmentKind"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            startsAt: string;
+        };
+        /** @enum {string} */
+        AppointmentItemKind: "attendance_missing" | "missed" | "notice_undelivered" | "needs_resolution" | "attendance_conflict";
         RemindCapability: {
             allowed: boolean;
             /** @enum {string|null} */
@@ -11213,8 +11338,6 @@ export interface components {
             needsResolution: number | null;
             capabilities: components["schemas"]["AppointmentCapabilities"];
         };
-        /** @enum {string} */
-        AppointmentKind: "info_event" | "consultation";
         /** @enum {string} */
         AppointmentStatus: "scheduled" | "cancelled";
         BookingCounts: {
@@ -11374,6 +11497,8 @@ export interface components {
         BookingInput: {
             /** Format: uuid */
             participationId: string;
+            /** Format: uuid */
+            followUpOf?: string;
         };
         ParticipationAppointments: {
             bookings: {
@@ -11409,6 +11534,14 @@ export interface components {
                 conflict: "open" | "escalated" | "resolved" | null;
                 /** @enum {string|null} */
                 conflictResolution: "replacement_basis" | "information_delivered_otherwise" | null;
+                /** Format: uuid */
+                followUpOf: string | null;
+                /** @enum {string|null} */
+                missedResolution: "participant_declined" | "information_delivered_otherwise" | "no_longer_needed" | null;
+                missed: {
+                    followUp: boolean;
+                    resolve: boolean;
+                } | null;
                 capabilities: components["schemas"]["BookingCapabilities"];
             }[];
             bookable: {
@@ -11474,6 +11607,10 @@ export interface components {
         };
         /** @enum {string} */
         AttendanceConflictReview: "escalated" | "information_delivered_otherwise";
+        MissedResolutionInput: {
+            /** @enum {string} */
+            reason: "participant_declined" | "information_delivered_otherwise" | "no_longer_needed";
+        };
         InvitationRequestResult: {
             /** Format: uuid */
             batchId: string;
@@ -11529,7 +11666,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";

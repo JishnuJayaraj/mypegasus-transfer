@@ -128,7 +128,7 @@ export const auditProjection: {
   appointment_changed: projectLevel,
   appointment_cancelled: projectLevel,
   appointment_booked: shown("case", {
-    details: ["appointmentId", "appointmentKind", "startsAt", "origin"],
+    details: ["appointmentId", "appointmentKind", "startsAt", "origin", "followUpOf"],
   }),
   appointment_booking_cancelled: shown("case", {
     reason: true,
@@ -161,6 +161,11 @@ export const auditProjection: {
     details: ["appointmentId", "appointmentKind", "startsAt"],
   }),
   appointment_notice_followed_up: shown("case", { details: ["method", "appointmentId"] }),
+  // The work list (Q167): no further follow-up of a missed appointment, with its reason.
+  missed_appointment_resolved: shown("case", {
+    reason: true,
+    details: ["appointmentId", "appointmentKind", "startsAt"],
+  }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

@@ -292,7 +292,7 @@ export {
   mayBookFor,
   mayRecordAttendance,
   mayResolveAppointmentItem,
-  type AppointmentItemKind,
+  type ResolvableAppointmentItem,
   mayManageAppointment,
   mayRemind,
   type AppointmentScope,
@@ -673,6 +673,20 @@ export {
 } from "./self-service/api";
 export { ParticipantAction, participantActions, type ActionFacts } from "./worklist/actions";
 export {
+  AppointmentFilter,
+  AppointmentItem,
+  AppointmentItemKind,
+  appointmentItems,
+  followUpRefusal,
+  matchesAppointmentFilter,
+  missedBookings,
+  MissedResolution,
+  missedResolutionRefusal,
+  WorklistAppointments,
+  type AppointmentItemBooking,
+  type AppointmentItemNotice,
+} from "./worklist/appointments";
+export {
   compareUrgency,
   Deadline,
   DeadlineKind,
@@ -792,6 +806,7 @@ export {
   ConflictReviewInput,
   InformedInput,
   InformedResult,
+  MissedResolutionInput,
   ParticipationAppointments,
 } from "./appointments/api";
 export {
