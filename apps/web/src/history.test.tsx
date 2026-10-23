@@ -158,6 +158,23 @@ describe("the tab 'Verlauf'", () => {
             details: { outcome: "cancelled" },
           }),
           entry({
+            occurredAt: "2026-10-22T08:19:00.000000Z",
+            type: "reminder_queued",
+            actor: { kind: "system", name: null, assisted: false, job: "appointments.notify" },
+            details: {
+              kind: "appointment_cancelled",
+              channelKind: null,
+              appointmentId: "00000000-0000-4000-c000-000000000001",
+              startsAt: "2026-11-02T09:00:00.000Z",
+            },
+          }),
+          entry({
+            occurredAt: "2026-10-22T08:18:00.000000Z",
+            type: "appointment_notice_followed_up",
+            actor: staff("Bernd Beratung"),
+            details: { method: "phone", appointmentId: "00000000-0000-4000-c000-000000000001" },
+          }),
+          entry({
             occurredAt: "2026-10-22T08:10:00.000000Z",
             type: "participant_data_changed",
             actor: staff("Bernd Beratung", true),
@@ -186,10 +203,19 @@ describe("the tab 'Verlauf'", () => {
     const assigned = await rowOf("Eintrittswelle zugewiesen");
     expect(within(assigned).getByText("W1 → W2")).toBeInTheDocument();
     expect(within(assigned).getByText("Ehemaliges Teammitglied")).toBeInTheDocument();
-    const delivery = await rowOf("Erinnerung abgeschlossen");
+    const delivery = await rowOf("Nachricht abgeschlossen");
     expect(within(delivery).getByText("nicht gesendet")).toBeInTheDocument();
     expect(within(delivery).getByText("Nichts mehr offen")).toBeInTheDocument();
     expect(within(delivery).getByText("System")).toBeInTheDocument();
+    // An organizer's notice names the appointment's start as written then, never its title.
+    const notice = await rowOf("22.10.2026, 10:19");
+    expect(
+      within(notice).getByText(
+        "Absage eines gebuchten Termins am 02.11.2026, 10:00, kein Kontaktweg",
+      ),
+    ).toBeInTheDocument();
+    const followedUp = await rowOf("Nachverfolgung einer Terminnachricht");
+    expect(within(followedUp).getByText("per Telefon")).toBeInTheDocument();
     const data = await rowOf("Personendaten geändert");
     expect(within(data).getByText("Nachname, Mobilnummer")).toBeInTheDocument();
     expect(within(data).getByText("Bernd Beratung (assistiert)")).toBeInTheDocument();
@@ -212,8 +238,8 @@ describe("the tab 'Verlauf'", () => {
             nextCursor: "b3BhcXVl",
           }),
     );
-    const queued = await rowOf("Erinnerung angefordert");
-    expect(within(queued).getByText("SMS")).toBeInTheDocument();
+    const queued = await rowOf("Nachricht angefordert");
+    expect(within(queued).getByText("Erinnerung an offene Punkte, SMS")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Mehr laden" }));
     expect(await screen.findByText("Beratung zugewiesen")).toBeInTheDocument();
     await waitFor(() =>

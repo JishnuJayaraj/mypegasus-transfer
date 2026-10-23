@@ -1,12 +1,14 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
-import { nextEligibleDate, reminderTemplates } from "@transfer/domain";
+import { nextEligibleDate, NoticeFollowUpMethod, reminderTemplates } from "@transfer/domain";
 import {
   Button,
   formatDate,
   formatTimestamp,
   InlineNotification,
   Modal,
+  Select,
+  SelectItem,
   SimpleTable,
   Stack,
   useToast,
@@ -18,6 +20,8 @@ import { participationRemindersQuery, useApi, worklistQuery } from "../api";
 type ListItem = components["schemas"]["WorklistItem"];
 type Result = components["schemas"]["ReminderRequestResult"];
 type SkipCode = Result["skipped"][number]["code"];
+type FollowUpMethod = components["schemas"]["NoticeFollowUpInput"]["method"];
+const followUpMethods = NoticeFollowUpMethod.options;
 
 /** Both channel codes read as one text to staff (data-protection.md, reminders). */
 const generic = (code: SkipCode) =>
@@ -195,14 +199,16 @@ export function BulkRemind({
 }
 
 /**
- * "Nachrichten" (data-protection.md, reminders): every reminder of the participation, newest
- * first: when, what, E-Mail or SMS, its state or why it was cancelled, and "Team" as the sender,
- * never a name or an address.
+ * "Nachrichten" (data-protection.md, reminders and messages): every message of the participation,
+ * newest first: when, what, E-Mail or SMS (or none: written without a usable channel), its state
+ * or why it was cancelled, the team or the system (an organizer's notice) as the sender, never a
+ * name or an address; on an undelivered notice "Nachverfolgung erfassen" and, once recorded, how.
  */
 export function MessagesTab({ participationId }: { participationId: string }) {
   const { t } = useTranslation();
   const api = useApi();
   const query = useInfiniteQuery(participationRemindersQuery(api, participationId));
+  const [followUp, setFollowUp] = useState<string | null>(null);
   if (query.isError) {
     const status = query.error instanceof ApiProblemError ? query.error.status : null;
     return (
@@ -218,19 +224,32 @@ export function MessagesTab({ participationId }: { participationId: string }) {
       <h2 id="participant-messages">{t("reminders.tab.title")}</h2>
       <SimpleTable
         title={t("reminders.tab.title")}
-        columns={(["requestedAt", "kind", "channel", "state", "by"] as const).map((key) => ({
-          key,
-          header: t(`reminders.tab.columns.${key}`),
-        }))}
+        columns={(["requestedAt", "kind", "channel", "state", "by", "followUp"] as const).map(
+          (key) => ({ key, header: t(`reminders.tab.columns.${key}`) }),
+        )}
         rows={items.map((item) => ({
           id: item.id,
           requestedAt: formatTimestamp(item.requestedAt),
           kind: t(`reminders.kinds.${item.kind}`),
-          channel: t(`reminders.channels.${item.channel}`),
+          channel: item.channel
+            ? t(`reminders.channels.${item.channel}`)
+            : t("reminders.tab.noChannel"),
           state: item.cancelReason
             ? `${t("reminders.status.cancelled")}: ${t(`reminders.cancelReasons.${item.cancelReason}`)}`
             : t(`reminders.status.${item.status}`),
-          by: t("reminders.tab.team"),
+          by: item.bySystem ? t("reminders.tab.system") : t("reminders.tab.team"),
+          followUp: item.followUpMethod ? (
+            t("reminders.followUp.recorded", {
+              method: t(`reminders.followUp.methods.${item.followUpMethod}`),
+              date: formatTimestamp(item.followedUpAt ?? ""),
+            })
+          ) : item.capabilities.followUp ? (
+            <Button kind="tertiary" size="sm" onClick={() => setFollowUp(item.id)}>
+              {t("reminders.followUp.action")}
+            </Button>
+          ) : (
+            ""
+          ),
         }))}
         emptyState={t("reminders.tab.empty")}
       />
@@ -244,6 +263,80 @@ export function MessagesTab({ participationId }: { participationId: string }) {
           {t("reminders.tab.more")}
         </Button>
       )}
+      {followUp && (
+        <FollowUpDialog
+          participationId={participationId}
+          reminderId={followUp}
+          onClose={() => setFollowUp(null)}
+        />
+      )}
     </section>
+  );
+}
+
+/** "Nachverfolgung erfassen": how the person was told, or that it isn't needed. */
+function FollowUpDialog({
+  participationId,
+  reminderId,
+  onClose,
+}: {
+  participationId: string;
+  reminderId: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const showToast = useToast();
+  const [method, setMethod] = useState<FollowUpMethod | "">("");
+  const save = useMutation({
+    mutationFn: async () => {
+      await api.POST("/api/v1/participations/{participationId}/reminders/{reminderId}/follow-up", {
+        params: { path: { participationId, reminderId } },
+        body: { method: method as FollowUpMethod },
+      });
+    },
+    onSuccess: async () => {
+      showToast({ title: t("reminders.followUp.saved") });
+      await queryClient.invalidateQueries({
+        queryKey: participationRemindersQuery(api, participationId).queryKey,
+      });
+      onClose();
+    },
+  });
+  return (
+    <Modal
+      open
+      modalHeading={t("reminders.followUp.title")}
+      primaryButtonText={t("reminders.followUp.save")}
+      secondaryButtonText={t("reminders.cancel")}
+      primaryButtonDisabled={method === "" || save.isPending}
+      onRequestSubmit={() => save.mutate()}
+      onRequestClose={onClose}
+      size="sm"
+    >
+      <Stack gap={5}>
+        {save.isError && (
+          <InlineNotification
+            kind="error"
+            title={t("reminders.followUp.failed")}
+            hideCloseButton
+            lowContrast
+          />
+        )}
+        <p>{t("reminders.followUp.intro")}</p>
+        <Select
+          id="follow-up-method"
+          labelText={t("reminders.followUp.method")}
+          value={method}
+          onChange={(event) => setMethod(event.target.value as FollowUpMethod | "")}
+        >
+          <SelectItem value="" text={t("reminders.followUp.choose")} />
+          {followUpMethods.map((value) => (
+            <SelectItem key={value} value={value} text={t(`reminders.followUp.methods.${value}`)} />
+          ))}
+        </Select>
+      </Stack>
+    </Modal>
   );
 }

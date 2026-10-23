@@ -74,7 +74,7 @@ test("history: the PL sees the wave assignment and the reminder with their actor
   const assigned = row(page, "Eintrittswelle zugewiesen");
   await expect(assigned).toContainText("ohne Welle → W1");
   await expect(assigned).toContainText("Petra Projektleitung");
-  const reminded = row(page, "Erinnerung angefordert");
+  const reminded = row(page, "Nachricht angefordert");
   await expect(reminded).toContainText("E-Mail");
   await expect(reminded).toContainText("Petra Projektleitung");
   const added = row(page, "Unterlage hinzugefügt");
