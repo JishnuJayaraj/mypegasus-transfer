@@ -130,6 +130,32 @@ export const auditProjection: {
     reason: true,
     details: ["appointmentId", "appointmentKind", "startsAt"],
   }),
+  // Attendance (Q163, Q168): the value with the previous one, the closed-case flow's reason; the
+  // confirmation whether it changed the status; a conflict's handling and its resolution.
+  attendance_recorded: shown("case", {
+    reason: true,
+    details: [
+      "appointmentId",
+      "appointmentKind",
+      "startsAt",
+      "attendance",
+      "previousAttendance",
+      "afterClose",
+    ],
+  }),
+  attendance_superseded: shown("case", {
+    details: ["appointmentId", "appointmentKind", "startsAt", "previousAttendance"],
+  }),
+  information_delivery_confirmed: shown("case", {
+    details: ["appointmentId", "appointmentKind", "startsAt", "statusChanged"],
+  }),
+  attendance_conflict_escalated: shown("case", {
+    details: ["appointmentId", "appointmentKind", "startsAt"],
+  }),
+  attendance_conflict_resolved: shown("case", {
+    reason: true,
+    details: ["appointmentId", "appointmentKind", "startsAt"],
+  }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

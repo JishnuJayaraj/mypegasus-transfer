@@ -292,3 +292,41 @@ export function mayBookFor(actor: Actor, target: PermissionTarget): Permission {
   if (actor.kind !== "staff") return no("actor_not_allowed");
   return staffPermission(actor, target, (role) => role === "project_lead" || role === "consultant");
 }
+
+/**
+ * Who records or corrects attendance and confirms what it rests on (data-protection.md,
+ * appointments; Q62, Q163): a current PL of the project, or the consultant currently assigned to
+ * the participation; after the participation closed (`afterClose`) the PL only. Back office reads
+ * attendance and records none; org roles, participants and the system nothing here.
+ */
+export function mayRecordAttendance(
+  actor: Actor,
+  target: PermissionTarget,
+  afterClose = false,
+): Permission {
+  if (actor.kind !== "staff") return no("actor_not_allowed");
+  return staffPermission(
+    actor,
+    target,
+    (role) => role === "project_lead" || (!afterClose && role === "consultant"),
+  );
+}
+
+export type AppointmentItemKind = "attendance_conflict";
+const itemRoles: Record<AppointmentItemKind, readonly Role[]> = {
+  attendance_conflict: ["project_lead"],
+};
+
+/**
+ * Who resolves a participation's appointment item (data-protection.md, appointments; Q163): an
+ * `attendance_conflict` (escalating it or attesting the information was delivered otherwise) is
+ * the PL's alone, also after the participation closed.
+ */
+export function mayResolveAppointmentItem(
+  actor: Actor,
+  target: PermissionTarget,
+  item: AppointmentItemKind,
+): Permission {
+  if (actor.kind !== "staff") return no("actor_not_allowed");
+  return staffPermission(actor, target, (role) => itemRoles[item].includes(role));
+}
