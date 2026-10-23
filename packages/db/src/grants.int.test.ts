@@ -193,6 +193,9 @@ const statusFunctions = [
   "confirm_information_delivered",
   "escalate_attendance_conflict",
   "resolve_attendance_conflict",
+  // Slice 5b: invitations, organizer notices and their follow-up (data-protection.md, messages)
+  "request_invitations",
+  "record_notice_follow_up",
 ];
 const helpers = [
   "assert_context",
@@ -280,6 +283,11 @@ const helpers = [
   "booking_conflict_open",
   "confirm_informed",
   "lock_conflict_booking",
+  "appointment_notice_context",
+  "message_job_context",
+  "appointment_booking_refusal",
+  "queue_appointment_message",
+  "queue_appointment_notice",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -909,6 +917,23 @@ describe("transfer_app and the document tables", () => {
     ["call the terminal-booking trigger", "select cancel_bookings_at_terminal_status()"],
     ["confirm informed directly", "select confirm_informed(null, null, null, null)"],
     ["lock a conflict's booking directly", "select lock_conflict_booking(null, null)"],
+    // Messages (data-protection.md, messages): the new columns are written by the functions only.
+    [
+      "update a message's follow-up",
+      "update participant_reminder set followed_up_method = 'phone', followed_up_by = gen_random_uuid(), followed_up_at = now()",
+    ],
+    ["update a message's appointment", "update participant_reminder set appointment_id = null"],
+    ["read a notice's context directly", "select appointment_notice_context(null)"],
+    ["read a job's context directly", "select message_job_context(null, null)"],
+    ["check a booking directly", "select appointment_booking_refusal(null, null, null)"],
+    [
+      "queue an appointment's message directly",
+      "select queue_appointment_message(null, null, null, null, null, null)",
+    ],
+    [
+      "queue an organizer's notice directly",
+      "select queue_appointment_notice(null, null, null, null, null)",
+    ],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

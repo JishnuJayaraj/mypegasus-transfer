@@ -351,7 +351,7 @@ describe("claim_reminder_dispatch", () => {
         actor_type: "system",
         system_job: "reminders.send",
         reason_code: "channel_unavailable",
-        details: { reminderId, outcome: "cancelled" },
+        details: { reminderId, outcome: "cancelled", kind: "open_items" },
       },
     ]);
   });
@@ -405,7 +405,7 @@ describe("claim_reminder_dispatch", () => {
       cancel_reason: null,
     });
     const [event] = await events(participationId, ["reminder_delivery"]);
-    expect(event.details).toEqual({ reminderId, outcome: "delivery_unknown" });
+    expect(event.details).toEqual({ reminderId, outcome: "delivery_unknown", kind: "open_items" });
   });
 });
 

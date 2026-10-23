@@ -66,6 +66,7 @@ import {
   ReminderKind,
   ReminderStatus,
   ReminderCancelReason,
+  NoticeFollowUpMethod,
   AppointmentKind,
   AppointmentStatus,
   AppointmentCancelReason,
@@ -406,6 +407,7 @@ export const documentSessionKind = pgEnum("document_session_kind", ["staff", "pa
 export const reminderKind = pgEnum("reminder_kind", values(ReminderKind));
 export const reminderStatus = pgEnum("reminder_status", values(ReminderStatus));
 export const reminderCancelReason = pgEnum("reminder_cancel_reason", values(ReminderCancelReason));
+export const noticeFollowUpMethod = pgEnum("notice_follow_up_method", values(NoticeFollowUpMethod));
 export const appointmentKind = pgEnum("appointment_kind", values(AppointmentKind));
 export const appointmentStatus = pgEnum("appointment_status", values(AppointmentStatus));
 export const appointmentCancelReason = pgEnum(
@@ -1629,64 +1631,6 @@ export const documentLink = pgTable(
   ],
 );
 
-/**
- * A reminder (data-protection.md, reminders; Q156): ids, kind, the text version and language,
- * the channel's id and kind and the consent it was queued under, who requested it and when (the
- * Berlin date counts the window), its status, a closed cancel reason and times. Never an address,
- * a rendered text, a provider response or an error. Written only by the reminder functions;
- * read by whoever reads the participation's `case_internal` data.
- */
-export const participantReminder = pgTable(
-  "participant_reminder",
-  {
-    id: uuid("id").primaryKey(),
-    projectId: uuid("project_id")
-      .notNull()
-      .references(() => project.id),
-    participationId: uuid("participation_id").notNull(),
-    batchId: uuid("batch_id").notNull(),
-    kind: reminderKind("kind").notNull(),
-    messageVersion: text("message_version").notNull(),
-    language: noticeLanguage("language").notNull(),
-    channelId: uuid("channel_id")
-      .notNull()
-      .references(() => participantChannel.id),
-    channelKind: contactChannelKind("channel_kind").notNull(),
-    consentId: uuid("consent_id")
-      .notNull()
-      .references(() => consentRecord.id),
-    requestedBy: uuid("requested_by")
-      .notNull()
-      .references(() => staffUser.id),
-    requestedAt: instant("requested_at").notNull().defaultNow(),
-    requestedOn: dateColumn("requested_on").notNull(),
-    status: reminderStatus("status").notNull().default("queued"),
-    cancelReason: reminderCancelReason("cancel_reason"),
-    claimedAt: instant("claimed_at"),
-    outcomeAt: instant("outcome_at"),
-  },
-  (t) => [
-    foreignKey({
-      name: "participant_reminder_participation_fk",
-      columns: [t.participationId, t.projectId],
-      foreignColumns: [participation.id, participation.projectId],
-    }),
-    index("participant_reminder_participation_idx").on(t.participationId, t.requestedAt),
-    check(
-      "participant_reminder_message_version",
-      sql`${t.messageVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
-    ),
-    check(
-      "participant_reminder_cancelled",
-      sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null)`,
-    ),
-    check(
-      "participant_reminder_outcome",
-      sql`(${t.status} in ('queued', 'dispatching')) = (${t.outcomeAt} is null) and (${t.status} <> 'dispatching' or ${t.claimedAt} is not null)`,
-    ),
-  ],
-);
-
 const { capacity, bookingCutoffDays, titleMax, venueMax } = appointmentPolicy;
 
 /**
@@ -1842,6 +1786,85 @@ export const appointmentBooking = pgTable(
     check(
       "appointment_booking_superseded",
       sql`(${t.attendanceSupersededBy} is null) = (${t.attendanceSupersededAt} is null) and (${t.attendanceSupersededAt} is null or (${t.attendance} = 'absent' and ${t.cancelReason} = 'appointment_cancelled'))`,
+    ),
+  ],
+);
+
+/**
+ * A message (data-protection.md, reminders and messages; Q156, Q165): a reminder, an invitation to
+ * an appointment or the organizer's notice about a booked one. Ids, kind, the text version and
+ * language, the channel's id and kind and the consent it was queued under (none for a row written
+ * without a usable channel, cancelled at once), who requested it (nobody for a notice: the system)
+ * and when (the Berlin date counts a reminder's window), the appointment and booking it is about,
+ * its status, a closed cancel reason, a notice's follow-up and times. Never an address, a rendered
+ * text, a provider response or an error. Written only by the message functions; read by whoever
+ * reads the participation's `case_internal` data.
+ */
+export const participantReminder = pgTable(
+  "participant_reminder",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    batchId: uuid("batch_id").notNull(),
+    kind: reminderKind("kind").notNull(),
+    messageVersion: text("message_version").notNull(),
+    language: noticeLanguage("language").notNull(),
+    channelId: uuid("channel_id").references(() => participantChannel.id),
+    channelKind: contactChannelKind("channel_kind"),
+    consentId: uuid("consent_id").references(() => consentRecord.id),
+    requestedBy: uuid("requested_by").references(() => staffUser.id),
+    requestedAt: instant("requested_at").notNull().defaultNow(),
+    requestedOn: dateColumn("requested_on").notNull(),
+    status: reminderStatus("status").notNull().default("queued"),
+    cancelReason: reminderCancelReason("cancel_reason"),
+    claimedAt: instant("claimed_at"),
+    outcomeAt: instant("outcome_at"),
+    appointmentId: uuid("appointment_id"),
+    bookingId: uuid("booking_id").references(() => appointmentBooking.id),
+    followedUpMethod: noticeFollowUpMethod("followed_up_method"),
+    followedUpBy: uuid("followed_up_by").references(() => staffUser.id),
+    followedUpAt: instant("followed_up_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_reminder_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "participant_reminder_appointment_fk",
+      columns: [t.appointmentId, t.projectId],
+      foreignColumns: [appointment.id, appointment.projectId],
+    }),
+    index("participant_reminder_participation_idx").on(t.participationId, t.requestedAt),
+    index("participant_reminder_appointment_idx").on(t.appointmentId, t.participationId),
+    check(
+      "participant_reminder_message_version",
+      sql`${t.messageVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
+    ),
+    check(
+      "participant_reminder_cancelled",
+      sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null)`,
+    ),
+    check(
+      "participant_reminder_outcome",
+      sql`(${t.status} in ('queued', 'dispatching')) = (${t.outcomeAt} is null) and (${t.status} <> 'dispatching' or ${t.claimedAt} is not null)`,
+    ),
+    // Enum values added with this check are compared as text (one migration transaction).
+    check(
+      "participant_reminder_kind",
+      sql`(${t.kind}::text = 'open_items') = (${t.appointmentId} is null) and (${t.kind}::text in ('appointment_changed', 'appointment_cancelled')) = (${t.bookingId} is not null) and (${t.kind}::text in ('appointment_changed', 'appointment_cancelled')) = (${t.requestedBy} is null)`,
+    ),
+    check(
+      "participant_reminder_channel",
+      sql`(${t.channelId} is null) = coalesce(${t.cancelReason}::text in ('no_channel', 'consent_required'), false) and (${t.channelId} is null) = (${t.channelKind} is null) and (${t.channelId} is null) = (${t.consentId} is null) and (${t.channelId} is not null or (${t.kind}::text <> 'open_items' and ${t.claimedAt} is null))`,
+    ),
+    check(
+      "participant_reminder_follow_up",
+      sql`(${t.followedUpMethod} is null) = (${t.followedUpBy} is null) and (${t.followedUpMethod} is null) = (${t.followedUpAt} is null) and (${t.followedUpMethod} is null or (${t.kind}::text in ('appointment_changed', 'appointment_cancelled') and (${t.status} in ('failed', 'delivery_unknown') or ${t.status} = 'cancelled' and ${t.cancelReason} <> 'participation_closed')))`,
     ),
   ],
 );
