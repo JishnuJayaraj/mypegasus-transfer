@@ -3,6 +3,7 @@ import { ActivationDeliveryKind } from "../activation/model";
 import { isoDate } from "../iso-date";
 import { NoticeLanguage, PORTAL_CONTACT_CONSENT_VERSION } from "../notices/catalog";
 import {
+  NoticeFollowUpMethod,
   ReminderCancelReason,
   ReminderKind,
   reminderPolicy,
@@ -40,19 +41,70 @@ export const ReminderRequestResult = z
   .meta({ id: "ReminderRequestResult" });
 export type ReminderRequestResult = z.infer<typeof ReminderRequestResult>;
 
-/** One reminder in "Nachrichten": who requested it is shown as the team, never by name. */
+/** 1–500 distinct participations of one request. */
+const participationIds = z
+  .array(z.uuid())
+  .min(reminderPolicy.minPerRequest)
+  .max(reminderPolicy.maxPerRequest)
+  .refine((ids) => new Set(ids).size === ids.length, {
+    message: "A participation is named twice",
+    params: { code: "duplicate_participation" },
+  });
+
+/** `POST /appointments/{id}/invitations` (data-protection.md, invitations): 1–500 participations. */
+export const InvitationRequestInput = z
+  .strictObject({ participationIds })
+  .meta({ id: "InvitationRequestInput" });
+export type InvitationRequestInput = z.infer<typeof InvitationRequestInput>;
+
+/**
+ * The invitations queued per channel, those written without a usable channel ("nicht zustellbar,
+ * im Portal sichtbar"), and each skipped participation with its code (data, not a problem).
+ */
+export const InvitationRequestResult = z
+  .strictObject({
+    batchId: z.uuid(),
+    queued: z.array(z.strictObject({ participationId: z.uuid(), channel: ActivationDeliveryKind })),
+    notDeliverable: z.array(
+      z.strictObject({
+        participationId: z.uuid(),
+        code: z.enum(["no_channel", "consent_required"]),
+      }),
+    ),
+    skipped: z.array(z.strictObject({ participationId: z.uuid(), code: ReminderSkip })),
+  })
+  .meta({ id: "InvitationRequestResult" });
+export type InvitationRequestResult = z.infer<typeof InvitationRequestResult>;
+
+/** `POST /participations/{id}/reminders/{reminderId}/follow-up`: how the person was told. */
+export const NoticeFollowUpInput = z
+  .strictObject({ method: NoticeFollowUpMethod })
+  .meta({ id: "NoticeFollowUpInput" });
+
+/**
+ * One message in "Nachrichten": who requested it is shown as the team (or the system for a
+ * notice), never by name; no channel for one written without a usable channel; an appointment's
+ * message names the appointment; a notice's follow-up once recorded.
+ */
 export const ReminderRecord = z
   .strictObject({
     id: z.uuid(),
     kind: ReminderKind,
     messageVersion: z.string(),
     language: NoticeLanguage,
-    channel: ActivationDeliveryKind,
+    channel: ActivationDeliveryKind.nullable(),
+    appointmentId: z.uuid().nullable(),
     requestedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
     requestedOn: isoDate,
+    /** Queued by the system: an organizer's notice. */
+    bySystem: z.boolean(),
     status: ReminderStatus,
     cancelReason: ReminderCancelReason.nullable(),
     outcomeAt: z.iso.datetime().nullable(),
+    followUpMethod: z.enum(NoticeFollowUpMethod.options).nullable(),
+    followedUpAt: z.iso.datetime().nullable(),
+    /** "Nachverfolgung erfassen" on an undelivered notice (the PL, the assigned consultant). */
+    capabilities: z.strictObject({ followUp: z.boolean() }),
   })
   .meta({ id: "ReminderRecord" });
 export type ReminderRecord = z.infer<typeof ReminderRecord>;

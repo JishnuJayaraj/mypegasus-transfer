@@ -312,15 +312,17 @@ export function mayRecordAttendance(
   );
 }
 
-export type AppointmentItemKind = "attendance_conflict";
+export type AppointmentItemKind = "attendance_conflict" | "notice_undelivered";
 const itemRoles: Record<AppointmentItemKind, readonly Role[]> = {
   attendance_conflict: ["project_lead"],
+  notice_undelivered: ["project_lead", "consultant"],
 };
 
 /**
  * Who resolves a participation's appointment item (data-protection.md, appointments; Q163): an
  * `attendance_conflict` (escalating it or attesting the information was delivered otherwise) is
- * the PL's alone, also after the participation closed.
+ * the PL's alone, also after the participation closed; a `notice_undelivered` (recording how the
+ * person was told) the PL's or the assigned consultant's (data-protection.md, messages).
  */
 export function mayResolveAppointmentItem(
   actor: Actor,

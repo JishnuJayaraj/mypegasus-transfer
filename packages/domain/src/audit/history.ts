@@ -115,8 +115,12 @@ export const auditProjection: {
   document_reviewed: shown("case", { reason: true, details: ["documentType", "decision"] }),
   document_deleted: shown("case", { reason: true, details: ["documentType"] }),
   document_upload_rejected: security,
-  reminder_queued: shown("case", { details: ["kind", "channelKind"] }),
-  reminder_delivery: shown("case", { reason: true, details: ["outcome"] }),
+  // Messages (Q168): the kind and, for an appointment's message, the appointment and its start
+  // as written then, in both the queued and the delivery projection.
+  reminder_queued: shown("case", {
+    details: ["kind", "channelKind", "appointmentId", "startsAt"],
+  }),
+  reminder_delivery: shown("case", { reason: true, details: ["outcome", "kind", "appointmentId"] }),
   audit_history_opened: security,
   // Appointments (Q168): the appointment's own events are project-level; a booking shows its
   // appointment, kind, start as written and origin, a cancellation its reason too.
@@ -156,6 +160,7 @@ export const auditProjection: {
     reason: true,
     details: ["appointmentId", "appointmentKind", "startsAt"],
   }),
+  appointment_notice_followed_up: shown("case", { details: ["method", "appointmentId"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

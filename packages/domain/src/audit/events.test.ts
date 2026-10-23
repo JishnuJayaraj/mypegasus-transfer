@@ -114,6 +114,7 @@ describe("audit event types (ADR-0002)", () => {
       "information_delivery_confirmed",
       "attendance_conflict_escalated",
       "attendance_conflict_resolved",
+      "appointment_notice_followed_up",
     ]);
   });
 
@@ -192,6 +193,8 @@ describe("audit event types (ADR-0002)", () => {
       "information_delivery_confirmed",
       "attendance_conflict_escalated",
       "attendance_conflict_resolved",
+      // Messages (Slice 5b): only `record_notice_follow_up` writes it.
+      "appointment_notice_followed_up",
     ]);
   });
 
@@ -1248,6 +1251,75 @@ describe("reminders (data-protection.md, reminders)", () => {
     ]) {
       expect(AuditEvent.safeParse(bad).success).toBe(false);
     }
+  });
+
+  it("record an appointment's messages with the appointment and its start (Q168)", () => {
+    const appointmentId = otherId;
+    const startsAt = "2026-11-02T08:00:00.000Z";
+    const invitation = {
+      ...queued,
+      details: { ...queued.details, kind: "appointment_invitation", appointmentId, startsAt },
+    };
+    const notifier = { type: "system", job: "appointments.notify" } as const;
+    const notice = {
+      ...invitation,
+      actor: notifier,
+      details: { ...invitation.details, kind: "appointment_cancelled", channelKind: null },
+    };
+    expect(issueCodes(invitation)).toEqual([]);
+    expect(
+      issueCodes({ ...invitation, details: { ...invitation.details, channelKind: null } }),
+    ).toEqual([]);
+    expect(issueCodes(notice)).toEqual([]);
+    // Notices by the system only, the rest by staff; an appointment's message names it.
+    expect(issueCodes({ ...notice, actor: user })).toEqual(["actor_mismatch"]);
+    expect(issueCodes({ ...invitation, actor: notifier })).toEqual(["actor_mismatch"]);
+    expect(
+      issueCodes({ ...invitation, details: { ...queued.details, kind: "appointment_invitation" } }),
+    ).toEqual(["kind_mismatch"]);
+    expect(issueCodes({ ...queued, details: { ...queued.details, appointmentId } })).toEqual([
+      "kind_mismatch",
+    ]);
+    expect(issueCodes({ ...queued, details: { ...queued.details, channelKind: null } })).toEqual([
+      "kind_mismatch",
+    ]);
+    const settled = {
+      ...delivery,
+      details: { ...delivery.details, kind: "appointment_invitation", appointmentId },
+    };
+    expect(issueCodes(settled)).toEqual([]);
+    expect(issueCodes({ ...settled, details: { ...settled.details, kind: "open_items" } })).toEqual(
+      ["kind_mismatch"],
+    );
+    expect(issueCodes({ ...delivery, details: { ...delivery.details, appointmentId } })).toEqual([
+      "kind_mismatch",
+    ]);
+    // Cancelled at the request without a usable channel: by whoever queued it.
+    const atRequest = {
+      ...settled,
+      actor: user,
+      reasonCode: "no_channel",
+      details: { ...settled.details, outcome: "cancelled" },
+    };
+    expect(issueCodes(atRequest)).toEqual([]);
+    expect(issueCodes({ ...atRequest, actor: notifier })).toEqual([]);
+    expect(issueCodes({ ...atRequest, reasonCode: "channel_unavailable" })).toEqual([
+      "actor_mismatch",
+    ]);
+  });
+
+  it("record a notice's follow-up by staff, the method and the appointment only", () => {
+    const followedUp = {
+      ...base,
+      type: "appointment_notice_followed_up",
+      details: { reminderId: otherId, appointmentId: otherId, method: "phone" },
+    };
+    expect(issueCodes(followedUp)).toEqual([]);
+    expect(AuditEvent.safeParse({ ...followedUp, actor: job }).success).toBe(false);
+    expect(
+      AuditEvent.safeParse({ ...followedUp, details: { ...followedUp.details, method: "email" } })
+        .success,
+    ).toBe(false);
   });
 
   it("end a v1 consent superseded by v2, never as a withdrawal", () => {

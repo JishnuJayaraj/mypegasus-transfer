@@ -3,6 +3,11 @@ import { reminderConsentVersion } from "../notices/catalog";
 import {
   chooseChannel,
   consentUpgradeOffered,
+  invitationRetryAllowed,
+  NoticeFollowUpMethod,
+  noticeKinds,
+  noticeUndelivered,
+  ReminderKind,
   mayReadReminders,
   nextEligibleDate,
   portalReach,
@@ -11,9 +16,10 @@ import {
   reminderPolicy,
   ReminderSkip,
   ReminderStatus,
+  type PreviousInvitation,
   type ReminderChannelFacts,
 } from "./model";
-import { ReminderRequestInput } from "./api";
+import { InvitationRequestInput, ReminderRequestInput } from "./api";
 
 // Synthetic ids and dates only.
 const channel = (overrides: Partial<ReminderChannelFacts> = {}): ReminderChannelFacts => ({
@@ -36,12 +42,23 @@ describe("the reminder codes (data-protection.md, reminders)", () => {
       "delivery_unknown",
       "cancelled",
     ]);
+    expect(ReminderKind.options).toEqual([
+      "open_items",
+      "appointment_invitation",
+      "appointment_changed",
+      "appointment_cancelled",
+    ]);
+    expect([...noticeKinds]).toEqual(["appointment_changed", "appointment_cancelled"]);
     expect(ReminderSkip.options).toEqual([
       "no_channel",
       "consent_required",
       "reminded_recently",
       "nothing_open",
       "participation_closed",
+      "not_eligible",
+      "already_booked",
+      "already_invited",
+      "invitation_limit",
     ]);
     expect(ReminderCancelReason.options).toEqual([
       "channel_unavailable",
@@ -50,7 +67,11 @@ describe("the reminder codes (data-protection.md, reminders)", () => {
       "nothing_open",
       "requester_no_longer_authorized",
       "delivery_unavailable",
+      "no_channel",
+      "consent_required",
+      "appointment_unavailable",
     ]);
+    expect(NoticeFollowUpMethod.options).toEqual(["phone", "in_person", "letter", "not_needed"]);
   });
 });
 
@@ -195,5 +216,106 @@ describe("mayReadReminders (Q156)", () => {
     expect(reads(staff("consultant", true))).toBe(true);
     expect(reads(staff("back_office"))).toBe(true);
     expect(reads(staff("consultant"))).toBe(false);
+  });
+});
+
+const previous = (
+  status: PreviousInvitation["status"],
+  cancelReason: PreviousInvitation["cancelReason"] = null,
+  minute = 0,
+): PreviousInvitation => ({
+  status,
+  cancelReason,
+  requestedAt: `2026-10-23T09:${String(minute).padStart(2, "0")}:00.000Z`,
+});
+
+describe("invitationRetryAllowed (data-protection.md, invitations)", () => {
+  it("allows the first invitation", () => {
+    expect(invitationRetryAllowed([])).toBe("ok");
+  });
+
+  it("allows a new one after a failure or a delivery reason, as an authorized requester", () => {
+    expect(invitationRetryAllowed([previous("failed")])).toBe("ok");
+    for (const reason of [
+      "no_channel",
+      "consent_required",
+      "channel_unavailable",
+      "consent_ended",
+      "delivery_unavailable",
+      "requester_no_longer_authorized",
+    ] as const) {
+      expect(invitationRetryAllowed([previous("cancelled", reason)])).toBe("ok");
+    }
+  });
+
+  it("refuses while one is open or its outcome uncertain, and after any other cancellation", () => {
+    for (const status of ["queued", "dispatching", "sent", "delivery_unknown"] as const) {
+      expect(invitationRetryAllowed([previous(status)])).toBe("already_invited");
+    }
+    for (const reason of [
+      "nothing_open",
+      "appointment_unavailable",
+      "participation_closed",
+    ] as const) {
+      expect(invitationRetryAllowed([previous("cancelled", reason)])).toBe("already_invited");
+    }
+  });
+
+  it("decides by the latest invitation", () => {
+    expect(invitationRetryAllowed([previous("failed", null, 2), previous("sent", null, 1)])).toBe(
+      "ok",
+    );
+    expect(invitationRetryAllowed([previous("failed", null, 1), previous("sent", null, 2)])).toBe(
+      "already_invited",
+    );
+  });
+
+  it("counts three delivery attempts, rows cancelled before the provider none", () => {
+    const failed = [0, 1, 2].map((minute) => previous("failed", null, minute));
+    expect(invitationRetryAllowed(failed.slice(0, 2))).toBe("ok");
+    expect(invitationRetryAllowed(failed)).toBe("invitation_limit");
+    const withUnknown = [previous("delivery_unknown", null, 0), ...failed.slice(1)];
+    expect(invitationRetryAllowed(withUnknown)).toBe("invitation_limit");
+    const cancelled = [0, 1, 2, 3].map((minute) => previous("cancelled", "no_channel", minute));
+    expect(invitationRetryAllowed([...cancelled, ...failed.slice(0, 2)])).toBe("ok");
+  });
+});
+
+const notice = (overrides: Partial<Parameters<typeof noticeUndelivered>[0]> = {}) =>
+  noticeUndelivered({
+    kind: "appointment_cancelled",
+    status: "failed",
+    cancelReason: null,
+    followedUp: false,
+    ...overrides,
+  });
+
+describe("noticeUndelivered (data-protection.md, messages: follow-up)", () => {
+  it("asks for a follow-up of a failed, uncertain or cancelled notice", () => {
+    expect(notice()).toBe(true);
+    expect(notice({ kind: "appointment_changed", status: "delivery_unknown" })).toBe(true);
+    expect(notice({ status: "cancelled", cancelReason: "no_channel" })).toBe(true);
+    expect(notice({ status: "cancelled", cancelReason: "consent_ended" })).toBe(true);
+  });
+
+  it("not for a sent or open notice, a closed participation, a recorded follow-up or another kind", () => {
+    for (const status of ["sent", "queued", "dispatching"] as const) {
+      expect(notice({ status })).toBe(false);
+    }
+    expect(notice({ status: "cancelled", cancelReason: "participation_closed" })).toBe(false);
+    expect(notice({ followedUp: true })).toBe(false);
+    expect(notice({ kind: "appointment_invitation" })).toBe(false);
+    expect(notice({ kind: "open_items" })).toBe(false);
+  });
+});
+
+const parse = (ids: string[]) => InvitationRequestInput.safeParse({ participationIds: ids });
+
+describe("InvitationRequestInput", () => {
+  it("takes 1–500 distinct participations", () => {
+    expect(parse([id(1)]).success).toBe(true);
+    expect(parse([]).success).toBe(false);
+    expect(parse([id(1), id(1)]).success).toBe(false);
+    expect(parse(Array.from({ length: 501 }, (_, n) => id(n))).success).toBe(false);
   });
 });

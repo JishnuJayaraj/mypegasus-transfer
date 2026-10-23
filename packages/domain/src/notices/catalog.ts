@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ReminderKind } from "../reminders/model";
 
 export const NoticeLanguage = z.enum(["de", "en"]);
 export type NoticeLanguage = z.infer<typeof NoticeLanguage>;
@@ -18,6 +19,14 @@ export const PORTAL_CONTACT_CONSENT_VERSION = "portal-contact-consent:v2" as con
 export const reminderConsentVersion = PORTAL_CONTACT_CONSENT_VERSION;
 /** The reminder's fixed text (data-protection.md, reminders; Q154). */
 export const PORTAL_REMINDER_VERSION = "portal-reminder:v1" as const;
+/** The invitation's fixed text (data-protection.md, messages: the texts; Q165). */
+export const PORTAL_INVITATION_VERSION = "portal-invitation:v1" as const;
+/** The organizer's notice, for a changed and a cancelled appointment alike (Q165). */
+export const PORTAL_APPOINTMENT_CHANGE_VERSION = "portal-appointment-change:v1" as const;
+export type MessageVersion =
+  | typeof PORTAL_REMINDER_VERSION
+  | typeof PORTAL_INVITATION_VERSION
+  | typeof PORTAL_APPOINTMENT_CHANGE_VERSION;
 /**
  * The purposes notice before the first wizard page (data-protection.md, self-service; Q138): an
  * acknowledgement, not a consent.
@@ -131,19 +140,25 @@ Providing it is voluntary. I can withdraw this consent at any time with effect f
 };
 
 /**
- * The reminder (data-protection.md, reminders; Q154): a fixed generic text whose only placeholder
- * is the plain portal URL; no name, project, employer, Personalnummer, deadline or item. The
- * SHA-256 covers subject, text and the email-only note joined by blank lines. Final wording with
- * the DPO (Q132).
+ * A message's fixed text (data-protection.md, reminders and messages; Q154, Q165): generic, its
+ * only placeholder the plain portal URL; no name, project, employer, Personalnummer, deadline,
+ * item, appointment kind, date, time, venue or title. The SHA-256 covers subject, text and the
+ * email-only note joined by blank lines. Final wording with the DPO (Q132).
  */
-export interface ReminderTemplate {
-  version: typeof PORTAL_REMINDER_VERSION;
+export interface MessageTemplate<V extends MessageVersion = MessageVersion> {
+  version: V;
   language: NoticeLanguage;
   subject: string;
   text: string;
   emailNote: string;
   sha256: string;
 }
+export type ReminderTemplate = MessageTemplate<typeof PORTAL_REMINDER_VERSION>;
+
+const privacyNote: Readonly<Record<NoticeLanguage, string>> = {
+  de: "Diese Nachricht enthält aus Datenschutzgründen keine weiteren Einzelheiten.",
+  en: "For privacy reasons, this message contains no further details.",
+};
 
 export const reminderTemplates: Readonly<Record<NoticeLanguage, ReminderTemplate>> = {
   de: {
@@ -151,7 +166,7 @@ export const reminderTemplates: Readonly<Record<NoticeLanguage, ReminderTemplate
     language: "de",
     subject: "Im Teilnehmerportal ist noch etwas offen",
     text: "In Ihrem Teilnehmerportal ist noch etwas offen. Bitte melden Sie sich an und prüfen Sie Ihre Angaben oder Unterlagen: {{portalUrl}}",
-    emailNote: "Diese Nachricht enthält aus Datenschutzgründen keine weiteren Einzelheiten.",
+    emailNote: privacyNote.de,
     sha256: "6c179e836430938b1333586603061c8857d84a9d1aae5daad5d9a00e541cc61c",
   },
   en: {
@@ -159,25 +174,94 @@ export const reminderTemplates: Readonly<Record<NoticeLanguage, ReminderTemplate
     language: "en",
     subject: "Something is still open in the participant portal",
     text: "Something is still open in your participant portal. Please sign in and review your information or documents: {{portalUrl}}",
-    emailNote: "For privacy reasons, this message contains no further details.",
+    emailNote: privacyNote.en,
     sha256: "ee71cfb6dd4f9dbc5cce04d02401274a8bb0b37dc140ef1f095a2f62f01f658c",
   },
 };
 
+/** The invitation (Q165): one appointment waits in the portal, nothing said about which. */
+export const invitationTemplates: Readonly<
+  Record<NoticeLanguage, MessageTemplate<typeof PORTAL_INVITATION_VERSION>>
+> = {
+  de: {
+    version: PORTAL_INVITATION_VERSION,
+    language: "de",
+    subject: "Neue Einladung im Teilnehmerportal",
+    text: "In Ihrem Teilnehmerportal gibt es eine Einladung zu einem Termin. Bitte melden Sie sich an: {{portalUrl}}",
+    emailNote: privacyNote.de,
+    sha256: "eb943dadcf095d7dbae766af4a742c6c7f4bfc2e171870c346990c318bffa7e1",
+  },
+  en: {
+    version: PORTAL_INVITATION_VERSION,
+    language: "en",
+    subject: "New invitation in the participant portal",
+    text: "There is an invitation to an appointment in your participant portal. Please sign in: {{portalUrl}}",
+    emailNote: privacyNote.en,
+    sha256: "b70e188eab5b0b8421f8462236bc1a2c390a5e5f705ed09bc37551a7c75079ed",
+  },
+};
+
+/** The organizer's notice (Q165), for a corrected title or venue and a cancellation alike. */
+export const appointmentChangeTemplates: Readonly<
+  Record<NoticeLanguage, MessageTemplate<typeof PORTAL_APPOINTMENT_CHANGE_VERSION>>
+> = {
+  de: {
+    version: PORTAL_APPOINTMENT_CHANGE_VERSION,
+    language: "de",
+    subject: "Änderung im Teilnehmerportal",
+    text: "Bei einem Ihrer Termine im Teilnehmerportal gibt es eine Änderung. Bitte melden Sie sich an: {{portalUrl}}",
+    emailNote: privacyNote.de,
+    sha256: "1a6efbe9df14fa995489503c1c3cf5825e7bd7643b8be7e55dd3f2c6ebdc9f71",
+  },
+  en: {
+    version: PORTAL_APPOINTMENT_CHANGE_VERSION,
+    language: "en",
+    subject: "Change in the participant portal",
+    text: "One of your appointments in the participant portal has changed. Please sign in: {{portalUrl}}",
+    emailNote: privacyNote.en,
+    sha256: "ca5e9a63d88a3e4230dfd5b1bfa84a9772391d6551be51f36806423e8878f3f8",
+  },
+};
+
+/** Each message kind's fixed text; both notice kinds share one. */
+export const messageTemplates: Readonly<
+  Record<ReminderKind, Readonly<Record<NoticeLanguage, MessageTemplate>>>
+> = {
+  open_items: reminderTemplates,
+  appointment_invitation: invitationTemplates,
+  appointment_changed: appointmentChangeTemplates,
+  appointment_cancelled: appointmentChangeTemplates,
+};
+
+/** The text version a message of `kind` is queued with (the database checks it again). */
+export function messageVersionOf(kind: ReminderKind): MessageVersion {
+  return messageTemplates[kind].de.version;
+}
+
 /**
- * The reminder as it is sent: by email the subject and the text with the note, by SMS the text
- * alone; plain text with the portal URL as given (no token, id or tracking parameter).
+ * A message as it is sent: by email the subject and the text with the privacy note, by SMS the
+ * text alone; plain text with the portal URL as given (no token, id or tracking parameter).
  */
+export function messageFor(
+  kind: ReminderKind,
+  language: NoticeLanguage,
+  channel: "email" | "sms",
+  portalUrl: string,
+): { subject?: string; text: string } {
+  const template = messageTemplates[kind][language];
+  const text = template.text.replace("{{portalUrl}}", portalUrl);
+  return channel === "email"
+    ? { subject: template.subject, text: `${text}\n\n${template.emailNote}` }
+    : { text };
+}
+
+/** The reminder as it is sent (`messageFor` of `open_items`). */
 export function reminderMessage(
   language: NoticeLanguage,
   kind: "email" | "sms",
   portalUrl: string,
 ): { subject?: string; text: string } {
-  const template = reminderTemplates[language];
-  const text = template.text.replace("{{portalUrl}}", portalUrl);
-  return kind === "email"
-    ? { subject: template.subject, text: `${text}\n\n${template.emailNote}` }
-    : { text };
+  return messageFor("open_items", language, kind, portalUrl);
 }
 
 /**
