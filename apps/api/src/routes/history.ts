@@ -39,7 +39,7 @@ type HistoryRow = {
   to_value: string | null;
   reason_code: string | null;
   effective_date: string | null;
-  details: Record<string, string | string[] | null>;
+  details: Record<string, string | boolean | string[] | null>;
 };
 
 const actorKind = { user: "staff", participant: "participant", system: "system" } as const;

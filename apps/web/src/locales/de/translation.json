@@ -1507,7 +1507,12 @@
       "reminder_queued": "Erinnerung angefordert",
       "reminder_delivery": "Erinnerung abgeschlossen",
       "appointment_booked": "Termin gebucht",
-      "appointment_booking_cancelled": "Terminbuchung abgesagt"
+      "appointment_booking_cancelled": "Terminbuchung abgesagt",
+      "attendance_recorded": "Teilnahme erfasst",
+      "attendance_superseded": "Abwesenheit ersetzt (fand nicht statt)",
+      "information_delivery_confirmed": "Information bestätigt",
+      "attendance_conflict_escalated": "Widerspruch eskaliert",
+      "attendance_conflict_resolved": "Widerspruch geklärt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1559,10 +1564,17 @@
       "delivery_unavailable": "Versand nicht verfügbar",
       "participant_cancelled": "Von der teilnehmenden Person abgesagt",
       "staff_cancelled": "Vom Beratungsteam abgesagt",
-      "appointment_cancelled": "Vom Veranstalter abgesagt"
+      "appointment_cancelled": "Vom Veranstalter abgesagt",
+      "late_entry": "Nachtrag",
+      "correction": "Korrektur",
+      "replacement_basis": "Andere Teilnahme als Grundlage",
+      "information_delivered_otherwise": "Anderweitig informiert"
     },
     "appointment": "{{kind}} am {{start}}",
-    "appointmentBy": "{{kind}} am {{start}} ({{origin}})"
+    "appointmentBy": "{{kind}} am {{start}} ({{origin}})",
+    "afterClose": "(nach Abschluss der Teilnahme)",
+    "withStatusChange": "(mit Statusänderung)",
+    "asBasis": "(als Grundlage, ohne Statusänderung)"
   },
   "appointments": {
     "title": "Termine",
@@ -1666,7 +1678,24 @@
       "appointment_full": "Ausgebucht.",
       "after_cutoff": "Das letzte Eintrittsdatum ist überschritten.",
       "booking_closed": "Die Buchung ist geschlossen.",
-      "booking_cancelled": "Die Buchung ist schon abgesagt."
+      "booking_cancelled": "Die Buchung ist schon abgesagt.",
+      "attendance_recorded": "Für diesen Termin ist schon eine Teilnahme erfasst.",
+      "appointment_not_started": "Der Termin hat noch nicht begonnen.",
+      "appointment_not_ended": "„Nicht erschienen“ erst nach dem Ende des Termins.",
+      "after_close_reason_required": "Die Teilnahme ist beendet: bitte einen Grund für den Nachtrag wählen.",
+      "started_after_close": "Der Termin begann erst nach dem Ende der Teilnahme.",
+      "not_booked": "Ohne Buchung nur „teilgenommen“.",
+      "attendance_unchanged": "Diese Teilnahme ist schon so erfasst.",
+      "mark_informed_not_allowed": "Hier nicht als informiert erfassbar.",
+      "before_cutoff": "Das letzte Eintrittsdatum ist überschritten.",
+      "information_delivery_unconfirmed": "Bitte bestätigen Sie, dass die erforderlichen Informationen vermittelt wurden.",
+      "not_attended": "Nur eine Teilnahme „teilgenommen“ trägt das.",
+      "already_basis": "Diese Teilnahme ist schon die Grundlage.",
+      "already_informed": "Die Person ist schon als informiert erfasst.",
+      "no_conflict": "Hier ist nichts zu klären.",
+      "already_escalated": "Schon eskaliert.",
+      "actor_not_allowed": "Dazu fehlt Ihnen die Berechtigung.",
+      "duplicate_entry": "Diese Person ist doppelt aufgeführt."
     },
     "form": {
       "createTitle": {
@@ -1724,6 +1753,7 @@
         "status": "Status",
         "origin": "Gebucht",
         "bookedAt": "Gebucht am",
+        "attendance": "Teilnahme",
         "actions": "Aktionen"
       },
       "needsResolution": "Klärung nötig",
@@ -1753,10 +1783,88 @@
         "status": "Status",
         "availability": "Plätze",
         "hint": "Hinweis",
+        "attendance": "Teilnahme",
         "actions": "Aktionen"
       },
       "book": "Buchen",
       "cancel": "Buchung absagen"
+    },
+    "attendance": {
+      "record": "Teilnahme erfassen",
+      "title": "Teilnahme erfassen",
+      "intro": "„Teilgenommen“ ab dem Beginn, „nicht erschienen“ nach dem Ende. Als informiert erfassen Sie eine Person nur, wenn ihr die erforderlichen Informationen vermittelt wurden.",
+      "rows": "Teilnehmende",
+      "empty": "Keine Buchung ohne erfasste Teilnahme.",
+      "columns": {
+        "name": "Name",
+        "attendance": "Teilnahme",
+        "informed": "Als informiert erfassen"
+      },
+      "valueOf": "Teilnahme von {{name}}",
+      "markInformedOf": "{{name}} als informiert erfassen",
+      "values": {
+        "attended": "teilgenommen",
+        "absent": "nicht erschienen"
+      },
+      "walkIn": "Ohne Buchung erschienen",
+      "addWalkIn": "{{name}} hinzufügen",
+      "delivered": "Die erforderlichen Informationen wurden vermittelt",
+      "afterCloseReason": "Grund (Teilnahme beendet)",
+      "afterCloseHint": "Nach dem Ende einer Teilnahme erfasst nur die Projektleitung; der Status ändert sich nicht.",
+      "afterCloseReasons": {
+        "late_entry": "Nachtrag",
+        "correction": "Korrektur"
+      },
+      "submit": "Erfassen",
+      "refused": "Keine Teilnahme erfasst",
+      "recorded": "{{recorded}} Teilnahme(n) erfasst, {{informed}} als informiert",
+      "superseded": "ersetzt (fand nicht statt)",
+      "basis": "Grundlage für „informiert“",
+      "conflicts": {
+        "open": "Widerspruch zu klären",
+        "escalated": "Widerspruch eskaliert",
+        "resolved": "Widerspruch geklärt"
+      },
+      "resolutions": {
+        "replacement_basis": "andere Teilnahme als Grundlage",
+        "information_delivered_otherwise": "anderweitig informiert"
+      },
+      "notTakenPlace": "Fand nicht statt (Korrektur)",
+      "notTakenPlaceTitle": "Termin fand nicht statt",
+      "notTakenPlaceText": "Erfasst sind nur Abwesenheiten. Der Termin wird als „fand nicht statt“ abgesagt; die Abwesenheiten bleiben im Verlauf und gelten als ersetzt. Es gehen keine Nachrichten hinaus.",
+      "notTakenPlaceDone": "Termin als nicht stattgefunden korrigiert",
+      "actions": {
+        "correct": {
+          "button": "Teilnahme korrigieren",
+          "title": "Teilnahme korrigieren",
+          "text": "Die Teilnahme wird auf „{{value}}“ korrigiert. Eine Korrektur ändert keinen Status.",
+          "done": "Teilnahme korrigiert"
+        },
+        "informed": {
+          "button": "Als informiert erfassen",
+          "title": "Als informiert erfassen",
+          "text": "Die Person wird auf Grundlage dieser Teilnahme als informiert erfasst.",
+          "done": "Als informiert erfasst"
+        },
+        "basis": {
+          "button": "Als Grundlage bestätigen",
+          "title": "Als Grundlage bestätigen",
+          "text": "Diese Teilnahme ersetzt die widersprochene Grundlage. Der Status ändert sich nicht.",
+          "done": "Als Grundlage bestätigt"
+        },
+        "escalate": {
+          "button": "Eskalieren",
+          "title": "Widerspruch eskalieren",
+          "text": "Der Widerspruch bleibt offen und wird als eskaliert angezeigt, bis er geklärt ist.",
+          "done": "Eskaliert"
+        },
+        "otherwise": {
+          "button": "Anderweitig informiert",
+          "title": "Anderweitig informiert",
+          "text": "Sie bestätigen als Projektleitung, dass die erforderlichen Informationen anderweitig vermittelt wurden. Der Status ändert sich nicht.",
+          "done": "Widerspruch geklärt"
+        }
+      }
     }
   }
 }

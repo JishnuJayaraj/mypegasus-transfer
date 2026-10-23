@@ -242,3 +242,149 @@ describe("changing a booked appointment", () => {
     );
   });
 });
+
+/** A live booking on the appointment page, not yet recorded. */
+const liveBooking = (overrides: Record<string, unknown> = {}) => ({
+  id: "00000000-0000-4000-a000-0000000000b1",
+  participationId,
+  personnelNumber: "BSP-0001",
+  lastName: "Beispiel",
+  firstName: "Erika",
+  status: "booked",
+  origin: "staff",
+  bookedAt: "2091-02-01T09:00:00.000000Z",
+  cancelReason: null,
+  cancelledAt: null,
+  needsResolution: null,
+  attendance: null,
+  attendanceRecordedAt: null,
+  afterCloseReason: null,
+  informedBasis: false,
+  superseded: false,
+  conflict: null,
+  conflictResolution: null,
+  capabilities: {
+    cancel: false,
+    recordAttended: true,
+    recordAbsent: true,
+    offerInformed: true,
+    afterClose: false,
+    markInformed: false,
+    confirmBasis: false,
+    reviewConflict: false,
+  },
+  ...overrides,
+});
+
+/** The appointment page of a started appointment of `kind` with one booking to record. */
+function attendancePage(kind: "info_event" | "consultation") {
+  const started = appointment({
+    kind,
+    hostStaffUserId: kind === "consultation" ? staffUsers[1]!.id : null,
+    capabilities: {
+      change: true,
+      changeHost: false,
+      cancel: true,
+      book: false,
+      recordAttendance: true,
+      correctNotTakenPlace: false,
+    },
+  });
+  return setup(`/projects/${project.id}/appointments/${appointmentId}`, {
+    [`GET /api/v1/appointments/${appointmentId}`]: () => json(started),
+    [`GET /api/v1/appointments/${appointmentId}/bookings`]: () => json({ items: [liveBooking()] }),
+    [`GET ${projectPath}/worklist`]: () => json(worklist([])),
+    [`POST /api/v1/appointments/${appointmentId}/attendance`]: () =>
+      json({ recorded: 1, informed: 1, statusChanges: 1 }),
+  });
+}
+
+describe("'Teilnahme erfassen' (process-and-lifecycle.md, appointments: attendance)", () => {
+  it("never preselects 'als informiert erfassen' for a consultation", async () => {
+    const user = userEvent.setup();
+    attendancePage("consultation");
+    await user.click(await screen.findByRole("button", { name: "Teilnahme erfassen" }));
+    const dialog = await screen.findByRole("dialog", { name: "Teilnahme erfassen" });
+    await user.selectOptions(
+      within(dialog).getByLabelText("Teilnahme von Beispiel, Erika (BSP-0001)"),
+      "attended",
+    );
+    expect(
+      within(dialog).getByLabelText("Beispiel, Erika (BSP-0001) als informiert erfassen"),
+    ).not.toBeChecked();
+  });
+
+  it("preselects it for an info event, and refuses a ticked row without the confirmation", async () => {
+    const user = userEvent.setup();
+    const { calls } = attendancePage("info_event");
+    await user.click(await screen.findByRole("button", { name: "Teilnahme erfassen" }));
+    const dialog = await screen.findByRole("dialog", { name: "Teilnahme erfassen" });
+    await user.selectOptions(
+      within(dialog).getByLabelText("Teilnahme von Beispiel, Erika (BSP-0001)"),
+      "attended",
+    );
+    expect(
+      within(dialog).getByLabelText("Beispiel, Erika (BSP-0001) als informiert erfassen"),
+    ).toBeChecked();
+    const confirmation = within(dialog).getByLabelText(
+      "Die erforderlichen Informationen wurden vermittelt",
+    );
+    expect(confirmation).not.toBeChecked();
+    await user.click(within(dialog).getByRole("button", { name: "Erfassen" }));
+    expect(
+      await within(dialog).findByText(
+        "Bitte bestätigen Sie, dass die erforderlichen Informationen vermittelt wurden.",
+      ),
+    ).toBeInTheDocument();
+    const attendanceCall = `POST /api/v1/appointments/${appointmentId}/attendance`;
+    expect(calls.some((call) => call.key === attendanceCall)).toBe(false);
+    await user.click(confirmation);
+    await user.click(within(dialog).getByRole("button", { name: "Erfassen" }));
+    await waitFor(() =>
+      expect(calls.find((call) => call.key === attendanceCall)?.body).toEqual({
+        entries: [{ participationId, attendance: "attended", markInformed: true }],
+        informationDelivered: true,
+        afterCloseReason: null,
+      }),
+    );
+  });
+
+  it("names each refused row after 'Keine Teilnahme erfasst'", async () => {
+    const user = userEvent.setup();
+    setup(`/projects/${project.id}/appointments/${appointmentId}`, {
+      [`GET /api/v1/appointments/${appointmentId}`]: () =>
+        json(
+          appointment({
+            capabilities: {
+              change: false,
+              changeHost: false,
+              cancel: false,
+              book: false,
+              recordAttendance: true,
+              correctNotTakenPlace: false,
+            },
+          }),
+        ),
+      [`GET /api/v1/appointments/${appointmentId}/bookings`]: () =>
+        json({ items: [liveBooking()] }),
+      [`GET ${projectPath}/worklist`]: () => json(worklist([])),
+      [`POST /api/v1/appointments/${appointmentId}/attendance`]: () =>
+        problem(422, "domain-error", {
+          errors: [{ pointer: "/entries/0", code: "appointment_not_ended", detail: "Refused" }],
+        }),
+    });
+    await user.click(await screen.findByRole("button", { name: "Teilnahme erfassen" }));
+    const dialog = await screen.findByRole("dialog", { name: "Teilnahme erfassen" });
+    await user.selectOptions(
+      within(dialog).getByLabelText("Teilnahme von Beispiel, Erika (BSP-0001)"),
+      "absent",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Erfassen" }));
+    expect(await within(dialog).findByText("Keine Teilnahme erfasst")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "Beispiel, Erika (BSP-0001): „Nicht erschienen“ erst nach dem Ende des Termins.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

@@ -287,7 +287,7 @@ describe("informed, the conflict and its review", () => {
   it("informs on a corrected attendance, then reviews the conflict of a basis corrected to `absent`", async () => {
     const p = await participation();
     const event = await startedEvent([p]);
-    const record = (attendance: string, as = projectLead) =>
+    const record = (attendance: string, as: string = projectLead) =>
       post(
         `/appointments/${event}/attendance`,
         { entries: [{ participationId: p, attendance }] },
@@ -336,7 +336,7 @@ describe("informed, the conflict and its review", () => {
       conflict: "open",
       capabilities: { reviewConflict: true },
     });
-    const review = (reason: string, as = projectLead) =>
+    const review = (reason: string, as: string = projectLead) =>
       post(`/appointment-bookings/${booking!.id}/conflict-review`, { reason }, as);
     await expectProblem(await review("escalated", consultant), 403, "forbidden");
     expect((await review("escalated")).status).toBe(204);

@@ -11063,7 +11063,7 @@ export interface components {
              */
             effectiveDate: string | null;
             details: {
-                [key: string]: string | string[] | null;
+                [key: string]: string | boolean | string[] | null;
             };
         };
         /** @enum {string} */
