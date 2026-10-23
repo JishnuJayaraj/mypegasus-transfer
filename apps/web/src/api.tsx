@@ -189,6 +189,27 @@ export const participationRemindersQuery = (api: ApiClient, participationId: str
     retry: false,
   });
 
+/**
+ * The tab "Verlauf": the participation's audit history, newest first (data-protection.md, audit
+ * metadata). The first page is audited as an opening, so it is fetched only when the tab is shown.
+ */
+export const participationHistoryQuery = (api: ApiClient, participationId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["participations", participationId, "history"],
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/history", {
+          params: {
+            path: { participationId },
+            query: { limit: 50, ...(pageParam && { cursor: pageParam }) },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });
+
 /** The regions (a handful of Niederlassungen), for the region pickers (Q126). */
 export const regionsQuery = (api: ApiClient) =>
   queryOptions({

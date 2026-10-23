@@ -36,6 +36,7 @@ import { PlacementAgentur } from "../../components/placement-agentur";
 import { RecoveryPanel } from "../../components/recovery";
 import { RouteError } from "../../components/route-error";
 import { DocumentsTab } from "../../components/documents-tab";
+import { HistoryTab } from "../../components/history";
 import { MessagesTab } from "../../components/reminders";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
@@ -46,17 +47,17 @@ type FieldKey = keyof typeof de.participant.fields;
 const RouterLink = createLink(Link);
 
 /**
- * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Unterlagen" or
- * "Nachrichten".
+ * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Unterlagen",
+ * "Nachrichten" or "Verlauf".
  */
-const tabs = [undefined, "self-service", "documents", "messages"] as const;
+const tabs = [undefined, "self-service", "documents", "messages", "history"] as const;
 type Search = { tab?: Exclude<(typeof tabs)[number], undefined> };
 
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
-  validateSearch: (search: Record<string, unknown>): Search =>
-    search.tab === "self-service" || search.tab === "documents" || search.tab === "messages"
-      ? { tab: search.tab }
-      : {},
+  validateSearch: (search: Record<string, unknown>): Search => {
+    const tab = tabs.find((candidate) => candidate !== undefined && candidate === search.tab);
+    return tab ? { tab } : {};
+  },
   loader: async ({ context: { api, queryClient }, params: { projectId, participationId } }) => {
     const [project, detail] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
@@ -138,6 +139,7 @@ function ParticipationPage() {
           <Tab>{t("participant.tabs.selfService")}</Tab>
           <Tab>{t("participant.tabs.documents")}</Tab>
           <Tab>{t("participant.tabs.messages")}</Tab>
+          <Tab>{t("participant.tabs.history")}</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -189,6 +191,16 @@ function ParticipationPage() {
           <TabPanel>
             {/* Loaded only when shown: the participant's reminders (data-protection.md). */}
             {tab === "messages" && <MessagesTab participationId={participationId} />}
+          </TabPanel>
+          <TabPanel>
+            {/* Loaded only when shown: opening the history is audited (data-protection.md). */}
+            {tab === "history" && (
+              <HistoryTab
+                participationId={participationId}
+                projectId={projectId}
+                withWaves={project.type === "ta_tg"}
+              />
+            )}
           </TabPanel>
         </TabPanels>
       </Tabs>
