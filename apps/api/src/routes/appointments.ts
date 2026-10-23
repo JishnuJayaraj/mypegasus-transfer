@@ -21,6 +21,8 @@ import {
   ConflictReviewInput,
   InformedInput,
   InformedResult,
+  InvitationRequestInput,
+  InvitationRequestResult,
   mayBookFor,
   mayListBookings,
   mayListField,
@@ -56,6 +58,8 @@ import {
   type AppointmentRow,
   type AppointmentViewer,
 } from "../appointments/service";
+import { invitationRefusal, requestInvitations } from "../appointments/invitations";
+import { createNoticeWriter } from "../appointments/notices";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { functionRefusal } from "../database-errors";
@@ -132,6 +136,8 @@ const stateCodes = new Set([
   "already_informed",
   "no_conflict",
   "already_escalated",
+  // Invitations (data-protection.md, invitations)
+  "booking_closed",
 ]);
 
 /** The refusal of a write function as a problem; undefined for anything else (a 500). */
@@ -167,7 +173,7 @@ async function writeVersioned<T>(c: Context<AppEnv>, run: () => Promise<T>) {
   }
 }
 
-const call = async (db: Database, query: ReturnType<typeof sql>) => {
+const call = async (db: Pick<Database, "execute">, query: ReturnType<typeof sql>) => {
   const { rows } = await db.execute<{ result: unknown }>(sql`select ${query} as result`);
   return rows[0]!.result;
 };
@@ -192,6 +198,7 @@ function attendanceProblem(c: Context<AppEnv>, error: unknown) {
 export function appointmentRoutes(deps: Deps) {
   const { db, clock } = deps;
   const attendance = createAttendanceService(deps);
+  const withNotices = createNoticeWriter(deps);
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const now = () => clock.now().toISOString();
@@ -421,9 +428,10 @@ export function appointmentRoutes(deps: Deps) {
           ? row.bookingClosesAt
           : bookingClosesAt(startsAt, days);
       const done = await writeVersioned(c, () =>
-        call(
-          db,
-          sql`update_appointment(p_context => ${auditContext(user.id, c.get("requestId"))},
+        withNotices(appointmentId, (tx) =>
+          call(
+            tx,
+            sql`update_appointment(p_context => ${auditContext(user.id, c.get("requestId"))},
             p_id => ${appointmentId}::uuid, p_expected_version => ${input.expectedVersion}::integer,
             p_starts_at => ${startsAt}::timestamptz, p_ends_at => ${endsAt}::timestamptz,
             p_booking_closes_at => ${closesAt}::timestamptz,
@@ -431,6 +439,7 @@ export function appointmentRoutes(deps: Deps) {
             p_title => ${input.title === undefined ? row.title : input.title}::text,
             p_venue => ${input.venue ?? row.venue}::text,
             p_audience_wave_id => ${audienceWaveId}::uuid)`,
+          ),
         ),
       );
       if (!done.ok) return done.response;
@@ -522,10 +531,12 @@ export function appointmentRoutes(deps: Deps) {
       const { row, viewer } = found;
       if (!mayManageAppointment(viewer.subject, row, viewer).ok) return problem(c, "forbidden");
       const done = await write(c, () =>
-        call(
-          db,
-          sql`cancel_appointment(p_context => ${auditContext(user.id, c.get("requestId"))},
-            p_id => ${appointmentId}::uuid, p_reason => ${reason}::appointment_cancel_reason)`,
+        withNotices(appointmentId, (tx) =>
+          call(
+            tx,
+            sql`cancel_appointment(p_context => ${auditContext(user.id, c.get("requestId"))},
+              p_id => ${appointmentId}::uuid, p_reason => ${reason}::appointment_cancel_reason)`,
+          ),
         ),
       );
       if (!done.ok) return done.response;
@@ -766,10 +777,12 @@ export function appointmentRoutes(deps: Deps) {
       const code = cancellationEligibility(booking, row, viewer.now);
       if (code !== "ok") return refused(c, code);
       const done = await write(c, () =>
-        call(
-          db,
-          sql`cancel_appointment_booking(p_context => ${auditContext(user.id, c.get("requestId"))},
-            p_booking_id => ${bookingId}::uuid)`,
+        withNotices(booking.appointmentId, (tx) =>
+          call(
+            tx,
+            sql`cancel_appointment_booking(p_context => ${auditContext(user.id, c.get("requestId"))},
+              p_booking_id => ${bookingId}::uuid)`,
+          ),
         ),
       );
       if (!done.ok) return done.response;
@@ -1081,6 +1094,71 @@ export function appointmentRoutes(deps: Deps) {
       } catch (error) {
         return attendanceProblem(c, error);
       }
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/appointments/{appointmentId}/invitations",
+      tags: ["appointments"],
+      summary:
+        "Invite up to 500 participations (the PL, the assigned consultant): each queued per channel, written without a usable channel (visible in the portal) or skipped with a code",
+      middleware,
+      request: {
+        params: AppointmentParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: InvitationRequestInput } },
+        },
+      },
+      responses: {
+        201: json(InvitationRequestResult, "The invitations and the skipped participations"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { appointmentId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const found = await access(c, user, appointmentId);
+      if (found.response) return found.response;
+      const blocked = await invitationRefusal(deps, found.viewer, input.participationIds);
+      if (blocked?.kind === "hidden") {
+        return domainProblem(
+          c,
+          blocked.indexes.map((index) => ({
+            code: "participation_not_found",
+            field: `participationIds/${index}`,
+          })),
+        );
+      }
+      if (blocked?.kind === "forbidden") return problem(c, "forbidden");
+      if (blocked) return refused(c, "project_not_active");
+      // Production never queues a message that can't go out (ADR-0006, ADR-0011).
+      if (
+        deps.env.nodeEnv === "production" &&
+        (!deps.reminders || !deps.mailer || !deps.smsSender)
+      ) {
+        return problem(c, "service-unavailable", {
+          errors: [
+            { pointer: "", code: "delivery_unavailable", detail: "Invitations can't be sent now" },
+          ],
+        });
+      }
+      const done = await write(c, () =>
+        requestInvitations(deps, user, appointmentId, input, c.get("requestId")),
+      );
+      if (!done.ok) return done.response;
+      return c.json(done.value, 201);
     },
   );
 

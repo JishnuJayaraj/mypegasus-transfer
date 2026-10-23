@@ -1,11 +1,13 @@
 import type { Mailer, SmsSender } from "@transfer/adapters";
 import { sql, transactionWithClient, type Database } from "@transfer/db";
 import {
+  messageFor,
+  noticeKinds,
   participantActions,
-  reminderMessage,
   terminalMainStatuses,
   type MainStatus,
   type NoticeLanguage,
+  type ReminderKind,
 } from "@transfer/domain";
 import type { Logger } from "pino";
 import { JobError } from "../jobs/errors";
@@ -17,13 +19,21 @@ import type { Release } from "../projects/template-pins";
 /** Retries of `reminders.send` (ADR-0011): the last one's error settles `delivery_unknown`. */
 export const reminderRetryLimit = 5;
 
-/** Where the API queues the reminders' jobs inside the request's transaction (ADR-0011). */
+/** The job of a message: `appointments.notify` for an organizer's notice, else `reminders.send`. */
+export type MessageJob = typeof jobNames.sendReminder | typeof jobNames.notifyAppointment;
+
+/** Where the API queues the messages' jobs inside the request's transaction (ADR-0011). */
 export interface ReminderQueue {
   enqueue(
     reminderId: string,
     db: { executeSql(text: string, values?: unknown[]): Promise<{ rows: unknown[] }> },
+    job?: MessageJob,
   ): Promise<void>;
 }
+
+/** The job a message of `kind` is sent by. */
+export const messageJob = (kind: ReminderKind): MessageJob =>
+  noticeKinds.has(kind) ? jobNames.notifyAppointment : jobNames.sendReminder;
 
 export type ReminderSendDeps = {
   db: Database;
@@ -66,14 +76,16 @@ type Outcome =
   | "skipped";
 
 /**
- * `reminders.send` (data-protection.md, reminders; ADR-0011). No sender for the queued kind: the
- * reminder is cancelled `delivery_unavailable` before any claim. Otherwise one transaction locks
- * the participation, evaluates the participant's actions and claims the dispatch, which rechecks
- * the queued channel, consent, status and requester; a refused claim ends the job. After the
- * commit the fixed text goes to the queued channel with the provider key `reminder:<id>`: `sent`
- * and a definitive `failed` are final; an error or an unknown outcome fails the job for a retry,
- * and on the last attempt (`lastAttempt`) settles `delivery_unknown`. Logs the job, its id, the
- * reminder id and the outcome only: never the address, the text or a provider error.
+ * `reminders.send` and `appointments.notify` (data-protection.md, reminders and messages;
+ * ADR-0011): one message of any kind. No sender for the queued channel: the message is cancelled
+ * `delivery_unavailable` before any claim. Otherwise one transaction locks the participation,
+ * evaluates the participant's actions (a reminder only) and claims the dispatch, which rechecks
+ * the queued channel, consent, status, the requester (not for a notice) and, for an invitation,
+ * the appointment; a refused claim ends the job. After the commit the kind's fixed text goes to
+ * the queued channel with the provider key `reminder:<id>`: `sent` and a definitive `failed` are
+ * final; an error or an unknown outcome fails the job for a retry (the same attempt), and on the
+ * last one (`lastAttempt`) settles `delivery_unknown`. Logs the job, its id, the message id and
+ * the outcome only: never the address, the text or a provider error.
  */
 export async function sendReminder(
   deps: ReminderSendDeps,
@@ -82,8 +94,9 @@ export async function sendReminder(
   lastAttempt: boolean,
 ): Promise<Outcome> {
   const { db, logger } = deps;
+  let job: MessageJob = jobNames.sendReminder;
   const log = (outcome: Outcome) => {
-    logger.info({ job: jobNames.sendReminder, jobId, reminderId, outcome }, "reminder");
+    logger.info({ job, jobId, reminderId, outcome }, "reminder");
     return outcome;
   };
   const record = (outcome: string, cancelReason: string | null = null) =>
@@ -91,13 +104,15 @@ export async function sendReminder(
       ${outcome}::reminder_status, ${cancelReason}::reminder_cancel_reason, ${jobId}) as result`);
   const { rows } = await db.execute<{
     status: string;
+    kind: ReminderKind;
     channelKind: "email" | "sms";
     projectId: string;
     participationId: string;
-  }>(sql`select status, channel_kind as "channelKind", project_id as "projectId",
+  }>(sql`select status, kind, channel_kind as "channelKind", project_id as "projectId",
       participation_id as "participationId"
     from participant_reminder where id = ${reminderId}::uuid`);
   const reminder = rows[0];
+  if (reminder) job = messageJob(reminder.kind);
   if (!reminder || !["queued", "dispatching"].includes(reminder.status)) return log("skipped");
   const sender = reminder.channelKind === "email" ? deps.mailer : deps.smsSender;
   if (!sender) {
@@ -112,10 +127,17 @@ export async function sendReminder(
     const { rows: locked } = await tx.execute<{ status: MainStatus }>(
       sql`select (lock_participation(${reminder.participationId}::uuid)).status as status`,
     );
-    const records = await loadSelfServiceRecords(tx, deps.release, reminder.projectId, [
-      reminder.participationId,
-    ]);
-    const open = hasOpenActions(records.get(reminder.participationId)!, locked[0]!.status);
+    // Only a reminder asks whether something is open; the claim ignores it for the other kinds.
+    const open =
+      reminder.kind !== "open_items" ||
+      hasOpenActions(
+        (
+          await loadSelfServiceRecords(tx, deps.release, reminder.projectId, [
+            reminder.participationId,
+          ])
+        ).get(reminder.participationId)!,
+        locked[0]!.status,
+      );
     const { rows: claim } = await tx.execute<{ result: string }>(sql`
       select claim_reminder_dispatch(${reminderId}::uuid, ${open}, ${jobId}) as result`);
     if (claim[0]!.result !== "dispatching") return null;
@@ -126,7 +148,12 @@ export async function sendReminder(
   });
   if (!claimed) return log("settled");
 
-  const message = reminderMessage(claimed.language, reminder.channelKind, deps.portalPublicUrl);
+  const message = messageFor(
+    reminder.kind,
+    claimed.language,
+    reminder.channelKind,
+    deps.portalPublicUrl,
+  );
   const idempotencyKey = `reminder:${reminderId}`;
   let status: "sent" | "failed";
   try {

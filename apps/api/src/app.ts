@@ -34,6 +34,7 @@ import { projectRoutes } from "./routes/projects";
 import { teamRoutes } from "./routes/team";
 import { activationRoutes } from "./routes/activation";
 import { portalRoutes } from "./routes/portal";
+import { portalAppointmentRoutes } from "./routes/portal-appointments";
 import { selfServiceRoutes } from "./routes/self-service";
 import { assistedModeRoutes } from "./routes/assisted-mode";
 import { createDetached } from "./detached";
@@ -166,6 +167,7 @@ export function createApp(deps: Deps) {
   api.route("/", adminRoutes(runtimeDeps));
   api.route("/", activationRoutes(runtimeDeps));
   api.route("/", portalRoutes(runtimeDeps));
+  api.route("/", portalAppointmentRoutes(runtimeDeps));
   api.route("/", selfServiceRoutes(runtimeDeps));
   api.route("/", assistedModeRoutes(runtimeDeps));
   api.route("/", documentRoutes(runtimeDeps));

@@ -2,12 +2,16 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { and, desc, eq, participantReminder, participation, sql } from "@transfer/db";
 import {
   mayReadReminders,
+  mayResolveAppointmentItem,
+  NoticeFollowUpInput,
+  noticeUndelivered,
   ReminderPage,
   ReminderRequestInput,
   ReminderRequestResult,
+  terminalMainStatuses,
 } from "@transfer/domain";
 import type { Context } from "hono";
-import { projectAccess } from "../access";
+import { projectAccess, projectTarget } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { functionRefusal } from "../database-errors";
@@ -16,13 +20,14 @@ import { loadRelease } from "../projects/template-pins";
 import { reminderRefusal, requestReminders } from "../reminders/service";
 import { sendReminder } from "../reminders/send";
 import { requireSession, sessionUser } from "../session";
-import { utc } from "../sql";
+import { auditContext, utc } from "../sql";
 
 // Reminders (data-protection.md, reminders; ADR-0010): the bulk request and the participant's
 // message log. Ids, codes and dates only: never an address, a text or who requested by name.
 
 const ProjectParams = z.object({ projectId: z.uuid() });
 const ParticipationParams = z.object({ participationId: z.uuid() });
+const FollowUpParams = z.object({ participationId: z.uuid(), reminderId: z.uuid() });
 const PageQuery = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.string().optional(),
@@ -146,11 +151,11 @@ export function reminderRoutes(deps: Deps) {
       const { participationId } = c.req.valid("param");
       const { limit, cursor } = c.req.valid("query");
       const [row] = await db
-        .select({ projectId: participation.projectId })
+        .select({ projectId: participation.projectId, status: participation.status })
         .from(participation)
         .where(eq(participation.id, participationId));
       if (!row) return problem(c, "not-found");
-      const { subject, visible } = await projectAccess(db, sessionUser(c), row.projectId);
+      const { subject, visible, regionId } = await projectAccess(db, sessionUser(c), row.projectId);
       if (!visible) return problem(c, "not-found");
       if (!mayReadReminders(subject, { projectId: row.projectId, participationId })) {
         return problem(c, "forbidden");
@@ -174,6 +179,10 @@ export function reminderRoutes(deps: Deps) {
           status: participantReminder.status,
           cancelReason: participantReminder.cancelReason,
           outcomeAt: utc(participantReminder.outcomeAt),
+          appointmentId: participantReminder.appointmentId,
+          bySystem: sql<boolean>`${participantReminder.requestedBy} is null`,
+          followUpMethod: participantReminder.followedUpMethod,
+          followedUpAt: utc(participantReminder.followedUpAt),
         })
         .from(participantReminder)
         .where(
@@ -187,9 +196,22 @@ export function reminderRoutes(deps: Deps) {
         )
         .orderBy(desc(participantReminder.requestedAt), desc(participantReminder.id))
         .limit(limit + 1);
+      // "Nachverfolgung erfassen" (data-protection.md, messages: follow-up).
+      const mayFollowUp =
+        !terminalMainStatuses.has(row.status) &&
+        mayResolveAppointmentItem(
+          subject,
+          projectTarget(row.projectId, regionId, participationId),
+          "notice_undelivered",
+        ).ok;
       const items = rows.slice(0, limit).map((item) => ({
         ...item,
         outcomeAt: item.outcomeAt ?? null,
+        followedUpAt: item.followedUpAt ?? null,
+        capabilities: {
+          followUp:
+            mayFollowUp && noticeUndelivered({ ...item, followedUp: item.followUpMethod !== null }),
+        },
       }));
       const last = items.at(-1);
       c.header("Cache-Control", "private, no-store");
@@ -203,6 +225,78 @@ export function reminderRoutes(deps: Deps) {
         },
         200,
       );
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/reminders/{reminderId}/follow-up",
+      tags: ["reminders"],
+      summary:
+        "Record how the person was told of an undelivered organizer's notice, or that it isn't needed (the PL, the assigned consultant)",
+      middleware,
+      request: {
+        params: FollowUpParams,
+        body: { required: true, content: { "application/json": { schema: NoticeFollowUpInput } } },
+      },
+      responses: {
+        204: { description: "Recorded" },
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { participationId, reminderId } = c.req.valid("param");
+      const { method } = c.req.valid("json");
+      const [row] = await db
+        .select({ projectId: participantReminder.projectId })
+        .from(participantReminder)
+        .where(
+          and(
+            eq(participantReminder.id, reminderId),
+            eq(participantReminder.participationId, participationId),
+          ),
+        );
+      if (!row) return problem(c, "not-found");
+      const { subject, visible, regionId } = await projectAccess(db, user, row.projectId);
+      const target = { projectId: row.projectId, participationId };
+      if (!visible || !mayReadReminders(subject, target)) return problem(c, "not-found");
+      if (
+        !mayResolveAppointmentItem(
+          subject,
+          projectTarget(row.projectId, regionId, participationId),
+          "notice_undelivered",
+        ).ok
+      ) {
+        return problem(c, "forbidden");
+      }
+      try {
+        await db.execute(sql`select record_notice_follow_up(
+          p_context => ${auditContext(user.id, c.get("requestId"))},
+          p_reminder_id => ${reminderId}::uuid,
+          p_method => ${method}::notice_follow_up_method)`);
+      } catch (error) {
+        const code = functionRefusal(error);
+        if (code === "reminder_not_found") return problem(c, "not-found");
+        if (code === "actor_not_allowed") return problem(c, "forbidden");
+        if (
+          code === "notice_delivered" ||
+          code === "already_followed_up" ||
+          code === "participation_closed"
+        ) {
+          return domainProblem(c, [code]);
+        }
+        throw error;
+      }
+      return c.body(null, 204);
     },
   );
 

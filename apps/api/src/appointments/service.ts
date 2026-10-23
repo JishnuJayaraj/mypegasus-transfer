@@ -43,7 +43,9 @@ export const appointmentColumns = sql`a.id, a.project_id as "projectId", a.kind,
   ${at("a.starts_at")} as "startsAt", ${at("a.ends_at")} as "endsAt",
   ${at("a.booking_closes_at")} as "bookingClosesAt", a.capacity, a.title, a.venue, a.status,
   a.cancel_reason as "cancelReason", ${at("a.cancelled_at")} as "cancelledAt", a.version,
-  exists (select from appointment_booking u where u.appointment_id = a.id) as "inUse"`;
+  (exists (select from appointment_booking u where u.appointment_id = a.id)
+    or exists (select from participant_reminder i
+               where i.appointment_id = a.id and i.kind = 'appointment_invitation')) as "inUse"`;
 
 export async function loadAppointment(
   db: Pick<Database, "execute">,

@@ -54,7 +54,7 @@ export const Appointment = z
     status: AppointmentStatus,
     cancelReason: AppointmentCancelReason.nullable(),
     cancelledAt: instant.nullable(),
-    /** Booking or invitation present: kind, times, cutoff and audience are frozen. */
+    /** Booking or invitation present (also cancelled): kind, times, cutoff and audience are frozen. */
     inUse: z.boolean(),
     version: z.int().min(1),
     bookings: BookingCounts,
