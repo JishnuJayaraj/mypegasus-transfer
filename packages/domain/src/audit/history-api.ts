@@ -25,10 +25,15 @@ export const HistoryActor = z
   .meta({ id: "HistoryActor" });
 export type HistoryActor = z.infer<typeof HistoryActor>;
 
-/** A status change (`field`), a creation (to `imported`) or an end-reason correction (no field). */
-export const HistoryChange = z
-  .strictObject({ field: StatusField.nullable(), from: z.string().nullable(), to: z.string() })
-  .meta({ id: "HistoryChange" });
+/**
+ * A status change (`field`), a creation (to `imported`) or an end-reason correction (no field).
+ * No schema id: it is only used nullable (an id would make the generated type nullable everywhere).
+ */
+export const HistoryChange = z.strictObject({
+  field: StatusField.nullable(),
+  from: z.string().nullable(),
+  to: z.string(),
+});
 
 /** A shown detail: a code, a date, an id or a list of codes. */
 const HistoryDetail = z.union([z.string(), z.array(z.string())]).nullable();

@@ -27,3 +27,6 @@ export const { encode: encodeCursor, decode: decodeCursor } = cursorCodec(Cursor
 export const templateCursor = cursorCodec(
   z.strictObject({ agenturKey: AgenturKey, version: z.int().min(1) }),
 );
+
+/** The audit history's position: the last shown event's sequence number (opaque to the client). */
+export const historyCursor = cursorCodec(z.strictObject({ before: z.int().min(1) }));

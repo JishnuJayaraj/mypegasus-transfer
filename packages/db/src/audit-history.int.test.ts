@@ -87,7 +87,7 @@ async function participation() {
   return call(app, "create_participation", { projectId: seedProjectIds.werkNord, context: pl });
 }
 
-async function assign(participationId: string, staffUserId = consultant) {
+async function assign(participationId: string, staffUserId: string = consultant) {
   await call(app, "assign_participations", {
     projectId: seedProjectIds.werkNord,
     participationIds: [participationId],
@@ -351,7 +351,7 @@ describe("audit_history redaction (Q157)", () => {
     id = await participation();
   });
 
-  const latest = async (staffUserId = projectLead) =>
+  const latest = async (staffUserId: string = projectLead) =>
     (await history(await session(staffUserId), id))[0]!;
 
   it("keeps only the allowed detail keys", async () => {

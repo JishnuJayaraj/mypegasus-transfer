@@ -4269,6 +4269,197 @@
         ],
         "additionalProperties": false
       },
+      "HistoryPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "HistoryEntry": {
+        "type": "object",
+        "properties": {
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "type": {
+            "$ref": "#/components/schemas/HistoryEventType"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/HistoryActor"
+          },
+          "change": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "field": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "status",
+                  "profiling_status",
+                  "dsv_status",
+                  null
+                ]
+              },
+              "from": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "to": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "field",
+              "from",
+              "to"
+            ],
+            "additionalProperties": false
+          },
+          "reasonCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effectiveDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "occurredAt",
+          "type",
+          "actor",
+          "change",
+          "reasonCode",
+          "effectiveDate",
+          "details"
+        ],
+        "additionalProperties": false
+      },
+      "HistoryEventType": {
+        "type": "string",
+        "enum": [
+          "participation_created",
+          "status_changed",
+          "entry_wave_assigned",
+          "profiling_exception_requested",
+          "profiling_exception_approved",
+          "profiling_exception_rejected",
+          "profiling_exception_revoked",
+          "profiling_exception_superseded",
+          "end_reason_corrected",
+          "warning_confirmed",
+          "participant_data_changed",
+          "participation_created_manually",
+          "participation_dates_changed",
+          "participant_assigned",
+          "participant_unassigned",
+          "activation_code_issued",
+          "activation_code_delivery",
+          "activation_code_handed_over",
+          "activation_code_revoked",
+          "privacy_notice_provided",
+          "participant_activated",
+          "consent_given",
+          "contact_channel_added",
+          "contact_channel_removed",
+          "consent_ended",
+          "placement_agentur_set",
+          "self_service_notice_acknowledged",
+          "document_added",
+          "document_reviewed",
+          "document_deleted",
+          "reminder_queued",
+          "reminder_delivery"
+        ]
+      },
+      "HistoryActor": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "staff",
+              "participant",
+              "system"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assisted": {
+            "type": "boolean"
+          },
+          "job": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "assisted",
+          "job"
+        ],
+        "additionalProperties": false
+      },
       "ProjectTeam": {
         "type": "object",
         "properties": {
@@ -12350,6 +12541,96 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ReminderPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/history": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The participation's audit history, newest first (an opaque cursor): the viewer's streams only, redacted by the database",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "cursor",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of the history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryPage"
                 }
               }
             }

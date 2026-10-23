@@ -3019,6 +3019,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participation's audit history, newest first (an opaque cursor): the viewer's streams only, redacted by the database */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of the history */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HistoryPage"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -9517,6 +9594,44 @@ export interface components {
             cancelReason: "channel_unavailable" | "consent_ended" | "participation_closed" | "nothing_open" | "requester_no_longer_authorized" | "delivery_unavailable" | null;
             /** Format: date-time */
             outcomeAt: string | null;
+        };
+        HistoryPage: {
+            items: components["schemas"]["HistoryEntry"][];
+            nextCursor: string | null;
+        };
+        HistoryEntry: {
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            occurredAt: string;
+            type: components["schemas"]["HistoryEventType"];
+            actor: components["schemas"]["HistoryActor"];
+            change: {
+                /** @enum {string|null} */
+                field: "status" | "profiling_status" | "dsv_status" | null;
+                from: string | null;
+                to: string;
+            } | null;
+            reasonCode: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            effectiveDate: string | null;
+            details: {
+                [key: string]: string | string[] | null;
+            };
+        };
+        /** @enum {string} */
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery";
+        HistoryActor: {
+            /** @enum {string} */
+            kind: "staff" | "participant" | "system";
+            name: string | null;
+            assisted: boolean;
+            job: string | null;
         };
         ProjectTeam: {
             members: components["schemas"]["ProjectMember"][];
