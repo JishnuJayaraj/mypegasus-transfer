@@ -242,8 +242,9 @@ keeps its signature and refuses a participant actor (`actor_not_allowed`). An ac
 gets no new activation code (`already_activated`; a recovery code comes with PR 3f).
 
 A terminal status runs in the status transaction: moving to `withdrawn`, `ta_completed` or
-`exited` revokes every open activation code as `participation_closed` and ends the participant's
-sessions (`participation_closed`).
+`exited` revokes every open activation code as `participation_closed`, ends the participant's
+sessions (`participation_closed`) and cancels the live bookings of appointments that haven't
+started (`participation_closed`, audited by the system; see "Appointments").
 
 There is no self-registration: `self_registered` and `rejected` (its only path) left the
 lifecycle core in Slice 3 ([round 35](../decisions/2026-10-20-answers-round-35.md)).
@@ -621,13 +622,55 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 | Project setup | PL | name, customer, type, Project Agentur (KuG-Agentur for `ta_tg`), pinned Agentur templates, overrides; in `ta_tg` entry waves with their dates; activation |
 | Import / manual creation | PL | participations in `imported`; import report with row errors, warnings and possible duplicates (see below) |
 | Portal activation | PL/back office → participants | PR 3d issues a personal activation code per participation (letter, printed sheet with recorded handover, or sent in person to a private email/mobile after a photo-ID check), supplies and records the Article 14 notice and revokes open codes when a participation closes; PR 3e lets the participant activate and register a private email/mobile, then moves `imported`/`unreachable` to `contacted` (Q112–Q120) |
-| Info events & appointments | PL/Berater, participants self-book | attendance → `informed`; DSV often handed out here (`dsv_offered`) |
+| Info events & appointments | PL/Berater book (Slice 5b-1), participants self-book (5b-3) | bookings (see "Appointments" below); attendance → `informed` (5b-2); DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |
 | Arbeitsuchendmeldung | participant / TG | ASU record with channel and proof; Kug 200b signed, collected and submitted in batches per placement Agentur (also offered to people who registered as job-seeking themselves, for the profile-access consent) |
 | Profiling | profiler + participant | profiling track, TL 407 (incl. "Anlage" for overflow), signatures |
 | Submission to Agentur | assigned PL | TL 407 submission status and channel per participant |
 | DSV | PL / back office | DSV track, signatures of all three parties, scan, original location |
+
+### Appointments *(accepted, Q162, Q164, Q168; Slice 5b)*
+
+An **appointment** is an `info_event` (a group event, for the whole project or, in `ta_tg`, one
+entry wave) or a `consultation` (a slot with one host, a PL or consultant of the project). It has
+start and end (`timestamptz`, shown in Europe/Berlin), a capacity of 1–500, a public booking cutoff
+0–14 whole days before the start (default one day), an optional generic title (≤ 100) and the
+shared venue (1–200), and is `scheduled` or `cancelled`. Title and venue are generic: no names,
+diagnoses or consultation notes (data-protection.md, appointments). One policy in every project
+(`appointmentPolicy`): nothing varies per Agentur.
+
+- **Creating and changing** (as built in 5b-1): the start lies in the future (`starts_in_past`,
+  Q170). Capacity rises any time and falls to no fewer than the live bookings
+  (`capacity_below_bookings`); title and venue may be corrected with bookings present. Times, the
+  public cutoff and the audience never change once the appointment has had a booking
+  (`appointment_in_use`: cancel it and create a new one), so every booking keeps its
+  appointment's times; the kind never changes (Q170). No two scheduled slots of one host overlap,
+  in any project (`host_overlap`; touching is fine, Q171). The PL changes a slot's host before its
+  start, to a PL or consultant who may list every live booking of it (`host_not_responsible`).
+- **Cancelling by the organizer:** before or after the start, with a closed reason
+  (`organiser_unavailable`, `too_few_bookings`, `did_not_take_place`, `created_in_error`,
+  `other`); every live booking is cancelled with it (`appointment_cancelled`). A cancelled
+  appointment leaves no attendance work. No operational delete; retention applies.
+- **Booking** (`bookingEligibility`, the database decides again), refused in this order:
+  `appointment_cancelled`, `appointment_started` (staff book until the start, also after the
+  public cutoff; a late booking is a booking, not a walk-in), `booking_closed` (the participant
+  after the public cutoff), `participation_closed` (terminal), `not_in_audience` (an info event of
+  another wave, or a participation from `active_in_tg` on), `host_not_responsible` (a consultation
+  whose host may not list the participation), `already_booked`, `info_event_limit` (one live
+  info-event booking whose event hasn't ended, Q171), `booking_overlap` (two live bookings of one
+  participation overlapping; touching is fine; any number of consultations), `appointment_full`,
+  `after_cutoff` (before `informed` in `ta_tg`, today after the wave's `latestEntryDate`: the
+  `before_cutoff` semantics). A bookable appointment whose Berlin start date lies after the upcoming
+  `latestEntryDate` of a participation before `active_in_tg` is booked with the warning
+  `beyond_upcoming_cutoff` (Q172); nothing predicts a withdrawal.
+- **Cancelling a booking:** staff (the PL, the assigned consultant) any live booking until the
+  start; the participant their own from 5b-3. No waiting list.
+- **A terminal status** cancels the participation's live bookings of appointments that haven't
+  started (`participation_closed`, see "Main status"); bookings of started appointments stay for
+  the attendance record (5b-2).
+- Attendance, `informed` from attendance (5b-2), invitations and notices (5b-3) and the work list's
+  appointment items (5b-4) follow [the Slice 5b plan](../plans/slice-5b.md).
 
 ### Document review *(assumed, Q146; Slice 4b)*
 

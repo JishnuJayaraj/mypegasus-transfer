@@ -278,6 +278,40 @@ generator then. No action now.
   unassigned consultant) → the function, whose refusals map `unauthenticated` → 401,
   `not_member` and `not_assigned` → 403, `participation_not_found` → 404.
 
+## Note 2026-10-23 (Slice 5b, PR 5b-1): appointments and staff bookings
+
+- **Routes:** `GET /projects/{id}/appointments` (`AppointmentPage`: `period` `upcoming` (not
+  ended, soonest first) or `past` (latest first), cursor on the start, `capabilities`
+  `createInfoEvent`, `createConsultation`, `chooseHost`), `POST /projects/{id}/appointments`
+  (`AppointmentInput` → `201 Appointment`), `GET` and `PATCH /appointments/{id}`
+  (`AppointmentChangeInput` with `expectedVersion`; the API sends the whole new state to the
+  function; a moved start keeps the cutoff's days), `POST /appointments/{id}/host`
+  (`{ expectedVersion, hostStaffUserId }`), `POST /appointments/{id}/cancellation` (`{ reason }`),
+  `GET /appointments/{id}/bookings` (the bookings the viewer may list, live first, with the
+  listable person fields), `POST /appointments/{id}/bookings` (`{ participationId }` →
+  `201 { bookingId, warnings }`), `POST /appointment-bookings/{id}/cancellation` (`{}` → `204`),
+  `GET /participations/{id}/appointments` (the bookings and the upcoming appointments in the
+  participation's audience or host rule, each with its seat state and refusal code or warnings).
+  Every list and item is `private, no-store`.
+- **An `Appointment`** carries `bookings` as the viewer's view (`{ scope: "all", booked,
+  availability }`, `{ scope: "own", own, availability }`), never a total outside the exact scope;
+  `needsResolution` (the PL only, else null); `inUse`; `capabilities` `change`, `changeHost`,
+  `cancel`, `book`.
+- **Order:** the schema (400) → visibility (404: an unknown appointment or one of a project the
+  viewer can't see; a booking whose participation the viewer may not list) → membership or the
+  operation's permission (403: not a member, back office booking, a consultant on an info event
+  or another's slot) → a participation in the body the viewer can't list, or of another project,
+  `422 participation_not_found` at `/participationId` → state (422, the domain's booking codes
+  before the function) → version (409 `conflict`). The function's refusals map `actor_not_allowed`
+  → 403, `stale_version` → 409, `appointment_not_found`/`booking_not_found` → 404, the rest → 422.
+- **Problem codes:** 422 `host_not_allowed` (`/hostStaffUserId`), `host_overlap`,
+  `starts_in_past` (`/startsAt`), `ends_before_start` (`/endsAt`), `capacity_below_bookings`
+  (`/capacity`), `appointment_in_use`, `appointment_unchanged`, `appointment_cancelled`,
+  `appointment_started`, `audience_mismatch` (`/audienceWaveId`), `not_consultation`,
+  `host_not_responsible`, the booking codes (`participation_closed`, `not_in_audience`,
+  `already_booked`, `info_event_limit`, `booking_overlap`, `appointment_full`, `after_cutoff`),
+  `booking_cancelled`; 400 `host_mismatch`, `control_character`; the others exist.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

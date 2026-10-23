@@ -204,8 +204,9 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## The project page (Slice 5, PR 5-1)
 
-- The tabs "Übersicht" (the dashboard), "Teilnehmende" (the work list), "Einrichtung" (project
-  setup, Agentur settings, waves, import) and "Team"; the tab and the work list's code filters
+- The tabs "Übersicht" (the dashboard), "Teilnehmende" (the work list), "Termine" (the
+  appointments, PR 5b-1), "Einrichtung" (project setup, Agentur settings, waves, import) and
+  "Team"; the tab and the work list's code filters
   are the route's search params (`?tab=participants&status=informed`), never a person's value.
   Each tab loads its data only while shown.
 - One snapshot per project (`worklistQuery`, `GET /projects/{id}/worklist`) feeds the work list;
@@ -227,16 +228,29 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   after a bulk action keeps the previous snapshot visible with its time ("Stand 10:42") and keeps
   "Alle Treffer auswählen" disabled until it is complete. The search field has
   `autocomplete="off"`.
+- **"Termine"** (PR 5b-1, `apps/web/src/components/appointments.tsx`): upcoming or past
+  appointments (Art, Datum, Ort, Gastgeber·in, the API's count view "12 von 40" or "davon Ihre: 3"
+  with "Plätze frei / ausgebucht", Status, "Klärung nötig" for the PL), "Infoveranstaltung
+  anlegen" and "Beratungstermin anlegen" by the page's capabilities, the form with the hint on
+  personal data (Berlin date and times, the public cutoff in days). The appointment page
+  (`/projects/$projectId/appointments/$appointmentId`): details, "Ändern" (times, cutoff and
+  audience read-only once booked), "Gastgeber·in ändern" (the PL), "Absagen" with a reason and the
+  confirmation, the bookings the viewer may list with "Buchung absagen", and "Teilnehmende buchen"
+  from the viewer's work list snapshot (the name search stays in the component, as on the work
+  list), the API's warning shown with the result.
 - **A refused bulk wave assignment** says "Keine Zuweisung vorgenommen" first, then lists the
   refused rows by Personalnummer with their reasons (all or nothing,
   process-and-lifecycle.md).
 
 ## The participant page
 
-- The tabs "Übersicht", "Selbstauskunft", "Unterlagen", "Nachrichten" and "Verlauf", the tab in
+- The tabs "Übersicht", "Selbstauskunft", "Unterlagen", "Termine", "Nachrichten" and "Verlauf", the tab in
   the route's search param (`?tab=history`); each tab other than the overview loads its data only
   while shown, so opening "Verlauf" (an audited opening, data-protection.md) happens only when the
   user chooses it.
+- "Termine" (PR 5b-1, `apps/web/src/components/participation-appointments.tsx`): the
+  participation's bookings with "Buchung absagen", and the upcoming appointments in its audience or
+  host rule with the seat state, the refusal or the cutoff warning, and "Buchen".
 - "Verlauf" (PR 5-3, `apps/web/src/components/history.tsx`): Zeitpunkt (Berlin), Ereignis,
   Änderung (von → nach; the wave codes from the project's waves, field names, document types,
   dates), Grund, Wirksam am, Durch (the name, "Ehemaliges Teammitglied", "Teilnehmer·in",
