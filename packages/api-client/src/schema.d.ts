@@ -3863,6 +3863,292 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/appointments/{appointmentId}/attendance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record or correct attendance (the PL, the assigned consultant; after a close the PL with a reason): 1–500 rows, all or nothing, walk-ins, and "als informiert erfassen" with the delivery confirmed */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    appointmentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AttendanceInput"];
+                };
+            };
+            responses: {
+                /** @description What was recorded and the status changes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AttendanceResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointment-bookings/{bookingId}/informed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Als informiert erfassen" on a qualifying attendance, or "Als Grundlage bestätigen" while another basis is in conflict, with the delivery confirmed */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["InformedInput"];
+                };
+            };
+            responses: {
+                /** @description The status changes made */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InformedResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointment-bookings/{bookingId}/conflict-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The PL's review of an attendance conflict: escalated (stays open) or information_delivered_otherwise (resolved), also after the close */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bookingId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConflictReviewInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/history": {
         parameters: {
             query?: never;
@@ -10516,6 +10802,8 @@ export interface components {
             changeHost: boolean;
             cancel: boolean;
             book: boolean;
+            recordAttendance: boolean;
+            correctNotTakenPlace: boolean;
         };
         AppointmentInput: {
             kind: components["schemas"]["AppointmentKind"];
@@ -10600,14 +10888,37 @@ export interface components {
              */
             cancelledAt: string | null;
             needsResolution: boolean | null;
-            capabilities: {
-                cancel: boolean;
-            };
+            /** @enum {string|null} */
+            attendance: "attended" | "absent" | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            attendanceRecordedAt: string | null;
+            /** @enum {string|null} */
+            afterCloseReason: "late_entry" | "correction" | null;
+            informedBasis: boolean;
+            superseded: boolean;
+            /** @enum {string|null} */
+            conflict: "open" | "escalated" | "resolved" | null;
+            /** @enum {string|null} */
+            conflictResolution: "replacement_basis" | "information_delivered_otherwise" | null;
+            capabilities: components["schemas"]["BookingCapabilities"];
         };
         /** @enum {string} */
         BookingStatus: "booked" | "cancelled";
         /** @enum {string} */
         BookingOrigin: "participant" | "staff" | "walk_in";
+        BookingCapabilities: {
+            cancel: boolean;
+            recordAttended: boolean;
+            recordAbsent: boolean;
+            offerInformed: boolean;
+            afterClose: boolean;
+            markInformed: boolean;
+            confirmBasis: boolean;
+            reviewConflict: boolean;
+        };
         BookingResult: {
             /** Format: uuid */
             bookingId: string;
@@ -10646,9 +10957,22 @@ export interface components {
                  * @description UTC timestamp (ISO 8601)
                  */
                 cancelledAt: string | null;
-                capabilities: {
-                    cancel: boolean;
-                };
+                /** @enum {string|null} */
+                attendance: "attended" | "absent" | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                attendanceRecordedAt: string | null;
+                /** @enum {string|null} */
+                afterCloseReason: "late_entry" | "correction" | null;
+                informedBasis: boolean;
+                superseded: boolean;
+                /** @enum {string|null} */
+                conflict: "open" | "escalated" | "resolved" | null;
+                /** @enum {string|null} */
+                conflictResolution: "replacement_basis" | "information_delivered_otherwise" | null;
+                capabilities: components["schemas"]["BookingCapabilities"];
             }[];
             bookable: {
                 appointment: components["schemas"]["AppointmentSummary"];
@@ -10679,6 +11003,40 @@ export interface components {
             venue: string;
             status: components["schemas"]["AppointmentStatus"];
         };
+        AttendanceResult: {
+            recorded: number;
+            informed: number;
+            statusChanges: number;
+        };
+        AttendanceInput: {
+            entries: {
+                /** Format: uuid */
+                participationId: string;
+                /** @enum {string} */
+                attendance: "attended" | "absent";
+                /** @default false */
+                markInformed: boolean;
+            }[];
+            /** @default false */
+            informationDelivered: boolean;
+            /**
+             * @default null
+             * @enum {string|null}
+             */
+            afterCloseReason: "late_entry" | "correction" | null;
+        };
+        InformedResult: {
+            statusChanges: number;
+        };
+        InformedInput: {
+            /** @enum {boolean} */
+            informationDelivered: true;
+        };
+        ConflictReviewInput: {
+            reason: components["schemas"]["AttendanceConflictReview"];
+        };
+        /** @enum {string} */
+        AttendanceConflictReview: "escalated" | "information_delivered_otherwise";
         HistoryPage: {
             items: components["schemas"]["HistoryEntry"][];
             nextCursor: string | null;
@@ -10709,7 +11067,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";

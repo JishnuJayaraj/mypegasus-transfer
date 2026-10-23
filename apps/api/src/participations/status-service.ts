@@ -32,7 +32,9 @@ import {
   type EntryWave,
   type GuardId,
   type DatesIssue,
+  type Edge,
   type IsoDate,
+  type MainStatus,
   type ParticipationDatesInput,
   type Operation,
   type OperationContext,
@@ -380,6 +382,39 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
   }
 
   return {
+    /**
+     * Whether the steps along existing edges pass inside the caller's transaction, which holds
+     * the project lock (process-and-lifecycle.md, appointments: `informed` from attendance): per
+     * step the actor's permission (`mayPerformTransition`) and the lifecycle check with the
+     * participation's wave, dated facts and today. Locks the participation; the first refusal's
+     * code (a failed guard by its id, a denial as `actor_not_allowed`), or null. The status
+     * function decides again.
+     */
+    async checkSteps(
+      tx: Transaction,
+      actor: ServiceActor,
+      participationId: string,
+      steps: readonly Edge[],
+    ): Promise<string | null> {
+      const loaded = await load(tx, participationId, actor);
+      const guardFacts = await facts.facts(tx, {
+        participationId,
+        currentRequest: loaded.exception,
+      });
+      let current = loaded.context.current;
+      for (const edge of steps) {
+        if (!mayPerformTransition(actor, edge, loaded.target).ok) return "actor_not_allowed";
+        const check = canTransition(edge.track, edge.from!, edge.to, {
+          ...loaded.context,
+          current,
+          facts: guardFacts,
+        });
+        if (!check.ok) return check.failedGuards[0] ?? check.code;
+        current = { ...current, status: edge.to as MainStatus };
+      }
+      return null;
+    },
+
     /** Creation along the creation edge (`imported`, by the PL, Q60). */
     async createParticipation(
       actor: ServiceActor,

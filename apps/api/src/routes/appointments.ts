@@ -9,6 +9,8 @@ import {
   AppointmentInput,
   AppointmentPage,
   AppointmentQuery,
+  AttendanceInput,
+  AttendanceResult,
   bookingClosesAt,
   bookingCutoffDays,
   bookingEligibility,
@@ -16,22 +18,36 @@ import {
   BookingResult,
   bookingView,
   cancellationEligibility,
+  ConflictReviewInput,
+  InformedInput,
+  InformedResult,
   mayBookFor,
   mayListBookings,
   mayListField,
   mayManageAppointment,
+  mayRecordAttendance,
+  mayResolveAppointmentItem,
   needsResolution,
   ParticipationAppointments,
+  terminalMainStatuses,
   type StaffUser,
 } from "@transfer/domain";
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
 import { projectTarget } from "../access";
 import {
+  AttendanceRefusal,
+  bookingAttendanceColumns,
+  bookingAttendanceView,
+  createAttendanceService,
+  type BookingAttendanceRow,
+} from "../appointments/attendance";
+import {
   appointmentColumns,
   appointmentView,
   appointmentViewer,
   bookingParticipation,
+  booksAtAll,
   hostRule,
   isMember,
   liveBookingsOf,
@@ -43,6 +59,7 @@ import {
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { decodeCursor, encodeCursor } from "../cursor";
 import { functionRefusal } from "../database-errors";
+import { BulkRefusal, StatusServiceError } from "../participations/status-service";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
 import { auditContext } from "../sql";
@@ -70,6 +87,7 @@ const fieldOf: Record<string, string> = {
   appointment_in_use: "startsAt",
   audience_mismatch: "audienceWaveId",
   participation_not_found: "participationId",
+  information_delivery_unconfirmed: "informationDelivered",
 };
 const refused = (c: Context<AppEnv>, code: string) =>
   domainProblem(c, [{ code, field: fieldOf[code] ?? null }]);
@@ -98,6 +116,22 @@ const stateCodes = new Set([
   "appointment_full",
   "after_cutoff",
   "booking_cancelled",
+  // Attendance and `informed` (Q163, Q164)
+  "attendance_recorded",
+  "appointment_not_started",
+  "appointment_not_ended",
+  "after_close_reason_required",
+  "started_after_close",
+  "not_booked",
+  "attendance_unchanged",
+  "mark_informed_not_allowed",
+  "before_cutoff",
+  "information_delivery_unconfirmed",
+  "not_attended",
+  "already_basis",
+  "already_informed",
+  "no_conflict",
+  "already_escalated",
 ]);
 
 /** The refusal of a write function as a problem; undefined for anything else (a 500). */
@@ -138,8 +172,26 @@ const call = async (db: Database, query: ReturnType<typeof sql>) => {
   return rows[0]!.result;
 };
 
+/** A refusal of the attendance service as a problem; anything else is rethrown. */
+function attendanceProblem(c: Context<AppEnv>, error: unknown) {
+  if (error instanceof BulkRefusal) {
+    return domainProblem(
+      c,
+      error.rows.map(({ index, code }) => ({ code, field: `entries/${index}` })),
+    );
+  }
+  if (error instanceof AttendanceRefusal) {
+    return domainProblem(c, [{ code: error.code, field: error.field }]);
+  }
+  if (error instanceof StatusServiceError) return refused(c, error.code);
+  const response = refusal(c, functionRefusal(error));
+  if (response) return response;
+  throw error;
+}
+
 export function appointmentRoutes(deps: Deps) {
   const { db, clock } = deps;
+  const attendance = createAttendanceService(deps);
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const now = () => clock.now().toISOString();
@@ -498,30 +550,31 @@ export function appointmentRoutes(deps: Deps) {
       const found = await access(c, sessionUser(c), c.req.valid("param").appointmentId);
       if (found.response) return found.response;
       const { row, viewer } = found;
-      const { rows } = await db.execute<{
-        id: string;
-        participationId: string;
-        personnelNumber: string | null;
-        lastName: string | null;
-        firstName: string | null;
-        status: "booked" | "cancelled";
-        origin: "participant" | "staff" | "walk_in";
-        bookedAt: string;
-        cancelReason:
-          | null
-          | "participant_cancelled"
-          | "staff_cancelled"
-          | "appointment_cancelled"
-          | "participation_closed";
-        cancelledAt: string | null;
-      }>(
+      const { rows } = await db.execute<
+        BookingAttendanceRow & {
+          id: string;
+          personnelNumber: string | null;
+          lastName: string | null;
+          firstName: string | null;
+          origin: "participant" | "staff" | "walk_in";
+          bookedAt: string;
+          cancelReason:
+            | null
+            | "participant_cancelled"
+            | "staff_cancelled"
+            | "appointment_cancelled"
+            | "participation_closed";
+          cancelledAt: string | null;
+        }
+      >(
         sql`select b.id, b.participation_id as "participationId",
             i.personnel_number as "personnelNumber", i.last_name as "lastName",
             i.first_name as "firstName", b.status, b.origin,
             to_char(b.booked_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "bookedAt",
             b.cancel_reason as "cancelReason",
-            to_char(b.cancelled_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cancelledAt"
-          from appointment_booking b
+            to_char(b.cancelled_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cancelledAt",
+            ${bookingAttendanceColumns}
+          from appointment_booking b join participation q on q.id = b.participation_id
           left join participant_identity i on i.participation_id = b.participation_id
           where b.appointment_id = ${row.id}::uuid
           order by b.status = 'booked' desc, i.last_name, i.first_name, b.id`,
@@ -546,31 +599,42 @@ export function appointmentRoutes(deps: Deps) {
       c.header("Cache-Control", "private, no-store");
       return c.json(
         {
-          items: visible.map((booking) => ({
-            ...booking,
-            personnelNumber: field(
-              booking.participationId,
-              "personnelNumber",
-              booking.personnelNumber,
-            ),
-            lastName: field(booking.participationId, "lastName", booking.lastName),
-            firstName: field(booking.participationId, "firstName", booking.firstName),
-            needsResolution: lead
-              ? needsResolution(
-                  booking,
-                  row,
-                  hostMayList(row.hostStaffUserId, booking.participationId),
-                  viewer.now,
-                )
-              : null,
-            capabilities: {
-              cancel:
-                mayBookFor(
-                  viewer.subject,
-                  projectTarget(row.projectId, viewer.regionId, booking.participationId),
-                ).ok && cancellationEligibility(booking, row, viewer.now) === "ok",
-            },
-          })),
+          items: visible.map((booking) => {
+            const { fields, capabilities } = bookingAttendanceView(viewer, row, booking);
+            return {
+              id: booking.id,
+              participationId: booking.participationId,
+              personnelNumber: field(
+                booking.participationId,
+                "personnelNumber",
+                booking.personnelNumber,
+              ),
+              lastName: field(booking.participationId, "lastName", booking.lastName),
+              firstName: field(booking.participationId, "firstName", booking.firstName),
+              status: booking.status,
+              origin: booking.origin,
+              bookedAt: booking.bookedAt,
+              cancelReason: booking.cancelReason,
+              cancelledAt: booking.cancelledAt,
+              needsResolution: lead
+                ? needsResolution(
+                    booking,
+                    row,
+                    hostMayList(row.hostStaffUserId, booking.participationId),
+                    viewer.now,
+                  )
+                : null,
+              ...fields,
+              capabilities: {
+                cancel:
+                  mayBookFor(
+                    viewer.subject,
+                    projectTarget(row.projectId, viewer.regionId, booking.participationId),
+                  ).ok && cancellationEligibility(booking, row, viewer.now) === "ok",
+                ...capabilities,
+              },
+            };
+          }),
         },
         200,
       );
@@ -747,34 +811,37 @@ export function appointmentRoutes(deps: Deps) {
         to_char(a.ends_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "endsAt",
         a.title, a.venue, a.status`;
       const [{ rows: bookings }, { rows: upcoming }, live] = await Promise.all([
-        db.execute<{
-          id: string;
-          status: "booked" | "cancelled";
-          origin: "participant" | "staff" | "walk_in";
-          bookedAt: string;
-          cancelReason:
-            | null
-            | "participant_cancelled"
-            | "staff_cancelled"
-            | "appointment_cancelled"
-            | "participation_closed";
-          cancelledAt: string | null;
-          appointment: {
+        db.execute<
+          BookingAttendanceRow & {
             id: string;
-            kind: "info_event" | "consultation";
-            startsAt: string;
-            endsAt: string;
-            title: string | null;
-            venue: string;
-            status: "scheduled" | "cancelled";
-          };
-        }>(
-          sql`select b.id, b.status, b.origin,
+            origin: "participant" | "staff" | "walk_in";
+            bookedAt: string;
+            cancelReason:
+              | null
+              | "participant_cancelled"
+              | "staff_cancelled"
+              | "appointment_cancelled"
+              | "participation_closed";
+            cancelledAt: string | null;
+            appointment: {
+              id: string;
+              kind: "info_event" | "consultation";
+              startsAt: string;
+              endsAt: string;
+              title: string | null;
+              venue: string;
+              status: "scheduled" | "cancelled";
+            };
+          }
+        >(
+          sql`select b.id, b.participation_id as "participationId", b.status, b.origin,
               to_char(b.booked_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "bookedAt",
               b.cancel_reason as "cancelReason",
               to_char(b.cancelled_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "cancelledAt",
-              (select row_to_json(s) from (select ${summary}) s) as appointment
+              (select row_to_json(s) from (select ${summary}) s) as appointment,
+              ${bookingAttendanceColumns}
             from appointment_booking b join appointment a on a.id = b.appointment_id
+            join participation q on q.id = b.participation_id
             where b.participation_id = ${participationId}::uuid
             order by a.starts_at desc, b.id`,
         ),
@@ -835,19 +902,185 @@ export function appointmentRoutes(deps: Deps) {
       c.header("Cache-Control", "private, no-store");
       return c.json(
         {
-          bookings: bookings.map((booking) => ({
-            ...booking,
-            capabilities: {
-              cancel:
-                mayBook &&
-                cancellationEligibility(booking, booking.appointment, viewer.now) === "ok",
-            },
-          })),
+          bookings: bookings.map((booking) => {
+            const { fields, capabilities } = bookingAttendanceView(
+              viewer,
+              booking.appointment,
+              booking,
+            );
+            return {
+              id: booking.id,
+              appointment: booking.appointment,
+              status: booking.status,
+              origin: booking.origin,
+              bookedAt: booking.bookedAt,
+              cancelReason: booking.cancelReason,
+              cancelledAt: booking.cancelledAt,
+              ...fields,
+              capabilities: {
+                cancel:
+                  mayBook &&
+                  cancellationEligibility(booking, booking.appointment, viewer.now) === "ok",
+                ...capabilities,
+              },
+            };
+          }),
           bookable,
           capabilities: { book: mayBook },
         },
         200,
       );
+    },
+  );
+
+  /** A booking the viewer may list, with its appointment and attendance; else the 404. */
+  async function bookingAccess(c: Context<AppEnv>, user: StaffUser, bookingId: string) {
+    const { rows } = await db.execute<BookingAttendanceRow & { id: string; appointmentId: string }>(
+      sql`select b.id, b.appointment_id as "appointmentId", b.participation_id as "participationId",
+          b.status, ${bookingAttendanceColumns}
+        from appointment_booking b join participation q on q.id = b.participation_id
+        where b.id = ${bookingId}::uuid`,
+    );
+    const booking = rows[0];
+    if (!booking) return { response: problem(c, "not-found") };
+    const found = await access(c, user, booking.appointmentId);
+    if (found.response) return { response: problem(c, "not-found") };
+    const { row, viewer } = found;
+    const { participationId } = booking;
+    if (!mayListBookings(viewer.subject, { projectId: row.projectId, participationId })) {
+      return { response: problem(c, "not-found") };
+    }
+    return { booking, row, viewer };
+  }
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/appointments/{appointmentId}/attendance",
+      tags: ["appointments"],
+      summary:
+        'Record or correct attendance (the PL, the assigned consultant; after a close the PL with a reason): 1–500 rows, all or nothing, walk-ins, and "als informiert erfassen" with the delivery confirmed',
+      middleware,
+      request: {
+        params: AppointmentParams,
+        body: { required: true, content: { "application/json": { schema: AttendanceInput } } },
+      },
+      responses: {
+        200: json(AttendanceResult, "What was recorded and the status changes"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const user = sessionUser(c);
+      const { appointmentId } = c.req.valid("param");
+      const found = await access(c, user, appointmentId);
+      if (found.response) return found.response;
+      const { viewer } = found;
+      if (!booksAtAll(viewer)) return problem(c, "forbidden");
+      try {
+        const result = await attendance.record(
+          viewer,
+          appointmentId,
+          c.req.valid("json"),
+          c.get("requestId"),
+        );
+        return c.json(result, 200);
+      } catch (error) {
+        return attendanceProblem(c, error);
+      }
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/appointment-bookings/{bookingId}/informed",
+      tags: ["appointments"],
+      summary:
+        '"Als informiert erfassen" on a qualifying attendance, or "Als Grundlage bestätigen" while another basis is in conflict, with the delivery confirmed',
+      middleware,
+      request: {
+        params: BookingParams,
+        body: { required: true, content: { "application/json": { schema: InformedInput } } },
+      },
+      responses: {
+        200: json(InformedResult, "The status changes made"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { bookingId } = c.req.valid("param");
+      const found = await bookingAccess(c, sessionUser(c), bookingId);
+      if (found.response) return found.response;
+      const { booking, row, viewer } = found;
+      const closed = terminalMainStatuses.has(booking.participationStatus);
+      const target = projectTarget(row.projectId, viewer.regionId, booking.participationId);
+      if (!mayRecordAttendance(viewer.subject, target, closed).ok) return problem(c, "forbidden");
+      if (!viewer.projectActive) return refused(c, "project_not_active");
+      try {
+        return c.json(await attendance.confirm(viewer, bookingId, c.get("requestId")), 200);
+      } catch (error) {
+        return attendanceProblem(c, error);
+      }
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/appointment-bookings/{bookingId}/conflict-review",
+      tags: ["appointments"],
+      summary:
+        "The PL's review of an attendance conflict: escalated (stays open) or information_delivered_otherwise (resolved), also after the close",
+      middleware,
+      request: {
+        params: BookingParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: ConflictReviewInput } },
+        },
+      },
+      responses: {
+        204: { description: "Recorded" },
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { bookingId } = c.req.valid("param");
+      const found = await bookingAccess(c, sessionUser(c), bookingId);
+      if (found.response) return found.response;
+      const { booking, row, viewer } = found;
+      const target = projectTarget(row.projectId, viewer.regionId, booking.participationId);
+      if (!mayResolveAppointmentItem(viewer.subject, target, "attendance_conflict").ok) {
+        return problem(c, "forbidden");
+      }
+      try {
+        await attendance.review(viewer, booking, c.req.valid("json").reason, c.get("requestId"));
+        return c.body(null, 204);
+      } catch (error) {
+        return attendanceProblem(c, error);
+      }
     },
   );
 

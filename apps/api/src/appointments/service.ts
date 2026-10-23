@@ -1,11 +1,13 @@
 import { eq, project, sql, type Database } from "@transfer/db";
 import {
+  appointmentCancellation,
   bookingView,
   mayBookFor,
   mayManageAppointment,
   needsResolution,
   type Appointment,
   type AppointmentFacts,
+  type Attendance,
   latestEntryCutoff,
   type DsvStatus,
   type EntryWave,
@@ -53,22 +55,25 @@ export async function loadAppointment(
   return rows[0];
 }
 
-/** The live bookings of these appointments: which participation, never more. */
+type LiveBookingRow = { id: string; participationId: string; attendance: Attendance | null };
+
+/** The live bookings of these appointments: which participation and its attendance, never more. */
 export async function liveBookingsOf(
   db: Pick<Database, "execute">,
   appointmentIds: readonly string[],
-): Promise<Map<string, { id: string; participationId: string }[]>> {
-  const byAppointment = new Map<string, { id: string; participationId: string }[]>();
+): Promise<Map<string, LiveBookingRow[]>> {
+  const byAppointment = new Map<string, LiveBookingRow[]>();
   if (appointmentIds.length === 0) return byAppointment;
-  const { rows } = await db.execute<{ id: string; appointmentId: string; participationId: string }>(
-    sql`select id, appointment_id as "appointmentId", participation_id as "participationId"
+  const { rows } = await db.execute<LiveBookingRow & { appointmentId: string }>(
+    sql`select id, appointment_id as "appointmentId", participation_id as "participationId",
+        attendance
       from appointment_booking
       where status = 'booked' and appointment_id = any(${`{${appointmentIds.join(",")}}`}::uuid[])`,
   );
-  for (const row of rows) {
-    const list = byAppointment.get(row.appointmentId) ?? [];
-    list.push({ id: row.id, participationId: row.participationId });
-    byAppointment.set(row.appointmentId, list);
+  for (const { appointmentId, ...row } of rows) {
+    const list = byAppointment.get(appointmentId) ?? [];
+    list.push(row);
+    byAppointment.set(appointmentId, list);
   }
   return byAppointment;
 }
@@ -168,7 +173,7 @@ export async function appointmentViewer(
 export function appointmentView(
   viewer: AppointmentViewer,
   row: AppointmentRow,
-  live: readonly { participationId: string }[],
+  live: readonly { participationId: string; attendance: Attendance | null }[],
   hostMayList: (hostId: string | null, participationId: string) => boolean,
 ): Appointment {
   const target = { projectId: viewer.projectId };
@@ -176,6 +181,8 @@ export function appointmentView(
   const scheduled = row.status === "scheduled";
   const upcoming = Date.parse(row.startsAt) > Date.parse(viewer.now);
   const lead = roles(viewer).has("project_lead");
+  // Recorded attendance blocks a cancellation but the PL's correction of absences (Q164).
+  const recorded = live.flatMap((booking) => (booking.attendance ? [booking.attendance] : []));
   return {
     id: row.id,
     projectId: row.projectId,
@@ -215,8 +222,11 @@ export function appointmentView(
         scheduled &&
         upcoming &&
         row.kind === "consultation",
-      cancel: manage && scheduled,
+      cancel: manage && scheduled && recorded.length === 0,
       book: viewer.projectActive && scheduled && upcoming && booksAtAll(viewer),
+      recordAttendance: viewer.projectActive && scheduled && !upcoming && booksAtAll(viewer),
+      correctNotTakenPlace:
+        scheduled && appointmentCancellation("did_not_take_place", lead, recorded) === "correction",
     },
   };
 }

@@ -121,7 +121,14 @@ describe("creating and changing appointments", () => {
       inUse: false,
       bookings: { scope: "all", booked: 0, availability: "available" },
       needsResolution: 0,
-      capabilities: { change: true, changeHost: false, cancel: true, book: true },
+      capabilities: {
+        change: true,
+        changeHost: false,
+        cancel: true,
+        book: true,
+        recordAttendance: false,
+        correctNotTakenPlace: false,
+      },
     });
     expect(Date.parse(event.bookingClosesAt)).toBe(Date.parse(event.startsAt) - 24 * 3600_000);
   });
@@ -136,6 +143,8 @@ describe("creating and changing appointments", () => {
       changeHost: false,
       cancel: true,
       book: true,
+      recordAttendance: false,
+      correctNotTakenPlace: false,
     });
     expect(slot.needsResolution).toBeNull();
     const body = {
