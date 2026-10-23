@@ -66,6 +66,13 @@ import {
   ReminderKind,
   ReminderStatus,
   ReminderCancelReason,
+  AppointmentKind,
+  AppointmentStatus,
+  AppointmentCancelReason,
+  BookingOrigin,
+  BookingStatus,
+  BookingCancelReason,
+  appointmentPolicy,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -396,6 +403,15 @@ export const documentSessionKind = pgEnum("document_session_kind", ["staff", "pa
 export const reminderKind = pgEnum("reminder_kind", values(ReminderKind));
 export const reminderStatus = pgEnum("reminder_status", values(ReminderStatus));
 export const reminderCancelReason = pgEnum("reminder_cancel_reason", values(ReminderCancelReason));
+export const appointmentKind = pgEnum("appointment_kind", values(AppointmentKind));
+export const appointmentStatus = pgEnum("appointment_status", values(AppointmentStatus));
+export const appointmentCancelReason = pgEnum(
+  "appointment_cancel_reason",
+  values(AppointmentCancelReason),
+);
+export const bookingOrigin = pgEnum("booking_origin", values(BookingOrigin));
+export const bookingStatus = pgEnum("booking_status", values(BookingStatus));
+export const bookingCancelReason = pgEnum("booking_cancel_reason", values(BookingCancelReason));
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1659,6 +1675,132 @@ export const participantReminder = pgTable(
   ],
 );
 
+const { capacity, bookingCutoffDays, titleMax, venueMax } = appointmentPolicy;
+
+/**
+ * An appointment of a project (process-and-lifecycle.md, appointments; Q164, Q166): an info event
+ * (optionally for one wave) or a consultation slot with one host. Project data (`project_master`);
+ * the host and creator are staff ids. Written only by the appointment functions; never deleted
+ * operationally. Kind, times, cutoff and audience are frozen once it has a booking (Q168).
+ */
+export const appointment = pgTable(
+  "appointment",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    kind: appointmentKind("kind").notNull(),
+    hostStaffUserId: uuid("host_staff_user_id").references(() => staffUser.id),
+    audienceWaveId: uuid("audience_wave_id"),
+    startsAt: instant("starts_at").notNull(),
+    endsAt: instant("ends_at").notNull(),
+    bookingClosesAt: instant("booking_closes_at").notNull(),
+    capacity: integer("capacity").notNull(),
+    title: text("title"),
+    venue: text("venue").notNull(),
+    status: appointmentStatus("status").notNull().default("scheduled"),
+    cancelReason: appointmentCancelReason("cancel_reason"),
+    cancelledAt: instant("cancelled_at"),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => staffUser.id),
+    createdAt: instant("created_at").notNull().defaultNow(),
+    version: integer("version").notNull().default(1),
+  },
+  (t) => [
+    unique("appointment_id_project_unique").on(t.id, t.projectId),
+    foreignKey({
+      name: "appointment_audience_wave_fk",
+      columns: [t.audienceWaveId, t.projectId],
+      foreignColumns: [projectEntryWave.id, projectEntryWave.projectId],
+    }),
+    index("appointment_project_idx").on(t.projectId, t.startsAt),
+    index("appointment_host_idx").on(t.hostStaffUserId, t.startsAt),
+    check("appointment_times", sql`${t.endsAt} > ${t.startsAt}`),
+    check(
+      "appointment_booking_closes",
+      sql`${t.bookingClosesAt} <= ${t.startsAt} and ${t.bookingClosesAt} >= ${t.startsAt} - interval '${sql.raw(String(bookingCutoffDays.max))} days'`,
+    ),
+    check(
+      "appointment_capacity",
+      sql`${t.capacity} between ${sql.raw(String(capacity.min))} and ${sql.raw(String(capacity.max))}`,
+    ),
+    check(
+      "appointment_title",
+      sql`${t.title} is null or (char_length(${t.title}) between 1 and ${sql.raw(String(titleMax))} and ${t.title} = btrim(${t.title}) and ${t.title} !~ '[[:cntrl:]]')`,
+    ),
+    check(
+      "appointment_venue",
+      sql`char_length(${t.venue}) between 1 and ${sql.raw(String(venueMax))} and ${t.venue} = btrim(${t.venue}) and ${t.venue} !~ '[[:cntrl:]]'`,
+    ),
+    check(
+      "appointment_host",
+      sql`(${t.kind} = 'consultation') = (${t.hostStaffUserId} is not null)`,
+    ),
+    check("appointment_audience", sql`${t.kind} = 'info_event' or ${t.audienceWaveId} is null`),
+    check(
+      "appointment_cancelled",
+      sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null) and (${t.status} = 'cancelled') = (${t.cancelledAt} is not null)`,
+    ),
+  ],
+);
+
+/**
+ * A participation's booking of an appointment (data-protection.md, appointments; Q164, Q166):
+ * `case_internal` (field `appointmentBookings`), `personnel_file`. At most one live booking per
+ * appointment and participation. Written only by the appointment functions and the terminal
+ * status trigger.
+ */
+export const appointmentBooking = pgTable(
+  "appointment_booking",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    appointmentId: uuid("appointment_id").notNull(),
+    origin: bookingOrigin("origin").notNull(),
+    status: bookingStatus("status").notNull().default("booked"),
+    cancelReason: bookingCancelReason("cancel_reason"),
+    /** The staff user who booked; null when the participant booked. */
+    bookedBy: uuid("booked_by").references(() => staffUser.id),
+    bookedAt: instant("booked_at").notNull().defaultNow(),
+    cancelledBy: uuid("cancelled_by").references(() => staffUser.id),
+    cancelledAt: instant("cancelled_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "appointment_booking_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "appointment_booking_appointment_fk",
+      columns: [t.appointmentId, t.projectId],
+      foreignColumns: [appointment.id, appointment.projectId],
+    }),
+    uniqueIndex("appointment_booking_live_unique")
+      .on(t.appointmentId, t.participationId)
+      .where(sql`${t.status} = 'booked'`),
+    index("appointment_booking_participation_idx").on(t.participationId),
+    index("appointment_booking_appointment_idx").on(t.appointmentId),
+    check(
+      "appointment_booking_cancelled",
+      sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null) and (${t.status} = 'cancelled') = (${t.cancelledAt} is not null)`,
+    ),
+    check(
+      "appointment_booking_booked_by",
+      sql`(${t.origin} = 'participant') = (${t.bookedBy} is null)`,
+    ),
+    check(
+      "appointment_booking_cancelled_by",
+      sql`(${t.cancelledBy} is not null) = coalesce(${t.cancelReason} in ('staff_cancelled', 'appointment_cancelled'), false)`,
+    ),
+  ],
+);
+
 /**
  * A fully executed DSV amendment of a contractual date change (process-and-lifecycle.md, "DSV
  * amendment"; round 32): operational evidence, not the contract (the signed original stays on
@@ -2227,6 +2369,8 @@ export const tables = [
   document,
   documentLink,
   participantReminder,
+  appointment,
+  appointmentBooking,
   lifecycleEdge,
   auditEvent,
   jobRun,

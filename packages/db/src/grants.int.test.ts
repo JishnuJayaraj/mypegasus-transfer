@@ -181,6 +181,13 @@ const statusFunctions = [
   "upgrade_channel_consent",
   // Slice 5: the audit history (data-protection.md, audit metadata)
   "audit_history",
+  // Slice 5b: appointments (data-protection.md, appointments)
+  "create_appointment",
+  "update_appointment",
+  "change_appointment_host",
+  "cancel_appointment",
+  "book_appointment",
+  "cancel_appointment_booking",
 ];
 const helpers = [
   "assert_context",
@@ -251,6 +258,18 @@ const helpers = [
   "reminder_job_context",
   "settle_reminder",
   "audit_history_details",
+  "appointment_member_roles",
+  "appointment_staff_allowed",
+  "appointment_text_valid",
+  "appointment_instant",
+  "appointment_values_valid",
+  "assert_host_free",
+  "assert_appointment_audience",
+  "assert_appointment_manager",
+  "assert_appointment_context",
+  "cancel_booking_row",
+  "lock_appointment_participations",
+  "cancel_bookings_at_terminal_status",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -861,6 +880,23 @@ describe("transfer_app and the document tables", () => {
        values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), 'open_items', 'portal-reminder:v1', 'de', gen_random_uuid(), 'email', gen_random_uuid(), gen_random_uuid(), current_date)`,
     ),
     ["settle a reminder directly", "select settle_reminder(null, null, null, null)"],
+    // Appointments (data-protection.md, appointments): selected, written only by the functions.
+    ...writes(
+      "appointment",
+      "capacity",
+      `insert into appointment (id, project_id, kind, starts_at, ends_at, booking_closes_at, capacity, venue, created_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', 'info_event', now() + interval '2 days', now() + interval '3 days', now() + interval '1 day', 10, 'Raum 1', gen_random_uuid())`,
+    ),
+    ...writes(
+      "appointment_booking",
+      "status",
+      `insert into appointment_booking (id, project_id, participation_id, appointment_id, origin, booked_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), 'staff', gen_random_uuid())`,
+    ),
+    ["read roles of a project directly", "select appointment_member_roles(null, null)"],
+    ["cancel a booking row directly", "select cancel_booking_row(null, null, null, null)"],
+    ["lock participations directly", "select lock_appointment_participations(null)"],
+    ["call the terminal-booking trigger", "select cancel_bookings_at_terminal_status()"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

@@ -95,6 +95,9 @@ describe("data catalog", () => {
       document: entry("by_document_type", "confidential", true),
       document_link: entry("access_credential", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
+      // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.
+      appointment: entry("project_master", "internal"),
+      appointment_booking: entry("personnel_file", "internal", true),
       document_type_policy: entry("reference_data", "internal"),
       // Slice 5 (Q157): the audit history's reference tables
       audit_event_projection: entry("reference_data", "internal"),

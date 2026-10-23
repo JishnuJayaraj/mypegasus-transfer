@@ -217,6 +217,20 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // Appointments (data-protection.md, appointments; Q58, Q166): project data, kind, times,
+  // capacity, the generic title and the shared venue; the host and creator are staff ids (Q59).
+  appointment: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  // Bookings (Q166): which appointment, origin, status, closed reasons, staff ids and times; the
+  // `personnel_file` triggers of Q105 and Q166 (mapping awaiting confirmation, period `unset`).
+  appointment_booking: {
+    retentionClass: "personnel_file",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // The document type catalog per version (classes, file names, roles): no personal data.
   document_type_policy: {
     retentionClass: "reference_data",
@@ -538,6 +552,19 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     cancel_reason: "reminderLog",
     claimed_at: "reminderLog",
     outcome_at: "reminderLog",
+  },
+  appointment_booking: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    appointment_id: "appointmentBookings",
+    origin: "appointmentBookings",
+    status: "appointmentBookings",
+    cancel_reason: "appointmentBookings",
+    booked_by: null,
+    booked_at: "appointmentBookings",
+    cancelled_by: null,
+    cancelled_at: "appointmentBookings",
   },
 };
 
