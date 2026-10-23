@@ -106,10 +106,12 @@ describe("auditProjection (data-protection.md, audit metadata; Q157)", () => {
   });
 
   it("shows nothing of an event outside the history's streams", () => {
-    for (const row of auditProjectionRows()) {
-      if (row.stream === null || row.stream === "security" || row.stream === "review") {
-        expect(row).toMatchObject({ showsChange: false, showsReason: false, detailKeys: [] });
-      }
+    const outside = auditProjectionRows().filter(
+      (row) => row.stream === null || row.stream === "security" || row.stream === "review",
+    );
+    expect(outside.length).toBeGreaterThan(0);
+    for (const row of outside) {
+      expect(row).toMatchObject({ showsChange: false, showsReason: false, detailKeys: [] });
     }
   });
 
@@ -153,10 +155,9 @@ describe("auditProjection (data-protection.md, audit metadata; Q157)", () => {
   });
 });
 
-describe("historyStreams (Q157)", () => {
-  const streams = (roles: ProjectRole[], assigned = true) =>
-    historyStreams(new Set(roles), assigned);
+const streams = (roles: ProjectRole[], assigned = true) => historyStreams(new Set(roles), assigned);
 
+describe("historyStreams (Q157)", () => {
   it("gives each project role its streams, the consultant only while assigned", () => {
     expect(streams(["project_lead"])).toEqual({
       streams: ["case", "profiling", "dsv"],

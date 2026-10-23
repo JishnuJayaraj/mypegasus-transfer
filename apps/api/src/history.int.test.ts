@@ -160,6 +160,6 @@ describe("historyEntry", () => {
       historyEntry({ ...row, event_type: "reminder_queued", reason_code: "nothing_open" }),
     ).toThrow(more);
     expect(() => historyEntry({ ...row, to_value: "x" })).toThrow(more);
-    expect(() => historyEntry({ ...row, event_type: "document_opened" })).toThrow();
+    expect(() => historyEntry({ ...row, event_type: "document_opened" })).toThrow(/Invalid option/);
   });
 });

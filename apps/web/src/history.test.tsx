@@ -107,12 +107,13 @@ function setup(history: Parameters<typeof mockApi>[0][string]) {
   return mock;
 }
 
+const eventLabel = (type: string) => de.history.events[type as keyof typeof de.history.events];
 const rowOf = async (text: string) => (await screen.findByText(text)).closest("tr")!;
 
 describe("the tab 'Verlauf'", () => {
   it("has a German label for every event type a history can show", () => {
     for (const type of HistoryEventType.options) {
-      expect(de.history.events[type]).toMatch(/\S/);
+      expect(eventLabel(type)).toMatch(/\S/);
     }
     expect(Object.keys(de.history.events).toSorted()).toEqual(
       [...HistoryEventType.options].toSorted(),
@@ -128,7 +129,7 @@ describe("the tab 'Verlauf'", () => {
     );
     const table = (await screen.findByText("Teilnahme angelegt")).closest("table")!;
     for (const type of HistoryEventType.options) {
-      expect(within(table).getAllByText(de.history.events[type]).length).toBeGreaterThan(0);
+      expect(within(table).getAllByText(eventLabel(type)).length).toBeGreaterThan(0);
     }
   });
 

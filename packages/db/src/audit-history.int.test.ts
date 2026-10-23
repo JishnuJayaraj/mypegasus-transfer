@@ -96,6 +96,10 @@ async function assign(participationId: string, staffUserId: string = consultant)
   });
 }
 
+const key = (row: { event_type: string; field: string | null }) => `${row.event_type}/${row.field}`;
+const sorted = <T extends { event_type: string; field: string | null }>(list: T[]) =>
+  list.toSorted((a, b) => key(a).localeCompare(key(b)));
+
 describe("the reference tables (drift)", () => {
   it("hold the domain's projection, one row per event type and status field", async () => {
     const rows = await all(
@@ -110,10 +114,6 @@ describe("the reference tables (drift)", () => {
       shows_reason: row.showsReason,
       detail_keys: [...row.detailKeys],
     }));
-    const key = (row: { event_type: string; field: string | null }) =>
-      `${row.event_type}/${row.field}`;
-    const sorted = <T extends { event_type: string; field: string | null }>(list: T[]) =>
-      list.toSorted((a, b) => key(a).localeCompare(key(b)));
     expect(sorted(rows)).toEqual(sorted(expected));
     const enumValues = await all("select unnest(enum_range(null::audit_event_type))::text as v");
     expect(enumValues.map((row) => row.v).toSorted()).toEqual(AuditEventType.options.toSorted());
