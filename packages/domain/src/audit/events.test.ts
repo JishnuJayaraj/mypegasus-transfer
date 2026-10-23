@@ -103,6 +103,7 @@ describe("audit event types (ADR-0002)", () => {
       "document_upload_rejected",
       "reminder_queued",
       "reminder_delivery",
+      "audit_history_opened",
     ]);
   });
 
@@ -167,6 +168,8 @@ describe("audit event types (ADR-0002)", () => {
       // Reminders (Slice 5): only the reminder functions write them.
       "reminder_queued",
       "reminder_delivery",
+      // The history's opening (Q157): only `audit_history` writes it.
+      "audit_history_opened",
     ]);
   });
 
@@ -1448,5 +1451,21 @@ describe("self-service events (Q138, Q112)", () => {
         details: { consentId: otherId, purpose: "portal_contact" },
       }),
     ).toEqual(["channel_mismatch"]);
+  });
+});
+
+describe("the audit history's opening (data-protection.md, audit metadata; Q157)", () => {
+  const opened = { ...base, type: "audit_history_opened", details: {} };
+
+  it("records the viewer, the participation and the time only", () => {
+    expect(issueCodes(opened)).toEqual([]);
+    for (const bad of [
+      { ...opened, details: { stream: "case" } },
+      { ...opened, participationId: null },
+      { ...opened, actor: { type: "system", job: "reminders.send" } },
+      { ...opened, actor: { type: "participant", participationId } },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
   });
 });

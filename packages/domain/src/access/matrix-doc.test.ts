@@ -27,6 +27,11 @@ it("renders every subject, key and undecided cell (docs/domain/generated/access-
   );
   expect(rows(part("## Audit metadata"))).toHaveLength(profiles * AuditStream.options.length);
   expect(rows(part("## Aggregates"))).toHaveLength(profiles);
+  const history = part("## Audit history");
+  expect(history).toContain("| `consultant` | `case`, `profiling` | `dsv`, `payroll` |");
+  expect(history).toContain("| `status_changed` (`dsv_status`) | `dsv` | yes | no | `offerDeadline` |");
+  expect(history).toContain("| `project_created` | project-level | no | no | — |");
+  expect(history).toContain("| `document_opened` | `security` | no | no | — |");
   expect(doc).toContain(
     "| PL | `health` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode |",
   );

@@ -1,4 +1,6 @@
+import { auditProjectionRows, historyStreams, roleFieldKnowledge } from "../audit/history";
 import { DocumentType } from "../documents/catalog";
+import { ProjectRole } from "../enums";
 import {
   AuditStream,
   decideAccess,
@@ -235,6 +237,28 @@ function undecided(): string {
   return undecidedTable([...found, ...operations]);
 }
 
+const yesNo = (value: boolean) => (value ? "yes" : "no");
+const codes = (values: readonly string[]) => (values.length ? values.map(code).join(", ") : "—");
+
+/** The history's streams per project role, and each event type's projection (Q157, Q161). */
+export function historyTables(): string {
+  const roles = ProjectRole.options.map((role) => {
+    const { streams, ownStreams } = historyStreams(new Set([role]), true);
+    return [code(role), codes(streams), codes(ownStreams), codes(roleFieldKnowledge[role])];
+  });
+  const events = auditProjectionRows().map((row) => [
+    code(row.eventType) + (row.field ? ` (${code(row.field)})` : ""),
+    row.stream ? code(row.stream) : "project-level",
+    yesNo(row.showsChange),
+    yesNo(row.showsReason),
+    codes(row.detailKeys),
+  ]);
+  return [
+    table(["Project role", "Streams", "Own events only", "Field keys of"], roles),
+    table(["Event type", "Stream", "Change", "Reason", "Detail keys"], events),
+  ].join("\n\n");
+}
+
 /** docs/domain/generated/access-matrix.md, written by `pnpm generate`. */
 export function renderAccessMatrixDoc(): string {
   const personSections = kinds.map(
@@ -284,6 +308,18 @@ Filtered projections (Q87 A), the same in every mode in the active phase; \`list
 is left, the operational streams need break-glass; the review queue stays open (round 12).
 
 ${audit()}
+
+## Audit history
+
+A participation's tab "Verlauf" (Q157, *accepted*; the per-type readings Q161, *assumed*): the
+function \`audit_history\` returns only these rows, and of each only what its event type shows.
+A consultant's streams apply while assigned; several roles are the union (Q61). Field keys in
+\`fields\` are kept only for the categories the viewer's roles may know. \`security\`,
+\`review\` and project-level events are never in a history; opening one writes
+\`audit_history_opened\` (\`security\`). Generated from \`auditProjection\`,
+\`historyStreams\` and \`roleFieldKnowledge\` (\`packages/domain/src/audit/history.ts\`).
+
+${historyTables()}
 
 ## Aggregates
 

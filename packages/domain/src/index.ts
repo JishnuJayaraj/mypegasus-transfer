@@ -380,6 +380,28 @@ export {
   statusFieldOfTrack,
 } from "./audit/events";
 export {
+  auditProjection,
+  auditProjectionRows,
+  fieldCategoryRows,
+  historyEventTypes,
+  historyStreams,
+  historyStreamsOf,
+  projectionOf,
+  roleFieldKnowledge,
+  roleFieldKnowledgeRows,
+  type AuditProjection,
+  type AuditProjectionRow,
+  type HistoryStream,
+  type HistoryStreams,
+} from "./audit/history";
+export {
+  HistoryActor,
+  HistoryChange,
+  HistoryEntry,
+  HistoryEventType,
+  HistoryPage,
+} from "./audit/history-api";
+export {
   StaffAuditEvent,
   StaffAuditEventType,
   StaffLoginMethod,
