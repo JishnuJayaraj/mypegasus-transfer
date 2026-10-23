@@ -96,6 +96,10 @@ describe("data catalog", () => {
       document_link: entry("access_credential", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
       document_type_policy: entry("reference_data", "internal"),
+      // Slice 5 (Q157): the audit history's reference tables
+      audit_event_projection: entry("reference_data", "internal"),
+      role_field_knowledge: entry("reference_data", "internal"),
+      field_access_category: entry("reference_data", "internal"),
       audit_event: entry("audit_log", "confidential", true),
       lifecycle_edge: entry("reference_data", "internal"),
       job_run: entry("reference_data", "internal"),

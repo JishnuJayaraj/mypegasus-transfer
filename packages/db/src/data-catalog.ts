@@ -223,6 +223,22 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
+  // The audit history's projection, role knowledge and field categories (Q157): no personal data.
+  audit_event_projection: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  role_field_knowledge: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  field_access_category: {
+    retentionClass: "reference_data",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
   // Reason codes are confidential (Q66); evidence records get their own class (round 16).
   profiling_exception_request: {
     retentionClass: "participation_record",

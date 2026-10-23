@@ -179,6 +179,8 @@ const statusFunctions = [
   "claim_reminder_dispatch",
   "record_reminder_outcome",
   "upgrade_channel_consent",
+  // Slice 5: the audit history (data-protection.md, audit metadata)
+  "audit_history",
 ];
 const helpers = [
   "assert_context",
@@ -248,6 +250,7 @@ const helpers = [
   "reminder_requester_allowed",
   "reminder_job_context",
   "settle_reminder",
+  "audit_history_details",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -858,6 +861,43 @@ describe("transfer_app and the document tables", () => {
        values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), 'open_items', 'portal-reminder:v1', 'de', gen_random_uuid(), 'email', gen_random_uuid(), gen_random_uuid(), current_date)`,
     ),
     ["settle a reminder directly", "select settle_reminder(null, null, null, null)"],
+  ])("may not %s (42501)", async (_label, statement) => {
+    await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// Slice 5: the audit history (ADR-0002, the audit history; Q157): the reference tables are
+// selected, written only by the migrations; the trail itself stays closed to the runtime role.
+describe("transfer_app and the audit history", () => {
+  it("selects the reference tables", async () => {
+    const counts = await app.query(
+      `select (select count(*)::int from audit_event_projection) as projection,
+         (select count(*)::int from role_field_knowledge) as knowledge,
+         (select count(*)::int from field_access_category) as fields`,
+    );
+    expect(counts.rows[0].projection).toBeGreaterThan(0);
+    expect(counts.rows[0].knowledge).toBeGreaterThan(0);
+    expect(counts.rows[0].fields).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ...writes(
+      "audit_event_projection",
+      "shows_reason",
+      "insert into audit_event_projection values ('x_event', null, 'case', true, true, '{reasonCode}')",
+    ),
+    ...writes(
+      "role_field_knowledge",
+      "access_category",
+      "insert into role_field_knowledge values ('back_office', 'health')",
+    ),
+    ...writes(
+      "field_access_category",
+      "access_category",
+      "insert into field_access_category values ('xField', 'case_internal')",
+    ),
+    ["select the trail", "select * from audit_event"],
+    ["filter details directly", "select audit_history_details('{}', '{}', '{}')"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

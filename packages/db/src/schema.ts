@@ -1,9 +1,11 @@
 import {
+  AccessCategory,
   ActorType,
   AmendmentOriginalLocation,
   AssistedModeEndReason,
   AssistedModeHow,
   AuditEventType,
+  AuditStream,
   BaReportingKind,
   BaReportingStatus,
   DsvAmendmentKind,
@@ -318,6 +320,8 @@ export const profilingExceptionSupersededReason = pgEnum(
   values(ProfilingExceptionSupersededReason),
 );
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
+export const auditStream = pgEnum("audit_stream", values(AuditStream));
+export const accessCategory = pgEnum("access_category", values(AccessCategory));
 export const assignmentEndReason = pgEnum("assignment_end_reason", values(AssignmentEndReason));
 export const staffAuditEventType = pgEnum("staff_audit_event_type", values(StaffAuditEventType));
 export const relaxationReasonCode = pgEnum("relaxation_reason_code", values(RelaxationReasonCode));
@@ -1419,6 +1423,69 @@ export const documentTypePolicy = pgTable(
 );
 
 /**
+ * What a participation's audit history shows of each event type (data-protection.md, audit
+ * metadata; Q157): its stream (null: project-level), whether `field`/`from`/`to` and the reason
+ * code are shown, and the detail keys; one row per status field for `status_changed`. Reference
+ * data written only by the migrations; a drift test holds it equal to the domain's
+ * `auditProjection`. `event_type` is text: a type added in the same migration can't be inserted as
+ * the enum (ADR-0002, migrations).
+ */
+export const auditEventProjection = pgTable(
+  "audit_event_projection",
+  {
+    eventType: text("event_type").notNull(),
+    field: statusField("field"),
+    stream: auditStream("stream"),
+    showsChange: boolean("shows_change").notNull(),
+    showsReason: boolean("shows_reason").notNull(),
+    detailKeys: text("detail_keys").array().notNull(),
+  },
+  (t) => [
+    unique("audit_event_projection_unique").on(t.eventType, t.field).nullsNotDistinct(),
+    check("audit_event_projection_event_type", sql`${t.eventType} ~ '^[a-z][a-z0-9_]{0,62}$'`),
+    check(
+      "audit_event_projection_field",
+      sql`(${t.field} is null) = (${t.eventType} <> 'status_changed')`,
+    ),
+  ],
+);
+
+/**
+ * Per project role the access categories whose field keys an audit history keeps (the field
+ * names of `participant_data_changed`; data-protection.md, audit metadata). Reference data written
+ * only by the migrations; a drift test holds it equal to the domain's `roleFieldKnowledge`.
+ */
+export const roleFieldKnowledge = pgTable(
+  "role_field_knowledge",
+  {
+    projectRole: projectRole("project_role").notNull(),
+    accessCategory: accessCategory("access_category").notNull(),
+  },
+  (t) => [
+    primaryKey({ name: "role_field_knowledge_pkey", columns: [t.projectRole, t.accessCategory] }),
+  ],
+);
+
+/**
+ * Each participant field's access category (the field catalog), and `custom.*` for the custom
+ * fields, so `audit_history` can keep a field key per role. Reference data written only by the
+ * migrations; a drift test holds it equal to the domain's field catalog.
+ */
+export const fieldAccessCategory = pgTable(
+  "field_access_category",
+  {
+    fieldKey: text("field_key").primaryKey(),
+    accessCategory: accessCategory("access_category").notNull(),
+  },
+  (t) => [
+    check(
+      "field_access_category_key",
+      sql`${t.fieldKey} ~ '^[a-z][A-Za-z0-9]{0,62}$' or ${t.fieldKey} = 'custom.*'`,
+    ),
+  ],
+);
+
+/**
  * A document (data-protection.md, uploads and documents; Q143–Q148): the metadata of one encrypted
  * file in the store under `documents/<id>`, never its content. Its retention class is its type's
  * (a composite FK to the policy of its catalog version), so retention is per row (ADR-0008).
@@ -2154,6 +2221,9 @@ export const tables = [
   participantSession,
   assistedMode,
   documentTypePolicy,
+  auditEventProjection,
+  roleFieldKnowledge,
+  fieldAccessCategory,
   document,
   documentLink,
   participantReminder,
