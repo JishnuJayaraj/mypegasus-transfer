@@ -186,6 +186,56 @@ body {
   padding-inline-start: $spacing-06;
 }
 
+// The portal's "Termine" (mobile-first, logical properties): one card per appointment.
+.tp-appointments {
+  display: grid;
+  gap: $spacing-05;
+}
+
+.tp-appointment {
+  display: grid;
+  gap: $spacing-03;
+  padding-block: $spacing-05;
+  padding-inline: $spacing-05;
+  border-inline-start: 4px solid theme.$border-interactive;
+  background: theme.$layer-01;
+  overflow-wrap: anywhere;
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .cds--btn {
+    inline-size: 100%;
+    max-inline-size: 20rem;
+  }
+}
+
+.tp-appointment-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: $spacing-02 $spacing-04;
+
+  dt {
+    font-weight: 600;
+  }
+}
+
+.tp-appointment-state {
+  font-weight: 600;
+}
+
+.tp-appointment-confirm {
+  border: 0;
+  margin: 0;
+  padding: 0;
+
+  legend {
+    margin-block-end: $spacing-03;
+  }
+}
+
 .tp-toasts {
   position: fixed;
   inset-block-start: 3.5rem;

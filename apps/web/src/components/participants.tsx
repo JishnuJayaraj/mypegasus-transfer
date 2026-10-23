@@ -32,6 +32,7 @@ import { ManualParticipationForm } from "./manual-participation-form";
 import { useSelfServiceLabel } from "./self-service-tab";
 import { useConsultants } from "./team";
 import { BulkWave, WorklistFilters } from "./worklist-tools";
+import { BulkInvite } from "./invitations";
 import { BulkRemind } from "./reminders";
 
 const RouterLink = createLink(Link);
@@ -162,7 +163,9 @@ export function Participants({
   const mayRemind = items.some(
     ({ capabilities: { remind } }) => remind.allowed || remind.code !== null,
   );
-  const selectable = mayAssign || mayActivate || mayAssignWave || mayRemind;
+  // "Zu Termin einladen" (data-protection.md, invitations): the PL and the assigned consultant.
+  const mayInvite = items.some(({ capabilities: { invite } }) => invite.allowed);
+  const selectable = mayAssign || mayActivate || mayAssignWave || mayRemind || mayInvite;
   const visibleColumns = useMemo(
     () =>
       columns.filter(
@@ -334,6 +337,13 @@ export function Participants({
               )}
               {mayRemind && (
                 <BulkRemind
+                  projectId={projectId}
+                  selected={selectedItems}
+                  onSent={() => setSelected(new Set())}
+                />
+              )}
+              {mayInvite && (
+                <BulkInvite
                   projectId={projectId}
                   selected={selectedItems}
                   onSent={() => setSelected(new Set())}

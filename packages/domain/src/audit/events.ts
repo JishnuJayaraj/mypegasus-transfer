@@ -36,7 +36,12 @@ import {
   LoginMethod,
 } from "../activation/model";
 import { IdentityAssurance } from "../activation/steps";
-import { ReminderCancelReason, ReminderKind } from "../reminders/model";
+import {
+  noticeKinds,
+  NoticeFollowUpMethod,
+  ReminderCancelReason,
+  ReminderKind,
+} from "../reminders/model";
 import {
   AppointmentCancelReason,
   AppointmentKind,
@@ -167,6 +172,8 @@ export const AuditEventType = z.enum([
   "information_delivery_confirmed",
   "attendance_conflict_escalated",
   "attendance_conflict_resolved",
+  // Slice 5b, messages (data-protection.md, messages: follow-up), written only by its function
+  "appointment_notice_followed_up",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -258,6 +265,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "information_delivery_confirmed",
   "attendance_conflict_escalated",
   "attendance_conflict_resolved",
+  "appointment_notice_followed_up",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -649,6 +657,72 @@ const attendanceConflictResolved = event("attendance_conflict_resolved", {
   }
 });
 
+/** The system queues the organizer's notices (`appointments.notify`), staff everything else. */
+const systemNotice = z.strictObject({
+  type: z.literal("system"),
+  job: z.literal("appointments.notify"),
+});
+
+/**
+ * A message queued (data-protection.md, messages): a reminder or an invitation by a PL or the
+ * assigned consultant, an organizer's notice by the system; an appointment's message names the
+ * appointment and its start as written then (Q168). Without a usable channel (an invitation or a
+ * notice only) no channel kind, and the row is cancelled at once. Ids and codes only, never the
+ * address or the text.
+ */
+const reminderQueued = event("reminder_queued", {
+  ...ofParticipation,
+  actor: z.union([staffActor, systemNotice]),
+  details: z.strictObject({
+    reminderId: z.uuid(),
+    batchId: z.uuid(),
+    kind: ReminderKind,
+    channelKind: ActivationDeliveryKind.nullable(),
+    appointmentId: z.uuid().optional(),
+    startsAt: z.iso.datetime().optional(),
+  }),
+}).superRefine(({ actor, details }, ctx) => {
+  if (noticeKinds.has(details.kind) !== (actor.type === "system")) issue(ctx, "actor_mismatch");
+  const ofAppointment = details.kind !== "open_items";
+  if (
+    ofAppointment !== (details.appointmentId !== undefined) ||
+    ofAppointment !== (details.startsAt !== undefined) ||
+    (!ofAppointment && details.channelKind === null)
+  ) {
+    issue(ctx, "kind_mismatch");
+  }
+});
+
+/** Cancelled at the request: no usable channel, before any job. */
+const atRequest: ReadonlySet<ReminderCancelReason> = new Set(["no_channel", "consent_required"]);
+
+/**
+ * A message's final state: recorded by its job, or at the request when no channel was usable (as
+ * whoever queued it); a cancellation names its reason (the reason code), nothing else does; never
+ * a provider response or error.
+ */
+const reminderDelivery = event("reminder_delivery", {
+  ...ofParticipation,
+  actor: z.union([z.strictObject({ type: z.literal("system"), job: systemJob }), staffActor]),
+  reasonCode: ReminderCancelReason.nullable(),
+  details: z.strictObject({
+    reminderId: z.uuid(),
+    outcome: z.enum(["sent", "failed", "delivery_unknown", "cancelled"]),
+    kind: ReminderKind.optional(),
+    appointmentId: z.uuid().optional(),
+  }),
+}).superRefine(({ actor, reasonCode, details }, ctx) => {
+  if ((details.outcome === "cancelled") !== (reasonCode !== null)) {
+    issue(ctx, "reason_mismatch");
+  }
+  if (actor.type === "user" && !(reasonCode !== null && atRequest.has(reasonCode))) {
+    issue(ctx, "actor_mismatch");
+  }
+  if (details.appointmentId !== undefined && (details.kind ?? "open_items") === "open_items") {
+    issue(ctx, "kind_mismatch");
+  }
+});
+
 /**
  * Every audit event, discriminated by `type`. The types of Slices 3–9 that the plan gives no
  * shape for (`warning_confirmed`, `export_created`) carry a code and no details until their
@@ -1018,33 +1092,12 @@ export const AuditEvent = z.discriminatedUnion("type", [
    * A reminder queued by a PL or the assigned consultant (data-protection.md, reminders): ids and
    * codes only, never the address or the text.
    */
-  event("reminder_queued", {
-    ...ofParticipation,
-    actor: staffActor,
-    details: z.strictObject({
-      reminderId: z.uuid(),
-      batchId: z.uuid(),
-      kind: ReminderKind,
-      channelKind: ActivationDeliveryKind,
-    }),
-  }),
+  reminderQueued,
   /**
    * A reminder's final state, recorded by its job: a cancellation names its reason (the reason
    * code), nothing else does; never a provider response or error.
    */
-  event("reminder_delivery", {
-    ...ofParticipation,
-    actor: z.strictObject({ type: z.literal("system"), job: systemJob }),
-    reasonCode: ReminderCancelReason.nullable(),
-    details: z.strictObject({
-      reminderId: z.uuid(),
-      outcome: z.enum(["sent", "failed", "delivery_unknown", "cancelled"]),
-    }),
-  }).superRefine(({ reasonCode, details }, ctx) => {
-    if ((details.outcome === "cancelled") !== (reasonCode !== null)) {
-      issue(ctx, "reason_mismatch");
-    }
-  }),
+  reminderDelivery,
   /**
    * A staff user opened the participation's audit history (data-protection.md, audit metadata;
    * Q157): who, which participation and when, nothing else. A security event, never shown in a
@@ -1103,5 +1156,15 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject(ofBooking),
   }),
   attendanceConflictResolved,
+  /** How staff told a person whose notice wasn't delivered, or that it isn't needed. */
+  event("appointment_notice_followed_up", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      reminderId: z.uuid(),
+      appointmentId: z.uuid(),
+      method: NoticeFollowUpMethod,
+    }),
+  }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

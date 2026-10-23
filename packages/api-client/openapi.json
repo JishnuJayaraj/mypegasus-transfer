@@ -3870,6 +3870,30 @@
               },
               "remind": {
                 "$ref": "#/components/schemas/RemindCapability"
+              },
+              "invite": {
+                "type": "object",
+                "properties": {
+                  "allowed": {
+                    "type": "boolean"
+                  },
+                  "channel": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "email",
+                      "sms",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "allowed",
+                  "channel"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -3878,7 +3902,8 @@
               "recordHandover",
               "revokeActivationCode",
               "providePrivacyNotice",
-              "remind"
+              "remind",
+              "invite"
             ],
             "additionalProperties": false
           }
@@ -4010,6 +4035,10 @@
               "reminded_recently",
               "nothing_open",
               "participation_closed",
+              "not_eligible",
+              "already_booked",
+              "already_invited",
+              "invitation_limit",
               null
             ]
           },
@@ -4120,7 +4149,11 @@
                     "consent_required",
                     "reminded_recently",
                     "nothing_open",
-                    "participation_closed"
+                    "participation_closed",
+                    "not_eligible",
+                    "already_booked",
+                    "already_invited",
+                    "invitation_limit"
                   ]
                 }
               },
@@ -4164,7 +4197,10 @@
       "ReminderKind": {
         "type": "string",
         "enum": [
-          "open_items"
+          "open_items",
+          "appointment_invitation",
+          "appointment_changed",
+          "appointment_cancelled"
         ]
       },
       "ReminderPage": {
@@ -4210,11 +4246,22 @@
             ]
           },
           "channel": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "enum": [
               "email",
-              "sms"
+              "sms",
+              null
             ]
+          },
+          "appointmentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           },
           "requestedAt": {
             "type": "string",
@@ -4228,6 +4275,9 @@
             "examples": [
               "2027-03-01"
             ]
+          },
+          "bySystem": {
+            "type": "boolean"
           },
           "status": {
             "$ref": "#/components/schemas/ReminderStatus"
@@ -4244,6 +4294,9 @@
               "nothing_open",
               "requester_no_longer_authorized",
               "delivery_unavailable",
+              "no_channel",
+              "consent_required",
+              "appointment_unavailable",
               null
             ]
           },
@@ -4253,6 +4306,38 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "followUpMethod": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "phone",
+              "in_person",
+              "letter",
+              "not_needed",
+              null
+            ]
+          },
+          "followedUpAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "followUp": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "followUp"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -4261,13 +4346,39 @@
           "messageVersion",
           "language",
           "channel",
+          "appointmentId",
           "requestedAt",
           "requestedOn",
+          "bySystem",
           "status",
           "cancelReason",
-          "outcomeAt"
+          "outcomeAt",
+          "followUpMethod",
+          "followedUpAt",
+          "capabilities"
         ],
         "additionalProperties": false
+      },
+      "NoticeFollowUpInput": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/NoticeFollowUpMethod"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "additionalProperties": false
+      },
+      "NoticeFollowUpMethod": {
+        "type": "string",
+        "enum": [
+          "phone",
+          "in_person",
+          "letter",
+          "not_needed"
+        ]
       },
       "AppointmentPage": {
         "type": "object",
@@ -5364,6 +5475,119 @@
           "information_delivered_otherwise"
         ]
       },
+      "InvitationRequestResult": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queued": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "channel": {
+                  "type": "string",
+                  "enum": [
+                    "email",
+                    "sms"
+                  ]
+                }
+              },
+              "required": [
+                "participationId",
+                "channel"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "notDeliverable": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "no_channel",
+                    "consent_required"
+                  ]
+                }
+              },
+              "required": [
+                "participationId",
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "no_channel",
+                    "consent_required",
+                    "reminded_recently",
+                    "nothing_open",
+                    "participation_closed",
+                    "not_eligible",
+                    "already_booked",
+                    "already_invited",
+                    "invitation_limit"
+                  ]
+                }
+              },
+              "required": [
+                "participationId",
+                "code"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "batchId",
+          "queued",
+          "notDeliverable",
+          "skipped"
+        ],
+        "additionalProperties": false
+      },
+      "InvitationRequestInput": {
+        "type": "object",
+        "properties": {
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 500
+          }
+        },
+        "required": [
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
       "HistoryPage": {
         "type": "object",
         "properties": {
@@ -5527,7 +5751,8 @@
           "attendance_superseded",
           "information_delivery_confirmed",
           "attendance_conflict_escalated",
-          "attendance_conflict_resolved"
+          "attendance_conflict_resolved",
+          "appointment_notice_followed_up"
         ]
       },
       "HistoryActor": {
@@ -7257,6 +7482,331 @@
         },
         "required": [
           "oneTimeCode"
+        ],
+        "additionalProperties": false
+      },
+      "PortalAppointments": {
+        "type": "object",
+        "properties": {
+          "invitations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "appointmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "$ref": "#/components/schemas/AppointmentKind"
+                },
+                "details": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "venue": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "startsAt",
+                    "endsAt",
+                    "title",
+                    "venue"
+                  ],
+                  "additionalProperties": false
+                },
+                "state": {
+                  "$ref": "#/components/schemas/PortalInvitationState"
+                },
+                "cutoffHint": {
+                  "type": "boolean"
+                },
+                "alternative": {
+                  "type": "boolean"
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "book": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "book"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "appointmentId",
+                "kind",
+                "details",
+                "state",
+                "cutoffHint",
+                "alternative",
+                "capabilities"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "bookings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "appointmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "$ref": "#/components/schemas/AppointmentKind"
+                },
+                "details": {
+                  "type": "object",
+                  "properties": {
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "venue": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "startsAt",
+                    "endsAt",
+                    "title",
+                    "venue"
+                  ],
+                  "additionalProperties": false
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "cancel": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "cancel"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "appointmentId",
+                "kind",
+                "details",
+                "capabilities"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "cancelled": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "appointmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "$ref": "#/components/schemas/AppointmentKind"
+                },
+                "details": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "venue": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "startsAt",
+                    "endsAt",
+                    "title",
+                    "venue"
+                  ],
+                  "additionalProperties": false
+                },
+                "cancelledBy": {
+                  "type": "string",
+                  "enum": [
+                    "organizer",
+                    "team"
+                  ]
+                },
+                "alternative": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "appointmentId",
+                "kind",
+                "details",
+                "cancelledBy",
+                "alternative"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "bookable": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "appointmentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "$ref": "#/components/schemas/AppointmentKind"
+                },
+                "details": {
+                  "type": "object",
+                  "properties": {
+                    "startsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "endsAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "UTC timestamp (ISO 8601)"
+                    },
+                    "title": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "venue": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "startsAt",
+                    "endsAt",
+                    "title",
+                    "venue"
+                  ],
+                  "additionalProperties": false
+                },
+                "availability": {
+                  "$ref": "#/components/schemas/SeatAvailability"
+                },
+                "cutoffHint": {
+                  "type": "boolean"
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "book": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "book"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "appointmentId",
+                "kind",
+                "details",
+                "availability",
+                "cutoffHint",
+                "capabilities"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "invitations",
+          "bookings",
+          "cancelled",
+          "bookable"
+        ],
+        "additionalProperties": false
+      },
+      "PortalInvitationState": {
+        "type": "string",
+        "enum": [
+          "bookable",
+          "full",
+          "closed",
+          "unavailable",
+          "no_longer_valid"
+        ]
+      },
+      "PortalBookingResult": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "bookingId"
         ],
         "additionalProperties": false
       },
@@ -13693,6 +14243,109 @@
         }
       }
     },
+    "/api/v1/participations/{participationId}/reminders/{reminderId}/follow-up": {
+      "post": {
+        "tags": [
+          "reminders"
+        ],
+        "summary": "Record how the person was told of an undelivered organizer's notice, or that it isn't needed (the PL, the assigned consultant)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "reminderId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoticeFollowUpInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{projectId}/appointments": {
       "get": {
         "tags": [
@@ -14909,6 +15562,117 @@
           },
           "422": {
             "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointments/{appointmentId}/invitations": {
+      "post": {
+        "tags": [
+          "appointments"
+        ],
+        "summary": "Invite up to 500 participations (the PL, the assigned consultant): each queued per channel, written without a usable channel (visible in the portal) or skipped with a code",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "appointmentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The invitations and the skipped participations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationRequestResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -18005,6 +18769,215 @@
           },
           "429": {
             "description": "Too many requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/appointments": {
+      "get": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "The portal's \"Termine\": invitations, the participant's bookings, cancelled appointments and bookable ones",
+        "responses": {
+          "200": {
+            "description": "The four sections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalAppointments"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/appointments/{appointmentId}/booking": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Book an appointment as the participant, until its public booking cutoff",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "appointmentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The booking",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalBookingResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/portal/appointment-bookings/{bookingId}/cancellation": {
+      "post": {
+        "tags": [
+          "portal"
+        ],
+        "summary": "Cancel the participant's own booking until the start; another participation's booking is a 404",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "bookingId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Cancelled"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

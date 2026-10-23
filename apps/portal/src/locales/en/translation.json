@@ -19,7 +19,8 @@
     "login": "Log in",
     "manageChannels": "Manage your contact details",
     "selfService": "My details",
-    "consents": "Consents"
+    "consents": "Consents",
+    "appointments": "Appointments"
   },
   "status": {
     "checking": "Checking the connection …",
@@ -150,6 +151,71 @@
       "revoked": "withdrawn",
       "lost_access_replaced": "access recovered, contact replaced",
       "superseded": "replaced by the new consent"
+    }
+  },
+  "appointments": {
+    "title": "Appointments",
+    "intro": "Here you find your invitations and booked appointments. You can book and cancel appointments.",
+    "expired": "Your session has expired. Please log in again.",
+    "failed": "Your appointments could not be loaded. Please try again later.",
+    "sections": {
+      "invitations": "Invitations",
+      "mine": "My appointments",
+      "cancelled": "Cancelled",
+      "bookable": "Book an appointment"
+    },
+    "empty": {
+      "invitations": "You have no open invitations.",
+      "mine": "You have no booked appointments.",
+      "cancelled": "No cancelled appointments.",
+      "bookable": "There are no further appointments you can book right now."
+    },
+    "kinds": {
+      "info_event": "Information event",
+      "consultation": "Counselling appointment"
+    },
+    "heading": "{{kind}} on {{date}}",
+    "time": "Time",
+    "timeRange": "{{start}}–{{end}}",
+    "subject": "Topic",
+    "venue": "Place",
+    "states": {
+      "full": "fully booked",
+      "closed": "Booking closed",
+      "unavailable": "You cannot book this appointment.",
+      "noLongerValid": "This invitation is no longer valid."
+    },
+    "availability": {
+      "available": "Places available",
+      "full": "fully booked"
+    },
+    "cutoffHint": "This appointment is after a deadline that applies to you.",
+    "cancelledBy": {
+      "organizer": "cancelled by the organiser",
+      "team": "cancelled by your counselling team"
+    },
+    "alternative": "Book another appointment",
+    "contactTeam": "Please contact your counselling team.",
+    "book": "Book",
+    "confirmBook": "Do you want to book this appointment?",
+    "yesBook": "Yes, book",
+    "cancel": "Cancel booking",
+    "confirmCancel": "Do you want to cancel this appointment?",
+    "yesCancel": "Yes, cancel",
+    "back": "Back",
+    "booked": "The appointment is booked.",
+    "cancelledDone": "Your booking is cancelled.",
+    "errors": {
+      "appointment_full": "The appointment is now fully booked.",
+      "booking_closed": "Booking for this appointment is closed.",
+      "already_booked": "You have already booked this appointment.",
+      "info_event_limit": "You have already booked an information event.",
+      "booking_overlap": "You already have another appointment at this time.",
+      "after_cutoff": "A deadline that applies to you has passed. Please contact your counselling team.",
+      "appointment_started": "The appointment has already started.",
+      "appointment_cancelled": "The appointment was cancelled.",
+      "booking_cancelled": "The booking is already cancelled.",
+      "failed": "That did not work. Please try again later."
     }
   }
 }

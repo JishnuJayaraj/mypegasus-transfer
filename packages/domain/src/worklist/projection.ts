@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ActivationDeliveryKind } from "../activation/model";
 import { ActivationStatus } from "../activation/status";
 import { entryWaveAssignment } from "../access/participation-view";
 import type { IsoDate } from "../iso-date";
@@ -42,6 +43,13 @@ export const WorklistCapabilities = z.strictObject({
   revokeActivationCode: z.boolean(),
   providePrivacyNotice: z.boolean(),
   remind: RemindCapability,
+  /**
+   * "Zu Termin einladen" (data-protection.md, invitations): whether the viewer may invite the row
+   * (`mayRemind`, an open participation) and the channel an invitation would go to now, `null`
+   * when none is usable ("nicht zustellbar, im Portal sichtbar"). The appointment's rules follow
+   * at the request.
+   */
+  invite: z.strictObject({ allowed: z.boolean(), channel: ActivationDeliveryKind.nullable() }),
 });
 
 /**
@@ -107,7 +115,7 @@ export type WorklistViewer = {
   /** Whether a self-service field may be named (the "Selbstauskunft" tab's rule). */
   knows: (key: string) => boolean;
   /** The operation's permission; the domain's preconditions follow. */
-  may: (operation: Exclude<keyof WorklistItem["capabilities"], "remind">) => boolean;
+  may: (operation: Exclude<keyof WorklistItem["capabilities"], "remind" | "invite">) => boolean;
   /** `mayRemind` in an active project; the reminder rules follow. */
   remind: boolean;
 };
@@ -186,6 +194,10 @@ export function worklistProjection(
       revokeActivationCode: viewer.may("revokeActivationCode"),
       providePrivacyNotice: viewer.may("providePrivacyNotice"),
       remind,
+      invite: {
+        allowed: viewer.remind && !closed,
+        channel: viewer.remind ? (chooseChannel(facts.channels)?.kind ?? null) : null,
+      },
     },
   };
 }

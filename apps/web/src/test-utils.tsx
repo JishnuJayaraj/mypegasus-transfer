@@ -187,6 +187,7 @@ export const worklistItem = (
     revokeActivationCode: false,
     providePrivacyNotice: false,
     remind: { allowed: false, code: null, channel: null },
+    invite: { allowed: false, channel: null },
     ...overrides.capabilities,
   },
 });

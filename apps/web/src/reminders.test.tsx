@@ -225,6 +225,11 @@ const record = (n: number, overrides: object = {}) => ({
   status: "sent",
   cancelReason: null,
   outcomeAt: "2026-10-22T08:15:02.000000Z",
+  appointmentId: null,
+  bySystem: false,
+  followUpMethod: null,
+  followedUpAt: null,
+  capabilities: { followUp: false },
   ...overrides,
 });
 
@@ -283,6 +288,185 @@ describe("the tab 'Nachrichten'", () => {
     detailSetup(() => problem(403, "forbidden"));
     expect(
       await screen.findByText("Sie dürfen die Nachrichten dieser Person nicht sehen."),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the new kinds in 'Nachrichten' and their follow-up (data-protection.md, messages)", () => {
+  it("names invitations and notices, the system as sender, and records a follow-up", async () => {
+    const user = userEvent.setup();
+    const notice = record(3, {
+      kind: "appointment_cancelled",
+      messageVersion: "portal-appointment-change:v1",
+      channel: null,
+      appointmentId: "00000000-0000-4000-c000-000000000001",
+      bySystem: true,
+      status: "cancelled",
+      cancelReason: "no_channel",
+      capabilities: { followUp: true },
+    });
+    let recorded = false;
+    const posted: unknown[] = [];
+    const mock = mockApi({
+      "GET /api/v1/me": () => json(staffUsers[1]),
+      "GET /api/v1/dev/staff-users": () => json(staffUsers),
+      [`GET ${projectPath}`]: () => json(project),
+      [`GET ${projectPath}/config`]: () => json(unpinnedConfig),
+      [`GET ${projectPath}/entry-waves`]: () => json({ items: [], nextCursor: null }),
+      [`GET ${detailPath}`]: () => json(detail),
+      [`GET ${detailPath}/reminders`]: () =>
+        json({
+          items: [
+            recorded
+              ? {
+                  ...notice,
+                  followUpMethod: "phone",
+                  followedUpAt: "2026-10-22T09:00:00.000000Z",
+                  capabilities: { followUp: false },
+                }
+              : notice,
+            record(4, {
+              kind: "appointment_invitation",
+              messageVersion: "portal-invitation:v1",
+              appointmentId: "00000000-0000-4000-c000-000000000001",
+            }),
+          ],
+          nextCursor: null,
+        }),
+      [`POST ${detailPath}/reminders/${notice.id}/follow-up`]: ({ body }) => {
+        posted.push(body);
+        recorded = true;
+        return new Response(null, { status: 204 });
+      },
+    });
+    renderApp(`/projects/${project.id}/participations/${participationId}?tab=messages`, mock.api);
+    const row = (await screen.findByText("Absage eines gebuchten Termins")).closest("tr")!;
+    expect(within(row).getByText("kein Kontaktweg")).toBeInTheDocument();
+    expect(within(row).getByText("nicht gesendet: kein Kontaktweg")).toBeInTheDocument();
+    expect(within(row).getByText("System (Veranstalter)")).toBeInTheDocument();
+    const invitation = screen.getByText("Einladung zu einem Termin").closest("tr")!;
+    expect(within(invitation).getByText("Team")).toBeInTheDocument();
+    expect(
+      within(invitation).queryByRole("button", { name: "Nachverfolgung erfassen" }),
+    ).not.toBeInTheDocument();
+    await user.click(within(row).getByRole("button", { name: "Nachverfolgung erfassen" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: "Erfassen" })).toBeDisabled();
+    await user.selectOptions(within(dialog).getByLabelText("Wie informiert?"), "phone");
+    await user.click(within(dialog).getByRole("button", { name: "Erfassen" }));
+    expect(await screen.findByText("per Telefon (22.10.2026, 11:00)")).toBeInTheDocument();
+    expect(posted).toEqual([{ method: "phone" }]);
+  });
+});
+
+const appointmentId = "00000000-0000-4000-c000-000000000009";
+const appointmentPage = {
+  items: [
+    {
+      id: appointmentId,
+      kind: "info_event",
+      startsAt: "2099-11-02T09:00:00.000Z",
+      endsAt: "2099-11-02T11:00:00.000Z",
+      bookingClosesAt: "2099-11-01T09:00:00.000Z",
+      status: "scheduled",
+      title: "Infoveranstaltung W1",
+      bookings: { scope: "all", booked: 3, availability: "available" },
+    },
+    {
+      id: "00000000-0000-4000-c000-000000000008",
+      kind: "info_event",
+      startsAt: "2099-11-03T09:00:00.000Z",
+      endsAt: "2099-11-03T11:00:00.000Z",
+      bookingClosesAt: "2099-11-02T09:00:00.000Z",
+      status: "scheduled",
+      title: "Ausgebucht",
+      bookings: { scope: "all", booked: 2, availability: "full" },
+    },
+  ],
+  nextCursor: null,
+  capabilities: { createInfoEvent: true, createConsultation: true, chooseHost: true },
+};
+const invite = (allowed: boolean, channel: string | null) => ({
+  capabilities: { invite: { allowed, channel } },
+});
+
+describe("'Zu Termin einladen' in the work list (data-protection.md, invitations)", () => {
+  it("chooses the appointment, counts per channel, previews the text and shows the result", async () => {
+    const user = userEvent.setup();
+    const items = [
+      worklistItem({ id: id(1), personnelNumber: "BSP-0001", ...invite(true, "email") }),
+      worklistItem({ id: id(2), personnelNumber: "BSP-0002", ...invite(true, "sms") }),
+      worklistItem({ id: id(3), personnelNumber: "BSP-0003", ...invite(true, null) }),
+      worklistItem({ id: id(4), personnelNumber: "BSP-0004", ...invite(false, null) }),
+    ];
+    const { calls } = setup(items, {
+      [`GET ${projectPath}/appointments`]: () => json(appointmentPage),
+      [`POST /api/v1/appointments/${appointmentId}/invitations`]: () =>
+        json(
+          {
+            batchId: "00000000-0000-4000-c000-000000000001",
+            queued: [{ participationId: id(1), channel: "email" }],
+            notDeliverable: [{ participationId: id(3), code: "no_channel" }],
+            skipped: [{ participationId: id(2), code: "already_booked" }],
+          },
+          201,
+        ),
+    });
+    await user.click(await screen.findByRole("button", { name: "Alle Treffer auswählen" }));
+    await user.click(screen.getByRole("button", { name: "Zu Termin einladen (3)" }));
+    const dialog = await screen.findByRole("dialog", { name: "Zu Termin einladen" });
+    const counts = within(dialog).getByRole("list", { name: "Ausgewählte Teilnehmende" });
+    expect(
+      within(counts)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual([
+      "1 per E-Mail",
+      "1 per SMS",
+      "1 nicht zustellbar, im Portal sichtbar",
+      "1 abgeschlossen oder ohne Ihre Zuständigkeit",
+    ]);
+    expect(within(dialog).getByText("Neue Einladung im Teilnehmerportal")).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "In Ihrem Teilnehmerportal gibt es eine Einladung zu einem Termin. Bitte melden Sie sich an: [Adresse des Teilnehmerportals]",
+      ),
+    ).toBeInTheDocument();
+    const send = within(dialog).getByRole("button", { name: "Einladen" });
+    expect(send).toBeDisabled();
+    const choice = within(dialog).getByLabelText("Termin");
+    // A full appointment isn't offered.
+    expect(within(choice).queryByText(/Ausgebucht/)).not.toBeInTheDocument();
+    await user.selectOptions(choice, appointmentId);
+    await user.click(send);
+    expect(
+      await within(dialog).findByText("1 Einladung wird gesendet (1 per E-Mail, 0 per SMS)."),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["1 nicht zustellbar, im Portal sichtbar", "1: bereits gebucht"]);
+    const sent = calls.find((call) => call.key.endsWith("/invitations"))!;
+    expect(sent.body).toEqual({ participationIds: [id(1), id(2), id(3)] });
+  });
+
+  it("says why nothing was sent", async () => {
+    const user = userEvent.setup();
+    setup([worklistItem({ id: id(1), ...invite(true, "email") })], {
+      [`GET ${projectPath}/appointments`]: () => json(appointmentPage),
+      [`POST /api/v1/appointments/${appointmentId}/invitations`]: () =>
+        problem(422, "domain-error", {
+          errors: [{ pointer: "", code: "appointment_full", detail: "x" }],
+        }),
+    });
+    await user.click(await screen.findByRole("button", { name: "Alle Treffer auswählen" }));
+    await user.click(screen.getByRole("button", { name: "Zu Termin einladen (1)" }));
+    const dialog = await screen.findByRole("dialog", { name: "Zu Termin einladen" });
+    await user.selectOptions(await within(dialog).findByLabelText("Termin"), appointmentId);
+    await user.click(within(dialog).getByRole("button", { name: "Einladen" }));
+    expect(
+      await screen.findByText("Der Termin ist ausgebucht. Es wurde nichts gesendet."),
     ).toBeInTheDocument();
   });
 });

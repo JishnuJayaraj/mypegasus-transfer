@@ -351,6 +351,39 @@ generator then. No action now.
   `already_escalated`, `attendance_recorded` (cancelling an appointment or a booking with
   attendance).
 
+## Note 2026-10-23 (Slice 5b, PR 5b-3): the portal's "Termine", invitations and notices
+
+- **Portal routes** (a live active portal session; `private, no-store`):
+  `GET /portal/appointments` → `PortalAppointments` (`invitations`, `bookings`, `cancelled`,
+  `bookable`; details only where the domain's `portalAppointments` shows them, the seat state
+  never a count); `POST /portal/appointments/{id}/booking` (`{}` → `201 { bookingId }`);
+  `POST /portal/appointment-bookings/{id}/cancellation` (`{}` → `204`). A booking of another
+  participation, an appointment of another project or outside the participant's audience or host
+  rule is `404`; a dead session `401`; the other booking refusals `422` with their code
+  (`booking_closed`, `appointment_full`, `already_booked`, `info_event_limit`, `booking_overlap`,
+  `after_cutoff`, `appointment_cancelled`, `appointment_started`, `booking_cancelled`,
+  `attendance_recorded`). The database function takes the session's token, so the API never
+  books or cancels for a participation other than the session's.
+- **Invitations:** `POST /appointments/{id}/invitations` (`InvitationRequestInput`:
+  `{ participationIds }`, 1–500 distinct) → `201 InvitationRequestResult` (`batchId`, `queued`
+  per channel, `notDeliverable` with `no_channel` or `consent_required`, `skipped` with
+  `participation_closed`, `not_eligible`, `already_booked`, `already_invited` or
+  `invitation_limit`): data, not a problem. Order: the schema (400) → visibility (404: the
+  appointment; a participation the viewer can't list or of another project is
+  `participation_not_found` at `/participationIds/<i>`) → permission (403: `mayRemind` for every
+  row) → state (422: `project_not_active`, then the database's `appointment_cancelled`,
+  `appointment_started`, `booking_closed`, `appointment_full`). In production `503
+  delivery_unavailable` without pg-boss or both senders, before writing anything.
+- **Follow-up:** `POST /participations/{id}/reminders/{reminderId}/follow-up` (`{ method }` →
+  `204`): 404 for a message of another participation, one the viewer may not read or not a
+  notice; 403 without `mayResolveAppointmentItem(notice_undelivered)`; 422 `notice_delivered`,
+  `already_followed_up`, `participation_closed`.
+- **Payloads:** `ReminderRecord` adds `appointmentId`, `bySystem`, `followUpMethod`,
+  `followedUpAt` and `capabilities.followUp`, and its `channel` may be null; `ReminderKind`,
+  `ReminderSkip` and the cancel reasons have the new codes. `WorklistItem.capabilities.invite`
+  is `{ allowed, channel }` (the channel an invitation would go to now, null without a usable
+  one). `Appointment.inUse` counts invitations too.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

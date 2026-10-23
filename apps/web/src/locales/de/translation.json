@@ -1402,10 +1402,16 @@
       "participation_closed": "abgeschlossen",
       "nothing_open": "nichts mehr offen",
       "requester_no_longer_authorized": "Absender nicht mehr berechtigt",
-      "delivery_unavailable": "kein Versanddienst"
+      "delivery_unavailable": "kein Versanddienst",
+      "no_channel": "kein Kontaktweg",
+      "consent_required": "keine Einwilligung in Benachrichtigungen",
+      "appointment_unavailable": "Termin nicht mehr buchbar"
     },
     "kinds": {
-      "open_items": "Erinnerung an offene Punkte"
+      "open_items": "Erinnerung an offene Punkte",
+      "appointment_invitation": "Einladung zu einem Termin",
+      "appointment_changed": "Änderung eines gebuchten Termins",
+      "appointment_cancelled": "Absage eines gebuchten Termins"
     },
     "channels": {
       "email": "E-Mail",
@@ -1423,8 +1429,28 @@
         "kind": "Nachricht",
         "channel": "Kanal",
         "state": "Status",
-        "by": "Durch"
-      }
+        "by": "Durch",
+        "followUp": "Nachverfolgung"
+      },
+      "noChannel": "kein Kontaktweg",
+      "system": "System (Veranstalter)"
+    },
+    "followUp": {
+      "action": "Nachverfolgung erfassen",
+      "title": "Nachverfolgung erfassen",
+      "intro": "Die Nachricht hat die Person nicht erreicht. Erfassen Sie, wie sie informiert wurde, oder dass es nicht nötig ist.",
+      "method": "Wie informiert?",
+      "choose": "Bitte wählen",
+      "methods": {
+        "phone": "per Telefon",
+        "in_person": "persönlich",
+        "letter": "per Brief",
+        "not_needed": "nicht erforderlich"
+      },
+      "save": "Erfassen",
+      "saved": "Nachverfolgung erfasst",
+      "failed": "Die Nachverfolgung konnte nicht erfasst werden.",
+      "recorded": "{{method}} ({{date}})"
     }
   },
   "history": {
@@ -1504,15 +1530,16 @@
       "document_added": "Unterlage hinzugefügt",
       "document_reviewed": "Unterlage geprüft",
       "document_deleted": "Unterlage gelöscht",
-      "reminder_queued": "Erinnerung angefordert",
-      "reminder_delivery": "Erinnerung abgeschlossen",
+      "reminder_queued": "Nachricht angefordert",
+      "reminder_delivery": "Nachricht abgeschlossen",
       "appointment_booked": "Termin gebucht",
       "appointment_booking_cancelled": "Terminbuchung abgesagt",
       "attendance_recorded": "Teilnahme erfasst",
       "attendance_superseded": "Abwesenheit ersetzt (fand nicht statt)",
       "information_delivery_confirmed": "Information bestätigt",
       "attendance_conflict_escalated": "Widerspruch eskaliert",
-      "attendance_conflict_resolved": "Widerspruch geklärt"
+      "attendance_conflict_resolved": "Widerspruch geklärt",
+      "appointment_notice_followed_up": "Nachverfolgung einer Terminnachricht"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1568,13 +1595,17 @@
       "late_entry": "Nachtrag",
       "correction": "Korrektur",
       "replacement_basis": "Andere Teilnahme als Grundlage",
-      "information_delivered_otherwise": "Anderweitig informiert"
+      "information_delivered_otherwise": "Anderweitig informiert",
+      "no_channel": "Kein Kontaktweg",
+      "consent_required": "Keine Einwilligung in Benachrichtigungen",
+      "appointment_unavailable": "Termin nicht mehr buchbar"
     },
     "appointment": "{{kind}} am {{start}}",
     "appointmentBy": "{{kind}} am {{start}} ({{origin}})",
     "afterClose": "(nach Abschluss der Teilnahme)",
     "withStatusChange": "(mit Statusänderung)",
-    "asBasis": "(als Grundlage, ohne Statusänderung)"
+    "asBasis": "(als Grundlage, ohne Statusänderung)",
+    "messageFor": "{{kind}} am {{start}}"
   },
   "appointments": {
     "title": "Termine",
@@ -1865,6 +1896,58 @@
           "done": "Widerspruch geklärt"
         }
       }
+    }
+  },
+  "invitations": {
+    "open_one": "Zu Termin einladen ({{count}})",
+    "open_other": "Zu Termin einladen ({{count}})",
+    "title": "Zu Termin einladen",
+    "appointment": "Termin",
+    "choose": "Termin wählen",
+    "none": "Kein Termin mit freien Plätzen, der im Portal noch buchbar ist.",
+    "countsLabel": "Ausgewählte Teilnehmende",
+    "counts": {
+      "email_one": "{{count}} per E-Mail",
+      "email_other": "{{count}} per E-Mail",
+      "sms_one": "{{count}} per SMS",
+      "sms_other": "{{count}} per SMS",
+      "notDeliverable_one": "{{count}} nicht zustellbar, im Portal sichtbar",
+      "notDeliverable_other": "{{count}} nicht zustellbar, im Portal sichtbar",
+      "closed_one": "{{count}} abgeschlossen oder ohne Ihre Zuständigkeit",
+      "closed_other": "{{count}} abgeschlossen oder ohne Ihre Zuständigkeit"
+    },
+    "rulesNote": "Wer den Termin nicht buchen kann, bereits gebucht hat oder schon eingeladen ist, wird übersprungen.",
+    "previewIntro": "Die Teilnehmenden erhalten diesen festen Text in der Sprache ihres Portals (Deutsch oder Englisch), ohne Namen oder Einzelheiten zum Termin. Die Einladung steht im Portal, auch wenn die Nachricht nicht zugestellt werden kann:",
+    "preview": "Vorschau der Einladung",
+    "send": "Einladen",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "sent_one": "{{count}} Einladung erstellt",
+    "sent_other": "{{count}} Einladungen erstellt",
+    "result": {
+      "queued_one": "{{count}} Einladung wird gesendet ({{email}} per E-Mail, {{sms}} per SMS).",
+      "queued_other": "{{count}} Einladungen werden gesendet ({{email}} per E-Mail, {{sms}} per SMS)."
+    },
+    "skips": {
+      "participation_closed_one": "{{count}}: abgeschlossen",
+      "participation_closed_other": "{{count}}: abgeschlossen",
+      "not_eligible_one": "{{count}}: kann diesen Termin nicht buchen",
+      "not_eligible_other": "{{count}}: können diesen Termin nicht buchen",
+      "already_booked_one": "{{count}}: bereits gebucht",
+      "already_booked_other": "{{count}}: bereits gebucht",
+      "already_invited_one": "{{count}}: bereits eingeladen",
+      "already_invited_other": "{{count}}: bereits eingeladen",
+      "invitation_limit_one": "{{count}}: drei Zustellversuche erreicht",
+      "invitation_limit_other": "{{count}}: drei Zustellversuche erreicht"
+    },
+    "errors": {
+      "failed": "Die Einladungen konnten nicht erstellt werden. Es wurde nichts gesendet.",
+      "unavailable": "Einladungen können derzeit nicht versendet werden. Es wurde nichts gesendet.",
+      "appointment_full": "Der Termin ist ausgebucht. Es wurde nichts gesendet.",
+      "booking_closed": "Die Buchung im Portal ist für diesen Termin geschlossen. Es wurde nichts gesendet.",
+      "appointment_cancelled": "Der Termin ist abgesagt. Es wurde nichts gesendet.",
+      "appointment_started": "Der Termin hat begonnen. Es wurde nichts gesendet.",
+      "project_not_active": "Das Projekt ist nicht aktiv. Es wurde nichts gesendet."
     }
   }
 }

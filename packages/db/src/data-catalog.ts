@@ -209,9 +209,10 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
-  // Reminders (data-protection.md, reminders; Q156): ids, codes, versions and times; never an
-  // address, a text or a provider response. Non-signers with the 90-day deletion, otherwise the
-  // end of the 3rd calendar year after exit; the channel keeps its own erasure rule.
+  // Messages (data-protection.md, reminders and messages; Q156, Q165): reminders, invitations and
+  // organizer notices; ids, codes, versions, times and a notice's follow-up; never an address, a
+  // text or a provider response. The `personnel_file` triggers of Q105 and Q166 (mapping awaiting
+  // confirmation, period `unset`); the channel keeps its own erasure rule.
   participant_reminder: {
     retentionClass: "personnel_file",
     dataClass: "internal",
@@ -553,6 +554,11 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     cancel_reason: "reminderLog",
     claimed_at: "reminderLog",
     outcome_at: "reminderLog",
+    appointment_id: null,
+    booking_id: null,
+    followed_up_by: null,
+    followed_up_method: "reminderLog",
+    followed_up_at: "reminderLog",
   },
   appointment_booking: {
     id: null,

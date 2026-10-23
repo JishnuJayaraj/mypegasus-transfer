@@ -165,6 +165,13 @@ need the proxy CA (`/root/.ccr/README.md`).
   for the last one, addition with consent and a one-time code); shared pieces live in
   `apps/portal/src/components` and `problem.ts`. `apps/web` adds the recovery panel
   (`components/recovery.tsx`) to an activated participant's detail.
+- PR 5b-3: "Termine" (`apps/portal/src/routes/appointments.tsx`, linked from the start page):
+  the four sections of `GET /api/v1/portal/appointments` (`apps/api/src/routes/
+  portal-appointments.ts`, the domain's `portalAppointments`): "Einladungen", "Meine Termine",
+  "Abgesagt", "Termine buchen", one card per appointment (`.tp-appointment`, logical CSS
+  properties, readable at 320 px without horizontal scrolling), "Buchen" and "Absagen" each with
+  an inline confirmation (a `fieldset` whose legend asks), "Anderen Termin buchen" as a link to the
+  last section. Dates and times in Europe/Berlin, de/en.
 
 ## Encrypted fields (Slice 4a, PR 4a-4)
 
@@ -201,6 +208,10 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   with the reminder id as `singletonKey`, claims the dispatch under the participation lock, sends
   the fixed text (provider key `reminder:<reminderId>`) and records the outcome
   (`apps/api/src/reminders/`; ADR-0011).
+- **Invitations and organizer notices** (Slice 5b PR 5b-3): invitations go through
+  `reminders.send`; the organizer's notices through `appointments.notify`, queued in the
+  organizer's own transaction (`apps/api/src/appointments/notices.ts`,
+  `apps/api/src/appointments/invitations.ts`); one handler sends every kind's fixed text.
 
 ## The project page (Slice 5, PR 5-1)
 
@@ -216,6 +227,11 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - From PR 5-2 the work list's bulk "Erinnern" counts the selected rows by their
   `capabilities.remind` before sending, the column "Erinnert" shows the latest reminder, and the
   participant page has the tab "Nachrichten" (`apps/web/src/components/reminders.tsx`).
+- From PR 5b-3 the bulk "Zu Termin einladen" (`apps/web/src/components/invitations.tsx`) picks an
+  appointment the participant can still book in the portal, counts the selected rows by their
+  `capabilities.invite` ("per E-Mail", "per SMS", "nicht zustellbar, im Portal sichtbar"), shows
+  the fixed text and then the result with the skips; "Nachrichten" names the new kinds, the
+  system as the sender of a notice, and offers "Nachverfolgung erfassen" on an undelivered one.
 - **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende", "mit
   offenen Angaben oder Unterlagen", "Frist in 14 Tagen", "Frist überschritten", "Hinweise", "nicht
   erreichbar") and tables per status, track, wave, activation and notice state, deadline kind and

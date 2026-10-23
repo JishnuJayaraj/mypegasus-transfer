@@ -195,10 +195,60 @@
     rechecks exactly the queued channel and consent, the version, the status and the requester:
     no dispatch when the invalidating change committed before the claim (ADR-0011).
   - *The message log* (`participant_reminder`): ids, kind, text version, language, the channel's
-    id and kind, the consent id, the requester's id, times, status and a closed cancel reason;
-    never an address, rendered text, provider response, free text, error message, IP or tracking
-    data. The tab "Nachrichten" shows it to whoever reads the participation's `case_internal`
-    data (the PL, the assigned consultant, back office), the requester as "Team".
+    id and kind, the consent id, the requester's id, the appointment and booking an appointment's
+    message is about, times, status, a closed cancel reason and a notice's follow-up; never an
+    address, rendered text, provider response, free text, error message, IP or tracking data. The
+    tab "Nachrichten" shows it to whoever reads the participation's `case_internal` data (the PL,
+    the assigned consultant, back office), the requester as "Team", an organizer's notice as
+    "System (Veranstalter)", a row without a usable channel as "kein Kontaktweg".
+- **Messages about appointments (Slice 5b; Q165, accepted; as built in 5b-3, readings Q174):**
+  one message log with three more kinds: `appointment_invitation`, `appointment_changed` (title
+  or venue corrected) and `appointment_cancelled` (the appointment, or the booking by staff). The
+  reminders' contract applies (channel choice, a live consent v2, whose "notifications about using
+  the portal" cover them; channel, consent, language and text version fixed when queued;
+  cancelled rather than rerouted; the outcomes; the log's fields). Neither kind uses or consumes
+  the 3-day reminder window.
+  - *Invitations:* requested by staff for 1–500 participations under the exclusive project lock
+    (`mayRemind`; the requester rechecked at the dispatch). An appointment no participant can book
+    from the portal now (cancelled, started, past its public cutoff, full) refuses the request as a
+    whole. Each eligible participation gets a row, also without a usable channel: then it is
+    `cancelled` at once (`no_channel`, `consent_required`; no job; "nicht zustellbar, im Portal
+    sichtbar"), so the portal shows the invitation either way. Skips without a row:
+    `participation_closed`, `not_eligible` (another booking rule for the participant),
+    `already_booked`, `already_invited`, `invitation_limit`.
+  - *Retry:* a new invitation to the same appointment is allowed after the latest one ended
+    `failed`, was cancelled for a delivery reason (`no_channel`, `consent_required`,
+    `channel_unavailable`, `consent_ended`, `delivery_unavailable`) or, by a currently authorized
+    requester, `requester_no_longer_authorized`; refused while it is `queued`, `dispatching`,
+    `sent` or `delivery_unknown` (an uncertain outcome is never resent) and after any other
+    cancellation. At most three delivery attempts per participation and appointment, the first
+    included: an attempt is a row the claim handed to the provider (`sent`, `failed`,
+    `delivery_unknown`); a row cancelled before that uses none, and the job's transport retries are
+    the same attempt (`invitationRetryAllowed`).
+  - *Organizer notices:* the function that cancels the appointment or a booking (staff), or
+    corrects the title or venue of an appointment that hasn't started, queues one notice per
+    person booked as the system (no requester, actor `system`, job `appointments.notify`) in its
+    own transaction, so a reassignment between the change and the dispatch can't suppress it. A
+    cancellation after the start notifies too; the PL's `did_not_take_place` correction of a past
+    event over absences only sends none, nor does the participant's own cancellation or a closed
+    participation. The claim keeps the recipient, channel and consent checks and has no requester
+    check. Without a usable channel the notice is `cancelled` at once like an invitation.
+  - *The claim's rechecks* for an invitation: still bookable for the participant
+    (`appointment_unavailable`), not booked meanwhile (`nothing_open`). Lock order: participation
+    → appointment and booking `FOR SHARE` → message `FOR UPDATE` → channel, consent `FOR SHARE`
+    (ADR-0002, messages).
+  - *Texts (Q165; final wording with the DPO, Q132):* `portal-invitation:v1` and
+    `portal-appointment-change:v1` (both notice kinds), de/en, immutable, SHA-256 tests in the
+    notice catalog; no name, project, employer, kind, date, time, venue or title; the only
+    placeholder the plain portal URL; plain-text mail with the reminders' privacy note in email
+    only (`messageFor`).
+  - *Follow-up:* a notice that ended `failed`, `delivery_unknown` or cancelled for any reason but
+    `participation_closed` is undelivered (`noticeUndelivered`) until the PL or the assigned
+    consultant records once how the person was told (`phone`, `in_person`, `letter`) or that it
+    isn't needed (`not_needed`; "Nachverfolgung erfassen" in "Nachrichten";
+    `mayResolveAppointmentItem`), audited `appointment_notice_followed_up` (method and
+    appointment). Not for a closed participation. Participants without a usable channel are booked
+    by staff (phone, in person); letters stay out of scope, the follow-up records them.
 - **Appointments (Slice 5b; Q162, Q166, Q168, accepted; as built in 5b-1):** info events and
   consultation slots of a project (process-and-lifecycle.md, appointments).
   - *Who:* a current PL of the project creates, changes and cancels every appointment and alone
@@ -231,6 +281,19 @@
     `appointment_booking` is `internal`, `case_internal` (field `appointmentBookings`, listable as
     codes and dates), `personnel_file`. Bookings are never BA evidence and no funding status is
     inferred from the kind: funded-measure evidence is a separate record (Q169).
+  - *The portal's "Termine" (as built in 5b-3; Q164, Q165, readings Q174):* an activated
+    participant with a live session sees their own invitations (until the start, whether or not
+    the message arrived; "ausgebucht", "Buchung geschlossen" or another refusal with booking
+    disabled and the next step: "Anderen Termin buchen" when an appointment of the same kind is
+    bookable, else "Bitte wenden Sie sich an Ihr Beratungsteam"; title, venue and time only while
+    the appointment is in their audience or host rule, else its kind and "Diese Einladung gilt
+    nicht mehr"), their live bookings until the end with "Absagen" until the start, bookings and
+    invited appointments cancelled by the organizer or the team until 14 days after the later of
+    the original start and the cancellation, and the appointments they may book with the seat
+    state only (`portalAppointments`). They book until the public cutoff and cancel their own
+    booking until the start through their session (`book_appointment`,
+    `cancel_appointment_booking` with the session's token); another participation's booking, or an
+    appointment outside their project or rule, is a `404`. No booking confirmation message.
   - *Attendance (as built in 5b-2; Q163):* the PL and the assigned consultant record and correct
     attendance and confirm `informed` on it (`mayRecordAttendance`); after the participation
     closed the PL only. The conflict review ("Eskalieren", "Anderweitig informiert") is the PL's

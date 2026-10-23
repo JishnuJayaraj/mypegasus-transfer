@@ -92,11 +92,26 @@ export function HistoryTab({
           type: label(text(details.documentType) ?? ""),
           decision: coded("history.decisions", text(details.decision) ?? ""),
         });
-      case "reminder_queued":
+      // A message: its kind, the channel, an appointment's start as written then (Q168).
+      case "reminder_queued": {
+        const kind = coded("reminders.kinds", text(details.kind) ?? "open_items");
+        const channel = text(details.channelKind);
+        const start = text(details.startsAt);
+        return [
+          start ? t("history.messageFor", { kind, start: formatTimestamp(start) }) : kind,
+          channel ? coded("reminders.channels", channel) : t("reminders.tab.noChannel"),
+        ].join(", ");
+      }
+      case "reminder_delivery": {
+        const outcome = coded("history.outcomes", text(details.outcome) ?? "");
+        const kind = text(details.kind);
+        return kind ? `${coded("reminders.kinds", kind)}: ${outcome}` : outcome;
+      }
+      case "appointment_notice_followed_up":
+        return coded("reminders.followUp.methods", text(details.method) ?? "");
       case "contact_channel_added":
       case "contact_channel_removed":
-        return coded("reminders.channels", text(details.channelKind ?? details.kind) ?? "");
-      case "reminder_delivery":
+        return coded("reminders.channels", text(details.kind) ?? "");
       case "activation_code_delivery":
         return coded("history.outcomes", text(details.outcome) ?? "");
       // The appointment's kind and start as written then (Q168), never its title or venue.

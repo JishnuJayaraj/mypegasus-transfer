@@ -454,4 +454,16 @@ describe("mayResolveAppointmentItem (Q163)", () => {
       ),
     ).toBe("role_not_allowed");
   });
+
+  it("leaves an undelivered notice to the PL and the assigned consultant (data-protection.md, messages)", () => {
+    expect(allowed((actor) => mayResolveAppointmentItem(actor, target, "notice_undelivered"))).toBe(
+      "PL C",
+    );
+    expect(
+      result(mayResolveAppointmentItem(staff(["consultant"]), target, "notice_undelivered")),
+    ).toBe("not_assigned");
+    expect(
+      result(mayResolveAppointmentItem(staff(["back_office"]), target, "notice_undelivered")),
+    ).toBe("role_not_allowed");
+  });
 });

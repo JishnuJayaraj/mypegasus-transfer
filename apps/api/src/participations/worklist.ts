@@ -232,7 +232,10 @@ async function channelsOf(db: Pick<Database, "select">, ids: readonly string[]) 
   return byParticipation;
 }
 
-/** Each participation's latest reminder: its Berlin request date and status. */
+/**
+ * Each participation's latest reminder (`open_items`): its Berlin request date and status;
+ * invitations and notices neither use nor consume the window (data-protection.md, messages).
+ */
 async function lastRemindersOf(db: Pick<Database, "selectDistinctOn">, ids: readonly string[]) {
   const byParticipation = new Map<string, { requestedOn: string; status: ReminderStatus }>();
   if (ids.length === 0) return byParticipation;
@@ -243,7 +246,12 @@ async function lastRemindersOf(db: Pick<Database, "selectDistinctOn">, ids: read
       status: participantReminder.status,
     })
     .from(participantReminder)
-    .where(inArray(participantReminder.participationId, [...ids]))
+    .where(
+      and(
+        inArray(participantReminder.participationId, [...ids]),
+        eq(participantReminder.kind, "open_items"),
+      ),
+    )
     .orderBy(
       participantReminder.participationId,
       desc(participantReminder.requestedAt),

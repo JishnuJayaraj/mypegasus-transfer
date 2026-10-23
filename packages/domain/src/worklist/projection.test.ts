@@ -73,6 +73,7 @@ describe("worklistProjection", () => {
         revokeActivationCode: true,
         providePrivacyNotice: true,
         remind: { allowed: false, code: "no_channel", channel: null },
+        invite: { allowed: true, channel: null },
       },
     });
   });
@@ -149,6 +150,21 @@ describe("the reminder of a row", () => {
     expect(remind({ channels: [channel] }, viewer({ remind: false })).capabilities.remind).toEqual({
       allowed: false,
       code: null,
+      channel: null,
+    });
+  });
+});
+
+describe("the invitation of a row (data-protection.md, invitations)", () => {
+  it("names the channel an invitation would go to, also inside the reminder window", () => {
+    const lastReminder = { requestedOn: "2027-03-09", status: "sent" } as const;
+    expect(remind({ channels: [channel], lastReminder }).capabilities.invite).toEqual({
+      allowed: true,
+      channel: "sms",
+    });
+    expect(remind({ channels: [] }).capabilities.invite).toEqual({ allowed: true, channel: null });
+    expect(remind({ channels: [channel] }, viewer({ remind: false })).capabilities.invite).toEqual({
+      allowed: false,
       channel: null,
     });
   });

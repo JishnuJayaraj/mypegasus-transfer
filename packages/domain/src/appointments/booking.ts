@@ -129,13 +129,8 @@ function firstRefusal(request: BookingRequest): BookingRefusal | null {
     return "booking_closed";
   }
   if (terminalMainStatuses.has(participation.status)) return "participation_closed";
-  if (appointment.kind === "info_event") {
-    const inAudience =
-      appointment.audienceWaveId === null ||
-      appointment.audienceWaveId === participation.entryWaveId;
-    if (!inAudience || !beforeTg.has(participation.status)) return "not_in_audience";
-  } else if (!request.hostMayList) {
-    return "host_not_responsible";
+  if (!inBookingRule(appointment, participation, request.hostMayList)) {
+    return appointment.kind === "info_event" ? "not_in_audience" : "host_not_responsible";
   }
   if (liveBookings.some((booking) => booking.appointmentId === appointment.id)) {
     return "already_booked";
@@ -160,6 +155,22 @@ function firstRefusal(request: BookingRequest): BookingRefusal | null {
     return "after_cutoff";
   }
   return null;
+}
+
+/**
+ * Whether the appointment is in the participation's audience or host rule now (Q164): an info
+ * event of the project or the participation's wave while it is before `active_in_tg`; a
+ * consultation whose host may list it (Q62).
+ */
+export function inBookingRule(
+  appointment: { kind: AppointmentKind; audienceWaveId: string | null },
+  participation: { status: MainStatus; entryWaveId: string | null },
+  hostMayList: boolean,
+): boolean {
+  if (appointment.kind === "consultation") return hostMayList;
+  const inAudience =
+    appointment.audienceWaveId === null || appointment.audienceWaveId === participation.entryWaveId;
+  return inAudience && beforeTg.has(participation.status);
 }
 
 /** Whether a live booking may be cancelled now (Q164): the participant or staff, until the start. */

@@ -8,6 +8,8 @@ export const jobNames = {
   purgeDocument: "documents.purge-object",
   // Slice 5: one reminder's dispatch (data-protection.md, reminders).
   sendReminder: "reminders.send",
+  // Slice 5b: one organizer's notice, queued as the system (data-protection.md, messages).
+  notifyAppointment: "appointments.notify",
 } as const;
 
 /** The nightly run is a Berlin local time (round 9). */

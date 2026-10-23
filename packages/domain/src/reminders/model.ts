@@ -10,8 +10,14 @@ import type { ContactKind } from "../portal/contact";
 // to a channel the participant registered with a live consent v2. The database decides again at
 // the request and before the dispatch; these rules give the work list its capability.
 
-/** What a reminder is about: something open in the portal (the participant's actions). */
-export const ReminderKind = z.enum(["open_items"]).meta({ id: "ReminderKind" });
+/**
+ * What a message is about (data-protection.md, messages): something open in the portal (the
+ * participant's actions, a reminder), an invitation to an appointment, or the organizer's notice
+ * that a booked appointment changed (title or venue) or was cancelled.
+ */
+export const ReminderKind = z
+  .enum(["open_items", "appointment_invitation", "appointment_changed", "appointment_cancelled"])
+  .meta({ id: "ReminderKind" });
 export type ReminderKind = z.infer<typeof ReminderKind>;
 
 /**
@@ -23,17 +29,30 @@ export const ReminderStatus = z
   .meta({ id: "ReminderStatus" });
 export type ReminderStatus = z.infer<typeof ReminderStatus>;
 
-/** Why a selected participation got no reminder; the request goes on for the others. */
+/**
+ * Why a selected participation got no message; the request goes on for the others. An invitation
+ * also skips `not_eligible` (the booking rules), `already_booked`, `already_invited` and
+ * `invitation_limit` (data-protection.md, invitations).
+ */
 export const ReminderSkip = z.enum([
   "no_channel",
   "consent_required",
   "reminded_recently",
   "nothing_open",
   "participation_closed",
+  "not_eligible",
+  "already_booked",
+  "already_invited",
+  "invitation_limit",
 ]);
 export type ReminderSkip = z.infer<typeof ReminderSkip>;
 
-/** Why a queued reminder was never handed to a provider. */
+/**
+ * Why a message was never handed to a provider. An invitation or notice without a usable channel
+ * is written `cancelled` at once (`no_channel`, `consent_required`), so the portal shows it either
+ * way; the claim cancels an invitation whose appointment is no longer bookable for the
+ * participation (`appointment_unavailable`) or booked meanwhile (`nothing_open`).
+ */
 export const ReminderCancelReason = z.enum([
   "channel_unavailable",
   "consent_ended",
@@ -41,15 +60,99 @@ export const ReminderCancelReason = z.enum([
   "nothing_open",
   "requester_no_longer_authorized",
   "delivery_unavailable",
+  "no_channel",
+  "consent_required",
+  "appointment_unavailable",
 ]);
 export type ReminderCancelReason = z.infer<typeof ReminderCancelReason>;
+
+/** The organizer's notices: the people booked, told by the system (data-protection.md, messages). */
+export const noticeKinds: ReadonlySet<ReminderKind> = new Set([
+  "appointment_changed",
+  "appointment_cancelled",
+]);
 
 /**
  * One policy everywhere, no regional rule (regional-variation.md, reminder rules; Q152, Q155):
  * one reminder per participation within 3 Berlin calendar days from the last queued request,
- * whatever its outcome; 1–500 participations per request.
+ * whatever its outcome; 1–500 participations per request. Invitations and notices neither use nor
+ * consume the window; an invitation has at most three delivery attempts per participation and
+ * appointment, the first included.
  */
-export const reminderPolicy = { windowDays: 3, minPerRequest: 1, maxPerRequest: 500 } as const;
+export const reminderPolicy = {
+  windowDays: 3,
+  minPerRequest: 1,
+  maxPerRequest: 500,
+  invitationAttempts: 3,
+} as const;
+
+/** A previous invitation of the participation to the same appointment. */
+export type PreviousInvitation = {
+  status: ReminderStatus;
+  cancelReason: ReminderCancelReason | null;
+  /** UTC timestamp (ISO 8601) of the request: the latest decides. */
+  requestedAt: string;
+};
+
+/** The cancellations for a delivery reason, after which a new invitation may go out. */
+const deliveryReasons: ReadonlySet<ReminderCancelReason> = new Set([
+  "no_channel",
+  "consent_required",
+  "channel_unavailable",
+  "consent_ended",
+  "delivery_unavailable",
+  // Only a currently authorized requester asks again: the request checks the requester first.
+  "requester_no_longer_authorized",
+]);
+
+/** An attempt is a row the claim handed to a provider; transport retries are the same attempt. */
+const attempted: ReadonlySet<ReminderStatus> = new Set(["sent", "failed", "delivery_unknown"]);
+
+/**
+ * Whether a new invitation to the appointment may be requested for the participation
+ * (data-protection.md, invitations; Q165): always without a previous one; after the latest ended
+ * `failed` or was cancelled for a delivery reason (or `requester_no_longer_authorized`); never
+ * while it is open or its outcome uncertain (`queued`, `dispatching`, `sent`, `delivery_unknown`)
+ * or after any other cancellation (`already_invited`); and at most three delivery attempts in all
+ * (`invitation_limit`), rows cancelled before the provider counting none.
+ */
+export function invitationRetryAllowed(
+  previous: readonly PreviousInvitation[],
+): "ok" | "already_invited" | "invitation_limit" {
+  const latest = previous.toSorted((a, b) => b.requestedAt.localeCompare(a.requestedAt))[0];
+  if (!latest) return "ok";
+  const retry =
+    latest.status === "failed" ||
+    (latest.status === "cancelled" && deliveryReasons.has(latest.cancelReason!));
+  if (!retry) return "already_invited";
+  const attempts = previous.filter(({ status }) => attempted.has(status)).length;
+  return attempts >= reminderPolicy.invitationAttempts ? "invitation_limit" : "ok";
+}
+
+/**
+ * How staff told a person whose notice wasn't delivered, or that it isn't needed
+ * (data-protection.md, messages: follow-up).
+ */
+export const NoticeFollowUpMethod = z
+  .enum(["phone", "in_person", "letter", "not_needed"])
+  .meta({ id: "NoticeFollowUpMethod" });
+export type NoticeFollowUpMethod = z.infer<typeof NoticeFollowUpMethod>;
+
+/**
+ * Whether an organizer's notice needs staff follow-up (`notice_undelivered`): it ended `failed`,
+ * `delivery_unknown` or cancelled for any reason but `participation_closed`, and no follow-up is
+ * recorded yet.
+ */
+export function noticeUndelivered(notice: {
+  kind: ReminderKind;
+  status: ReminderStatus;
+  cancelReason: ReminderCancelReason | null;
+  followedUp: boolean;
+}): boolean {
+  if (!noticeKinds.has(notice.kind) || notice.followedUp) return false;
+  if (notice.status === "failed" || notice.status === "delivery_unknown") return true;
+  return notice.status === "cancelled" && notice.cancelReason !== "participation_closed";
+}
 
 /** The first Berlin date a new reminder may be requested: a Monday's allows the Thursday's. */
 export function nextEligibleDate(lastQueuedOn: IsoDate): IsoDate {

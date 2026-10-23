@@ -759,8 +759,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `document_reviewed` | `case` | no | yes | `documentType`, `decision` |
 | `document_deleted` | `case` | no | yes | `documentType` |
 | `document_upload_rejected` | `security` | no | no | — |
-| `reminder_queued` | `case` | no | no | `kind`, `channelKind` |
-| `reminder_delivery` | `case` | no | yes | `outcome` |
+| `reminder_queued` | `case` | no | no | `kind`, `channelKind`, `appointmentId`, `startsAt` |
+| `reminder_delivery` | `case` | no | yes | `outcome`, `kind`, `appointmentId` |
 | `audit_history_opened` | `security` | no | no | — |
 | `appointment_created` | project-level | no | no | — |
 | `appointment_changed` | project-level | no | no | — |
@@ -772,6 +772,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `information_delivery_confirmed` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt`, `statusChanged` |
 | `attendance_conflict_escalated` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt` |
 | `attendance_conflict_resolved` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
+| `appointment_notice_followed_up` | `case` | no | no | `method`, `appointmentId` |
 
 ## Aggregates
 

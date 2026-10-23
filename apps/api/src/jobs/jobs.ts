@@ -26,17 +26,19 @@ import { sendActivationNotice, type ActivationNoticeDeps } from "./activation-no
 export { jobNames, timeZone } from "./names";
 
 /**
- * Queue policies (round 19). `lifecycle.sweep` is `singleton`: one sweep active at a time, every
+ * Queue policies (ADR-0011). `lifecycle.sweep` is `singleton`: one sweep active at a time, every
  * other one kept queued, because a missed occurrence (`missed: "once"`) can arrive beside the due
  * one and must not displace it; `job_run` makes a later sweep of a completed day a no-op.
  * `lifecycle.evaluate-project` is `exclusive` per `singletonKey` `<projectId>:<runDate>`: a
  * second job for the same project and day is refused while one is queued or active. pg-boss
  * deduplicates keys only on `stately` and `exclusive` queues (spike S2). Failures retry with
- * backoff (plan 5.9). `portal.activation-notice` is `exclusive` per channel id (Slice 3 plan D21):
+ * backoff (ADR-0011). `portal.activation-notice` is `exclusive` per channel id (ADR-0011):
  * the completion queues it in its own transaction, at least once. `documents.purge-object` is
  * `exclusive` per document id: the deletion queues it in its own transaction. `reminders.send` is
  * `exclusive` per reminder id (data-protection.md, reminders): the request queues it in its own
  * transaction; 5 retries with backoff, the last one's error settling `delivery_unknown`.
+ * `appointments.notify` is the same per organizer's notice (data-protection.md, messages): the
+ * organizer's change queues it in its own transaction.
  */
 const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "exclusive" }> = {
   [jobNames.lifecycleSweep]: {
@@ -68,6 +70,13 @@ const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "excl
     expireInSeconds: 5 * 60,
   },
   [jobNames.sendReminder]: {
+    policy: "exclusive",
+    retryLimit: reminderRetryLimit,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 5 * 60,
+  },
+  [jobNames.notifyAppointment]: {
     policy: "exclusive",
     retryLimit: reminderRetryLimit,
     retryDelay: 60,
@@ -203,19 +212,21 @@ async function startWorkers(
   }
   const { release } = deps;
   if (notices && release) {
-    await boss.work(jobNames.sendReminder, { pollingIntervalSeconds }, async (jobs) => {
-      for (const job of jobs) {
-        await runJob(logger, job, async () => {
-          const { reminderId } = SendReminderPayload.parse(job.data);
-          await sendReminder(
-            { db, logger, release, ...notices },
-            reminderId,
-            job.id,
-            job.retryCount >= reminderRetryLimit,
-          );
-        });
-      }
-    });
+    for (const name of [jobNames.sendReminder, jobNames.notifyAppointment]) {
+      await boss.work(name, { pollingIntervalSeconds }, async (jobs) => {
+        for (const job of jobs) {
+          await runJob(logger, job, async () => {
+            const { reminderId } = SendReminderPayload.parse(job.data);
+            await sendReminder(
+              { db, logger, release, ...notices },
+              reminderId,
+              job.id,
+              job.retryCount >= reminderRetryLimit,
+            );
+          });
+        }
+      });
+    }
   }
   const { storage } = deps;
   if (storage) {
@@ -257,11 +268,11 @@ export function documentPurgeQueue(boss: PgBoss): DocumentPurgeQueue {
   };
 }
 
-/** Queues a reminder's job in the request's transaction: `singletonKey` the reminder. */
+/** Queues a message's job in the request's transaction: `singletonKey` the message. */
 export function reminderQueue(boss: PgBoss): ReminderQueue {
   return {
-    async enqueue(reminderId, db) {
-      await boss.send(jobNames.sendReminder, { reminderId }, { singletonKey: reminderId, db });
+    async enqueue(reminderId, db, job = jobNames.sendReminder) {
+      await boss.send(job, { reminderId }, { singletonKey: reminderId, db });
     },
   };
 }
