@@ -5,7 +5,8 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createApp, messaging } from "./app";
 import { loadDotEnv, parseEnv } from "./env";
-import { activationNoticeQueue, documentPurgeQueue, startJobs } from "./jobs/jobs";
+import { activationNoticeQueue, documentPurgeQueue, reminderQueue, startJobs } from "./jobs/jobs";
+import { loadRelease } from "./projects/template-pins";
 import { documentFiles } from "./documents/files";
 import { failClosedFacts } from "./participations/guard-facts";
 import { createLogger } from "./logger";
@@ -42,6 +43,7 @@ const jobs = env.jobsEnabled
           portalPublicUrl: env.portalPublicUrl!,
         },
         storage: files?.storage,
+        release: loadRelease(env.configDir),
       },
     })
   : undefined;
@@ -66,6 +68,7 @@ const server = serve(
       fileStorage: files?.storage,
       virusScanner: files?.scanner,
       documentPurges: jobs ? documentPurgeQueue(jobs.boss) : undefined,
+      reminders: jobs ? reminderQueue(jobs.boss) : undefined,
     }).fetch,
     port: env.port,
   },

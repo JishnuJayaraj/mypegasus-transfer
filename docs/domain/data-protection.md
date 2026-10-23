@@ -164,6 +164,41 @@
   in the browser over the snapshot (case and diacritics folded, `ß` as `ss`); the term is never
   sent, never in a URL, a query key, a log or browser storage, and the snapshot stays in memory.
   Only the code filters sit in the URL.
+- **Reminders (Slice 5; Q152–Q156, accepted):** manual only; no scheduled reminder (ASU
+  reminders wait for Q1 and Slice 6) and no regional rule (`reminderPolicy`, regional-variation.md).
+  - *Who:* a current PL of the active project for any non-terminal participation, a current
+    assigned consultant for their assigned ones (`mayRemind`); nobody else, never in assisted mode
+    or through break-glass. A consultant naming a participation hidden from them gets
+    `422 participation_not_found`, back office (who sees it) `403`. Authority is checked at the
+    request and again at the dispatch claim; a lost membership or assignment cancels the reminder
+    (`requester_no_longer_authorized`). Reminder records and their audit events are never used for
+    staff rankings, productivity metrics or general performance monitoring.
+  - *Channel and consent:* only a channel the participant registered, verified, neither removed
+    nor suspended, whose consent is live with purpose `portal_contact` and version exactly
+    `portal-contact-consent:v2`. Never imported contact data, the work email, postal data or a
+    destination from staff. Among the eligible channels the most recently verified email, else the
+    most recently verified mobile, the smaller channel id on a tie (`chooseChannel`). The channel
+    and its consent, the account's language and the text version are fixed when the reminder is
+    queued; a channel or consent that stops being eligible cancels it, never reroutes it. Skips:
+    `no_channel` (no live channel), `consent_required` (a live channel, none with a live v2
+    consent), `reminded_recently`, `nothing_open`, `participation_closed`; staff see both channel
+    codes as the one text "Kein für Erinnerungen nutzbarer Kontaktweg."
+  - *Text:* one kind (`open_items`, only while the participant has a participant action), the
+    fixed generic text `portal-reminder:v1` (de/en, immutable, SHA-256 tests in the notice
+    catalog; final wording with the DPO, Q132): no name, project, employer, Personalnummer,
+    deadline or item; its only placeholder is the plain `PORTAL_PUBLIC_URL` (no token,
+    participant id, campaign parameter or tracking redirect); plain-text mail, no pixel.
+  - *Window:* one reminder per participation within 3 Berlin calendar days from the last queued
+    request, whatever its outcome (a Monday's allows the next on the Thursday).
+  - *Dispatch:* rows, `reminder_queued` and the `reminders.send` jobs commit together; the job
+    locks the participation, evaluates the participant's actions and claims the dispatch, which
+    rechecks exactly the queued channel and consent, the version, the status and the requester:
+    no dispatch when the invalidating change committed before the claim (ADR-0011).
+  - *The message log* (`participant_reminder`): ids, kind, text version, language, the channel's
+    id and kind, the consent id, the requester's id, times, status and a closed cancel reason;
+    never an address, rendered text, provider response, free text, error message, IP or tracking
+    data. The tab "Nachrichten" shows it to whoever reads the participation's `case_internal`
+    data (the PL, the assigned consultant, back office), the requester as "Team".
 - **Customer**: no login in the MVP (Q47). See the next section.
 
 ### Resources, categories and the generated matrix *(assumed, round 11)*
@@ -500,7 +535,7 @@ and highly confidential data only; ordinary person-data writes are `participant_
 | beE employment, payroll, Transfer-KuG | Art. 6(1)(b) + (c) (SGB III, SGB IV, AO) |
 | Profiling and reporting to the Agentur | Art. 6(1)(c) (§110/§111 SGB III) + signed TL 407 declaration |
 | Health / disability | Art. 9(2)(b). Details beyond yes/no only with explicit consent, Art. 9(2)(a) |
-| Private email/mobile for portal login | consent, Art. 6(1)(a), revocable |
+| Private email/mobile for portal login and portal notifications (reminders) | consent, Art. 6(1)(a), revocable (`portal-contact-consent:v2`) |
 | TG access to the BA applicant profile (Kug 200b) | own consent record |
 | Aggregated customer reporting | Art. 6(1)(f), anonymised |
 
@@ -511,6 +546,19 @@ and highly confidential data only; ordinary person-data writes are `participant_
   exactly for `portal_contact` (a `CHECK`), which is given in the portal; revoking it is the
   channel's removal. `kug200b_profile_access` is recorded from the signed Kug 200b (Slice 6).
   Revoking consent never blocks contract-based or legally required processing.
+- **Consent v2 (Slice 5; Q154, final):** `portal-contact-consent:v2` (de/en, immutable, SHA-256
+  tests) covers login codes and operational notifications from the portal, such as a reminder
+  that something is open; no advertising; voluntary and revocable by removing the channel or
+  writing to the controller. From Slice 5 on, activation, recovery and a new channel record v2
+  only (`complete_activation` and `add_participant_channel` refuse v1). No migration converts v1
+  evidence: a v1 channel keeps login codes but gets no reminder. "Meine Kontaktwege" offers each
+  v1 channel a voluntary upgrade (the v2 text, "Zustimmen", "Später"); declining removes no
+  channel, ends no session and doesn't affect login; the offer comes back on the next visit only
+  there. The verified address isn't verified again; staff can't give v2 on a participant's behalf
+  (no staff or assisted route). `upgrade_channel_consent` locks the participation, the channel and
+  its consent, ends the v1 consent `superseded` (never `revoked`), inserts the participant's v2
+  consent, points the channel to it and audits `consent_ended` and `consent_given`, or answers
+  `already_current`. Staff channel views show the consent version beside kind and state.
 - **Acknowledgements are not consents:** the self-service purposes notice is acknowledged, not
   consented to (above, "Self-service data").
 - **Declarations to the BA** are not our consents: the Jobbörse choice (TL 407 field 50) is
@@ -535,7 +583,7 @@ so a long payroll rule never keeps a whole profile.
 | Entgeltunterlagen | end of the calendar year after the last social-security audit (§28f SGB IV) |
 | Accounting vouchers | 8 years (BEG IV); books and annual statements 10 years |
 | ESF-funded projects (later) | per funding notice, configurable |
-| Audit log | 3 years; pseudonymise subject references when the subject's data is deleted |
+| Audit log | 3 years; pseudonymise subject references when the subject's data is deleted (also `reminder_queued` and `reminder_delivery`, Q156) |
 
 **Evidence set** (for anyone who took part in a BA-funded §110 measure or received
 Transfer-KuG): identity, measure, dates and times of participation, signed participation pages
@@ -559,7 +607,7 @@ them, a legal hold suspends only the affected records, never the whole participa
 | `access_credential` (Slice 3, PR 3b/3d) | `staff_session` (the SHA-256 of a session token, never the token; the staff user, start, expiry, end and end reason; `internal`); `activation_code` (a separately keyed code hash and, only for in-person issuance, a separately keyed destination hash; channel, non-secret state, staff ids and times; never the code or destination; `confidential`, project-scoped); from PR 3e `one_time_code_challenge` (a keyed one-time-code hash, the normalised address it went to, outcome, attempts, times; `confidential`) and `participant_session` (a token's SHA-256, state, steps done, step-up, from Slice 4a the step-up before special-category data and its wrong birth dates, times; `internal`); from Slice 4b `document_link` (an opening's link: a token's SHA-256, the document, the session's kind and hash, expiry; `internal`, no privilege for the runtime role) | deleted, or stripped of hashes and addresses, 30 days after use, expiry, lock, revocation or end; a legal hold never keeps a secret usable (Q122, assumed). The executable period remains `unset` until Slice 7 |
 | `participation_record` | `participation` (statuses, dates, end reasons and, from Slice 4a, the placement Agentur key and when it was set: `internal`, `case_internal`, listable; written only by `set_placement_agentur`, PR 4a-1), `participant_assignment` (which consultant a participation is assigned to, by whom and when, how it ended; ids and codes, `internal`, closed, never deleted; Slice 3, PR 3c), `participant_identity` (Personalnummer, last and first name, birth date; Slice 2, PR 2f), `participant_identifier_data` (the encrypted RV-Nummer, its presence, key id and times; `highly_confidential`; Slice 4a, PR 4a-4), `participation_dsv_amendment` (DSV amendment metadata: kind, date fully executed, old and new effective dates, the confirming staff id and instant, the controlled original location, an optional document number; no free text; immutable; part of the evidence set, round 32 D3; Slice 2, PR 2h-3), `ba_reporting_task` (BA reporting tasks: kind, the date reported on, status; Slice 2, PR 2h-3), `profiling_exception_request` (reason codes and an evidence id and fingerprint, never evidence contents; the fingerprint is confidential evidence metadata, never in audit details, logs or responses, round 17; the evidence becomes a document, `profiling_exception_evidence`, with Slice 6) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q77/Q105): non-signer without a fully executed DSV or funded §110 participation 90 calendar days after `withdrawnOn` (unless a legal hold or documented dispute); fully executed DSV without TG entry, end of the 3rd calendar year after cancellation or contractual end; TG participant, end of the 3rd calendar year after exit; BA-funded, the minimum evidence set until the end of the 4th calendar year after the later of `kugFinalSettlementDate`/`measure110SettlementDate`, never while one is missing |
 | `audit_log` | `audit_event`, `staff_audit_event` (staff authentication and administration history: staff ids, codes and counts; account, org-role and region changes; removed org roles preserve role, region and reason; never a name, email, claimed identity, token or claim; no `project_id`, `internal`; Slice 3, PR 3b/3c) | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
-| `personnel_file` (Slice 2, PR 2f; Slice 3, PR 3d) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate`; `privacy_notice_delivery`: immutable Article 14 evidence with version, language, method, staff id, time and optional activation-code id, never notice text or destination (`internal`, project-scoped); from PR 3e `participant_account` (activation time, code id, identity assurance with the staff confirmer of a photo ID, language; `internal`), `participant_channel` (the field `portalChannels`: kind, normalised private address, verification, consent id, notice, suspension and removal dates; `confidential`; the address and its hash erased 30 days after removal, Q122) and `consent_record` (purpose, source, the channel id of a portal contact consent, text version, language, actor and dates, never the address; `confidential`); from Slice 4a (Q141) `participant_profile` (the self-service profile, TL 407 section B: `confidential`), `self_service_notice_acknowledgement` (the purposes notice acknowledged: version, language, actor, time; `internal`, immutable), `participant_residence_social_data` (the encrypted nationality, entry date, residence status and Bürgergeld, their presence, key id and times; `highly_confidential`; PR 4a-4) and, on `participant_details`, which contact fields the participant maintains and when they wrote the address (metadata) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
+| `personnel_file` (Slice 2, PR 2f; Slice 3, PR 3d) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate`; `privacy_notice_delivery`: immutable Article 14 evidence with version, language, method, staff id, time and optional activation-code id, never notice text or destination (`internal`, project-scoped); from PR 3e `participant_account` (activation time, code id, identity assurance with the staff confirmer of a photo ID, language; `internal`), `participant_channel` (the field `portalChannels`: kind, normalised private address, verification, consent id, notice, suspension and removal dates; `confidential`; the address and its hash erased 30 days after removal, Q122) and `consent_record` (purpose, source, the channel id of a portal contact consent, text version, language, actor and dates, never the address; `confidential`); from Slice 4a (Q141) `participant_profile` (the self-service profile, TL 407 section B: `confidential`), `self_service_notice_acknowledgement` (the purposes notice acknowledged: version, language, actor, time; `internal`, immutable), `participant_residence_social_data` (the encrypted nationality, entry date, residence status and Bürgergeld, their presence, key id and times; `highly_confidential`; PR 4a-4) and, on `participant_details`, which contact fields the participant maintains and when they wrote the address (metadata); from Slice 5 (Q156) `participant_reminder` (the reminder log: ids, kind, text version, language, the channel's id and kind, the consent id, the requester's id, times, status, cancel reason; `internal`, `case_internal`; non-signers with the 90-day deletion, otherwise the end of the 3rd calendar year after exit; a legal hold extends only the affected rows; the channel's address is erased under its own rule, the reminder keeps the value-free channel id) | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
 | `health_record` (Q141) | `participant_health_data` (Slice 4a, PR 4a-4): the encrypted health restrictions and Schwerbehinderung/Gleichstellung yes/no answers, their presence, key id and times (`special_category`) | 3 months after beE exit or with the non-signer deletion; executable period `unset` until Slice 7 |
 | `by_document_type` (Slice 4b, PR 4b-2; Q145) | `document`: each row its type's class, held by its policy (`personnel_file` for the CV, other uploads and certificates; `evidence_set` for the signed TL 407 and Kug 200b scans; `personnel_file` for the DSV scan and cancellation; `participation_record` for the ASU proof and exception evidence). The metadata of an encrypted file (type, media type, size, the kept file name, who added and reviewed it, the content hash and the wrapped key the runtime role can't select); a deletion's tombstone (type, dates, who by kind, reason code; the file name erased) follows the type's class, its object is purged at once | the type's class; executable periods `unset` until Slice 7 |
 | `evidence_set` (Slice 4b) | no table of its own: `document` rows of the signed TL 407 and Kug 200b scans | the BA evidence set (above); `unset` until Slice 7 |
@@ -686,7 +734,7 @@ Implementation:
     - Steps: the notice repeated (the version shown recorded), the birth date (skipped only for a
       handed-over sheet or an in-person code without one), then the retyped delivery address of
       an in-person code (keyed hash comparison) or a private email or mobile with the consent
-      `portal-contact-consent:v1` (de/en, purpose `portal_contact`) and a six-digit one-time code.
+      `portal-contact-consent:v1` (de/en, purpose `portal_contact`; v2 from Slice 5) and a six-digit one-time code.
       The imported work email is refused (`channel_invalid`); an address of another active
       account is the generic `channel_in_use`.
     - Failures: a wrong birth date or delivery address counts on the code and the fifth locks it
@@ -716,7 +764,10 @@ Implementation:
       refuses is accepted silently. Logins are audited (`participant_login`, the channel's id).
     - **Channels:** the participant adds a private email or mobile with its own consent and a
       one-time code to it, and removes one, which ends its consent `revoked` (both audited as the
-      participant). Removing the last channel ends all their sessions; the portal warns first. An
+      participant). Removing the last channel ends all their sessions; the portal warns first
+      that portal login is then no longer possible and that help in person, by phone or by letter
+      remains (Q154). From Slice 5 a new channel records consent v2 (above, "Legal basis and
+      consent"). An
       address of another account, or the participant's own, is the generic `channel_in_use`; the
       work email is `channel_invalid`. Staff still see only kind, states and dates.
     - **Recovery (Q130):** the PL or back office issue a recovery code (letter, sheet or in person)

@@ -87,6 +87,19 @@ Not adapters:
   activation's, and its outcome recorded by `record_one_time_code_delivery`.
 - A recovery code in person is sent like a first in-person code (`record_activation_delivery`).
 
+## As built 2026-10-22: reminder delivery (Slice 5, PR 5-2)
+
+- Reminders go through the same `Mailer` and `SmsSender` (data-protection.md, reminders): plain
+  text, the fixed `portal-reminder:v1` in the account's language with `PORTAL_PUBLIC_URL` as its
+  only placeholder; by email with the subject and the privacy note, by SMS the text alone. The
+  idempotency key is `reminder:<reminderId>`, so a retry after an unknown outcome never sends
+  twice at a provider that honours it (the mock outbox does).
+- `sent` and `failed` are the provider's answer; `DeliveryOutcomeUnknown` or any other error
+  counts as unknown, is never logged (it may echo the address) and fails the job for a retry.
+- Production has no sender until a real adapter exists, so the reminder route answers
+  `503 delivery_unavailable` there; in development and e2e the mocks write to the outbox
+  (`GET /api/v1/dev/outbox`).
+
 ## As built 2026-10-22: document storage and virus scan (Slice 4b, PR 4b-1)
 
 - `FileStorage` (`packages/adapters/src/storage`): `put(key, bytes)` (replaces an object under

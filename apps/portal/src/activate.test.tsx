@@ -12,7 +12,7 @@ const state = (nextStep: string, extra: object = {}) => ({
   deliveryKind: null,
   language: "de",
   noticeVersion: "art14-activation:v1",
-  consentVersion: "portal-contact-consent:v1",
+  consentVersion: "portal-contact-consent:v2",
   ...extra,
 });
 afterEach(async () => {
@@ -81,7 +81,7 @@ describe("activation (D22, D23)", () => {
           oneTimeCode: "123456",
           noticeVersion: "art14-activation:v1",
           consent: true,
-          consentVersion: "portal-contact-consent:v1",
+          consentVersion: "portal-contact-consent:v2",
           language: "de",
         },
       },

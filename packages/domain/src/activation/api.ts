@@ -112,6 +112,8 @@ export const StaffChannelRecord = z.strictObject({
   verifiedAt: z.iso.datetime(),
   verifiedBy: ChannelVerification,
   consentGivenAt: z.iso.datetime(),
+  /** The consent's text version (data-protection.md, consent v2): v1 gets no reminders. */
+  consentVersion: z.string(),
   consentEndedAt: z.iso.datetime().nullable(),
   noticeSentAt: z.iso.datetime().nullable(),
   suspendedAt: z.iso.datetime().nullable(),

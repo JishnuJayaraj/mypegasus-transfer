@@ -197,6 +197,10 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - **Activation notice** (Slice 3 PR 3e): `portal.activation-notice`, queued by the completion in
   its own transaction with the channel id as `singletonKey`, sends the notice to the new channel
   at least once (provider key `activation-notice:<channelId>`) and records `notice_sent_at`.
+- **Reminders** (Slice 5 PR 5-2): `reminders.send`, queued by the request in its own transaction
+  with the reminder id as `singletonKey`, claims the dispatch under the participation lock, sends
+  the fixed text (provider key `reminder:<reminderId>`) and records the outcome
+  (`apps/api/src/reminders/`; ADR-0011).
 
 ## The project page (Slice 5, PR 5-1)
 
@@ -208,6 +212,9 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   its query key is the prefix of every participant query of the project, so a change to a
   participation refreshes the list and the dashboard alike. The domain's `WorklistFilter`,
   `matchesWorklistFilter`, `searchKey` and `mostUrgent` run in the browser as on the server.
+- From PR 5-2 the work list's bulk "Erinnern" counts the selected rows by their
+  `capabilities.remind` before sending, the column "Erinnert" shows the latest reminder, and the
+  participant page has the tab "Nachrichten" (`apps/web/src/components/reminders.tsx`).
 
 ## Performance approach (frontend)
 

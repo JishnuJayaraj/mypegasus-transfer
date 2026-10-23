@@ -1,6 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PORTAL_CONTACT_CONSENT_VERSION, type ContactKind, type PortalMe } from "@transfer/domain";
+import { organisation } from "@transfer/config";
+import {
+  PORTAL_CONTACT_CONSENT_VERSION,
+  portalContactConsent,
+  type ContactKind,
+  type NoticeLanguage,
+  type PortalMe,
+} from "@transfer/domain";
 import {
   Button,
   Form,
@@ -37,7 +44,9 @@ const isErrorKey = (code: string | undefined): code is ErrorKey =>
 /**
  * The participant's channels (Q123): each masked, with its removal (its consent ends;
  * the last one ends the session, so the page warns first) and the addition of a private email or
- * mobile, verified by a one-time code, with its own consent. Never the work email.
+ * mobile, verified by a one-time code, with its own consent. Never the work email. A channel with
+ * an earlier consent offers consent v2 (data-protection.md, consent v2): voluntary, "Später"
+ * changes nothing and the offer comes back on the next visit.
  */
 function Channels() {
   const { t, i18n } = useTranslation();
@@ -47,6 +56,9 @@ function Channels() {
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState<string>();
   const [loggedOut, setLoggedOut] = useState(false);
+  // "Später" for this visit only: never stored, so the offer comes back next time.
+  const [later, setLater] = useState<ReadonlySet<string>>(new Set());
+  const [upgraded, setUpgraded] = useState(false);
   const language = messageLanguage(i18n.resolvedLanguage);
   const channels = useQuery({
     queryKey: ["portal-channels"],
@@ -93,6 +105,21 @@ function Channels() {
       changed((channels.data ?? []).filter((channel) => channel.id !== channelId));
     });
 
+  const upgrade = (channelId: string) =>
+    run(async () => {
+      const { data } = await api.POST("/api/v1/portal/channels/{channelId}/consent-upgrade", {
+        params: { path: { channelId } },
+        body: { consent: true, consentVersion: PORTAL_CONTACT_CONSENT_VERSION, language },
+      });
+      if (!data) throw new Error("No portal data");
+      setUpgraded(true);
+      changed(
+        (channels.data ?? []).map((channel) =>
+          channel.id === channelId ? { ...channel, consentUpgrade: false } : channel,
+        ),
+      );
+    });
+
   if (loggedOut) {
     return (
       <Stack gap={5}>
@@ -125,6 +152,14 @@ function Channels() {
           lowContrast
         />
       )}
+      {upgraded && (
+        <InlineNotification
+          kind="success"
+          title={t("channels.upgrade.done")}
+          onClose={() => setUpgraded(false)}
+          lowContrast
+        />
+      )}
       <ul className="tp-list">
         {list.map((channel) => (
           <li key={channel.id}>
@@ -135,6 +170,14 @@ function Channels() {
                   at: formatTimestamp(channel.verifiedAt),
                 })}
               </span>
+              {channel.consentUpgrade && !later.has(channel.id) && (
+                <UpgradeNotice
+                  language={language}
+                  busy={busy}
+                  onAgree={() => void upgrade(channel.id)}
+                  onLater={() => setLater(new Set([...later, channel.id]))}
+                />
+              )}
               {confirming === channel.id ? (
                 <Stack gap={3}>
                   <InlineNotification
@@ -186,6 +229,37 @@ function Channels() {
       />
       <Link to="/">{t("activate.done.home")}</Link>
     </Stack>
+  );
+}
+
+/** The v2 consent text for one channel, with "Zustimmen" and "Später". */
+function UpgradeNotice(props: {
+  language: NoticeLanguage;
+  busy: boolean;
+  onAgree: () => void;
+  onLater: () => void;
+}) {
+  const { t } = useTranslation();
+  const consent = portalContactConsent(props.language, organisation);
+  return (
+    <section className="tp-consent-offer" aria-label={t("channels.upgrade.title")}>
+      <Stack gap={3}>
+        <h2>{t("channels.upgrade.title")}</h2>
+        <p>{t("channels.upgrade.intro")}</p>
+        <h3>{consent.title}</h3>
+        {consent.text.split("\n\n").map((paragraph) => (
+          <p key={paragraph}>{paragraph}</p>
+        ))}
+        <Stack gap={3} orientation="horizontal">
+          <Button disabled={props.busy} onClick={props.onAgree}>
+            {t("channels.upgrade.agree")}
+          </Button>
+          <Button kind="secondary" disabled={props.busy} onClick={props.onLater}>
+            {t("channels.upgrade.later")}
+          </Button>
+        </Stack>
+      </Stack>
+    </section>
   );
 }
 

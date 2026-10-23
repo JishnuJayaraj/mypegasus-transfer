@@ -103,7 +103,7 @@ export async function activatedParticipant(
     await owner.$client.query(
       `insert into consent_record (id, project_id, participation_id, purpose, channel_id,
          text_version, language, actor_type)
-       values ($1, $2, $3, 'portal_contact', $4, 'portal-contact-consent:v1', 'de', 'participant')`,
+       values ($1, $2, $3, 'portal_contact', $4, 'portal-contact-consent:v2', 'de', 'participant')`,
       [consentId, projectId, participationId, channelId],
     );
     await owner.$client.query(
@@ -116,6 +116,23 @@ export async function activatedParticipant(
     await owner.$client.end();
   }
   return participationId;
+}
+
+/**
+ * The participant's channels as they were before Slice 5: consent `portal-contact-consent:v1`
+ * (data-protection.md, consent v2), which activations no longer record. An owner fixture.
+ */
+export async function consentAsV1(participationId: string) {
+  const owner = createDb(testDatabaseUrls("transfer_e2e").owner);
+  try {
+    await owner.$client.query(
+      `update consent_record set text_version = 'portal-contact-consent:v1'
+       where participation_id = $1`,
+      [participationId],
+    );
+  } finally {
+    await owner.$client.end();
+  }
 }
 
 /**

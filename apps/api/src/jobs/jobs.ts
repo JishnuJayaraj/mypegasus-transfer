@@ -14,8 +14,11 @@ import {
   ActivationNoticePayload,
   EvaluateProjectPayload,
   PurgeDocumentPayload,
+  SendReminderPayload,
   SweepPayload,
 } from "./payloads";
+import { reminderRetryLimit, sendReminder, type ReminderQueue } from "../reminders/send";
+import type { Release } from "../projects/template-pins";
 import type { FileStorage } from "@transfer/adapters";
 import { purgeDocumentObject, type DocumentPurgeQueue } from "../documents/purge";
 import { sendActivationNotice, type ActivationNoticeDeps } from "./activation-notice";
@@ -31,7 +34,9 @@ export { jobNames, timeZone } from "./names";
  * deduplicates keys only on `stately` and `exclusive` queues (spike S2). Failures retry with
  * backoff (plan 5.9). `portal.activation-notice` is `exclusive` per channel id (Slice 3 plan D21):
  * the completion queues it in its own transaction, at least once. `documents.purge-object` is
- * `exclusive` per document id: the deletion queues it in its own transaction.
+ * `exclusive` per document id: the deletion queues it in its own transaction. `reminders.send` is
+ * `exclusive` per reminder id (data-protection.md, reminders): the request queues it in its own
+ * transaction; 5 retries with backoff, the last one's error settling `delivery_unknown`.
  */
 const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "exclusive" }> = {
   [jobNames.lifecycleSweep]: {
@@ -62,6 +67,13 @@ const queues: Record<string, Omit<Queue, "name"> & { policy: "singleton" | "excl
     retryBackoff: true,
     expireInSeconds: 5 * 60,
   },
+  [jobNames.sendReminder]: {
+    policy: "exclusive",
+    retryLimit: reminderRetryLimit,
+    retryDelay: 60,
+    retryBackoff: true,
+    expireInSeconds: 5 * 60,
+  },
 };
 
 /** `HH:MM` (Berlin) as a daily cron expression; 02:00–02:59 is refused (round 9). */
@@ -83,6 +95,8 @@ export type WorkDeps = {
   notices?: Omit<ActivationNoticeDeps, "db" | "logger">;
   /** The document store the purge job deletes from; none in production yet (Q149). */
   storage?: FileStorage | undefined;
+  /** The release whose configuration the reminder job evaluates the actions with. */
+  release?: Release | undefined;
 };
 
 export type JobsOptions = {
@@ -187,6 +201,22 @@ async function startWorkers(
       }
     });
   }
+  const { release } = deps;
+  if (notices && release) {
+    await boss.work(jobNames.sendReminder, { pollingIntervalSeconds }, async (jobs) => {
+      for (const job of jobs) {
+        await runJob(logger, job, async () => {
+          const { reminderId } = SendReminderPayload.parse(job.data);
+          await sendReminder(
+            { db, logger, release, ...notices },
+            reminderId,
+            job.id,
+            job.retryCount >= reminderRetryLimit,
+          );
+        });
+      }
+    });
+  }
   const { storage } = deps;
   if (storage) {
     await boss.work(jobNames.purgeDocument, { pollingIntervalSeconds }, async (jobs) => {
@@ -223,6 +253,15 @@ export function documentPurgeQueue(boss: PgBoss): DocumentPurgeQueue {
   return {
     async enqueue(documentId, db) {
       await boss.send(jobNames.purgeDocument, { documentId }, { singletonKey: documentId, db });
+    },
+  };
+}
+
+/** Queues a reminder's job in the request's transaction: `singletonKey` the reminder. */
+export function reminderQueue(boss: PgBoss): ReminderQueue {
+  return {
+    async enqueue(reminderId, db) {
+      await boss.send(jobNames.sendReminder, { reminderId }, { singletonKey: reminderId, db });
     },
   };
 }

@@ -36,6 +36,7 @@ import { PlacementAgentur } from "../../components/placement-agentur";
 import { RecoveryPanel } from "../../components/recovery";
 import { RouteError } from "../../components/route-error";
 import { DocumentsTab } from "../../components/documents-tab";
+import { MessagesTab } from "../../components/reminders";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -44,13 +45,18 @@ type Detail = components["schemas"]["ParticipationDetail"];
 type FieldKey = keyof typeof de.participant.fields;
 const RouterLink = createLink(Link);
 
-/** The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended) or "Unterlagen". */
-const tabs = [undefined, "self-service", "documents"] as const;
+/**
+ * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Unterlagen" or
+ * "Nachrichten".
+ */
+const tabs = [undefined, "self-service", "documents", "messages"] as const;
 type Search = { tab?: Exclude<(typeof tabs)[number], undefined> };
 
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
   validateSearch: (search: Record<string, unknown>): Search =>
-    search.tab === "self-service" || search.tab === "documents" ? { tab: search.tab } : {},
+    search.tab === "self-service" || search.tab === "documents" || search.tab === "messages"
+      ? { tab: search.tab }
+      : {},
   loader: async ({ context: { api, queryClient }, params: { projectId, participationId } }) => {
     const [project, detail] = await Promise.all([
       queryClient.ensureQueryData(projectQuery(api, projectId)),
@@ -131,6 +137,7 @@ function ParticipationPage() {
           <Tab>{t("participant.tabs.overview")}</Tab>
           <Tab>{t("participant.tabs.selfService")}</Tab>
           <Tab>{t("participant.tabs.documents")}</Tab>
+          <Tab>{t("participant.tabs.messages")}</Tab>
         </TabList>
         <TabPanels>
           <TabPanel>
@@ -178,6 +185,10 @@ function ParticipationPage() {
           <TabPanel>
             {/* Loaded only when shown, like "Selbstauskunft". */}
             {tab === "documents" && <DocumentsTab detail={detail} />}
+          </TabPanel>
+          <TabPanel>
+            {/* Loaded only when shown: the participant's reminders (data-protection.md). */}
+            {tab === "messages" && <MessagesTab participationId={participationId} />}
           </TabPanel>
         </TabPanels>
       </Tabs>
@@ -367,6 +378,7 @@ function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: str
                   verifiedBy: t(`activation.verifiedBy.${channel.verifiedBy}`),
                   consentGivenAt: formatTimestamp(channel.consentGivenAt),
                 })}{" "}
+                {t("activation.detail.consentVersion", { version: channel.consentVersion })}{" "}
                 {channel.noticeSentAt
                   ? t("activation.detail.noticeSent", { at: formatTimestamp(channel.noticeSentAt) })
                   : t("activation.detail.noticePending")}

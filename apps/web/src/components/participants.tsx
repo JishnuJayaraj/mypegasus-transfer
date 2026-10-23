@@ -32,6 +32,7 @@ import { ManualParticipationForm } from "./manual-participation-form";
 import { useSelfServiceLabel } from "./self-service-tab";
 import { useConsultants } from "./team";
 import { BulkWave, WorklistFilters } from "./worklist-tools";
+import { BulkRemind } from "./reminders";
 
 const RouterLink = createLink(Link);
 
@@ -48,6 +49,7 @@ const columns = [
   "open",
   "deadline",
   "portal",
+  "reminded",
   "activationStatus",
   "privacyNoticeState",
 ] as const;
@@ -156,7 +158,11 @@ export function Participants({
     (item) => item.capabilities.issueActivationCode || item.capabilities.providePrivacyNotice,
   );
   const mayAssignWave = taTg && items.some((item) => item.capabilities.assignEntryWave);
-  const selectable = mayAssign || mayActivate || mayAssignWave;
+  // A row the viewer may remind: allowed now, or skipped with a code (data-protection.md, reminders).
+  const mayRemind = items.some(
+    ({ capabilities: { remind } }) => remind.allowed || remind.code !== null,
+  );
+  const selectable = mayAssign || mayActivate || mayAssignWave || mayRemind;
   const visibleColumns = useMemo(
     () =>
       columns.filter(
@@ -326,6 +332,13 @@ export function Participants({
                   onAssigned={() => setSelected(new Set())}
                 />
               )}
+              {mayRemind && (
+                <BulkRemind
+                  projectId={projectId}
+                  selected={selectedItems}
+                  onSent={() => setSelected(new Set())}
+                />
+              )}
               {mayActivate && (
                 <BulkActivation
                   projectId={projectId}
@@ -446,6 +459,9 @@ const WorklistTable = memo(function WorklistTable({
       ),
     deadline: deadline(item),
     portal: t(`worklist.portal.${item.portal}`),
+    reminded: item.reminder
+      ? `${formatDate(item.reminder.lastRequestedOn)} (${t(`reminders.status.${item.reminder.status}`)})`
+      : "",
     activationStatus: t(
       item.activationStatus.account === "activated"
         ? "activation.status.activated"

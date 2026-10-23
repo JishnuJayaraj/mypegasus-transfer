@@ -23,12 +23,14 @@ export function item(overrides: Partial<WorklistItem> = {}): WorklistItem {
     deadlines: [],
     flags: [],
     portal: "not_reachable",
+    reminder: null,
     capabilities: {
       assignEntryWave: false,
       issueActivationCode: false,
       recordHandover: false,
       revokeActivationCode: false,
       providePrivacyNotice: false,
+      remind: { allowed: false, code: null, channel: null },
     },
     ...overrides,
   };

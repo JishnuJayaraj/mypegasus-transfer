@@ -171,6 +171,24 @@ export const participationActivationQuery = (api: ApiClient, participationId: st
       ),
   });
 
+/** The tab "Nachrichten": the participation's reminders, newest first (data-protection.md, reminders). */
+export const participationRemindersQuery = (api: ApiClient, participationId: string) =>
+  infiniteQueryOptions({
+    queryKey: ["participations", participationId, "reminders"],
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/reminders", {
+          params: {
+            path: { participationId },
+            query: { limit: 50, ...(pageParam && { cursor: pageParam }) },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });
+
 /** The regions (a handful of Niederlassungen), for the region pickers (Q126). */
 export const regionsQuery = (api: ApiClient) =>
   queryOptions({

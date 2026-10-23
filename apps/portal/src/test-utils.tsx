@@ -26,6 +26,7 @@ export const me = {
       id: "00000000-0000-4000-8000-000000000001",
       kind: "email",
       maskedAddress: "e…@example.org",
+      consentUpgrade: false,
       verifiedAt: "2026-10-21T10:00:00.000Z",
     },
   ],

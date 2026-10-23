@@ -27,6 +27,8 @@ export default defineConfig({
       AUTH_MODE: "dev",
       DATABASE_URL: testDatabaseUrls("transfer_e2e").app,
       APP_ORIGINS: origin,
+      // The portal the messages link to: the one this server serves (reminders.spec.ts follows it).
+      PORTAL_PUBLIC_URL: `${origin}/portal/`,
       API_PORT: String(PORT),
       LOG_LEVEL: "warn",
       // Playwright starts the server before the global setup recreates transfer_e2e (and its

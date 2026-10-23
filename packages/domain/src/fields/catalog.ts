@@ -101,6 +101,9 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["workEmail", "oldEmploymentEndDate"], C, "confidential", false, personnelFile),
   field("knowledgeDate", C, "confidential", false),
   ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true, personnelFile),
+  // The reminders sent to the participant (data-protection.md, reminders; Q156): kind, version,
+  // language, channel kind, times and outcome; read with the case data, never an address
+  field("reminderLog", "internal", "case_internal", false, personnelFile),
   // The participant's verified portal contacts (ADR-0007, Q123): staff see kind, state and
   // dates only, never the address; never in lists
   field("portalChannels", C, "confidential", true, { listable: false, ...personnelFile }),

@@ -10,6 +10,9 @@ import {
   ActivationState,
   ChannelCodeRequestInput,
   ChannelRemovalResult,
+  ConsentUpgradeInput,
+  ConsentUpgradeResult,
+  consentUpgradeOffered,
   ChannelVerificationInput,
   LoginCodeRequestInput,
   LoginInput,
@@ -536,7 +539,14 @@ export function portalRoutes(deps: Deps) {
       firstName: string;
       language: NoticeLanguage;
       sessionExpiresAt: string;
-      channels: { id: string; kind: ContactKind; address: string; verifiedAt: string }[];
+      channels: {
+        id: string;
+        kind: ContactKind;
+        address: string;
+        verifiedAt: string;
+        live: boolean;
+        consentVersion: string;
+      }[];
     }>(sql`
       select i.first_name as "firstName", a.language,
         to_char(least(s.last_seen_at + ${sql.raw(`interval '${portalLimits.session.idleMinutes} minutes'`)},
@@ -544,8 +554,9 @@ export function portalRoutes(deps: Deps) {
           at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "sessionExpiresAt",
         coalesce((select json_agg(json_build_object('id', ch.id, 'kind', ch.kind,
             'address', ch.address, 'verifiedAt', to_char(ch.verified_at at time zone 'UTC',
-              'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')) order by ch.verified_at, ch.id)
-          from participant_channel ch
+              'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'), 'live', ch.suspended_at is null,
+            'consentVersion', k.text_version) order by ch.verified_at, ch.id)
+          from participant_channel ch join consent_record k on k.id = ch.consent_id
           where ch.participation_id = s.participation_id and ch.removed_at is null), '[]')
           as channels
       from participant_session s
@@ -555,9 +566,10 @@ export function portalRoutes(deps: Deps) {
     const { channels, ...me } = rows[0]!;
     return {
       ...me,
-      channels: channels.map(({ address, ...channel }) => ({
+      channels: channels.map(({ address, live, consentVersion, ...channel }) => ({
         ...channel,
         maskedAddress: maskContactAddress(channel.kind, address),
+        consentUpgrade: consentUpgradeOffered({ live, consentVersion }),
       })),
     };
   }
@@ -850,6 +862,50 @@ export function portalRoutes(deps: Deps) {
       }
       if (sessionEnded) clearPortalCookie(c, env);
       return c.json({ sessionEnded }, 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/portal/channels/{channelId}/consent-upgrade",
+      tags: ["portal"],
+      summary:
+        "Give consent v2 for one of the participant's own channels (voluntary; the address isn't verified again)",
+      middleware: active,
+      request: {
+        params: ChannelParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: ConsentUpgradeInput } },
+        },
+      },
+      responses: {
+        200: json(ConsentUpgradeResult, "Upgraded, or already v2"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "not-found",
+          "domain-error",
+          "too-many-requests",
+        ),
+      },
+    }),
+    async (c) => {
+      const { channelId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      let result: "upgraded" | "already_current";
+      try {
+        const { rows } = await db.execute<{ result: "upgraded" | "already_current" }>(sql`
+          select upgrade_channel_consent(${portalSession(c).tokenHash}, ${channelId}::uuid,
+            ${randomUUID()}::uuid, ${input.consentVersion}, ${input.language}::notice_language,
+            ${c.get("requestId")}) as result`);
+        result = rows[0]!.result;
+      } catch (error) {
+        if (functionRefusal(error) === "channel_not_found") return problem(c, "not-found");
+        return refused(c, error);
+      }
+      return c.json({ result }, 200);
     },
   );
 

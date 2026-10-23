@@ -61,6 +61,9 @@ import {
   DocumentReviewReason,
   DocumentDeleteReason,
   documentLimits,
+  ReminderKind,
+  ReminderStatus,
+  ReminderCancelReason,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -386,6 +389,9 @@ export const documentReviewState = pgEnum("document_review_state", values(Docume
 export const documentReviewReason = pgEnum("document_review_reason", values(DocumentReviewReason));
 export const documentDeleteReason = pgEnum("document_delete_reason", values(DocumentDeleteReason));
 export const documentSessionKind = pgEnum("document_session_kind", ["staff", "participant"]);
+export const reminderKind = pgEnum("reminder_kind", values(ReminderKind));
+export const reminderStatus = pgEnum("reminder_status", values(ReminderStatus));
+export const reminderCancelReason = pgEnum("reminder_cancel_reason", values(ReminderCancelReason));
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1529,6 +1535,64 @@ export const documentLink = pgTable(
 );
 
 /**
+ * A reminder (data-protection.md, reminders; Q156): ids, kind, the text version and language,
+ * the channel's id and kind and the consent it was queued under, who requested it and when (the
+ * Berlin date counts the window), its status, a closed cancel reason and times. Never an address,
+ * a rendered text, a provider response or an error. Written only by the reminder functions;
+ * read by whoever reads the participation's `case_internal` data.
+ */
+export const participantReminder = pgTable(
+  "participant_reminder",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    batchId: uuid("batch_id").notNull(),
+    kind: reminderKind("kind").notNull(),
+    messageVersion: text("message_version").notNull(),
+    language: noticeLanguage("language").notNull(),
+    channelId: uuid("channel_id")
+      .notNull()
+      .references(() => participantChannel.id),
+    channelKind: contactChannelKind("channel_kind").notNull(),
+    consentId: uuid("consent_id")
+      .notNull()
+      .references(() => consentRecord.id),
+    requestedBy: uuid("requested_by")
+      .notNull()
+      .references(() => staffUser.id),
+    requestedAt: instant("requested_at").notNull().defaultNow(),
+    requestedOn: dateColumn("requested_on").notNull(),
+    status: reminderStatus("status").notNull().default("queued"),
+    cancelReason: reminderCancelReason("cancel_reason"),
+    claimedAt: instant("claimed_at"),
+    outcomeAt: instant("outcome_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_reminder_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("participant_reminder_participation_idx").on(t.participationId, t.requestedAt),
+    check(
+      "participant_reminder_message_version",
+      sql`${t.messageVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
+    ),
+    check(
+      "participant_reminder_cancelled",
+      sql`(${t.status} = 'cancelled') = (${t.cancelReason} is not null)`,
+    ),
+    check(
+      "participant_reminder_outcome",
+      sql`(${t.status} in ('queued', 'dispatching')) = (${t.outcomeAt} is null) and (${t.status} <> 'dispatching' or ${t.claimedAt} is not null)`,
+    ),
+  ],
+);
+
+/**
  * A fully executed DSV amendment of a contractual date change (process-and-lifecycle.md, "DSV
  * amendment"; round 32): operational evidence, not the contract (the signed original stays on
  * paper). Written only by `set_participation_dates`; a trigger refuses every update and deletion.
@@ -2092,6 +2156,7 @@ export const tables = [
   documentTypePolicy,
   document,
   documentLink,
+  participantReminder,
   lifecycleEdge,
   auditEvent,
   jobRun,

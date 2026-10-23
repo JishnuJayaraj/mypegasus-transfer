@@ -4,7 +4,8 @@ import { PrivacyNoticeState } from "../privacy/notice-state";
 import type { ProjectType } from "../project";
 import { DeadlineKind, DeadlineState, remainingFlags } from "./deadlines";
 import { ActivationFilter, matchesWorklistFilter, WorklistFilter } from "./filter";
-import { PortalReach, type WorklistItem } from "./projection";
+import { PortalReach } from "../reminders/model";
+import type { WorklistItem } from "./projection";
 
 // The dashboard (data-protection.md, the work list and the dashboard): every count is the number
 // of distinct participations its filter matches in the same work list, so a count and its

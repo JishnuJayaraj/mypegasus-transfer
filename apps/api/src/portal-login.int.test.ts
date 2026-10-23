@@ -137,7 +137,7 @@ const completion = (oneTimeCode: string) => ({
   oneTimeCode,
   noticeVersion: "art14-activation:v1",
   consent: true,
-  consentVersion: "portal-contact-consent:v1",
+  consentVersion: "portal-contact-consent:v2",
   language: "de",
 });
 
@@ -367,7 +367,7 @@ describe("portal channels (Q123)", () => {
     const added = await browser.post("/channels/verification", {
       oneTimeCode: code,
       consent: true,
-      consentVersion: "portal-contact-consent:v1",
+      consentVersion: "portal-contact-consent:v2",
       language: "en",
     });
     expect(added.status).toBe(201);
@@ -441,7 +441,7 @@ describe("portal channels (Q123)", () => {
       await browser.post("/channels/verification", {
         oneTimeCode: "123456",
         consent: true,
-        consentVersion: "portal-contact-consent:v1",
+        consentVersion: "portal-contact-consent:v2",
         language: "de",
       }),
       422,

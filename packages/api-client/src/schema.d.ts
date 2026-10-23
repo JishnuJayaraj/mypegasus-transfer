@@ -2837,6 +2837,188 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Remind up to 500 participations of their open items (the PL or the assigned consultant); each is queued or skipped with a code */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReminderRequestInput"];
+                };
+            };
+            responses: {
+                /** @description The queued reminders and the skipped participations */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReminderRequestResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The participation's reminders, newest first (cursor); for whoever reads its case data */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: number;
+                    cursor?: string;
+                };
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of reminders */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReminderPage"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{projectId}/members": {
         parameters: {
             query?: never;
@@ -5531,6 +5713,93 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/channels/{channelId}/consent-upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give consent v2 for one of the participant's own channels (voluntary; the address isn't verified again) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    channelId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConsentUpgradeInput"];
+                };
+            };
+            responses: {
+                /** @description Upgraded, or already v2 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ConsentUpgradeResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too many requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -9142,12 +9411,14 @@ export interface components {
             deadlines: components["schemas"]["Deadline"][];
             flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
             portal: components["schemas"]["PortalReach"];
+            reminder: components["schemas"]["WorklistReminder"];
             capabilities: {
                 assignEntryWave: boolean;
                 issueActivationCode: boolean;
                 recordHandover: boolean;
                 revokeActivationCode: boolean;
                 providePrivacyNotice: boolean;
+                remind: components["schemas"]["RemindCapability"];
             };
         };
         ParticipantAction: {
@@ -9168,6 +9439,24 @@ export interface components {
             state: components["schemas"]["DeadlineState"];
             final?: boolean;
         };
+        WorklistReminder: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            lastRequestedOn: string;
+            status: components["schemas"]["ReminderStatus"];
+        } | null;
+        /** @enum {string} */
+        ReminderStatus: "queued" | "dispatching" | "sent" | "failed" | "delivery_unknown" | "cancelled";
+        RemindCapability: {
+            allowed: boolean;
+            /** @enum {string|null} */
+            code: "no_channel" | "consent_required" | "reminded_recently" | "nothing_open" | "participation_closed" | null;
+            /** @enum {string|null} */
+            channel: "email" | "sms" | null;
+        };
         EntryWaveAssignmentsResult: {
             assigned: number;
             unchanged: number;
@@ -9176,6 +9465,58 @@ export interface components {
             /** Format: uuid */
             waveId: string;
             participationIds: string[];
+        };
+        ReminderRequestResult: {
+            /** Format: uuid */
+            batchId: string;
+            queued: {
+                /** Format: uuid */
+                participationId: string;
+                /** @enum {string} */
+                channel: "email" | "sms";
+            }[];
+            skipped: {
+                /** Format: uuid */
+                participationId: string;
+                /** @enum {string} */
+                code: "no_channel" | "consent_required" | "reminded_recently" | "nothing_open" | "participation_closed";
+            }[];
+        };
+        ReminderRequestInput: {
+            kind: components["schemas"]["ReminderKind"];
+            participationIds: string[];
+        };
+        /** @enum {string} */
+        ReminderKind: "open_items";
+        ReminderPage: {
+            items: components["schemas"]["ReminderRecord"][];
+            nextCursor: string | null;
+        };
+        ReminderRecord: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ReminderKind"];
+            messageVersion: string;
+            /** @enum {string} */
+            language: "de" | "en";
+            /** @enum {string} */
+            channel: "email" | "sms";
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            requestedAt: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            requestedOn: string;
+            status: components["schemas"]["ReminderStatus"];
+            /** @enum {string|null} */
+            cancelReason: "channel_unavailable" | "consent_ended" | "participation_closed" | "nothing_open" | "requester_no_longer_authorized" | "delivery_unavailable" | null;
+            /** Format: date-time */
+            outcomeAt: string | null;
         };
         ProjectTeam: {
             members: components["schemas"]["ProjectMember"][];
@@ -9349,6 +9690,7 @@ export interface components {
                 verifiedBy: "one_time_code" | "activation_link";
                 /** Format: date-time */
                 consentGivenAt: string;
+                consentVersion: string;
                 /** Format: date-time */
                 consentEndedAt: string | null;
                 /** Format: date-time */
@@ -9508,7 +9850,7 @@ export interface components {
             /** @enum {string} */
             noticeVersion: "art14-activation:v1";
             /** @enum {string} */
-            consentVersion: "portal-contact-consent:v1";
+            consentVersion: "portal-contact-consent:v2";
         };
         /** @enum {string} */
         ActivationStep: "birth_date" | "delivery_address" | "channel" | "one_time_code" | "complete";
@@ -9552,6 +9894,7 @@ export interface components {
             maskedAddress: string;
             /** Format: date-time */
             verifiedAt: string;
+            consentUpgrade: boolean;
         };
         ActivationCompletionInput: {
             oneTimeCode?: string;
@@ -9561,7 +9904,7 @@ export interface components {
             /** @enum {boolean} */
             consent: true;
             /** @enum {string} */
-            consentVersion: "portal-contact-consent:v1";
+            consentVersion: "portal-contact-consent:v2";
             /** @enum {string} */
             language: "de" | "en";
         };
@@ -9599,12 +9942,24 @@ export interface components {
             /** @enum {boolean} */
             consent: true;
             /** @enum {string} */
-            consentVersion: "portal-contact-consent:v1";
+            consentVersion: "portal-contact-consent:v2";
             /** @enum {string} */
             language: "de" | "en";
         };
         ChannelRemovalResult: {
             sessionEnded: boolean;
+        };
+        ConsentUpgradeResult: {
+            /** @enum {string} */
+            result: "upgraded" | "already_current";
+        };
+        ConsentUpgradeInput: {
+            /** @enum {boolean} */
+            consent: true;
+            /** @enum {string} */
+            consentVersion: "portal-contact-consent:v2";
+            /** @enum {string} */
+            language: "de" | "en";
         };
         PortalStepUp: {
             method: components["schemas"]["SensitiveStepUpMethod"];
@@ -9898,7 +10253,7 @@ export interface components {
              */
             endedAt: string | null;
             /** @enum {string|null} */
-            endReason: "revoked" | "lost_access_replaced" | null;
+            endReason: "revoked" | "lost_access_replaced" | "superseded" | null;
         };
         ParticipationSelfService: {
             /** Format: uuid */

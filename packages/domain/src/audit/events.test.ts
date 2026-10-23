@@ -101,6 +101,8 @@ describe("audit event types (ADR-0002)", () => {
       "document_reviewed",
       "document_deleted",
       "document_upload_rejected",
+      "reminder_queued",
+      "reminder_delivery",
     ]);
   });
 
@@ -162,6 +164,9 @@ describe("audit event types (ADR-0002)", () => {
       "document_reviewed",
       "document_deleted",
       "document_upload_rejected",
+      // Reminders (Slice 5): only the reminder functions write them.
+      "reminder_queued",
+      "reminder_delivery",
     ]);
   });
 
@@ -1174,6 +1179,63 @@ describe("portal login, channel and recovery events (Q130, ADR-0007, Q123)", () 
         details: { channelId: otherId, kind: "sms" },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("reminders (data-protection.md, reminders)", () => {
+  const job = { type: "system", job: "reminders.send" } as const;
+  const queued = {
+    ...base,
+    type: "reminder_queued",
+    details: { reminderId: otherId, batchId: otherId, kind: "open_items", channelKind: "email" },
+  };
+  const delivery = {
+    ...base,
+    type: "reminder_delivery",
+    actor: job,
+    reasonCode: null,
+    details: { reminderId: otherId, outcome: "sent" },
+  };
+
+  it("record the queued reminder and its final state, ids and codes only", () => {
+    expect(issueCodes(queued)).toEqual([]);
+    expect(issueCodes(delivery)).toEqual([]);
+    expect(
+      issueCodes({
+        ...delivery,
+        reasonCode: "consent_ended",
+        details: { reminderId: otherId, outcome: "cancelled" },
+      }),
+    ).toEqual([]);
+  });
+
+  it("name a cancellation's reason and no other, never an address or a provider error", () => {
+    expect(issueCodes({ ...delivery, reasonCode: "nothing_open" })).toEqual(["reason_mismatch"]);
+    expect(
+      issueCodes({ ...delivery, details: { reminderId: otherId, outcome: "cancelled" } }),
+    ).toEqual(["reason_mismatch"]);
+    for (const bad of [
+      { ...queued, details: { ...queued.details, address: "x@example.invalid" } },
+      { ...queued, actor: job },
+      { ...delivery, actor: user },
+      { ...delivery, details: { ...delivery.details, error: "timeout" } },
+      { ...delivery, participationId: null },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("end a v1 consent superseded by v2, never as a withdrawal", () => {
+    const participant = { type: "participant", participationId } as const;
+    expect(
+      issueCodes({
+        ...base,
+        type: "consent_ended",
+        actor: participant,
+        reasonCode: "superseded",
+        details: { consentId: otherId, channelId: otherId, purpose: "portal_contact" },
+      }),
+    ).toEqual([]);
   });
 });
 

@@ -126,7 +126,7 @@ async function activated(address = "erika.privat@example.org") {
     oneTimeCode: lastCode(),
     noticeVersion: "art14-activation:v1",
     consent: true,
-    consentVersion: "portal-contact-consent:v1",
+    consentVersion: "portal-contact-consent:v2",
     language: "de",
   });
   expect(done.status).toBe(201);
@@ -523,7 +523,7 @@ describe("GET /portal/consents (Q138)", () => {
         id: expect.any(String),
         purpose: "portal_contact",
         source: "portal",
-        textVersion: "portal-contact-consent:v1",
+        textVersion: "portal-contact-consent:v2",
         language: "de",
         channelId: expect.any(String),
         givenAt: expect.stringMatching(/Z$/),

@@ -288,6 +288,7 @@ export {
 } from "./access/decide";
 export {
   mayPerformOperation,
+  mayRemind,
   mayPerformTransition,
   OperationKind,
   type Actor,
@@ -473,7 +474,13 @@ export {
 } from "./activation/steps";
 export {
   ART14_NOTICE_VERSION,
+  PORTAL_CONTACT_CONSENT_V1,
   PORTAL_CONTACT_CONSENT_VERSION,
+  PORTAL_REMINDER_VERSION,
+  reminderConsentVersion,
+  reminderMessage,
+  reminderTemplates,
+  type ReminderTemplate,
   SELF_SERVICE_NOTICE_VERSION,
   NoticeLanguage,
   art14Notice,
@@ -654,16 +661,37 @@ export {
   type FunnelProject,
 } from "./worklist/funnel";
 export {
-  PortalReach,
-  portalReach,
-  reachableConsentVersion,
   Worklist,
   WorklistItem,
   worklistMaxRows,
   worklistProjection,
-  type PortalChannelFacts,
   type WorklistFacts,
   type WorklistProject,
   type WorklistViewer,
 } from "./worklist/projection";
 export { matchesSearch, searchKey } from "./worklist/search";
+export {
+  chooseChannel,
+  consentUpgradeOffered,
+  mayReadReminders,
+  nextEligibleDate,
+  PortalReach,
+  portalReach,
+  ReminderCancelReason,
+  reminderEligibility,
+  ReminderKind,
+  reminderPolicy,
+  ReminderSkip,
+  ReminderStatus,
+  type ReminderChannelFacts,
+} from "./reminders/model";
+export {
+  ConsentUpgradeInput,
+  ConsentUpgradeResult,
+  RemindCapability,
+  ReminderPage,
+  ReminderRecord,
+  ReminderRequestInput,
+  ReminderRequestResult,
+  WorklistReminder,
+} from "./reminders/api";

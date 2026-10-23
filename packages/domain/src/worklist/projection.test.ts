@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { wave } from "../lifecycle/testing/context";
 import { snapshot, state } from "../lifecycle/testing/planner";
 import {
-  portalReach,
-  reachableConsentVersion,
   worklistMaxRows,
   worklistProjection,
   type WorklistFacts,
@@ -27,6 +25,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
     customFieldKeys: [],
   },
   channels: [],
+  lastReminder: null,
   ...overrides,
 });
 const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({
@@ -34,6 +33,7 @@ const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({
   lists: () => true,
   knows: () => true,
   may: () => true,
+  remind: true,
   ...overrides,
 });
 const project = {
@@ -65,12 +65,14 @@ describe("worklistProjection", () => {
       deadlines: [{ kind: "privacy_notice", date: "2027-03-20", state: "upcoming" }],
       flags: [],
       portal: "not_reachable",
+      reminder: null,
       capabilities: {
         assignEntryWave: true,
         issueActivationCode: true,
         recordHandover: true,
         revokeActivationCode: true,
         providePrivacyNotice: true,
+        remind: { allowed: false, code: "no_channel", channel: null },
       },
     });
   });
@@ -116,32 +118,44 @@ describe("worklistProjection", () => {
   });
 });
 
-const channel = (overrides = {}) => ({
+const channel = {
+  id: "00000000-0000-4000-8000-0000000000c1",
+  kind: "sms" as const,
+  verifiedAt: "2027-03-01T09:00:00.000Z",
   live: true,
-  consentVersion: reachableConsentVersion,
+  consentVersion: "portal-contact-consent:v2",
   consentEnded: false,
-  ...overrides,
+};
+
+const remind = (overrides: Partial<WorklistFacts>, v = viewer()) =>
+  worklistProjection(facts(overrides), snapshot(), project, "2027-03-10", now, v);
+
+describe("the reminder of a row", () => {
+  it("names the channel kind a permitted reminder would go to", () => {
+    const item = remind({ channels: [channel] });
+    expect(item.portal).toBe("reachable");
+    expect(item.capabilities.remind).toEqual({ allowed: true, code: null, channel: "sms" });
+  });
+
+  it("gives the skip code, and nothing to a viewer who may not remind", () => {
+    const lastReminder = { requestedOn: "2027-03-08", status: "sent" } as const;
+    const item = remind({ channels: [channel], lastReminder });
+    expect(item.reminder).toEqual({ lastRequestedOn: "2027-03-08", status: "sent" });
+    expect(item.capabilities.remind).toEqual({
+      allowed: false,
+      code: "reminded_recently",
+      channel: null,
+    });
+    expect(remind({ channels: [channel] }, viewer({ remind: false })).capabilities.remind).toEqual({
+      allowed: false,
+      code: null,
+      channel: null,
+    });
+  });
 });
 
-describe("portalReach", () => {
-  it("is reachable through a live channel with a live consent of the reminders' version", () => {
-    expect(reachableConsentVersion).toBe("portal-contact-consent:v2");
-    expect(portalReach([channel({ live: false }), channel()])).toBe("reachable");
-  });
-
-  it("needs a consent with a live channel of an older version or an ended consent", () => {
-    expect(portalReach([channel({ consentVersion: "portal-contact-consent:v1" })])).toBe(
-      "consent_required",
-    );
-    expect(portalReach([channel({ consentEnded: true })])).toBe("consent_required");
-  });
-
-  it("isn't reachable without a live channel", () => {
-    expect(portalReach([])).toBe("not_reachable");
-    expect(portalReach([channel({ live: false })])).toBe("not_reachable");
-  });
-
-  it("bounds the snapshot", () => {
+describe("the snapshot", () => {
+  it("is bounded", () => {
     expect(worklistMaxRows).toBe(5000);
   });
 });
