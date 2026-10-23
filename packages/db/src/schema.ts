@@ -72,6 +72,9 @@ import {
   BookingOrigin,
   BookingStatus,
   BookingCancelReason,
+  Attendance,
+  AttendanceAfterCloseReason,
+  AttendanceConflictResolution,
   appointmentPolicy,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
@@ -412,6 +415,15 @@ export const appointmentCancelReason = pgEnum(
 export const bookingOrigin = pgEnum("booking_origin", values(BookingOrigin));
 export const bookingStatus = pgEnum("booking_status", values(BookingStatus));
 export const bookingCancelReason = pgEnum("booking_cancel_reason", values(BookingCancelReason));
+export const attendance = pgEnum("attendance", values(Attendance));
+export const attendanceAfterCloseReason = pgEnum(
+  "attendance_after_close_reason",
+  values(AttendanceAfterCloseReason),
+);
+export const attendanceConflictResolution = pgEnum(
+  "attendance_conflict_resolution",
+  values(AttendanceConflictResolution),
+);
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1747,10 +1759,10 @@ export const appointment = pgTable(
 );
 
 /**
- * A participation's booking of an appointment (data-protection.md, appointments; Q164, Q166):
- * `case_internal` (field `appointmentBookings`), `personnel_file`. At most one live booking per
- * appointment and participation. Written only by the appointment functions and the terminal
- * status trigger.
+ * A participation's booking of an appointment (data-protection.md, appointments; Q163, Q164,
+ * Q166) with its attendance, the basis of `informed` and its conflict: `case_internal` (field
+ * `appointmentBookings`), `personnel_file`. At most one live booking per appointment and
+ * participation. Written only by the appointment functions and the terminal status trigger.
  */
 export const appointmentBooking = pgTable(
   "appointment_booking",
@@ -1769,6 +1781,23 @@ export const appointmentBooking = pgTable(
     bookedAt: instant("booked_at").notNull().defaultNow(),
     cancelledBy: uuid("cancelled_by").references(() => staffUser.id),
     cancelledAt: instant("cancelled_at"),
+    // Attendance (Q163): the value, who recorded it and when; the closed-case flow's reason.
+    attendance: attendance("attendance"),
+    attendanceRecordedBy: uuid("attendance_recorded_by").references(() => staffUser.id),
+    attendanceRecordedAt: instant("attendance_recorded_at"),
+    afterCloseReason: attendanceAfterCloseReason("after_close_reason"),
+    /** Marked as the basis of `informed` (or of a replacement) with the delivery confirmed. */
+    informedBasisBy: uuid("informed_basis_by").references(() => staffUser.id),
+    informedBasisAt: instant("informed_basis_at"),
+    /** A basis in conflict: the PL's open handling state and the resolution. */
+    conflictEscalatedBy: uuid("conflict_escalated_by").references(() => staffUser.id),
+    conflictEscalatedAt: instant("conflict_escalated_at"),
+    conflictResolution: attendanceConflictResolution("conflict_resolution"),
+    conflictResolvedBy: uuid("conflict_resolved_by").references(() => staffUser.id),
+    conflictResolvedAt: instant("conflict_resolved_at"),
+    /** An absence superseded by the PL's `did_not_take_place` correction (Q164). */
+    attendanceSupersededBy: uuid("attendance_superseded_by").references(() => staffUser.id),
+    attendanceSupersededAt: instant("attendance_superseded_at"),
   },
   (t) => [
     foreignKey({
@@ -1797,6 +1826,22 @@ export const appointmentBooking = pgTable(
     check(
       "appointment_booking_cancelled_by",
       sql`(${t.cancelledBy} is not null) = coalesce(${t.cancelReason} in ('staff_cancelled', 'appointment_cancelled'), false)`,
+    ),
+    check(
+      "appointment_booking_attendance",
+      sql`(${t.attendance} is null) = (${t.attendanceRecordedBy} is null) and (${t.attendance} is null) = (${t.attendanceRecordedAt} is null) and (${t.afterCloseReason} is null or ${t.attendance} is not null) and (${t.origin} <> 'walk_in' or ${t.attendance} is not null)`,
+    ),
+    check(
+      "appointment_booking_basis",
+      sql`(${t.informedBasisBy} is null) = (${t.informedBasisAt} is null) and (${t.informedBasisAt} is null or ${t.attendance} is not null)`,
+    ),
+    check(
+      "appointment_booking_conflict",
+      sql`(${t.conflictEscalatedBy} is null) = (${t.conflictEscalatedAt} is null) and (${t.conflictResolution} is null) = (${t.conflictResolvedBy} is null) and (${t.conflictResolution} is null) = (${t.conflictResolvedAt} is null) and (${t.informedBasisAt} is not null or (${t.conflictEscalatedAt} is null and ${t.conflictResolution} is null))`,
+    ),
+    check(
+      "appointment_booking_superseded",
+      sql`(${t.attendanceSupersededBy} is null) = (${t.attendanceSupersededAt} is null) and (${t.attendanceSupersededAt} is null or (${t.attendance} = 'absent' and ${t.cancelReason} = 'appointment_cancelled'))`,
     ),
   ],
 );
