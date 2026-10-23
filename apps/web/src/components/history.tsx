@@ -99,6 +99,18 @@ export function HistoryTab({
       case "reminder_delivery":
       case "activation_code_delivery":
         return coded("history.outcomes", text(details.outcome) ?? "");
+      // The appointment's kind and start as written then (Q168), never its title or venue.
+      case "appointment_booked":
+      case "appointment_booking_cancelled": {
+        const values = {
+          kind: coded("appointments.kinds", text(details.appointmentKind) ?? ""),
+          start: details.startsAt ? formatTimestamp(text(details.startsAt) ?? "") : "",
+        };
+        const origin = text(details.origin);
+        return origin
+          ? t("history.appointmentBy", { ...values, origin: coded("appointments.origins", origin) })
+          : t("history.appointment", values);
+      }
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");
       default:

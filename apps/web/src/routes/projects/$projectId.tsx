@@ -28,13 +28,14 @@ import { AgenturSettings } from "../../components/agentur-settings";
 import { ImportSection } from "../../components/import-section";
 import { Participants } from "../../components/participants";
 import { ProjectDashboard } from "../../components/project-dashboard";
+import { AppointmentsTab } from "../../components/appointments";
 import { ProjectRegion } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
 import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
 
-/** The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Einrichtung", "Team". */
-const tabs = [undefined, "participants", "setup", "team"] as const;
+/** The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Termine", "Einrichtung", "Team". */
+const tabs = [undefined, "participants", "appointments", "setup", "team"] as const;
 type ProjectTab = Exclude<(typeof tabs)[number], undefined>;
 export type ProjectSearch = WorklistFilter & { tab?: ProjectTab };
 
@@ -96,6 +97,7 @@ function ProjectPage() {
         <TabList aria-label={t("projectDetail.tabs")}>
           <Tab>{t("projectDetail.overview")}</Tab>
           <Tab>{t("projectDetail.participants")}</Tab>
+          <Tab>{t("projectDetail.appointments")}</Tab>
           <Tab>{t("projectDetail.setup")}</Tab>
           <Tab>{t("team.title")}</Tab>
         </TabList>
@@ -115,6 +117,9 @@ function ProjectPage() {
                 }
               />
             )}
+          </TabPanel>
+          <TabPanel>
+            {tab === "appointments" && <AppointmentsTab projectId={projectId} taTg={taTg} />}
           </TabPanel>
           <TabPanel>
             {tab === "setup" && (

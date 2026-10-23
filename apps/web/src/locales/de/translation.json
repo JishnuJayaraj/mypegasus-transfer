@@ -92,7 +92,8 @@
     "tabs": "Projektbereiche",
     "overview": "Übersicht",
     "participants": "Teilnehmende",
-    "setup": "Einrichtung"
+    "setup": "Einrichtung",
+    "appointments": "Termine"
   },
   "waveForm": {
     "createTitle": "Neue Eintrittswelle",
@@ -908,7 +909,8 @@
       "selfService": "Selbstauskunft",
       "documents": "Unterlagen",
       "messages": "Nachrichten",
-      "history": "Verlauf"
+      "history": "Verlauf",
+      "appointments": "Termine"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -1503,7 +1505,9 @@
       "document_reviewed": "Unterlage geprüft",
       "document_deleted": "Unterlage gelöscht",
       "reminder_queued": "Erinnerung angefordert",
-      "reminder_delivery": "Erinnerung abgeschlossen"
+      "reminder_delivery": "Erinnerung abgeschlossen",
+      "appointment_booked": "Termin gebucht",
+      "appointment_booking_cancelled": "Terminbuchung abgesagt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1552,7 +1556,207 @@
       "consent_ended": "Einwilligung beendet",
       "nothing_open": "Nichts mehr offen",
       "requester_no_longer_authorized": "Anfordernde Person nicht mehr berechtigt",
-      "delivery_unavailable": "Versand nicht verfügbar"
+      "delivery_unavailable": "Versand nicht verfügbar",
+      "participant_cancelled": "Von der teilnehmenden Person abgesagt",
+      "staff_cancelled": "Vom Beratungsteam abgesagt",
+      "appointment_cancelled": "Vom Veranstalter abgesagt"
+    },
+    "appointment": "{{kind}} am {{start}}",
+    "appointmentBy": "{{kind}} am {{start}} ({{origin}})"
+  },
+  "appointments": {
+    "title": "Termine",
+    "intro": "Infoveranstaltungen und Beratungstermine des Projekts.",
+    "loading": "Wird geladen…",
+    "failed": "Die Termine konnten nicht geladen werden.",
+    "forbidden": "Sie sehen die Termine dieses Projekts nicht.",
+    "notFound": "Termin nicht gefunden.",
+    "empty": "Keine Termine.",
+    "loadMore": "Weitere laden",
+    "periods": {
+      "label": "Zeitraum",
+      "upcoming": "Anstehend",
+      "past": "Vergangen"
+    },
+    "createInfoEvent": "Infoveranstaltung anlegen",
+    "createConsultation": "Beratungstermin anlegen",
+    "created": "Termin angelegt",
+    "saved": "Termin geändert",
+    "open": "Öffnen",
+    "columns": {
+      "kind": "Art",
+      "when": "Datum",
+      "venue": "Ort",
+      "host": "Gastgeber·in",
+      "bookings": "Gebucht",
+      "status": "Status",
+      "resolution": "Klärung nötig",
+      "actions": "Aktionen"
+    },
+    "kinds": {
+      "info_event": "Infoveranstaltung",
+      "consultation": "Beratungstermin"
+    },
+    "statuses": {
+      "scheduled": "Geplant",
+      "cancelled": "Abgesagt"
+    },
+    "when": "{{date}}, {{from}}–{{to}} Uhr",
+    "seats": {
+      "all": "{{booked}} von {{capacity}}",
+      "own": "davon Ihre: {{own}}",
+      "available": "Plätze frei",
+      "full": "ausgebucht"
+    },
+    "resolutionCount": "{{count}} Buchung(en)",
+    "cancelReasons": {
+      "organiser_unavailable": "Veranstalter verhindert",
+      "too_few_bookings": "Zu wenige Buchungen",
+      "did_not_take_place": "Fand nicht statt",
+      "created_in_error": "Versehentlich angelegt",
+      "other": "Anderer Grund"
+    },
+    "bookingStatuses": {
+      "booked": "Gebucht",
+      "cancelled": "Abgesagt"
+    },
+    "origins": {
+      "participant": "im Portal",
+      "staff": "durch das Team",
+      "walk_in": "ohne Buchung erschienen"
+    },
+    "bookingCancelReasons": {
+      "participant_cancelled": "von der teilnehmenden Person abgesagt",
+      "staff_cancelled": "vom Beratungsteam abgesagt",
+      "appointment_cancelled": "vom Veranstalter abgesagt",
+      "participation_closed": "Teilnahme beendet"
+    },
+    "warnings": {
+      "beyond_upcoming_cutoff": "Dieser Termin liegt nach dem letzten Eintrittsdatum ({{date}}) der Teilnahme."
+    },
+    "errors": {
+      "invalid": "Bitte prüfen Sie diese Angabe.",
+      "invalid_date": "Bitte ein Datum TT.MM.JJJJ angeben.",
+      "invalid_time": "Bitte eine Uhrzeit HH:MM angeben, die es an diesem Tag gibt.",
+      "forbidden": "Dazu fehlt Ihnen die Berechtigung.",
+      "conflict": "Der Termin wurde inzwischen geändert. Bitte laden Sie die Seite neu.",
+      "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+      "host_mismatch": "Ein Beratungstermin braucht eine Gastgeber·in.",
+      "ends_before_start": "Das Ende muss nach dem Beginn liegen.",
+      "host_not_allowed": "Diese Person ist keine Projektleitung oder Beratung des Projekts.",
+      "host_overlap": "Die Gastgeber·in hat zu dieser Zeit schon einen Termin.",
+      "host_not_responsible": "Die Gastgeber·in darf nicht alle gebuchten Teilnehmenden sehen.",
+      "not_ta_tg": "Wellen gibt es nur in Projekten mit Transfergesellschaft.",
+      "wave_of_other_project": "Diese Welle gehört nicht zum Projekt.",
+      "audience_mismatch": "Nur eine Infoveranstaltung hat eine Zielgruppe.",
+      "starts_in_past": "Der Beginn liegt in der Vergangenheit.",
+      "capacity_below_bookings": "Es sind schon mehr Plätze gebucht.",
+      "appointment_in_use": "Zeiten, Buchungsschluss und Zielgruppe ändern sich nicht mehr, sobald gebucht wurde. Bitte sagen Sie den Termin ab und legen Sie ihn neu an.",
+      "appointment_unchanged": "Es wurde nichts geändert.",
+      "appointment_cancelled": "Der Termin ist abgesagt.",
+      "appointment_started": "Der Termin hat schon begonnen.",
+      "not_consultation": "Nur ein Beratungstermin hat eine Gastgeber·in.",
+      "project_not_active": "Das Projekt ist noch nicht aktiv.",
+      "participation_not_found": "Diese Teilnahme ist nicht verfügbar.",
+      "participation_closed": "Die Teilnahme ist beendet.",
+      "not_in_audience": "Der Termin gilt nicht für diese Teilnahme.",
+      "already_booked": "Schon gebucht.",
+      "info_event_limit": "Es ist schon eine Infoveranstaltung gebucht.",
+      "booking_overlap": "Zu dieser Zeit ist schon ein Termin gebucht.",
+      "appointment_full": "Ausgebucht.",
+      "after_cutoff": "Das letzte Eintrittsdatum ist überschritten.",
+      "booking_closed": "Die Buchung ist geschlossen.",
+      "booking_cancelled": "Die Buchung ist schon abgesagt."
+    },
+    "form": {
+      "createTitle": {
+        "info_event": "Infoveranstaltung anlegen",
+        "consultation": "Beratungstermin anlegen"
+      },
+      "editTitle": "Termin ändern",
+      "personalData": "Keine Namen, Diagnosen oder Gesprächsnotizen in Titel oder Ort: beides sehen alle im Projekt und später die eingeladenen Teilnehmenden.",
+      "date": "Datum (TT.MM.JJJJ)",
+      "start": "Beginn (HH:MM)",
+      "end": "Ende (HH:MM)",
+      "cutoffDays": "Öffentlicher Buchungsschluss: Tage vor Beginn (0–14)",
+      "capacity": "Plätze (1–500)",
+      "title": "Titel (optional)",
+      "venue": "Ort",
+      "host": "Gastgeber·in",
+      "audience": "Zielgruppe",
+      "wholeProject": "Ganzes Projekt",
+      "wave": "Welle {{code}}",
+      "frozen": "Es wurde schon gebucht: Zeiten, Buchungsschluss und Zielgruppe ändern sich nicht mehr.",
+      "submit": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "page": {
+      "back": "Zurück zu den Terminen von {{project}}",
+      "details": "Termin",
+      "facts": {
+        "kind": "Art",
+        "when": "Datum",
+        "bookingClosesAt": "Öffentlicher Buchungsschluss",
+        "venue": "Ort",
+        "title": "Titel",
+        "host": "Gastgeber·in",
+        "audience": "Zielgruppe",
+        "capacity": "Plätze",
+        "bookings": "Gebucht",
+        "status": "Status",
+        "cancelReason": "Absagegrund"
+      },
+      "change": "Ändern",
+      "changeHost": "Gastgeber·in ändern",
+      "hostSaved": "Gastgeber·in geändert",
+      "cancel": "Absagen",
+      "cancelTitle": "Termin absagen",
+      "cancelText": "Alle Buchungen werden mit abgesagt.",
+      "reason": "Grund",
+      "cancelSubmit": "Termin absagen",
+      "cancelled": "Termin abgesagt",
+      "resolution": "Klärung nötig: {{count}} Buchung(en), deren Teilnehmende die Gastgeber·in nicht mehr sehen darf. Ändern Sie die Gastgeber·in, sagen Sie die Buchung oder den Termin ab.",
+      "bookings": "Buchungen",
+      "bookingsEmpty": "Keine Buchungen, die Sie sehen dürfen.",
+      "bookingColumns": {
+        "name": "Name",
+        "personnelNumber": "Personalnummer",
+        "status": "Status",
+        "origin": "Gebucht",
+        "bookedAt": "Gebucht am",
+        "actions": "Aktionen"
+      },
+      "needsResolution": "Klärung nötig",
+      "cancelBooking": "Buchung absagen",
+      "cancelBookingTitle": "Buchung absagen",
+      "cancelBookingText": "Die Buchung wird abgesagt; der Platz wird frei.",
+      "bookingCancelled": "Buchung abgesagt",
+      "book": "Teilnehmende buchen",
+      "search": "Name oder Personalnummer",
+      "choose": "Teilnehmende·r",
+      "chooseHint": "Bitte wählen",
+      "noMatch": "Keine passenden Teilnehmenden.",
+      "bookSubmit": "Buchen",
+      "booked": "Gebucht"
+    },
+    "participant": {
+      "title": "Termine",
+      "bookings": "Buchungen",
+      "bookingsEmpty": "Keine Buchungen.",
+      "bookable": "Termin buchen",
+      "bookableEmpty": "Keine buchbaren Termine.",
+      "columns": {
+        "kind": "Art",
+        "when": "Datum",
+        "venue": "Ort",
+        "title": "Titel",
+        "status": "Status",
+        "availability": "Plätze",
+        "hint": "Hinweis",
+        "actions": "Aktionen"
+      },
+      "book": "Buchen",
+      "cancel": "Buchung absagen"
     }
   }
 }

@@ -246,3 +246,63 @@ export const staffDirectoryQuery = (api: ApiClient, search: string) =>
     queryFn: () => unwrap(api.GET("/api/v1/staff-directory", { params: { query: { search } } })),
     enabled: search.trim().length > 0,
   });
+
+/**
+ * A project's appointments (data-protection.md, appointments), upcoming or past, page by page;
+ * each with the viewer's count view and capabilities.
+ */
+export const projectAppointmentsQuery = (
+  api: ApiClient,
+  projectId: string,
+  period: "upcoming" | "past",
+) =>
+  infiniteQueryOptions({
+    queryKey: ["projects", projectId, "appointments", period],
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/api/v1/projects/{projectId}/appointments", {
+          params: {
+            path: { projectId },
+            query: { period, limit: 50, ...(pageParam && { cursor: pageParam }) },
+          },
+        }),
+      ),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    retry: false,
+  });
+
+export const appointmentQuery = (api: ApiClient, appointmentId: string) =>
+  queryOptions({
+    queryKey: ["appointments", appointmentId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/appointments/{appointmentId}", { params: { path: { appointmentId } } }),
+      ),
+  });
+
+/** The appointment's bookings of the participations the viewer may list. */
+export const appointmentBookingsQuery = (api: ApiClient, appointmentId: string) =>
+  queryOptions({
+    queryKey: ["appointments", appointmentId, "bookings"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/appointments/{appointmentId}/bookings", {
+          params: { path: { appointmentId } },
+        }),
+      ),
+    retry: false,
+  });
+
+/** The participant tab "Termine": the bookings and what staff may book now. */
+export const participationAppointmentsQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "appointments"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/appointments", {
+          params: { path: { participationId } },
+        }),
+      ),
+    retry: false,
+  });

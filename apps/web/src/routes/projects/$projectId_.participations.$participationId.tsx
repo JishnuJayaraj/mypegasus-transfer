@@ -38,6 +38,7 @@ import { RouteError } from "../../components/route-error";
 import { DocumentsTab } from "../../components/documents-tab";
 import { HistoryTab } from "../../components/history";
 import { MessagesTab } from "../../components/reminders";
+import { AppointmentsTab } from "../../components/participation-appointments";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -48,9 +49,16 @@ const RouterLink = createLink(Link);
 
 /**
  * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Unterlagen",
- * "Nachrichten" or "Verlauf".
+ * "Termine", "Nachrichten" or "Verlauf".
  */
-const tabs = [undefined, "self-service", "documents", "messages", "history"] as const;
+const tabs = [
+  undefined,
+  "self-service",
+  "documents",
+  "appointments",
+  "messages",
+  "history",
+] as const;
 type Search = { tab?: Exclude<(typeof tabs)[number], undefined> };
 
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
@@ -138,6 +146,7 @@ function ParticipationPage() {
           <Tab>{t("participant.tabs.overview")}</Tab>
           <Tab>{t("participant.tabs.selfService")}</Tab>
           <Tab>{t("participant.tabs.documents")}</Tab>
+          <Tab>{t("participant.tabs.appointments")}</Tab>
           <Tab>{t("participant.tabs.messages")}</Tab>
           <Tab>{t("participant.tabs.history")}</Tab>
         </TabList>
@@ -187,6 +196,12 @@ function ParticipationPage() {
           <TabPanel>
             {/* Loaded only when shown, like "Selbstauskunft". */}
             {tab === "documents" && <DocumentsTab detail={detail} />}
+          </TabPanel>
+          <TabPanel>
+            {/* Loaded only when shown: the bookings (data-protection.md, appointments). */}
+            {tab === "appointments" && (
+              <AppointmentsTab participationId={participationId} projectId={projectId} />
+            )}
           </TabPanel>
           <TabPanel>
             {/* Loaded only when shown: the participant's reminders (data-protection.md). */}

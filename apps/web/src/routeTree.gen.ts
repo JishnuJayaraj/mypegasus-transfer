@@ -16,6 +16,7 @@ import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ProjectsNewRouteImport } from './routes/projects/new'
+import { Route as ProjectsProjectIdAppointmentsAppointmentIdRouteImport } from './routes/projects/$projectId_.appointments.$appointmentId'
 import { Route as ProjectsProjectIdParticipationsParticipationIdRouteImport } from './routes/projects/$projectId_.participations.$participationId'
 import { Route as ProjectsProjectIdParticipationsParticipationIdAssistedRouteImport } from './routes/projects/$projectId_.participations.$participationId_.assisted'
 
@@ -54,6 +55,12 @@ const ProjectsNewRoute = ProjectsNewRouteImport.update({
   path: '/projects/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsProjectIdAppointmentsAppointmentIdRoute =
+  ProjectsProjectIdAppointmentsAppointmentIdRouteImport.update({
+    id: '/projects/$projectId_/appointments/$appointmentId',
+    path: '/projects/$projectId/appointments/$appointmentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProjectsProjectIdParticipationsParticipationIdRoute =
   ProjectsProjectIdParticipationsParticipationIdRouteImport.update({
     id: '/projects/$projectId_/participations/$participationId',
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId/appointments/$appointmentId': typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   '/projects/$projectId/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
   '/projects/$projectId/participations/$participationId/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
@@ -86,6 +94,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
   '/projects': typeof ProjectsIndexRoute
+  '/projects/$projectId/appointments/$appointmentId': typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   '/projects/$projectId/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
   '/projects/$projectId/participations/$participationId/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
@@ -98,6 +107,7 @@ export interface FileRoutesById {
   '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/projects/new': typeof ProjectsNewRoute
   '/projects/': typeof ProjectsIndexRoute
+  '/projects/$projectId_/appointments/$appointmentId': typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   '/projects/$projectId_/participations/$participationId': typeof ProjectsProjectIdParticipationsParticipationIdRoute
   '/projects/$projectId_/participations/$participationId_/assisted': typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/new'
     | '/projects/'
+    | '/projects/$projectId/appointments/$appointmentId'
     | '/projects/$projectId/participations/$participationId'
     | '/projects/$projectId/participations/$participationId/assisted'
   fileRoutesByTo: FileRoutesByTo
@@ -122,6 +133,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/new'
     | '/projects'
+    | '/projects/$projectId/appointments/$appointmentId'
     | '/projects/$projectId/participations/$participationId'
     | '/projects/$projectId/participations/$participationId/assisted'
   id:
@@ -133,6 +145,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId'
     | '/projects/new'
     | '/projects/'
+    | '/projects/$projectId_/appointments/$appointmentId'
     | '/projects/$projectId_/participations/$participationId'
     | '/projects/$projectId_/participations/$participationId_/assisted'
   fileRoutesById: FileRoutesById
@@ -145,6 +158,7 @@ export interface RootRouteChildren {
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
   ProjectsNewRoute: typeof ProjectsNewRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
+  ProjectsProjectIdAppointmentsAppointmentIdRoute: typeof ProjectsProjectIdAppointmentsAppointmentIdRoute
   ProjectsProjectIdParticipationsParticipationIdRoute: typeof ProjectsProjectIdParticipationsParticipationIdRoute
   ProjectsProjectIdParticipationsParticipationIdAssistedRoute: typeof ProjectsProjectIdParticipationsParticipationIdAssistedRoute
 }
@@ -200,6 +214,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId_/appointments/$appointmentId': {
+      id: '/projects/$projectId_/appointments/$appointmentId'
+      path: '/projects/$projectId/appointments/$appointmentId'
+      fullPath: '/projects/$projectId/appointments/$appointmentId'
+      preLoaderRoute: typeof ProjectsProjectIdAppointmentsAppointmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId_/participations/$participationId': {
       id: '/projects/$projectId_/participations/$participationId'
       path: '/projects/$projectId/participations/$participationId'
@@ -225,6 +246,8 @@ const rootRouteChildren: RootRouteChildren = {
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,
   ProjectsNewRoute: ProjectsNewRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
+  ProjectsProjectIdAppointmentsAppointmentIdRoute:
+    ProjectsProjectIdAppointmentsAppointmentIdRoute,
   ProjectsProjectIdParticipationsParticipationIdRoute:
     ProjectsProjectIdParticipationsParticipationIdRoute,
   ProjectsProjectIdParticipationsParticipationIdAssistedRoute:
