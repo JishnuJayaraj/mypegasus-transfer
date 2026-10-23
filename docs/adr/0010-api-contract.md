@@ -315,6 +315,42 @@ generator then. No action now.
   `already_booked`, `info_event_limit`, `booking_overlap`, `appointment_full`, `after_cutoff`),
   `booking_cancelled`; 400 `host_mismatch`, `control_character`; the others exist.
 
+## Note 2026-10-23 (Slice 5b, PR 5b-2): attendance and `informed`
+
+- **Routes:** `POST /appointments/{id}/attendance` (`AttendanceInput`: `entries` of
+  `{ participationId, attendance, markInformed }`, 1–500, each participation once (400
+  `duplicate_entry` at `/entries/<i>/participationId`), `informationDelivered`,
+  `afterCloseReason` → `200 { recorded, informed, statusChanges }`); `POST
+  /appointment-bookings/{id}/informed` (`{ informationDelivered: true }` → `200 { statusChanges }`:
+  "Als informiert erfassen", or "Als Grundlage bestätigen" while another basis is in conflict);
+  `POST /appointment-bookings/{id}/conflict-review` (`{ reason }`, `escalated` or
+  `information_delivered_otherwise` → `204`; the PL only).
+- **All or nothing:** the API takes the project lock, checks every row (the domain's
+  `attendanceEligibility`, and for a ticked row the status service's checks of each step to
+  `informed`) and answers `422` with one `errors[]` entry per refused row at `/entries/<i>` before
+  anything is written; a request refusal points at the body (`project_not_active`,
+  `appointment_cancelled`) or at `/informationDelivered` (`information_delivery_unconfirmed`). A
+  refused guard is named by its id (`before_cutoff`).
+- **Order:** the schema (400) → visibility (404: the appointment, a booking whose participation
+  the viewer may not list) → permission (403: back office and other non-recorders on the attendance
+  route; on a booking `mayRecordAttendance`, after the close the PL's; the conflict review the PL's)
+  → state (422). A participation in a row the viewer can't list, or of another project, is
+  `participation_not_found` at `/entries/<i>`.
+- **Payloads:** `AppointmentBooking` and the participant tab's bookings carry `attendance`,
+  `attendanceRecordedAt`, `afterCloseReason`, `informedBasis`, `superseded`, `conflict` (`open`,
+  `escalated`, `resolved`) and `conflictResolution`, and `BookingCapabilities` (`cancel`,
+  `recordAttended`, `recordAbsent`, `offerInformed`, `afterClose`, `markInformed`,
+  `confirmBasis`, `reviewConflict`); `AppointmentCapabilities` add `recordAttendance` and
+  `correctNotTakenPlace`, and `cancel` is false once attendance is recorded. A history detail may
+  be a flag (`afterClose`, `statusChanged`).
+- **Problem codes:** 422 `appointment_not_started`, `appointment_not_ended`,
+  `participation_closed`, `after_close_reason_required`, `started_after_close`, `not_booked`,
+  `host_not_responsible`, `attendance_unchanged`, `mark_informed_not_allowed`, `before_cutoff`,
+  `actor_not_allowed` (a row the viewer lists but may not record), `information_delivery_unconfirmed`,
+  `booking_cancelled`, `not_attended`, `already_basis`, `already_informed`, `no_conflict`,
+  `already_escalated`, `attendance_recorded` (cancelling an appointment or a booking with
+  attendance).
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

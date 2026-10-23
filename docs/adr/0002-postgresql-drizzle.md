@@ -546,6 +546,52 @@ rules.
   the title or venue. All five are reserved (`record_audit_event` refuses them). Grants: `SELECT` on
   both tables, `EXECUTE` on the six functions; the helpers have none.
 
+## Amendment 2026-10-23: attendance and `informed` (Slice 5b, PR 5b-2)
+
+Migrations `0061_attendance.sql` (generated) and `0062_attendance_functions.sql` (hand-written, the
+0060 hardening); process-and-lifecycle.md and data-protection.md ("Appointments", attendance) hold
+the rules.
+- **`appointment_booking`** gains `attendance` (`attended`, `absent`), `attendance_recorded_by/at`,
+  `after_close_reason` (`late_entry`, `correction`), `informed_basis_by/at`,
+  `conflict_escalated_by/at`, `conflict_resolution` (`replacement_basis`,
+  `information_delivered_otherwise`), `conflict_resolved_by/at`, `attendance_superseded_by/at`
+  (staff ids and times, all `appointmentBookings`); `CHECK`s keep each value with its actor and
+  time, a walk-in recorded, a basis, an escalation or a resolution only on a recorded booking, and
+  a supersession only on an absence cancelled with its appointment.
+- **The lock order** (the table of the 5b-1 amendment, extended):
+
+  | Operation | Project lock | Then |
+  |---|---|---|
+  | `record_attendance` | exclusive | the named participations in UUID order → the appointment `FOR UPDATE` → their live bookings in id order; each status change through `apply_status_change` (the shared lock re-entrant under the exclusive one) |
+  | `confirm_information_delivered`, `escalate_attendance_conflict`, `resolve_attendance_conflict` | shared (`lock_participation`) | the participation → the booking's appointment `FOR SHARE` → the participation's bookings in id order (the booking alone for the review) |
+  | `cancel_appointment` with the PL's `did_not_take_place` correction | exclusive | as before |
+
+  An integration test races the bulk recording, a booking of another appointment and a terminal
+  transition of a recorded participation (no deadlock; either the recording or the withdrawal
+  comes first).
+- **Functions** (`SECURITY DEFINER`, staff context in normal mode only):
+  `record_attendance(context, appointment, participation ids, attendance values, informed ticks,
+  information delivered, after-close reason)` (1–500 rows, all or nothing, walk-ins as bookings of
+  origin `walk_in`; the closed-case flow for the PL, the terminal change's time from its
+  `status_changed`; returns `{ recorded, informed, statusChanges }`);
+  `confirm_information_delivered(context, booking, information delivered)` (a status change
+  before `informed`, else a replacement basis resolving the open conflicts; returns the number of
+  status changes); `escalate_attendance_conflict(context, booking)` and
+  `resolve_attendance_conflict(context, booking, resolution)` (the PL; the attestation only). The
+  status changes run in the internal `confirm_informed` through `apply_status_change`, which
+  re-checks the edge, the project and the track; `before_cutoff` of `unreachable → contacted` is
+  checked there with database time, and the API's status service checks each step's permission
+  and guards before. `cancel_appointment` (replaced) refuses `attendance_recorded` but for the
+  PL's `did_not_take_place` correction over absences only (each `attendance_superseded`, then
+  cancelled with the appointment, `correction: true`); `cancel_appointment_booking` (replaced)
+  refuses a booking with attendance.
+- **Events:** `attendance_recorded`, `attendance_superseded`, `information_delivery_confirmed`,
+  `attendance_conflict_escalated`, `attendance_conflict_resolved` (`case`, need their
+  participation), each with its `audit_event_projection` row; ids, codes, flags and times only.
+  All five are reserved. Grants: `EXECUTE` on the four functions; the helpers
+  (`booking_event_details`, `participation_closed_at`, `booking_conflict_open`,
+  `confirm_informed`, `lock_conflict_booking`) have none.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

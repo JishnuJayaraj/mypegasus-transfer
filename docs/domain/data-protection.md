@@ -231,6 +231,13 @@
     `appointment_booking` is `internal`, `case_internal` (field `appointmentBookings`, listable as
     codes and dates), `personnel_file`. Bookings are never BA evidence and no funding status is
     inferred from the kind: funded-measure evidence is a separate record (Q169).
+  - *Attendance (as built in 5b-2; Q163):* the PL and the assigned consultant record and correct
+    attendance and confirm `informed` on it (`mayRecordAttendance`); after the participation
+    closed the PL only. The conflict review ("Eskalieren", "Anderweitig informiert") is the PL's
+    (`mayResolveAppointmentItem`). Back office reads attendance with the bookings and records none.
+    The booking holds the value, who recorded it and when, the closed-case reason, the basis of
+    `informed` (who, when), the conflict's handling and resolution and the supersession (staff ids
+    and times), all in `appointmentBookings`, `personnel_file` like the booking.
 - **Customer**: no login in the MVP (Q47). See the next section.
 
 ### Resources, categories and the generated matrix *(assumed, round 11)*
@@ -409,7 +416,13 @@ assumed)*: the participant page's tab "Verlauf" shows one participation's histor
   history. `appointment_booked` (`case`: the appointment's id, kind, start as written then and the
   origin) and `appointment_booking_cancelled` (`case`, with its reason) show the PL and the assigned
   consultant the booking, back office nothing. The start is written into the event, so the history
-  never depends on the current appointment row; no title or venue is in any detail.
+  never depends on the current appointment row; no title or venue is in any detail. Attendance
+  (5b-2, `case`, the same viewers): `attendance_recorded` (the value and the previous one,
+  `afterClose`, the closed-case reason), `attendance_superseded` (the PL's `did_not_take_place`
+  correction, the previous `absent`), `information_delivery_confirmed` (whether it changed the
+  status; the changes are their own `status_changed` rows), `attendance_conflict_escalated` and
+  `attendance_conflict_resolved` (its reason: `replacement_basis` or
+  `information_delivered_otherwise`); each names the appointment, its kind and start as written.
 - The reference tables `audit_event_projection`, `role_field_knowledge` and
   `field_access_category` hold no personal data (`reference_data`); the history's events are
   `audit_log` (three years, the participation reference pseudonymised when the record is deleted).
