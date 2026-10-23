@@ -68,6 +68,7 @@ function Participant({ me }: { me: PortalMe }) {
       </ul>
       <Stack gap={3}>
         <Link to="/self-service">{t("home.selfService")}</Link>
+        <Link to="/appointments">{t("home.appointments")}</Link>
         <Link to="/consents">{t("home.consents")}</Link>
         <Link to="/channels">{t("home.manageChannels")}</Link>
       </Stack>
@@ -79,6 +80,7 @@ function Participant({ me }: { me: PortalMe }) {
           queryClient.removeQueries({ queryKey: ["portal-self-service"] });
           queryClient.removeQueries({ queryKey: ["portal-consents"] });
           queryClient.removeQueries({ queryKey: ["portal-documents"] });
+          queryClient.removeQueries({ queryKey: ["portal-appointments"] });
           queryClient.setQueryData(["portal-me"], null);
         }}
       >

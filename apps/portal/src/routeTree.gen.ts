@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ActivateRouteImport } from './routes/activate'
+import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as ChannelsRouteImport } from './routes/channels'
 import { Route as ConsentsRouteImport } from './routes/consents'
 import { Route as LoginRouteImport } from './routes/login'
@@ -25,6 +26,11 @@ const IndexRoute = IndexRouteImport.update({
 const ActivateRoute = ActivateRouteImport.update({
   id: '/activate',
   path: '/activate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppointmentsRoute = AppointmentsRouteImport.update({
+  id: '/appointments',
+  path: '/appointments',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChannelsRoute = ChannelsRouteImport.update({
@@ -56,6 +62,7 @@ const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
+  '/appointments': typeof AppointmentsRoute
   '/channels': typeof ChannelsRoute
   '/consents': typeof ConsentsRoute
   '/login': typeof LoginRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
+  '/appointments': typeof AppointmentsRoute
   '/channels': typeof ChannelsRoute
   '/consents': typeof ConsentsRoute
   '/login': typeof LoginRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/activate': typeof ActivateRoute
+  '/appointments': typeof AppointmentsRoute
   '/channels': typeof ChannelsRoute
   '/consents': typeof ConsentsRoute
   '/login': typeof LoginRoute
@@ -86,6 +95,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/activate'
+    | '/appointments'
     | '/channels'
     | '/consents'
     | '/login'
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/activate'
+    | '/appointments'
     | '/channels'
     | '/consents'
     | '/login'
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/activate'
+    | '/appointments'
     | '/channels'
     | '/consents'
     | '/login'
@@ -114,6 +126,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ActivateRoute: typeof ActivateRoute
+  AppointmentsRoute: typeof AppointmentsRoute
   ChannelsRoute: typeof ChannelsRoute
   ConsentsRoute: typeof ConsentsRoute
   LoginRoute: typeof LoginRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/activate'
       fullPath: '/activate'
       preLoaderRoute: typeof ActivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/appointments': {
+      id: '/appointments'
+      path: '/appointments'
+      fullPath: '/appointments'
+      preLoaderRoute: typeof AppointmentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/channels': {
@@ -178,6 +198,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivateRoute: ActivateRoute,
+  AppointmentsRoute: AppointmentsRoute,
   ChannelsRoute: ChannelsRoute,
   ConsentsRoute: ConsentsRoute,
   LoginRoute: LoginRoute,

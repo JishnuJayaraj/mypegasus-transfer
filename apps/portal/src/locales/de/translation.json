@@ -19,7 +19,8 @@
     "login": "Anmelden",
     "manageChannels": "Kontaktwege verwalten",
     "selfService": "Meine Angaben",
-    "consents": "Einwilligungen"
+    "consents": "Einwilligungen",
+    "appointments": "Termine"
   },
   "status": {
     "checking": "Verbindung wird geprüft …",
@@ -150,6 +151,71 @@
       "revoked": "widerrufen",
       "lost_access_replaced": "Zugang wiederhergestellt, Kontaktweg ersetzt",
       "superseded": "durch die neue Einwilligung ersetzt"
+    }
+  },
+  "appointments": {
+    "title": "Termine",
+    "intro": "Hier finden Sie Ihre Einladungen und gebuchten Termine. Sie können Termine buchen und absagen.",
+    "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
+    "failed": "Die Termine konnten nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "sections": {
+      "invitations": "Einladungen",
+      "mine": "Meine Termine",
+      "cancelled": "Abgesagt",
+      "bookable": "Termine buchen"
+    },
+    "empty": {
+      "invitations": "Sie haben keine offenen Einladungen.",
+      "mine": "Sie haben keine gebuchten Termine.",
+      "cancelled": "Keine abgesagten Termine.",
+      "bookable": "Zurzeit können Sie keine weiteren Termine buchen."
+    },
+    "kinds": {
+      "info_event": "Infoveranstaltung",
+      "consultation": "Beratungstermin"
+    },
+    "heading": "{{kind}} am {{date}}",
+    "time": "Uhrzeit",
+    "timeRange": "{{start}}–{{end}} Uhr",
+    "subject": "Thema",
+    "venue": "Ort",
+    "states": {
+      "full": "ausgebucht",
+      "closed": "Buchung geschlossen",
+      "unavailable": "Diesen Termin können Sie nicht buchen.",
+      "noLongerValid": "Diese Einladung gilt nicht mehr."
+    },
+    "availability": {
+      "available": "Plätze frei",
+      "full": "ausgebucht"
+    },
+    "cutoffHint": "Dieser Termin liegt nach einer für Sie geltenden Frist.",
+    "cancelledBy": {
+      "organizer": "vom Veranstalter abgesagt",
+      "team": "vom Beratungsteam abgesagt"
+    },
+    "alternative": "Anderen Termin buchen",
+    "contactTeam": "Bitte wenden Sie sich an Ihr Beratungsteam.",
+    "book": "Buchen",
+    "confirmBook": "Möchten Sie diesen Termin verbindlich buchen?",
+    "yesBook": "Ja, buchen",
+    "cancel": "Absagen",
+    "confirmCancel": "Möchten Sie diesen Termin absagen?",
+    "yesCancel": "Ja, absagen",
+    "back": "Zurück",
+    "booked": "Der Termin ist gebucht.",
+    "cancelledDone": "Ihre Buchung ist abgesagt.",
+    "errors": {
+      "appointment_full": "Der Termin ist inzwischen ausgebucht.",
+      "booking_closed": "Die Buchung für diesen Termin ist geschlossen.",
+      "already_booked": "Sie haben diesen Termin bereits gebucht.",
+      "info_event_limit": "Sie haben bereits eine Infoveranstaltung gebucht.",
+      "booking_overlap": "Sie haben zu dieser Zeit schon einen anderen Termin.",
+      "after_cutoff": "Für Sie gilt eine Frist, die bereits abgelaufen ist. Bitte wenden Sie sich an Ihr Beratungsteam.",
+      "appointment_started": "Der Termin hat bereits begonnen.",
+      "appointment_cancelled": "Der Termin wurde abgesagt.",
+      "booking_cancelled": "Die Buchung ist bereits abgesagt.",
+      "failed": "Das hat nicht geklappt. Bitte versuchen Sie es später erneut."
     }
   }
 }
