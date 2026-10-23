@@ -36,7 +36,8 @@ test("attendance: the PL records an info event's attendance and the participant 
   await page.getByLabel("Plätze (1–500)").fill("40");
   await page.getByLabel("Ort").fill("Kantine Werk 2");
   const created = page.waitForResponse(
-    (r) => r.url().endsWith(`/projects/${projectId}/appointments`) && r.request().method() === "POST",
+    (r) =>
+      r.url().endsWith(`/projects/${projectId}/appointments`) && r.request().method() === "POST",
   );
   await page.getByRole("button", { name: "Speichern" }).click();
   const { id: appointmentId } = (await (await created).json()) as { id: string };
@@ -69,8 +70,8 @@ test("attendance: the PL records an info event's attendance and the participant 
   await expect(dialog.getByLabel(`${label} als informiert erfassen`)).toBeChecked();
   await dialog.getByText("Die erforderlichen Informationen wurden vermittelt").click();
   await expectAccessible(page);
-  const recorded = page.waitForResponse(
-    (r) => r.url().endsWith(`/appointments/${appointmentId}/attendance`),
+  const recorded = page.waitForResponse((r) =>
+    r.url().endsWith(`/appointments/${appointmentId}/attendance`),
   );
   await dialog.getByRole("button", { name: "Erfassen" }).click();
   expect(await (await recorded).json()).toEqual({ recorded: 1, informed: 1, statusChanges: 1 });
