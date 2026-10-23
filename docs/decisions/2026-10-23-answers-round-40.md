@@ -123,3 +123,45 @@ attendance at an appointment isn't automatically such evidence.
 Attendance corrected later; last-day attendance entered after withdrawal; reassignment before a
 cancellation's delivery; cancellation without a usable channel; concurrent booking, cancellation
 and dispatch.
+
+## Approval after the second review (commit `12695eb`)
+
+The product owner approved the revised direction and the four-PR split for development on
+synthetic data, with the focused amendments below; no further planning round. The plan's details
+listed as readings in Q162–Q168 are accepted with these amendments.
+
+**Standards**
+1. **Dispatch lock order:** the claim follows the one order: participation → appointment →
+   booking → message → channel → consent (a plan inconsistency, not an observed deadlock).
+2. **Retention branches:** the 90-day non-signer branch excludes people with an executed DSV or a
+   funded measure (Q105, Q77); `ta_completed` in a `ta_only` project has no TG exit date, so
+   "otherwise after exit" leaves it undefined. The trigger mapping stays awaiting confirmation and
+   the executable periods `unset`; it must be settled before deletion runs, not before synthetic
+   development. The separate funded-evidence boundary is accepted; Q169 stays `verify`, and 5b
+   isn't presented as the system that supplies funded-measure evidence.
+
+**Spec**
+1. **Conflict recovery (5b-2):** a replacement basis can be confirmed without a status change (the
+   person is already informed); `information_delivered_otherwise` is an explicit PL attestation;
+   `escalated` keeps the issue open; unresolved conflicts stay visible after closure.
+2. **False no-shows (5b-2):** a restricted, audited PL `did_not_take_place` correction when only
+   absences are recorded, preserving their history and superseding them; an `attended` record
+   needs individual investigation.
+3. **Delivery attempts (5b-3):** three explicit delivery attempts in total, the first included;
+   rows created without a usable channel or consent use none; automatic transport retries are the
+   same attempt; a currently authorized staff member may retry after
+   `requester_no_longer_authorized`; no resend while an outcome is uncertain.
+4. **Portal visibility (5b-3):** the 14-day cancellation window counts from the later of the
+   original start and the cancellation; an invitation stays identifiable when the event is full or
+   public booking has closed ("ausgebucht", "Buchung geschlossen", booking disabled, the next
+   step); only currently authorized appointment details stay visible.
+5. **Follow-up chains (5b-4):** automatic matching to a later eligible information event with the
+   same briefing purpose, explicit `followUpOf` for consultations; a follow-up counts only while
+   live or attended; cancelling it restores the missed item; a later no-show leaves actionable
+   follow-up work.
+
+**Accepted choices:** `available` / `full` as an explicit Q150 exception ("full" beside the visible
+capacity reveals occupancy; no unauthorized total or remaining-seat count in any API payload);
+`information_delivered_otherwise` as a resolution and `escalated` as an open handling state; three
+delivery attempts and the amended 14-day window; inferred information-event and linked
+consultation follow-up with the rules above; frozen times plus historical snapshots.

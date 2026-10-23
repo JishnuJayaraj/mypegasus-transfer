@@ -1,9 +1,11 @@
 # Slice 5b — Info events and appointments (F4)
 
-Status: **revised** after the product owner's review of PR #82 ([round 40](../decisions/2026-10-23-answers-round-40.md)):
-Q162–Q168 are `accepted` as amended there; Q169 (funded-measure evidence) is new, `verify`.
-The details this revision adds to implement round 40 are listed as "readings to confirm" in the
-rows of Q162–Q168. Waiting for approval of the revision; nothing is implemented before then.
+Status: **approved** 2026-10-23 by the product owner for development on synthetic data (PR #82,
+[round 40](../decisions/2026-10-23-answers-round-40.md) with its second review): Q162–Q168 are
+`accepted` as amended there, including the readings of this plan; this revision adds the second
+review's amendments (the dispatch lock order, the retention branches, conflict recovery, the
+correction of false no-shows, delivery attempts, portal visibility, follow-up chains). Q169
+(funded-measure evidence) stays `verify`; 5b supplies no funded-measure evidence. Next: PR 5b-1.
 Roadmap (Q158): info events and consultation slots; participant self-booking and cancellation;
 attendance; invitations and their message logging; attendance driving the authorised `informed`
 workflow; overdue appointments joining the work list of Slice 5. Only appointment polish stays in
@@ -39,7 +41,13 @@ page's tabs.
   (`organiser_unavailable`, `too_few_bookings`, `did_not_take_place`, `created_in_error`, `other`),
   no free text. It cancels every live booking (`appointment_cancelled`) and notifies each person
   (D14); a cancelled appointment leaves no `attendance_missing` or `missed` item, so a late
-  cancellation never becomes a false no-show.
+  cancellation never becomes a false no-show. **Correcting false no-shows:** when the attendance
+  recorded for an appointment is only `absent`, the PL may still cancel it with
+  `did_not_take_place` as a correction (`appointment_cancelled` with `correction: true`): each
+  absence stays in the booking's history and is superseded (`attendance_superseded`, the booking
+  cancelled `appointment_cancelled`), so no `missed` item remains; no notices go out for a past
+  event. A single `attended` record refuses the correction (`attendance_recorded`): each is
+  investigated and corrected on its own first (D11, which may raise `attendance_conflict`, D13).
 
 ### Roles and visibility
 
@@ -56,9 +64,10 @@ page's tabs.
   and back office always, a consultant for a slot whose bookings are all of their assigned
   participations. Otherwise the viewer gets the count among the participations they may list
   ("davon Ihre: 3") and the seat state `availability`: `available` or `full`, never a number.
-  Participants get only `availability`. The seat state is the minimum the booking function needs;
-  it discloses no count except that a full appointment holds its configured capacity, and no
-  person. No other aggregate of bookings is shown outside the PL's and back office's scope.
+  Participants get only `availability`. The seat state is an **explicit exception to Q150**,
+  accepted as an operational disclosure: "full" beside the visible capacity reveals the occupancy
+  of that appointment, never a person. No API payload returns a total or remaining-seat count to
+  a viewer outside the exact-count scope, and no other aggregate of bookings is shown there.
 - **D6. Reassignment and a departing host** (Q162): access follows the open assignments and
   memberships at every request, so a consultant whose assignment ended, who lost the consultant
   role or the membership, or was deactivated, sees none of the participation's bookings at once,
@@ -93,12 +102,17 @@ page's tabs.
   the attendance record (D11). No waiting list.
 - **D9. Self-booking in the portal** (Q164, Q165), de/en, mobile-first, logical CSS properties, an
   activated participant with a live session: "Termine" shows
-  - **Einladungen**: every appointment the participant was invited to (D14) while it is bookable
-    for them and not booked, whether or not the email or SMS arrived;
+  - **Einladungen**: every appointment the participant was invited to (D14) and hasn't booked,
+    whether or not the email or SMS arrived, until its start; a full one shows "ausgebucht", one
+    past its public cutoff "Buchung geschlossen", each with booking disabled and the next step
+    ("Anderen Termin buchen" when an alternative of the same kind is bookable, else "Bitte wenden
+    Sie sich an Ihr Beratungsteam"); a cancelled one moves to "Abgesagt". Its details (title,
+    venue, time) only while the appointment is still in the participation's audience or host rule
+    (D7), otherwise only its kind and "Diese Einladung gilt nicht mehr";
   - **Meine Termine**: live bookings with kind, date, time, title, venue, "Absagen" (with a
     confirmation) until the start;
-  - **Abgesagt**: bookings cancelled by the organizer or the team, until 14 days after the original
-    start: which appointment, "vom Veranstalter abgesagt" / "vom Beratungsteam abgesagt", and
+  - **Abgesagt**: bookings, and invited appointments, cancelled by the organizer or the team, until
+    14 days after the later of the original start and the cancellation: which appointment, "vom Veranstalter abgesagt" / "vom Beratungsteam abgesagt", and
     "Anderen Termin buchen" when a bookable alternative of the same kind exists;
   - **Termine buchen**: the bookable appointments with `availability` ("Plätze frei" /
     "ausgebucht") and the D7 hint; "Buchen" after a confirmation.
@@ -115,7 +129,7 @@ page's tabs.
   | book, cancel one booking (portal, staff), "Als informiert erfassen", resolve one item, record a follow-up | shared (`lock_participation`) | participation → appointment `FOR UPDATE` (capacity, overlaps) → booking |
   | create, change, cancel an appointment; change a host; record attendance (bulk, after close); request invitations | exclusive | the affected participations in UUID order → appointment → bookings → messages |
   | a terminal status change (`apply_status_change`) | shared (held) | participation (held) → its booking rows in id order; no appointment lock (freeing a seat only lowers the count, so a concurrent capacity check can only be stricter) |
-  | the dispatch claim (`claim_reminder_dispatch`) | shared (`lock_participation`) | participation → message `FOR UPDATE` → appointment and booking `FOR SHARE` → channel, consent `FOR SHARE` |
+  | the dispatch claim (`claim_reminder_dispatch`) | shared (`lock_participation`) | participation → appointment and booking `FOR SHARE` (their ids read from the message's immutable columns without a lock) → message `FOR UPDATE` → channel, consent `FOR SHARE`; an `open_items` reminder skips the appointment step |
 
   Two participants racing for the last seat serialize on the appointment row: one booking, one
   `appointment_full`. The partial unique index `(appointment_id, participation_id) WHERE status =
@@ -151,10 +165,17 @@ page's tabs.
     `unreachable → contacted` (its `before_cutoff` guard) `→ informed`; each change its own
     `status_changed` through `apply_status_change`. `attendanceStatusChanges` is tested to return
     only rows of `edges`. A failing guard refuses the request.
-  - A correction of the basis attendance to `absent` reverses nothing: while the participation
-    has no other confirmed basis, it shows `attendance_conflict` (D19) until the PL records a review
-    with a closed reason (`information_delivered_otherwise`, `escalated`) or another attendance is
-    confirmed.
+  - A correction of the basis attendance to `absent` reverses nothing: the participation shows
+    `attendance_conflict` (D19) until one of two resolutions:
+    - **a replacement basis:** "Als Grundlage bestätigen" on another `attended` booking of the
+      participation, with the same delivery confirmation, by the PL or the assigned consultant (after
+      close the PL only); it marks the new basis and changes no status
+      (`information_delivery_confirmed` with `statusChanged: false`);
+    - **the PL's attestation** `information_delivered_otherwise` (`attendance_conflict_resolved`).
+
+    The PL may record `escalated` as the handling state (`attendance_conflict_escalated`): the item
+    stays open, shown as escalated, until a resolution. An unresolved conflict stays visible after
+    the participation closes, and the PL resolves it there too (no status change).
 
 ### Messages
 
@@ -171,10 +192,15 @@ page's tabs.
     `no_channel` or `consent_required` (no job), so the portal shows the invitation either way.
     Skips without a row: `participation_closed`, `not_eligible` (D7), `already_booked`,
     `already_invited`, `invitation_limit`. Retry: a new invitation is allowed after the latest one
-    for that participation and appointment ended `failed` or was cancelled for a delivery reason
+    for that participation and appointment ended `failed`, was cancelled for a delivery reason
     (`no_channel`, `consent_required`, `channel_unavailable`, `consent_ended`,
-    `delivery_unavailable`); refused while it is `queued`, `dispatching`, `sent` or
-    `delivery_unknown`; at most three per participation and appointment. The claim rechecks that
+    `delivery_unavailable`) or, for a currently authorized requester, `requester_no_longer_authorized`;
+    refused while it is `queued`, `dispatching`, `sent` or `delivery_unknown` (an uncertain outcome
+    is never resent). **At most three delivery attempts per participation and appointment, the
+    first included:** an attempt is a row the claim handed to the provider (outcome `sent`,
+    `failed` or `delivery_unknown`); a row cancelled before that (at the request without a usable
+    channel or consent, or at the claim) uses none, and the job's transport retries are the same
+    attempt. The claim rechecks that
     the appointment is still bookable for the participation (`appointment_unavailable`) and not
     booked meanwhile (`nothing_open`).
   - **Organizer notices** follow from the organizer's change, not from a requester's authority:
@@ -213,24 +239,36 @@ page's tabs.
   account, Q59). Bookings, attendance, the basis and follow-up resolutions are `internal`,
   `case_internal` (field `appointmentBookings`, listable as codes and dates). Titles and venues
   never enter a message, audit detail or log line.
-- **D17. Retention boundary** (Q166, Q105): bookings, attendance and their resolutions, and the
-  messages (Q156), are `personnel_file` in every project and for every kind: non-signers deleted
-  90 days after `withdrawnOn`; an executed DSV without TG entry at the end of the third calendar
-  year after its cancellation or contractual end; otherwise at the end of the third calendar year
-  after exit; a legal hold suspends only the affected rows. They are never BA evidence, and no
-  funding status is inferred from `info_event` or `consultation`. Funded-measure evidence is a
+- **D17. Retention boundary** (Q166, Q105, Q77): bookings, attendance and their resolutions, and
+  the messages (Q156), are `personnel_file` in every project and for every kind. Their triggers,
+  **mapping awaiting confirmation, executable periods `unset`** in the data catalog until the
+  Slice 7 job (settled before any deletion runs, not before synthetic development):
+  - a non-signer withdrawn **without** a fully executed DSV, funded §110 participation, legal hold
+    or other duty: 90 days after `withdrawnOn`;
+  - an executed DSV without TG entry: the end of the third calendar year after its cancellation or
+    contractual end;
+  - a TG participant: the end of the third calendar year after exit;
+  - `ta_completed` in a `ta_only` project (no TG exit date): proposed the end of the third calendar
+    year after the `ta_completed` change;
+  - withdrawn with a funded §110 participation (outside the 90-day branch): proposed the end of the
+    third calendar year after `withdrawnOn`;
+  - a legal hold suspends only the affected rows.
+
+  They are never BA evidence, and no funding status is inferred from `info_event` or
+  `consultation`: 5b isn't the system that supplies funded-measure evidence. That evidence is a
   separate, separately classified minimum record linked to an explicit measure under the
-  evidence-set policy; 5b builds none (Q169: the linkage and evidence requirements of the
-  project's approved measure documents). `appointment` follows `project_master`.
+  evidence-set policy; 5b builds none (Q169). `appointment` follows `project_master`.
 - **D18. The history** (Q168): new event types, each with its `auditProjection` row and an
   `audit_event_projection` migration row (the drift test):
   - project-level, in no history: `appointment_created`, `appointment_changed` (changed keys),
-    `appointment_cancelled` (reason);
+    `appointment_cancelled` (reason, `correction`);
   - `case`: `appointment_booked` (`appointmentId`, `appointmentKind`, `startsAt`, `origin`,
     `followUpOf`), `appointment_booking_cancelled` (reason; `appointmentId`, `appointmentKind`,
     `startsAt`), `attendance_recorded` (reason after close; `appointmentId`, `appointmentKind`,
-    `startsAt`, `attendance`, `previousAttendance`, `afterClose`), `information_delivery_confirmed`
-    (`appointmentId`, `appointmentKind`, `startsAt`), `attendance_conflict_resolved`,
+    `startsAt`, `attendance`, `previousAttendance`, `afterClose`), `attendance_superseded`
+    (`appointmentId`, `appointmentKind`, `startsAt`, `previousAttendance`; D3),
+    `information_delivery_confirmed` (`appointmentId`, `appointmentKind`, `startsAt`,
+    `statusChanged`), `attendance_conflict_escalated`, `attendance_conflict_resolved`,
     `missed_appointment_resolved` (reason; `appointmentId`), `appointment_notice_followed_up`
     (`method`; `appointmentId`);
   - `reminder_queued` adds `appointmentId` and `startsAt` and may have the system actor;
@@ -246,15 +284,19 @@ page's tabs.
   - `attendance_missing`: a live booking whose appointment has ended and whose Berlin end date has
     passed, attendance unrecorded (also for a terminal participation: factual work the PL can
     still do, D12);
-  - `missed`: recorded `absent` with unresolved follow-up: an info event is resolved by a later
-    live or attended info-event booking (the same purpose); a consultation only by a booking staff
-    mark as its follow-up (`followUpOf`) or, for either, by an explicit resolution with a closed
-    reason (`participant_declined`, `information_delivered_otherwise`, `no_longer_needed`) by the
-    PL or the assigned consultant; an unrelated consultation clears nothing;
+  - `missed`: recorded `absent` with unresolved follow-up. A follow-up counts only **while it is
+    live or attended**: for an info event, a later eligible info-event booking (the same briefing
+    purpose, matched automatically); for a consultation, only a booking staff link as its
+    follow-up (`followUpOf`); an unrelated consultation clears nothing. Cancelling the follow-up
+    restores the item; a follow-up recorded `absent` becomes the missed item of the chain, so
+    exactly one actionable item remains. Or an explicit resolution with a closed reason
+    (`participant_declined`, `information_delivered_otherwise`, `no_longer_needed`) by the PL or
+    the assigned consultant ends the chain;
   - `notice_undelivered` (D14), `needs_resolution` (D6), `attendance_conflict` (D13).
 
   None of these is a guard or a participant action (no `open_items` reminder from them); a
-  terminal participation has only `attendance_missing`. Filter `appointment`: `upcoming`,
+  terminal participation keeps `attendance_missing` and an unresolved `attendance_conflict`
+  (unfinished staff work), nothing else. Filter `appointment`: `upcoming`,
   `overdue` (`attendance_missing` ∪ `missed`), `to_resolve` (`notice_undelivered` ∪
   `needs_resolution` ∪ `attendance_conflict`) and each kind. Dashboard tiles "Termine überfällig"
   (`overdue`) and "Termine zu klären" (`to_resolve`) and the group "Termine" (one count per filter
@@ -324,7 +366,7 @@ channel, portalUrl)`; `portalAppointments(…)` (D9's sections).
 | Table | PR | Holds | dataClass / accessCategory | retentionClass |
 |---|---|---|---|---|
 | `appointment` | 5b-1 | id, project, kind, `host_staff_user_id`, `audience_wave_id`, `starts_at`, `ends_at`, `booking_closes_at`, capacity, title, venue, status, `cancel_reason`, `cancelled_at`, `created_by`, `created_at`, `version`; `CHECK`s for D1 | internal / project data, read by the project's members (staff ids: Q59) | `project_master` |
-| `appointment_booking` | 5b-1 (+5b-2, 5b-4 columns) | id, project, participation, appointment, origin, status, `cancel_reason`, `booked_by` (null for the participant), `booked_at`, `cancelled_by`, `cancelled_at`; 5b-2: attendance, `attendance_recorded_by/at`, `after_close_reason`, `informed_basis_by/at`, `conflict_resolution`, `conflict_resolved_by/at`; 5b-4: `follow_up_of`, `missed_resolution`, `missed_resolved_by/at`; the partial unique index (D10) | internal / `case_internal` (`appointmentBookings`) | `personnel_file` (D17) |
+| `appointment_booking` | 5b-1 (+5b-2, 5b-4 columns) | id, project, participation, appointment, origin, status, `cancel_reason`, `booked_by` (null for the participant), `booked_at`, `cancelled_by`, `cancelled_at`; 5b-2: attendance, `attendance_recorded_by/at`, `after_close_reason`, `informed_basis_by/at`, `conflict_escalated_by/at`, `conflict_resolution`, `conflict_resolved_by/at`, `attendance_superseded_by/at`; 5b-4: `follow_up_of`, `missed_resolution`, `missed_resolved_by/at`; the partial unique index (D10) | internal / `case_internal` (`appointmentBookings`) | `personnel_file` (D17) |
 | `participant_reminder` | 5b-3 | adds `appointment_id`, `booking_id`, `followed_up_method/by/at`; `requested_by` nullable for organizer notices; `channel_id`, `channel_kind`, `consent_id` nullable only for a row cancelled at the request (`no_channel`, `consent_required`); `CHECK`s tie each to its kind | as before (`reminderLog`) | as before (Q156, D17) |
 
 Enum values are added in their PR's migration (`audit_event_type`, `reminder_kind`,
@@ -340,8 +382,10 @@ Enum values are added in their PR's migration (`audit_event_type`, `reminder_kin
 - 5b-2: `record_attendance(context, appointment, entries, information_delivered, after_close_reason)`
   (all or nothing; walk-ins; the D13 changes through `apply_status_change`, which re-checks edge,
   permission, project, track activity and `before_cutoff`; the status service validates the
-  domain guards first), `confirm_information_delivered(context, booking)` (D13),
-  `resolve_attendance_conflict`.
+  domain guards first), `confirm_information_delivered(context, booking)` (D13: with a status
+  change before `informed`, as a replacement basis without one after it),
+  `escalate_attendance_conflict`, `resolve_attendance_conflict`; `cancel_appointment` takes the
+  PL's `did_not_take_place` correction over absences only (D3).
 - 5b-3: `request_invitations` (exclusive lock; D14), the organizer notices inside
   `update_appointment`, `cancel_appointment` and `cancel_appointment_booking`;
   `claim_reminder_dispatch` and `record_reminder_outcome` replaced for the new kinds and details;
@@ -357,7 +401,7 @@ Enum values are added in their PR's migration (`audit_event_type`, `reminder_kin
 | 5b-1 | `GET /appointments/{id}/bookings`; `POST /appointments/{id}/bookings`; `POST /appointment-bookings/{id}/cancellation` | the bookings the viewer may list (`private, no-store`); staff booking (`422` with the D7 code, `warnings`); staff cancellation |
 | 5b-1 | `GET /participations/{id}/appointments` | the tab "Termine": bookings, attendance, items, bookable appointments |
 | 5b-2 | `POST /appointments/{id}/attendance` | `{ entries: [{ participationId, attendance, markInformed }], informationDelivered, afterCloseReason? }` → `200 { recorded, statusChanges }`; `422` with `errors[]` at `/entries/<i>` |
-| 5b-2 | `POST /appointment-bookings/{id}/informed`; `POST /appointment-bookings/{id}/conflict-review` | "Als informiert erfassen" (`{ informationDelivered: true }`); the PL's review (`{ reason }`) |
+| 5b-2 | `POST /appointment-bookings/{id}/informed`; `POST /appointment-bookings/{id}/conflict-review` | "Als informiert erfassen" or "Als Grundlage bestätigen" (`{ informationDelivered: true }`); the PL's `escalated` or `information_delivered_otherwise` (`{ reason }`) |
 | 5b-3 | `GET /portal/appointments`; `POST /portal/appointments/{id}/booking`; `POST /portal/appointment-bookings/{id}/cancellation` | D9's sections; book; cancel (`404` for another participation's booking) |
 | 5b-3 | `POST /appointments/{id}/invitations`; `POST /participations/{id}/reminders/{reminderId}/follow-up` | `{ participationIds }` → `201 { batchId, queued, notDeliverable, skipped }`; the follow-up (`{ method }`) |
 | 5b-4 | `POST /appointment-bookings/{id}/missed-resolution`; `GET /projects/{id}/worklist`, `/dashboard` | `{ reason }`; the D19 fields, filter and counts |
@@ -375,7 +419,9 @@ body) → permission `403` → state `422`. Logs carry ids and codes only.
 - 5b-2: "Teilnahme erfassen" (per row "teilgenommen" from the start, "nicht erschienen" after the
   end, "als informiert erfassen" as D13, the confirmation checkbox, "Ohne Buchung erschienen" with
   the snapshot's name search, the refusal text); on a booking "Als informiert erfassen",
-  "Teilnahme korrigieren", for the PL "Prüfung erfassen" on a conflict and the after-close reason.
+  "Teilnahme korrigieren", "Als Grundlage bestätigen" on a conflict, for the PL "Eskalieren" and
+  "Anderweitig informiert" and the after-close reason; "Fand nicht statt (Korrektur)" (PL) on an
+  appointment with absences only.
 - 5b-3: portal "Termine" (D9) linked from the start page, keyboard and screen-reader usable, 320 px
   without horizontal scrolling; work list bulk "Zu Termin einladen" (the appointment, counts per
   channel, "nicht zustellbar, im Portal sichtbar", skips, the text as preview, the result);
@@ -430,8 +476,11 @@ body) → permission `403` → state `422`. Logs carry ids and codes only.
   `absent`, after close, `informed` or later; `attended` before the start and `absent` before the
   end are refused.
 - Scenarios (D23): attendance corrected `absent → attended`, then informed through the separate
-  action; `attended → absent` after it led to `informed` leaves the status, shows the conflict and
-  the PL's review clears it; last-day attendance entered after the cutoff withdrawal by the PL with
+  action; `attended → absent` after it led to `informed` leaves the status and shows the conflict,
+  which a replacement basis or the PL's attestation clears and `escalated` doesn't, and which stays
+  visible after the participation closes; an appointment recorded all absent is corrected to
+  `did_not_take_place` with the absences superseded and kept in the history, while one `attended`
+  record refuses it; last-day attendance entered after the cutoff withdrawal by the PL with
   `late_entry` changes no status, and the consultant is refused.
 - A request without `informationDelivered` but a ticked row is refused; consultation rows are never
   preselected (component test); one refused row records nothing and changes no status; an
@@ -443,20 +492,24 @@ body) → permission `403` → state `422`. Logs carry ids and codes only.
 - The two texts' SHA-256 tests (de/en); a rendered message contains only the portal URL beyond the
   fixed text.
 - Invitations: no usable channel → a `cancelled` row, the invitation visible in the portal; retry
-  after `failed` and after `no_channel` once a channel exists, refused while `sent` or
-  `delivery_unknown`, at most three; a booking before dispatch cancels it `nothing_open`; neither
+  after `failed`, after `no_channel` once a channel exists and after `requester_no_longer_authorized`
+  by an authorized requester, refused while `sent` or `delivery_unknown`; three delivery attempts at
+  most, rows cancelled before the provider and transport retries counting none; a booking before dispatch cancels it `nothing_open`; neither
   kind touches the reminder window.
 - Scenarios (D23): a consultant reassigned between a cancellation and its dispatch: the notice is
   still sent (system path); a cancellation without a usable channel writes a `cancelled` notice;
   booking, appointment cancellation and the dispatch claim run concurrently: no booking survives a
   cancelled appointment, no notice goes to a booking that wasn't cancelled, no deadlock.
-- Portal at 320 px in de and en: invitations, booking, cancellation, the "Abgesagt" section with an
-  alternative; e2e: participant books and cancels.
+- Portal at 320 px in de and en: invitations (also "ausgebucht" and "Buchung geschlossen" with
+  booking disabled, and "gilt nicht mehr" without details), booking, cancellation, the "Abgesagt"
+  section with an alternative and its window from a late cancellation; e2e: participant books and cancels.
 
 **5b-4**
 - Domain: `attendance_missing` from the day after the end date, also for a terminal participation;
-  `missed` cleared by a later info-event booking for an info event, never by an unrelated
-  consultation, by a marked follow-up or an explicit resolution; `notice_undelivered` until the
+  `missed` cleared only while its follow-up (a later info-event booking, or a linked consultation)
+  is live or attended, back when the follow-up is cancelled, passed on when the follow-up is absent
+  (one item per chain), never cleared by an unrelated consultation, ended by an explicit
+  resolution; `notice_undelivered` until the
   follow-up; for every new count `count = items.filter(filter).length`, distinct participations.
 - The work list over 2,000 participations with bookings keeps the Slice 5 performance criterion.
 
@@ -472,4 +525,4 @@ body) → permission `403` → state `422`. Logs carry ids and codes only.
   architecture/overview.md (the portal page).
 - 5b-4: process-and-lifecycle.md (appointment items beside the deadline warnings),
   architecture/overview.md (the dashboard), roadmap.md (Slice 5b done); this plan to
-  `docs/plans/archive/`; confirmed readings moved into the rows of Q162–Q168.
+  `docs/plans/archive/`; the retention trigger mapping (D17) still awaiting confirmation noted in Q166.
