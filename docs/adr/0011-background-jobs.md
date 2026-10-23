@@ -162,6 +162,21 @@ after the commit (`detached.ts`), as the last attempt; with `NODE_ENV=production
 answers `503 jobs_unavailable` without pg-boss and `503 delivery_unavailable` without both
 senders, before writing anything.
 
+## Note 2026-10-23: invitations and the organizer's notices (Slice 5b, PR 5b-3)
+
+Invitations go through `reminders.send` like reminders (the request queues them in its own
+transaction). The organizer's notices have their own `exclusive` queue `appointments.notify`
+(retries 5, backoff): the function that cancels an appointment or a booking, or corrects a title
+or venue, queues the notices as the system in its transaction, and the API sends each one's job
+`{ reminderId }` (`singletonKey` the message id) on the same connection before the commit, so
+the change, the notices and the jobs commit together. Both queues run the same handler: the claim
+(`claim_reminder_dispatch`, ADR-0002 for its lock order) rechecks per kind and has no requester
+check for a notice, so a reassignment between the change and the dispatch can't suppress it; only
+a reminder evaluates the participant's actions. The kind's fixed text goes out with the provider
+key `reminder:<id>`; transport retries are the same delivery attempt. A notice's outcome is
+recorded as `appointments.notify`. A row written without a usable channel gets no job. Without
+pg-boss each job runs once after the commit (`detached.ts`).
+
 ## Note 2026-10-17: draft projects plan nothing (Slice 2, PR 2e-1)
 
 A project is `draft` until it is activated (Q98). The sweep still dispatches

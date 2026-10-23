@@ -592,6 +592,64 @@ the rules.
   (`booking_event_details`, `participation_closed_at`, `booking_conflict_open`,
   `confirm_informed`, `lock_conflict_booking`) have none.
 
+## Amendment 2026-10-23: the portal's bookings and messages about appointments (Slice 5b, PR 5b-3)
+
+Migrations `0063_messages.sql` (generated) and `0064_message_functions.sql` (hand-written, the
+0062 hardening); data-protection.md ("Messages about appointments", "Appointments": the portal)
+holds the rules.
+- **`participant_reminder`** gains `appointment_id` (composite FK to `appointment`),
+  `booking_id`, `followed_up_method` (`phone`, `in_person`, `letter`, `not_needed`),
+  `followed_up_by/at`; `requested_by` is null exactly for an organizer's notice; `channel_id`,
+  `channel_kind` and `consent_id` are null exactly for a row cancelled at the request
+  (`no_channel`, `consent_required`; never a reminder). `CHECK`s tie each to its kind: an
+  appointment for every kind but `open_items`, a booking and no requester exactly for the two
+  notices, a follow-up only on an undelivered notice. The new enum values are compared as text in
+  the `CHECK`s and functions (one migration run). Only `open_items` counts the reminder window
+  (`request_reminders` replaced).
+- **The lock order** (the tables above, extended):
+
+  | Operation | Project lock | Then |
+  |---|---|---|
+  | `book_appointment` and `cancel_appointment_booking` by the participant (the session's token) | shared (through `lock_active_session`) | the participation → the session → the appointment `FOR UPDATE` → the booking |
+  | `request_invitations` | exclusive | the named participations in UUID order → the appointment `FOR UPDATE` → message rows (inserted) |
+  | `update_appointment` (title or venue), `cancel_appointment`, `cancel_appointment_booking` (staff) with their notices | as before | as before, then the notices' message rows (inserted) |
+  | `claim_reminder_dispatch` | shared (`lock_participation`) | the participation → the appointment and the booking `FOR SHARE` (their ids read from the message's immutable columns without a lock) → the message `FOR UPDATE` → the channel and the consent `FOR SHARE`; a reminder skips the appointment step |
+  | `record_notice_follow_up` | shared (`lock_participation`) | the participation → the message `FOR UPDATE` |
+
+  An integration test races a participant's booking, the appointment's cancellation and an
+  invitation's claim: no booking survives the cancelled appointment, every cancellation notice
+  belongs to a booking the cancellation cancelled, no deadlock.
+- **Functions** (`SECURITY DEFINER`): `book_appointment(context, appointment, participation, id,
+  token)` and `cancel_appointment_booking(context, booking, token)` (recreated with the optional
+  token): a staff context without a token as before; a participant context with the token of their
+  live active session (`session_invalid` otherwise), origin `participant` until the public cutoff
+  (`booking_closed`), their own booking only (`booking_not_found` for another), no notice. The
+  booking rules are one helper, `appointment_booking_refusal(participation, appointment,
+  participant)`, in the domain's order. `request_invitations(context, appointment, participation
+  ids, batch)`: the PL or the assigned consultant in normal mode, 1–500 participations of the
+  active project; refused as a whole for `appointment_cancelled`, `appointment_started`,
+  `booking_closed`, `appointment_full`; per row a skip code, or an invitation (cancelled at once
+  without a usable channel). Organizer notices: `update_appointment` (title or venue before the
+  start), `cancel_appointment` (not for the PL's correction) and `cancel_appointment_booking` (staff)
+  queue one per person booked through the internal `queue_appointment_notice`, as the system
+  (`appointments.notify`, the organizer's request id), none for a closed participation.
+  `claim_reminder_dispatch` (replaced) rechecks per kind (no requester check for a notice;
+  `nothing_open` or `appointment_unavailable` for an invitation); `settle_reminder` (replaced)
+  writes the kind and the appointment and records a notice's outcome as `appointments.notify`.
+  `update_appointment` counts an invitation as use (`appointment_in_use`).
+  `record_notice_follow_up(context, message, method)`: the PL or the assigned consultant, once
+  (`already_followed_up`), on an undelivered notice (`notice_delivered` otherwise) of an open
+  participation (`participation_closed`).
+- **Events:** `reminder_queued` adds `appointmentId` and `startsAt` (the start as written then)
+  and has the system actor for a notice and no `channelKind` for a row without a usable channel;
+  `reminder_delivery` adds `kind` and `appointmentId` and has the requester's or the system's
+  context when written at the request. Both projections show the new keys (a migration updated
+  their rows; older events lack them). New: `appointment_notice_followed_up` (`case`, `method`,
+  `appointmentId`), reserved. Grants: `EXECUTE` on `request_invitations` and
+  `record_notice_follow_up` (and the two recreated functions); the helpers
+  (`appointment_notice_context`, `message_job_context`, `appointment_booking_refusal`,
+  `queue_appointment_message`, `queue_appointment_notice`) have none.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

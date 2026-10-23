@@ -163,9 +163,10 @@ describe("the invitation of a row (data-protection.md, invitations)", () => {
       channel: "sms",
     });
     expect(remind({ channels: [] }).capabilities.invite).toEqual({ allowed: true, channel: null });
-    expect(remind({ channels: [channel] }, viewer({ remind: false })).capabilities.invite).toEqual(
-      { allowed: false, channel: null },
-    );
+    expect(remind({ channels: [channel] }, viewer({ remind: false })).capabilities.invite).toEqual({
+      allowed: false,
+      channel: null,
+    });
   });
 });
 

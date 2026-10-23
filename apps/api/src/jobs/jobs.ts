@@ -26,13 +26,13 @@ import { sendActivationNotice, type ActivationNoticeDeps } from "./activation-no
 export { jobNames, timeZone } from "./names";
 
 /**
- * Queue policies (round 19). `lifecycle.sweep` is `singleton`: one sweep active at a time, every
+ * Queue policies (ADR-0011). `lifecycle.sweep` is `singleton`: one sweep active at a time, every
  * other one kept queued, because a missed occurrence (`missed: "once"`) can arrive beside the due
  * one and must not displace it; `job_run` makes a later sweep of a completed day a no-op.
  * `lifecycle.evaluate-project` is `exclusive` per `singletonKey` `<projectId>:<runDate>`: a
  * second job for the same project and day is refused while one is queued or active. pg-boss
  * deduplicates keys only on `stately` and `exclusive` queues (spike S2). Failures retry with
- * backoff (plan 5.9). `portal.activation-notice` is `exclusive` per channel id (Slice 3 plan D21):
+ * backoff (ADR-0011). `portal.activation-notice` is `exclusive` per channel id (ADR-0011):
  * the completion queues it in its own transaction, at least once. `documents.purge-object` is
  * `exclusive` per document id: the deletion queues it in its own transaction. `reminders.send` is
  * `exclusive` per reminder id (data-protection.md, reminders): the request queues it in its own
