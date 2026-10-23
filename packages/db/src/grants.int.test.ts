@@ -188,6 +188,11 @@ const statusFunctions = [
   "cancel_appointment",
   "book_appointment",
   "cancel_appointment_booking",
+  // Slice 5b: attendance and `informed` (data-protection.md, appointments)
+  "record_attendance",
+  "confirm_information_delivered",
+  "escalate_attendance_conflict",
+  "resolve_attendance_conflict",
 ];
 const helpers = [
   "assert_context",
@@ -270,6 +275,11 @@ const helpers = [
   "cancel_booking_row",
   "lock_appointment_participations",
   "cancel_bookings_at_terminal_status",
+  "booking_event_details",
+  "participation_closed_at",
+  "booking_conflict_open",
+  "confirm_informed",
+  "lock_conflict_booking",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -897,6 +907,8 @@ describe("transfer_app and the document tables", () => {
     ["cancel a booking row directly", "select cancel_booking_row(null, null, null, null)"],
     ["lock participations directly", "select lock_appointment_participations(null)"],
     ["call the terminal-booking trigger", "select cancel_bookings_at_terminal_status()"],
+    ["confirm informed directly", "select confirm_informed(null, null, null, null)"],
+    ["lock a conflict's booking directly", "select lock_conflict_booking(null, null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

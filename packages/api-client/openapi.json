@@ -4543,13 +4543,21 @@
           },
           "book": {
             "type": "boolean"
+          },
+          "recordAttendance": {
+            "type": "boolean"
+          },
+          "correctNotTakenPlace": {
+            "type": "boolean"
           }
         },
         "required": [
           "change",
           "changeHost",
           "cancel",
-          "book"
+          "book",
+          "recordAttendance",
+          "correctNotTakenPlace"
         ],
         "additionalProperties": false
       },
@@ -4792,17 +4800,67 @@
               "null"
             ]
           },
-          "capabilities": {
-            "type": "object",
-            "properties": {
-              "cancel": {
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "cancel"
+          "attendance": {
+            "type": [
+              "string",
+              "null"
             ],
-            "additionalProperties": false
+            "enum": [
+              "attended",
+              "absent",
+              null
+            ]
+          },
+          "attendanceRecordedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "afterCloseReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "late_entry",
+              "correction",
+              null
+            ]
+          },
+          "informedBasis": {
+            "type": "boolean"
+          },
+          "superseded": {
+            "type": "boolean"
+          },
+          "conflict": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "open",
+              "escalated",
+              "resolved",
+              null
+            ]
+          },
+          "conflictResolution": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "replacement_basis",
+              "information_delivered_otherwise",
+              null
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/BookingCapabilities"
           }
         },
         "required": [
@@ -4817,6 +4875,13 @@
           "cancelReason",
           "cancelledAt",
           "needsResolution",
+          "attendance",
+          "attendanceRecordedAt",
+          "afterCloseReason",
+          "informedBasis",
+          "superseded",
+          "conflict",
+          "conflictResolution",
           "capabilities"
         ],
         "additionalProperties": false
@@ -4835,6 +4900,46 @@
           "staff",
           "walk_in"
         ]
+      },
+      "BookingCapabilities": {
+        "type": "object",
+        "properties": {
+          "cancel": {
+            "type": "boolean"
+          },
+          "recordAttended": {
+            "type": "boolean"
+          },
+          "recordAbsent": {
+            "type": "boolean"
+          },
+          "offerInformed": {
+            "type": "boolean"
+          },
+          "afterClose": {
+            "type": "boolean"
+          },
+          "markInformed": {
+            "type": "boolean"
+          },
+          "confirmBasis": {
+            "type": "boolean"
+          },
+          "reviewConflict": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "cancel",
+          "recordAttended",
+          "recordAbsent",
+          "offerInformed",
+          "afterClose",
+          "markInformed",
+          "confirmBasis",
+          "reviewConflict"
+        ],
+        "additionalProperties": false
       },
       "BookingResult": {
         "type": "object",
@@ -4940,17 +5045,67 @@
                   "format": "date-time",
                   "description": "UTC timestamp (ISO 8601)"
                 },
-                "capabilities": {
-                  "type": "object",
-                  "properties": {
-                    "cancel": {
-                      "type": "boolean"
-                    }
-                  },
-                  "required": [
-                    "cancel"
+                "attendance": {
+                  "type": [
+                    "string",
+                    "null"
                   ],
-                  "additionalProperties": false
+                  "enum": [
+                    "attended",
+                    "absent",
+                    null
+                  ]
+                },
+                "attendanceRecordedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "UTC timestamp (ISO 8601)"
+                },
+                "afterCloseReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "late_entry",
+                    "correction",
+                    null
+                  ]
+                },
+                "informedBasis": {
+                  "type": "boolean"
+                },
+                "superseded": {
+                  "type": "boolean"
+                },
+                "conflict": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "open",
+                    "escalated",
+                    "resolved",
+                    null
+                  ]
+                },
+                "conflictResolution": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "replacement_basis",
+                    "information_delivered_otherwise",
+                    null
+                  ]
+                },
+                "capabilities": {
+                  "$ref": "#/components/schemas/BookingCapabilities"
                 }
               },
               "required": [
@@ -4961,6 +5116,13 @@
                 "bookedAt",
                 "cancelReason",
                 "cancelledAt",
+                "attendance",
+                "attendanceRecordedAt",
+                "afterCloseReason",
+                "informedBasis",
+                "superseded",
+                "conflict",
+                "conflictResolution",
                 "capabilities"
               ],
               "additionalProperties": false
@@ -5077,6 +5239,131 @@
         ],
         "additionalProperties": false
       },
+      "AttendanceResult": {
+        "type": "object",
+        "properties": {
+          "recorded": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "informed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "statusChanges": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "recorded",
+          "informed",
+          "statusChanges"
+        ],
+        "additionalProperties": false
+      },
+      "AttendanceInput": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "attendance": {
+                  "type": "string",
+                  "enum": [
+                    "attended",
+                    "absent"
+                  ]
+                },
+                "markInformed": {
+                  "type": "boolean",
+                  "default": false
+                }
+              },
+              "required": [
+                "participationId",
+                "attendance"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 500
+          },
+          "informationDelivered": {
+            "type": "boolean",
+            "default": false
+          },
+          "afterCloseReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "late_entry",
+              "correction",
+              null
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "additionalProperties": false
+      },
+      "InformedResult": {
+        "type": "object",
+        "properties": {
+          "statusChanges": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "statusChanges"
+        ],
+        "additionalProperties": false
+      },
+      "InformedInput": {
+        "type": "object",
+        "properties": {
+          "informationDelivered": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "informationDelivered"
+        ],
+        "additionalProperties": false
+      },
+      "ConflictReviewInput": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/AttendanceConflictReview"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "AttendanceConflictReview": {
+        "type": "string",
+        "enum": [
+          "escalated",
+          "information_delivered_otherwise"
+        ]
+      },
       "HistoryPage": {
         "type": "object",
         "properties": {
@@ -5173,6 +5460,9 @@
                   "type": "string"
                 },
                 {
+                  "type": "boolean"
+                },
+                {
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -5232,7 +5522,12 @@
           "reminder_queued",
           "reminder_delivery",
           "appointment_booked",
-          "appointment_booking_cancelled"
+          "appointment_booking_cancelled",
+          "attendance_recorded",
+          "attendance_superseded",
+          "information_delivery_confirmed",
+          "attendance_conflict_escalated",
+          "attendance_conflict_resolved"
         ]
       },
       "HistoryActor": {
@@ -14318,6 +14613,302 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointments/{appointmentId}/attendance": {
+      "post": {
+        "tags": [
+          "appointments"
+        ],
+        "summary": "Record or correct attendance (the PL, the assigned consultant; after a close the PL with a reason): 1–500 rows, all or nothing, walk-ins, and \"als informiert erfassen\" with the delivery confirmed",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "appointmentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttendanceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "What was recorded and the status changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointment-bookings/{bookingId}/informed": {
+      "post": {
+        "tags": [
+          "appointments"
+        ],
+        "summary": "\"Als informiert erfassen\" on a qualifying attendance, or \"Als Grundlage bestätigen\" while another basis is in conflict, with the delivery confirmed",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "bookingId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InformedInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The status changes made",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InformedResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/appointment-bookings/{bookingId}/conflict-review": {
+      "post": {
+        "tags": [
+          "appointments"
+        ],
+        "summary": "The PL's review of an attendance conflict: escalated (stays open) or information_delivered_otherwise (resolved), also after the close",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "bookingId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConflictReviewInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

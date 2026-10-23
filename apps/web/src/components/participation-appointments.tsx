@@ -5,10 +5,12 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { participationAppointmentsQuery, useApi } from "../api";
 import { problemCodes, useWhen } from "./appointments";
+import { BookingAttendanceActions, useAttendanceLabel } from "./attendance";
 
 // The participant tab "Termine" (process-and-lifecycle.md and data-protection.md, appointments):
-// the participation's bookings with "Buchung absagen", and the upcoming appointments staff may
-// book for it with "Buchen", each with its seat state, refusal or warning from the API.
+// the participation's bookings with their attendance, "Buchung absagen" and the attendance actions
+// (also after the participation closed, where a conflict stays visible), and the upcoming
+// appointments staff may book for it with "Buchen", each with its seat state, refusal or warning.
 
 export function AppointmentsTab({
   participationId,
@@ -22,6 +24,7 @@ export function AppointmentsTab({
   const queryClient = useQueryClient();
   const showToast = useToast();
   const when = useWhen();
+  const attendanceLabel = useAttendanceLabel();
   const query = useQuery(participationAppointmentsQuery(api, participationId));
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [error, setError] = useState<string>();
@@ -90,10 +93,9 @@ export function AppointmentsTab({
       )}
       <SimpleTable
         title={t("appointments.participant.bookings")}
-        columns={(["kind", "when", "venue", "status", "actions"] as const).map((key) => ({
-          key,
-          header: t(`appointments.participant.columns.${key}`),
-        }))}
+        columns={(["kind", "when", "venue", "status", "attendance", "actions"] as const).map(
+          (key) => ({ key, header: t(`appointments.participant.columns.${key}`) }),
+        )}
         rows={bookings.map((booking) => ({
           id: booking.id,
           kind: kind(booking.appointment),
@@ -105,12 +107,20 @@ export function AppointmentsTab({
           ]
             .filter(Boolean)
             .join(" · "),
-          actions: booking.capabilities.cancel ? (
-            <Button kind="ghost" size="sm" onClick={() => setCancelling(booking.id)}>
-              {t("appointments.participant.cancel")}
-            </Button>
-          ) : (
-            ""
+          attendance: attendanceLabel(booking),
+          actions: (
+            <>
+              {booking.capabilities.cancel && (
+                <Button kind="ghost" size="sm" onClick={() => setCancelling(booking.id)}>
+                  {t("appointments.participant.cancel")}
+                </Button>
+              )}
+              <BookingAttendanceActions
+                booking={{ ...booking, participationId }}
+                appointmentId={booking.appointment.id}
+                onChanged={refresh}
+              />
+            </>
           ),
         }))}
         emptyState={t("appointments.participant.bookingsEmpty")}

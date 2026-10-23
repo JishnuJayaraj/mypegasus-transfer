@@ -10,6 +10,8 @@ import {
   mayPerformTransition,
   mayBookFor,
   mayManageAppointment,
+  mayRecordAttendance,
+  mayResolveAppointmentItem,
   mayRemind,
   OperationKind,
   type Actor,
@@ -424,5 +426,32 @@ describe("mayBookFor (Q62, Q162)", () => {
     );
     expect(result(mayBookFor(staff([]), target))).toBe("not_member");
     expect(result(mayBookFor({ kind: "system" }, target))).toBe("actor_not_allowed");
+  });
+});
+
+describe("mayRecordAttendance (Q62, Q163)", () => {
+  it("lets the PL and the assigned consultant record, after the close the PL only", () => {
+    expect(allowed((actor) => mayRecordAttendance(actor, target))).toBe("PL C");
+    expect(allowed((actor) => mayRecordAttendance(actor, target, true))).toBe("PL");
+    expect(result(mayRecordAttendance(staff(["consultant"]), target))).toBe("not_assigned");
+    expect(result(mayRecordAttendance(staff(["back_office"]), target))).toBe("role_not_allowed");
+    expect(result(mayRecordAttendance(staff([]), target))).toBe("not_member");
+  });
+});
+
+describe("mayResolveAppointmentItem (Q163)", () => {
+  it("leaves an attendance conflict to the PL", () => {
+    expect(
+      allowed((actor) => mayResolveAppointmentItem(actor, target, "attendance_conflict")),
+    ).toBe("PL");
+    expect(
+      result(
+        mayResolveAppointmentItem(
+          staff(["consultant"], { assigned: true }),
+          target,
+          "attendance_conflict",
+        ),
+      ),
+    ).toBe("role_not_allowed");
   });
 });

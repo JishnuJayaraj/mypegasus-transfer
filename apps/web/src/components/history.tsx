@@ -17,9 +17,9 @@ const statusLabels = {
   dsv_status: "participants.dsvStatuses",
 } as const;
 
-const text = (value: string | string[] | null | undefined) =>
-  typeof value === "string" ? value : null;
-const list = (value: string | string[] | null | undefined) => (Array.isArray(value) ? value : []);
+type Detail = string | boolean | string[] | null | undefined;
+const text = (value: Detail) => (typeof value === "string" ? value : null);
+const list = (value: Detail) => (Array.isArray(value) ? value : []);
 
 export function HistoryTab({
   participationId,
@@ -101,15 +101,37 @@ export function HistoryTab({
         return coded("history.outcomes", text(details.outcome) ?? "");
       // The appointment's kind and start as written then (Q168), never its title or venue.
       case "appointment_booked":
-      case "appointment_booking_cancelled": {
+      case "appointment_booking_cancelled":
+      case "attendance_recorded":
+      case "attendance_superseded":
+      case "information_delivery_confirmed":
+      case "attendance_conflict_escalated":
+      case "attendance_conflict_resolved": {
         const values = {
           kind: coded("appointments.kinds", text(details.appointmentKind) ?? ""),
           start: details.startsAt ? formatTimestamp(text(details.startsAt) ?? "") : "",
         };
         const origin = text(details.origin);
-        return origin
+        const appointment = origin
           ? t("history.appointmentBy", { ...values, origin: coded("appointments.origins", origin) })
           : t("history.appointment", values);
+        // Attendance with the previous value (Q163); the confirmation whether it changed a status.
+        const attendance = (code: Detail) => {
+          const value = text(code);
+          return value === null ? null : coded("appointments.attendance.values", value);
+        };
+        if (details.attendance !== undefined) {
+          const value = arrow(
+            attendance(details.previousAttendance),
+            attendance(details.attendance) ?? "",
+          );
+          const closed = details.afterClose === true ? ` ${t("history.afterClose")}` : "";
+          return `${appointment}: ${value}${closed}`;
+        }
+        if (typeof details.statusChanged === "boolean") {
+          return `${appointment} ${t(details.statusChanged ? "history.withStatusChange" : "history.asBasis")}`;
+        }
+        return appointment;
       }
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");

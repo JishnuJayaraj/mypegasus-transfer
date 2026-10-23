@@ -1,8 +1,16 @@
 import { z } from "zod";
+import {
+  Attendance,
+  AttendanceAfterCloseReason,
+  AttendanceConflictResolution,
+  AttendanceConflictReview,
+  AttendanceConflictState,
+} from "./attendance";
 import { BookingCounts, BookingRefusal, BookingWarning } from "./booking";
 import {
   AppointmentCancelReason,
   AppointmentKind,
+  appointmentPolicy,
   AppointmentStatus,
   BookingCancelReason,
   BookingOrigin,
@@ -14,6 +22,8 @@ import {
 // The appointment routes (ADR-0010; data-protection.md, appointments). Codes, ids, times and the
 // generic title and venue; a booking's person fields only where the viewer may list them.
 
+const appointmentRows = appointmentPolicy.rowsPerRequest;
+
 /** What the viewer may do with an appointment now (decided by the server, ADR-0010). */
 export const AppointmentCapabilities = z
   .strictObject({
@@ -21,6 +31,10 @@ export const AppointmentCapabilities = z
     changeHost: z.boolean(),
     cancel: z.boolean(),
     book: z.boolean(),
+    /** "Teilnahme erfassen": from the start, the PL or a consultant (per row the booking's own). */
+    recordAttendance: z.boolean(),
+    /** "Fand nicht statt (Korrektur)": the PL, with absences only recorded (Q164). */
+    correctNotTakenPlace: z.boolean(),
   })
   .meta({ id: "AppointmentCapabilities" });
 
@@ -72,6 +86,39 @@ export const AppointmentQuery = z.object({
   cursor: z.string().optional(),
 });
 
+/**
+ * A booking's attendance (Q163): the value and when it was recorded, the closed-case flow's
+ * reason, whether it is the basis of `informed`, superseded by the PL's correction, its conflict.
+ */
+const bookingAttendance = {
+  attendance: Attendance.nullable(),
+  attendanceRecordedAt: instant.nullable(),
+  afterCloseReason: AttendanceAfterCloseReason.nullable(),
+  informedBasis: z.boolean(),
+  superseded: z.boolean(),
+  conflict: AttendanceConflictState.nullable(),
+  conflictResolution: AttendanceConflictResolution.nullable(),
+};
+
+/** What the viewer may do with a booking now (decided by the server, ADR-0010). */
+export const BookingCapabilities = z
+  .strictObject({
+    cancel: z.boolean(),
+    recordAttended: z.boolean(),
+    recordAbsent: z.boolean(),
+    /** The attendance dialog's "als informiert erfassen" (preselected for info events only). */
+    offerInformed: z.boolean(),
+    /** Recording is the closed-case flow: the PL with a reason, no status change. */
+    afterClose: z.boolean(),
+    /** "Als informiert erfassen" on the qualifying attendance. */
+    markInformed: z.boolean(),
+    /** "Als Grundlage bestätigen" while another basis is in conflict. */
+    confirmBasis: z.boolean(),
+    /** The PL's "Eskalieren" (while open) and "Anderweitig informiert". */
+    reviewConflict: z.boolean(),
+  })
+  .meta({ id: "BookingCapabilities" });
+
 /** One booking on the appointment page: listable person fields only (Q62). */
 export const AppointmentBooking = z
   .strictObject({
@@ -87,7 +134,8 @@ export const AppointmentBooking = z
     cancelledAt: instant.nullable(),
     /** For the PL (Q162): its host may no longer list the participation; else null. */
     needsResolution: z.boolean().nullable(),
-    capabilities: z.strictObject({ cancel: z.boolean() }),
+    ...bookingAttendance,
+    capabilities: BookingCapabilities,
   })
   .meta({ id: "AppointmentBooking" });
 
@@ -125,7 +173,8 @@ export const ParticipationAppointments = z
         bookedAt: instant,
         cancelReason: BookingCancelReason.nullable(),
         cancelledAt: instant.nullable(),
-        capabilities: z.strictObject({ cancel: z.boolean() }),
+        ...bookingAttendance,
+        capabilities: BookingCapabilities,
       }),
     ),
     /**
@@ -143,3 +192,64 @@ export const ParticipationAppointments = z
     capabilities: z.strictObject({ book: z.boolean() }),
   })
   .meta({ id: "ParticipationAppointments" });
+
+/**
+ * `POST /appointments/{id}/attendance` (Q163): 1–500 rows, all or nothing; a row without a live
+ * booking is a walk-in. A ticked "als informiert erfassen" needs `informationDelivered`; the
+ * reason applies to the rows of closed participations (the PL's closed-case flow).
+ */
+export const AttendanceInput = z
+  .strictObject({
+    entries: z
+      .array(
+        z.strictObject({
+          participationId: z.uuid(),
+          attendance: Attendance,
+          markInformed: z.boolean().default(false),
+        }),
+      )
+      .min(appointmentRows.min)
+      .max(appointmentRows.max),
+    informationDelivered: z.boolean().default(false),
+    afterCloseReason: AttendanceAfterCloseReason.nullable().default(null),
+  })
+  .superRefine((input, ctx) => {
+    const seen = new Set<string>();
+    for (const [index, entry] of input.entries.entries()) {
+      if (seen.has(entry.participationId)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "duplicate_entry",
+          path: ["entries", index, "participationId"],
+          params: { code: "duplicate_entry" },
+        });
+      }
+      seen.add(entry.participationId);
+    }
+  })
+  .meta({ id: "AttendanceInput" });
+export type AttendanceInput = z.infer<typeof AttendanceInput>;
+
+export const AttendanceResult = z
+  .strictObject({
+    recorded: z.int().min(0),
+    /** The participations confirmed `informed` by this request. */
+    informed: z.int().min(0),
+    /** The `status_changed` events written (one or two per participation informed). */
+    statusChanges: z.int().min(0),
+  })
+  .meta({ id: "AttendanceResult" });
+
+/** "Als informiert erfassen" or "Als Grundlage bestätigen": the delivery confirmed. */
+export const InformedInput = z
+  .strictObject({ informationDelivered: z.literal(true) })
+  .meta({ id: "InformedInput" });
+
+export const InformedResult = z
+  .strictObject({ statusChanges: z.int().min(0) })
+  .meta({ id: "InformedResult" });
+
+/** The PL's review of a conflict (Q163). */
+export const ConflictReviewInput = z
+  .strictObject({ reason: AttendanceConflictReview })
+  .meta({ id: "ConflictReviewInput" });

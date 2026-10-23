@@ -622,7 +622,7 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 | Project setup | PL | name, customer, type, Project Agentur (KuG-Agentur for `ta_tg`), pinned Agentur templates, overrides; in `ta_tg` entry waves with their dates; activation |
 | Import / manual creation | PL | participations in `imported`; import report with row errors, warnings and possible duplicates (see below) |
 | Portal activation | PL/back office → participants | PR 3d issues a personal activation code per participation (letter, printed sheet with recorded handover, or sent in person to a private email/mobile after a photo-ID check), supplies and records the Article 14 notice and revokes open codes when a participation closes; PR 3e lets the participant activate and register a private email/mobile, then moves `imported`/`unreachable` to `contacted` (Q112–Q120) |
-| Info events & appointments | PL/Berater book (Slice 5b-1), participants self-book (5b-3) | bookings (see "Appointments" below); attendance → `informed` (5b-2); DSV often handed out here (`dsv_offered`) |
+| Info events & appointments | PL/Berater book (Slice 5b-1), participants self-book (5b-3), PL/Berater record attendance (5b-2) | bookings and attendance; `informed` confirmed on an attendance (see "Appointments" below); DSV often handed out here (`dsv_offered`) |
 | Consents | participant | consent records per purpose (portal contact, Kug 200b profile access) |
 | Self-service data collection | participant (or staff in assisted mode) | personal data, CV, documents |
 | Arbeitsuchendmeldung | participant / TG | ASU record with channel and proof; Kug 200b signed, collected and submitted in batches per placement Agentur (also offered to people who registered as job-seeking themselves, for the profile-access consent) |
@@ -677,9 +677,63 @@ diagnoses or consultation notes (data-protection.md, appointments). One policy i
   start; the participant their own from 5b-3. No waiting list.
 - **A terminal status** cancels the participation's live bookings of appointments that haven't
   started (`participation_closed`, see "Main status"); bookings of started appointments stay for
-  the attendance record (5b-2).
-- Attendance, `informed` from attendance (5b-2), invitations and notices (5b-3) and the work list's
-  appointment items (5b-4) follow [the Slice 5b plan](../plans/slice-5b.md).
+  the attendance record.
+- Invitations and notices (5b-3) and the work list's appointment items (5b-4) follow
+  [the Slice 5b plan](../plans/slice-5b.md).
+
+#### Attendance and `informed` *(accepted, Q163, Q164; as built in 5b-2; readings Q173)*
+
+Recording what happened and authorizing what happens next are two steps.
+- **Attendance** (`attendanceEligibility`, the database decides again): the PL or the assigned
+  consultant records `attended` from the start and `absent` after the end
+  (`appointment_not_started`, `appointment_not_ended`) on a live booking they may list, in an
+  active project, on a scheduled appointment; the start-in-the-future rule of normal scheduling
+  never applies here (Q170). One request ("Teilnahme erfassen") takes 1–500 rows, all or nothing:
+  one refused row records nothing and changes no status ("Keine Teilnahme erfasst", then each row's
+  code). A participation without a live booking is a **walk-in**: `attended` only (`not_booked`),
+  any non-terminal participation for an info event, one the host may list for a consultation
+  (`host_not_responsible`); it gets a booking of origin `walk_in`, beyond the capacity and the
+  booking rules (a record of what happened, Q173). A recorded value may be **corrected** to the
+  other one (`attendance_unchanged` otherwise) by the same roles, audited with the previous and the
+  new value; a correction never changes a status. A booking with attendance can't be cancelled
+  (`attendance_recorded`).
+- **After the participation closed** (the closed-case flow): only the PL records or corrects the
+  attendance of a live booking of an appointment that started before the terminal change
+  (`participation_closed` for anyone else and for a walk-in, `started_after_close`), with a closed
+  reason (`late_entry`, `correction`; `after_close_reason_required`), audited with `afterClose`;
+  never a status change and never "Als informiert erfassen". The participation isn't reopened and
+  no guard is bypassed. A last-day event entered after the next night's cutoff withdrawal is this
+  flow.
+- **`informed`** (`attendanceStatusChanges`, only rows of the edge list): in the attendance
+  request each `attended` row recorded for the first time, of a participation before `informed`,
+  offers "als informiert erfassen" (preselected for an info event, never for a consultation); a
+  request with any ticked row needs the recorder's confirmation "Die erforderlichen Informationen
+  wurden vermittelt" (`informationDelivered`, unticked by default;
+  `information_delivery_unconfirmed`), and a tick anywhere else is `mark_informed_not_allowed`.
+  Later, on an existing qualifying attendance (`attended`, not recorded after a close, the
+  participation before `informed`), the separate action "Als informiert erfassen" with the same
+  confirmation (`qualifiesForInformed`) is the recovery path for an unticked row and for a
+  correction from `absent` to `attended`. Either way one transaction writes
+  `information_delivery_confirmed`, marks the booking as the **basis** and changes the status as
+  the confirming staff user along the `manual` edges: `contacted → informed`, `imported →
+  contacted → informed`, `unreachable → contacted` (its `before_cutoff` guard, with database time)
+  `→ informed`, each its own `status_changed` through the status function. A failing guard
+  refuses the request.
+- **The conflict:** a correction of the basis to `absent` reverses nothing; the booking shows
+  `attendance_conflict` ("Widerspruch zu klären") until one of two resolutions: a **replacement
+  basis** ("Als Grundlage bestätigen" on another `attended` booking of the participation, with the
+  same confirmation, by the PL or the assigned consultant, after the close the PL only), which
+  changes no status; or the PL's attestation `information_delivered_otherwise` ("Anderweitig
+  informiert"). The PL may record `escalated` ("Eskalieren") as the handling state: the conflict
+  stays open, shown as escalated. An unresolved conflict stays visible after the participation
+  closes, and the PL resolves it there too.
+- **Correcting false no-shows:** when the attendance recorded for an appointment is only `absent`,
+  the PL may still cancel it with `did_not_take_place` as a correction (`appointment_cancelled`
+  with `correction: true`): each absence stays on its booking and in the history, superseded
+  (`attendance_superseded`), and the bookings are cancelled with the appointment, so no missed
+  appointment remains; no notices go out for a past event. Any other cancellation of an appointment
+  with attendance, and a single `attended` record, refuse it (`attendance_recorded`): each is
+  investigated and corrected on its own first.
 
 ### Document review *(assumed, Q146; Slice 4b)*
 

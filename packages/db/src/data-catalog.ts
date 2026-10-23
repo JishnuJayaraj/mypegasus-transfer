@@ -224,8 +224,9 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: false,
   },
-  // Bookings (Q166): which appointment, origin, status, closed reasons, staff ids and times; the
-  // `personnel_file` triggers of Q105 and Q166 (mapping awaiting confirmation, period `unset`).
+  // Bookings (Q163, Q166): which appointment, origin, status, attendance, the basis of `informed`
+  // and its conflict, closed reasons, staff ids and times; the `personnel_file` triggers of Q105
+  // and Q166 (mapping awaiting confirmation, period `unset`).
   appointment_booking: {
     retentionClass: "personnel_file",
     dataClass: "internal",
@@ -565,6 +566,19 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     booked_at: "appointmentBookings",
     cancelled_by: null,
     cancelled_at: "appointmentBookings",
+    attendance: "appointmentBookings",
+    attendance_recorded_by: null,
+    attendance_recorded_at: "appointmentBookings",
+    after_close_reason: "appointmentBookings",
+    informed_basis_by: null,
+    informed_basis_at: "appointmentBookings",
+    conflict_escalated_by: null,
+    conflict_escalated_at: "appointmentBookings",
+    conflict_resolution: "appointmentBookings",
+    conflict_resolved_by: null,
+    conflict_resolved_at: "appointmentBookings",
+    attendance_superseded_by: null,
+    attendance_superseded_at: "appointmentBookings",
   },
 };
 

@@ -35,8 +35,8 @@ export const HistoryChange = z.strictObject({
   to: z.string(),
 });
 
-/** A shown detail: a code, a date, an id or a list of codes. */
-const HistoryDetail = z.union([z.string(), z.array(z.string())]).nullable();
+/** A shown detail: a code, a date, an id, a flag (`afterClose`, `statusChanged`) or codes. */
+const HistoryDetail = z.union([z.string(), z.boolean(), z.array(z.string())]).nullable();
 
 export const HistoryEntry = z
   .strictObject({

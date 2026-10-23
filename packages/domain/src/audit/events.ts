@@ -43,6 +43,11 @@ import {
   BookingCancelReason,
   BookingOrigin,
 } from "../appointments/model";
+import {
+  Attendance,
+  AttendanceAfterCloseReason,
+  AttendanceConflictResolution,
+} from "../appointments/attendance";
 import { NoticeLanguage } from "../notices/catalog";
 import {
   contactFields,
@@ -155,6 +160,13 @@ export const AuditEventType = z.enum([
   "appointment_cancelled",
   "appointment_booked",
   "appointment_booking_cancelled",
+  // Slice 5b, attendance and `informed` (process-and-lifecycle.md, appointments), written only by
+  // their functions
+  "attendance_recorded",
+  "attendance_superseded",
+  "information_delivery_confirmed",
+  "attendance_conflict_escalated",
+  "attendance_conflict_resolved",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -241,6 +253,11 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "appointment_cancelled",
   "appointment_booked",
   "appointment_booking_cancelled",
+  "attendance_recorded",
+  "attendance_superseded",
+  "information_delivery_confirmed",
+  "attendance_conflict_escalated",
+  "attendance_conflict_resolved",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -599,6 +616,37 @@ const appointmentBookingCancelled = event("appointment_booking_cancelled", {
           ? ["staff_cancelled", "appointment_cancelled"]
           : [];
   if (!by.includes(reasonCode)) issue(ctx, "reason_mismatch");
+});
+
+/**
+ * Attendance recorded or corrected by staff (Q163), with the previous value; `afterClose` exactly
+ * when the PL recorded it after the participation closed, with the closed reason.
+ */
+const attendanceRecorded = event("attendance_recorded", {
+  ...ofParticipation,
+  actor: staffActor,
+  reasonCode: AttendanceAfterCloseReason.nullable(),
+  details: z.strictObject({
+    ...ofBooking,
+    attendance: Attendance,
+    previousAttendance: Attendance.nullable(),
+    afterClose: z.boolean(),
+  }),
+}).superRefine(({ reasonCode, details }, ctx) => {
+  if (details.afterClose !== (reasonCode !== null)) issue(ctx, "reason_mismatch");
+  if (details.attendance === details.previousAttendance) issue(ctx, "attendance_unchanged");
+});
+
+/** A conflict ended: by a replacement basis (which it names) or the PL's attestation. */
+const attendanceConflictResolved = event("attendance_conflict_resolved", {
+  ...ofParticipation,
+  actor: staffActor,
+  reasonCode: AttendanceConflictResolution,
+  details: z.strictObject({ ...ofBooking, basisBookingId: z.uuid().optional() }),
+}).superRefine(({ reasonCode, details }, ctx) => {
+  if ((reasonCode === "replacement_basis") !== (details.basisBookingId !== undefined)) {
+    issue(ctx, "basis_mismatch");
+  }
 });
 
 /**
@@ -1032,5 +1080,28 @@ export const AuditEvent = z.discriminatedUnion("type", [
   }),
   appointmentBooked,
   appointmentBookingCancelled,
+  attendanceRecorded,
+  /** An absence superseded by the PL's `did_not_take_place` correction, kept in the history. */
+  event("attendance_superseded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ ...ofBooking, previousAttendance: z.literal("absent") }),
+  }),
+  /**
+   * The confirmation that the necessary information was delivered, on the attendance it rests on:
+   * with the status changes to `informed`, or a replacement basis without one.
+   */
+  event("information_delivery_confirmed", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ ...ofBooking, statusChanged: z.boolean() }),
+  }),
+  /** The PL's open handling state of a conflict. */
+  event("attendance_conflict_escalated", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject(ofBooking),
+  }),
+  attendanceConflictResolved,
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

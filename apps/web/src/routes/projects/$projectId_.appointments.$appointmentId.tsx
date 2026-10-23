@@ -37,6 +37,11 @@ import {
   useWhen,
   type Appointment,
 } from "../../components/appointments";
+import {
+  AttendanceDialog,
+  BookingAttendanceActions,
+  useAttendanceLabel,
+} from "../../components/attendance";
 import { RouteError } from "../../components/route-error";
 
 type CancelReason = NonNullable<components["schemas"]["AppointmentCancelInput"]["reason"]>;
@@ -85,8 +90,9 @@ function AppointmentError(props: ErrorComponentProps) {
 
 /**
  * One appointment (process-and-lifecycle.md, appointments): its details, "Ändern",
- * "Gastgeber·in ändern" (the PL), "Absagen" with a reason, the bookings the viewer may list and
- * "Teilnehmende buchen". Every action follows the API's capabilities.
+ * "Gastgeber·in ändern" (the PL), "Absagen" with a reason or the PL's "Fand nicht statt
+ * (Korrektur)", the bookings the viewer may list with their attendance, "Teilnehmende buchen" and
+ * "Teilnahme erfassen". Every action follows the API's capabilities.
  */
 function AppointmentPage() {
   const { t } = useTranslation();
@@ -102,6 +108,7 @@ function AppointmentPage() {
   const waves = useQuery({ ...entryWavesQuery(api, projectId), enabled: project.type === "ta_tg" });
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [correcting, setCorrecting] = useState(false);
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["appointments", appointmentId] }),
@@ -177,6 +184,11 @@ function AppointmentPage() {
                 {t("appointments.page.cancel")}
               </Button>
             )}
+            {capabilities.correctNotTakenPlace && (
+              <Button kind="danger--tertiary" onClick={() => setCorrecting(true)}>
+                {t("appointments.attendance.notTakenPlace")}
+              </Button>
+            )}
           </ButtonSet>
         )}
         {editing && (
@@ -208,6 +220,17 @@ function AppointmentPage() {
           setCancelling(false);
         }}
       />
+      {correcting && (
+        <NotTakenPlace
+          appointment={appointment}
+          onClose={() => setCorrecting(false)}
+          onCorrected={async () => {
+            await refresh();
+            showToast({ title: t("appointments.attendance.notTakenPlaceDone") });
+            setCorrecting(false);
+          }}
+        />
+      )}
       <Bookings appointment={appointment} projectId={projectId} onChanged={refresh} />
     </>
   );
@@ -340,6 +363,55 @@ function CancelAppointment({
 }
 
 /**
+ * "Fand nicht statt (Korrektur)" (the PL; process-and-lifecycle.md, appointments): with absences
+ * only recorded, the appointment is cancelled `did_not_take_place` and each absence superseded.
+ */
+function NotTakenPlace({
+  appointment,
+  onClose,
+  onCorrected,
+}: {
+  appointment: Appointment;
+  onClose: () => void;
+  onCorrected: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const correct = useMutation({
+    mutationFn: async () => {
+      await api.POST("/api/v1/appointments/{appointmentId}/cancellation", {
+        params: { path: { appointmentId: appointment.id } },
+        body: { reason: "did_not_take_place" },
+      });
+    },
+    onSuccess: onCorrected,
+  });
+  return (
+    <Modal
+      open
+      danger
+      modalHeading={t("appointments.attendance.notTakenPlaceTitle")}
+      primaryButtonText={t("appointments.attendance.notTakenPlace")}
+      secondaryButtonText={t("appointments.form.cancel")}
+      primaryButtonDisabled={correct.isPending}
+      onRequestClose={onClose}
+      onRequestSubmit={() => correct.mutate()}
+    >
+      <Stack gap={5}>
+        <p>{t("appointments.attendance.notTakenPlaceText")}</p>
+        {correct.isError && (
+          <InlineNotification
+            kind="error"
+            title={t(`appointments.errors.${problemCodes(correct.error)[0]!.code}` as never)}
+            hideCloseButton
+          />
+        )}
+      </Stack>
+    </Modal>
+  );
+}
+
+/**
  * The bookings the viewer may list, "Buchung absagen" per booking, and "Teilnehmende buchen" from
  * the viewer's work list snapshot (the name search stays in this component's state).
  */
@@ -356,7 +428,9 @@ function Bookings({
   const api = useApi();
   const showToast = useToast();
   const bookings = useQuery(appointmentBookingsQuery(api, appointment.id));
+  const attendanceLabel = useAttendanceLabel();
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
   const cancel = useMutation({
     mutationFn: async (bookingId: string) => {
       await api.POST("/api/v1/appointment-bookings/{bookingId}/cancellation", {
@@ -376,10 +450,32 @@ function Bookings({
       {appointment.capabilities.book && (
         <BookParticipant appointment={appointment} projectId={projectId} onBooked={onChanged} />
       )}
+      {appointment.capabilities.recordAttendance && (
+        <Button kind="secondary" onClick={() => setRecording(true)}>
+          {t("appointments.attendance.record")}
+        </Button>
+      )}
+      {recording && (
+        <AttendanceDialog
+          appointment={appointment}
+          bookings={bookings.data?.items ?? []}
+          projectId={projectId}
+          onClose={() => setRecording(false)}
+          onRecorded={onChanged}
+        />
+      )}
       <SimpleTable
         title={t("appointments.page.bookings")}
         columns={(
-          ["name", "personnelNumber", "status", "origin", "bookedAt", "actions"] as const
+          [
+            "name",
+            "personnelNumber",
+            "status",
+            "origin",
+            "bookedAt",
+            "attendance",
+            "actions",
+          ] as const
         ).map((key) => ({ key, header: t(`appointments.page.bookingColumns.${key}`) }))}
         rows={(bookings.data?.items ?? []).map((row) => ({
           id: row.id,
@@ -394,12 +490,20 @@ function Bookings({
             .join(" · "),
           origin: t(`appointments.origins.${row.origin}`),
           bookedAt: formatTimestamp(row.bookedAt),
-          actions: row.capabilities.cancel ? (
-            <Button kind="ghost" size="sm" onClick={() => setCancelling(row.id)}>
-              {t("appointments.page.cancelBooking")}
-            </Button>
-          ) : (
-            ""
+          attendance: attendanceLabel(row),
+          actions: (
+            <>
+              {row.capabilities.cancel && (
+                <Button kind="ghost" size="sm" onClick={() => setCancelling(row.id)}>
+                  {t("appointments.page.cancelBooking")}
+                </Button>
+              )}
+              <BookingAttendanceActions
+                booking={row}
+                appointmentId={appointment.id}
+                onChanged={onChanged}
+              />
+            </>
           ),
         }))}
         emptyState={t("appointments.page.bookingsEmpty")}

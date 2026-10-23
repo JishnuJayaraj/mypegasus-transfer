@@ -109,6 +109,11 @@ describe("audit event types (ADR-0002)", () => {
       "appointment_cancelled",
       "appointment_booked",
       "appointment_booking_cancelled",
+      "attendance_recorded",
+      "attendance_superseded",
+      "information_delivery_confirmed",
+      "attendance_conflict_escalated",
+      "attendance_conflict_resolved",
     ]);
   });
 
@@ -181,6 +186,12 @@ describe("audit event types (ADR-0002)", () => {
       "appointment_cancelled",
       "appointment_booked",
       "appointment_booking_cancelled",
+      // Attendance (Slice 5b): only the attendance functions write them.
+      "attendance_recorded",
+      "attendance_superseded",
+      "information_delivery_confirmed",
+      "attendance_conflict_escalated",
+      "attendance_conflict_resolved",
     ]);
   });
 
@@ -1590,5 +1601,93 @@ describe("appointments (data-protection.md, appointments; Q168)", () => {
     expect(
       issueCodes({ ...bookingCancelled, actor: { ...user, onBehalfOf: participationId } }),
     ).toEqual(["reason_mismatch"]);
+  });
+});
+
+describe("attendance (data-protection.md, appointments; Q163, Q168)", () => {
+  const ofBooking = {
+    bookingId: otherId,
+    appointmentId: otherId,
+    appointmentKind: "info_event",
+    startsAt: "2091-02-10T09:00:00.000Z",
+  };
+  const recorded = {
+    ...base,
+    type: "attendance_recorded",
+    reasonCode: null,
+    details: { ...ofBooking, attendance: "attended", previousAttendance: null, afterClose: false },
+  };
+
+  it("records the value with the previous one, the reason exactly after the close", () => {
+    expect(issueCodes(recorded)).toEqual([]);
+    expect(
+      issueCodes({
+        ...recorded,
+        reasonCode: "late_entry",
+        details: { ...recorded.details, afterClose: true },
+      }),
+    ).toEqual([]);
+    expect(issueCodes({ ...recorded, reasonCode: "late_entry" })).toEqual(["reason_mismatch"]);
+    expect(
+      issueCodes({ ...recorded, details: { ...recorded.details, previousAttendance: "attended" } }),
+    ).toEqual(["attendance_unchanged"]);
+    for (const bad of [
+      { ...recorded, actor: { type: "system", job: "lifecycle.evaluate-project" } },
+      { ...recorded, actor: { ...user, onBehalfOf: participationId } },
+      { ...recorded, participationId: null },
+      { ...recorded, details: { ...recorded.details, venue: "Kantine" } },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("supersedes absences only and confirms the delivery with or without a status change", () => {
+    const superseded = {
+      ...base,
+      type: "attendance_superseded",
+      details: { ...ofBooking, previousAttendance: "absent" },
+    };
+    expect(issueCodes(superseded)).toEqual([]);
+    expect(
+      AuditEvent.safeParse({
+        ...superseded,
+        details: { ...ofBooking, previousAttendance: "attended" },
+      }).success,
+    ).toBe(false);
+    for (const changed of [true, false]) {
+      expect(
+        issueCodes({
+          ...base,
+          type: "information_delivery_confirmed",
+          details: { ...ofBooking, statusChanged: changed },
+        }),
+      ).toEqual([]);
+    }
+    expect(
+      issueCodes({ ...base, type: "attendance_conflict_escalated", details: ofBooking }),
+    ).toEqual([]);
+  });
+
+  it("names the replacement basis exactly when a conflict is resolved by one", () => {
+    const resolved = {
+      ...base,
+      type: "attendance_conflict_resolved",
+      reasonCode: "information_delivered_otherwise",
+      details: ofBooking,
+    };
+    expect(issueCodes(resolved)).toEqual([]);
+    expect(issueCodes({ ...resolved, reasonCode: "replacement_basis" })).toEqual([
+      "basis_mismatch",
+    ]);
+    expect(
+      issueCodes({
+        ...resolved,
+        reasonCode: "replacement_basis",
+        details: { ...ofBooking, basisBookingId: otherId },
+      }),
+    ).toEqual([]);
+    expect(issueCodes({ ...resolved, details: { ...ofBooking, basisBookingId: otherId } })).toEqual(
+      ["basis_mismatch"],
+    );
   });
 });
