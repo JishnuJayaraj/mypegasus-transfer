@@ -6,7 +6,10 @@ Status: **approved** 2026-10-23 by the product owner for development on syntheti
 review's amendments (the dispatch lock order, the retention branches, conflict recovery, the
 correction of false no-shows, delivery attempts, portal visibility, follow-up chains). Q169
 (funded-measure evidence) stays `verify`; 5b supplies no funded-measure evidence. PR 5b-1 built
-the appointments and staff bookings (its readings: Q170–Q172); next 5b-2 and 5b-3.
+the appointments and staff bookings (its readings Q170–Q172, accepted in
+[round 41](../decisions/2026-10-23-answers-round-41.md); 5b-2 records attendance on existing
+appointments whatever their start, 5b-3 counts invitations in `appointment_in_use`); next 5b-2 and
+5b-3.
 Roadmap (Q158): info events and consultation slots; participant self-booking and cancellation;
 attendance; invitations and their message logging; attendance driving the authorised `informed`
 workflow; overdue appointments joining the work list of Slice 5. Only appointment polish stays in

@@ -189,12 +189,14 @@ END $$;
 
 -- The functions transfer_app may execute.
 
--- A new appointment (Q162, Q164): the PL any, a consultant only their own slot, of the active
--- project, under the exclusive project lock. Refuses `invalid_argument` (the table's rules, a host
+-- A new appointment (Q162, Q164): the PL any, a consultant only their own slot, under the
+-- exclusive project lock; a draft project too, so the PL plans the schedule before the launch
+-- (Q170: bookings need an active project). Refuses `invalid_argument` (the table's rules, a host
 -- for a consultation only, a wave for an info event only), `actor_not_allowed` (assisted mode,
--- any other role or slot), `project_not_found`, `project_not_active`, `host_not_allowed` (the
--- host isn't an active PL or consultant of the project), `not_ta_tg`, `wave_of_other_project`,
--- `starts_in_past` (Q170) and `host_overlap`. Audited `appointment_created` (project-level).
+-- any other role or slot), `project_not_found`, `host_not_allowed` (the host isn't an active PL or
+-- consultant of the project), `not_ta_tg`, `wave_of_other_project`, `starts_in_past` (Q170: normal
+-- scheduling only; no attendance work on an existing appointment depends on it) and
+-- `host_overlap`. Audited `appointment_created` (project-level).
 CREATE FUNCTION create_appointment(
   p_context audit_context, p_project_id uuid, p_id uuid, p_kind appointment_kind,
   p_host_staff_user_id uuid, p_audience_wave_id uuid, p_starts_at timestamptz,
@@ -211,9 +213,6 @@ BEGIN
   END IF;
   PERFORM public.assert_appointment_context(p_context, NULL);
   PERFORM public.lock_project_setup(p_project_id);
-  IF (SELECT status FROM public.project WHERE id = p_project_id) <> 'active' THEN
-    RAISE EXCEPTION 'project_not_active';
-  END IF;
   PERFORM public.assert_appointment_manager(p_project_id, (p_context).staff_user_id, p_kind,
     p_host_staff_user_id);
   IF p_kind = 'consultation' AND NOT public.appointment_member_roles(p_project_id,

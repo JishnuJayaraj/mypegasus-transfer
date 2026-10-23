@@ -72,6 +72,12 @@ export type BookingRequest = {
     entryWaveId: string | null;
     /** The `latestEntryDate` of its wave (the `before_cutoff` guard's date). */
     latestEntryDate: IsoDate | null;
+    /**
+     * The applicable latest entry date while the cutoff would withdraw or flag the participation
+     * (`latestEntryCutoff`: the wave's, or the project's final entry date without a wave), else
+     * null: the date of the warning.
+     */
+    entryCutoff: IsoDate | null;
   };
   liveBookings: readonly LiveBooking[];
   projectType: ProjectType;
@@ -93,8 +99,9 @@ const beforeTg = new Set<MainStatus>([...beforeInformed, "informed"]);
  * appointment, at most one live info-event booking that hasn't ended, no overlap with another live
  * booking (touching is fine); a free seat; before `informed` in `ta_tg`, the wave's cutoff not
  * passed (`before_cutoff`: today after `latestEntryDate`). A bookable appointment whose Berlin
- * start date lies after the upcoming cutoff of a participation before `active_in_tg` carries the
- * warning `beyond_upcoming_cutoff`; nothing predicts a withdrawal.
+ * start date lies after the participation's applicable cutoff (`entryCutoff`), not yet passed,
+ * carries the warning `beyond_upcoming_cutoff` (Q172): information only; nothing predicts a
+ * withdrawal and no guard changes.
  */
 export function bookingEligibility(request: BookingRequest): {
   code: "ok" | BookingRefusal;
@@ -102,12 +109,11 @@ export function bookingEligibility(request: BookingRequest): {
 } {
   const refusal = firstRefusal(request);
   if (refusal) return { code: refusal, warnings: [] };
-  const { appointment, participation, projectType } = request;
-  const cutoff = participation.latestEntryDate;
+  const { appointment, participation, today } = request;
+  const cutoff = participation.entryCutoff;
   const warned =
-    projectType === "ta_tg" &&
     cutoff !== null &&
-    beforeTg.has(participation.status) &&
+    compareIsoDates(today, cutoff) <= 0 &&
     compareIsoDates(berlinDate(appointment.startsAt), cutoff) > 0;
   return {
     code: "ok",

@@ -640,14 +640,20 @@ shared venue (1–200), and is `scheduled` or `cancelled`. Title and venue are g
 diagnoses or consultation notes (data-protection.md, appointments). One policy in every project
 (`appointmentPolicy`): nothing varies per Agentur.
 
-- **Creating and changing** (as built in 5b-1): the start lies in the future (`starts_in_past`,
-  Q170). Capacity rises any time and falls to no fewer than the live bookings
-  (`capacity_below_bookings`); title and venue may be corrected with bookings present. Times, the
-  public cutoff and the audience never change once the appointment has had a booking
-  (`appointment_in_use`: cancel it and create a new one), so every booking keeps its
-  appointment's times; the kind never changes (Q170). No two scheduled slots of one host overlap,
-  in any project (`host_overlap`; touching is fine, Q171). The PL changes a slot's host before its
-  start, to a PL or consultant who may list every live booking of it (`host_not_responsible`).
+- **Creating and changing** (as built in 5b-1; Q170): appointments are planned in a `draft` or
+  `active` project; bookings (and later invitations and attendance) need `active`
+  (`project_not_active`). Normal scheduling gives an appointment a future start, and its times
+  move only while it is unused (`starts_in_past`); this check never applies to recording or
+  correcting attendance of an existing appointment. Capacity rises any time and falls to no fewer
+  than the live bookings (`capacity_below_bookings`); title and venue may be corrected with
+  bookings present. Times, the public cutoff and the audience never change once the appointment
+  has had a booking or (from 5b-3) an invitation, even a cancelled one (`appointment_in_use`:
+  cancel it and create a new one), so every booking keeps its appointment's times; the kind never
+  changes. A host can't conduct overlapping scheduled slots in any project (`host_overlap`, shown as
+  "host unavailable" without naming the other project; intervals `[start, end)`, so consecutive
+  slots touch; cancelled slots don't block; Q171). The PL changes a slot's host before its start,
+  to a PL or consultant who may list every live booking of it (`host_not_responsible`) and is free
+  then.
 - **Cancelling by the organizer:** before or after the start, with a closed reason
   (`organiser_unavailable`, `too_few_bookings`, `did_not_take_place`, `created_in_error`,
   `other`); every live booking is cancelled with it (`appointment_cancelled`). A cancelled
@@ -658,12 +664,15 @@ diagnoses or consultation notes (data-protection.md, appointments). One policy i
   after the public cutoff), `participation_closed` (terminal), `not_in_audience` (an info event of
   another wave, or a participation from `active_in_tg` on), `host_not_responsible` (a consultation
   whose host may not list the participation), `already_booked`, `info_event_limit` (one live
-  info-event booking whose event hasn't ended, Q171), `booking_overlap` (two live bookings of one
+  info-event booking whose event hasn't ended; cancelled ones don't count, Q171), `booking_overlap` (two live bookings of one
   participation overlapping; touching is fine; any number of consultations), `appointment_full`,
   `after_cutoff` (before `informed` in `ta_tg`, today after the wave's `latestEntryDate`: the
-  `before_cutoff` semantics). A bookable appointment whose Berlin start date lies after the upcoming
-  `latestEntryDate` of a participation before `active_in_tg` is booked with the warning
-  `beyond_upcoming_cutoff` (Q172); nothing predicts a withdrawal.
+  `before_cutoff` semantics, unchanged). A bookable appointment is booked with the warning
+  `beyond_upcoming_cutoff` when its Berlin start date falls after the participation's applicable
+  cutoff that hasn't passed yet: the planner's `latestEntryCutoff`, i.e. in `ta_tg` while the
+  cutoff would withdraw or flag the participation (this can include `informed`), the wave's date
+  or the project's final entry date without a wave (Q84, Q172). The warning is information only:
+  nothing predicts a withdrawal and no guard changes.
 - **Cancelling a booking:** staff (the PL, the assigned consultant) any live booking until the
   start; the participant their own from 5b-3. No waiting list.
 - **A terminal status** cancels the participation's live bookings of appointments that haven't

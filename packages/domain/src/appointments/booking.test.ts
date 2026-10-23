@@ -32,6 +32,7 @@ const request = (overrides: Partial<BookingRequest> = {}): BookingRequest => ({
     status: "contacted",
     entryWaveId: "wave-1",
     latestEntryDate: "2091-03-15",
+    entryCutoff: "2091-03-15",
   },
   liveBookings: [],
   projectType: "ta_tg",
@@ -49,6 +50,12 @@ const at = (start: string, end: string, kind: "info_event" | "consultation" = "c
   startsAt: start,
   endsAt: end,
 });
+
+/** The warnings of a booking with this applicable cutoff. */
+const warned = (entryCutoff: string | null, overrides: Partial<BookingRequest> = {}) =>
+  bookingEligibility(
+    request({ participation: { ...request().participation, entryCutoff }, ...overrides }),
+  ).warnings;
 
 describe("bookingEligibility", () => {
   it("books a scheduled, unstarted appointment with a free seat", () => {
@@ -142,23 +149,57 @@ describe("bookingEligibility", () => {
     expect(code({ bookedCount: 2 })).toBe("appointment_full");
   });
 
-  it("refuses after an already-passed cutoff before informed, warns before an upcoming one", () => {
+  it("refuses after the wave's passed cutoff before informed; informed and later book", () => {
     const participation = { ...request().participation, latestEntryDate: "2091-02-05" };
     expect(code({ participation, today: "2091-02-05" })).toBe("ok");
     expect(code({ participation, today: "2091-02-06" })).toBe("after_cutoff");
     expect(
       code({ participation: { ...participation, status: "unreachable" }, today: "2091-02-06" }),
     ).toBe("after_cutoff");
-    // `informed` is past the guard; the warning still says the start lies after the cutoff.
-    const informed = { ...participation, status: "informed" as const };
-    expect(bookingEligibility(request({ participation: informed, today: "2091-02-06" }))).toEqual({
-      code: "ok",
-      warnings: [{ code: "beyond_upcoming_cutoff", latestEntryDate: "2091-02-05" }],
-    });
-    expect(bookingEligibility(request({ participation }))).toEqual({
-      code: "ok",
-      warnings: [{ code: "beyond_upcoming_cutoff", latestEntryDate: "2091-02-05" }],
-    });
+    // The guard stays as it is: `informed` isn't refused (Q172).
+    expect(
+      code({ participation: { ...participation, status: "informed" }, today: "2091-02-06" }),
+    ).toBe("ok");
+    expect(code({ participation, projectType: "ta_only", today: "2091-02-06" })).toBe("ok");
+    expect(
+      code({ participation: { ...participation, latestEntryDate: null }, today: "2091-02-06" }),
+    ).toBe("ok");
+  });
+
+  it("warns when the start lies after the applicable upcoming cutoff, whatever the wave guard says", () => {
+    expect(warned("2091-02-05")).toEqual([
+      { code: "beyond_upcoming_cutoff", latestEntryDate: "2091-02-05" },
+    ]);
+    // The project's final entry date for a participation without a wave (Q84), or an `informed`
+    // one whose DSV track ends at the cutoff: the planner's projection decides, not the status.
+    expect(
+      warned("2091-02-05", {
+        participation: {
+          status: "informed",
+          entryWaveId: null,
+          latestEntryDate: null,
+          entryCutoff: "2091-02-05",
+        },
+      }),
+    ).toEqual([{ code: "beyond_upcoming_cutoff", latestEntryDate: "2091-02-05" }]);
+    // Upcoming only: on the cutoff day still, after it no longer.
+    expect(warned("2091-02-05", { today: "2091-02-05" })).toHaveLength(1);
+    expect(
+      warned("2091-02-05", {
+        today: "2091-02-06",
+        participation: {
+          status: "informed",
+          entryWaveId: "wave-1",
+          latestEntryDate: "2091-02-05",
+          entryCutoff: "2091-02-05",
+        },
+      }),
+    ).toEqual([]);
+    // No applicable cutoff (the planner's null), or a start before it: nothing.
+    expect(warned(null)).toEqual([]);
+    expect(warned("2091-03-15")).toEqual([]);
+    // Only a bookable appointment carries a warning.
+    expect(warned("2091-02-05", { bookedCount: 2 })).toEqual([]);
   });
 
   it("warns by the appointment's Berlin date: on the cutoff day itself nothing", () => {
@@ -168,30 +209,23 @@ describe("bookingEligibility", () => {
       startsAt: "2091-02-09T23:30:00.000Z",
       endsAt: "2091-02-10T01:00:00.000Z",
     };
-    const participation = { ...request().participation, latestEntryDate: "2091-02-10" };
+    const participation = { ...request().participation, entryCutoff: "2091-02-10" };
     expect(bookingEligibility(request({ appointment: late, participation })).warnings).toEqual([]);
-    const dayAfter = { ...participation, latestEntryDate: "2091-02-09" };
+    const dayAfter = { ...participation, entryCutoff: "2091-02-09" };
     expect(
       bookingEligibility(request({ appointment: late, participation: dayAfter })).warnings,
     ).toEqual([{ code: "beyond_upcoming_cutoff", latestEntryDate: "2091-02-09" }]);
   });
 
-  it("has no cutoff without a wave date, in ta_only, or from active_in_tg", () => {
-    const passed = { ...request().participation, latestEntryDate: "2091-01-01" };
-    expect(code({ participation: { ...passed, latestEntryDate: null } })).toBe("ok");
-    expect(code({ participation: passed, projectType: "ta_only" })).toBe("ok");
-    const slot = { ...appointment, kind: "consultation" as const };
-    const active = { ...passed, status: "active_in_tg" as const };
-    expect(bookingEligibility(request({ appointment: slot, participation: active }))).toEqual({
-      code: "ok",
-      warnings: [],
-    });
-  });
-
   it("refuses in the documented order", () => {
     const everything: Partial<BookingRequest> = {
       appointment: { ...appointment, status: "cancelled", audienceWaveId: "wave-2" },
-      participation: { status: "withdrawn", entryWaveId: "wave-1", latestEntryDate: "2091-01-01" },
+      participation: {
+        status: "withdrawn",
+        entryWaveId: "wave-1",
+        latestEntryDate: "2091-01-01",
+        entryCutoff: null,
+      },
       bookedCount: 2,
       liveBookings: [
         {

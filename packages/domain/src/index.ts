@@ -95,6 +95,7 @@ export {
   cutoffFinalReminderDays,
   cutoffWarningDays,
   latestEntryCutoff,
+  type CutoffSnapshot,
   lifecycleFlags,
   planSystemTransitions,
   projectFlags,

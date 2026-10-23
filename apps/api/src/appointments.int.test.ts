@@ -284,6 +284,43 @@ describe("staff bookings (Q62, Q162)", () => {
     expect(full.errors![0]!.code).toBe("appointment_full");
   });
 
+  it("warns by the project's final entry date without a wave, and not once the cutoff passed", async () => {
+    // Every wave of Werk Nord ends tomorrow: the project's final entry date (Q84).
+    await owner.$client.query(
+      `update project_entry_wave set signing_deadline = current_date, default_tg_start = current_date + 1,
+         latest_entry_date = current_date + 1 where project_id = $1`,
+      [werkNord],
+    );
+    const event = await createAppointment({ startsAt: hours(72), endsAt: hours(74), capacity: 5 });
+    const res = await book(event.id, await participation());
+    expect((await readJson(res, BookingResult)).warnings).toEqual([
+      { code: "beyond_upcoming_cutoff", latestEntryDate: expect.any(String) },
+    ]);
+    // After the cutoff an informed participation (not refused) gets no warning.
+    await owner.$client.query(
+      `update project_entry_wave set signing_deadline = current_date - 2, default_tg_start = current_date - 1,
+         latest_entry_date = current_date - 1 where project_id = $1`,
+      [werkNord],
+    );
+    const informed = await participation({ wave: seedWaves[0].id });
+    await changeStatus(owner.$client, informed, {
+      field: "status",
+      from: "contacted",
+      to: "informed",
+    });
+    const late = await book(event.id, informed);
+    expect((await readJson(late, BookingResult)).warnings).toEqual([]);
+  });
+
+  it("lets the PL plan in a draft project without offering bookings", async () => {
+    const draft = seedProjectIds.lagerSued;
+    const planned = await createAppointment({}, projectLead, draft);
+    expect(planned.capabilities).toMatchObject({ change: true, cancel: true, book: false });
+    const p = await call(owner.$client, "create_participation", { projectId: draft, context: pl });
+    const refused = await expectProblem(await book(planned.id, p), 422, "domain-error");
+    expect(refused.errors![0]!.code).toBe("project_not_active");
+  });
+
   it("names a hidden participation participation_not_found; back office may not book", async () => {
     const event = await createAppointment();
     const unassigned = await participation();

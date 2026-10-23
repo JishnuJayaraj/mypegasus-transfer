@@ -219,9 +219,15 @@ describe("create_appointment", () => {
       failsWith("wave_of_other_project"),
     );
     await expect(create({ start: -1, end: 1 })).rejects.toMatchObject(failsWith("starts_in_past"));
-    await expect(create({ projectId: seedProjectIds.lagerSued })).rejects.toMatchObject(
-      failsWith("project_not_active"),
-    );
+  });
+
+  it("lets the PL plan appointments in a draft project; bookings need it active", async () => {
+    const draft = seedProjectIds.lagerSued;
+    const id = await create({ projectId: draft });
+    expect(await update(id, { venue: "Raum 2" })).toBe(2);
+    const p = await call(app, "create_participation", { projectId: draft, context: pl });
+    await expect(book(id, p)).rejects.toMatchObject(failsWith("project_not_active"));
+    await cancel(id);
   });
 
   it("refuses what the table refuses as invalid_argument", async () => {
@@ -270,6 +276,10 @@ describe("create_appointment", () => {
     // Another host, or an info event, at the same time.
     await create({ kind: "consultation", host: otherConsultant, start: 48, end: 49 });
     await create({ start: 48, end: 49 });
+    // A cancelled slot frees its host's time.
+    const cancelled = await create({ kind: "consultation", start: 60, end: 61 });
+    await cancel(cancelled);
+    await create({ kind: "consultation", projectId: verwaltung, start: 60, end: 61 });
   });
 });
 
@@ -739,6 +749,28 @@ describe("concurrency", () => {
         [id],
       );
       expect(live.n).toBe(1);
+    }
+  });
+
+  it("keeps one host's slots apart when two projects create them at once", async () => {
+    for (let round = 0; round < 5; round++) {
+      const slot = (projectId: string, client: unknown) =>
+        call(client as Client, "create_appointment", {
+          context: pl,
+          projectId,
+          id: randomUUID(),
+          kind: "consultation",
+          hostStaffUserId: consultant,
+          audienceWaveId: null,
+          startsAt: hours(100 + round * 3),
+          endsAt: hours(101 + round * 3),
+          bookingClosesAt: hours(80),
+          capacity: 1,
+          title: null,
+          venue: "Raum 1",
+        });
+      const outcomes = await settle([slot(werkNord, c1), slot(verwaltung, c2)]);
+      expect(outcomes.toSorted()).toEqual(["host_overlap", "ok"]);
     }
   });
 

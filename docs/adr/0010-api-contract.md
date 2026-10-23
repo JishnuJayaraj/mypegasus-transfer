@@ -293,6 +293,9 @@ generator then. No action now.
   `GET /participations/{id}/appointments` (the bookings and the upcoming appointments in the
   participation's audience or host rule, each with its seat state and refusal code or warnings).
   Every list and item is `private, no-store`.
+- **Bookings need an active project** (Q170): in a draft project appointments are planned, the
+  `book` capabilities are false and a booking is `422 project_not_active`. The booking's
+  `warnings` come from `latestEntryCutoff` (Q172).
 - **An `Appointment`** carries `bookings` as the viewer's view (`{ scope: "all", booked,
   availability }`, `{ scope: "own", own, availability }`), never a total outside the exact scope;
   `needsResolution` (the PL only, else null); `inUse`; `capabilities` `change`, `changeHost`,

@@ -618,6 +618,7 @@ export function appointmentRoutes(deps: Deps) {
         return refused(c, "participation_not_found");
       }
       if (!mayBookFor(viewer.subject, target).ok) return problem(c, "forbidden");
+      if (!viewer.projectActive) return refused(c, "project_not_active");
       const [live, booked, hostMayList] = await Promise.all([
         participationLiveBookings(db, participationId),
         liveBookingsOf(db, [row.id]),
@@ -741,7 +742,7 @@ export function appointmentRoutes(deps: Deps) {
         return problem(c, "forbidden");
       }
       const target = projectTarget(facts.projectId, viewer.regionId, participationId);
-      const mayBook = mayBookFor(viewer.subject, target).ok;
+      const mayBook = viewer.projectActive && mayBookFor(viewer.subject, target).ok;
       const summary = sql`a.id, a.kind, to_char(a.starts_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "startsAt",
         to_char(a.ends_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "endsAt",
         a.title, a.venue, a.status`;

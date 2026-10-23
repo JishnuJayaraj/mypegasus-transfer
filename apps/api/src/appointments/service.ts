@@ -1,4 +1,4 @@
-import { sql, type Database } from "@transfer/db";
+import { eq, project, sql, type Database } from "@transfer/db";
 import {
   bookingView,
   mayBookFor,
@@ -6,8 +6,12 @@ import {
   needsResolution,
   type Appointment,
   type AppointmentFacts,
+  latestEntryCutoff,
+  type DsvStatus,
+  type EntryWave,
   type LiveBooking,
   type MainStatus,
+  type ProfilingStatus,
   type ProjectRole,
   type StaffUser,
 } from "@transfer/domain";
@@ -126,6 +130,8 @@ export type AppointmentViewer = {
   projectId: string;
   regionId: string | null;
   now: string;
+  /** Bookings need an active project; a draft plans its appointments only (Q170). */
+  projectActive: boolean;
 };
 
 const roles = (viewer: AppointmentViewer) =>
@@ -145,8 +151,14 @@ export async function appointmentViewer(
   projectId: string,
   now: string,
 ): Promise<{ viewer: AppointmentViewer; visible: boolean }> {
-  const { subject, visible, regionId } = await projectAccess(db, user, projectId);
-  return { viewer: { subject, projectId, regionId, now }, visible };
+  const [{ subject, visible, regionId }, [found]] = await Promise.all([
+    projectAccess(db, user, projectId),
+    db.select({ status: project.status }).from(project).where(eq(project.id, projectId)),
+  ]);
+  return {
+    viewer: { subject, projectId, regionId, now, projectActive: found?.status === "active" },
+    visible,
+  };
 }
 
 /**
@@ -204,7 +216,7 @@ export function appointmentView(
         upcoming &&
         row.kind === "consultation",
       cancel: manage && scheduled,
-      book: scheduled && upcoming && booksAtAll(viewer),
+      book: viewer.projectActive && scheduled && upcoming && booksAtAll(viewer),
     },
   };
 }
@@ -223,20 +235,44 @@ export async function participationLiveBookings(
   return rows;
 }
 
-/** What the booking rules need of a participation (its wave's cutoff, the project's type). */
+/**
+ * What the booking rules need of a participation: its status and wave, the wave's
+ * `latestEntryDate` (the `before_cutoff` guard) and the applicable cutoff of the warning
+ * (`latestEntryCutoff`: the wave's date, or the project's final entry date without a wave, Q84,
+ * while the cutoff would withdraw or flag it; Q172).
+ */
 export async function bookingParticipation(db: Pick<Database, "execute">, participationId: string) {
   const { rows } = await db.execute<{
     projectId: string;
     status: MainStatus;
+    profilingStatus: ProfilingStatus;
+    dsvStatus: DsvStatus;
     entryWaveId: string | null;
-    latestEntryDate: string | null;
     projectType: "ta_tg" | "ta_only";
+    waves: EntryWave[];
   }>(
-    sql`select p.project_id as "projectId", p.status, p.entry_wave_id as "entryWaveId",
-        w.latest_entry_date::text as "latestEntryDate", j.type as "projectType"
+    sql`select p.project_id as "projectId", p.status, p.profiling_status as "profilingStatus",
+        p.dsv_status as "dsvStatus", p.entry_wave_id as "entryWaveId", j.type as "projectType",
+        coalesce((select json_agg(json_build_object('id', w.id, 'code', w.code,
+            'signingDeadline', w.signing_deadline, 'defaultTgStart', w.default_tg_start,
+            'defaultTgEnd', w.default_tg_end, 'latestEntryDate', w.latest_entry_date))
+          from project_entry_wave w where w.project_id = p.project_id), '[]') as waves
       from participation p join project j on j.id = p.project_id
-      left join project_entry_wave w on w.id = p.entry_wave_id
       where p.id = ${participationId}::uuid`,
   );
-  return rows[0];
+  const row = rows[0];
+  if (!row) return undefined;
+  const wave = row.waves.find((candidate) => candidate.id === row.entryWaveId) ?? null;
+  const { status, profilingStatus, dsvStatus } = row;
+  return {
+    projectId: row.projectId,
+    projectType: row.projectType,
+    status,
+    entryWaveId: row.entryWaveId,
+    latestEntryDate: wave?.latestEntryDate ?? null,
+    entryCutoff: latestEntryCutoff(
+      { current: { status, profilingStatus, dsvStatus }, wave },
+      { type: row.projectType, waves: row.waves },
+    ),
+  };
 }

@@ -518,13 +518,14 @@ rules.
   | `create_appointment`, `update_appointment`, `change_appointment_host`, `cancel_appointment` | exclusive | the participations of its live bookings in UUID order → the appointment → its bookings in id order; the host lock for a slot's times or host |
   | a terminal status (`apply_status_change`) | shared (held) | the participation (held) → its booking rows in id order; no appointment lock (a freed seat only lowers a count) |
 
-  Integration tests race the last seat, the same booking twice, and a booking, an appointment
+  Integration tests race the last seat, the same booking twice, two projects creating
+  overlapping slots of one host (Q171), and a booking, an appointment
   cancellation and a terminal transition together (no deadlock, no live booking left on a
   cancelled appointment).
 - **Functions** (`SECURITY DEFINER`, staff context in normal mode only, `actor_not_allowed`
   otherwise): `create_appointment(context, project, id, kind, host, wave, start, end, cutoff,
-  capacity, title, venue)` (the PL any, a consultant their own slot; `project_not_active`,
-  `host_not_allowed`, `not_ta_tg`, `wave_of_other_project`, `starts_in_past`, `host_overlap`);
+  capacity, title, venue)` (the PL any, a consultant their own slot, in a draft or active
+  project, Q170; `host_not_allowed`, `not_ta_tg`, `wave_of_other_project`, `starts_in_past`, `host_overlap`);
   `update_appointment(context, id, version, the whole new state)` (`stale_version`,
   `appointment_cancelled`, `appointment_in_use` for times, cutoff or audience after any booking,
   `starts_in_past`, `capacity_below_bookings`, `host_overlap`, `appointment_unchanged`);
@@ -532,7 +533,7 @@ rules.
   `not_consultation`, `appointment_started`, `host_not_responsible`); `cancel_appointment(context,
   id, reason)` (every live booking `appointment_cancelled`; returns their number);
   `book_appointment(context, appointment, participation, id)` (origin `staff`; the PL or the
-  assigned consultant; the domain's refusals in its order, `after_cutoff` through
+  assigned consultant; an active project only, `project_not_active`; the domain's refusals in its order, `after_cutoff` through
   `participation_before_cutoff`); `cancel_appointment_booking(context, booking)` (`staff_cancelled`;
   `booking_cancelled`, `appointment_started`).
 - **The terminal cancellation** is the trigger `participation_terminal_cancel_bookings` beside the

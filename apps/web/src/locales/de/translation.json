@@ -1644,7 +1644,7 @@
       "host_mismatch": "Ein Beratungstermin braucht eine Gastgeber·in.",
       "ends_before_start": "Das Ende muss nach dem Beginn liegen.",
       "host_not_allowed": "Diese Person ist keine Projektleitung oder Beratung des Projekts.",
-      "host_overlap": "Die Gastgeber·in hat zu dieser Zeit schon einen Termin.",
+      "host_overlap": "Die Gastgeber·in ist zu dieser Zeit nicht verfügbar.",
       "host_not_responsible": "Die Gastgeber·in darf nicht alle gebuchten Teilnehmenden sehen.",
       "not_ta_tg": "Wellen gibt es nur in Projekten mit Transfergesellschaft.",
       "wave_of_other_project": "Diese Welle gehört nicht zum Projekt.",
