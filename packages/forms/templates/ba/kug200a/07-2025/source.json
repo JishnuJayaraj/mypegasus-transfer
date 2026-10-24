@@ -1,0 +1,11 @@
+{
+  "formCode": "kug200a",
+  "version": "07-2025",
+  "sourceUrl": "https://www.arbeitsagentur.de/datei/formular-transfergesellschaften_ba029375.pdf",
+  "retrievedOn": "2026-10-24",
+  "sha256": "c2c4a573a41cfa21a447db558d2883228d817d5fd62ac6fbe1448207a3ff089b",
+  "pages": 2,
+  "acroFormFields": 56,
+  "verifiedBlank": true,
+  "note": "Original BA download, unchanged. Source provenance only; validity dates and field map belong to the reviewed Slice 6 registry implementation."
+}
