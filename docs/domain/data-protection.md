@@ -697,7 +697,7 @@ and highly confidential data only; ordinary person-data writes are `participant_
 | Profiling and reporting to the Agentur | Art. 6(1)(c) (§110/§111 SGB III) + signed TL 407 declaration |
 | Health / disability | Art. 9(2)(b). Details beyond yes/no only with explicit consent, Art. 9(2)(a) |
 | Private email/mobile for portal login and portal notifications (reminders) | consent, Art. 6(1)(a), revocable (`portal-contact-consent:v2`) |
-| TG access to the BA applicant profile (Kug 200b) | own consent record |
+| TG access to the BA applicant profile (Kug 200b) | the signed acknowledgement (declaration 17) recorded as written, kept as the record `kug200b_profile_access`; whether it is a consent, and what a withdrawal effects, is to verify (Q185) |
 | Aggregated customer reporting | Art. 6(1)(f), anonymised |
 
 - Each processing purpose is stored with its legal basis.
@@ -705,7 +705,10 @@ and highly confidential data only; ordinary person-data writes are `participant_
   `kug200b_profile_access`), source (`portal`, or `paper_form` that staff record from a signed
   form), text version and language, who and when, and when and why it ended. A channel is named
   exactly for `portal_contact` (a `CHECK`), which is given in the portal; revoking it is the
-  channel's removal. `kug200b_profile_access` is recorded from the signed Kug 200b (Slice 6).
+  channel's removal. `kug200b_profile_access` is recorded from the signed Kug 200b (Slice 6): declaration 17 is worded
+  as an acknowledgement of selective access, so its characterization as a consent stays a DPO/legal
+  check (Q185); a recorded withdrawal never claims BA access was disabled and never erases a valid
+  ASU registration.
   Revoking consent never blocks contract-based or legally required processing.
 - **Consent v2 (Slice 5; Q154, final):** `portal-contact-consent:v2` (de/en, immutable, SHA-256
   tests) covers login codes and operational notifications from the portal, such as a reminder
