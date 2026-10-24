@@ -1,0 +1,11 @@
+{
+  "formCode": "kug200b",
+  "version": "09-2021",
+  "sourceUrl": "https://www.arbeitsagentur.de/datei/erklaerung-arbeitsuchendmeldung-kenntnisnahme-transfergesellschaft_ba147320.pdf",
+  "retrievedOn": "2026-10-24",
+  "sha256": "0134cc889e39eaced1a2be3c307244605c66bbb54a0e30fc42f08e2c4e833c00",
+  "pages": 1,
+  "acroFormFields": 20,
+  "verifiedBlank": true,
+  "note": "Original BA download, unchanged. Source provenance only; validity dates and field map belong to the reviewed Slice 6 registry implementation."
+}
