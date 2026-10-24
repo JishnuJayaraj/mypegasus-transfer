@@ -106,16 +106,21 @@ export type Tl407Source = {
 
 const yesNo = (value: boolean | null) => (value === null ? null : value ? "yes" : "no");
 
+const houseNumber = /^(.*?\S)\s+([0-9]+(?:\s?[a-zA-Z])?(?:\s*[-/]\s*[0-9]+(?:\s?[a-zA-Z])?)?)$/;
+// A street left ending in a bare number or a separator: which part is the house number is unclear.
+const ambiguousStreet = /(?:^|\s)[0-9]+(?:\s?[a-zA-Z])?$|[-/]$/;
+
 /**
- * A German street with its house number split for the forms' two fields: the last word when it
- * is a house number (`12`, `12a`, `12-14`, `12 a`), else the whole text stays the street and the
- * number blank (Q197).
+ * A German street with its house number split for the forms' two fields (Q197): the trailing
+ * house number or range (`12`, `12a`, `12 a`, `12-14`, `12 - 14`, `3/4b`, `3 / 4b`), keeping
+ * digits inside the street name (`Straße des 17. Juni 12a`). Without a clear trailing number, or
+ * when the street would still end in one (`Weg 7 12`), the original text stays the street and
+ * the number blank, for clarification or handwriting.
  */
 export function splitStreet(street: string): { street: string; houseNumber: string | null } {
-  const match = /^(.*\S)\s+([0-9]+(?:\s?[a-zA-Z])?(?:\s?[-/]\s?[0-9]+(?:\s?[a-zA-Z])?)?)$/.exec(
-    street.trim(),
-  );
-  return match ? { street: match[1]!, houseNumber: match[2]! } : { street, houseNumber: null };
+  const match = houseNumber.exec(street.trim());
+  if (!match || ambiguousStreet.test(match[1]!)) return { street, houseNumber: null };
+  return { street: match[1]!, houseNumber: match[2]! };
 }
 
 function address(value: ContactAddress | null) {

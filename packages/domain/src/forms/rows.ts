@@ -38,12 +38,17 @@ export function orderEducation<T extends Period & { kind?: "school" | "other" }>
 }
 
 /**
- * The work rows of the last three years before `today` (TL 407 field 40): those running or
- * ending on or after `today − 3 years`, most recent first.
+ * The work rows of the last three years before `today` (TL 407 field 40): those started on or
+ * before `today` and running or ending on or after `today − 3 years`, most recent first. A job
+ * that hasn't started yet is no experience.
  */
 export function recentWork<T extends Period>(rows: readonly T[], today: IsoDate): T[] {
   const since = addMonths(today, -36);
   return rows
-    .filter((row) => row.to === null || compareIsoDates(row.to, since) >= 0)
+    .filter(
+      (row) =>
+        compareIsoDates(row.from, today) <= 0 &&
+        (row.to === null || compareIsoDates(row.to, since) >= 0),
+    )
     .toSorted(mostRecentFirst);
 }

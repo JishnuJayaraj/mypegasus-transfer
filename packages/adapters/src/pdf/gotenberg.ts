@@ -22,17 +22,18 @@ export class GotenbergHtmlRenderer implements HtmlRenderer {
     html(document.footerHtml, "footer.html");
     for (const [name, value] of Object.entries({ ...a4, ...margins })) form.append(name, value);
     const url = new URL("forms/chromium/convert/html", `${this.options.url.replace(/\/$/, "")}/`);
-    let response: Response;
+    // The body is read inside the boundary too: a stream that breaks or times out after the
+    // headers is as unavailable as a refused connection.
     try {
-      response = await (this.options.fetch ?? fetch)(url, {
+      const response = await (this.options.fetch ?? fetch)(url, {
         method: "POST",
         body: form,
         signal: AbortSignal.timeout(this.options.timeoutMs ?? 30_000),
       });
+      if (!response.ok) throw new PdfUnavailable();
+      return new Uint8Array(await response.arrayBuffer());
     } catch {
       throw new PdfUnavailable();
     }
-    if (!response.ok) throw new PdfUnavailable();
-    return new Uint8Array(await response.arrayBuffer());
   }
 }

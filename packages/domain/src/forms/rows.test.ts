@@ -36,14 +36,18 @@ describe("row order (ba-forms.md, row limits)", () => {
     ]);
   });
 
-  it("keeps the work of the last three years, most recent first", () => {
+  it("keeps the work of the last three years that has started, most recent first", () => {
     const rows = [
       { id: "ended-before", from: "2080-01-01", to: "2088-02-28" },
       { id: "ended-on-boundary", from: "2080-01-01", to: "2088-03-01" },
       { id: "running", from: "2090-01-01", to: null },
       { id: "recent", from: "2089-01-01", to: "2089-12-31" },
+      { id: "starts-today", from: "2091-03-01", to: null },
+      { id: "future", from: "2092-01-01", to: null },
+      { id: "future-ended", from: "2091-03-02", to: "2091-12-31" },
     ];
     expect(recentWork(rows, "2091-03-01").map((row) => row.id)).toEqual([
+      "starts-today",
       "running",
       "recent",
       "ended-on-boundary",

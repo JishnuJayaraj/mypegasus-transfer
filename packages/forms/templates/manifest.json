@@ -35,9 +35,9 @@
     {
       "ref": "anlage-profilingbogen:v1",
       "files": {
-        "index.html": "1bdb27ed9da2be44dec1d00c9220fe583cbadb4faf76edd5f985213258c81350",
-        "header.html": "c6eabe4d8cc80116549a118530eea219f425dba9d08bad95426605ba80986ce3",
-        "footer.html": "8858134e7e493197ab46cd8e12ce1f1b0e9ea494f0a3f4fd8080c50b8d541c98"
+        "index.html": "887a7a1e7ed93bc46db9861abd2ffbcd5548e4a2b0888eab7705587ebfb242d9",
+        "header.html": "1d0146e0eb6270bfe8a1c5525fc23432f0f968213a28fa42500c1770bf3158b3",
+        "footer.html": "3d3b34e57b7be9669ff66a8811c32877cb908b03797bf7154ede135a9e5a4a22"
       }
     }
   ]

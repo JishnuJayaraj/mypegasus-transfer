@@ -13,6 +13,9 @@
         line-height: 1.35;
         color: #000;
         margin: 0;
+        /* a word longer than its line breaks anywhere rather than run off the page */
+        overflow-wrap: anywhere;
+        word-break: break-word;
       }
       h1 {
         font-size: 13pt;
@@ -32,6 +35,7 @@
       }
       table {
         width: 100%;
+        table-layout: fixed;
         border-collapse: collapse;
       }
       th,
@@ -40,6 +44,7 @@
         padding: 1.5mm 2mm;
         text-align: start;
         vertical-align: top;
+        overflow-wrap: anywhere;
       }
       thead {
         display: table-header-group;

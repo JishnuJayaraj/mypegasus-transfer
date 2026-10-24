@@ -12,6 +12,7 @@
     "pdf-lib": "1.17.1"
   },
   "devDependencies": {
-    "@transfer/forms": "workspace:*"
+    "@transfer/forms": "workspace:*",
+    "pdfjs-dist": "6.3.289"
   }
 }

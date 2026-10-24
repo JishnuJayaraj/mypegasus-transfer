@@ -125,14 +125,18 @@ Files and checks: ADR-0009, amendment 2026-10-24. The rules, all in `packages/do
   street, house number, postal code, city); the beE stay from the effective contractual TG dates
   in `ta_tg`, blank in `ta_only` (Q181); phone, mobile and email only when the TL 407's own BA
   contact declaration is yes; the health line's rating without text (field
-  `txtfLeistungHandlungZ1` is never filled). Kug 200b: 1–12; 13–19 never.
+  `txtfLeistungHandlungZ1` is never filled). Kug 200b: 1–12; 13–19 never. The address's street
+  and house number are split best effort (Q197): a trailing number or range, digits inside the
+  street name kept; ambiguous input keeps the original street and leaves the number blank for
+  clarification or handwriting.
 - **Validation** (`validateFormInput`), codes and keys, never values:
   - errors (refuse generation): `unknown_key`, `value_kind_invalid`, `value_not_applicable` (a
     value for a field that doesn't apply, e.g. beE dates in `ta_only`), `option_invalid`,
     `date_invalid` (an impossible date; 29.02. only in a leap year), `time_invalid`,
     `time_range_reversed` (a session whose `bis` isn't after `von`, equal included),
     `identifier_too_long` (the RV-Nummer longer than 12; never cut), `character_unsupported` (a
-    character the embedded font can't print), `required_missing` (an applicable `*` field or a
+    character the embedded font can't print, by field; never transliterated, the stored name
+    stays as it is; the external-paper path before live use, Q197), `required_missing` (an applicable `*` field or a
     required table without rows, where the map says `error`);
   - blanks (`required_blank`): the same on a form completed by hand (Kug 200b), shown to staff
     before printing;
@@ -142,10 +146,11 @@ Files and checks: ADR-0009, amendment 2026-10-24. The rules, all in `packages/do
   - The laid-out output is checked again (`checkFilledFields`): every date field a real
     `TT.MM.JJJJ` date (the test copy's `03.14.1998` is an error), every time `hh:mm`, no value in
     a field the map never fills.
-- **Row order** (Q41): `orderSessions`, `orderEducation` (a row marked as the school
-  qualification first, then most recent first; the profile doesn't mark it yet, Q196),
-  `recentWork` (rows running or ending on or after the generation date minus three years, most
-  recent first); languages as given, German its own row.
+- **Row order** (Q41): `orderSessions`; `orderEducation`: the highest school qualification first,
+  as the participant marks it and the profiler confirms it (never inferred from text or recency;
+  persisted from 6-2, Q196), then the rest most recent first; `recentWork`: rows started on or
+  before the generation date and running or ending on or after it minus three years, most recent
+  first (a running row first, then by end and start); languages as given, German its own row.
 - **Layout and overflow** (`layoutForm`, `layoutTl407`; Q182, readings Q197): each text starts at
   the form's own size and shrinks in 0.5 pt steps to the map's minimum, measured with the
   embedded font's metrics (`TextMeasure`, from the PDF adapter). A table with more rows than the
@@ -154,9 +159,12 @@ Files and checks: ADR-0009, amendment 2026-10-24. The rules, all in `packages/do
   size is cut at a word boundary with "… Fortsetzung siehe Anlage" (or "siehe Anlage" where that
   doesn't fit) and continues on the Anlage under its heading, a table cell under
   "<table>, Zeile n: <column>"; nothing is lost. Identifiers shrink but are never cut. A form
-  without an Anlage (Kug 200b) leaves such a text blank for handwriting (`text_not_fitting`).
+  without an Anlage (Kug 200b) leaves such a text blank for handwriting (`text_not_fitting`),
+  which the pre-print checklist shows with the blank `*` fields (Q197).
 - **The Anlage** (`renderAnlage` with `anlage-profilingbogen:v1`): "Anlage zum Profilingbogen
   (TL 407 08/2025)", name and birth date in the header of every page, "Seite n von m" in the
-  footer, each continued table or text under its source heading; every value HTML-escaped. It is
+  footer, each continued table or text under its source heading; every value HTML-escaped. A word
+  longer than its line breaks anywhere (headings, header, text, table cells) and tables have fixed
+  column widths, so the printed PDF keeps every character; nothing is truncated or shrunk. It is
   appended to the TL 407 as one packet (`mergePdfs`) and takes the TL 407's strictest class.
 

@@ -145,8 +145,9 @@ Not adapters:
   - **HTML** goes to an `HtmlRenderer`: `GotenbergHtmlRenderer` posts `index.html`, `header.html`
     and `footer.html` to Gotenberg's `/forms/chromium/convert/html` (A4, margins for the header
     and footer); `MockHtmlRenderer` draws the document's structured text (`PrintDocument.text`)
-    with pdf-lib, without a browser or network, page "n von m" included. A refusal or an
-    unreachable Gotenberg is `PdfUnavailable`, never logged with content.
+    with pdf-lib, without a browser or network, page "n von m" included, breaking words longer
+    than a line. A refusal, an unreachable Gotenberg, or a body that breaks or times out after the
+    headers is `PdfUnavailable`, never logged with content.
   - `createPdfRenderer({ adapter, gotenbergUrl, production, font })`: `PDF_ADAPTER=gotenberg`
     needs `GOTENBERG_URL` (a cluster-internal service); `mock` wires the mock outside production
     only, so in production HTML answers `PdfUnavailable` (`503 pdf_unavailable`) while forms
@@ -155,7 +156,9 @@ Not adapters:
     `imageToPdf` (a JPEG or PNG scan as a centred A4 page); `readAcroFormValues` reads a fill
     back.
   - The Gotenberg contract test runs against `GOTENBERG_URL` (CI's service container
-    `gotenberg/gotenberg:8.37.0-chromium`, pinned by digest) and is skipped when it is empty.
+    `gotenberg/gotenberg:8.37.0-chromium`, pinned by digest): it reads the rendered text back with
+    pdf.js and checks that unbroken runs longer than a line survive whole, none past the page
+    edge. Skipped when the URL is empty; set but unreachable, it fails.
 - `Exporter` (`packages/adapters/src/export`): `CsvExporter.export({ kind, version, columns, rows })`
   → `<kind>-v<version>.csv`, `;`-separated, UTF-8 with BOM, a header row, CRLF, quoted where a
   cell holds `;`, `"` or a line break; a cell starting with `=`, `+`, `-`, `@`, a tab or a carriage

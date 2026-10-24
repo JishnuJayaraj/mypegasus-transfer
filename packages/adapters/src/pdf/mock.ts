@@ -10,11 +10,25 @@ const page = { width: 595.28, height: 841.89, margin: 50 };
 const size = { header: 8, heading: 12, body: 10 };
 const lineGap = 1.35;
 
+/** A word wider than the line, in pieces that fit: nothing runs off the page. */
+function pieces(word: string, font: PDFFont, fontSize: number, width: number): string[] {
+  const parts: string[] = [];
+  let part = "";
+  for (const char of word) {
+    if (part && font.widthOfTextAtSize(part + char, fontSize) > width) {
+      parts.push(part);
+      part = char;
+    } else part += char;
+  }
+  return [...parts, part];
+}
+
 function wrapWords(text: string, font: PDFFont, fontSize: number, width: number): string[] {
   const lines: string[] = [];
   for (const paragraph of text.split("\n")) {
     let line = "";
-    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+    const words = paragraph.split(/\s+/).filter(Boolean);
+    for (const word of words.flatMap((each) => pieces(each, font, fontSize, width))) {
       const next = line ? `${line} ${word}` : word;
       if (line && font.widthOfTextAtSize(next, fontSize) > width) {
         lines.push(line);
@@ -52,7 +66,9 @@ export class MockHtmlRenderer implements HtmlRenderer {
       current = doc.addPage([page.width, page.height]);
       pages.push(current);
       y = page.height - page.margin;
-      for (const line of document.text.pageHeader) {
+      for (const line of document.text.pageHeader.flatMap((text) =>
+        wrapWords(text, font, size.header, width),
+      )) {
         current.drawText(line, { x: page.margin, y, size: size.header, font });
         y -= size.header * lineGap;
       }

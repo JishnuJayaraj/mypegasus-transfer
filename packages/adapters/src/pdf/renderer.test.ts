@@ -6,6 +6,7 @@ import { pageCount } from "./acroform";
 import { imageToPdf, mergePdfs } from "./compose";
 import { PdfUnavailable } from "./pdf-renderer";
 import { createPdfRenderer, PdfLibRenderer } from "./renderer";
+import { count, extractText, unbrokenAnlage } from "./testing/text";
 
 const font = loadFont();
 const long = Array.from({ length: 60 }, (_, index) => `Zeile ${index + 1} der Fortsetzung`).join(
@@ -38,6 +39,20 @@ describe("createPdfRenderer (ADR-0006)", () => {
   it("renders HTML with the mock outside production, page n of m on every page", async () => {
     const renderer = createPdfRenderer({ adapter: "mock", production: false, font });
     expect(await pageCount(await renderer.renderHtml(anlage))).toBe(2);
+  });
+
+  it("breaks unbroken runs longer than a line in the mock too, losing nothing", async () => {
+    const renderer = createPdfRenderer({ adapter: "mock", production: false, font });
+    const pdf = await renderer.renderHtml(
+      renderAnlage(loadOwnTemplate("anlage-profilingbogen:v1"), unbrokenAnlage),
+    );
+    const { text, beyondEdge } = await extractText(pdf);
+    // the name is in the page header and its continuation; the mock repeats the header per page
+    expect(count(text, "Q")).toBe(200);
+    expect(count(text, "Z")).toBe(300);
+    expect(count(text, "H")).toBe(120);
+    expect(count(text, "N") % 150).toBe(0);
+    expect(beyondEdge).toBe(0);
   });
 
   it("wires no mock in production: renderHtml is unavailable, filling still works", async () => {

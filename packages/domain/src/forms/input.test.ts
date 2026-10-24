@@ -145,17 +145,32 @@ describe("tl407Input (ba-forms.md, what is filled)", () => {
   });
 });
 
+const split = (street: string) => {
+  const { street: name, houseNumber } = splitStreet(street);
+  return [name, houseNumber];
+};
+
 describe("splitStreet", () => {
-  it("splits a trailing house number, else keeps the street whole", () => {
-    expect(splitStreet("Musterstraße 10")).toEqual({ street: "Musterstraße", houseNumber: "10" });
-    expect(splitStreet("Straße des 17. Juni 5 a")).toEqual({
-      street: "Straße des 17. Juni",
-      houseNumber: "5 a",
-    });
-    expect(splitStreet("Am Ring 12-14")).toEqual({ street: "Am Ring", houseNumber: "12-14" });
-    expect(splitStreet("Hof 3/4b")).toEqual({ street: "Hof", houseNumber: "3/4b" });
-    expect(splitStreet("Am Markt")).toEqual({ street: "Am Markt", houseNumber: null });
-    expect(splitStreet("12")).toEqual({ street: "12", houseNumber: null });
+  it("splits a trailing house number or range, spaced or not", () => {
+    expect(split("Musterstraße 10")).toEqual(["Musterstraße", "10"]);
+    expect(split("Musterstraße 12a")).toEqual(["Musterstraße", "12a"]);
+    expect(split("Musterstraße 12 a")).toEqual(["Musterstraße", "12 a"]);
+    expect(split("Am Ring 12-14")).toEqual(["Am Ring", "12-14"]);
+    expect(split("Musterstraße 12 - 14")).toEqual(["Musterstraße", "12 - 14"]);
+    expect(split("Hof 3/4b")).toEqual(["Hof", "3/4b"]);
+    expect(split("Hof 3 / 4b")).toEqual(["Hof", "3 / 4b"]);
+  });
+
+  it("keeps digits inside the street name", () => {
+    expect(split("Straße des 17. Juni 12a")).toEqual(["Straße des 17. Juni", "12a"]);
+    expect(split("Straße des 17. Juni 5 a")).toEqual(["Straße des 17. Juni", "5 a"]);
+    expect(split("B 27 Nord 4")).toEqual(["B 27 Nord", "4"]);
+  });
+
+  it("keeps an ambiguous or number-less street whole, the number blank", () => {
+    for (const street of ["Am Markt", "12", "Weg 7 12", "Musterstraße 12 -", "Musterstraße 12-"]) {
+      expect(split(street)).toEqual([street, null]);
+    }
   });
 });
 

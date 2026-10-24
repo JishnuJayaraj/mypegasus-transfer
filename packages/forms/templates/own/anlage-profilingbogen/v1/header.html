@@ -6,8 +6,16 @@
       body {
         font-family: "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif;
         font-size: 8pt;
-        margin: 0 15mm;
+        margin: 0;
+        padding: 0 15mm;
         width: 100%;
+        box-sizing: border-box;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      div {
+        width: 100%;
+        text-align: start;
       }
       p {
         margin: 0;
@@ -15,7 +23,9 @@
     </style>
   </head>
   <body>
-    <p>{{title}}</p>
-    <p>{{person}}</p>
+    <div>
+      <p>{{title}}</p>
+      <p>{{person}}</p>
+    </div>
   </body>
 </html>

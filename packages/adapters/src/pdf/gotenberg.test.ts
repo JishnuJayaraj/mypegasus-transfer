@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { pageCount } from "./acroform";
 import { GotenbergHtmlRenderer } from "./gotenberg";
 import { PdfUnavailable } from "./pdf-renderer";
+import { count, extractText, unbrokenAnlage } from "./testing/text";
 
 const document = renderAnlage(loadOwnTemplate("anlage-profilingbogen:v1"), {
   template: "anlage-profilingbogen:v1",
@@ -45,12 +46,39 @@ describe("GotenbergHtmlRenderer", () => {
     ]);
   });
 
-  it("answers PdfUnavailable when Gotenberg refuses or can't be reached", async () => {
+  it("answers PdfUnavailable when Gotenberg refuses, can't be reached or its body breaks or times out after the headers", async () => {
     const refusing = (async () => new Response("no", { status: 503 })) as unknown as typeof fetch;
     const failing = (async () => {
       throw new TypeError("fetch failed");
     }) as unknown as typeof fetch;
-    for (const fetch of [refusing, failing]) {
+    const breaking = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0x25, 0x50, 0x44, 0x46]));
+            controller.error(new Error("synthetic body failure"));
+          },
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const slow = (async (_url: URL, init: RequestInit) =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0x25]));
+            init.signal!.addEventListener("abort", () => controller.error(init.signal!.reason));
+          },
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    await expect(
+      new GotenbergHtmlRenderer({
+        url: "http://gotenberg:3000",
+        fetch: slow,
+        timeoutMs: 20,
+      }).render(document),
+    ).rejects.toThrow(PdfUnavailable);
+    for (const fetch of [refusing, failing, breaking]) {
       await expect(
         new GotenbergHtmlRenderer({ url: "http://gotenberg:3000", fetch }).render(document),
       ).rejects.toThrow(PdfUnavailable);
@@ -58,12 +86,25 @@ describe("GotenbergHtmlRenderer", () => {
   });
 });
 
-// Against a real Gotenberg (CI's service container); skipped without GOTENBERG_URL.
+// Against a real Gotenberg (CI's service container); skipped without GOTENBERG_URL, and failing
+// when it is set but unreachable.
+const renderer = () => new GotenbergHtmlRenderer({ url: process.env.GOTENBERG_URL! });
+
 describe.skipIf(!process.env.GOTENBERG_URL)("Gotenberg contract", () => {
   it("renders the Anlage template to a PDF", async () => {
-    const renderer = new GotenbergHtmlRenderer({ url: process.env.GOTENBERG_URL! });
-    const pdf = await renderer.render(document satisfies PrintDocument);
+    const pdf = await renderer().render(document satisfies PrintDocument);
     expect(Buffer.from(pdf.subarray(0, 5)).toString("latin1")).toBe("%PDF-");
     expect(await pageCount(pdf)).toBeGreaterThanOrEqual(1);
+    expect((await extractText(pdf)).text).toContain("Łucja Ayşe Doğan-Großmann, geb. 29.07.2051");
+  });
+
+  it("keeps every character of unbroken runs longer than a line, none past the page edge", async () => {
+    const pdf = await renderer().render(
+      renderAnlage(loadOwnTemplate("anlage-profilingbogen:v1"), unbrokenAnlage),
+    );
+    const { text, beyondEdge } = await extractText(pdf);
+    // the name is in the header and under the title
+    expect(["Q", "Z", "N", "H"].map((char) => count(text, char))).toEqual([200, 300, 300, 120]);
+    expect(beyondEdge).toBe(0);
   });
 });
