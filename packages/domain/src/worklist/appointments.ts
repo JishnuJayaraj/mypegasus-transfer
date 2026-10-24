@@ -104,6 +104,7 @@ export type AppointmentItemNotice = {
 };
 
 const ms = (at: string) => Date.parse(at);
+const rank = (kind: AppointmentItemKind) => AppointmentItemKind.options.indexOf(kind);
 const live = (booking: AppointmentItemBooking) =>
   booking.status === "booked" && booking.appointmentStatus === "scheduled";
 
@@ -200,17 +201,15 @@ export function appointmentItems(
   if (!terminal) {
     for (const notice of notices) if (noticeUndelivered(notice)) add("notice_undelivered", notice);
   }
-  const rank = (kind: AppointmentItemKind) => AppointmentItemKind.options.indexOf(kind);
-  items.sort((a, b) => rank(a.kind) - rank(b.kind) || ms(a.startsAt) - ms(b.startsAt));
   const upcoming = terminal
     ? []
     : bookings
         .filter((booking) => live(booking) && ms(booking.startsAt) > ms(now))
-        .sort((a, b) => ms(a.startsAt) - ms(b.startsAt));
+        .toSorted((a, b) => ms(a.startsAt) - ms(b.startsAt));
   const first = upcoming[0];
   return {
     next: first ? { kind: first.appointmentKind, startsAt: first.startsAt } : null,
-    items,
+    items: items.toSorted((a, b) => rank(a.kind) - rank(b.kind) || ms(a.startsAt) - ms(b.startsAt)),
   };
 }
 

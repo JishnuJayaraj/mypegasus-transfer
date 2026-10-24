@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tansta
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { createLink } from "@tanstack/react-router";
 import {
+  berlinDate as appointmentDate,
+  berlinTime as appointmentTime,
   compareUrgency,
   daysBetween,
   matchesSearch,
@@ -49,6 +51,7 @@ const columns = [
   "consultants",
   "open",
   "deadline",
+  "appointment",
   "portal",
   "reminded",
   "activationStatus",
@@ -427,6 +430,33 @@ const WorklistTable = memo(function WorklistTable({
           : t("worklist.deadlineIn", { kind, count: days });
     return urgent.final ? `${text} (${t("worklist.deadlineFinal")})` : text;
   };
+  // "Termin" (process-and-lifecycle.md, appointments: the work list): the most urgent item, else
+  // the next booking.
+  const appointment = ({ appointments: { next, items: open } }: ListItem) => {
+    const [first] = open;
+    if (!first) {
+      return next
+        ? t("worklist.appointmentNext", {
+            kind: t(`appointments.kinds.${next.kind}`),
+            date: formatDate(appointmentDate(next.startsAt)),
+            time: appointmentTime(next.startsAt),
+          })
+        : "";
+    }
+    const overdue = first.kind === "attendance_missing" || first.kind === "missed";
+    return (
+      <>
+        <Tag type={overdue ? "red" : "purple"} size="sm">
+          {t("worklist.appointmentItem", {
+            item: t(`worklist.appointmentItems.${first.kind}`),
+            kind: t(`appointments.kinds.${first.appointmentKind}`),
+            date: formatDate(appointmentDate(first.startsAt)),
+          })}
+        </Tag>
+        {open.length > 1 && ` ${t("worklist.appointmentMore", { count: open.length - 1 })}`}
+      </>
+    );
+  };
   const rows = items.map((item) => ({
     id: item.id,
     select: (
@@ -468,6 +498,7 @@ const WorklistTable = memo(function WorklistTable({
         </>
       ),
     deadline: deadline(item),
+    appointment: appointment(item),
     portal: t(`worklist.portal.${item.portal}`),
     reminded: item.reminder
       ? `${formatDate(item.reminder.lastRequestedOn)} (${t(`reminders.status.${item.reminder.status}`)})`

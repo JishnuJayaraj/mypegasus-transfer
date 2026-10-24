@@ -179,6 +179,7 @@ export const worklistItem = (
   flags: [],
   portal: "not_reachable",
   reminder: null,
+  appointments: { next: null, items: [] },
   ...overrides,
   capabilities: {
     assignEntryWave: false,

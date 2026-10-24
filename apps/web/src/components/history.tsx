@@ -121,15 +121,20 @@ export function HistoryTab({
       case "attendance_superseded":
       case "information_delivery_confirmed":
       case "attendance_conflict_escalated":
-      case "attendance_conflict_resolved": {
+      case "attendance_conflict_resolved":
+      case "missed_appointment_resolved": {
         const values = {
           kind: coded("appointments.kinds", text(details.appointmentKind) ?? ""),
           start: details.startsAt ? formatTimestamp(text(details.startsAt) ?? "") : "",
         };
         const origin = text(details.origin);
-        const appointment = origin
+        const booked = origin
           ? t("history.appointmentBy", { ...values, origin: coded("appointments.origins", origin) })
           : t("history.appointment", values);
+        // A consultation booked as a missed one's follow-up (process-and-lifecycle.md).
+        const appointment = text(details.followUpOf)
+          ? `${booked} · ${t("history.followUp")}`
+          : booked;
         // Attendance with the previous value (Q163); the confirmation whether it changed a status.
         const attendance = (code: Detail) => {
           const value = text(code);

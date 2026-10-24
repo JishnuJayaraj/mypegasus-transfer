@@ -141,18 +141,18 @@ describe("appointmentItems: attendance_missing", () => {
   });
 });
 
-describe("appointmentItems: missed", () => {
-  const absent = (n: number, overrides: Partial<AppointmentItemBooking> = {}) =>
-    booking(n, { attendance: "absent", ...overrides });
-  const laterEvent = (n: number, overrides: Partial<AppointmentItemBooking> = {}) =>
-    booking(n, {
-      startsAt: "2027-02-15T09:00:00.000Z",
-      endsAt: "2027-02-15T11:00:00.000Z",
-      ...overrides,
-    });
-  const consultation = (n: number, overrides: Partial<AppointmentItemBooking> = {}) =>
-    booking(n, { appointmentKind: "consultation", attendance: "absent", ...overrides });
+const absent = (n: number, overrides: Partial<AppointmentItemBooking> = {}) =>
+  booking(n, { attendance: "absent", ...overrides });
+const laterEvent = (n: number, overrides: Partial<AppointmentItemBooking> = {}) =>
+  booking(n, {
+    startsAt: "2027-02-15T09:00:00.000Z",
+    endsAt: "2027-02-15T11:00:00.000Z",
+    ...overrides,
+  });
+const consultation = (n: number, overrides: Partial<AppointmentItemBooking> = {}) =>
+  booking(n, { appointmentKind: "consultation", attendance: "absent", ...overrides });
 
+describe("appointmentItems: missed", () => {
   it("an absence without follow-up or resolution", () => {
     expect(kinds([absent(1)])).toEqual([`missed:${id(101)}`]);
     expect(kinds([absent(1, { status: "cancelled" })])).toEqual([]);
@@ -272,9 +272,9 @@ describe("appointmentItems: notice_undelivered, needs_resolution, attendance_con
       startsAt: "2027-02-01T09:00:00.000Z",
       endsAt: "2027-02-01T10:00:00.000Z",
     });
-    const absent = booking(3, { appointmentKind: "consultation", attendance: "absent" });
+    const noShow = booking(3, { appointmentKind: "consultation", attendance: "absent" });
     const result = appointmentItems(
-      [absent, missing, older],
+      [noShow, missing, older],
       [notice()],
       "informed",
       null,
@@ -296,12 +296,13 @@ describe("appointmentItems: notice_undelivered, needs_resolution, attendance_con
   });
 });
 
+const withItem = (kind: AppointmentItemKind) => ({
+  next: null,
+  items: [{ kind, appointmentId: id(1), appointmentKind: "info_event" as const, startsAt: now }],
+});
+
 describe("matchesAppointmentFilter", () => {
   const empty = { next: null, items: [] };
-  const item = (kind: AppointmentItemKind) => ({
-    next: null,
-    items: [{ kind, appointmentId: id(1), appointmentKind: "info_event" as const, startsAt: now }],
-  });
 
   it("upcoming is a next booking", () => {
     expect(
@@ -316,12 +317,12 @@ describe("matchesAppointmentFilter", () => {
   it("overdue, to_resolve and each kind", () => {
     const overdue = new Set(["attendance_missing", "missed"]);
     for (const kind of AppointmentItemKind.options) {
-      expect(matchesAppointmentFilter(item(kind), kind)).toBe(true);
-      expect(matchesAppointmentFilter(item(kind), "overdue")).toBe(overdue.has(kind));
-      expect(matchesAppointmentFilter(item(kind), "to_resolve")).toBe(!overdue.has(kind));
-      expect(matchesAppointmentFilter(item(kind), "upcoming")).toBe(false);
+      expect(matchesAppointmentFilter(withItem(kind), kind)).toBe(true);
+      expect(matchesAppointmentFilter(withItem(kind), "overdue")).toBe(overdue.has(kind));
+      expect(matchesAppointmentFilter(withItem(kind), "to_resolve")).toBe(!overdue.has(kind));
+      expect(matchesAppointmentFilter(withItem(kind), "upcoming")).toBe(false);
     }
-    expect(matchesAppointmentFilter(item("missed"), "attendance_missing")).toBe(false);
+    expect(matchesAppointmentFilter(withItem("missed"), "attendance_missing")).toBe(false);
     expect(AppointmentFilter.options).toEqual([
       "upcoming",
       "overdue",

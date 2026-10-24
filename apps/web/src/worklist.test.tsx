@@ -58,6 +58,24 @@ const items = [
     firstName: "Anna",
     deadlines: [{ kind: "privacy_notice", date: "2026-10-01", state: "overdue" }],
     portal: "consent_required",
+    // A missed consultation and an undelivered notice (process-and-lifecycle.md, appointments).
+    appointments: {
+      next: null,
+      items: [
+        {
+          kind: "missed",
+          appointmentId: id(20),
+          appointmentKind: "consultation",
+          startsAt: "2026-10-20T08:00:00.000Z",
+        },
+        {
+          kind: "notice_undelivered",
+          appointmentId: id(21),
+          appointmentKind: "info_event",
+          startsAt: "2026-10-27T08:00:00.000Z",
+        },
+      ],
+    },
     capabilities: capable,
   }),
   worklistItem({
@@ -66,6 +84,10 @@ const items = [
     lastName: "Beispiel",
     firstName: "Bernd",
     status: "informed",
+    appointments: {
+      next: { kind: "info_event", startsAt: "2026-10-27T08:00:00.000Z" },
+      items: [],
+    },
     capabilities: capable,
   }),
 ];
@@ -132,6 +154,20 @@ describe("Übersicht", () => {
     expect(within(waves).getByRole("row", { name: /Ohne Welle/ })).toHaveTextContent("3");
   });
 
+  it("has the tiles and the group Termine, each opening the work list's appointment filter", async () => {
+    const { router } = setup({}, "");
+    const tile = await screen.findByRole("link", { name: "1 Termine überfällig" });
+    expect(screen.getByRole("link", { name: "1 Termine zu klären" })).toBeInTheDocument();
+    const group = screen.getByRole("table", { name: "Termine" });
+    expect(within(group).getByRole("row", { name: /Termin anstehend/ })).toHaveTextContent("1");
+    expect(within(group).getByRole("row", { name: /Nicht erschienen/ })).toHaveTextContent("1");
+    await userEvent.click(tile);
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: "participants", appointment: "overdue" }),
+    );
+    await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
+  });
+
   it("says when the viewer may not see it", async () => {
     setup({ [`GET ${path}/dashboard`]: () => problem(403, "forbidden") }, "");
     expect(
@@ -154,6 +190,30 @@ describe("Teilnehmende", () => {
       }),
     ).toBeInTheDocument();
     expect(within(other).getByRole("cell", { name: "Einwilligung fehlt" })).toBeInTheDocument();
+  });
+
+  it("shows the most urgent appointment item, else the next booking, and filters by Termine", async () => {
+    const { router } = setup();
+    const missed = (await (await ready()).findByRole("link", { name: "BSP-0002" })).closest("tr")!;
+    expect(
+      within(missed).getByRole("cell", {
+        name: "Nicht erschienen: Beratungstermin vom 20.10.2026 +1 weitere",
+      }),
+    ).toBeInTheDocument();
+    const next = list().getByRole("link", { name: "BSP-0003" }).closest("tr")!;
+    expect(
+      within(next).getByRole("cell", { name: "Infoveranstaltung am 27.10.2026, 09:00 Uhr" }),
+    ).toBeInTheDocument();
+    await userEvent.selectOptions(list().getByLabelText("Termine"), "upcoming");
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        tab: "participants",
+        appointment: "upcoming",
+      }),
+    );
+    expect(personnelNumbers()).toEqual(["BSP-0003"]);
+    await userEvent.selectOptions(list().getByLabelText("Termine"), "to_resolve");
+    await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
   });
 
   it("keeps the code filters in the route's search params, both ways", async () => {
