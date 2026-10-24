@@ -1,0 +1,198 @@
+{
+  "formCode": "kug200b",
+  "version": "09-2021",
+  "label": "Kug 200b 09/2021",
+  "fontSize": 9,
+  "minFontSize": 7,
+  "missingRequired": "blank",
+  "anlage": null,
+  "entries": [
+    {
+      "key": "tgName",
+      "label": "1 Bezeichnung der Transfergesellschaft",
+      "kind": "text",
+      "fields": ["1_txtf_Bezeichnung_Transfergesellschaft"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "employerName",
+      "label": "2 Bezeichnung des personalabgebenden Betriebes",
+      "kind": "text",
+      "fields": ["2_txtf_Bezeichnung_Betrieb"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "firstName",
+      "label": "3 Vorname",
+      "kind": "text",
+      "fields": ["3_txtf_Vorname"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "lastName",
+      "label": "4 Nachname",
+      "kind": "text",
+      "fields": ["4_txtf_Nachname"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "street",
+      "label": "5 Straße",
+      "kind": "text",
+      "fields": ["5_txtf_Strasse"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "houseNumber",
+      "label": "6 Hausnummer",
+      "kind": "text",
+      "fields": ["6_txtf_Hausnummer"],
+      "required": true,
+      "box": {
+        "width": 75,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "postalCode",
+      "label": "7 Postleitzahl",
+      "kind": "text",
+      "fields": ["7_txtf_PLZ"],
+      "required": true,
+      "box": {
+        "width": 74.17,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "city",
+      "label": "8 Ort",
+      "kind": "text",
+      "fields": ["8_txtf_Ort"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "maritalStatus",
+      "label": "9 Familienstand",
+      "kind": "radio",
+      "fields": ["9_rbtn_Familienstand"],
+      "required": true,
+      "options": {
+        "single": "ledig",
+        "married": "verheiratet"
+      }
+    },
+    {
+      "key": "nationality",
+      "label": "10 Staatsangehörigkeit",
+      "kind": "radio",
+      "fields": ["10_rbtn_Staatsangehoerigkeit"],
+      "required": true,
+      "options": {
+        "german": "deutsch",
+        "other": "andere"
+      }
+    },
+    {
+      "key": "otherNationality",
+      "label": "10 Andere Staatsangehörigkeit",
+      "kind": "text",
+      "fields": ["10_txtf_andere_Staatsangehoerigkeit"],
+      "required": false,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "pensionInsuranceNumber",
+      "label": "11 Rentenversicherungsnummer",
+      "kind": "text",
+      "fields": ["11_txtf_Rentenversicherungsnummer"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false,
+      "identifier": {
+        "maxLength": 12
+      }
+    },
+    {
+      "key": "severeDisability",
+      "label": "12 Schwerbehinderung oder Gleichstellung",
+      "kind": "radio",
+      "fields": ["12_rbtn_Schwerbehinderung_Gleichstellung"],
+      "required": false,
+      "options": {
+        "yes": "Ja",
+        "no": "Nein"
+      }
+    }
+  ],
+  "dateRanges": [],
+  "neverFilled": [
+    {
+      "field": "13_txtf_Telefon",
+      "reason": "handwritten"
+    },
+    {
+      "field": "14_txtf_Mobil",
+      "reason": "handwritten"
+    },
+    {
+      "field": "15_txtf_Email",
+      "reason": "handwritten"
+    },
+    {
+      "field": "16_chbx_Erklaerung_arbeitsuchend",
+      "reason": "declaration"
+    },
+    {
+      "field": "17_chbx_Erklaerung_zur_Kenntnis_genommen",
+      "reason": "declaration"
+    },
+    {
+      "field": "18_txtf_Ort",
+      "reason": "signature"
+    },
+    {
+      "field": "19_txtf_Datum",
+      "reason": "signature"
+    }
+  ]
+}

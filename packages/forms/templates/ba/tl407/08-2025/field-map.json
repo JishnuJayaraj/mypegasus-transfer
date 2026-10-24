@@ -1,0 +1,1203 @@
+{
+  "formCode": "tl407",
+  "version": "08-2025",
+  "label": "TL 407 08/2025",
+  "fontSize": 9,
+  "minFontSize": 7,
+  "missingRequired": "error",
+  "anlage": {
+    "template": "anlage-profilingbogen:v1",
+    "title": "Anlage zum Profilingbogen (TL 407 08/2025)",
+    "firstName": "firstName",
+    "lastName": "lastName",
+    "birthDate": "birthDate"
+  },
+  "entries": [
+    {
+      "key": "paragraph110",
+      "label": "Nach § 110 SGB III",
+      "kind": "checkbox",
+      "fields": ["chbxParagraph110"],
+      "required": false,
+      "applies": "ta_only",
+      "onState": "Nach Paragraph 110 SGBIII"
+    },
+    {
+      "key": "paragraph111",
+      "label": "Nach § 111 SGB III",
+      "kind": "checkbox",
+      "fields": ["chbxParagraph111"],
+      "required": false,
+      "applies": "ta_tg",
+      "onState": "Nach Paragraph 111 SGBIII"
+    },
+    {
+      "key": "carrier.name",
+      "label": "1 Name",
+      "kind": "text",
+      "fields": ["txtfMTName"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "carrier.street",
+      "label": "2 Straße",
+      "kind": "text",
+      "fields": ["txtfMTStrasse"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "carrier.houseNumber",
+      "label": "3 Hausnummer",
+      "kind": "text",
+      "fields": ["txtfMTHausNr"],
+      "required": false,
+      "box": {
+        "width": 75,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "carrier.postalCode",
+      "label": "4 Postleitzahl",
+      "kind": "text",
+      "fields": ["txtfMTPlz"],
+      "required": true,
+      "box": {
+        "width": 75,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "carrier.city",
+      "label": "5 Ort",
+      "kind": "text",
+      "fields": ["txtfMTOrt"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "firstName",
+      "label": "6 Vorname",
+      "kind": "text",
+      "fields": ["txtfPersonVorname", "txtfProfilPersonVorname"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "lastName",
+      "label": "7 Nachname",
+      "kind": "text",
+      "fields": ["txtfPersonNachname", "txtfProfilPersonNachname"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "birthDate",
+      "label": "8 Geburtsdatum",
+      "kind": "date",
+      "fields": ["datePersonGebDatum", "dateProfilPersonGebDatum"],
+      "required": true
+    },
+    {
+      "key": "beeFrom",
+      "label": "9 Voraussichtliche Verweildauer in der beE von",
+      "kind": "date",
+      "fields": ["dateVerweilDauerVon"],
+      "required": true,
+      "applies": "ta_tg"
+    },
+    {
+      "key": "beeTo",
+      "label": "10 Voraussichtliche Verweildauer in der beE bis",
+      "kind": "date",
+      "fields": ["dateVerweilDauerBis"],
+      "required": true,
+      "applies": "ta_tg"
+    },
+    {
+      "kind": "table",
+      "key": "sessions",
+      "label": "11 Zeiten der Teilnahme an der Profilingmaßnahme",
+      "required": false,
+      "rows": 4,
+      "markerColumn": "date",
+      "columns": [
+        {
+          "key": "date",
+          "label": "Am",
+          "kind": "date",
+          "fields": [
+            "dateProfilingAmZ1",
+            "dateProfilingAmZ2",
+            "dateProfilingAmZ3",
+            "dateProfilingAmZ4"
+          ]
+        },
+        {
+          "key": "from",
+          "label": "Von",
+          "kind": "time",
+          "fields": [
+            "timeProfilingVomZ1",
+            "timeProfilingVomZ2",
+            "timeProfilingVomZ3",
+            "timeProfilingVomZ4"
+          ]
+        },
+        {
+          "key": "to",
+          "label": "Bis",
+          "kind": "time",
+          "fields": [
+            "timeProfilingBisZ1",
+            "timeProfilingBisZ2",
+            "timeProfilingBisZ3",
+            "timeProfilingBisZ4"
+          ]
+        }
+      ],
+      "dateRanges": [],
+      "timeRanges": [
+        {
+          "from": "from",
+          "to": "to"
+        }
+      ]
+    },
+    {
+      "key": "pensionInsuranceNumber",
+      "label": "20 Rentenversicherungsnummer",
+      "kind": "text",
+      "fields": ["txtfPersonRvNr"],
+      "required": true,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false,
+      "identifier": {
+        "maxLength": 12
+      }
+    },
+    {
+      "key": "gender",
+      "label": "22 Geschlecht",
+      "kind": "radio",
+      "fields": ["rbtnPersonGeschlecht"],
+      "required": true,
+      "options": {
+        "male": "maennlich",
+        "female": "weiblich",
+        "diverse": "divers",
+        "not_specified": "ohne Angabe"
+      }
+    },
+    {
+      "key": "street",
+      "label": "23 Straße",
+      "kind": "text",
+      "fields": ["txtfPersonStr"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "houseNumber",
+      "label": "24 Hausnummer",
+      "kind": "text",
+      "fields": ["txtfPersonHausNr"],
+      "required": false,
+      "box": {
+        "width": 75,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "postalCode",
+      "label": "25 Postleitzahl",
+      "kind": "text",
+      "fields": ["txtfPersonPlz"],
+      "required": true,
+      "box": {
+        "width": 75,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "city",
+      "label": "26 Ort",
+      "kind": "text",
+      "fields": ["txtfPersonOrt"],
+      "required": true,
+      "box": {
+        "width": 159,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "phone",
+      "label": "27 Telefon",
+      "kind": "text",
+      "fields": ["txtfPersonTel"],
+      "required": false,
+      "box": {
+        "width": 116.93,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "mobile",
+      "label": "28 Mobil",
+      "kind": "text",
+      "fields": ["txtfPersonMobil"],
+      "required": false,
+      "box": {
+        "width": 117,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "email",
+      "label": "29 E-Mail",
+      "kind": "text",
+      "fields": ["txtfPersonEmail"],
+      "required": false,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "maritalStatus",
+      "label": "30 Familienstand",
+      "kind": "radio",
+      "fields": ["rbtnPersonFamilienstand"],
+      "required": true,
+      "options": {
+        "single": "ledig",
+        "married": "verheiratet"
+      }
+    },
+    {
+      "key": "nationality",
+      "label": "31 Staatsangehörigkeit",
+      "kind": "radio",
+      "fields": ["rbtnPersonStA"],
+      "required": true,
+      "options": {
+        "german": "deutsch",
+        "other": "andere"
+      }
+    },
+    {
+      "key": "otherNationality",
+      "label": "31 Andere Staatsangehörigkeit",
+      "kind": "text",
+      "fields": ["txtfPersonStA"],
+      "required": false,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "entryToGermanyDate",
+      "label": "32 Einreisedatum",
+      "kind": "date",
+      "fields": ["datePersonEinreise"],
+      "required": false
+    },
+    {
+      "key": "residenceStatus",
+      "label": "33 Aufenthaltsstatus",
+      "kind": "radio",
+      "fields": ["rbtnPersonAufenthalt"],
+      "required": false,
+      "options": {
+        "blue_card": "Blaue Karte",
+        "residence_permit": "Aufenthaltserlaubnis",
+        "visa": "Visum",
+        "settlement_permit": "Niederlassungserlaubnis",
+        "permission_to_reside": "Aufenthaltsgestattung",
+        "toleration": "Duldung"
+      }
+    },
+    {
+      "key": "unemployedFrom",
+      "label": "34 Arbeitslos seit/ab",
+      "kind": "date",
+      "fields": ["datePersonArbeitslos"],
+      "required": true
+    },
+    {
+      "key": "unemployedUntil",
+      "label": "35 Arbeitslosigkeit endet am",
+      "kind": "date",
+      "fields": ["datePersonArbeitslosEnde"],
+      "required": false
+    },
+    {
+      "key": "buergergeld",
+      "label": "36 Bürgergeld",
+      "kind": "radio",
+      "fields": ["rbtnPersonBuergergeld"],
+      "required": true,
+      "options": {
+        "yes": "Ja",
+        "no": "Nein"
+      }
+    },
+    {
+      "key": "healthRestrictions",
+      "label": "37 Gesundheitliche Einschränkungen",
+      "kind": "radio",
+      "fields": ["rbtnPersonEinschraenkungen"],
+      "required": true,
+      "options": {
+        "yes": "Ja",
+        "no": "Nein"
+      }
+    },
+    {
+      "key": "severeDisability",
+      "label": "38 Schwerbehinderung oder Gleichstellung",
+      "kind": "radio",
+      "fields": ["rbtnPersonSchwb"],
+      "required": true,
+      "options": {
+        "yes": "Ja",
+        "no": "Nein"
+      }
+    },
+    {
+      "kind": "table",
+      "key": "education",
+      "label": "39 Schulbesuch, Aus- und Weiterbildung",
+      "required": true,
+      "rows": 5,
+      "markerColumn": "institution",
+      "columns": [
+        {
+          "key": "from",
+          "label": "Von",
+          "kind": "date",
+          "fields": [
+            "dateBildungVonZ1",
+            "dateBildungVonZ2",
+            "dateBildungVonZ3",
+            "dateBildungVonZ4",
+            "dateBildungVonZ5"
+          ]
+        },
+        {
+          "key": "to",
+          "label": "Bis",
+          "kind": "date",
+          "fields": [
+            "dateBildungBisZ1",
+            "dateBildungBisZ2",
+            "dateBildungBisZ3",
+            "dateBildungBisZ4",
+            "dateBildungBisZ5"
+          ]
+        },
+        {
+          "key": "institution",
+          "label": "Schule/Ausbildungsstätte/Hochschule",
+          "kind": "text",
+          "fields": [
+            "txtfBildungSchuleZ1",
+            "txtfBildungSchuleZ2",
+            "txtfBildungSchuleZ3",
+            "txtfBildungSchuleZ4",
+            "txtfBildungSchuleZ5"
+          ],
+          "box": {
+            "width": 162,
+            "height": 18
+          },
+          "multiline": false
+        },
+        {
+          "key": "qualification",
+          "label": "Schul-/Ausbildung als",
+          "kind": "text",
+          "fields": [
+            "txtfBildungAusbildungZ1",
+            "txtfBildungAusbildungZ2",
+            "txtfBildungAusbildungZ3",
+            "txtfBildungAusbildungZ4",
+            "txtfBildungAusbildungZ5"
+          ],
+          "box": {
+            "width": 81,
+            "height": 18
+          },
+          "multiline": false
+        },
+        {
+          "key": "completed",
+          "label": "Abschluss",
+          "kind": "radio",
+          "fields": [
+            "rbtnBildungAbschlussZ1",
+            "rbtnBildungAbschlussZ2",
+            "rbtnBildungAbschlussZ3",
+            "rbtnBildungAbschlussZ4",
+            "rbtnBildungAbschlussZ5"
+          ],
+          "options": {
+            "yes": "Ja",
+            "no": "Nein"
+          }
+        }
+      ],
+      "dateRanges": [
+        {
+          "from": "from",
+          "to": "to"
+        }
+      ],
+      "timeRanges": []
+    },
+    {
+      "kind": "table",
+      "key": "work",
+      "label": "40 Beruflicher Werdegang",
+      "required": true,
+      "rows": 7,
+      "markerColumn": "employer",
+      "columns": [
+        {
+          "key": "from",
+          "label": "Von",
+          "kind": "date",
+          "fields": [
+            "dateBerufVonZ1",
+            "dateBerufVonZ2",
+            "dateBerufVonZ3",
+            "dateBerufVonZ4",
+            "dateBerufVonZ5",
+            "dateBerufVonZ6",
+            "dateBerufVonZ7"
+          ]
+        },
+        {
+          "key": "to",
+          "label": "Bis",
+          "kind": "date",
+          "fields": [
+            "dateBerufBisZ1",
+            "dateBerufBisZ2",
+            "dateBerufBisZ3",
+            "dateBerufBisZ4",
+            "dateBerufBisZ5",
+            "dateBerufBisZ6",
+            "dateBerufBisZ7"
+          ]
+        },
+        {
+          "key": "employer",
+          "label": "Beschäftigungsstelle",
+          "kind": "text",
+          "fields": [
+            "txtfBerufStelleZ1",
+            "txtfBerufStelleZ2",
+            "txtfBerufStelleZ3",
+            "txtfBerufStelleZ4",
+            "txtfBerufStelleZ5",
+            "txtfBerufStelleZ6",
+            "txtfBerufStelleZ7"
+          ],
+          "box": {
+            "width": 180,
+            "height": 18
+          },
+          "multiline": false
+        },
+        {
+          "key": "activity",
+          "label": "Tätigkeit als",
+          "kind": "text",
+          "fields": [
+            "txtfBerufTaetigZ1",
+            "txtfBerufTaetigZ2",
+            "txtfBerufTaetigZ3",
+            "txtfBerufTaetigZ4",
+            "txtfBerufTaetigZ5",
+            "txtfBerufTaetigZ6",
+            "txtfBerufTaetigZ7"
+          ],
+          "box": {
+            "width": 159,
+            "height": 18
+          },
+          "multiline": false
+        }
+      ],
+      "dateRanges": [
+        {
+          "from": "from",
+          "to": "to"
+        }
+      ],
+      "timeRanges": []
+    },
+    {
+      "key": "germanLevel",
+      "label": "41 Sprachkenntnisse Deutsch",
+      "kind": "radio",
+      "fields": ["rbtnSpracheKentnisseZ1"],
+      "required": true,
+      "options": {
+        "basic": "Grundkenntnisse",
+        "extended": "Erweiterte Kenntnisse",
+        "business_fluent": "Verhandlungssicher"
+      }
+    },
+    {
+      "kind": "table",
+      "key": "languages",
+      "label": "41 Weitere Sprachen",
+      "required": false,
+      "rows": 4,
+      "markerColumn": "language",
+      "columns": [
+        {
+          "key": "language",
+          "label": "Sprache",
+          "kind": "text",
+          "fields": [
+            "txtfSpracheWeitereZ2",
+            "txtfSpracheWeitereZ3",
+            "txtfSpracheWeitereZ4",
+            "txtfSpracheWeitereZ5"
+          ],
+          "box": {
+            "width": 120,
+            "height": 18
+          },
+          "multiline": false
+        },
+        {
+          "key": "level",
+          "label": "Kenntnisse",
+          "kind": "radio",
+          "fields": [
+            "rbtnSpracheKentnisseZ2",
+            "rbtnSpracheKentnisseZ3",
+            "rbtnSpracheKentnisseZ4",
+            "rbtnSpracheKentnisseZ5"
+          ],
+          "options": {
+            "basic": "Grundkenntnisse",
+            "extended": "Erweiterte Kenntnisse",
+            "business_fluent": "Verhandlungssicher"
+          }
+        }
+      ],
+      "dateRanges": [],
+      "timeRanges": []
+    },
+    {
+      "key": "drivingLicence",
+      "label": "42 Führerscheinklasse(n)",
+      "kind": "text",
+      "fields": ["txtfPersonFuehrerschein"],
+      "required": true,
+      "box": {
+        "width": 495,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "vehicleAvailable",
+      "label": "43 Fahrzeug vorhanden",
+      "kind": "radio",
+      "fields": ["rbtnPersonFahrzeug"],
+      "required": true,
+      "options": {
+        "yes": "Ja",
+        "no": "Nein"
+      }
+    },
+    {
+      "key": "employmentType",
+      "label": "44 Art der Anstellung",
+      "kind": "radio",
+      "fields": ["rbtnPersonAnstellung"],
+      "required": true,
+      "options": {
+        "full_time": "Vollzeit",
+        "part_time": "Teilzeit"
+      }
+    },
+    {
+      "key": "weeklyHours",
+      "label": "44 Anzahl der Wochenstunden",
+      "kind": "text",
+      "fields": ["txtfPersonAnstellung"],
+      "required": false,
+      "box": {
+        "width": 75,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "workingTimeDistribution",
+      "label": "45 Verteilung der Arbeitszeit",
+      "kind": "text",
+      "fields": ["txtfPersonArbeitszeit"],
+      "required": true,
+      "box": {
+        "width": 495,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "desiredJob",
+      "label": "46 Gewünschter Beruf/Tätigkeit/Ausbildung",
+      "kind": "text",
+      "fields": ["txtfPersonBeruf"],
+      "required": true,
+      "box": {
+        "width": 495,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "alternativeJob",
+      "label": "47 Alternative zum gewünschten Beruf/Tätigkeit/Ausbildung",
+      "kind": "text",
+      "fields": ["txtfPersonBerufAlternative"],
+      "required": false,
+      "box": {
+        "width": 495,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "desiredWorkLocations",
+      "label": "48 Gewünschte(r) Ausübungsort(e)",
+      "kind": "text",
+      "fields": ["txtfPersonStelleOrt"],
+      "required": true,
+      "box": {
+        "width": 495,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "maxDistanceKm",
+      "label": "49 Maximale Entfernung zum Wohnort (km)",
+      "kind": "text",
+      "fields": ["numfPersonStelleEntfernung"],
+      "required": true,
+      "group": "maxDistance",
+      "box": {
+        "width": 74.17,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "maxDistanceScope",
+      "label": "49 Maximale Entfernung zum Wohnort",
+      "kind": "radio",
+      "fields": ["rbtnPersonStelleEntfernung"],
+      "required": true,
+      "group": "maxDistance",
+      "options": {
+        "nationwide": "bundesweit",
+        "international": "international"
+      }
+    },
+    {
+      "key": "jobboerseChoice",
+      "label": "50 Veröffentlichung in der Internet-Jobbörse",
+      "kind": "radio",
+      "fields": ["rbtnPersonDatenInternet"],
+      "required": true,
+      "options": {
+        "full": "voll veroeffentlichen - Name, Adresse, Telefonnummer",
+        "anonymous_callme": "anonym veroeffentlichen - mit Zustimmung zur anonymen, telefonischen Kontaktaufnahme - Zusaetzliche Informationen finden Sie unter Wichtiger Hinweis zu 2",
+        "anonymous_no_contact": "anonym veroeffentlichen - ohne Zustimmung zur anonymen, telefonischen Kontaktaufnahme",
+        "none": "nicht veroeffentlichen"
+      }
+    },
+    {
+      "key": "earliestStartDate",
+      "label": "51 Frühestmöglicher Termin für eine Arbeitsaufnahme",
+      "kind": "date",
+      "fields": ["datePersonArbeitBeginn"],
+      "required": true
+    },
+    {
+      "key": "assessment.schoolQualification.rating",
+      "label": "C Qualifikation: Schulische Qualifikation",
+      "kind": "radio",
+      "fields": ["rbtnQualiBedarfZ1"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.schoolQualification.text",
+      "label": "C Qualifikation: Schulische Qualifikation: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfQualiHandlungZ1"],
+      "required": false,
+      "box": {
+        "width": 126,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.vocationalQualification.rating",
+      "label": "C Qualifikation: Berufliche Qualifikation",
+      "kind": "radio",
+      "fields": ["rbtnQualiBedarfZ2"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.vocationalQualification.text",
+      "label": "C Qualifikation: Berufliche Qualifikation: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfQualiHandlungZ2"],
+      "required": false,
+      "box": {
+        "width": 126,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.workExperience.rating",
+      "label": "C Qualifikation: Berufserfahrung",
+      "kind": "radio",
+      "fields": ["rbtnQualiBedarfZ3"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.workExperience.text",
+      "label": "C Qualifikation: Berufserfahrung: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfQualiHandlungZ3"],
+      "required": false,
+      "box": {
+        "width": 126,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.languageSkills.rating",
+      "label": "C Qualifikation: Sprachkenntnisse",
+      "kind": "radio",
+      "fields": ["rbtnQualiBedarfZ4"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.languageSkills.text",
+      "label": "C Qualifikation: Sprachkenntnisse: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfQualiHandlungZ4"],
+      "required": false,
+      "box": {
+        "width": 126,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherQualification.label",
+      "label": "C Qualifikation: Weitere (Art)",
+      "kind": "text",
+      "fields": ["txtfQualiArtZ5"],
+      "required": false,
+      "box": {
+        "width": 162,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherQualification.rating",
+      "label": "C Qualifikation: Weitere",
+      "kind": "radio",
+      "fields": ["rbtnQualiBedarfZ5"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.otherQualification.text",
+      "label": "C Qualifikation: Weitere: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfQualiHandlungZ5"],
+      "required": false,
+      "box": {
+        "width": 126,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.health.rating",
+      "label": "C Leistungsfähigkeit: Vermittlungsrelevante gesundheitliche Einschränkungen",
+      "kind": "radio",
+      "fields": ["rbtnLeistungBedarfZ1"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.intellectualCapacity.rating",
+      "label": "C Leistungsfähigkeit: Intellektuelle Leistungsfähigkeit",
+      "kind": "radio",
+      "fields": ["rbtnLeistungBedarfZ2"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.intellectualCapacity.text",
+      "label": "C Leistungsfähigkeit: Intellektuelle Leistungsfähigkeit: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfLeistungHandlungZ2"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.workAndSocialBehaviour.rating",
+      "label": "C Leistungsfähigkeit: Arbeits- und Sozialverhalten",
+      "kind": "radio",
+      "fields": ["rbtnLeistungBedarfZ3"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.workAndSocialBehaviour.text",
+      "label": "C Leistungsfähigkeit: Arbeits- und Sozialverhalten: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfLeistungHandlungZ3"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherPerformance.label",
+      "label": "C Leistungsfähigkeit: Sonstige (Art)",
+      "kind": "text",
+      "fields": ["txtfLeistungArtZ4"],
+      "required": false,
+      "box": {
+        "width": 162,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherPerformance.rating",
+      "label": "C Leistungsfähigkeit: Sonstige",
+      "kind": "radio",
+      "fields": ["rbtnLeistungBedarfZ4"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.otherPerformance.text",
+      "label": "C Leistungsfähigkeit: Sonstige: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfLeistungHandlungZ4"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.initiative.rating",
+      "label": "C Motivation: Eigeninitiative/Arbeitshaltung",
+      "kind": "radio",
+      "fields": ["rbtnMotivationBedarfZ1"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.initiative.text",
+      "label": "C Motivation: Eigeninitiative/Arbeitshaltung: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfMotivationHandlungZ1"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.learningReadiness.rating",
+      "label": "C Motivation: Lern- und Weiterbildungsbereitschaft",
+      "kind": "radio",
+      "fields": ["rbtnMotivationBedarfZ2"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.learningReadiness.text",
+      "label": "C Motivation: Lern- und Weiterbildungsbereitschaft: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfMotivationHandlungZ2"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherMotivation.label",
+      "label": "C Motivation: Sonstige (Art)",
+      "kind": "text",
+      "fields": ["txtfMotivationArtZ3"],
+      "required": false,
+      "box": {
+        "width": 162,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherMotivation.rating",
+      "label": "C Motivation: Sonstige",
+      "kind": "radio",
+      "fields": ["rbtnMotivationBedarfZ3"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.otherMotivation.text",
+      "label": "C Motivation: Sonstige: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfMotivationHandlungZ3"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.localMobility.rating",
+      "label": "C Rahmenbedingungen: Örtliche Mobilität",
+      "kind": "radio",
+      "fields": ["rbtnRahmenBedarfZ1"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.localMobility.text",
+      "label": "C Rahmenbedingungen: Örtliche Mobilität: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfRahmenHandlungZ1"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherConditions.label",
+      "label": "C Rahmenbedingungen: Sonstige (Art)",
+      "kind": "text",
+      "fields": ["txtfRahmenArtZ2"],
+      "required": false,
+      "box": {
+        "width": 162,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "assessment.otherConditions.rating",
+      "label": "C Rahmenbedingungen: Sonstige",
+      "kind": "radio",
+      "fields": ["rbtnRahmenBedarfZ2"],
+      "required": false,
+      "options": {
+        "no_need": "Kein Handlungsbedarf",
+        "placement_relevant": "Vermittlungsrelevanter Handlungsbedarf"
+      }
+    },
+    {
+      "key": "assessment.otherConditions.text",
+      "label": "C Rahmenbedingungen: Sonstige: Handlungsbedarf",
+      "kind": "text",
+      "fields": ["txtfRahmenHandlungZ2"],
+      "required": false,
+      "box": {
+        "width": 120,
+        "height": 18
+      },
+      "multiline": false
+    },
+    {
+      "key": "overallAssessment",
+      "label": "A. Gesamteinschätzung",
+      "kind": "text",
+      "fields": ["txtareaEinschaetzung"],
+      "required": false,
+      "box": {
+        "width": 495,
+        "height": 81
+      },
+      "multiline": true
+    },
+    {
+      "key": "nextSteps",
+      "label": "B. Weiteres Vorgehen",
+      "kind": "text",
+      "fields": ["txtareaWeiteresVorgehen"],
+      "required": false,
+      "box": {
+        "width": 495,
+        "height": 81
+      },
+      "multiline": true
+    }
+  ],
+  "dateRanges": [
+    {
+      "from": "beeFrom",
+      "to": "beeTo"
+    },
+    {
+      "from": "unemployedFrom",
+      "to": "unemployedUntil"
+    }
+  ],
+  "plausibility": {
+    "birthDate": "birthDate",
+    "ageAt": "beeFrom",
+    "entryDate": "entryToGermanyDate"
+  },
+  "neverFilled": [
+    {
+      "field": "txtfVermerkKdNr",
+      "reason": "agentur"
+    },
+    {
+      "field": "txtfVermerkOrg",
+      "reason": "agentur"
+    },
+    {
+      "field": "txtfPersonUnterschriftOrt",
+      "reason": "signature"
+    },
+    {
+      "field": "datePersonUnterschrift",
+      "reason": "signature"
+    },
+    {
+      "field": "txtfProfilersUnterschriftOrt",
+      "reason": "signature"
+    },
+    {
+      "field": "dateProfilersUnterschrift",
+      "reason": "signature"
+    },
+    {
+      "field": "txtfLeistungHandlungZ1",
+      "reason": "health_detail"
+    }
+  ]
+}

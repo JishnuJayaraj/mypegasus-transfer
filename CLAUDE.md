@@ -126,6 +126,7 @@ packages/api-client  generated OpenAPI document + types and the typed client
 packages/ui       Carbon wrappers, layout, tokens, i18n helpers
 packages/self-service-ui  the self-service wizard, shared by both SPAs (no staff code)
 packages/config   regional configuration: layer model, resolver, pinned templates
+packages/forms    the BA form registry: blank PDFs, field maps, manifests, own HTML templates, font
 packages/adapters interfaces + implementations (ADR-0006)
 fixtures/         synthetic test files only
 docs/             product + domain + architecture docs (source of truth)
@@ -177,7 +178,7 @@ pnpm db:seed          # synthetic data only
 pnpm db:reset         # dev only: empty schema, migrate, seed
 pnpm jobs:lifecycle [--today YYYY-MM-DD]   # the nightly lifecycle sweep once (dev/CI only)
 pnpm generate         # all generators (API client, docs/domain/generated, config schema,
-                      # template manifest); the output is committed
+                      # template manifest, forms manifest); the output is committed
 docker build -t transfer .          # the production image (CI builds and smoke-tests it)
 scripts/image-smoke.sh transfer     # smoke test of the image
 ```

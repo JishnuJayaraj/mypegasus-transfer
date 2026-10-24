@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing/forms": "./src/forms/testing/index.ts"
   },
   "scripts": {
     "generate": "tsx scripts/generate.ts"

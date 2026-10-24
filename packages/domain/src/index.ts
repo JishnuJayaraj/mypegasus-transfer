@@ -840,3 +840,72 @@ export {
   type CapabilityRequest,
   type InformedRefusal,
 } from "./appointments/attendance";
+export {
+  FieldBox,
+  FormFieldEntry,
+  FieldMap,
+  FormColumnEntry,
+  FormCode,
+  FormVersion,
+  mappedFieldNames,
+  NeverFilled,
+  NeverFilledReason,
+  FormTableEntry,
+  type FieldKind,
+  type FieldRange,
+  type FormVersionRef,
+} from "./forms/field-map";
+export {
+  formatFormDate,
+  formatFormNumber,
+  isFormDate,
+  isFormTime,
+  isPrintable,
+  printableRanges,
+} from "./forms/format";
+export { orderEducation, orderSessions, recentWork, type SessionRow } from "./forms/rows";
+export {
+  JobboerseChoice,
+  kug200bInput,
+  SectionCRating,
+  splitStreet,
+  tl407Input,
+  TransferCompany,
+  type FormInput,
+  type FormRow,
+  type FormValue,
+  type Kug200bSource,
+  type Tl407Assessment,
+  type Tl407Source,
+} from "./forms/input";
+export {
+  FormErrorCode,
+  PlausibilityWarning,
+  plausibleAge,
+  validateFormInput,
+  type FormIssue,
+  type FormValidation,
+} from "./forms/validate";
+export {
+  checkFilledFields,
+  continuationNotes,
+  FormLayoutError,
+  layoutForm,
+  layoutTl407,
+  rowMarker,
+  type AnlageDocument,
+  type AnlageSection,
+  type FilledField,
+  type FormLayout,
+  type TextMeasure,
+} from "./forms/layout";
+export {
+  escapeHtml,
+  fillTemplate,
+  renderAnlage,
+  type HtmlTemplate,
+  type PrintDocument,
+  type TextBlock,
+  type TextDocument,
+} from "./forms/anlage";
+export { formVersionInUse, FormVersionManifest, isFormVersionInUse } from "./forms/version";
