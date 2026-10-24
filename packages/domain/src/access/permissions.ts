@@ -312,22 +312,24 @@ export function mayRecordAttendance(
   );
 }
 
-export type AppointmentItemKind = "attendance_conflict" | "notice_undelivered";
-const itemRoles: Record<AppointmentItemKind, readonly Role[]> = {
+export type ResolvableAppointmentItem = "attendance_conflict" | "notice_undelivered" | "missed";
+const itemRoles: Record<ResolvableAppointmentItem, readonly Role[]> = {
   attendance_conflict: ["project_lead"],
   notice_undelivered: ["project_lead", "consultant"],
+  missed: ["project_lead", "consultant"],
 };
 
 /**
  * Who resolves a participation's appointment item (data-protection.md, appointments; Q163): an
  * `attendance_conflict` (escalating it or attesting the information was delivered otherwise) is
  * the PL's alone, also after the participation closed; a `notice_undelivered` (recording how the
- * person was told) the PL's or the assigned consultant's (data-protection.md, messages).
+ * person was told, data-protection.md, messages) and a `missed` appointment (no further follow-up,
+ * process-and-lifecycle.md, appointment items) the PL's or the assigned consultant's.
  */
 export function mayResolveAppointmentItem(
   actor: Actor,
   target: PermissionTarget,
-  item: AppointmentItemKind,
+  item: ResolvableAppointmentItem,
 ): Permission {
   if (actor.kind !== "staff") return no("actor_not_allowed");
   return staffPermission(actor, target, (role) => itemRoles[item].includes(role));

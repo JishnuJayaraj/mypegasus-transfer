@@ -466,4 +466,14 @@ describe("mayResolveAppointmentItem (Q163)", () => {
       result(mayResolveAppointmentItem(staff(["back_office"]), target, "notice_undelivered")),
     ).toBe("role_not_allowed");
   });
+
+  it("leaves a missed appointment to the PL and the assigned consultant (process-and-lifecycle.md, appointments)", () => {
+    expect(allowed((actor) => mayResolveAppointmentItem(actor, target, "missed"))).toBe("PL C");
+    expect(result(mayResolveAppointmentItem(staff(["consultant"]), target, "missed"))).toBe(
+      "not_assigned",
+    );
+    expect(result(mayResolveAppointmentItem(staff(["back_office"]), target, "missed"))).toBe(
+      "role_not_allowed",
+    );
+  });
 });

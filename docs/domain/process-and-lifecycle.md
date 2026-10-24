@@ -193,6 +193,40 @@ with profiling** (round 4). So a participation has:
   there is none, `rejected` when every live document of the type is rejected (a required type
   never counts as both). An upload waiting for its review asks nothing of the participant. A
   terminal participation has no actions (*assumed*, Q160). Codes only, never a value.
+- **Appointment items** (Slice 5b; Q167, accepted; readings Q175; `appointmentItems`,
+  `packages/domain/src/worklist/appointments.ts`): beside the deadline warnings each row has
+  `appointments: { next, items }`. `next` is the earliest live booking of a scheduled appointment
+  that hasn't started (kind and start). The items, each `{ kind, appointmentId, appointmentKind,
+  startsAt }`, in this urgency order, then by start (the row shows the first, else `next`):
+  - `attendance_missing`: a live booking whose appointment's Berlin end date has passed (from the
+    next day), attendance unrecorded; it stays after the participation closed (the PL's
+    closed-case flow, "Attendance and `informed`");
+  - `missed`: a live booking recorded `absent` (not a basis of `informed`: its absence is the
+    conflict's) without an explicit resolution and without a **live follow-up**. For an info event
+    the follow-up is any later info-event booking of the participation (the same briefing purpose,
+    matched automatically); for a consultation only a consultation staff booked as its follow-up
+    (`followUpOf`; an unrelated consultation clears nothing). A follow-up counts while it is live
+    (upcoming, unrecorded or attended): cancelled, the item is back; recorded `absent`, the
+    follow-up is the chain's one missed item. "Keine weitere Nachverfolgung" by the PL or the
+    assigned consultant, with a closed reason (`participant_declined`,
+    `information_delivered_otherwise`, `no_longer_needed`), ends the chain
+    (`resolve_missed_appointment`, audited `missed_appointment_resolved`; once: `already_resolved`;
+    only while missed: `not_missed`; not for a closed participation: `participation_closed`).
+    "Folgetermin buchen" books another appointment of the kind; a consultation is linked
+    (`book_appointment` with `follow_up_of`: a missed consultation of the same participation,
+    `follow_up_not_found`, `follow_up_kind_mismatch`, `follow_up_not_missed`);
+  - `notice_undelivered`: an organizer's notice without its follow-up (data-protection.md,
+    messages about appointments);
+  - `needs_resolution`: a live future consultation booking whose host may no longer list the
+    participation, for the PL only (data-protection.md, appointments);
+  - `attendance_conflict`: a basis corrected to `absent`, open or escalated, also after the close.
+
+  They inform staff: never a guard, a participant action or a reminder. A terminal participation
+  keeps `attendance_missing` and an unresolved `attendance_conflict`, nothing else. The filter
+  `appointment` takes `upcoming` (a `next`), `overdue` (`attendance_missing` ∪ `missed`),
+  `to_resolve` (`notice_undelivered` ∪ `needs_resolution` ∪ `attendance_conflict`) or one kind; the
+  dashboard's tiles "Termine überfällig" and "Termine zu klären" and its group "Termine" count the
+  distinct participations each value matches in the same snapshot.
 
 ### Main status
 
@@ -678,8 +712,11 @@ diagnoses or consultation notes (data-protection.md, appointments). One policy i
 - **A terminal status** cancels the participation's live bookings of appointments that haven't
   started (`participation_closed`, see "Main status"); bookings of started appointments stay for
   the attendance record.
-- Invitations and notices (5b-3) and the work list's appointment items (5b-4) follow
-  [the Slice 5b plan](../plans/slice-5b.md).
+- Invitations and the organizer's notices: data-protection.md, messages about appointments; the
+  work list's items: "Appointment items" above.
+- **Not in the MVP** (v1.1 or later): waiting lists, rescheduling, automatic appointment reminders
+  (Q152), calendar files, booking confirmation messages, video-call links, recurring slot series,
+  letters, the Agentur's own appointments, funded-measure evidence (Q169).
 
 #### Attendance and `informed` *(accepted, Q163, Q164; as built in 5b-2; readings Q173)*
 

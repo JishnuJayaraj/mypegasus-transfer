@@ -76,6 +76,10 @@ Placed in round 39 (Q158): info events and consultation slots; participant self-
 cancellation; attendance; invitations and their message logging; attendance driving the
 authorised `informed` workflow; overdue appointments joining the work list of Slice 5. Only
 appointment polish stays in v1.1.
+**Done** 2026-10-24 (PRs 5b-1 to 5b-4): plan archived in
+[`plans/archive/slice-5b.md`](plans/archive/slice-5b.md); its rules live in ADR-0002, ADR-0010,
+ADR-0011, `domain/data-protection.md`, `domain/process-and-lifecycle.md` and
+`architecture/overview.md`.
 
 ## Slice 6 — Profiling & forms (F6)
 Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,

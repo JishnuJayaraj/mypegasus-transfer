@@ -384,6 +384,22 @@ generator then. No action now.
   is `{ allowed, channel }` (the channel an invitation would go to now, null without a usable
   one). `Appointment.inUse` counts invitations too.
 
+## Note 2026-10-24 (Slice 5b, PR 5b-4): the work list's appointment items
+
+- **The work list and the dashboard:** `WorklistItem.appointments` (`WorklistAppointments`:
+  `next` `{ kind, startsAt }` or null, `items[]` of `AppointmentItem`); `WorklistFilter.appointment`
+  (`AppointmentFilter`); the dashboard's tiles `appointments_overdue`, `appointments_to_resolve`
+  and the group `appointments`, every count with its filter as before.
+- **Resolution:** `POST /appointment-bookings/{id}/missed-resolution` (`MissedResolutionInput`:
+  `{ reason }` → `204`). Order: the schema (400) → visibility (404: the booking, or one of a
+  participation the viewer may not list) → permission (403 without
+  `mayResolveAppointmentItem(missed)`) → state (422 `participation_closed`, `already_resolved`,
+  `not_missed`).
+- **Follow-up:** `BookingInput.followUpOf` (optional): after the booking rules 422
+  `follow_up_not_found`, `follow_up_kind_mismatch`, `follow_up_not_missed` at `/followUpOf`.
+  `ParticipationAppointments.bookings[]` adds `followUpOf`, `missedResolution` and `missed`
+  (`{ followUp, resolve }` capabilities on a missed booking, else null).
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

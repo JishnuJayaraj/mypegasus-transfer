@@ -765,7 +765,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `appointment_created` | project-level | no | no | — |
 | `appointment_changed` | project-level | no | no | — |
 | `appointment_cancelled` | project-level | no | no | — |
-| `appointment_booked` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt`, `origin` |
+| `appointment_booked` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt`, `origin`, `followUpOf` |
 | `appointment_booking_cancelled` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
 | `attendance_recorded` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt`, `attendance`, `previousAttendance`, `afterClose` |
 | `attendance_superseded` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt`, `previousAttendance` |
@@ -773,6 +773,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `attendance_conflict_escalated` | `case` | no | no | `appointmentId`, `appointmentKind`, `startsAt` |
 | `attendance_conflict_resolved` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
 | `appointment_notice_followed_up` | `case` | no | no | `method`, `appointmentId` |
+| `missed_appointment_resolved` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
 
 ## Aggregates
 

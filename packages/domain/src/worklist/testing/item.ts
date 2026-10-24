@@ -24,6 +24,7 @@ export function item(overrides: Partial<WorklistItem> = {}): WorklistItem {
     flags: [],
     portal: "not_reachable",
     reminder: null,
+    appointments: { next: null, items: [] },
     capabilities: {
       assignEntryWave: false,
       issueActivationCode: false,

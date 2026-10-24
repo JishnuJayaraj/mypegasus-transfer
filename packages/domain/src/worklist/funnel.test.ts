@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { activationOf, matchesWorklistFilter, WorklistFilter } from "./filter";
 import { DashboardGroup, funnelFilters, ProjectDashboard, projectFunnel } from "./funnel";
 import { item } from "./testing/item";
+import type { AppointmentItemKind } from "./appointments";
 import type { WorklistItem } from "./projection";
 
 // Synthetic rows.
@@ -13,6 +14,13 @@ const consultant = {
   displayName: "Bernd Beratung",
   assignedAt: "2027-03-01T09:00:00.000Z",
 };
+
+const appointmentItem = (kind: AppointmentItemKind, n: number) => ({
+  kind,
+  appointmentId: id(100 + n),
+  appointmentKind: "info_event" as const,
+  startsAt: "2027-03-01T09:00:00.000Z",
+});
 
 const items: WorklistItem[] = [
   item({ id: id(1) }),
@@ -30,6 +38,15 @@ const items: WorklistItem[] = [
     ],
     flags: ["dsv_never_offered", "informed_without_wave_at_cutoff"],
     portal: "consent_required",
+    // Two items of one kind and a next booking: one participation each time.
+    appointments: {
+      next: { kind: "consultation", startsAt: "2027-03-20T09:00:00.000Z" },
+      items: [
+        appointmentItem("missed", 1),
+        appointmentItem("missed", 2),
+        appointmentItem("attendance_conflict", 3),
+      ],
+    },
   }),
   item({
     id: id(3),
@@ -42,6 +59,7 @@ const items: WorklistItem[] = [
     activationStatus: { account: "activated", code: "none", issuedAt: null, expiresAt: null },
     privacyNoticeState: { state: "due", dueOn: "2027-04-02", providedAt: null },
     portal: "reachable",
+    appointments: { next: null, items: [appointmentItem("notice_undelivered", 4)] },
   }),
   item({
     id: id(4),
@@ -52,6 +70,7 @@ const items: WorklistItem[] = [
       issuedAt: "2027-03-01T09:00:00.000Z",
       expiresAt: "2027-04-01T09:00:00.000Z",
     },
+    appointments: { next: null, items: [appointmentItem("attendance_missing", 5)] },
   }),
 ];
 
@@ -103,6 +122,15 @@ describe("matchesWorklistFilter", () => {
     expect(ids({ portal: "reachable" })).toEqual([id(3)]);
   });
 
+  it("the appointments: upcoming, overdue, to resolve, each kind", () => {
+    expect(ids({ appointment: "upcoming" })).toEqual([id(2)]);
+    expect(ids({ appointment: "overdue" })).toEqual([id(2), id(4)]);
+    expect(ids({ appointment: "to_resolve" })).toEqual([id(2), id(3)]);
+    expect(ids({ appointment: "missed" })).toEqual([id(2)]);
+    expect(ids({ appointment: "needs_resolution" })).toEqual([]);
+    expect(ids({ appointment: "overdue", status: "withdrawn" })).toEqual([id(4)]);
+  });
+
   it("is strict and takes codes and ids only", () => {
     expect(WorklistFilter.safeParse({ name: "Muster" }).success).toBe(false);
     expect(WorklistFilter.safeParse({ wave: "W1" }).success).toBe(false);
@@ -136,6 +164,8 @@ describe("projectFunnel", () => {
       deadline_overdue: 1,
       flags: 1,
       not_reachable: 2,
+      appointments_overdue: 2,
+      appointments_to_resolve: 2,
     });
   });
 
@@ -149,6 +179,20 @@ describe("projectFunnel", () => {
       "dsv_never_offered",
       "informed_without_wave_at_cutoff",
       "profiling_declined_after_entry",
+    ]);
+  });
+
+  it("has the group Termine: one count per appointment filter", () => {
+    const appointments = projectFunnel(items, project).appointments;
+    expect(appointments.map((a) => [a.key, a.count])).toEqual([
+      ["upcoming", 1],
+      ["overdue", 2],
+      ["to_resolve", 2],
+      ["attendance_missing", 1],
+      ["missed", 1],
+      ["notice_undelivered", 1],
+      ["needs_resolution", 0],
+      ["attendance_conflict", 1],
     ]);
   });
 

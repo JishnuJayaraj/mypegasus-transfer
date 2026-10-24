@@ -18,6 +18,7 @@ import {
   instant,
   SeatAvailability,
 } from "./model";
+import { MissedResolution } from "../worklist/appointments";
 
 // The appointment routes (ADR-0010; data-protection.md, appointments). Codes, ids, times and the
 // generic title and venue; a booking's person fields only where the viewer may list them.
@@ -174,6 +175,14 @@ export const ParticipationAppointments = z
         cancelReason: BookingCancelReason.nullable(),
         cancelledAt: instant.nullable(),
         ...bookingAttendance,
+        /** The missed consultation booking this one follows up. */
+        followUpOf: z.uuid().nullable(),
+        missedResolution: MissedResolution.nullable(),
+        /**
+         * A missed appointment (the work list's `missed`): "Folgetermin buchen" and "Keine weitere
+         * Nachverfolgung" by capability; null for any other booking.
+         */
+        missed: z.strictObject({ followUp: z.boolean(), resolve: z.boolean() }).nullable(),
         capabilities: BookingCapabilities,
       }),
     ),
@@ -248,6 +257,11 @@ export const InformedInput = z
 export const InformedResult = z
   .strictObject({ statusChanges: z.int().min(0) })
   .meta({ id: "InformedResult" });
+
+/** "Keine weitere Nachverfolgung" on a missed appointment (Q167): a closed reason. */
+export const MissedResolutionInput = z
+  .strictObject({ reason: MissedResolution })
+  .meta({ id: "MissedResolutionInput" });
 
 /** The PL's review of a conflict (Q163). */
 export const ConflictReviewInput = z

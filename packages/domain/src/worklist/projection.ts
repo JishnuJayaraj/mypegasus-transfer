@@ -28,6 +28,12 @@ import {
   type ReminderStatus,
 } from "../reminders/model";
 import { participantActions, ParticipantAction, type ActionFacts } from "./actions";
+import {
+  appointmentItems,
+  WorklistAppointments,
+  type AppointmentItemBooking,
+  type AppointmentItemNotice,
+} from "./appointments";
 import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
 
 // The work list (data-protection.md, the work list and the dashboard): one projection of a
@@ -77,6 +83,8 @@ export const WorklistItem = z
     portal: PortalReach,
     /** The latest reminder requested for the participation, whatever its outcome. */
     reminder: WorklistReminder.nullable(),
+    /** The next booking and the appointment items (staff work, never a participant action). */
+    appointments: WorklistAppointments,
     capabilities: WorklistCapabilities,
   })
   .meta({ id: "WorklistItem" });
@@ -103,6 +111,12 @@ export type WorklistFacts = Pick<
   completeness: ActionFacts;
   channels: readonly ReminderChannelFacts[];
   lastReminder: { requestedOn: IsoDate; status: ReminderStatus } | null;
+  appointments: {
+    bookings: readonly AppointmentItemBooking[];
+    notices: readonly AppointmentItemNotice[];
+    /** When the participation became terminal; null while it isn't. */
+    closedAt: string | null;
+  };
 };
 
 export type WorklistProject = PlannerProject & { id: string };
@@ -187,6 +201,14 @@ export function worklistProjection(
     reminder: facts.lastReminder
       ? { lastRequestedOn: facts.lastReminder.requestedOn, status: facts.lastReminder.status }
       : null,
+    appointments: appointmentItems(
+      facts.appointments.bookings,
+      facts.appointments.notices,
+      current.status,
+      facts.appointments.closedAt,
+      now.toISOString(),
+      today,
+    ),
     capabilities: {
       assignEntryWave: wave.allowed,
       issueActivationCode: viewer.may("issueActivationCode"),

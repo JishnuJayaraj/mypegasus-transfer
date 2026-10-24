@@ -1,7 +1,7 @@
 # Decisions — 2026-10-23, round 41 (Slice 5b, PR 5b-1 readings, Q170–Q172)
 
 The product owner answered the three questions PR 5b-1 (#83) raised where
-[the Slice 5b plan](../plans/slice-5b.md) didn't decide. Like rounds 32–40, these are pilot
+[the Slice 5b plan](../plans/archive/slice-5b.md) didn't decide. Like rounds 32–40, these are pilot
 answers in the placeholder roles for development and testing on synthetic data. Q170 and Q171 are
 `accepted` (Q170 with amendments), Q172 is `accepted` as amended in `open-questions.md`.
 

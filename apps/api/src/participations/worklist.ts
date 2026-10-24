@@ -32,6 +32,7 @@ import {
   type WorklistProject,
 } from "@transfer/domain";
 import { projectAccess, projectTarget } from "../access";
+import { itemBookingsOf, itemNoticesOf } from "../appointments/items";
 import type { Release } from "../projects/template-pins";
 import type { GuardFactsProvider } from "./guard-facts";
 import { consultantsOf, listStatesOf } from "./list-states";
@@ -119,7 +120,9 @@ export async function loadWorklist(
       if (rows.length > worklistMaxRows) return { kind: "too_large" as const };
       const ids = rows.map(({ p }) => p.id);
       const requestIds = rows.flatMap(({ p }) => p.profilingExceptionRequestId ?? []);
-      const [consultants, states, records, channels, reminders, requests] = [
+      // The appointment items' host rule is the PL's (as on the appointment page).
+      const resolvesHosts = subject.projectRoles[projectId]?.has("project_lead") ?? false;
+      const [consultants, states, records, channels, reminders, requests, bookings, notices] = [
         await consultantsOf(tx, ids),
         await listStatesOf(tx, clock, ids, new Map(rows.map((r) => [r.p.id, r.receivedOn]))),
         await loadSelfServiceRecords(tx, release, projectId, ids),
@@ -131,6 +134,8 @@ export async function loadWorklist(
               .from(profilingExceptionRequest)
               .where(inArray(profilingExceptionRequest.id, requestIds))
           : [],
+        await itemBookingsOf(tx, projectId, ids, resolvesHosts),
+        await itemNoticesOf(tx, ids),
       ];
       const worklistProject: WorklistProject = { id: projectId, type: found!.type, waves };
       const items: WorklistItem[] = [];
@@ -162,6 +167,13 @@ export async function loadWorklist(
               },
               channels: channels.get(p.id) ?? [],
               lastReminder: reminders.get(p.id) ?? null,
+              appointments: {
+                bookings: bookings.get(p.id) ?? [],
+                notices: notices.get(p.id) ?? [],
+                // The terminal change cancels the bookings of appointments that hadn't started,
+                // so a closed participation's live bookings all started before its close.
+                closedAt: null,
+              },
             },
             {
               current: {

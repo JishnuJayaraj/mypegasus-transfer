@@ -492,6 +492,7 @@ describe("book_appointment", () => {
       appointmentKind: "info_event",
       startsAt: new Date(a.starts_at).toISOString(),
       origin: "staff",
+      followUpOf: null,
     });
   });
 
@@ -705,6 +706,7 @@ describe("the audit trail", () => {
       expect(Object.keys(shown[1].details).toSorted()).toEqual([
         "appointmentId",
         "appointmentKind",
+        "followUpOf",
         "origin",
         "startsAt",
       ]);

@@ -543,7 +543,8 @@
       "open": "Offen",
       "deadline": "Frist",
       "portal": "Portal",
-      "reminded": "Erinnert"
+      "reminded": "Erinnert",
+      "appointment": "Termin"
     },
     "statuses": {
       "imported": "Importiert",
@@ -1243,7 +1244,8 @@
       "none": "Ohne",
       "noWave": "Ohne Welle",
       "noConsultant": "Nicht zugewiesen",
-      "anyFlag": "Mit Hinweis"
+      "anyFlag": "Mit Hinweis",
+      "appointment": "Termine"
     },
     "actionsFilter": {
       "any": "Mit offenen Angaben oder Unterlagen",
@@ -1306,7 +1308,27 @@
       "provided": "Bereitgestellt",
       "due": "Fällig",
       "overdue": "Überfällig"
-    }
+    },
+    "appointmentFilter": {
+      "upcoming": "Termin anstehend",
+      "overdue": "Termine überfällig",
+      "to_resolve": "Termine zu klären",
+      "attendance_missing": "Teilnahme nicht erfasst",
+      "missed": "Nicht erschienen",
+      "notice_undelivered": "Nachricht nicht zugestellt",
+      "needs_resolution": "Klärung nötig",
+      "attendance_conflict": "Widerspruch zu klären"
+    },
+    "appointmentItems": {
+      "attendance_missing": "Teilnahme nicht erfasst",
+      "missed": "Nicht erschienen",
+      "notice_undelivered": "Nachricht nicht zugestellt",
+      "needs_resolution": "Klärung nötig",
+      "attendance_conflict": "Widerspruch zu klären"
+    },
+    "appointmentItem": "{{kind}} vom {{date}}",
+    "appointmentNext": "{{kind}} am {{date}}, {{time}} Uhr",
+    "appointmentMore": "+{{count}} weitere"
   },
   "dashboard": {
     "title": "Übersicht",
@@ -1321,7 +1343,9 @@
       "deadline_upcoming": "Frist in 14 Tagen",
       "deadline_overdue": "Frist überschritten",
       "flags": "Hinweise",
-      "not_reachable": "nicht erreichbar"
+      "not_reachable": "nicht erreichbar",
+      "appointments_overdue": "Termine überfällig",
+      "appointments_to_resolve": "Termine zu klären"
     },
     "groups": {
       "statuses": "Status",
@@ -1332,7 +1356,8 @@
       "notice": "Datenschutzhinweis",
       "deadlines": "Fristen",
       "flags": "Hinweise",
-      "portal": "Portal"
+      "portal": "Portal",
+      "appointments": "Termine"
     },
     "columns": {
       "label": "Bezeichnung",
@@ -1539,7 +1564,8 @@
       "information_delivery_confirmed": "Information bestätigt",
       "attendance_conflict_escalated": "Widerspruch eskaliert",
       "attendance_conflict_resolved": "Widerspruch geklärt",
-      "appointment_notice_followed_up": "Nachverfolgung einer Terminnachricht"
+      "appointment_notice_followed_up": "Nachverfolgung einer Terminnachricht",
+      "missed_appointment_resolved": "Versäumter Termin ohne weitere Nachverfolgung"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1598,14 +1624,17 @@
       "information_delivered_otherwise": "Anderweitig informiert",
       "no_channel": "Kein Kontaktweg",
       "consent_required": "Keine Einwilligung in Benachrichtigungen",
-      "appointment_unavailable": "Termin nicht mehr buchbar"
+      "appointment_unavailable": "Termin nicht mehr buchbar",
+      "participant_declined": "Teilnehmende Person lehnt ab",
+      "no_longer_needed": "Nicht mehr erforderlich"
     },
     "appointment": "{{kind}} am {{start}}",
     "appointmentBy": "{{kind}} am {{start}} ({{origin}})",
     "afterClose": "(nach Abschluss der Teilnahme)",
     "withStatusChange": "(mit Statusänderung)",
     "asBasis": "(als Grundlage, ohne Statusänderung)",
-    "messageFor": "{{kind}} am {{start}}"
+    "messageFor": "{{kind}} am {{start}}",
+    "followUp": "Folgetermin"
   },
   "appointments": {
     "title": "Termine",
@@ -1726,7 +1755,12 @@
       "no_conflict": "Hier ist nichts zu klären.",
       "already_escalated": "Schon eskaliert.",
       "actor_not_allowed": "Dazu fehlt Ihnen die Berechtigung.",
-      "duplicate_entry": "Diese Person ist doppelt aufgeführt."
+      "duplicate_entry": "Diese Person ist doppelt aufgeführt.",
+      "follow_up_not_found": "Der versäumte Termin gehört nicht zu dieser Teilnahme.",
+      "follow_up_kind_mismatch": "Ein Beratungstermin wird nur durch einen Beratungstermin nachgeholt.",
+      "follow_up_not_missed": "Dieser Termin ist nicht mehr offen: schon nachgeholt oder geklärt.",
+      "already_resolved": "Die Nachverfolgung ist schon beendet.",
+      "not_missed": "Dieser Termin ist nicht als versäumt offen."
     },
     "form": {
       "createTitle": {
@@ -1818,7 +1852,26 @@
         "actions": "Aktionen"
       },
       "book": "Buchen",
-      "cancel": "Buchung absagen"
+      "cancel": "Buchung absagen",
+      "missed": {
+        "open": "Nicht erschienen, Nachverfolgung offen",
+        "resolved": "Keine weitere Nachverfolgung: {{reason}}",
+        "followUpOf": "Folgetermin",
+        "followUp": "Folgetermin buchen",
+        "followUpHint": "Folgetermin für den versäumten Termin vom {{date}}: buchen Sie unten einen Termin dieser Art ({{kind}}).",
+        "followUpCancel": "Ohne Folgetermin zurück",
+        "resolve": "Keine weitere Nachverfolgung",
+        "resolveTitle": "Keine weitere Nachverfolgung",
+        "resolveText": "Der versäumte Termin wird danach nicht mehr in der Arbeitsliste geführt.",
+        "reason": "Grund",
+        "chooseReason": "Grund wählen",
+        "reasons": {
+          "participant_declined": "Teilnehmende Person lehnt ab",
+          "information_delivered_otherwise": "Anderweitig informiert",
+          "no_longer_needed": "Nicht mehr erforderlich"
+        },
+        "done": "Nachverfolgung beendet"
+      }
     },
     "attendance": {
       "record": "Teilnahme erfassen",

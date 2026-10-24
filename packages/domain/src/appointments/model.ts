@@ -158,9 +158,12 @@ export const AppointmentCancelInput = z
   .strictObject({ reason: AppointmentCancelReason })
   .meta({ id: "AppointmentCancelInput" });
 
-/** `POST /appointments/{id}/bookings`: staff book one participation. */
+/**
+ * `POST /appointments/{id}/bookings`: staff book one participation; a consultation may follow up
+ * the participation's missed consultation (its booking, `followUpOf`).
+ */
 export const BookingInput = z
-  .strictObject({ participationId: z.uuid() })
+  .strictObject({ participationId: z.uuid(), followUpOf: z.uuid().optional() })
   .meta({ id: "BookingInput" });
 
 const utcParts = new Intl.DateTimeFormat("en-CA", {
