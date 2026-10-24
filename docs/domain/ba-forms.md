@@ -18,7 +18,9 @@ names, checked against the copies we received on 2026-10-15.
 - Version: `Kug 200b - 09/2021`, 1 page, 20 fields.
 - Purpose: the participant registers as job-seeking **in writing through the TG**, and
   acknowledges that the TG gets selective access to their applicant profile at the Agentur.
-  This is the form behind the "batch" registration at info events.
+  This is the form behind the "batch" registration at info events. The batch goes to the Agentur
+  with the official **Kug 200a** (07/2025; BA guidance of 4 May 2026, section 2.13(12)) unless the
+  Agentur's acceptance of an alternative is recorded (Q187, Q195).
 - Only for §111 (TG) cases. In TA-only projects participants register themselves.
 - Signature: handwritten (field 20, no AcroForm field).
 
@@ -87,5 +89,9 @@ siehe Anlage".
 
 The Jobbörse choice (field 50: `full`, `anonymous_callme`, `anonymous_no_contact`, `none`) and
 the BA contact/research consent (notes on the contact fields) are stored on the profiling record
-with date and form version. They are not our consents (Q44). The Kug 200b acknowledgement of TG
-access to the BA profile **is** stored as our own consent record.
+with date and form version. They are not our consents (Q44). What was signed binds to the paper:
+pending values may change until a signed form is accepted, which records the values actually
+marked on it, its form version and signature date, and a later edit never rewrites them (Q193).
+The Kug 200b acknowledgement of TG access to the BA profile (declaration 17) is recorded as
+written and kept as the record `kug200b_profile_access`; whether it is a consent is to verify
+(Q185).

@@ -73,10 +73,16 @@ Agentur".
   `project_has_participations`, `project_has_waves`).
 - **TG start and end are per participation**, defaulting from the participation's entry wave (Q18, Q79). TL 407 needs
   both ("voraussichtliche Verweildauer in der beE von/bis").
-- **ASU due date** *(verify, Q1)*: `asuDueDate = max(endDate − 3 months, knowledgeDate + 3 days)`,
-  where `endDate` is the end of the old employment and `knowledgeDate` is when the person
-  learned of it. To subtract months, clamp to the last day of the target month
-  (31.05. → 28./29.02., 31.12. → 30.09.). The later date applies.
+- **ASU due date** *(verify, Q1; corrected 2026-10-24, Q178)*: the two branches of §38(1)
+  SGB III, where `endDate` is the end of the old employment and `knowledgeDate` is when the person
+  learned of it. The reference date is `endDate − 3 months` (to subtract months, clamp to the last
+  day of the target month: 31.05. → 28./29.02., 31.12. → 30.09.). Knowledge on or before the
+  reference date → due on the reference date; knowledge after it (less than three months before
+  the end) → due 3 days after the knowledge. The earlier unconditional `max(endDate − 3 months,
+  knowledgeDate + 3 days)` is wrong (end 30.06.2027, knowledge 29.03.2027: due 30.03.2027, not
+  01.04.2027); the code follows it until Slice 6 replaces it. Without a knowledge date the due date
+  is unknown: the reference date is only an orientation, never an overdue finding. Calendar,
+  boundary, weekend/holiday and unusual cases stay under Q1.
 - **Signing and entry deadlines come from the Sozialplan / DSV / entry wave** (Q69), never from
   an Agentur template and never invented by the system.
 - **Entry waves** (Q79): every `ta_tg` project has **one or more entry waves**, each with a
