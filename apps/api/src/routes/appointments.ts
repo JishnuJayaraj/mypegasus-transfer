@@ -146,7 +146,7 @@ const stateCodes = new Set([
   "already_escalated",
   // Invitations (data-protection.md, invitations)
   "booking_closed",
-  // The work list's missed appointments (process-and-lifecycle.md, appointments)
+  // The work list's missed appointments (process-and-lifecycle.md, appointment items)
   "follow_up_not_found",
   "follow_up_kind_mismatch",
   "follow_up_not_missed",
@@ -726,11 +726,12 @@ export function appointmentRoutes(deps: Deps) {
       });
       if (eligibility.code !== "ok") return refused(c, eligibility.code);
       // A consultation following up the participation's missed one (process-and-lifecycle.md,
-      // appointments: the work list).
+      // appointment items).
       if (followUpOf) {
-        const items = (await itemBookingsOf(db, row.projectId, [participationId], false)).get(
-          participationId,
-        )!;
+        const items =
+          (await itemBookingsOf(db, row.projectId, [participationId], false)).get(
+            participationId,
+          ) ?? [];
         const followed = items.find((item) => item.id === followUpOf);
         const code = followed ? followUpRefusal(followed, items, row.kind) : "follow_up_not_found";
         if (code) return refused(c, code);
@@ -891,10 +892,11 @@ export function appointmentRoutes(deps: Deps) {
         ),
         participationLiveBookings(db, participationId),
       ]);
-      // The work list's missed appointments (process-and-lifecycle.md, appointments).
-      const items = (await itemBookingsOf(db, facts.projectId, [participationId], false)).get(
-        participationId,
-      )!;
+      // The work list's missed appointments (process-and-lifecycle.md, appointment items).
+      const items =
+        (await itemBookingsOf(db, facts.projectId, [participationId], false)).get(
+          participationId,
+        ) ?? [];
       const missed = terminalMainStatuses.has(facts.status)
         ? new Set<string>()
         : missedBookings(items);
@@ -1171,9 +1173,9 @@ export function appointmentRoutes(deps: Deps) {
       if (!mayResolveAppointmentItem(viewer.subject, target, "missed").ok) {
         return problem(c, "forbidden");
       }
-      const items = (await itemBookingsOf(db, row.projectId, [participationId], false)).get(
-        participationId,
-      )!;
+      const items =
+        (await itemBookingsOf(db, row.projectId, [participationId], false)).get(participationId) ??
+        [];
       const code = missedResolutionRefusal(
         items.find((item) => item.id === bookingId)!,
         items,

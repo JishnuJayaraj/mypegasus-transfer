@@ -281,3 +281,23 @@ describe("POST /appointments/{id}/bookings with followUpOf", () => {
     expect(kindsOf(row(await items(), p))).toEqual(["missed", "notice_undelivered"]);
   });
 });
+
+describe("a participation without bookings", () => {
+  it("has an empty tab and no follow-up to link", async () => {
+    const p = await participation();
+    const tab = await readJson(
+      await get(`/participations/${p}/appointments`),
+      ParticipationAppointments,
+    );
+    expect(tab.bookings).toEqual([]);
+    const slot = await appointment("consultation", 72, []);
+    expect(
+      await codes(
+        await post(`/appointments/${slot.id}/bookings`, {
+          participationId: p,
+          followUpOf: randomUUID(),
+        }),
+      ),
+    ).toEqual([{ code: "follow_up_not_found", pointer: "/followUpOf" }]);
+  });
+});
