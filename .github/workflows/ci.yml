@@ -31,19 +31,20 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       # The committed OpenAPI document and client types must match the API (ADR-0010), the
-      # generated docs tables the domain code, the config JSON Schema the Zod model and the
-      # template manifest the template files.
+      # generated docs tables the domain code, the config JSON Schema the Zod model, the
+      # template manifest the template files and the forms manifest the form registry (ADR-0009).
       - name: Generated files drift
         run: |
           pnpm generate
-          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema packages/config/templates/manifest.json docs/domain/generated
+          git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema packages/config/templates/manifest.json packages/forms/templates/manifest.json docs/domain/generated
 
   lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      # Existing template versions must be unchanged against the PR's base, or on main against
-      # the previous commit (Slice 2 plan 5.8); the check fails under CI without it.
+      # Existing template and form versions must be unchanged against the PR's base, or on main
+      # against the previous commit (regional-variation.md, template versions; ADR-0009); the
+      # check fails under CI without it.
       TEMPLATE_BASE_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,7 +59,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Oxlint, Oxfmt check, the guard against ignoreDeprecations in tsconfig*.json and the
-      # template immutability check
+      # template and form immutability check
       - run: pnpm lint
 
   test:
@@ -80,11 +81,17 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+      # The Gotenberg contract test of the PDF adapter (ADR-0006); the tag is pinned by digest.
+      gotenberg:
+        image: gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c
+        ports:
+          - 3000:3000
     env:
       # Dev roles with non-secret dev passwords (.env.example); tests switch to transfer_test.
       DATABASE_URL: postgres://transfer_app:transfer_app_dev@localhost:5432/transfer
       DATABASE_MIGRATION_URL: postgres://transfer_owner:transfer_owner_dev@localhost:5432/transfer
       DATABASE_ADMIN_URL: postgres://postgres:postgres@localhost:5432/postgres
+      GOTENBERG_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

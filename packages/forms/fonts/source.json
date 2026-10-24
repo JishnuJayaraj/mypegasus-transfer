@@ -1,0 +1,11 @@
+{
+  "family": "Noto Sans Regular",
+  "license": "SIL Open Font License 1.1 (OFL.txt)",
+  "sourceUrl": "https://raw.githubusercontent.com/notofonts/notofonts.github.io/main/fonts/NotoSans/hinted/ttf/NotoSans-Regular.ttf",
+  "sourceVersion": "2.015",
+  "sourceSha256": "478c558ea716033cd60c03438f628dfa75694dcf6b5f6d505a2f05fd2b4f3823",
+  "retrievedOn": "2026-10-24",
+  "subsetTool": "fonttools 4.60.1",
+  "subsetCommand": "pyftsubset NotoSans-Regular.ttf --unicodes=U+0020-007E,U+00A0-024F,U+0259,U+02BB-02BC,U+02C6-02C7,U+02D8-02DD,U+0300-036F,U+1E00-1EFF,U+2010-2027,U+2030-203A,U+20AC,U+2116,U+2122 --no-hinting --layout-features= --drop-tables+=GSUB,GPOS,GDEF --name-IDs=* --notdef-outline --output-file=noto-sans-subset.ttf",
+  "sha256": "ab18e625ce78c1f8da65b47ed279ae3cde8fe430e34a33610fa672b0ec7b77c2"
+}

@@ -90,17 +90,28 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   hash, the fictional sample templates in `templates/<agenturKey>/<version>.json` (immutable once
   merged; `pnpm lint` checks against `origin/main`, in CI the PR's base) and their generated
   `manifest.json`. It also owns `organisation.json`, the validated controller and DPO details
-  interpolated into immutable Article 14 notice templates (synthetic values in the repository).
+  interpolated into immutable Article 14 notice templates and, from Slice 6, the delivering legal
+  entity `transfergesellschaft` (name and address: the TL 407's Maßnahmeträger and the Kug 200b's
+  TG; synthetic values in the repository).
 - `packages/adapters`: interfaces + implementations behind them (ADR-0006). `Clock` (system,
   manual, Berlin dates and run times); `Mailer` and `SmsSender` contracts and their idempotent
   last-100 development outbox; `FileStorage` (memory for tests, filesystem under `STORAGE_DIR`
   for development and e2e, one shared contract test) and `VirusScanner` (a mock: EICAR infected,
-  an encrypted PDF unscannable) from Slice 4b. None of the mocks is wired in production. Real
-  mail/SMS providers, S3 storage, ClamAV, pdf and export come with the slices that need them.
+  an encrypted PDF unscannable) from Slice 4b. From Slice 6 `PdfRenderer` (pdf-lib fill and
+  flatten with the embedded font, Gotenberg or a text mock for HTML, `mergePdfs`, `imageToPdf`)
+  and `Exporter` (CSV), ADR-0006. None of the mocks is wired in production. Real mail/SMS
+  providers, S3 storage and ClamAV come with the slices that need them.
   The API encrypts document files before they reach the store (`apps/api/src/
   document-encryption.ts`, `DOCUMENT_ENCRYPTION_KEY`).
-- `packages/forms` (Slice 6): official BA form templates (blank PDF, field map, manifest),
-  ADR-0009.
+- `packages/forms` (Slice 6): the form registry (ADR-0009). Per official form version
+  `templates/ba/<formCode>/<version>/` the BA's unchanged `blank.pdf`, its `source.json`, our
+  `manifest.json` (effective dates, SHA-256) and `field-map.json`: TL 407 08/2025, Kug 200b
+  09/2021, Kug 200a 07/2025. Our HTML templates in `templates/own/<name>/v<n>/`
+  (`anlage-profilingbogen:v1`), the generated `templates/manifest.json` (drift-checked), the
+  Noto Sans subset in `fonts/` (OFL). `@transfer/forms/load` (Node only) reads and checks the
+  files; the rules (form input, validation, row order, overflow, the Anlage) are in
+  `packages/domain/src/forms` (ba-forms.md, the registry as built). Merged versions are immutable
+  like the Agentur templates.
 - `fixtures/`: synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV
   import).
 

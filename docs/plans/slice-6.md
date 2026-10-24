@@ -9,8 +9,9 @@ meaning of Kug 200b declaration 17, the health-detail gate, signed declarations 
 the readiness projection, the export lifecycle and the working copies' expiry. Q176 is resolved
 (the blanks are in `packages/forms`); Q177–Q194 carry the review's answers (`accepted`; Q181, Q182
 and Q185 `verify` for their Agentur or legal check; 🔒 rows still need their DPO confirmation
-before the pilot). New: Q195 (`open`, the Kug 200a blank and fields). Q1 stays `verify`. This is
-not an external DPO, legal, works-council or Agentur confirmation.
+before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was committed and
+checked in PR 6-1, which also opened Q196 and Q197. Q1 stays `verify`. This is not an external
+DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
 `PdfRenderer`, ADR-0006), the overflow attachment, scan upload, Agentur submission status; from
@@ -681,6 +682,9 @@ a file name, a form's content or a token.
 - The profiling track by the PL and the assigned consultant, refused by back office; `profiling_done`
   refused on `tl407_signed` until 6-3; `track_inactive` as built.
 - Sessions: overlap, from ≥ to and a future date refused; stale revision `409`.
+- The highest school qualification (Q196): the participant marks one education row, the profiler
+  confirms or corrects it (self-service and assisted permissions); it is persisted and passed to
+  `orderEducation` as `kind: "school"`, never inferred. Needed before 6-3 enables generation.
 
 **6-3**
 - Readiness: the profiler gets codes, warnings and overflow (each decryption audited); the PL gets
@@ -693,6 +697,8 @@ a file name, a form's content or a token.
   `profiling_done` refused on a quarantined scan; lifting restores it.
 - The PL deletes a scan before its review; an accepted one is `document_immutable`.
 - e2e: session, generation, scan, acceptance, `profiling_done`.
+- Generation refuses without the persisted school designation of 6-2 (Q196); an unsupported
+  character is explained per field and points to the external-paper path (Q197).
 
 **6-4**
 - `asuDueDate`: both branches and their boundary; month-end clamps; no knowledge date gives the
@@ -706,11 +712,15 @@ a file name, a form's content or a token.
 - The rules with `when` apply only on the route `kug_200b`; a declined offer is never missing.
 - Exports: the download re-authorizes, refuses a quarantined document, writes `export_downloaded`;
   no file is stored; bulk generation of 100 is all or nothing.
+- Before printing, a handwriting/clarification checklist shows the Kug 200b's blank `*` fields
+  and every `text_not_fitting` field (Q197); nothing disappears silently.
 
 **6-5a**
 - The Kug 200a fills from its field map and reads back; with a recorded accepted alternative the
   batch uses the alternative list as its artifact and says so; the index is never the artifact.
 - Rechecks refuse a stale batch with its rows; races and the terminal member as D33.
+- The Kug 200a's 6 pt minimum is assessed on representative filled PDFs before it is used
+  (Q197).
 
 **6-5b**
 - Submission refused with the blocker, and for an expired version only where the Agentur rejects

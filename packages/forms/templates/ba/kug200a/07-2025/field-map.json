@@ -1,0 +1,260 @@
+{
+  "formCode": "kug200a",
+  "version": "07-2025",
+  "label": "Kug 200a 07/2025",
+  "fontSize": 8,
+  "minFontSize": 6,
+  "missingRequired": "blank",
+  "anlage": null,
+  "entries": [
+    {
+      "key": "tgName",
+      "label": "Bezeichnung der Transfergesellschaft",
+      "kind": "text",
+      "fields": ["txtfTGBezeichnung"],
+      "required": false,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "tgBetriebsnummer",
+      "label": "Betriebsnummer der Transfergesellschaft",
+      "kind": "text",
+      "fields": ["txtfTGBetriebNr"],
+      "required": false,
+      "box": {
+        "width": 117,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "tgKugNumber",
+      "label": "T-Kug-Nummer",
+      "kind": "text",
+      "fields": ["txtfTGKugNr"],
+      "required": false,
+      "box": {
+        "width": 127,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "tgEconomicClass",
+      "label": "Branche/Wirtschaftsklasse der Transfergesellschaft",
+      "kind": "text",
+      "fields": ["txtfTGWK"],
+      "required": false,
+      "box": {
+        "width": 216,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "employerName",
+      "label": "Bezeichnung des personalabgebenden Betriebes",
+      "kind": "text",
+      "fields": ["txtfPABBezeichnung"],
+      "required": false,
+      "box": {
+        "width": 243,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "employerBetriebsnummer",
+      "label": "Betriebsnummer des personalabgebenden Betriebes",
+      "kind": "text",
+      "fields": ["txtfPABetriebNr"],
+      "required": false,
+      "box": {
+        "width": 117,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "employerEconomicClass",
+      "label": "Branche/WK des personalabgebenden Betriebes",
+      "kind": "text",
+      "fields": ["txtfPABWK"],
+      "required": false,
+      "box": {
+        "width": 216,
+        "height": 18
+      },
+      "multiline": false,
+      "fontSize": 9
+    },
+    {
+      "key": "infoEventDate",
+      "label": "Teilnahme an der Info-Veranstaltung, Datum am",
+      "kind": "date",
+      "fields": ["dateTNVeranstaltung"],
+      "required": false
+    },
+    {
+      "kind": "table",
+      "key": "participants",
+      "label": "Liste der Teilnehmenden",
+      "required": false,
+      "rows": 6,
+      "columns": [
+        {
+          "key": "personalData",
+          "label": "Nachname, Vorname, Straße, Hausnummer, Postleitzahl, Ort",
+          "kind": "text",
+          "fields": [
+            "txtareaTNPersDatenZ1",
+            "txtareaTNPersDatenZ2",
+            "txtareaTNPersDatenZ3",
+            "txtareaTNPersDatenZ4",
+            "txtareaTNPersDatenZ5",
+            "txtareaTNPersDatenZ6"
+          ],
+          "box": {
+            "width": 120,
+            "height": 60
+          },
+          "multiline": true
+        },
+        {
+          "key": "insuranceNumber",
+          "label": "Versicherungsnummer (VSNR)",
+          "kind": "text",
+          "fields": [
+            "txtfTNVsNrZ1",
+            "txtfTNVsNrZ2",
+            "txtfTNVsNrZ3",
+            "txtfTNVsNrZ4",
+            "txtfTNVsNrZ5",
+            "txtfTNVsNrZ6"
+          ],
+          "box": {
+            "width": 75,
+            "height": 18
+          },
+          "multiline": false,
+          "identifier": {
+            "maxLength": 12
+          }
+        },
+        {
+          "key": "lastActivity",
+          "label": "Zuletzt ausgeübte Tätigkeit beim Arbeitgeber",
+          "kind": "text",
+          "fields": [
+            "txtareaTNTaetigkeitZ1",
+            "txtareaTNTaetigkeitZ2",
+            "txtareaTNTaetigkeitZ3",
+            "txtareaTNTaetigkeitZ4",
+            "txtareaTNTaetigkeitZ5",
+            "txtareaTNTaetigkeitZ6"
+          ],
+          "box": {
+            "width": 81,
+            "height": 60
+          },
+          "multiline": true
+        },
+        {
+          "key": "lastActivityPeriod",
+          "label": "Zeitraum der zuletzt ausgeübten Tätigkeit",
+          "kind": "text",
+          "fields": [
+            "txtareaTNZeitTaetigZ1",
+            "txtareaTNZeitTaetigZ2",
+            "txtareaTNZeitTaetigZ3",
+            "txtareaTNZeitTaetigZ4",
+            "txtareaTNZeitTaetigZ5",
+            "txtareaTNZeitTaetigZ6"
+          ],
+          "box": {
+            "width": 81,
+            "height": 60
+          },
+          "multiline": true
+        },
+        {
+          "key": "plannedTgPeriod",
+          "label": "Geplanter Zeitraum der Beschäftigung in der Transfergesellschaft",
+          "kind": "text",
+          "fields": [
+            "txtareaTNZeitBeschaeftigtZ1",
+            "txtareaTNZeitBeschaeftigtZ2",
+            "txtareaTNZeitBeschaeftigtZ3",
+            "txtareaTNZeitBeschaeftigtZ4",
+            "txtareaTNZeitBeschaeftigtZ5",
+            "txtareaTNZeitBeschaeftigtZ6"
+          ],
+          "box": {
+            "width": 87,
+            "height": 60
+          },
+          "multiline": true
+        },
+        {
+          "key": "declarationAttached",
+          "label": "Erklärung zur schriftlichen Arbeitsuchendmeldung ist beigefügt",
+          "kind": "checkbox",
+          "fields": [
+            "chbxTNErklaerungZ1",
+            "chbxTNErklaerungZ2",
+            "chbxTNErklaerungZ3",
+            "chbxTNErklaerungZ4",
+            "chbxTNErklaerungZ5",
+            "chbxTNErklaerungZ6"
+          ],
+          "onState": "selektiert"
+        },
+        {
+          "key": "consentDeclaration",
+          "label": "Einverständniserklärung zur Einschaltung eines Dritten",
+          "kind": "checkbox_choice",
+          "fields": [
+            "chbxTNEinverstaendnisZ1",
+            "chbxTNEinverstaendnisZ2",
+            "chbxTNEinverstaendnisZ3",
+            "chbxTNEinverstaendnisZ4",
+            "chbxTNEinverstaendnisZ5",
+            "chbxTNEinverstaendnisZ6"
+          ],
+          "options": {
+            "attached": "ist beigefuegt",
+            "not_available": "liegt nicht vor"
+          }
+        },
+        {
+          "key": "infoEventAttended",
+          "label": "Teilnahme an der Info-Veranstaltung",
+          "kind": "checkbox",
+          "fields": [
+            "chbxTNTeilnahmeZ1",
+            "chbxTNTeilnahmeZ2",
+            "chbxTNTeilnahmeZ3",
+            "chbxTNTeilnahmeZ4",
+            "chbxTNTeilnahmeZ5",
+            "chbxTNTeilnahmeZ6"
+          ],
+          "onState": "selektiert"
+        }
+      ],
+      "dateRanges": [],
+      "timeRanges": []
+    }
+  ],
+  "dateRanges": [],
+  "neverFilled": []
+}

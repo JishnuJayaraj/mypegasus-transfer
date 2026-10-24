@@ -129,3 +129,37 @@ Not adapters:
   (from PR 4b-2) until an S3-compatible store (Hetzner Object Storage or MinIO in the cluster,
   no public access, versions and backups kept ≤ 30 days) and a ClamAV scanner exist with their
   contract tests and AVV chain (pre-pilot, Q149).
+
+## As built 2026-10-24: `PdfRenderer` and `Exporter` (Slice 6, PR 6-1)
+
+- `PdfRenderer` (`packages/adapters/src/pdf`): `fillForm({ template, fieldMap, fields, flatten? })`
+  and `renderHtml(document)`.
+  - **Filling** runs in process with pdf-lib for every adapter: each text field at the layout's
+    size in the committed Noto Sans subset, embedded whole through `@pdf-lib/fontkit` so names
+    outside WinAnsi (`Ł`, `ğ`, `ș`) print; radios and checkboxes by the export value or on-state
+    of the field map; a field the map never fills, or a value of another kind, is
+    `FormFillRefused` (the field name, never a value). Flattening is the default; it then drops
+    the objects flattening orphaned and the references to deleted widgets (page `Annots`, the
+    tagged structure tree's `OBJR`), so strict readers find no broken cross-reference. Contract
+    tests read every value back from the unflattened fill and check the flattened page count.
+  - **HTML** goes to an `HtmlRenderer`: `GotenbergHtmlRenderer` posts `index.html`, `header.html`
+    and `footer.html` to Gotenberg's `/forms/chromium/convert/html` (A4, margins for the header
+    and footer); `MockHtmlRenderer` draws the document's structured text (`PrintDocument.text`)
+    with pdf-lib, without a browser or network, page "n von m" included, breaking words longer
+    than a line. A refusal, an unreachable Gotenberg, or a body that breaks or times out after the
+    headers is `PdfUnavailable`, never logged with content.
+  - `createPdfRenderer({ adapter, gotenbergUrl, production, font })`: `PDF_ADAPTER=gotenberg`
+    needs `GOTENBERG_URL` (a cluster-internal service); `mock` wires the mock outside production
+    only, so in production HTML answers `PdfUnavailable` (`503 pdf_unavailable`) while forms
+    still fill. `createTextMeasure(font)` gives the layout the same metrics pdf-lib draws with.
+  - Pure helpers: `mergePdfs` (a form and its Anlage as one packet, a batch's scans) and
+    `imageToPdf` (a JPEG or PNG scan as a centred A4 page); `readAcroFormValues` reads a fill
+    back.
+  - The Gotenberg contract test runs against `GOTENBERG_URL` (CI's service container
+    `gotenberg/gotenberg:8.37.0-chromium`, pinned by digest): it reads the rendered text back with
+    pdf.js and checks that unbroken runs longer than a line survive whole, none past the page
+    edge. Skipped when the URL is empty; set but unreachable, it fails.
+- `Exporter` (`packages/adapters/src/export`): `CsvExporter.export({ kind, version, columns, rows })`
+  → `<kind>-v<version>.csv`, `;`-separated, UTF-8 with BOM, a header row, CRLF, quoted where a
+  cell holds `;`, `"` or a line break; a cell starting with `=`, `+`, `-`, `@`, a tab or a carriage
+  return gets a leading `'` (Q159). `EXPORT_ADAPTER=csv`.

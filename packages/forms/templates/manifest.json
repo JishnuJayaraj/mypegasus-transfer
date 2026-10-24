@@ -1,0 +1,44 @@
+{
+  "forms": [
+    {
+      "formCode": "kug200a",
+      "version": "07-2025",
+      "label": "Kug 200a 07/2025",
+      "validFrom": null,
+      "validUntil": null,
+      "sha256": "c2c4a573a41cfa21a447db558d2883228d817d5fd62ac6fbe1448207a3ff089b",
+      "pages": 2,
+      "fields": 56
+    },
+    {
+      "formCode": "kug200b",
+      "version": "09-2021",
+      "label": "Kug 200b 09/2021",
+      "validFrom": null,
+      "validUntil": null,
+      "sha256": "0134cc889e39eaced1a2be3c307244605c66bbb54a0e30fc42f08e2c4e833c00",
+      "pages": 1,
+      "fields": 20
+    },
+    {
+      "formCode": "tl407",
+      "version": "08-2025",
+      "label": "TL 407 08/2025",
+      "validFrom": null,
+      "validUntil": null,
+      "sha256": "d17a8087b5fba1803a491c66987b00b7cd73b25ba91f540f18f1482022b50968",
+      "pages": 7,
+      "fields": 160
+    }
+  ],
+  "templates": [
+    {
+      "ref": "anlage-profilingbogen:v1",
+      "files": {
+        "index.html": "887a7a1e7ed93bc46db9861abd2ffbcd5548e4a2b0888eab7705587ebfb242d9",
+        "header.html": "1d0146e0eb6270bfe8a1c5525fc23432f0f968213a28fa42500c1770bf3158b3",
+        "footer.html": "3d3b34e57b7be9669ff66a8811c32877cb908b03797bf7154ede135a9e5a4a22"
+      }
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@transfer/forms",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./load": "./src/load.ts"
+  },
+  "scripts": {
+    "generate": "tsx scripts/generate.ts"
+  },
+  "dependencies": {
+    "@transfer/domain": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@pdf-lib/fontkit": "1.1.1",
+    "pdf-lib": "1.17.1",
+    "tsx": "4.23.15"
+  }
+}

@@ -4,5 +4,12 @@
   "controllerEmail": "datenschutz@example.invalid",
   "dpoName": "Beispiel Datenschutzberatung",
   "dpoAddress": "Datenschutzweg 4, 10115 Berlin",
-  "dpoEmail": "dpo@example.invalid"
+  "dpoEmail": "dpo@example.invalid",
+  "transfergesellschaft": {
+    "name": "Beispiel Transfergesellschaft mbH",
+    "street": "Musterstraße",
+    "houseNumber": "10",
+    "postalCode": "10115",
+    "city": "Berlin"
+  }
 }

@@ -1,9 +1,10 @@
 # BA forms used in the process
 
-Both forms are nationwide BA forms, published as fillable PDFs (AcroForm, no XFA). We fill
+The forms are nationwide BA forms, published as fillable PDFs (AcroForm, no XFA). We fill
 them with the PDF adapter, print them, and they are signed by hand. Store `formCode` and
 `formVersion` with every generated document. Field names below are the real AcroForm field
-names, checked against the copies we received on 2026-10-15.
+names, checked against the copies we received on 2026-10-15 and the blanks committed on
+2026-10-24 (the registry test checks every field map against its blank).
 
 > Blank templates live in `packages/forms/templates/ba/<form_code>/<version>/` (ADR-0009). Filled
 > copies never go into the repo, except the synthetic test copies in `fixtures/forms/`.
@@ -95,3 +96,75 @@ marked on it, its form version and signature date, and a later edit never rewrit
 The Kug 200b acknowledgement of TG access to the BA profile (declaration 17) is recorded as
 written and kept as the record `kug200b_profile_access`; whether it is a consent is to verify
 (Q185).
+
+## Kug 200a — Liste der Teilnehmenden (cover list of a Kug 200b batch)
+
+- Title: *Liste der Teilnehmenden an einer Transfergesellschaft — Vorblatt zu den Erklärungen
+  „Schriftliche Arbeitsuchendmeldung" und „Einverständniserklärung zur Einschaltung eines
+  Dritten"*; "Nur durch Transfergesellschaft auszufüllen". No field is marked `*`.
+- Version: `Kug200a - 07/2025`, 2 pages, 56 fields (Q195).
+- Header (on both pages, one field each): the TG's name, Betriebsnummer, T-Kug-Nummer
+  (`TK-…`, if known), Branche/Wirtschaftsklasse; the personalabgebender Betrieb's name,
+  Betriebsnummer and Branche/WK; the date of the info event.
+- Six participant rows (two on p. 1, four on p. 2): name and address in one box, the
+  Versicherungsnummer (VSNR, an identifier), the last activity at the employer and its period,
+  the planned period in the TG, "Erklärung zur schriftlichen Arbeitsuchendmeldung ist beigefügt",
+  the consent declaration "ist beigefügt" / "liegt nicht vor" (one checkbox with two on-states),
+  "Teilnahme an der Info-Veranstaltung".
+- The registry holds its blank, manifest and field map; what fills it and how a batch of more
+  than six is split come with the batches (the Slice 6 plan, PR 6-5a).
+
+## The registry as built (Slice 6, PR 6-1)
+
+Files and checks: ADR-0009, amendment 2026-10-24. The rules, all in `packages/domain/src/forms`
+(no I/O, no system time):
+
+- **Input.** `tl407Input` and `kug200bInput` build the form input from domain data, keyed by the
+  field map: dates ISO, times `hh:mm`, choices our codes, null blank. TL 407: §110 in `ta_only`,
+  §111 in `ta_tg`; the Träger from the organisation configuration (`transfergesellschaft`: name,
+  street, house number, postal code, city); the beE stay from the effective contractual TG dates
+  in `ta_tg`, blank in `ta_only` (Q181); phone, mobile and email only when the TL 407's own BA
+  contact declaration is yes; the health line's rating without text (field
+  `txtfLeistungHandlungZ1` is never filled). Kug 200b: 1–12; 13–19 never. The address's street
+  and house number are split best effort (Q197): a trailing number or range, digits inside the
+  street name kept; ambiguous input keeps the original street and leaves the number blank for
+  clarification or handwriting.
+- **Validation** (`validateFormInput`), codes and keys, never values:
+  - errors (refuse generation): `unknown_key`, `value_kind_invalid`, `value_not_applicable` (a
+    value for a field that doesn't apply, e.g. beE dates in `ta_only`), `option_invalid`,
+    `date_invalid` (an impossible date; 29.02. only in a leap year), `time_invalid`,
+    `time_range_reversed` (a session whose `bis` isn't after `von`, equal included),
+    `identifier_too_long` (the RV-Nummer longer than 12; never cut), `character_unsupported` (a
+    character the embedded font can't print, by field; never transliterated, the stored name
+    stays as it is; the external-paper path before live use, Q197), `required_missing` (an applicable `*` field or a
+    required table without rows, where the map says `error`);
+  - blanks (`required_blank`): the same on a form completed by hand (Kug 200b), shown to staff
+    before printing;
+  - warnings staff confirm by code (`PlausibilityWarning`): `age_implausible` (outside 15–67
+    whole years at the effective TG start, else at today; 15 and 67 are plausible),
+    `entry_before_birth`, `range_reversed` (a date range with `von > bis`; equal is fine).
+  - The laid-out output is checked again (`checkFilledFields`): every date field a real
+    `TT.MM.JJJJ` date (the test copy's `03.14.1998` is an error), every time `hh:mm`, no value in
+    a field the map never fills.
+- **Row order** (Q41): `orderSessions`; `orderEducation`: the highest school qualification first,
+  as the participant marks it and the profiler confirms it (never inferred from text or recency;
+  persisted from 6-2, Q196), then the rest most recent first; `recentWork`: rows started on or
+  before the generation date and running or ending on or after it minus three years, most recent
+  first (a running row first, then by end and start); languages as given, German its own row.
+- **Layout and overflow** (`layoutForm`, `layoutTl407`; Q182, readings Q197): each text starts at
+  the form's own size and shrinks in 0.5 pt steps to the map's minimum, measured with the
+  embedded font's metrics (`TextMeasure`, from the PDF adapter). A table with more rows than the
+  form fills all but its last form row, which reads "weitere siehe Anlage" in the marker column;
+  that row and every later one go to the Anlage. A text too long for its box at the minimum
+  size is cut at a word boundary with "… Fortsetzung siehe Anlage" (or "siehe Anlage" where that
+  doesn't fit) and continues on the Anlage under its heading, a table cell under
+  "<table>, Zeile n: <column>"; nothing is lost. Identifiers shrink but are never cut. A form
+  without an Anlage (Kug 200b) leaves such a text blank for handwriting (`text_not_fitting`),
+  which the pre-print checklist shows with the blank `*` fields (Q197).
+- **The Anlage** (`renderAnlage` with `anlage-profilingbogen:v1`): "Anlage zum Profilingbogen
+  (TL 407 08/2025)", name and birth date in the header of every page, "Seite n von m" in the
+  footer, each continued table or text under its source heading; every value HTML-escaped. A word
+  longer than its line breaks anywhere (headings, header, text, table cells) and tables have fixed
+  column widths, so the printed PDF keeps every character; nothing is truncated or shrunk. It is
+  appended to the TL 407 as one packet (`mergePdfs`) and takes the TL 407's strictest class.
+
