@@ -21,7 +21,7 @@ import { BookingAttendanceActions, useAttendanceLabel } from "./attendance";
 // the participation's bookings with their attendance, "Buchung absagen" and the attendance actions
 // (also after the participation closed, where a conflict stays visible), and the upcoming
 // appointments staff may book for it with "Buchen", each with its seat state, refusal or warning.
-// A missed appointment (process-and-lifecycle.md, appointments: the work list) offers "Folgetermin
+// A missed appointment (process-and-lifecycle.md, appointment items) offers "Folgetermin
 // buchen" (the bookable appointments of its kind; a consultation is linked as its follow-up) and
 // "Keine weitere Nachverfolgung" with a closed reason.
 

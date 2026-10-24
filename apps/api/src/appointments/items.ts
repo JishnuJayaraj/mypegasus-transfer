@@ -9,8 +9,8 @@ import {
 } from "@transfer/domain";
 import { hostRule } from "./service";
 
-// The facts of the work list's appointment items (process-and-lifecycle.md, appointments: the
-// work list): each participation's bookings with their appointments and its organizer's notices.
+// The facts of the work list's appointment items (process-and-lifecycle.md, appointment
+// items): each participation's bookings with their appointments and its organizer's notices.
 // Codes, ids and times only, never a title or a venue.
 
 const at = (column: string) =>

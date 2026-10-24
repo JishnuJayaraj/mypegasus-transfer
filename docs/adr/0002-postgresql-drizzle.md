@@ -650,6 +650,32 @@ holds the rules.
   (`appointment_notice_context`, `message_job_context`, `appointment_booking_refusal`,
   `queue_appointment_message`, `queue_appointment_notice`) have none.
 
+## Amendment 2026-10-24: missed appointments on the work list (Slice 5b, PR 5b-4)
+
+Migrations `0065_missed_appointments.sql` (generated; its unique key is moved before the foreign
+key that needs it) and `0066_missed_appointment_functions.sql` (hand-written, the 0064
+hardening); process-and-lifecycle.md ("Appointment items") holds the rules.
+- **`appointment_booking`** gains `follow_up_of` (a composite FK `(follow_up_of,
+  participation_id)` to `(id, participation_id)`, so a follow-up is of the same participation;
+  only a staff booking, never itself), `missed_resolution` (`participant_declined`,
+  `information_delivered_otherwise`, `no_longer_needed`) and `missed_resolved_by/at` (all or
+  none, only on an `absent` booking). `transfer_app` writes none of them.
+- **The lock order** (the tables above, extended):
+
+  | Operation | Project lock | Then |
+  |---|---|---|
+  | `resolve_missed_appointment` | shared (`lock_participation`) | the participation → the appointment `FOR SHARE` → the booking `FOR UPDATE` |
+  | `book_appointment` with `follow_up_of` | as before | as before, then the followed booking `FOR UPDATE` (after the appointment) |
+
+- **Functions** (`SECURITY DEFINER`): `resolve_missed_appointment(context, booking, reason)`: the
+  PL or the assigned consultant in normal mode; `booking_not_found`, `actor_not_allowed`,
+  `participation_closed`, `already_resolved`, `not_missed`; audited `missed_appointment_resolved`.
+  `book_appointment(context, appointment, participation, id, token, follow_up_of)` (recreated with
+  the optional link; a participant links nothing): after the booking rules
+  `follow_up_not_found`, `follow_up_kind_mismatch`, `follow_up_not_missed`; `appointment_booked`
+  names `followUpOf`. The internal `booking_missed(booking)` is the domain's `missedBookings` for
+  one booking (never null). `record_audit_event` refuses the new type.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

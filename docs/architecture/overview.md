@@ -238,7 +238,13 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   state and flag. Each count is defined as a `WorklistFilter` (`projectFunnel`, `funnelFilters`)
   and links to the work list with that filter, so a count and its drill-down are one predicate
   (a domain test holds `count = items.filter(filter).length`). Tables and tiles, no chart library
-  (the CSP forbids inline styles).
+  (the CSP forbids inline styles). From PR 5b-4 the tiles "Termine überfällig" and "Termine zu
+  klären" and the table "Termine" (one count per value of the filter `appointment`: a next
+  booking, the two unions, each item kind) count the appointment items the same way
+  (process-and-lifecycle.md, appointment items).
+- From PR 5b-4 the work list's column "Termin" shows a row's most urgent appointment item (red for
+  an overdue one, "+n weitere" beside it), else its next booking; the filter "Termine" takes the
+  same values as the dashboard's group.
 - **Loading the work list:** until the snapshot has arrived the list says "Wird geladen…", the
   search field and "Alle Treffer auswählen" are disabled and no empty state is shown; a refetch
   after a bulk action keeps the previous snapshot visible with its time ("Stand 10:42") and keeps
@@ -266,7 +272,10 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   user chooses it.
 - "Termine" (PR 5b-1, `apps/web/src/components/participation-appointments.tsx`): the
   participation's bookings with "Buchung absagen", and the upcoming appointments in its audience or
-  host rule with the seat state, the refusal or the cutoff warning, and "Buchen".
+  host rule with the seat state, the refusal or the cutoff warning, and "Buchen". From PR 5b-4 a
+  missed appointment shows "Nicht erschienen, Nachverfolgung offen" with "Folgetermin buchen"
+  (the bookable appointments of its kind; a consultation is booked as its follow-up,
+  `followUpOf`) and "Keine weitere Nachverfolgung" (a closed reason), each by its capability.
 - "Verlauf" (PR 5-3, `apps/web/src/components/history.tsx`): Zeitpunkt (Berlin), Ereignis,
   Änderung (von → nach; the wave codes from the project's waves, field names, document types,
   dates), Grund, Wirksam am, Durch (the name, "Ehemaliges Teammitglied", "Teilnehmer·in",

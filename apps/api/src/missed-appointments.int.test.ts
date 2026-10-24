@@ -14,7 +14,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
 // The work list's appointment items, the dashboard's "Termine" and the missed appointment's
-// resolution and follow-up (process-and-lifecycle.md, appointments: the work list; ADR-0010)
+// resolution and follow-up (process-and-lifecycle.md, appointment items; ADR-0010)
 // against transfer_test, on the system clock (the functions decide by the database's).
 // Appointments are created ahead and moved into the past by the owner, a fixture. Synthetic data
 // only.

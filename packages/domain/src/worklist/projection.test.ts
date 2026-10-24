@@ -172,7 +172,7 @@ describe("the invitation of a row (data-protection.md, invitations)", () => {
   });
 });
 
-describe("the appointments of a row (process-and-lifecycle.md, appointments: the work list)", () => {
+describe("the appointments of a row (process-and-lifecycle.md, appointment items)", () => {
   it("projects the next booking and the items at the snapshot's time", () => {
     const booking = {
       id: "00000000-0000-4000-8000-0000000000b1",

@@ -1,4 +1,4 @@
--- Hand-written (ADR-0002, appointments; process-and-lifecycle.md, appointments: the work list;
+-- Hand-written (ADR-0002, appointments; process-and-lifecycle.md, appointment items;
 -- Q167): a missed appointment's explicit resolution, a consultation booked as the follow-up of a
 -- missed one, the history's projection rows and the grants. Same hardening as 0064: SECURITY
 -- DEFINER owned by transfer_owner, a fixed search_path with pg_temp last, schema-qualified names,

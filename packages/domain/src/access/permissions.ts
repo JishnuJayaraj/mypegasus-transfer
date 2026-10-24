@@ -324,7 +324,7 @@ const itemRoles: Record<ResolvableAppointmentItem, readonly Role[]> = {
  * `attendance_conflict` (escalating it or attesting the information was delivered otherwise) is
  * the PL's alone, also after the participation closed; a `notice_undelivered` (recording how the
  * person was told, data-protection.md, messages) and a `missed` appointment (no further follow-up,
- * process-and-lifecycle.md, appointments: the work list) the PL's or the assigned consultant's.
+ * process-and-lifecycle.md, appointment items) the PL's or the assigned consultant's.
  */
 export function mayResolveAppointmentItem(
   actor: Actor,

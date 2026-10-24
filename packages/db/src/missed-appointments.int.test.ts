@@ -11,7 +11,7 @@ import {
   testDatabaseUrls,
 } from "./testing";
 
-// The work list's missed appointments (process-and-lifecycle.md, appointments: the work list;
+// The work list's missed appointments (process-and-lifecycle.md, appointment items;
 // ADR-0002, the lock order), as transfer_app calls the functions: the explicit resolution and a
 // consultation booked as a missed one's follow-up. Synthetic data only. Appointments are created
 // in the future and moved into the past by the owner (a fixture); one time base per test.

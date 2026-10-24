@@ -17,7 +17,7 @@ import {
   type ReminderStatus,
 } from "../reminders/model";
 
-// The work list's appointment items (process-and-lifecycle.md, appointments: the work list;
+// The work list's appointment items (process-and-lifecycle.md, appointment items;
 // Q167): staff work beside the deadline warnings, never a guard and never a participant action.
 
 /** The items in their urgency order: a row shows the first one. */
@@ -109,7 +109,7 @@ const live = (booking: AppointmentItemBooking) =>
   booking.status === "booked" && booking.appointmentStatus === "scheduled";
 
 /**
- * Whether `candidate` follows up the missed `booking` (Q167, the second review): for an info
+ * Whether `candidate` follows up the missed `booking` (Q167): for an info
  * event a later info-event booking (the same briefing purpose, matched automatically), for a
  * consultation only a booking linked by `followUpOf`. It counts only while live: absent, it is the
  * chain's missed item itself.

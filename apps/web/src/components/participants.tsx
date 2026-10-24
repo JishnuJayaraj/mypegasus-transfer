@@ -430,7 +430,7 @@ const WorklistTable = memo(function WorklistTable({
           : t("worklist.deadlineIn", { kind, count: days });
     return urgent.final ? `${text} (${t("worklist.deadlineFinal")})` : text;
   };
-  // "Termin" (process-and-lifecycle.md, appointments: the work list): the most urgent item, else
+  // "Termin" (process-and-lifecycle.md, appointment items): the most urgent item, else
   // the next booking.
   const appointment = ({ appointments: { next, items: open } }: ListItem) => {
     const [first] = open;

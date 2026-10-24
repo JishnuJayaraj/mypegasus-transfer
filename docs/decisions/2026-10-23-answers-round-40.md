@@ -1,6 +1,6 @@
 # Decisions — 2026-10-23, round 40 (Slice 5b planning, Q162–Q168)
 
-The product owner reviewed [the Slice 5b plan](../plans/slice-5b.md) (PR #82, commit `9869120`).
+The product owner reviewed [the Slice 5b plan](../plans/archive/slice-5b.md) (PR #82, commit `9869120`).
 Like rounds 32–39, these are pilot answers in the placeholder roles: no external DPO, legal or
 works-council confirmation is involved yet, and none blocks development or testing on synthetic
 data. Q162–Q168 are `accepted` in `open-questions.md` as amended below; the 🔒 rows keep the

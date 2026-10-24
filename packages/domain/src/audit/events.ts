@@ -175,8 +175,8 @@ export const AuditEventType = z.enum([
   "attendance_conflict_resolved",
   // Slice 5b, messages (data-protection.md, messages: follow-up), written only by its function
   "appointment_notice_followed_up",
-  // Slice 5b, the work list's missed appointments (process-and-lifecycle.md, appointments: the
-  // work list), written only by its function
+  // Slice 5b, the work list's missed appointments (process-and-lifecycle.md, appointment items),
+  // written only by its function
   "missed_appointment_resolved",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
@@ -601,7 +601,7 @@ const appointmentChanged = event("appointment_changed", {
 
 /**
  * Staff book as themselves (origin `staff`), the participant in the portal; staff may link a
- * consultation as the follow-up of a missed one (`followUpOf`, its booking; absent before 5b-4).
+ * consultation as the follow-up of a missed one (`followUpOf`, its booking; absent in older events).
  */
 const appointmentBooked = event("appointment_booked", {
   ...ofParticipation,
