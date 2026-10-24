@@ -1,0 +1,11 @@
+{
+  "formCode": "tl407",
+  "version": "08-2025",
+  "sourceUrl": "https://www.arbeitsagentur.de/datei/arbeitspaket/profilingbogen-fuer-bezieher-innen-von-transferleistungen_ba147232.pdf",
+  "retrievedOn": "2026-10-24",
+  "sha256": "d17a8087b5fba1803a491c66987b00b7cd73b25ba91f540f18f1482022b50968",
+  "pages": 7,
+  "acroFormFields": 160,
+  "verifiedBlank": true,
+  "note": "Original BA download, unchanged. Source provenance only; validity dates and field map belong to the reviewed Slice 6 registry implementation."
+}
