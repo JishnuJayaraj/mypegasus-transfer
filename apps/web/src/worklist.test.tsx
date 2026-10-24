@@ -197,7 +197,7 @@ describe("Teilnehmende", () => {
     const missed = (await (await ready()).findByRole("link", { name: "BSP-0002" })).closest("tr")!;
     expect(
       within(missed).getByRole("cell", {
-        name: "Nicht erschienen: Beratungstermin vom 20.10.2026 +1 weitere",
+        name: "Nicht erschienen Beratungstermin vom 20.10.2026 +1 weitere",
       }),
     ).toBeInTheDocument();
     const next = list().getByRole("link", { name: "BSP-0003" }).closest("tr")!;

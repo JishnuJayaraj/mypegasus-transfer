@@ -447,12 +447,12 @@ const WorklistTable = memo(function WorklistTable({
     return (
       <>
         <Tag type={overdue ? "red" : "purple"} size="sm">
-          {t("worklist.appointmentItem", {
-            item: t(`worklist.appointmentItems.${first.kind}`),
-            kind: t(`appointments.kinds.${first.appointmentKind}`),
-            date: formatDate(appointmentDate(first.startsAt)),
-          })}
-        </Tag>
+          {t(`worklist.appointmentItems.${first.kind}`)}
+        </Tag>{" "}
+        {t("worklist.appointmentItem", {
+          kind: t(`appointments.kinds.${first.appointmentKind}`),
+          date: formatDate(appointmentDate(first.startsAt)),
+        })}
         {open.length > 1 && ` ${t("worklist.appointmentMore", { count: open.length - 1 })}`}
       </>
     );

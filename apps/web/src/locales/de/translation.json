@@ -1326,7 +1326,7 @@
       "needs_resolution": "Klärung nötig",
       "attendance_conflict": "Widerspruch zu klären"
     },
-    "appointmentItem": "{{item}}: {{kind}} vom {{date}}",
+    "appointmentItem": "{{kind}} vom {{date}}",
     "appointmentNext": "{{kind}} am {{date}}, {{time}} Uhr",
     "appointmentMore": "+{{count}} weitere"
   },
