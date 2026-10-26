@@ -119,10 +119,11 @@ function ProfilerReadinessBlock({ view }: { view: View }) {
     onError: () => setFailure("failed"),
   });
   const generate = useMutation({
-    mutationFn: async () => {
+    // The confirmations hold for the sources this readiness showed (its token), nothing else.
+    mutationFn: async (checked: ProfilerReadiness) => {
       const { data } = await api.POST("/api/v1/participations/{participationId}/forms/tl407", {
         params: { path: { participationId } },
-        body: { confirmWarnings: confirmed },
+        body: { sourceToken: checked.sourceToken, confirmWarnings: confirmed },
       });
       if (!data) throw new Error("No generation");
       return data;
@@ -190,7 +191,7 @@ function ProfilerReadinessBlock({ view }: { view: View }) {
               disabled={!allConfirmed || generate.isPending}
               onClick={() => {
                 setFailure(undefined);
-                generate.mutate();
+                generate.mutate(readiness);
               }}
             >
               {t(regenerate ? "profiling.tl407.regenerate" : "profiling.tl407.generate")}

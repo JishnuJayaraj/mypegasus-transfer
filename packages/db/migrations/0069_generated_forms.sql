@@ -3,7 +3,8 @@ ALTER TYPE "public"."audit_event_type" ADD VALUE 'form_generated';--> statement-
 -- Hand-edited (ADR-0002, migrations): 0070 inserts the catalog's version 3 policy rows with
 -- 'tl407_form' in the same migration transaction, where a value from ADD VALUE would be an unsafe
 -- use; the type is recreated instead, as 0041 did. The four functions that name it in their
--- signature are dropped here and created again by 0070, unchanged.
+-- signature are dropped here and created again by 0070 (`add_document` with upload limits that
+-- count uploads only).
 ALTER TABLE "document" DROP CONSTRAINT "document_policy_fk";--> statement-breakpoint
 ALTER TABLE "document" ALTER COLUMN "type" SET DATA TYPE text;--> statement-breakpoint
 ALTER TABLE "document_type_policy" ALTER COLUMN "type" SET DATA TYPE text;--> statement-breakpoint
@@ -27,6 +28,8 @@ CREATE TABLE "form_generation" (
 	"profiling_revision" integer NOT NULL,
 	"assessment_revision" integer NOT NULL,
 	"unemployment_revision" integer NOT NULL,
+	"source_token" text NOT NULL,
+	"organisation_sha256" text NOT NULL,
 	"jobboerse_choice" "jobboerse_choice",
 	"ba_contact_consent" boolean,
 	"confirmed_warnings" text[] NOT NULL,
@@ -36,6 +39,8 @@ CREATE TABLE "form_generation" (
 	CONSTRAINT "form_generation_document_unique" UNIQUE("document_id"),
 	CONSTRAINT "form_generation_form_version" CHECK ("form_generation"."form_version" ~ '^(0[1-9]|1[0-2])-[0-9]{4}$'),
 	CONSTRAINT "form_generation_revisions" CHECK ("form_generation"."profile_revision" >= 0 and "form_generation"."profiling_revision" >= 0 and "form_generation"."assessment_revision" >= 0 and "form_generation"."unemployment_revision" >= 0),
+	CONSTRAINT "form_generation_source_token" CHECK ("form_generation"."source_token" ~ '^[0-9a-f]{64}$'),
+	CONSTRAINT "form_generation_organisation_sha256" CHECK ("form_generation"."organisation_sha256" ~ '^[0-9a-f]{64}$'),
 	CONSTRAINT "form_generation_confirmed_warnings" CHECK ("form_generation"."confirmed_warnings" <@ array['age_implausible', 'entry_before_birth', 'range_reversed', 'school_qualification_none']::text[])
 );
 --> statement-breakpoint

@@ -62,8 +62,22 @@ async function request(method: string, path: string, as: string, body?: unknown)
 }
 const readiness = (id: string, as: string = consultant) =>
   request("GET", `/participations/${id}/forms/tl407/readiness`, as);
-const generate = (id: string, confirmWarnings: string[] = [], as: string = consultant) =>
-  request("POST", `/participations/${id}/forms/tl407`, as, { confirmWarnings });
+/** The source token of the profiler's readiness now (a logged read). */
+async function tokenOf(id: string) {
+  const checked = (await (await readiness(id)).json()) as { sourceToken: string };
+  return checked.sourceToken;
+}
+/** A generation for the readiness checked just before, unless a token is given. */
+const generate = async (
+  id: string,
+  confirmWarnings: string[] = [],
+  as: string = consultant,
+  sourceToken?: string,
+) =>
+  request("POST", `/participations/${id}/forms/tl407`, as, {
+    sourceToken: sourceToken ?? (await tokenOf(id)),
+    confirmWarnings,
+  });
 
 const sql = (text: string, values: unknown[] = []) => owner.$client.query(text, values);
 const events = async (id: string, type: string) =>
@@ -88,7 +102,12 @@ const job = (n: number) => ({
   activity: "Lagerist",
 });
 
-type Options = { education?: EducationRow[]; jobs?: number; lastName?: string; birthDate?: string };
+type Options = {
+  education?: EducationRow[] | null;
+  jobs?: number;
+  lastName?: string;
+  birthDate?: string;
+};
 
 /** A value sealed with the test key ($3) in the statement, as `write_sensitive_fields` would. */
 const seal = (field: string, value: unknown) =>
@@ -138,7 +157,9 @@ async function participant(options: Options = {}) {
        '2026-12-01', 1)`,
     [
       ...keys,
-      JSON.stringify(options.education ?? [{ ...school, highestSchoolQualification: true }]),
+      options.education === null
+        ? null
+        : JSON.stringify(options.education ?? [{ ...school, highestSchoolQualification: true }]),
       JSON.stringify(Array.from({ length: options.jobs ?? 1 }, (_, n) => job(n + 1))),
       JSON.stringify({ german: "business_fluent", others: [] }),
       JSON.stringify({
@@ -214,6 +235,7 @@ describe("the readiness projection (data-protection.md)", () => {
       view: "profiler",
       formVersion: "08-2025",
       ready: true,
+      sourceToken: expect.stringMatching(/^[0-9a-f]{64}$/),
       errors: [],
       warnings: [
         {
@@ -463,6 +485,73 @@ describe("generation (data-protection.md, generated forms; Q179)", () => {
     expect((await generate(id)).status).toBe(201);
   });
 
+  it("applies a confirmation only to the sources its readiness showed (Q199)", async () => {
+    const id = await participant({ education: [school] });
+    const checked = await read(id);
+    expect(checked).toMatchObject({ warnings: [{ code: "school_qualification_none" }] });
+    const { sourceToken } = checked as { sourceToken: string };
+    // The education changes after the check: the old "Kein Schulabschluss" mustn't apply to it.
+    await sql(
+      `update participant_profile set education_history = $2, revision = revision + 1
+       where participation_id = $1`,
+      [id, JSON.stringify([{ ...school, institution: "Abendschule" }])],
+    );
+    expect(
+      await codesOf(
+        await generate(id, ["school_qualification_none"], consultant, sourceToken),
+        409,
+      ),
+    ).toEqual([{ code: "source_changed", pointer: "/sourceToken" }]);
+    expect(await events(id, "warning_confirmed")).toEqual([]);
+    expect((await sql("select count(*)::int as n from form_generation")).rows).toEqual([{ n: 0 }]);
+  });
+
+  it("takes a reviewed 'Kein Schulabschluss' without any education row, never a made-up one (Q199)", async () => {
+    const id = await participant({ education: null });
+    expect(await read(id)).toMatchObject({
+      ready: true,
+      errors: [],
+      warnings: [{ code: "school_qualification_none", key: "education" }],
+    });
+    // Not clarified: refused; answered: generated with the table blank.
+    expect(await codesOf(await generate(id))).toEqual([
+      { code: "school_qualification_none", pointer: "/confirmWarnings" },
+    ]);
+    expect((await generate(id, ["school_qualification_none"])).status).toBe(201);
+    expect(
+      (
+        await sql("select confirmed_warnings from form_generation where participation_id = $1", [
+          id,
+        ])
+      ).rows,
+    ).toEqual([{ confirmed_warnings: ["school_qualification_none"] }]);
+  });
+
+  it("refuses a form printed with a name corrected meanwhile (identity has no revision)", async () => {
+    const id = await participant();
+    const put = storage.put.bind(storage);
+    vi.spyOn(storage, "put").mockImplementation(async (key, content) => {
+      await call(owner.$client, "write_participant_data", {
+        participationId: id,
+        context: pl,
+        lastName: "Beispiel-Neu",
+      });
+      return put(key, content);
+    });
+    expect(await codesOf(await generate(id), 409)).toEqual([
+      { code: "source_changed", pointer: "/sourceToken" },
+    ]);
+    expect((await sql("select count(*)::int as n from form_generation")).rows).toEqual([{ n: 0 }]);
+    // The token covers the identity, the contact details and the TG dates as well.
+    vi.restoreAllMocks();
+    const before = await tokenOf(id);
+    await sql(
+      "update participant_details set mobile = '0171 1111111' where participation_id = $1",
+      [id],
+    );
+    expect(await tokenOf(id)).not.toBe(before);
+  });
+
   it("refuses when a source moves between its read and its record, and deletes the object", async () => {
     const id = await participant();
     const put = storage.put.bind(storage);
@@ -477,7 +566,7 @@ describe("generation (data-protection.md, generated forms; Q179)", () => {
       return put(key, content);
     });
     expect(await codesOf(await generate(id), 409)).toEqual([
-      { code: "source_changed", pointer: "" },
+      { code: "source_changed", pointer: "/sourceToken" },
     ]);
     const stored = vi.mocked(storage.put).mock.calls[0]![0];
     await expect(storage.get(stored)).rejects.toBeInstanceOf(FileNotFound);
@@ -512,7 +601,11 @@ describe("generation (data-protection.md, generated forms; Q179)", () => {
     const id = await participant({ jobs: 8 });
     const res = await withoutHtml.request(
       `/api/v1/participations/${id}/forms/tl407`,
-      jsonRequest("POST", { confirmWarnings: [] }, await login(withoutHtml, consultant)),
+      jsonRequest(
+        "POST",
+        { sourceToken: await tokenOf(id), confirmWarnings: [] },
+        await login(withoutHtml, consultant),
+      ),
     );
     const problem = await expectProblem(res, 503, "service-unavailable");
     expect(problem.errors?.[0]?.code).toBe("pdf_unavailable");

@@ -18,6 +18,17 @@ export type Tl407ErrorCode = z.infer<typeof Tl407ErrorCode>;
 export const Tl407WarningCode = z.enum(tl407WarningCodes).meta({ id: "Tl407WarningCode" });
 export type Tl407WarningCode = z.infer<typeof Tl407WarningCode>;
 
+/**
+ * What a check was made of (data-protection.md, generated forms): a SHA-256 over the form version,
+ * the date, the source revisions, the identity, the contact details, the effective TG dates and
+ * the organisation's fingerprint. A generation names it; a changed source refuses it before any
+ * confirmation applies (`409 source_changed`).
+ */
+export const Tl407SourceToken = z
+  .string()
+  .regex(/^[0-9a-f]{64}$/)
+  .meta({ id: "Tl407SourceToken" });
+
 const issue = <T extends z.ZodType>(code: T) =>
   z.strictObject({
     code,
@@ -39,6 +50,8 @@ export const Tl407ProfilerReadiness = z
     formVersion: FormVersion.nullable(),
     /** No error: generation is possible once each warning is confirmed. */
     ready: z.boolean(),
+    /** Sent back with the generation; its confirmations hold for these sources only. */
+    sourceToken: Tl407SourceToken,
     errors: z.array(issue(Tl407ErrorCode)),
     warnings: z.array(issue(Tl407WarningCode)),
     overflow: z.array(z.strictObject({ kind: z.enum(["table", "text"]), key: z.string(), label })),
@@ -68,11 +81,14 @@ export type Tl407ProfilerReadiness = z.infer<typeof Tl407ProfilerReadiness>;
 export type Tl407ReadinessSummary = z.infer<typeof Tl407ReadinessSummary>;
 
 /**
- * `POST …/forms/tl407` (the assigned consultant): each warning of the check confirmed by its
- * code (each confirmation audited `warning_confirmed`); a code the check doesn't raise is ignored.
+ * `POST …/forms/tl407` (the assigned consultant): the source token of the readiness the profiler
+ * checked (`409 source_changed` when a source moved since, before any confirmation applies), and
+ * each warning of the check confirmed by its code (each confirmation audited `warning_confirmed`);
+ * a code the check doesn't raise is ignored.
  */
 export const Tl407GenerationInput = z
   .strictObject({
+    sourceToken: Tl407SourceToken,
     confirmWarnings: z
       .array(Tl407WarningCode)
       .max(tl407WarningCodes.length)

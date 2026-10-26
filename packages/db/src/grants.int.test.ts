@@ -316,6 +316,8 @@ const helpers = [
   "profiling_assessment_values",
   "open_profiling_assessment",
   "form_sources_valid",
+  "form_person",
+  "form_person_valid",
   "form_declarations_valid",
 ];
 

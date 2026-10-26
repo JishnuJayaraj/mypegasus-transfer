@@ -34,6 +34,13 @@ const context = (c: Context<AppEnv>) =>
 /** A refused generation as its problem, or rethrown. */
 function refused(c: Context<AppEnv>, refusal: Tl407Refusal) {
   if (refusal.kind === "domain") return domainProblem(c, refusal.codes);
+  if (refusal.kind === "stale") {
+    return problem(c, "conflict", {
+      errors: [
+        { pointer: "/sourceToken", code: "source_changed", detail: "Check the readiness again" },
+      ],
+    });
+  }
   if (refusal.kind === "unavailable") {
     if (refusal.code === "storage_unavailable") return storageUnavailable(c);
     return problem(c, "service-unavailable", {
@@ -41,11 +48,8 @@ function refused(c: Context<AppEnv>, refusal: Tl407Refusal) {
     });
   }
   const code = functionRefusal(refusal.error);
-  if (code === "source_changed") {
-    return problem(c, "conflict", {
-      errors: [{ pointer: "", code, detail: "Check the readiness again" }],
-    });
-  }
+  // Found at the record, under the lock: the same answer as a stale token.
+  if (code === "source_changed") return refused(c, { kind: "stale" });
   if (code === "actor_not_allowed") return problem(c, "forbidden");
   if (code === "participation_closed") return domainProblem(c, [code]);
   throw refusal.error;
@@ -117,7 +121,14 @@ export function formRoutes(deps: Deps) {
       path: "/participations/{participationId}/forms/tl407",
       tags: ["participations"],
       summary:
-        "Generate the TL 407 (the assigned consultant): the version in use, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated); 409 source_changed, 503 pdf_unavailable or storage_unavailable",
+        "Generate the TL 407 (the assigned consultant) for the readiness checked: its source token, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated)",
+      description: [
+        "Refusals:",
+        "- `409 source_changed` at `/sourceToken`: a source moved since the readiness (also when found at the record); check again.",
+        "- `422` with a warning code at `/confirmWarnings`: that warning isn't confirmed.",
+        "- `422` with form-level error codes (pointer empty: `form_version_unavailable`, `required_missing`, `character_unsupported`, …; each code once): the form can't be generated. The readiness names the fields.",
+        "- `422 participation_closed`; `503 pdf_unavailable` (the Anlage can't be rendered) or `storage_unavailable`.",
+      ].join("\n"),
       middleware,
       request: {
         params: ParticipationParams,
@@ -144,7 +155,7 @@ export function formRoutes(deps: Deps) {
     }),
     async (c) => {
       const { participationId } = c.req.valid("param");
-      const { confirmWarnings } = c.req.valid("json");
+      const input = c.req.valid("json");
       const result = await profilingAccess(db, c, participationId);
       if (!result.ok) return result.response as never;
       const { subject, target } = result.access;
@@ -153,12 +164,7 @@ export function formRoutes(deps: Deps) {
       if (closedStatuses.has(result.access.found.status)) {
         return domainProblem(c, ["participation_closed"]) as never;
       }
-      const outcome = await service.generate(
-        participationId,
-        clock.today(),
-        context(c),
-        confirmWarnings,
-      );
+      const outcome = await service.generate(participationId, clock.today(), context(c), input);
       logger.info(
         {
           requestId: c.get("requestId"),

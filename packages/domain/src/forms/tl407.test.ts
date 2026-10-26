@@ -157,10 +157,16 @@ const input = (values: FormInput["values"] = {}, education = ["Gesamtschule"]): 
 const today = "2091-03-01";
 
 describe("schoolQualificationCheck (Q196, Q198)", () => {
-  it("takes the marked row; without rows the table itself is missing", () => {
-    expect(schoolQualificationCheck(null)).toEqual([]);
-    expect(schoolQualificationCheck([])).toEqual([]);
+  it("takes the marked row", () => {
     expect(schoolQualificationCheck([school, marked])).toEqual([]);
+  });
+
+  it("asks for the explicit answer without any row too, never reading absence as 'none'", () => {
+    for (const none of [null, []]) {
+      expect(schoolQualificationCheck(none)).toEqual([
+        { code: "school_qualification_none", key: "education" },
+      ]);
+    }
   });
 
   it("asks for the explicit answer when no row is marked, never inferring it", () => {
@@ -236,6 +242,18 @@ describe("checkTl407 (ba-forms.md, validation before rendering)", () => {
   });
 });
 
+describe("checkTl407 without education rows (Q199)", () => {
+  it("asks for 'Kein Schulabschluss' instead of a missing table, and lays the form out blank there", () => {
+    const check = checkTl407(input({}, []), map, null, today, testMeasure);
+    expect(check.errors).toEqual([]);
+    expect(check.warnings).toEqual([{ code: "school_qualification_none", key: "education" }]);
+    expect(check.layout!.fields.map((field) => field.name)).not.toContain("e1");
+    // Another missing field still refuses.
+    const other = checkTl407(input({ birthDate: null }, []), map, [], today, testMeasure);
+    expect(other.errors).toEqual([{ code: "required_missing", key: "birthDate" }]);
+  });
+});
+
 describe("tl407Label", () => {
   it("names a field, a group, a table, a column and the form as printed", () => {
     expect(tl407Label(map, "lastName")).toBe("7 Nachname");
@@ -262,10 +280,12 @@ describe("tl407ProfilerReadiness (data-protection.md, the readiness projection)"
       today,
       testMeasure,
     );
-    expect(tl407ProfilerReadiness(map, check)).toEqual({
+    const token = "a".repeat(64);
+    expect(tl407ProfilerReadiness(map, check, token)).toEqual({
       view: "profiler",
       formVersion: "08-2025",
       ready: false,
+      sourceToken: token,
       errors: [
         {
           code: "character_unsupported",
@@ -284,12 +304,15 @@ describe("tl407ProfilerReadiness (data-protection.md, the readiness projection)"
       overflow: [],
     });
     const ready = checkTl407(input({}, ["A", "B"]), map, [marked], today, testMeasure);
-    expect(tl407ProfilerReadiness(map, ready)).toMatchObject({
+    expect(tl407ProfilerReadiness(map, ready, token)).toMatchObject({
       ready: true,
       overflow: [{ kind: "table", key: "education", label: "39 Schul- und Berufsausbildung" }],
     });
     const none = checkTl407(input(), null, null, today, testMeasure);
-    expect(tl407ProfilerReadiness(null, none)).toMatchObject({ formVersion: null, ready: false });
+    expect(tl407ProfilerReadiness(null, none, token)).toMatchObject({
+      formVersion: null,
+      ready: false,
+    });
   });
 });
 

@@ -40,8 +40,10 @@ const day = 24 * 60 * 60 * 1000;
 
 /**
  * The earliest deletion a working copy's facts give (data-protection.md, generated forms): 30
- * days after supersession, an accepted scan or the terminal status, 90 days after an abandoned
- * generation; a legal hold suspends each. Every working copy has one, so none stays forever.
+ * days after supersession, an accepted scan or the terminal status; 90 days after its generation
+ * only while it is abandoned, with neither a successor nor an accepted scan (a scan accepted on
+ * day 80 gives day 110, not day 90); a legal hold suspends each. Every working copy has one, so
+ * none stays forever.
  */
 export function workingCopyExpiry(facts: WorkingCopyFacts): WorkingCopyExpiry {
   if (facts.legalHold) return { kind: "held" };
@@ -49,7 +51,10 @@ export function workingCopyExpiry(facts: WorkingCopyFacts): WorkingCopyExpiry {
     ["superseded", facts.supersededAt],
     ["scan_accepted", facts.scanAcceptedAt],
     ["participation_closed", facts.closedAt],
-    ["abandoned", facts.generatedAt],
+    [
+      "abandoned",
+      facts.supersededAt === null && facts.scanAcceptedAt === null ? facts.generatedAt : null,
+    ],
   ];
   let best: { trigger: WorkingCopyTrigger; from: Date; afterDays: number } | null = null;
   for (const [trigger, from] of candidates) {

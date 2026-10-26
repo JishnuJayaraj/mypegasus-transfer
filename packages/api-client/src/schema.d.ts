@@ -10655,7 +10655,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate the TL 407 (the assigned consultant): the version in use, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated); 409 source_changed, 503 pdf_unavailable or storage_unavailable */
+        /**
+         * Generate the TL 407 (the assigned consultant) for the readiness checked: its source token, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated)
+         * @description Refusals:
+         *     - `409 source_changed` at `/sourceToken`: a source moved since the readiness (also when found at the record); check again.
+         *     - `422` with a warning code at `/confirmWarnings`: that warning isn't confirmed.
+         *     - `422` with form-level error codes (pointer empty: `form_version_unavailable`, `required_missing`, `character_unsupported`, …; each code once): the form can't be generated. The readiness names the fields.
+         *     - `422 participation_closed`; `503 pdf_unavailable` (the Anlage can't be rendered) or `storage_unavailable`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -13985,6 +13992,7 @@ export interface components {
             view: "profiler";
             formVersion: string | null;
             ready: boolean;
+            sourceToken: components["schemas"]["Tl407SourceToken"];
             errors: {
                 code: components["schemas"]["Tl407ErrorCode"];
                 key: string;
@@ -14007,6 +14015,7 @@ export interface components {
                 label: string;
             }[];
         };
+        Tl407SourceToken: string;
         /** @enum {string} */
         Tl407ErrorCode: "unknown_key" | "value_kind_invalid" | "value_not_applicable" | "option_invalid" | "date_invalid" | "time_invalid" | "time_range_reversed" | "identifier_too_long" | "character_unsupported" | "required_missing" | "form_version_unavailable";
         /** @enum {string} */
@@ -14031,6 +14040,7 @@ export interface components {
             anlage: boolean;
         };
         Tl407GenerationInput: {
+            sourceToken: components["schemas"]["Tl407SourceToken"];
             confirmWarnings: components["schemas"]["Tl407WarningCode"][];
         };
         DevStaffUser: {

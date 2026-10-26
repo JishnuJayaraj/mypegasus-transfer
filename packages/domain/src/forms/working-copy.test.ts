@@ -32,6 +32,22 @@ describe("workingCopyExpiry (data-protection.md, generated forms; Q179)", () => 
     expect(workingCopyExpiry(late)).toMatchObject({ trigger: "abandoned" });
   });
 
+  it("counts the abandonment only while there is neither a successor nor an accepted scan", () => {
+    // A scan accepted on day 80: day 110, not day 90.
+    const scanned = { ...generated, scanAcceptedAt: at("2091-05-20T10:00:00Z") };
+    expect(workingCopyExpiry(scanned)).toEqual({
+      kind: "due",
+      trigger: "scan_accepted",
+      from: scanned.scanAcceptedAt,
+      afterDays: 30,
+    });
+    const succeeded = { ...generated, supersededAt: at("2091-05-20T10:00:00Z") };
+    expect(workingCopyExpiry(succeeded)).toMatchObject({ trigger: "superseded" });
+    // A later terminal status doesn't move it.
+    const closedLater = { ...succeeded, closedAt: at("2091-06-01T10:00:00Z") };
+    expect(workingCopyExpiry(closedLater)).toMatchObject({ trigger: "superseded" });
+  });
+
   it("is suspended by a legal hold", () => {
     expect(workingCopyExpiry({ ...generated, legalHold: true })).toEqual({ kind: "held" });
   });

@@ -2,14 +2,22 @@ import { describe, expect, it } from "vitest";
 import { Tl407GenerationInput, Tl407Readiness, Tl407ReadinessSummary } from "./api";
 
 describe("the TL 407 generation API (ADR-0010)", () => {
-  it("takes each confirmation by its code, once", () => {
+  it("takes the readiness's source token and each confirmation by its code, once", () => {
+    const sourceToken = "0".repeat(64);
     expect(
-      Tl407GenerationInput.safeParse({ confirmWarnings: ["school_qualification_none"] }).success,
+      Tl407GenerationInput.safeParse({
+        sourceToken,
+        confirmWarnings: ["school_qualification_none"],
+      }).success,
     ).toBe(true);
     for (const confirmWarnings of [["unknown"], ["range_reversed", "range_reversed"]]) {
-      expect(Tl407GenerationInput.safeParse({ confirmWarnings }).success).toBe(false);
+      expect(Tl407GenerationInput.safeParse({ sourceToken, confirmWarnings }).success).toBe(false);
     }
-    expect(Tl407GenerationInput.safeParse({}).success).toBe(false);
+    // Without the token, the confirmations would apply to whatever the sources are now.
+    expect(Tl407GenerationInput.safeParse({ confirmWarnings: [] }).success).toBe(false);
+    expect(Tl407GenerationInput.safeParse({ sourceToken: "x", confirmWarnings: [] }).success).toBe(
+      false,
+    );
   });
 
   it("gives the PL's summary no warning and no overflow property (data-protection.md)", () => {

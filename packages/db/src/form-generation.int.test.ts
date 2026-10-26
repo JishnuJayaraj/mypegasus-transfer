@@ -49,6 +49,21 @@ async function participation() {
 }
 
 const sources = { profile: 0, profiling: 0, assessment: 0, unemployment: 0 };
+/** The person as `form_person` reads a participation without identity, details or dates. */
+const person = {
+  firstName: "",
+  lastName: "",
+  birthDate: null,
+  street: null,
+  postalCode: null,
+  city: null,
+  country: null,
+  phone: null,
+  mobile: null,
+  privateEmail: null,
+  tgStart: null,
+  tgEnd: null,
+};
 const declarations = { jobboerseChoice: null, baContactConsent: null };
 
 function generate(
@@ -64,6 +79,9 @@ function generate(
     formCode: "tl407",
     formVersion: "08-2025",
     sources: JSON.stringify(sources),
+    person: JSON.stringify(person),
+    sourceToken: hex(),
+    organisationSha256: hex(),
     declarations: JSON.stringify(declarations),
     confirmedWarnings: [],
     anlage: false,
@@ -113,8 +131,8 @@ describe("record_form_generation (Q179)", () => {
     expect(
       await one(
         `select document_id, form_code::text, form_version, profile_revision, profiling_revision,
-           assessment_revision, unemployment_revision, jobboerse_choice::text, ba_contact_consent,
-           confirmed_warnings, anlage, generated_by
+           assessment_revision, unemployment_revision, source_token, organisation_sha256,
+           jobboerse_choice::text, ba_contact_consent, confirmed_warnings, anlage, generated_by
          from form_generation where id = $1`,
         [generationId],
       ),
@@ -126,6 +144,8 @@ describe("record_form_generation (Q179)", () => {
       profiling_revision: 1,
       assessment_revision: 0,
       unemployment_revision: 0,
+      source_token: expect.stringMatching(/^[0-9a-f]{64}$/),
+      organisation_sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
       jobboerse_choice: "anonymous_callme",
       ba_contact_consent: true,
       confirmed_warnings: ["age_implausible", "school_qualification_none"],
@@ -166,6 +186,17 @@ describe("record_form_generation (Q179)", () => {
         failsWith("source_changed"),
       );
     }
+    // The person printed isn't the stored one: identity, contact details and TG dates have no
+    // revision, so their values are compared.
+    for (const printedPerson of [
+      { ...person, lastName: "Muster" },
+      { ...person, mobile: "0171 3920000" },
+      { ...person, tgStart: "2026-04-01" },
+    ]) {
+      await expect(generate(id, { person: JSON.stringify(printedPerson) })).rejects.toMatchObject(
+        failsWith("source_changed"),
+      );
+    }
     const printed = { jobboerseChoice: "full", baContactConsent: null };
     await expect(generate(id, { declarations: JSON.stringify(printed) })).rejects.toMatchObject(
       failsWith("source_changed"),
@@ -200,6 +231,10 @@ describe("record_form_generation (Q179)", () => {
       { formVersion: "08/2025" },
       { sources: JSON.stringify({ ...sources, profile: -1 }) },
       { sources: JSON.stringify({ profile: 0 }) },
+      { person: JSON.stringify({ ...person, firstName: 1 }) },
+      { person: JSON.stringify({ lastName: "" }) },
+      { sourceToken: "token" },
+      { organisationSha256: null },
       { declarations: JSON.stringify({ jobboerseChoice: "everyone", baContactConsent: null }) },
       { declarations: JSON.stringify({ jobboerseChoice: null, baContactConsent: "yes" }) },
       { confirmedWarnings: ["looks_odd"] },
@@ -250,6 +285,28 @@ describe("the generated form is a working copy (data-protection.md, generated fo
         wrappedKey: randomBytes(60),
       }),
     ).rejects.toMatchObject(failsWith("document_type_not_supported"));
+  });
+
+  it("counts against no upload limit: 20 generations leave the uploads their allowance", async () => {
+    const id = await participation();
+    for (let n = 0; n < 21; n++) await generate(id);
+    const upload = () =>
+      call(app, "add_document", {
+        context: asConsultant,
+        participationId: id,
+        id: randomUUID(),
+        type: "cv",
+        mediaType: "application/pdf",
+        sizeBytes: 10,
+        contentSha256: hex(),
+        fileName: "lebenslauf.pdf",
+        keyId: hex(8),
+        wrappedKey: randomBytes(60),
+      });
+    expect(await upload()).toEqual(expect.any(String));
+    // The uploads keep their own hourly allowance: 20, the first already used.
+    for (let n = 1; n < 20; n++) await upload();
+    await expect(upload()).rejects.toMatchObject(failsWith("upload_rate_limited"));
   });
 
   it("has a cleanup path while its periods stay unset (a retention-plan test)", async () => {

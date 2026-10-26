@@ -725,23 +725,32 @@ and highly confidential data only; ordinary person-data writes are `participant_
   (Q49), saved as `tl407-<date>.pdf`. No ordinary operation adds, reviews or deletes it (the
   catalog's operations `generated`: uploads refuse the type, `review_document` has no role for it,
   `delete_document` answers `document_immutable`); back office and the participant never see it.
-  It is not evidence: no correction targets it, it expires.
+  It is not evidence: no correction targets it, it expires. It counts against no upload limit:
+  the 50 live documents and 20 an hour of uploads count uploads only.
 - **Who generates:** the TL 407 only the assigned consultant (the profiler, who alone reads
   section C), as themselves in normal mode, while the participation is open
   (`record_form_generation` refuses anyone else and a terminal participation).
 - **Provenance** (`form_generation`, confidential, class `form_working_copy`): the document, the
   form code and version, the revisions of the sources the generation read (the self-service
   profile, the profiling record with its sessions and pending declarations, section C, the
-  unemployment period), the **declaration snapshot** the form printed (the Jobbörse choice and the
-  BA contact declaration), the warning codes the profiler confirmed, whether an Anlage was
-  appended, who generated it and when. The API reads every source in one REPEATABLE READ snapshot;
-  `record_form_generation` compares the revisions and the printed declarations under the
-  participation lock and refuses a moved one (`409 source_changed`; the stored object is deleted
-  at once). Audited `form_generated` (document, code, version, Anlage: the `case` history) and
+  unemployment period), the **source token** of the readiness the profiler checked and the
+  organisation's fingerprint (the Träger printed), the **declaration snapshot** the form printed
+  (the Jobbörse choice and the BA contact declaration), the warning codes the profiler confirmed,
+  whether an Anlage was appended, who generated it and when.
+- **Change detection, twice:** the profiler's readiness carries a **source token**, a SHA-256 over
+  the form version, the date, the four revisions, the identity (names, birth date), the contact
+  details, the effective contractual TG dates and the organisation's fingerprint. A generation
+  names it; the API reads every source again in one REPEATABLE READ snapshot and refuses a
+  different token **before any confirmation applies** (`409 source_changed` at `/sourceToken`), so
+  a confirmation holds only for what the profiler saw. `record_form_generation` then compares,
+  under the participation lock, the revisions, the person printed (identity, contact details and
+  effective TG dates have no revision, so their values: `form_person`) and the printed
+  declarations, and refuses a moved one the same way; the stored object is deleted at once. Audited `form_generated` (document, code, version, Anlage: the `case` history) and
   one `warning_confirmed` per confirmed code.
 - **The working copy's expiry** (Q179; ADR-0008; `workingCopyExpiry`): the file is deleted 30 days
-  after a newer generation supersedes it or its signed scan is accepted, 90 days after a sole
-  unsigned generation (abandoned), 30 days after the participation's terminal status, whichever
+  after a newer generation supersedes it or its signed scan is accepted, 30 days after the
+  participation's terminal status, and 90 days after its generation only while it is abandoned
+  (neither a successor nor an accepted scan: a scan accepted on day 80 gives day 110), whichever
   comes first; a legal hold suspends each. The `form_generation` row and the document row stay as
   the tombstone with the provenance and, from 6-3b, the scans' links. The periods await the DPO:
   the class is `unset`, so no job deletes anything before Slice 7's retention job.
@@ -752,18 +761,21 @@ and highly confidential data only; ordinary person-data writes are `participant_
     sensitive answers, the unemployment period, and section C when one is stored, which logs all
     16 fields). The UI asks for it on "Prüfen" only;
   - the PL: `ready` and the missing applicable `*` fields whose source the PL may know about
-    (`staffSelfServiceAccess(…).knows`), from presence flags only, no decryption; no warning and no
-    overflow (both can derive from section C or the sensitive answers), never the unemployment
-    period or an identifier. `ready` there means nothing the PL may know about is missing; the
-    profiler's readiness decides generation;
+    (`staffSelfServiceAccess(…).knows`), from presence flags only, no decryption; no warning, no
+    overflow and no source token (both can derive from section C or the sensitive answers), never
+    the unemployment period or an identifier. `ready` there means nothing the PL may know about is
+    missing, a completeness summary for the PL: it is no generation guard and no entry guard, and
+    the profiler's readiness decides generation;
   - anyone else `403`, an unassigned consultant `404`.
 - **The school designation** (Q196, Q198, Q199): a row the participant marked (and the profiler
-  confirmed or corrected in assisted mode) is the highest school qualification. With rows and none
-  marked, generation needs the profiler's explicit "Kein Schulabschluss", given with the generation
-  as the confirmation `school_qualification_none` for exactly the sources it read: it is stored
-  with the generation and never carried to a later one, so a later participant edit doesn't
-  inherit it. It is never inferred from an unmarked row, the texts or recency, and no row is made
-  up.
+  confirmed or corrected in assisted mode) is the highest school qualification. Without a marked
+  row, whether rows exist or none is recorded, the answer is open ("not clarified", generation
+  refused) until the profiler confirms "Kein Schulabschluss" with the participant: the
+  confirmation `school_qualification_none` of one generation, for exactly the sources its
+  readiness's token covers. It is stored with that generation and never carried to a later one,
+  so a later edit asks again. Without any row it stands in for the empty table, which stays
+  blank; no row is made up, and the answer is never inferred from an unmarked row, the texts,
+  recency or a missing row.
 - **Characters the form can't print** (Q197): refused per field (`character_unsupported`), never
   transliterated; the readiness names the field, and the form is then completed on paper and
   uploaded as external paper (6-3b).

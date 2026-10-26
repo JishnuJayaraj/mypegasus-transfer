@@ -506,6 +506,7 @@ const profilerReadiness = {
   view: "profiler",
   formVersion: "08-2025",
   ready: true,
+  sourceToken: "b".repeat(64),
   errors: [],
   warnings: [
     {
@@ -543,6 +544,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
     await user.click(generate);
     await waitFor(() =>
       expect(callTo(calls, generatePath)[0]?.body).toEqual({
+        sourceToken: profilerReadiness.sourceToken,
         confirmWarnings: ["school_qualification_none"],
       }),
     );
@@ -589,7 +591,7 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
     await user.click(within(section).getByRole("button", { name: "Prüfen" }));
     await user.click(await within(section).findByRole("button", { name: "Erzeugen" }));
     expect(
-      await within(section).findByText(/Die Angaben haben sich inzwischen geändert/),
+      await within(section).findByText(/Die Angaben haben sich seit der Prüfung geändert/),
     ).toBeVisible();
     await waitFor(() => expect(callTo(calls, readinessPath)).toHaveLength(2));
   });

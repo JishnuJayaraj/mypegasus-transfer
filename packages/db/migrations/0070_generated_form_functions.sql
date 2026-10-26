@@ -1,8 +1,8 @@
 -- Hand-written (ADR-0002, generated forms; data-protection.md, generated forms and the readiness
 -- projection; Q179): the document type catalog's version 3 with the generated TL 407, the four
 -- document functions 0069 dropped with the recreated `document_type` (unchanged), the generation's
--- record, the deletion's refusal of a generated form, the history's projection row and the
--- grants. Same hardening as 0068: SECURITY DEFINER owned by transfer_owner, a fixed search_path
+-- record, the deletion's refusal of a generated form, the upload limits that count uploads only,
+-- the history's projection row and the grants. Same hardening as 0068: SECURITY DEFINER owned by transfer_owner, a fixed search_path
 -- with pg_temp last, schema-qualified names, no dynamic SQL, EXECUTE only for transfer_app,
 -- database time, refusals as P0001 with a stable code, never a value. Audit details carry ids,
 -- codes and versions only: never a value of the form. The event type 0069 added is compared as
@@ -59,7 +59,8 @@ INSERT INTO document_type_policy (type, catalog_version, retention_class, file_n
     '{consultant,project_lead}');
 --> statement-breakpoint
 
--- Created again with the recreated type, as 0054 wrote them.
+-- Created again with the recreated type, as 0054 wrote them; the upload limits count uploads only
+-- (a generated form is no upload: data-protection.md, generated forms).
 
 -- The policy a new document of the type gets: the type's row of the latest catalog version.
 CREATE FUNCTION current_document_policy(p_type document_type)
@@ -72,8 +73,8 @@ $$;
 -- encrypted and stored the object first, and deletes it on any refusal here. Under the
 -- participation lock: `participation_closed`, `document_type_not_supported` (operations
 -- undecided, Q65), `actor_not_allowed` (not an add role of the type, or a file name for a type
--- that keeps none: `invalid_argument`), `document_limit` (50 live documents) and
--- `upload_rate_limited` (20 added within the hour, by anyone; documentLimits). Audited
+-- that keeps none: `invalid_argument`), `document_limit` (50 live uploaded documents) and
+-- `upload_rate_limited` (20 uploaded within the hour, by anyone; documentLimits). Audited
 -- `document_added` (id, type, source `portal` / `staff` / `assisted`). Returns the id.
 CREATE FUNCTION add_document(
   p_context audit_context, p_participation_id uuid, p_id uuid, p_type document_type,
@@ -104,12 +105,17 @@ BEGIN
   IF p_file_name IS NOT NULL AND NOT pol.file_name THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
-  IF (SELECT pg_catalog.count(*) FROM public.document
-      WHERE participation_id = p_participation_id AND deleted_at IS NULL) >= 50 THEN
+  IF (SELECT pg_catalog.count(*) FROM public.document d
+      JOIN public.document_type_policy t
+        ON t.type = d.type AND t.catalog_version = d.catalog_version AND NOT t.generated
+      WHERE d.participation_id = p_participation_id AND d.deleted_at IS NULL) >= 50 THEN
     RAISE EXCEPTION 'document_limit';
   END IF;
-  IF (SELECT pg_catalog.count(*) FROM public.document
-      WHERE participation_id = p_participation_id AND added_at > now() - interval '1 hour') >= 20 THEN
+  IF (SELECT pg_catalog.count(*) FROM public.document d
+      JOIN public.document_type_policy t
+        ON t.type = d.type AND t.catalog_version = d.catalog_version AND NOT t.generated
+      WHERE d.participation_id = p_participation_id
+        AND d.added_at > now() - interval '1 hour') >= 20 THEN
     RAISE EXCEPTION 'upload_rate_limited';
   END IF;
   SELECT project_id INTO v_project_id FROM public.participation WHERE id = p_participation_id;
@@ -204,6 +210,42 @@ RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_
 $$;
 --> statement-breakpoint
 
+-- The person as a generation printed it, compared at its record (data-protection.md, generated
+-- forms): the names and birth date, the contact details and the effective contractual TG dates;
+-- these have no revision of their own. The address parts only with a street, as the API reads
+-- them; dates as ISO text.
+CREATE FUNCTION form_person(p_participation_id uuid)
+RETURNS jsonb LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT pg_catalog.jsonb_build_object(
+    'firstName', coalesce(i.first_name, ''), 'lastName', coalesce(i.last_name, ''),
+    'birthDate', i.birth_date::text,
+    'street', d.address_street,
+    'postalCode', CASE WHEN d.address_street IS NOT NULL THEN d.address_postal_code END,
+    'city', CASE WHEN d.address_street IS NOT NULL THEN d.address_city END,
+    'country', CASE WHEN d.address_street IS NOT NULL THEN d.address_country END,
+    'phone', d.phone, 'mobile', d.mobile, 'privateEmail', d.private_email,
+    'tgStart', coalesce(p.tg_start, w.default_tg_start)::text,
+    'tgEnd', coalesce(p.tg_end, w.default_tg_end)::text)
+  FROM public.participation p
+  LEFT JOIN public.participant_identity i ON i.participation_id = p.id
+  LEFT JOIN public.participant_details d ON d.participation_id = p.id
+  LEFT JOIN public.project_entry_wave w ON w.id = p.entry_wave_id
+  WHERE p.id = p_participation_id
+$$;
+--> statement-breakpoint
+
+-- The person a generation names (`form_person`'s keys), each a string or null.
+CREATE FUNCTION form_person_valid(p_person jsonb)
+RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT coalesce(pg_catalog.jsonb_typeof(p_person) = 'object'
+    AND ARRAY(SELECT k FROM pg_catalog.jsonb_object_keys(p_person) k ORDER BY k)
+      = '{birthDate,city,country,firstName,lastName,mobile,phone,postalCode,privateEmail,street,tgEnd,tgStart}'::text[]
+    AND NOT EXISTS (
+      SELECT FROM pg_catalog.jsonb_each(p_person) e(k, v)
+      WHERE pg_catalog.jsonb_typeof(v) NOT IN ('string', 'null')), false)
+$$;
+--> statement-breakpoint
+
 -- The declarations to the BA a generation printed (ba-forms.md, declarations to the BA):
 -- `{jobboerseChoice, baContactConsent}`, each null or a value of its kind.
 CREATE FUNCTION form_declarations_valid(p_declarations jsonb)
@@ -222,18 +264,21 @@ $$;
 -- The functions transfer_app may execute.
 
 -- A generated form stored (data-protection.md, generated forms; Q179): the API read its sources
--- in one snapshot (each decryption audited), checked, laid out and rendered the form, encrypted
--- and stored the file first, and deletes it on any refusal here. Only the TL 407 so far
--- (`form_not_supported`). Under the participation lock (`lock_profiler`: the assigned consultant
--- as themselves, `participation_closed`): `source_changed` when a source revision moved since the
--- read or the printed declarations aren't the pending ones. Inserts the document (`tl407_form`,
--- the catalog's current policy) and its generation: the provenance (form code and version, the
--- source revisions), the declaration snapshot, the confirmed warning codes and the Anlage.
+-- in one snapshot (each decryption audited), compared them with the readiness's source token,
+-- checked, laid out and rendered the form, encrypted and stored the file first, and deletes it on
+-- any refusal here. Only the TL 407 so far (`form_not_supported`). Under the participation lock
+-- (`lock_profiler`: the assigned consultant as themselves, `participation_closed`):
+-- `source_changed` when a source revision moved since the read, the person printed isn't the
+-- stored one (`form_person`) or the printed declarations aren't the pending ones. Inserts the
+-- document (`tl407_form`, the catalog's current policy) and its generation: the provenance (form
+-- code and version, the source revisions, the source token, the organisation's fingerprint), the
+-- declaration snapshot, the confirmed warning codes and the Anlage.
 -- Audited `form_generated` (document, code, version, Anlage) and one `warning_confirmed` per
 -- confirmed code. Returns the generation's id.
 CREATE FUNCTION record_form_generation(
   p_context audit_context, p_participation_id uuid, p_generation_id uuid, p_document_id uuid,
-  p_form_code form_code, p_form_version text, p_sources jsonb, p_declarations jsonb,
+  p_form_code form_code, p_form_version text, p_sources jsonb, p_person jsonb,
+  p_source_token text, p_organisation_sha256 text, p_declarations jsonb,
   p_confirmed_warnings text[], p_anlage boolean, p_size_bytes integer, p_content_sha256 text,
   p_key_id text, p_wrapped_key bytea
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
@@ -249,6 +294,9 @@ BEGIN
   IF p_generation_id IS NULL OR p_document_id IS NULL OR p_form_code IS NULL
      OR p_form_version IS NULL OR p_form_version !~ '^(0[1-9]|1[0-2])-[0-9]{4}$'
      OR NOT public.form_sources_valid(p_sources)
+     OR NOT public.form_person_valid(p_person)
+     OR p_source_token IS NULL OR p_source_token !~ '^[0-9a-f]{64}$'
+     OR p_organisation_sha256 IS NULL OR p_organisation_sha256 !~ '^[0-9a-f]{64}$'
      OR NOT public.form_declarations_valid(p_declarations)
      OR p_confirmed_warnings IS NULL
      OR NOT p_confirmed_warnings <@ '{age_implausible,entry_before_birth,range_reversed,school_qualification_none}'::text[]
@@ -274,6 +322,7 @@ BEGIN
      OR coalesce(pr.revision, 0) <> (p_sources ->> 'profiling')::integer
      OR coalesce(v_assessment, 0) <> (p_sources ->> 'assessment')::integer
      OR coalesce(v_unemployment, 0) <> (p_sources ->> 'unemployment')::integer
+     OR public.form_person(r.id) IS DISTINCT FROM p_person
      OR pr.jobboerse_choice::text IS DISTINCT FROM p_declarations ->> 'jobboerseChoice'
      OR pr.ba_contact_consent IS DISTINCT FROM (p_declarations ->> 'baContactConsent')::boolean THEN
     RAISE EXCEPTION 'source_changed';
@@ -286,12 +335,12 @@ BEGIN
     p_wrapped_key, 'user', (p_context).staff_user_id, false);
   INSERT INTO public.form_generation (id, project_id, participation_id, document_id, form_code,
     form_version, profile_revision, profiling_revision, assessment_revision,
-    unemployment_revision, jobboerse_choice, ba_contact_consent, confirmed_warnings, anlage,
-    generated_by)
+    unemployment_revision, source_token, organisation_sha256, jobboerse_choice,
+    ba_contact_consent, confirmed_warnings, anlage, generated_by)
   VALUES (p_generation_id, r.project_id, r.id, p_document_id, p_form_code, p_form_version,
     (p_sources ->> 'profile')::integer, (p_sources ->> 'profiling')::integer,
     (p_sources ->> 'assessment')::integer, (p_sources ->> 'unemployment')::integer,
-    pr.jobboerse_choice, pr.ba_contact_consent, p_confirmed_warnings, p_anlage,
+    p_source_token, p_organisation_sha256, pr.jobboerse_choice, pr.ba_contact_consent, p_confirmed_warnings, p_anlage,
     (p_context).staff_user_id);
   PERFORM public.write_audit_event(r.project_id, r.id, 'form_generated', p_context, NULL, NULL,
     NULL, NULL, NULL, pg_catalog.jsonb_build_object('documentId', p_document_id,
@@ -413,7 +462,8 @@ END $$;
 GRANT SELECT ON TABLE form_generation TO transfer_app;
 --> statement-breakpoint
 REVOKE ALL ON FUNCTION current_document_policy, add_document, record_document_upload_rejected,
-  document_link_content, form_sources_valid, form_declarations_valid, record_form_generation
+  document_link_content, form_sources_valid, form_person, form_person_valid,
+  form_declarations_valid, record_form_generation
   FROM PUBLIC;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION add_document, record_document_upload_rejected, document_link_content,

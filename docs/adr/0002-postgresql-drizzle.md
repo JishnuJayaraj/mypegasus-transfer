@@ -737,10 +737,13 @@ Migrations `0069_generated_forms.sql` (generated, hand-edited) and
   four functions that name the type in their signature dropped (`current_document_policy`,
   `add_document`, `record_document_upload_rejected`, `document_link_content`), the type dropped
   and created with the new value, the columns and the FK back; 0070 creates the four functions
-  again unchanged, with their grants. The next added document type takes the same path.
+  again with their grants, `add_document` with upload limits that count uploads only (documents of
+  a `generated` policy don't count against the 50 live or 20 an hour). The next added document
+  type takes the same path.
 - **Tables:** `form_generation` (one row per generated document: `document_id` unique, the enum
-  `form_code`, `form_version` as `MM-JJJJ`, the four source revisions ≥ 0, the printed
-  `jobboerse_choice` and `ba_contact_consent`, `confirmed_warnings` within the known codes, the
+  `form_code`, `form_version` as `MM-JJJJ`, the four source revisions ≥ 0, the readiness's
+  `source_token` and the `organisation_sha256` (SHA-256 hex each), the printed `jobboerse_choice`
+  and `ba_contact_consent`, `confirmed_warnings` within the known codes, the
   Anlage, who generated it and when; `project_id` and the composite FK to the participation);
   `document_type_policy.generated` (default false; true for `tl407_form`). `transfer_app` selects
   `form_generation` and writes neither; the document's ciphertext and wrapped key stay out of its
@@ -752,12 +755,14 @@ Migrations `0069_generated_forms.sql` (generated, hand-edited) and
   | `record_form_generation` | shared (`lock_participation` through `lock_profiler`) | the participation → the new document → its generation; the source rows whose revisions it compares are written only under the same participation lock |
 
 - **Functions:** `record_form_generation(context, participation, generation id, document id,
-  form code, version, sources, declarations, confirmed warnings, anlage, size, hash, key id,
-  wrapped key)`: the assigned consultant as themselves while open (`lock_profiler`); only the TL 407
-  so far (`form_not_supported`); `invalid_argument` for a malformed version, provenance
-  (`form_sources_valid`), declaration snapshot (`form_declarations_valid`) or an unknown or
-  repeated warning code; `source_changed` when a revision moved or the printed declarations aren't
-  the pending ones; inserts the document (type `tl407_form`, the current policy) and its
+  form code, version, sources, person, source token, organisation hash, declarations, confirmed
+  warnings, anlage, size, hash, key id, wrapped key)`: the assigned consultant as themselves while
+  open (`lock_profiler`); only the TL 407 so far (`form_not_supported`); `invalid_argument` for a
+  malformed version, provenance (`form_sources_valid`), person (`form_person_valid`), token or hash,
+  declaration snapshot (`form_declarations_valid`) or an unknown or repeated warning code;
+  `source_changed` when a revision moved, the person printed differs from the stored one (internal
+  `form_person`: names and birth date, the contact details, the effective contractual TG dates;
+  they have no revision of their own) or the printed declarations aren't the pending ones; inserts the document (type `tl407_form`, the current policy) and its
   generation; audits `form_generated` and one `warning_confirmed` per confirmed code (the code as
   its reason code). `delete_document` answers `document_immutable` for a generated type as for a
   signed one; `add_document` refuses it (`document_type_not_supported`, no add role) and

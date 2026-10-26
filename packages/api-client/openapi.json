@@ -12184,6 +12184,9 @@
           "ready": {
             "type": "boolean"
           },
+          "sourceToken": {
+            "$ref": "#/components/schemas/Tl407SourceToken"
+          },
           "errors": {
             "type": "array",
             "items": {
@@ -12273,11 +12276,16 @@
           "view",
           "formVersion",
           "ready",
+          "sourceToken",
           "errors",
           "warnings",
           "overflow"
         ],
         "additionalProperties": false
+      },
+      "Tl407SourceToken": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
       },
       "Tl407ErrorCode": {
         "type": "string",
@@ -12369,6 +12377,9 @@
       "Tl407GenerationInput": {
         "type": "object",
         "properties": {
+          "sourceToken": {
+            "$ref": "#/components/schemas/Tl407SourceToken"
+          },
           "confirmWarnings": {
             "type": "array",
             "items": {
@@ -12378,6 +12389,7 @@
           }
         },
         "required": [
+          "sourceToken",
           "confirmWarnings"
         ],
         "additionalProperties": false
@@ -23671,7 +23683,8 @@
         "tags": [
           "participations"
         ],
-        "summary": "Generate the TL 407 (the assigned consultant): the version in use, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated); 409 source_changed, 503 pdf_unavailable or storage_unavailable",
+        "summary": "Generate the TL 407 (the assigned consultant) for the readiness checked: its source token, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated)",
+        "description": "Refusals:\n- `409 source_changed` at `/sourceToken`: a source moved since the readiness (also when found at the record); check again.\n- `422` with a warning code at `/confirmWarnings`: that warning isn't confirmed.\n- `422` with form-level error codes (pointer empty: `form_version_unavailable`, `required_missing`, `character_unsupported`, …; each code once): the form can't be generated. The readiness names the fields.\n- `422 participation_closed`; `503 pdf_unavailable` (the Anlage can't be rendered) or `storage_unavailable`.",
         "parameters": [
           {
             "schema": {

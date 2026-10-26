@@ -2201,7 +2201,7 @@
         "age_implausible": "Alter unplausibel (außerhalb von 15 bis 67 Jahren): geprüft, die Angabe stimmt.",
         "entry_before_birth": "Einreisedatum vor dem Geburtsdatum: geprüft, die Angaben stimmen.",
         "range_reversed": "„von“ liegt nach „bis“: geprüft, die Angaben stimmen.",
-        "school_qualification_none": "Kein Schulabschluss: mit der teilnehmenden Person geklärt. Keine Zeile ist als höchster Schulabschluss markiert; gibt es einen, die Zeile im assistierten Modus markieren."
+        "school_qualification_none": "Kein Schulabschluss: mit der teilnehmenden Person geklärt. Keine Zeile ist als höchster Schulabschluss markiert oder keine erfasst; gibt es einen, die Zeile im assistierten Modus erfassen oder markieren."
       },
       "overflow": "Wird auf der „Anlage zum Profilingbogen“ fortgesetzt:",
       "generate": "Erzeugen",
@@ -2210,7 +2210,7 @@
       "generatedWithAnlage": "Profilingbogen mit Anlage erzeugt.",
       "failures": {
         "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
-        "stale": "Die Angaben haben sich inzwischen geändert. Die Bereitschaft wurde neu geprüft.",
+        "stale": "Die Angaben haben sich seit der Prüfung geändert. Die Bereitschaft wurde neu geprüft: bitte erneut bestätigen.",
         "refused": "Der Bogen kann so nicht erzeugt werden. Die Bereitschaft wurde neu geprüft.",
         "pdfUnavailable": "Die Anlage kann gerade nicht erstellt werden. Bitte später erneut versuchen.",
         "storageUnavailable": "Der Dokumentenspeicher ist gerade nicht verfügbar."

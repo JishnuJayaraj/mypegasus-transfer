@@ -42,18 +42,17 @@ export type Tl407Check = {
 };
 
 /**
- * The school designation (Q196, Q198): the education row the participant marked and the profiler
- * confirmed or corrected is the highest school qualification. With rows and none marked, the
- * answer is open until the profiler confirms with the participant that there is none
- * (`school_qualification_none`, given with the generation, which binds it to the profile's
- * revision): it is never inferred from an unmarked row, the texts or recency, and no row is made
- * up. Without any row the table itself is missing (`required_missing`).
+ * The school designation (Q196, Q198, Q199): the education row the participant marked and the
+ * profiler confirmed or corrected is the highest school qualification. Without a marked row, rows
+ * or none, the answer is open ("not clarified") until the profiler confirms with the participant
+ * that there is none (`school_qualification_none`, given with one generation for exactly the
+ * sources its readiness read): it is never inferred from an unmarked row, the texts, recency or a
+ * missing row, and no row is made up. Confirmed without any row, the table stays blank.
  */
 export function schoolQualificationCheck(
   education: readonly EducationRow[] | null,
 ): FormIssue<"school_qualification_none">[] {
-  if (!education || education.length === 0) return [];
-  if (education.some((row) => row.highestSchoolQualification)) return [];
+  if (education?.some((row) => row.highestSchoolQualification)) return [];
   return [{ code: "school_qualification_none", key: "education" }];
 }
 
@@ -77,9 +76,15 @@ export function checkTl407(
     };
   }
   const validation = validateFormInput(input, map, today);
+  // An empty education table is the open school question, not a missing field: answered "none",
+  // the table stays blank, never filled with a made-up row.
+  const noRows = (education?.length ?? 0) === 0;
+  const errors = validation.errors.filter(
+    (error) => !(noRows && error.code === "required_missing" && error.key === "education"),
+  );
   const warnings = [...validation.warnings, ...schoolQualificationCheck(education)];
-  const layout = validation.errors.length === 0 ? layoutTl407(input, map, measure) : null;
-  return { errors: validation.errors, warnings, layout };
+  const layout = errors.length === 0 ? layoutTl407(input, map, measure) : null;
+  return { errors, warnings, layout };
 }
 
 /** The confirmation codes a check still needs that `confirmed` doesn't give. */
@@ -115,6 +120,8 @@ export type Tl407ProfilerReadiness = {
   formVersion: string | null;
   /** No error: generation is possible once each warning is confirmed. */
   ready: boolean;
+  /** What the check was made of (the API's fingerprint of the sources). */
+  sourceToken: string;
   errors: Issue<Tl407ErrorCode>[];
   warnings: Issue<Tl407WarningCode>[];
   overflow: (FormOverflow & { label: string })[];
@@ -132,11 +139,13 @@ const labelled =
 export function tl407ProfilerReadiness(
   map: FieldMap | null,
   check: Tl407Check,
+  sourceToken: string,
 ): Tl407ProfilerReadiness {
   return {
     view: "profiler",
     formVersion: map?.version ?? null,
     ready: check.errors.length === 0,
+    sourceToken,
     errors: check.errors.map(labelled(map)),
     warnings: check.warnings.map(labelled(map)),
     overflow: (check.layout?.overflow ?? []).map((entry) => ({

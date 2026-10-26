@@ -179,11 +179,16 @@ readiness projection.
   decrypted sources, the school designation (`schoolQualificationCheck`, Q196, Q198) and, without
   errors, the layout with its overflow per table and text (`FormLayout.overflow`). The unemployment
   period's reversed range is a warning here too (`range_reversed`, key `unemployedUntil`).
-- **Confirmations by code** (`confirmWarnings`): each warning code the check raises must be
-  confirmed, else `422` with the code at `/confirmWarnings`; the codes are the plausibility
-  warnings and `school_qualification_none`, the explicit answer that the participant has no
-  school qualification when no education row is marked (never inferred; Q198, Q199). Only the
-  confirmations the check asked for are recorded and audited (`warning_confirmed`).
+- **Confirmations by code** (`confirmWarnings`) for one readiness (`sourceToken`): a source changed
+  since that readiness is `409 source_changed` at `/sourceToken` before any confirmation applies;
+  each warning code the check raises must be confirmed, else `422` with the code at
+  `/confirmWarnings`. The codes are the plausibility warnings and `school_qualification_none`, the
+  explicit answer that the participant has no school qualification when no education row is
+  marked, or none is recorded (the empty table stays blank then; never inferred; Q198, Q199). Only
+  the confirmations the check asked for are recorded and audited (`warning_confirmed`).
+- **Form-level refusals:** a form that can't be generated is `422` with its error codes, each once
+  and without a field pointer (`form_version_unavailable`, `required_missing`,
+  `character_unsupported`, …); the readiness names the fields.
 - **The packet:** the filled and flattened TL 407 and, when something overflows, the Anlage
   rendered by `PdfRenderer.renderHtml` and appended (`mergePdfs`); without an HTML renderer
   (production before Gotenberg) a packet that needs an Anlage is `503 pdf_unavailable`, a form

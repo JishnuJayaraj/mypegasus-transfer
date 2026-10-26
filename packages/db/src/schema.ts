@@ -1780,11 +1780,12 @@ export const documentLink = pgTable(
 /**
  * A generated form's provenance (data-protection.md, generated forms; Q179): the document it
  * stored, the form's code and version, the revisions of the sources it was built from (the
- * self-service profile, the profiling record, section C and the unemployment period), the
- * declarations to the BA it printed, the warnings the profiler confirmed by code and whether an
- * Anlage was appended; who generated it and when. Confidential, class `form_working_copy`: the
- * row stays as the tombstone when the working copy's file goes. Written only by
- * `record_form_generation`.
+ * self-service profile, the profiling record, section C and the unemployment period), the source
+ * token of the checked readiness (which also covers the identity, the contact details, the
+ * effective TG dates and the date) and the organisation's fingerprint, the declarations to the BA
+ * it printed, the warnings the profiler confirmed by code and whether an Anlage was appended; who
+ * generated it and when. Confidential, class `form_working_copy`: the row stays as the tombstone
+ * when the working copy's file goes. Written only by `record_form_generation`.
  */
 export const formGeneration = pgTable(
   "form_generation",
@@ -1804,6 +1805,8 @@ export const formGeneration = pgTable(
     profilingRevision: integer("profiling_revision").notNull(),
     assessmentRevision: integer("assessment_revision").notNull(),
     unemploymentRevision: integer("unemployment_revision").notNull(),
+    sourceToken: text("source_token").notNull(),
+    organisationSha256: text("organisation_sha256").notNull(),
     jobboerseChoice: jobboerseChoice("jobboerse_choice"),
     baContactConsent: boolean("ba_contact_consent"),
     confirmedWarnings: text("confirmed_warnings").array().notNull(),
@@ -1825,6 +1828,8 @@ export const formGeneration = pgTable(
       "form_generation_revisions",
       sql`${t.profileRevision} >= 0 and ${t.profilingRevision} >= 0 and ${t.assessmentRevision} >= 0 and ${t.unemploymentRevision} >= 0`,
     ),
+    check("form_generation_source_token", sql`${t.sourceToken} ~ '^[0-9a-f]{64}$'`),
+    check("form_generation_organisation_sha256", sql`${t.organisationSha256} ~ '^[0-9a-f]{64}$'`),
     check(
       "form_generation_confirmed_warnings",
       sql.raw(

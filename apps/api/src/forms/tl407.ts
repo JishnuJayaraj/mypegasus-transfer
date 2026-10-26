@@ -27,9 +27,9 @@ import {
   type IsoDate,
   type ProfilingAssessment,
   type Tl407Generation,
+  type Tl407GenerationInput,
   type Tl407Readiness,
   type Tl407Source,
-  type Tl407WarningCode,
 } from "@transfer/domain";
 import type { SQL } from "drizzle-orm";
 import { createHash, randomUUID } from "node:crypto";
@@ -58,7 +58,28 @@ export type Tl407Sources = {
   unemployment: number;
 };
 
-type Read = { source: Tl407Source; sources: Tl407Sources };
+/**
+ * The values without a revision of their own that the form prints, as `form_person` reads them:
+ * compared again when the generation is recorded.
+ */
+type Person = {
+  firstName: string;
+  lastName: string;
+  birthDate: IsoDate | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  country: string | null;
+  phone: string | null;
+  mobile: string | null;
+  privateEmail: string | null;
+  tgStart: IsoDate | null;
+  tgEnd: IsoDate | null;
+};
+
+type Read = { source: Tl407Source; sources: Tl407Sources; person: Person };
+
+const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 
 /** What the service needs beyond the database. */
 export type Tl407Deps = {
@@ -76,12 +97,43 @@ export type Tl407Deps = {
 /** Why a generation was refused: a domain code with its body location, or the store. */
 export type Tl407Refusal =
   | { kind: "domain"; codes: { code: string; field: string | null }[] }
+  /** A source moved since the readiness the profiler checked (`409 source_changed`). */
+  | { kind: "stale" }
   | { kind: "unavailable"; code: "storage_unavailable" | "pdf_unavailable" }
   | { kind: "function"; error: unknown };
 
 export function tl407Service(deps: Tl407Deps) {
   const { db, release, registry } = deps;
   const organisation = loadOrganisation(configDirs(deps.configDir).organisation);
+  const company = organisation.transfergesellschaft;
+  /** The Träger the form prints, as a fingerprint (its version is the deployment's file). */
+  const organisationSha256 = sha256(
+    JSON.stringify([
+      company.name,
+      company.street,
+      company.houseNumber,
+      company.postalCode,
+      company.city,
+    ]),
+  );
+
+  /**
+   * What a check was made of (data-protection.md, generated forms): the version, the date (the
+   * work rows and the age depend on it), the source revisions, the person and the organisation.
+   */
+  const tokenOf = ({ sources, person }: Read, version: string | null, today: IsoDate) =>
+    sha256(
+      `tl407-sources:v1\n${JSON.stringify([
+        version,
+        today,
+        sources.profile,
+        sources.profiling,
+        sources.assessment,
+        sources.unemployment,
+        Object.values(person),
+        organisationSha256,
+      ])}`,
+    );
   const documentKey = documentEncryptionKey(deps.documentKeyRoot);
   let renderer: PdfRenderer | undefined;
 
@@ -154,13 +206,30 @@ export function tl407Service(deps: Tl407Deps) {
           }
         }
         const wave = found!.wave;
+        const tgStart = effectiveTgStart(found!, wave);
+        const tgEnd = effectiveTgEnd(found!, wave);
+        const address = record.values.address;
+        const person: Person = {
+          firstName: record.identity.firstName,
+          lastName: record.identity.lastName,
+          birthDate: record.identity.birthDate,
+          street: address?.street ?? null,
+          postalCode: address?.postalCode ?? null,
+          city: address?.city ?? null,
+          country: address?.country ?? null,
+          phone: record.values.phone,
+          mobile: record.values.mobile,
+          privateEmail: record.values.privateEmail,
+          tgStart,
+          tgEnd,
+        };
         const source: Tl407Source = {
           projectType: found!.projectType,
           today,
           transferCompany: organisation.transfergesellschaft,
           identity: record.identity,
-          tgStart: effectiveTgStart(found!, wave),
-          tgEnd: effectiveTgEnd(found!, wave),
+          tgStart,
+          tgEnd,
           contact: {
             address: record.values.address,
             phone: record.values.phone,
@@ -179,6 +248,7 @@ export function tl407Service(deps: Tl407Deps) {
         };
         return {
           source,
+          person,
           sources: {
             profile: record.revision,
             profiling: profiling?.revision ?? 0,
@@ -247,24 +317,27 @@ export function tl407Service(deps: Tl407Deps) {
       const { source } = await read(participationId, today, null);
       return tl407ReadinessSummary(tl407Input(source), map, today, viewer.knows);
     }
-    const { source } = await read(participationId, today, { context: viewer.context });
+    const sourceRead = await read(participationId, today, { context: viewer.context });
+    const { source } = sourceRead;
     const input = tl407Input(source);
     const measure = await registry.measure();
     const check = checkTl407(input, map, source.profile.educationHistory, today, measure);
-    return tl407ProfilerReadiness(map, check);
+    return tl407ProfilerReadiness(map, check, tokenOf(sourceRead, map?.version ?? null, today));
   }
 
   /**
    * A generation (data-protection.md, generated forms): the version in use, the sources read and
-   * checked, each warning confirmed by code, the packet rendered (the form and its Anlage),
-   * encrypted and stored, then recorded with its provenance by `record_form_generation`; on its
-   * refusal the stored object is deleted at once.
+   * compared with the checked readiness's token before any confirmation applies, checked, each
+   * warning confirmed by code, the packet rendered (the form and its Anlage), encrypted and
+   * stored, then recorded with its provenance by `record_form_generation`, which compares the
+   * sources and the person again under the lock; on its refusal the stored object is deleted at
+   * once.
    */
   async function generate(
     participationId: string,
     today: IsoDate,
     context: SQL,
-    confirmed: readonly Tl407WarningCode[],
+    { sourceToken, confirmWarnings: confirmed }: Tl407GenerationInput,
   ): Promise<{ ok: true; generation: Tl407Generation } | { ok: false; refusal: Tl407Refusal }> {
     const files = deps.files;
     if (!files) return { ok: false, refusal: { kind: "unavailable", code: "storage_unavailable" } };
@@ -273,7 +346,12 @@ export function tl407Service(deps: Tl407Deps) {
       const codes = [{ code: "form_version_unavailable", field: null }];
       return { ok: false, refusal: { kind: "domain", codes } };
     }
-    const { source, sources } = await read(participationId, today, { context });
+    const sourceRead = await read(participationId, today, { context });
+    // The confirmations were given for what the readiness showed, nothing else (Q199).
+    if (tokenOf(sourceRead, version.manifest.version, today) !== sourceToken) {
+      return { ok: false, refusal: { kind: "stale" } };
+    }
+    const { source, sources, person } = sourceRead;
     const input = tl407Input(source);
     const check = checkTl407(
       input,
@@ -341,6 +419,8 @@ export function tl407Service(deps: Tl407Deps) {
         p_generation_id => ${randomUUID()}::uuid, p_document_id => ${documentId}::uuid,
         p_form_code => 'tl407'::form_code, p_form_version => ${version.manifest.version},
         p_sources => ${JSON.stringify(sources)}::jsonb,
+        p_person => ${JSON.stringify(person)}::jsonb, p_source_token => ${sourceToken},
+        p_organisation_sha256 => ${organisationSha256},
         p_declarations => ${JSON.stringify(declarations)}::jsonb,
         p_confirmed_warnings => ${textArray(confirmedWarnings)}::text[],
         p_anlage => ${layout.anlage !== null}::boolean,

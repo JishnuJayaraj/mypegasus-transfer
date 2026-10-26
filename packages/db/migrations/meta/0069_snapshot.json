@@ -1,5 +1,5 @@
 {
-  "id": "21676f0e-b09a-4c32-8b17-bc4a25b99895",
+  "id": "4ff7c768-755b-4ffb-977d-02ccc81e91d6",
   "prevId": "d4fe2f52-8673-4074-aee7-cea1519b704e",
   "version": "7",
   "dialect": "postgresql",
@@ -2534,6 +2534,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "source_token": {
+          "name": "source_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organisation_sha256": {
+          "name": "organisation_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "jobboerse_choice": {
           "name": "jobboerse_choice",
           "type": "jobboerse_choice",
@@ -2657,6 +2669,14 @@
         "form_generation_revisions": {
           "name": "form_generation_revisions",
           "value": "\"form_generation\".\"profile_revision\" >= 0 and \"form_generation\".\"profiling_revision\" >= 0 and \"form_generation\".\"assessment_revision\" >= 0 and \"form_generation\".\"unemployment_revision\" >= 0"
+        },
+        "form_generation_source_token": {
+          "name": "form_generation_source_token",
+          "value": "\"form_generation\".\"source_token\" ~ '^[0-9a-f]{64}$'"
+        },
+        "form_generation_organisation_sha256": {
+          "name": "form_generation_organisation_sha256",
+          "value": "\"form_generation\".\"organisation_sha256\" ~ '^[0-9a-f]{64}$'"
         },
         "form_generation_confirmed_warnings": {
           "name": "form_generation_confirmed_warnings",
