@@ -4,7 +4,12 @@ import { isoDate } from "../iso-date";
 import { edges, type Edge } from "../lifecycle/edges";
 import { ProfilingStatus } from "../lifecycle/enums";
 import { canTransition, type TransitionContext } from "../lifecycle/transition";
-import { assessmentFieldKeys, ProfilingAssessment, UnemploymentPeriod } from "./record";
+import {
+  assessmentFieldKeys,
+  ProfilingAssessment,
+  ProfilingWarning,
+  UnemploymentPeriod,
+} from "./record";
 
 // The profiling record's API (ADR-0010; data-protection.md, the profiling record): the tab's view,
 // built per viewer, and the profiler's logged reads. Properties a viewer may not know about are
@@ -54,7 +59,15 @@ export const ProfilingView = z
     /** The version `POST …/profiling-status` compares (compare-and-set). */
     statusVersion: z.int().min(0),
     profilingDoneOn: isoDate.nullable(),
-    /** The record's revision, which a sessions or declarations write compares (409). */
+    /**
+     * The participation is terminal: the record is read-only (ordinary writes are refused,
+     * `participation_closed`; corrections are their own workflow).
+     */
+    closed: z.boolean(),
+    /**
+     * The record's revision, which a sessions or declarations write compares (409); read in one
+     * snapshot with the sessions and declarations.
+     */
     revision: z.int().min(0),
     sessions: z.array(ProfilingSessionView),
     /** The pending declarations to the BA (the profiler only). */
@@ -78,10 +91,15 @@ export const ProfilingView = z
     /** The track's next steps from the current status. */
     transitions: z.array(ProfilingTransition),
     capabilities: z.strictObject({
-      /** The sessions, the pending declarations and the unemployment period (the profiler). */
+      /**
+       * Write the sessions, the pending declarations and the unemployment period (the profiler,
+       * while the participation is open).
+       */
       record: z.boolean(),
-      /** Read and write section C and p. 7 (the profiler). */
-      assessment: z.boolean(),
+      /** Read section C and p. 7 (the profiler; a logged read). */
+      readAssessment: z.boolean(),
+      /** Write section C and p. 7 (the profiler, while the participation is open). */
+      writeAssessment: z.boolean(),
       /** Read the unemployment period (a logged read). */
       readUnemploymentPeriod: z.boolean(),
     }),
@@ -99,11 +117,33 @@ export const ProfilingAssessmentView = z
   .meta({ id: "ProfilingAssessmentView" });
 export type ProfilingAssessmentView = z.infer<typeof ProfilingAssessmentView>;
 
-/** `GET …/profiling/unemployment`: the decrypted period, its read audited. */
+/**
+ * `GET …/profiling/unemployment`: the decrypted period with its revision, read in one statement,
+ * the read audited; an update or clearing sends the revision back (409 if stale).
+ */
 export const UnemploymentPeriodView = z
-  .strictObject({ participationId: z.uuid(), period: UnemploymentPeriod.nullable() })
+  .strictObject({
+    participationId: z.uuid(),
+    revision: z.int().min(0),
+    period: UnemploymentPeriod.nullable(),
+  })
   .meta({ id: "UnemploymentPeriodView" });
 export type UnemploymentPeriodView = z.infer<typeof UnemploymentPeriodView>;
+
+/**
+ * The answer to a profiling write: `revision` is the token of exactly what this write stored (the
+ * record's for sessions and declarations, the assessment's, the unemployment period's), which the
+ * writer's editor keeps with its values; `warnings` on the saved values; `profiling` the record as
+ * read afterwards, for the tab (it may already hold another writer's later change).
+ */
+export const ProfilingWriteResult = z
+  .strictObject({
+    revision: z.int().min(0),
+    warnings: z.array(ProfilingWarning),
+    profiling: ProfilingView,
+  })
+  .meta({ id: "ProfilingWriteResult" });
+export type ProfilingWriteResult = z.infer<typeof ProfilingWriteResult>;
 
 /**
  * `POST …/profiling-status` (process-and-lifecycle.md, profiling track; Q60): one step along an

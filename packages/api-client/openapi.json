@@ -11120,6 +11120,9 @@
               "2027-03-01"
             ]
           },
+          "closed": {
+            "type": "boolean"
+          },
           "revision": {
             "type": "integer",
             "minimum": 0
@@ -11212,7 +11215,10 @@
               "record": {
                 "type": "boolean"
               },
-              "assessment": {
+              "readAssessment": {
+                "type": "boolean"
+              },
+              "writeAssessment": {
                 "type": "boolean"
               },
               "readUnemploymentPeriod": {
@@ -11221,7 +11227,8 @@
             },
             "required": [
               "record",
-              "assessment",
+              "readAssessment",
+              "writeAssessment",
               "readUnemploymentPeriod"
             ],
             "additionalProperties": false
@@ -11232,6 +11239,7 @@
           "profilingStatus",
           "statusVersion",
           "profilingDoneOn",
+          "closed",
           "revision",
           "sessions",
           "transitions",
@@ -11335,6 +11343,36 @@
           "tl407_signed",
           "before_cutoff",
           null
+        ]
+      },
+      "ProfilingWriteResult": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfilingWarning"
+            }
+          },
+          "profiling": {
+            "$ref": "#/components/schemas/Profiling"
+          }
+        },
+        "required": [
+          "revision",
+          "warnings",
+          "profiling"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingWarning": {
+        "type": "string",
+        "enum": [
+          "range_reversed"
         ]
       },
       "ProfilingSessionsInput": {
@@ -11945,12 +11983,17 @@
             "type": "string",
             "format": "uuid"
           },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
           "period": {
             "$ref": "#/components/schemas/UnemploymentPeriod"
           }
         },
         "required": [
           "participationId",
+          "revision",
           "period"
         ],
         "additionalProperties": false
@@ -11990,11 +12033,16 @@
       "UnemploymentPeriodInput": {
         "type": "object",
         "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
           "period": {
             "$ref": "#/components/schemas/UnemploymentPeriod"
           }
         },
         "required": [
+          "revision",
           "period"
         ],
         "additionalProperties": false
@@ -22630,11 +22678,11 @@
         },
         "responses": {
           "200": {
-            "description": "Saved; the profiling record",
+            "description": "Saved: the record's revision of these sessions",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Profiling"
+                  "$ref": "#/components/schemas/ProfilingWriteResult"
                 }
               }
             }
@@ -22731,11 +22779,11 @@
         },
         "responses": {
           "200": {
-            "description": "Saved; the profiling record",
+            "description": "Saved: the record's revision of these declarations",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Profiling"
+                  "$ref": "#/components/schemas/ProfilingWriteResult"
                 }
               }
             }
@@ -22901,11 +22949,11 @@
         },
         "responses": {
           "200": {
-            "description": "Saved; the profiling record, the assessment by presence",
+            "description": "Saved: the assessment's revision of these values",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Profiling"
+                  "$ref": "#/components/schemas/ProfilingWriteResult"
                 }
               }
             }
@@ -22978,7 +23026,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "The unemployment period decrypted (the assigned consultant, back office); the read is audited (sensitive_read)",
+        "summary": "The unemployment period decrypted with its revision (the assigned consultant, back office); the read is audited (sensitive_read)",
         "parameters": [
           {
             "schema": {
@@ -23047,7 +23095,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "Write the unemployment period, encrypted (the assigned consultant), or clear it; audited (sensitive_write)",
+        "summary": "Write the unemployment period, encrypted (the assigned consultant), or clear it, with the revision of its read (409 stale_revision); audited (sensitive_write)",
         "parameters": [
           {
             "schema": {
@@ -23071,11 +23119,11 @@
         },
         "responses": {
           "200": {
-            "description": "Saved; the profiling record, the period by presence",
+            "description": "Saved: the period's revision, a reversed range warned",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Profiling"
+                  "$ref": "#/components/schemas/ProfilingWriteResult"
                 }
               }
             }

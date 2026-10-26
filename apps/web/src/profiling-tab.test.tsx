@@ -71,16 +71,26 @@ const session = {
   recordedAt: "2026-10-20T11:00:00.000000Z",
 };
 
+type Choice = "full" | "anonymous_callme" | "anonymous_no_contact" | "none" | null;
+
 /** The tab's view: the PL's (`profiler: false`) or the assigned consultant's. */
-const view = (profiler: boolean) => ({
+const view = (
+  profiler: boolean,
+  options: { revision?: number; jobboerseChoice?: Choice; closed?: boolean } = {},
+) => ({
   participationId,
   profilingStatus: "profiling_accepted",
   statusVersion: 3,
   profilingDoneOn: null,
-  revision: 2,
+  closed: options.closed ?? false,
+  revision: options.revision ?? 2,
   sessions: [session],
   ...(profiler && {
-    declarations: { jobboerseChoice: null, baContactConsent: null, recordedAt: null },
+    declarations: {
+      jobboerseChoice: options.jobboerseChoice ?? null,
+      baContactConsent: null,
+      recordedAt: null,
+    },
     assessment: {
       revision: 1,
       recorded: ["profilingAssessment.schoolQualification", "profilingHealthAssessment"],
@@ -88,12 +98,26 @@ const view = (profiler: boolean) => ({
     },
     unemploymentPeriodRecorded: true,
   }),
-  transitions: [
-    { to: "profiling_in_progress", allowed: true, refusal: null },
-    { to: "profiling_declined", allowed: true, refusal: null },
-  ],
-  capabilities: { record: profiler, assessment: profiler, readUnemploymentPeriod: profiler },
+  transitions: options.closed
+    ? [{ to: "profiling_in_progress", allowed: false, refusal: "track_inactive" }]
+    : [
+        { to: "profiling_in_progress", allowed: true, refusal: null },
+        { to: "profiling_declined", allowed: true, refusal: null },
+      ],
+  capabilities: {
+    record: profiler && !options.closed,
+    readAssessment: profiler,
+    writeAssessment: profiler && !options.closed,
+    readUnemploymentPeriod: profiler,
+  },
 });
+
+/** A write's answer: its own revision, its warnings and the record as read after it. */
+const written = (
+  profiling: ReturnType<typeof view>,
+  warnings: string[] = [],
+  revision = profiling.revision,
+) => json({ revision, warnings, profiling });
 
 const selfService = {
   participationId,
@@ -120,7 +144,14 @@ const assessment = {
   },
 };
 
-function setup(options: { profiler: boolean; viewProfiling?: boolean }) {
+type Routes = Parameters<typeof mockApi>[0];
+
+function setup(options: {
+  profiler: boolean;
+  viewProfiling?: boolean;
+  closed?: boolean;
+  routes?: Routes;
+}) {
   const mock = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
@@ -129,7 +160,7 @@ function setup(options: { profiler: boolean; viewProfiling?: boolean }) {
     [`GET ${projectPath}/entry-waves`]: () => json({ items: [], nextCursor: null }),
     [`GET ${detailPath}`]: () => json(detail(options.viewProfiling ?? true)),
     [`GET ${detailPath}/self-service`]: () => json(selfService),
-    [`GET ${detailPath}/profiling`]: () => json(view(options.profiler)),
+    [`GET ${detailPath}/profiling`]: () => json(view(options.profiler, { closed: options.closed })),
     [`POST ${detailPath}/profiling-status`]: () =>
       json({ ...view(options.profiler), profilingStatus: "profiling_in_progress" }),
     [`PUT ${detailPath}/profiling/sessions`]: ({ body }) => {
@@ -139,13 +170,15 @@ function setup(options: { profiler: boolean; viewProfiling?: boolean }) {
         ? problem(422, "domain-error", {
             errors: [{ pointer: "/sessions/1/date", code: "session_in_future", detail: "x" }],
           })
-        : json(view(options.profiler));
+        : written(view(options.profiler, { revision: 3 }));
     },
     [`GET ${detailPath}/profiling/assessment`]: () => json(assessment),
-    [`PUT ${detailPath}/profiling/assessment`]: () => json(view(options.profiler)),
+    [`PUT ${detailPath}/profiling/assessment`]: () => written(view(options.profiler), [], 2),
     [`GET ${detailPath}/profiling/unemployment`]: () =>
-      json({ participationId, period: { from: "2025-11-01", until: null } }),
-    [`PUT ${detailPath}/profiling/declarations`]: () => json(view(options.profiler)),
+      json({ participationId, revision: 1, period: { from: "2025-11-01", until: null } }),
+    [`PUT ${detailPath}/profiling/unemployment`]: () => written(view(options.profiler)),
+    [`PUT ${detailPath}/profiling/declarations`]: () => written(view(options.profiler)),
+    ...options.routes,
   });
   renderApp(`/projects/${project.id}/participations/${participationId}?tab=profiling`, mock.api);
   return mock;
@@ -282,6 +315,147 @@ describe("the tab 'Profiling'", () => {
         revision: 2,
         jobboerseChoice: "anonymous_callme",
         baContactConsent: false,
+      }),
+    );
+  });
+
+  it("keeps an unsaved declaration across a session save and sends the new revision", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ profiler: true });
+    const jobboerse = await screen.findByLabelText("Veröffentlichung in der Jobbörse (Feld 50)");
+    await user.selectOptions(jobboerse, "full");
+    await user.click(screen.getByRole("button", { name: "Termine speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/profiling/sessions`)).toHaveLength(1),
+    );
+    // The session save answered with revision 3 and unchanged declarations: the draft stays.
+    await waitFor(() => expect(jobboerse).toHaveValue("full"));
+    expect(screen.queryByText(/an anderer Stelle gespeichert/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Erklärungen speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/profiling/declarations`)[0]?.body).toEqual({
+        revision: 3,
+        jobboerseChoice: "full",
+        baContactConsent: null,
+      }),
+    );
+  });
+
+  it("shows a conflict when the stored declarations changed under a draft, kept until 'Neu laden'", async () => {
+    const user = userEvent.setup();
+    // The server's record: another tab stores "none" (revision 4) before this tab's session save.
+    let stored = view(true);
+    const { calls } = setup({
+      profiler: true,
+      routes: {
+        [`GET ${detailPath}/profiling`]: () => json(stored),
+        [`PUT ${detailPath}/profiling/sessions`]: () => {
+          stored = view(true, { revision: 4, jobboerseChoice: "none" });
+          return written(stored);
+        },
+        [`PUT ${detailPath}/profiling/declarations`]: ({ body }) =>
+          (body as { revision: number }).revision === stored.revision
+            ? written(stored)
+            : problem(409, "conflict"),
+      },
+    });
+    const jobboerse = await screen.findByLabelText("Veröffentlichung in der Jobbörse (Feld 50)");
+    await user.selectOptions(jobboerse, "full");
+    await user.click(screen.getByRole("button", { name: "Termine speichern" }));
+    expect(await screen.findByText(/an anderer Stelle gespeichert/)).toBeVisible();
+    expect(jobboerse).toHaveValue("full");
+    // A save goes with the draft's own revision: refused, the draft stays.
+    await user.click(screen.getByRole("button", { name: "Erklärungen speichern" }));
+    expect(await screen.findByText(/Das Profiling wurde inzwischen geändert/)).toBeVisible();
+    expect(callTo(calls, `PUT ${detailPath}/profiling/declarations`)[0]?.body).toMatchObject({
+      revision: 2,
+    });
+    expect(jobboerse).toHaveValue("full");
+    await user.click(screen.getByRole("button", { name: "Neu laden" }));
+    expect(jobboerse).toHaveValue("none");
+    expect(screen.queryByText(/an anderer Stelle gespeichert/)).toBeNull();
+  });
+
+  it("keeps section C's input on 409 and sends the save's own revision next", async () => {
+    const user = userEvent.setup();
+    let refuse = false;
+    const { calls } = setup({
+      profiler: true,
+      routes: {
+        [`PUT ${detailPath}/profiling/assessment`]: () =>
+          refuse ? problem(409, "conflict") : written(view(true), [], 2),
+      },
+    });
+    const section = within(
+      (await screen.findByRole("heading", { name: "Handlungsbedarf (Abschnitt C)" })).closest(
+        "section",
+      )!,
+    );
+    await user.click(section.getByRole("button", { name: /Anzeigen/ }));
+    const text = await section.findByDisplayValue(SECRET);
+    await user.click(section.getByRole("button", { name: "Einschätzung speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/profiling/assessment`)).toHaveLength(1),
+    );
+    refuse = true;
+    await user.type(text, " ergänzt");
+    await user.click(section.getByRole("button", { name: "Einschätzung speichern" }));
+    expect(await section.findByText(/Einschätzung wurde inzwischen/)).toBeVisible();
+    expect(text).toHaveValue(`${SECRET} ergänzt`);
+    expect(callTo(calls, `PUT ${detailPath}/profiling/assessment`)[1]?.body).toMatchObject({
+      revision: 2,
+    });
+  });
+
+  it("shows a closed participation read-only", async () => {
+    const user = userEvent.setup();
+    setup({ profiler: true, closed: true });
+    expect(await screen.findByText(/Die Teilnahme ist beendet/)).toBeVisible();
+    expect(screen.queryByText(/erst geändert werden, wenn die Person informiert ist/)).toBeNull();
+    expect(screen.getByRole("table", { name: "Termine des Profilings" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Termine speichern" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Erklärungen speichern" })).toBeNull();
+    expect(screen.getByLabelText("Veröffentlichung in der Jobbörse (Feld 50)")).toBeDisabled();
+    const section = within(
+      screen.getByRole("heading", { name: "Handlungsbedarf (Abschnitt C)" }).closest("section")!,
+    );
+    await user.click(section.getByRole("button", { name: /Anzeigen/ }));
+    expect(await section.findByDisplayValue(SECRET)).toHaveAttribute("readonly");
+    expect(section.queryByRole("button", { name: "Einschätzung speichern" })).toBeNull();
+    const unemployment = within(
+      screen.getByRole("heading", { name: "Arbeitslos seit / bis" }).closest("section")!,
+    );
+    await user.click(unemployment.getByRole("button", { name: /Anzeigen/ }));
+    expect(await unemployment.findByText("01.11.2025")).toBeVisible();
+    expect(unemployment.queryByRole("button", { name: "Speichern" })).toBeNull();
+  });
+
+  it("saves the unemployment period with its revision and warns of a reversed range", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: true,
+      routes: {
+        [`PUT ${detailPath}/profiling/unemployment`]: () =>
+          written(view(true), ["range_reversed"], 2),
+      },
+    });
+    const unemployment = within(
+      (await screen.findByRole("heading", { name: "Arbeitslos seit / bis" })).closest("section")!,
+    );
+    await user.click(unemployment.getByRole("button", { name: /Anzeigen/ }));
+    await user.type(await unemployment.findByLabelText("Arbeitslos bis"), "01.10.2025");
+    await user.click(unemployment.getByRole("button", { name: "Speichern" }));
+    expect(await unemployment.findByText(/„seit“ liegt nach „bis“/)).toBeVisible();
+    expect(callTo(calls, `PUT ${detailPath}/profiling/unemployment`)[0]?.body).toEqual({
+      revision: 1,
+      period: { from: "2025-11-01", until: "2025-10-01" },
+    });
+    // Clearing goes with the revision this save returned.
+    await user.click(unemployment.getByRole("button", { name: "Angabe entfernen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/profiling/unemployment`)[1]?.body).toEqual({
+        revision: 2,
+        period: null,
       }),
     );
   });

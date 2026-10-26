@@ -955,13 +955,17 @@ export const participantIdentifierData = pgTable(
  */
 export const participantResidenceSocialData = pgTable(
   "participant_residence_social_data",
-  encryptedFields({
-    nationality: "nationality",
-    entryToGermanyDate: "entry_to_germany_date",
-    residenceStatus: "residence_status",
-    buergergeld: "buergergeld",
-    unemploymentPeriod: "unemployment_period",
-  }),
+  {
+    ...encryptedFields({
+      nationality: "nationality",
+      entryToGermanyDate: "entry_to_germany_date",
+      residenceStatus: "residence_status",
+      buergergeld: "buergergeld",
+      unemploymentPeriod: "unemployment_period",
+    }),
+    /** The unemployment period's revision, which its write compares (409), clearing included. */
+    unemploymentRevision: integer("unemployment_revision").notNull().default(0),
+  },
   (t) =>
     encryptedChecks("participant_residence_social_data", t, [
       "nationality",
@@ -969,7 +973,12 @@ export const participantResidenceSocialData = pgTable(
       "residenceStatus",
       "buergergeld",
       "unemploymentPeriod",
-    ]),
+    ]).concat(
+      check(
+        "participant_residence_social_data_unemployment_revision",
+        sql`${t.unemploymentRevision} >= 0`,
+      ),
+    ),
 );
 
 /**

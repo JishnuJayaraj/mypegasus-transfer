@@ -99,6 +99,7 @@ CREATE TABLE "profiling_session" (
 --> statement-breakpoint
 ALTER TABLE "participant_residence_social_data" ADD COLUMN "unemployment_period" "bytea";--> statement-breakpoint
 ALTER TABLE "participant_residence_social_data" ADD COLUMN "unemployment_period_present" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "participant_residence_social_data" ADD COLUMN "unemployment_revision" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE "participant_profiling" ADD CONSTRAINT "participant_profiling_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "participant_profiling" ADD CONSTRAINT "participant_profiling_declarations_recorded_by_staff_user_id_fk" FOREIGN KEY ("declarations_recorded_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "participant_profiling" ADD CONSTRAINT "participant_profiling_participation_fk" FOREIGN KEY ("participation_id","project_id") REFERENCES "public"."participation"("id","project_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -110,4 +111,5 @@ ALTER TABLE "profiling_session" ADD CONSTRAINT "profiling_session_project_id_pro
 ALTER TABLE "profiling_session" ADD CONSTRAINT "profiling_session_recorded_by_staff_user_id_fk" FOREIGN KEY ("recorded_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "profiling_session" ADD CONSTRAINT "profiling_session_participation_fk" FOREIGN KEY ("participation_id","project_id") REFERENCES "public"."participation"("id","project_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "profiling_session_participation_idx" ON "profiling_session" USING btree ("participation_id","session_date");--> statement-breakpoint
-ALTER TABLE "participant_residence_social_data" ADD CONSTRAINT "participant_residence_social_data_unemployment_period_present" CHECK (("participant_residence_social_data"."unemployment_period" is not null) = "participant_residence_social_data"."unemployment_period_present");
+ALTER TABLE "participant_residence_social_data" ADD CONSTRAINT "participant_residence_social_data_unemployment_period_present" CHECK (("participant_residence_social_data"."unemployment_period" is not null) = "participant_residence_social_data"."unemployment_period_present");--> statement-breakpoint
+ALTER TABLE "participant_residence_social_data" ADD CONSTRAINT "participant_residence_social_data_unemployment_revision" CHECK ("participant_residence_social_data"."unemployment_revision" >= 0);

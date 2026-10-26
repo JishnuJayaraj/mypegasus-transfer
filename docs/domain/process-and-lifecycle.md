@@ -364,10 +364,24 @@ The staff app's tab "Profiling" (data-protection.md, the profiling record, for w
   with the same revision, audited `profiling_declarations_recorded` with the changed keys.
 - **Section C, p. 7 and the unemployment period**: the profiler's, encrypted and each field
   audited (data-protection.md, the profiling record); the health line keeps its rating only.
+  Gesamteinschätzung and weiteres Vorgehen keep their paragraph breaks into the TL 407; the line
+  texts are single-line. The assessment and the unemployment period each have their own revision
+  (`409 stale_revision`, also when clearing the period). A period whose "seit" is after its "bis"
+  is stored with a warning shown when saving, not refused (a plausibility check, not a BA rule).
+- **Concurrent editing** (ADR-0010, the profiling record): the tab reads each section's values
+  with the revision they belong to; a save keeps its own returned revision with what it saved.
+  The sessions and the declarations share the record's revision: saving one keeps the other's
+  unsaved input and moves its revision on while its stored value is unchanged; if another tab
+  changed that value meanwhile, the section says so and keeps the input until "Neu laden", and a
+  save from the stale input is refused (`409`), never applied.
 - **The highest school qualification** (Q196): the participant marks one education row in the
   wizard, the profiler confirms or corrects it with them in assisted mode; the TL 407 lists it
-  first (ba-forms.md, row order). Never inferred.
-- A terminal participation takes no profiling writes (`participation_closed`).
+  first (ba-forms.md, row order). Never inferred. Before TL 407 generation (Slice 6, the TL 407),
+  an explicit reviewed "no school qualification" answer is valid and "not yet clarified" is
+  incomplete; no row is fabricated, and a review holds only for the source values it reviewed.
+- A terminal participation takes no profiling writes (`participation_closed`); the tab shows it
+  read-only and says why. Corrections after the end go through the controlled correction route,
+  not ordinary editing.
 
 ### DSV track (only `ta_tg`)
 

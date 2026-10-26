@@ -1,5 +1,5 @@
 {
-  "id": "7a5fded5-aa23-4601-866e-af73ca064a95",
+  "id": "dccef610-0458-49d1-938c-e6dd04f03e4b",
   "prevId": "3b7baecf-2d9d-4e74-89d4-d83ff97143ff",
   "version": "7",
   "dialect": "postgresql",
@@ -4864,6 +4864,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "unemployment_revision": {
+          "name": "unemployment_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         }
       },
       "indexes": {},
@@ -4914,6 +4921,10 @@
         "participant_residence_social_data_unemployment_period_present": {
           "name": "participant_residence_social_data_unemployment_period_present",
           "value": "(\"participant_residence_social_data\".\"unemployment_period\" is not null) = \"participant_residence_social_data\".\"unemployment_period_present\""
+        },
+        "participant_residence_social_data_unemployment_revision": {
+          "name": "participant_residence_social_data_unemployment_revision",
+          "value": "\"participant_residence_social_data\".\"unemployment_revision\" >= 0"
         }
       },
       "isRLSEnabled": false

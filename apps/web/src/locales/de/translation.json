@@ -2053,7 +2053,7 @@
       "save": "Termine speichern",
       "saved": "Die Termine wurden gespeichert.",
       "failed": "Die Termine konnten nicht gespeichert werden.",
-      "stale": "Das Profiling wurde inzwischen geändert. Die Termine wurden neu geladen.",
+      "stale": "Das Profiling wurde inzwischen geändert. Ihre Eingaben sind erhalten; bitte prüfen Sie den Stand und speichern Sie erneut.",
       "dateInvalid": "Bitte ein Datum TT.MM.JJJJ eingeben.",
       "timeInvalid": "Bitte eine Uhrzeit hh:mm eingeben.",
       "errors": {
@@ -2085,7 +2085,9 @@
       "clear": "Angabe entfernen",
       "saved": "Gespeichert.",
       "failed": "Die Angabe konnte nicht gespeichert werden.",
-      "fromRequired": "Bitte das Datum „seit“ eingeben."
+      "fromRequired": "Bitte das Datum „seit“ eingeben.",
+      "stale": "Die Angabe wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind erhalten, aber nicht gespeichert. „Neu laden“ lädt den gespeicherten Stand und verwirft Ihre Eingaben.",
+      "reversed": "Gespeichert. Hinweis: „seit“ liegt nach „bis“. Bitte prüfen Sie die Angabe; vor dem Erzeugen des Bogens wird erneut darauf hingewiesen."
     },
     "assessment": {
       "title": "Handlungsbedarf (Abschnitt C)",
@@ -2127,7 +2129,7 @@
       "save": "Einschätzung speichern",
       "saved": "Die Einschätzung wurde gespeichert.",
       "failed": "Die Einschätzung konnte nicht gespeichert werden.",
-      "stale": "Die Einschätzung wurde inzwischen geändert. Bitte erneut anzeigen und bearbeiten.",
+      "stale": "Die Einschätzung wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind erhalten, aber nicht gespeichert. „Neu laden“ lädt den gespeicherten Stand und verwirft Ihre Eingaben.",
       "recorded": "{{count}} von 16 Angaben erfasst",
       "errors": {
         "too_long": "Der Text ist zu lang.",
@@ -2156,7 +2158,12 @@
       "save": "Erklärungen speichern",
       "saved": "Die Erklärungen wurden gespeichert.",
       "failed": "Die Erklärungen konnten nicht gespeichert werden.",
-      "stale": "Das Profiling wurde inzwischen geändert. Die Erklärungen wurden neu geladen."
+      "stale": "Das Profiling wurde inzwischen geändert. Ihre Eingaben sind erhalten; bitte prüfen Sie den Stand und speichern Sie erneut."
+    },
+    "closed": "Die Teilnahme ist beendet. Das Profiling kann nur noch gelesen werden; Korrekturen laufen über das vorgesehene Korrekturverfahren.",
+    "draft": {
+      "conflict": "Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind noch nicht gespeichert. „Neu laden“ übernimmt den gespeicherten Stand und verwirft Ihre Eingaben.",
+      "reload": "Neu laden"
     }
   }
 }

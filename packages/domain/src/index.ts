@@ -923,8 +923,11 @@ export {
   ProfilingSessionsInput,
   profilingSessionsProblems,
   ProfilingTime,
+  multilineText,
+  ProfilingWarning,
   UnemploymentPeriod,
   UnemploymentPeriodInput,
+  unemploymentPeriodWarnings,
   type AssessmentLine,
   type ProfilingIssue,
 } from "./profiling/record";
@@ -943,5 +946,6 @@ export {
   ProfilingTransitionRefusal,
   profilingTransitions,
   ProfilingView,
+  ProfilingWriteResult,
   UnemploymentPeriodView,
 } from "./profiling/api";

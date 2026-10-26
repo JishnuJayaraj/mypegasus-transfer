@@ -49,23 +49,19 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
   const { t } = useTranslation();
   const api = useApi();
   const query = useQuery(participationProfilingQuery(api, detail.id));
-  const [stale, setStale] = useState<"sessions" | "declarations">();
   if (query.isPending) return <p aria-live="polite">{t("profiling.loading")}</p>;
   if (query.isError) {
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return <p role="alert">{t(forbidden ? "profiling.forbidden" : "profiling.failed")}</p>;
   }
   const view = query.data;
-  // A section remounts with each revision; a "changed meanwhile" notice outlives that.
-  const notice = (section: "sessions" | "declarations") => ({
-    stale: stale === section,
-    onStale: (now: boolean) => setStale(now ? section : undefined),
-  });
   return (
     <Stack gap={7}>
+      {view.closed && (
+        <InlineNotification kind="info" title={t("profiling.closed")} hideCloseButton lowContrast />
+      )}
       <StatusSection view={view} />
-      {/* Remounted with each revision: the editor starts from what was saved. */}
-      <SessionsSection key={`sessions-${view.revision}`} view={view} {...notice("sessions")} />
+      <SessionsSection view={view} />
       <section className="tp-section" aria-labelledby="profiling-self-service">
         <h2 id="profiling-self-service">{t("profiling.selfService.title")}</h2>
         <p>{t("profiling.selfService.intro")}</p>
@@ -75,16 +71,57 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
           startLabel={t("participant.selfService.startAssisted")}
         />
       </section>
-      {view.capabilities.record && <UnemploymentSection view={view} />}
-      {view.capabilities.assessment && view.assessment && <AssessmentSection view={view} />}
-      {view.capabilities.record && view.declarations && (
-        <DeclarationsSection
-          key={`declarations-${view.revision}`}
-          view={view}
-          {...notice("declarations")}
-        />
-      )}
+      {view.unemploymentPeriodRecorded !== undefined &&
+        view.capabilities.readUnemploymentPeriod && <UnemploymentSection view={view} />}
+      {view.capabilities.readAssessment && view.assessment && <AssessmentSection view={view} />}
+      {view.declarations && <DeclarationsSection view={view} />}
     </Stack>
+  );
+}
+
+/**
+ * A section's draft over the server's value and the revision it was read with (ADR-0010; no
+ * silent loss). Clean, it follows every new server state. Dirty, it keeps the input; its token
+ * moves on only while the server's value of this section is still the one the draft started from
+ * (another section's save shares the revision); a draft equal to the new value is clean again; any
+ * other changed value is a conflict, shown, which only
+ * "Neu laden" resolves by taking the server's state. A save sends `token`, so a conflict's save is
+ * refused (409), never silently applied.
+ */
+function useDraft<T>(server: { revision: number; value: T }, same: (a: T, b: T) => boolean) {
+  const [base, setBase] = useState(server);
+  const [draft, setDraft] = useState(server.value);
+  const dirty = !same(draft, base.value);
+  if (server.revision !== base.revision) {
+    if (!dirty || same(draft, server.value)) {
+      setBase(server);
+      setDraft(server.value);
+    } else if (same(server.value, base.value)) {
+      setBase({ revision: server.revision, value: base.value });
+    }
+  }
+  const conflict = dirty && server.revision !== base.revision && !same(server.value, base.value);
+  /** Takes this server state as the draft's (after a save, or "Neu laden"). */
+  const adopt = (next: { revision: number; value: T }) => {
+    setBase(next);
+    setDraft(next.value);
+  };
+  return { draft, setDraft, dirty, conflict, token: base.revision, adopt };
+}
+
+/**
+ * A warning that the stored value changed elsewhere, with "Neu laden" beside it (Carbon's inline
+ * notification takes no interactive children).
+ */
+function ReloadNotice({ title, onReload }: { title: string; onReload: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <InlineNotification kind="warning" title={title} hideCloseButton lowContrast />
+      <Button kind="ghost" size="sm" onClick={onReload}>
+        {t("profiling.draft.reload")}
+      </Button>
+    </div>
   );
 }
 
@@ -164,7 +201,7 @@ function StatusSection({ view }: { view: View }) {
           lowContrast
         />
       )}
-      {allowed.length === 0 && refusal === "track_inactive" && (
+      {allowed.length === 0 && refusal === "track_inactive" && !view.closed && (
         <p>{t("profiling.status.inactive")}</p>
       )}
       {allowed.length === 0 && refusal === "project_not_active" && (
@@ -203,51 +240,67 @@ type SessionRow = { key: number; id?: string; date: string; from: string; to: st
 let lastRow = 0;
 const time = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
-type Notice = { stale: boolean; onStale: (stale: boolean) => void };
+const sessionRows = (sessions: View["sessions"]): SessionRow[] =>
+  sessions.map((s) => ({
+    key: ++lastRow,
+    id: s.id,
+    date: formatDate(s.date),
+    from: s.from,
+    to: s.to,
+  }));
+/** Two lists of rows the same as the server would store them (row keys aside). */
+const sameRows = (a: readonly SessionRow[], b: readonly SessionRow[]) =>
+  a.length === b.length &&
+  a.every(
+    (row, i) =>
+      row.id === b[i]!.id &&
+      row.date === b[i]!.date &&
+      row.from === b[i]!.from &&
+      row.to === b[i]!.to,
+  );
 
-function SessionsSection({ view, stale, onStale }: { view: View } & Notice) {
+function SessionsSection({ view }: { view: View }) {
   const { t } = useTranslation();
   const api = useApi();
   const showToast = useToast();
   const { saved, reload } = useSaved(view.participationId);
-  const [rows, setRows] = useState<SessionRow[]>(() =>
-    view.sessions.map((s) => ({
-      key: ++lastRow,
-      id: s.id,
-      date: formatDate(s.date),
-      from: s.from,
-      to: s.to,
-    })),
-  );
+  const {
+    draft: rows,
+    setDraft: setRows,
+    conflict,
+    token,
+    adopt,
+  } = useDraft({ revision: view.revision, value: sessionRows(view.sessions) }, sameRows);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [failed, setFailed] = useState(false);
-  const failure = failed ? "failed" : stale ? "stale" : undefined;
+  const [failure, setFailure] = useState<"failed" | "stale">();
   const save = useMutation({
     mutationFn: async (sessions: components["schemas"]["ProfilingSessionInput"][]) => {
       const { data } = await api.PUT(
         "/api/v1/participations/{participationId}/profiling/sessions",
         {
           params: { path: { participationId: view.participationId } },
-          body: { revision: view.revision, sessions },
+          body: { revision: token, sessions },
         },
       );
       if (!data) throw new Error("No profiling");
       return data;
     },
-    onSuccess: (updated) => {
-      onStale(false);
+    onSuccess: ({ profiling }) => {
       showToast({ title: t("profiling.sessions.saved") });
-      saved(updated);
+      // The record as read after the save: its sessions with their own revision.
+      adopt({ revision: profiling.revision, value: sessionRows(profiling.sessions) });
+      saved(profiling);
     },
     onError: async (error) => {
       const { status, codes } = codesAt(error);
       if (status === 409) {
-        onStale(true);
+        // The draft stays; the record is read again and a changed value shows as a conflict.
+        setFailure("stale");
         await reload();
         return;
       }
       if (status !== 422) {
-        setFailed(true);
+        setFailure("failed");
         return;
       }
       const next: Record<string, string[]> = {};
@@ -285,8 +338,7 @@ function SessionsSection({ view, stale, onStale }: { view: View } & Notice) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    setFailed(false);
-    onStale(false);
+    setFailure(undefined);
     const next: Record<string, string[]> = {};
     const sessions = rows.map((row) => {
       const date = parseDisplayDate(row.date);
@@ -327,6 +379,15 @@ function SessionsSection({ view, stale, onStale }: { view: View } & Notice) {
               title={t(`profiling.sessions.${failure}`)}
               hideCloseButton
               lowContrast
+            />
+          )}
+          {conflict && (
+            <ReloadNotice
+              title={t("profiling.draft.conflict")}
+              onReload={() => {
+                setFailure(undefined);
+                adopt({ revision: view.revision, value: sessionRows(view.sessions) });
+              }}
             />
           )}
           {rows.length === 0 && <p>{t("profiling.sessions.empty")}</p>}
@@ -425,27 +486,38 @@ function SensitiveHeader(props: {
   );
 }
 
+type PeriodForm = { revision: number; from: string; until: string };
+
 function UnemploymentSection({ view }: { view: View }) {
   const { t } = useTranslation();
   const api = useApi();
   const showToast = useToast();
   const { saved } = useSaved(view.participationId);
-  const [form, setForm] = useState<{ from: string; until: string }>();
+  // The period as read with its revision; the inputs edit it, a save sends that revision.
+  const [form, setForm] = useState<PeriodForm>();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [error, setError] = useState<string>();
+  const [stale, setStale] = useState(false);
+  const [reversed, setReversed] = useState(false);
   const title = t("profiling.unemployment.title");
+  const writable = view.capabilities.record;
 
   async function show() {
     setBusy(true);
     setFailed(false);
+    setStale(false);
     try {
       const { data } = await api.GET(
         "/api/v1/participations/{participationId}/profiling/unemployment",
         { params: { path: { participationId: view.participationId } } },
       );
       if (!data) throw new Error("No period");
-      setForm({ from: formatDate(data.period?.from), until: formatDate(data.period?.until) });
+      setForm({
+        revision: data.revision,
+        from: formatDate(data.period?.from),
+        until: formatDate(data.period?.until),
+      });
     } catch {
       setFailed(true);
     } finally {
@@ -453,20 +525,34 @@ function UnemploymentSection({ view }: { view: View }) {
     }
   }
 
-  async function write(period: components["schemas"]["UnemploymentPeriod"] | null) {
+  async function write(
+    current: PeriodForm,
+    period: components["schemas"]["UnemploymentPeriod"] | null,
+  ) {
     setBusy(true);
     setError(undefined);
+    setReversed(false);
     try {
       const { data } = await api.PUT(
         "/api/v1/participations/{participationId}/profiling/unemployment",
-        { params: { path: { participationId: view.participationId } }, body: { period } },
+        {
+          params: { path: { participationId: view.participationId } },
+          body: { revision: current.revision, period },
+        },
       );
       if (!data) throw new Error("No profiling");
-      saved(data);
+      saved(data.profiling);
+      // This save's own revision goes with the values it stored.
+      setForm(
+        period === null
+          ? { revision: data.revision, from: "", until: "" }
+          : { ...current, revision: data.revision },
+      );
+      setReversed(data.warnings.includes("range_reversed"));
       showToast({ title: t("profiling.unemployment.saved") });
-      if (period === null) setForm({ from: "", until: "" });
-    } catch {
-      setError(t("profiling.unemployment.failed"));
+    } catch (failure) {
+      if (codesAt(failure).status === 409) setStale(true);
+      else setError(t("profiling.unemployment.failed"));
     } finally {
       setBusy(false);
     }
@@ -479,7 +565,7 @@ function UnemploymentSection({ view }: { view: View }) {
     const until = parseDisplayDate(form.until);
     if (!from.ok || !from.value) return setError(t("profiling.unemployment.fromRequired"));
     if (!until.ok) return setError(t("profiling.sessions.dateInvalid"));
-    void write({ from: from.value, until: until.value ?? null });
+    void write(form, { from: from.value, until: until.value ?? null });
   }
 
   return (
@@ -492,9 +578,36 @@ function UnemploymentSection({ view }: { view: View }) {
         failed={failed}
         label={title}
         onShow={() => void show()}
-        onHide={() => setForm(undefined)}
+        onHide={() => {
+          setForm(undefined);
+          setStale(false);
+          setReversed(false);
+        }}
       />
-      {form && (
+      {stale && (
+        <ReloadNotice title={t("profiling.unemployment.stale")} onReload={() => void show()} />
+      )}
+      {reversed && (
+        <InlineNotification
+          kind="warning"
+          title={t("profiling.unemployment.reversed")}
+          hideCloseButton
+          lowContrast
+        />
+      )}
+      {form && !writable && (
+        <dl className="tp-facts">
+          <div>
+            <dt>{t("profiling.unemployment.from")}</dt>
+            <dd>{form.from || "—"}</dd>
+          </div>
+          <div>
+            <dt>{t("profiling.unemployment.until")}</dt>
+            <dd>{form.until || "—"}</dd>
+          </div>
+        </dl>
+      )}
+      {form && writable && (
         <Form className="tp-form" onSubmit={submit} noValidate>
           <Stack gap={5}>
             {error && <InlineNotification kind="error" title={error} hideCloseButton lowContrast />}
@@ -517,7 +630,7 @@ function UnemploymentSection({ view }: { view: View }) {
               <Button type="submit" disabled={busy}>
                 {t("profiling.unemployment.save")}
               </Button>
-              <Button kind="ghost" disabled={busy} onClick={() => void write(null)}>
+              <Button kind="ghost" disabled={busy} onClick={() => void write(form, null)}>
                 {t("profiling.unemployment.clear")}
               </Button>
             </div>
@@ -602,12 +715,15 @@ function AssessmentSection({ view }: { view: View }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [failure, setFailure] = useState<string>();
+  const [stale, setStale] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const title = t("profiling.assessment.title");
+  const writable = view.capabilities.writeAssessment;
 
   async function show() {
     setBusy(true);
     setFailed(false);
+    setStale(false);
     try {
       const { data } = await api.GET(
         "/api/v1/participations/{participationId}/profiling/assessment",
@@ -627,6 +743,7 @@ function AssessmentSection({ view }: { view: View }) {
     if (!loaded) return;
     setBusy(true);
     setFailure(undefined);
+    setStale(false);
     setErrors({});
     try {
       const { data } = await api.PUT(
@@ -637,14 +754,15 @@ function AssessmentSection({ view }: { view: View }) {
         },
       );
       if (!data) throw new Error("No profiling");
-      saved(data);
-      setLoaded({ ...loaded, revision: data.assessment?.revision ?? loaded.revision });
+      saved(data.profiling);
+      // The save's own revision goes with the values it stored, never a later one of the record.
+      setLoaded({ ...loaded, revision: data.revision });
       showToast({ title: t("profiling.assessment.saved") });
     } catch (error) {
       const { status, codes } = codesAt(error);
       if (status === 409) {
-        setLoaded(undefined);
-        setFailure(t("profiling.assessment.stale"));
+        // The input stays; "Neu laden" takes the stored state instead.
+        setStale(true);
       } else if (status === 422) {
         setErrors(
           Object.fromEntries(
@@ -684,8 +802,14 @@ function AssessmentSection({ view }: { view: View }) {
         failed={failed}
         label={title}
         onShow={() => void show()}
-        onHide={() => setLoaded(undefined)}
+        onHide={() => {
+          setLoaded(undefined);
+          setStale(false);
+        }}
       />
+      {stale && (
+        <ReloadNotice title={t("profiling.assessment.stale")} onReload={() => void show()} />
+      )}
       {loaded && (
         <Form className="tp-form" onSubmit={(event) => void submit(event)} noValidate>
           <Stack gap={6}>
@@ -701,6 +825,7 @@ function AssessmentSection({ view }: { view: View }) {
                       line={loaded.form[key]}
                       onChange={(change) => set(key, change)}
                       invalid={invalid}
+                      readOnly={!writable}
                     />
                   ))}
                 </Stack>
@@ -711,6 +836,7 @@ function AssessmentSection({ view }: { view: View }) {
               labelText={t("profiling.assessment.overallAssessment")}
               maxCount={2000}
               enableCounter
+              readOnly={!writable}
               value={loaded.form.overallAssessment}
               onChange={(event) =>
                 setLoaded({
@@ -725,17 +851,20 @@ function AssessmentSection({ view }: { view: View }) {
               labelText={t("profiling.assessment.nextSteps")}
               maxCount={2000}
               enableCounter
+              readOnly={!writable}
               value={loaded.form.nextSteps}
               onChange={(event) =>
                 setLoaded({ ...loaded, form: { ...loaded.form, nextSteps: event.target.value } })
               }
               {...invalid("/values/nextSteps")}
             />
-            <div>
-              <Button type="submit" disabled={busy}>
-                {t("profiling.assessment.save")}
-              </Button>
-            </div>
+            {writable && (
+              <div>
+                <Button type="submit" disabled={busy}>
+                  {t("profiling.assessment.save")}
+                </Button>
+              </div>
+            )}
           </Stack>
         </Form>
       )}
@@ -748,9 +877,10 @@ function LineEditor(props: {
   line: LineForm;
   onChange: (change: Partial<LineForm>) => void;
   invalid: (pointer: string) => { invalid?: boolean; invalidText?: ReactNode };
+  readOnly: boolean;
 }) {
   const { t } = useTranslation();
-  const { lineKey: key, line, onChange, invalid } = props;
+  const { lineKey: key, line, onChange, invalid, readOnly } = props;
   const name = t(`profiling.assessment.lines.${key}`);
   const other = key !== "health" && otherAssessmentLines.has(key);
   return (
@@ -767,6 +897,7 @@ function LineEditor(props: {
             key={value}
             id={`assessment-${key}-${value}`}
             value={value}
+            disabled={readOnly}
             labelText={t(`profiling.assessment.rating.${value}`)}
           />
         ))}
@@ -780,6 +911,7 @@ function LineEditor(props: {
               id={`assessment-${key}-label`}
               labelText={`${name}: ${t("profiling.assessment.label")}`}
               maxLength={100}
+              readOnly={readOnly}
               value={line.label}
               onChange={(event) => onChange({ label: event.target.value })}
               {...invalid(`/values/${key}/label`)}
@@ -789,6 +921,7 @@ function LineEditor(props: {
             id={`assessment-${key}-text`}
             labelText={`${name}: ${t("profiling.assessment.text")}`}
             maxLength={300}
+            readOnly={readOnly}
             value={line.text}
             onChange={(event) => onChange({ text: event.target.value })}
             {...invalid(`/values/${key}/text`)}
@@ -800,41 +933,51 @@ function LineEditor(props: {
 }
 
 type Choice = NonNullable<View["declarations"]>["jobboerseChoice"];
+type Declarations = { jobboerseChoice: Choice; baContactConsent: boolean | null };
 
-function DeclarationsSection({ view, stale, onStale }: { view: View } & Notice) {
+const declarationsOf = (view: View): Declarations => ({
+  jobboerseChoice: view.declarations?.jobboerseChoice ?? null,
+  baContactConsent: view.declarations?.baContactConsent ?? null,
+});
+const sameDeclarations = (a: Declarations, b: Declarations) =>
+  a.jobboerseChoice === b.jobboerseChoice && a.baContactConsent === b.baContactConsent;
+
+function DeclarationsSection({ view }: { view: View }) {
   const { t } = useTranslation();
   const api = useApi();
   const showToast = useToast();
   const { saved, reload } = useSaved(view.participationId);
-  const declarations = view.declarations!;
-  const [choice, setChoice] = useState<Choice>(declarations.jobboerseChoice);
-  const [contact, setContact] = useState<boolean | null>(declarations.baContactConsent);
-  const [failed, setFailed] = useState(false);
-  const failure = failed ? "failed" : stale ? "stale" : undefined;
+  const { draft, setDraft, conflict, token, adopt } = useDraft(
+    { revision: view.revision, value: declarationsOf(view) },
+    sameDeclarations,
+  );
+  const [failure, setFailure] = useState<"failed" | "stale">();
+  const writable = view.capabilities.record;
   const save = useMutation({
     mutationFn: async () => {
       const { data } = await api.PUT(
         "/api/v1/participations/{participationId}/profiling/declarations",
         {
           params: { path: { participationId: view.participationId } },
-          body: { revision: view.revision, jobboerseChoice: choice, baContactConsent: contact },
+          body: { revision: token, ...draft },
         },
       );
       if (!data) throw new Error("No profiling");
       return data;
     },
-    onSuccess: (updated) => {
-      onStale(false);
+    onSuccess: ({ profiling }) => {
       showToast({ title: t("profiling.declarations.saved") });
-      saved(updated);
+      adopt({ revision: profiling.revision, value: declarationsOf(profiling) });
+      saved(profiling);
     },
     onError: async (error) => {
-      if (codesAt(error).status !== 409) return setFailed(true);
-      onStale(true);
+      if (codesAt(error).status !== 409) return setFailure("failed");
+      setFailure("stale");
       await reload();
     },
   });
   const choices = ["full", "anonymous_callme", "anonymous_no_contact", "none"] as const;
+  const recordedAt = view.declarations?.recordedAt;
   return (
     <section className="tp-section" aria-labelledby="profiling-declarations">
       <h2 id="profiling-declarations">{t("profiling.declarations.title")}</h2>
@@ -843,8 +986,7 @@ function DeclarationsSection({ view, stale, onStale }: { view: View } & Notice) 
         className="tp-form"
         onSubmit={(event) => {
           event.preventDefault();
-          setFailed(false);
-          onStale(false);
+          setFailure(undefined);
           save.mutate();
         }}
         noValidate
@@ -858,12 +1000,26 @@ function DeclarationsSection({ view, stale, onStale }: { view: View } & Notice) 
               lowContrast
             />
           )}
+          {conflict && (
+            <ReloadNotice
+              title={t("profiling.draft.conflict")}
+              onReload={() => {
+                setFailure(undefined);
+                adopt({ revision: view.revision, value: declarationsOf(view) });
+              }}
+            />
+          )}
           <Select
             id="declarations-jobboerse"
             labelText={t("profiling.declarations.jobboerse")}
-            value={choice ?? "open"}
+            value={draft.jobboerseChoice ?? "open"}
+            disabled={!writable}
             onChange={(event) =>
-              setChoice(event.target.value === "open" ? null : (event.target.value as Choice))
+              setDraft({
+                ...draft,
+                jobboerseChoice:
+                  event.target.value === "open" ? null : (event.target.value as Choice),
+              })
             }
           >
             <SelectItem value="open" text={t("profiling.declarations.jobboerseOptions.open")} />
@@ -879,8 +1035,13 @@ function DeclarationsSection({ view, stale, onStale }: { view: View } & Notice) 
             name="declarations-ba-contact"
             legendText={t("profiling.declarations.baContact")}
             orientation="horizontal"
-            valueSelected={contact === null ? "open" : contact ? "yes" : "no"}
-            onChange={(value) => setContact(value === "open" ? null : value === "yes")}
+            disabled={!writable}
+            valueSelected={
+              draft.baContactConsent === null ? "open" : draft.baContactConsent ? "yes" : "no"
+            }
+            onChange={(value) =>
+              setDraft({ ...draft, baContactConsent: value === "open" ? null : value === "yes" })
+            }
           >
             {(["yes", "no", "open"] as const).map((value) => (
               <RadioButton
@@ -891,18 +1052,18 @@ function DeclarationsSection({ view, stale, onStale }: { view: View } & Notice) 
               />
             ))}
           </RadioButtonGroup>
-          {declarations.recordedAt && (
+          {recordedAt && (
             <p className="tp-hint">
-              {t("profiling.declarations.recordedAt", {
-                at: formatTimestamp(declarations.recordedAt),
-              })}
+              {t("profiling.declarations.recordedAt", { at: formatTimestamp(recordedAt) })}
             </p>
           )}
-          <div>
-            <Button type="submit" disabled={save.isPending}>
-              {t("profiling.declarations.save")}
-            </Button>
-          </div>
+          {writable && (
+            <div>
+              <Button type="submit" disabled={save.isPending}>
+                {t("profiling.declarations.save")}
+              </Button>
+            </div>
+          )}
         </Stack>
       </Form>
     </section>

@@ -329,6 +329,26 @@ describe("section C and p. 7 (Q192)", () => {
     await expect(writeAssessment(id, next, 1)).rejects.toMatchObject(failsWith("stale_revision"));
   });
 
+  it("keeps page 7's paragraph breaks and refuses them, and other control characters, elsewhere", async () => {
+    const id = await participation();
+    const values = assessment({
+      overallAssessment: "Erster Absatz.\n\nZweiter Absatz.",
+      nextSteps: "Bewerbungstraining\nVermittlung",
+    });
+    expect(await writeAssessment(id, values, 0)).toBe(1);
+    expect((await readAssessment(id)).values).toEqual(values);
+    for (const bad of [
+      assessment({ nextSteps: "Text\tmit Tab" }),
+      assessment({ nextSteps: "Text\r\nmit CRLF" }),
+      assessment({ nextSteps: "\nam Anfang" }),
+      assessment({ initiative: line(null, "eins\nzwei") }),
+    ]) {
+      await expect(writeAssessment(id, bad, 1)).rejects.toMatchObject(
+        failsWith("invalid_argument"),
+      );
+    }
+  });
+
   it("keeps the health line's rating only: a text there is refused, never stored", async () => {
     const id = await participation();
     await expect(
@@ -385,49 +405,69 @@ describe("section C and p. 7 (Q192)", () => {
   });
 });
 
-const writePeriod = (participationId: string, period: unknown, context = asConsultant) =>
-  call<boolean>(app, "write_unemployment_period", {
+const writePeriod = (
+  participationId: string,
+  period: unknown,
+  revision: number,
+  context = asConsultant,
+) =>
+  call<number>(app, "write_unemployment_period", {
     participationId,
     context,
     period: JSON.stringify(period),
+    revision,
     key,
     keyId,
   });
 const readPeriod = (participationId: string, context: string) =>
-  call<Record<string, unknown>>(app, "read_sensitive_fields", {
+  call<{ revision: number; period: unknown }>(app, "read_unemployment_period", {
     participationId,
     context,
-    keys: "{unemploymentPeriod}",
     key,
     keyId,
   });
 
 describe("the unemployment period (Q85, Q192)", () => {
-  it("is written by the assigned consultant and read like the residence answers", async () => {
+  it("is written by the assigned consultant with its revision and read with it, like the residence answers", async () => {
     const id = await participation();
     const period = { from: "2025-11-01", until: null };
-    expect(await writePeriod(id, period)).toBe(true);
-    expect(await writePeriod(id, period)).toBe(false);
-    expect(await readPeriod(id, asConsultant)).toEqual({ unemploymentPeriod: period });
-    expect(await readPeriod(id, asBackOffice)).toEqual({ unemploymentPeriod: period });
+    expect(await readPeriod(id, asConsultant)).toEqual({ revision: 0, period: null });
+    expect(await writePeriod(id, period, 0)).toBe(1);
+    expect(await writePeriod(id, period, 1)).toBe(1);
+    expect(await readPeriod(id, asConsultant)).toEqual({ revision: 1, period });
+    expect(await readPeriod(id, asBackOffice)).toEqual({ revision: 1, period });
     await expect(readPeriod(id, pl)).rejects.toMatchObject(failsWith("actor_not_allowed"));
     expect((await events(id, "sensitive_write")).map((e) => e.details)).toEqual([
       { key: "unemploymentPeriod" },
     ]);
-    expect(await events(id, "sensitive_read")).toHaveLength(2);
-    expect(await writePeriod(id, null)).toBe(true);
-    expect(await readPeriod(id, asConsultant)).toEqual({ unemploymentPeriod: null });
+    expect(await events(id, "sensitive_read")).toHaveLength(3);
+    expect(await writePeriod(id, null, 1)).toBe(2);
+    expect(await readPeriod(id, asConsultant)).toEqual({ revision: 2, period: null });
+  });
+
+  it("refuses a stale write, clearing included: two tabs of one profiler", async () => {
+    const id = await participation();
+    await writePeriod(id, { from: "2025-11-01", until: null }, 0);
+    // Tab 1 and tab 2 both read revision 1; tab 1 saves first.
+    expect(await writePeriod(id, { from: "2025-11-01", until: "2026-01-31" }, 1)).toBe(2);
+    for (const period of [{ from: "2025-12-01", until: null }, null]) {
+      await expect(writePeriod(id, period, 1)).rejects.toMatchObject(failsWith("stale_revision"));
+    }
+    expect(await readPeriod(id, asConsultant)).toEqual({
+      revision: 2,
+      period: { from: "2025-11-01", until: "2026-01-31" },
+    });
   });
 
   it("refuses others, a malformed period, and leaves the participant's answers alone", async () => {
     const id = await participation();
-    await expect(writePeriod(id, { from: "2025-11-01", until: null }, pl)).rejects.toMatchObject(
+    await expect(writePeriod(id, { from: "2025-11-01", until: null }, 0, pl)).rejects.toMatchObject(
       failsWith("actor_not_allowed"),
     );
     for (const bad of [{ from: "2025-11-31", until: null }, { from: "2025-11-01" }, "2025-11-01"]) {
-      await expect(writePeriod(id, bad)).rejects.toMatchObject(failsWith("invalid_argument"));
+      await expect(writePeriod(id, bad, 0)).rejects.toMatchObject(failsWith("invalid_argument"));
     }
-    await writePeriod(id, { from: "2025-11-01", until: "2026-03-31" });
+    await writePeriod(id, { from: "2025-11-01", until: "2026-03-31" }, 0);
     const row = await one(
       `select nationality_present, buergergeld_present, unemployment_period_present
        from participant_residence_social_data where participation_id = $1`,
@@ -438,10 +478,19 @@ describe("the unemployment period (Q85, Q192)", () => {
       buergergeld_present: false,
       unemployment_period_present: true,
     });
-    // A participant reads no unemployment period of theirs here: it is the profiler's record.
+    // Neither the participant nor assisted mode reads it: it is the profiler's record, and the
+    // portal's sensitive read doesn't know the key.
+    const participant = auditContext({ actorType: "participant", participationId: id });
+    await expect(readPeriod(id, participant)).rejects.toMatchObject(failsWith("actor_not_allowed"));
     await expect(
-      readPeriod(id, auditContext({ actorType: "participant", participationId: id })),
-    ).rejects.toMatchObject(failsWith("actor_not_allowed"));
+      call(app, "read_sensitive_fields", {
+        participationId: id,
+        context: asConsultant,
+        keys: "{unemploymentPeriod}",
+        key,
+        keyId,
+      }),
+    ).rejects.toMatchObject(failsWith("invalid_argument"));
   });
 });
 

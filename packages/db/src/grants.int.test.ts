@@ -204,6 +204,7 @@ const statusFunctions = [
   "write_profiling_assessment",
   "read_profiling_assessment",
   "write_unemployment_period",
+  "read_unemployment_period",
 ];
 const helpers = [
   "assert_context",
@@ -304,6 +305,8 @@ const helpers = [
   "profiling_sessions_valid",
   "profiling_text_valid",
   "profiling_rating_valid",
+  "profiling_multiline_valid",
+  "unemployment_reader",
   "profiling_assessment_lines",
   "profiling_other_lines",
   "profiling_assessment_valid",

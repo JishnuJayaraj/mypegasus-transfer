@@ -113,6 +113,21 @@ describe("PdfRenderer contract: TL 407 08/2025", () => {
     expect(await danglingReferences(flattened)).toBe(0);
   });
 
+  it("prints page 7's paragraph breaks as the record keeps them (Q192)", async () => {
+    const text = "Erster Absatz.\n\nZweiter Absatz.";
+    const { validation, unflattened } = await fillTl407(
+      tl407Input({
+        ...syntheticTl407,
+        assessment: { ...syntheticTl407.assessment!, overallAssessment: text, nextSteps: text },
+      }),
+    );
+    expect(validation.errors).toEqual([]);
+    expect(await readAcroFormValues(unflattened)).toMatchObject({
+      txtareaEinschaetzung: text,
+      txtareaWeiteresVorgehen: text,
+    });
+  });
+
   it("leaves the beE stay blank in ta_only and ticks §110 (Q181)", async () => {
     const input = tl407Input({
       ...syntheticTl407,

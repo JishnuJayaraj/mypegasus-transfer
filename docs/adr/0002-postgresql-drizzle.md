@@ -687,9 +687,10 @@ profiling record") hold the rules.
   who recorded it and when), `participant_profiling_assessment` (one ciphertext per section C line
   and per p. 7 text with presence flags, key id, its own `revision`),
   `participant_profiling_health_assessment` (the health line's rating only) and
-  `participant_residence_social_data.unemployment_period`. Each has `project_id` and a composite
-  FK to the participation. `transfer_app` selects the record and the sessions, of the encrypted
-  tables only keys, presence flags, key ids, revision and times; it writes none of them.
+  `participant_residence_social_data.unemployment_period` with its own `unemployment_revision`.
+  Each has `project_id` and a composite FK to the participation. `transfer_app` selects the record
+  and the sessions, of the encrypted tables only keys, presence flags, key ids, revisions and
+  times; it writes none of them.
 - **The lock order** (the tables above, extended):
 
   | Operation | Project lock | Then |
@@ -710,11 +711,17 @@ profiling record") hold the rules.
   assessment (`profiling_assessment_valid`), any key on the health line but its rating
   `health_detail_not_recorded`; one `sensitive_write` per changed field.
   `read_profiling_assessment(participation, context, key, key id)`: the assigned consultant only,
-  one `sensitive_read` per field. `write_unemployment_period(participation, context, period, key,
-  key id)`: one `sensitive_write`. Encryption, envelope and key id as in the field-encryption
-  amendment. `open_sensitive_fields` and `read_sensitive_fields` are replaced so staff in normal
-  mode read `unemploymentPeriod` like the residence and social answers (the assigned consultant,
-  back office); a participant's or an assisted-mode read of it is `actor_not_allowed`.
+  one `sensitive_read` per field. Gesamteinschätzung and weiteres Vorgehen are multiline
+  (`profiling_multiline_valid`: line breaks kept, any other control character refused, the API
+  normalises CRLF first); every other text is single-line (`profiling_text_valid`).
+  `write_unemployment_period(participation, context, period, revision, key, key id)` returns the
+  new `unemployment_revision`: a stale revision is `stale_revision` under the row lock, clearing
+  (`period` null) included; one `sensitive_write` when the value changed.
+  `read_unemployment_period(participation, context, key, key id)` returns `{ revision, period }`
+  from one row read with one `sensitive_read`, for the assigned consultant and back office in
+  normal mode (internal `unemployment_reader`); a participant's or an assisted-mode read is
+  `actor_not_allowed`. `read_sensitive_fields` doesn't serve `unemploymentPeriod`
+  (`invalid_argument`). Encryption, envelope and key id as in the field-encryption amendment.
   `record_audit_event` refuses the two new types. The profiling track's route uses the existing
   `change_participation_status`.
 

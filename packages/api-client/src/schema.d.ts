@@ -10000,13 +10000,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Saved; the profiling record */
+                /** @description Saved: the record's revision of these sessions */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Profiling"];
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
                     };
                 };
                 /** @description Validation failed */
@@ -10096,13 +10096,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Saved; the profiling record */
+                /** @description Saved: the record's revision of these declarations */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Profiling"];
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
                     };
                 };
                 /** @description Validation failed */
@@ -10250,13 +10250,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Saved; the profiling record, the assessment by presence */
+                /** @description Saved: the assessment's revision of these values */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Profiling"];
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
                     };
                 };
                 /** @description Validation failed */
@@ -10329,7 +10329,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The unemployment period decrypted (the assigned consultant, back office); the read is audited (sensitive_read) */
+        /** The unemployment period decrypted with its revision (the assigned consultant, back office); the read is audited (sensitive_read) */
         get: {
             parameters: {
                 query?: never;
@@ -10388,7 +10388,7 @@ export interface paths {
                 };
             };
         };
-        /** Write the unemployment period, encrypted (the assigned consultant), or clear it; audited (sensitive_write) */
+        /** Write the unemployment period, encrypted (the assigned consultant), or clear it, with the revision of its read (409 stale_revision); audited (sensitive_write) */
         put: {
             parameters: {
                 query?: never;
@@ -10404,13 +10404,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Saved; the profiling record, the period by presence */
+                /** @description Saved: the period's revision, a reversed range warned */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Profiling"];
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
                     };
                 };
                 /** @description Validation failed */
@@ -13565,6 +13565,7 @@ export interface components {
              * @example 2027-03-01
              */
             profilingDoneOn: string | null;
+            closed: boolean;
             revision: number;
             sessions: components["schemas"]["ProfilingSession"][];
             declarations?: {
@@ -13590,7 +13591,8 @@ export interface components {
             transitions: components["schemas"]["ProfilingTransition"][];
             capabilities: {
                 record: boolean;
-                assessment: boolean;
+                readAssessment: boolean;
+                writeAssessment: boolean;
                 readUnemploymentPeriod: boolean;
             };
         };
@@ -13621,6 +13623,13 @@ export interface components {
         };
         /** @enum {string|null} */
         ProfilingTransitionRefusal: "forbidden" | "project_not_active" | "track_inactive" | "tl407_signed" | "before_cutoff" | null;
+        ProfilingWriteResult: {
+            revision: number;
+            warnings: components["schemas"]["ProfilingWarning"][];
+            profiling: components["schemas"]["Profiling"];
+        };
+        /** @enum {string} */
+        ProfilingWarning: "range_reversed";
         ProfilingSessionsInput: {
             revision: number;
             sessions: components["schemas"]["ProfilingSessionInput"][];
@@ -13737,6 +13746,7 @@ export interface components {
         UnemploymentPeriodView: {
             /** Format: uuid */
             participationId: string;
+            revision: number;
             period: components["schemas"]["UnemploymentPeriod"];
         };
         UnemploymentPeriod: {
@@ -13754,6 +13764,7 @@ export interface components {
             until: string | null;
         } | null;
         UnemploymentPeriodInput: {
+            revision: number;
             period: components["schemas"]["UnemploymentPeriod"];
         };
         ProfilingStatusInput: {

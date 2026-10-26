@@ -8,6 +8,7 @@ import {
   ProfilingSessionsInput,
   profilingSessionsProblems,
   UnemploymentPeriodInput,
+  unemploymentPeriodWarnings,
   type ProfilingSessionInput,
 } from "./record";
 
@@ -20,7 +21,8 @@ const session = (date: string, from: string, to: string, id?: string): Profiling
 });
 const parseSessions = (sessions: unknown[]) =>
   ProfilingSessionsInput.safeParse({ revision: 0, sessions }).success;
-const parsePeriod = (period: unknown) => UnemploymentPeriodInput.safeParse({ period }).success;
+const parsePeriod = (period: unknown) =>
+  UnemploymentPeriodInput.safeParse({ revision: 0, period }).success;
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 
 describe("profiling sessions (Q193)", () => {
@@ -141,6 +143,39 @@ describe("section C and p. 7 (Q192)", () => {
     expect(parseProfilingAssessment(values)).toEqual({ ok: true, value: values });
   });
 
+  it("keeps page 7's paragraph breaks, CRLF as LF, and refuses other control characters", () => {
+    const written = {
+      ...emptyAssessment(),
+      overallAssessment: "Erster Absatz.\r\n\r\nZweiter Absatz.\rDritte Zeile.",
+      nextSteps: "  Bewerbungstraining\nVermittlung  ",
+    };
+    expect(parseProfilingAssessment(written)).toEqual({
+      ok: true,
+      value: {
+        ...written,
+        overallAssessment: "Erster Absatz.\n\nZweiter Absatz.\nDritte Zeile.",
+        nextSteps: "Bewerbungstraining\nVermittlung",
+      },
+    });
+    for (const bad of ["Text\tmit Tab", "Text\u0007", "Text\u0085"]) {
+      expect(parseProfilingAssessment({ ...emptyAssessment(), nextSteps: bad })).toEqual({
+        ok: false,
+        issues: [{ code: "control_characters", path: ["nextSteps"] }],
+      });
+    }
+    // A single-line text keeps refusing a line break.
+    expect(
+      parseProfilingAssessment({
+        ...emptyAssessment(),
+        initiative: { rating: null, text: "eins\nzwei" },
+      }),
+    ).toEqual({
+      ok: false,
+      issues: [{ code: "control_characters", path: ["initiative", "text"] }],
+    });
+    expect(parseProfilingAssessment(null)).toMatchObject({ ok: false });
+  });
+
   it("refuses a text on the health line, an unknown key and an overlong text by code", () => {
     const result = parseProfilingAssessment({
       ...emptyAssessment(),
@@ -188,5 +223,18 @@ describe("the unemployment period (Q85)", () => {
     expect(parsePeriod(null)).toBe(true);
     expect(parsePeriod({ from: null, until: "2090-01-01" })).toBe(false);
     expect(parsePeriod({ from: "2090-02-30", until: null })).toBe(false);
+  });
+
+  it("needs the revision of its read, also to clear it", () => {
+    expect(UnemploymentPeriodInput.safeParse({ period: null }).success).toBe(false);
+  });
+
+  it("warns, never refuses, when seit is after bis", () => {
+    expect(unemploymentPeriodWarnings({ from: "2090-06-01", until: "2090-01-01" })).toEqual([
+      "range_reversed",
+    ]);
+    expect(unemploymentPeriodWarnings({ from: "2090-06-01", until: "2090-06-01" })).toEqual([]);
+    expect(unemploymentPeriodWarnings({ from: "2090-06-01", until: null })).toEqual([]);
+    expect(unemploymentPeriodWarnings(null)).toEqual([]);
   });
 });

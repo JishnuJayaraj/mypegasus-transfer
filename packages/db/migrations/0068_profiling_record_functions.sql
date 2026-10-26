@@ -136,6 +136,18 @@ RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_
 $$;
 --> statement-breakpoint
 
+-- A page 7 narrative (the domain's `multilineText`): trimmed (no leading or trailing white space,
+-- line breaks included), 1 to `p_max` characters, line breaks as `\n` only and no other control
+-- character; or JSON null.
+CREATE FUNCTION profiling_multiline_valid(v jsonb, p_max integer)
+RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT v IS NOT NULL AND (v = 'null'::jsonb OR pg_catalog.jsonb_typeof(v) = 'string'
+    AND pg_catalog.char_length(v #>> '{}') BETWEEN 1 AND p_max
+    AND v #>> '{}' !~ '^[[:space:]]' AND v #>> '{}' !~ '[[:space:]]$'
+    AND pg_catalog.replace(v #>> '{}', E'\n', '') !~ '[[:cntrl:]]')
+$$;
+--> statement-breakpoint
+
 -- A section C rating, or JSON null.
 CREATE FUNCTION profiling_rating_valid(v jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_temp AS $$
@@ -160,7 +172,7 @@ $$;
 -- The structure of a whole assessment (the domain's `ProfilingAssessment`): every line an object
 -- of exactly its keys (a rating, a text of at most 300 characters, an "andere" line's label of at
 -- most 100), the health line `{rating}` only, Gesamteinschätzung and weiteres Vorgehen at most
--- 2,000 characters each; nothing else.
+-- 2,000 characters each with their line breaks; nothing else.
 CREATE FUNCTION profiling_assessment_valid(p_values jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_temp AS $$
   SELECT pg_catalog.jsonb_typeof(p_values) = 'object'
@@ -180,8 +192,8 @@ RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = pg_catalog, public, pg_
     AND pg_catalog.jsonb_typeof(p_values -> 'health') = 'object'
     AND ARRAY(SELECT k FROM pg_catalog.jsonb_object_keys(p_values -> 'health') k) = '{rating}'
     AND public.profiling_rating_valid(p_values -> 'health' -> 'rating')
-    AND public.profiling_text_valid(p_values -> 'overallAssessment', 2000)
-    AND public.profiling_text_valid(p_values -> 'nextSteps', 2000)
+    AND public.profiling_multiline_valid(p_values -> 'overallAssessment', 2000)
+    AND public.profiling_multiline_valid(p_values -> 'nextSteps', 2000)
 $$;
 --> statement-breakpoint
 
@@ -625,21 +637,36 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
+-- Whether the staff user may read the unemployment period now: like the other residence and
+-- social answers in normal mode (data-protection.md, access matrix): the assigned consultant or
+-- back office of the project, as themselves.
+CREATE FUNCTION unemployment_reader(p_participation_id uuid, p_context audit_context)
+RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT (p_context).actor_type = 'user' AND (p_context).on_behalf_of IS NULL
+    AND public.document_staff_roles(p_participation_id, (p_context).staff_user_id)
+      && '{consultant,back_office}'::text[]
+$$;
+--> statement-breakpoint
+
 -- "arbeitslos seit / bis" (TL 407 fields 34, 35; Q85 open, fail safe: highly confidential,
 -- `residence_social`) recorded by the assigned consultant beside the residence and social answers:
 -- `{from, until}` (real dates, `until` null while open; a reversed range is the form's warning,
--- not a refusal) or `null` to clear it. The other answers of the row stay as they are; a row
--- written under another key is `key_unknown`. Audited `sensitive_write` with the key
--- `unemploymentPeriod`; nothing changed writes nothing. Returns whether it changed.
+-- not a refusal) or `null` to clear it, with the revision its read returned (`stale_revision`,
+-- clearing included; 0 before the first write). The other answers of the row stay as they are; a
+-- row written under another key is `key_unknown`. Audited `sensitive_write` with the key
+-- `unemploymentPeriod`; nothing changed writes nothing. Returns the revision of what is stored.
 CREATE FUNCTION write_unemployment_period(
-  p_participation_id uuid, p_context audit_context, p_period jsonb, p_key text, p_key_id text
-) RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+  p_participation_id uuid, p_context audit_context, p_period jsonb, p_revision integer,
+  p_key text, p_key_id text
+) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   r public.participation;
   rs public.participant_residence_social_data;
   v_period jsonb := nullif(p_period, 'null'::jsonb);
+  v_revision integer;
 BEGIN
-  IF p_key IS NULL OR p_key !~ '^[0-9a-f]{64}$'
+  IF p_revision IS NULL OR p_revision < 0
+     OR p_key IS NULL OR p_key !~ '^[0-9a-f]{64}$'
      OR p_key_id IS NULL OR p_key_id !~ '^[0-9a-f]{16}$'
      OR v_period IS NOT NULL AND NOT (pg_catalog.jsonb_typeof(v_period) = 'object'
        AND ARRAY(SELECT k FROM pg_catalog.jsonb_object_keys(v_period) k ORDER BY k)
@@ -652,135 +679,65 @@ BEGIN
   r := public.lock_profiler(p_participation_id, p_context);
   SELECT * INTO rs FROM public.participant_residence_social_data WHERE participation_id = r.id
   FOR UPDATE;
+  v_revision := coalesce(rs.unemployment_revision, 0);
+  IF p_revision <> v_revision THEN
+    RAISE EXCEPTION 'stale_revision';
+  END IF;
   IF rs.key_id <> p_key_id THEN
     RAISE EXCEPTION 'key_unknown';
   END IF;
   IF public.open_sensitive_value(r.id, 'unemploymentPeriod', rs.unemployment_period, p_key)
      IS NOT DISTINCT FROM v_period THEN
-    RETURN false;
+    RETURN v_revision;
   END IF;
   INSERT INTO public.participant_residence_social_data (participation_id, project_id,
-    unemployment_period, unemployment_period_present, key_id)
+    unemployment_period, unemployment_period_present, unemployment_revision, key_id)
   VALUES (r.id, r.project_id,
     public.seal_sensitive_value(r.id, 'unemploymentPeriod', v_period, p_key),
-    v_period IS NOT NULL, p_key_id)
+    v_period IS NOT NULL, v_revision + 1, p_key_id)
   ON CONFLICT (participation_id) DO UPDATE SET unemployment_period = EXCLUDED.unemployment_period,
     unemployment_period_present = EXCLUDED.unemployment_period_present,
+    unemployment_revision = EXCLUDED.unemployment_revision,
     key_id = EXCLUDED.key_id, written_at = pg_catalog.now();
   PERFORM public.write_audit_event(r.project_id, r.id, 'sensitive_write', p_context, NULL, NULL,
     NULL, NULL, NULL, pg_catalog.jsonb_build_object('key', 'unemploymentPeriod'), false);
-  RETURN true;
+  RETURN v_revision + 1;
 END $$;
 --> statement-breakpoint
 
--- Replaced: the stored values include the unemployment period beside the other residence and
--- social answers. Otherwise as in 0050.
-CREATE OR REPLACE FUNCTION open_sensitive_fields(p_participation_id uuid, p_key text, p_key_id text)
-RETURNS jsonb LANGUAGE plpgsql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
-DECLARE
-  i public.participant_identifier_data;
-  rs public.participant_residence_social_data;
-  h public.participant_health_data;
-BEGIN
-  SELECT * INTO i FROM public.participant_identifier_data WHERE participation_id = p_participation_id;
-  SELECT * INTO rs FROM public.participant_residence_social_data
-  WHERE participation_id = p_participation_id;
-  SELECT * INTO h FROM public.participant_health_data WHERE participation_id = p_participation_id;
-  IF i.key_id <> p_key_id OR rs.key_id <> p_key_id OR h.key_id <> p_key_id THEN
-    RAISE EXCEPTION 'key_unknown';
-  END IF;
-  RETURN pg_catalog.jsonb_build_object(
-    'pensionInsuranceNumber', public.open_sensitive_value(p_participation_id,
-      'pensionInsuranceNumber', i.pension_insurance_number, p_key),
-    'nationality', public.open_sensitive_value(p_participation_id, 'nationality',
-      rs.nationality, p_key),
-    'entryToGermanyDate', public.open_sensitive_value(p_participation_id, 'entryToGermanyDate',
-      rs.entry_to_germany_date, p_key),
-    'residenceStatus', public.open_sensitive_value(p_participation_id, 'residenceStatus',
-      rs.residence_status, p_key),
-    'buergergeld', public.open_sensitive_value(p_participation_id, 'buergergeld',
-      rs.buergergeld, p_key),
-    'unemploymentPeriod', public.open_sensitive_value(p_participation_id, 'unemploymentPeriod',
-      rs.unemployment_period, p_key),
-    'healthRestrictions', public.open_sensitive_value(p_participation_id, 'healthRestrictions',
-      h.health_restrictions, p_key),
-    'severeDisability', public.open_sensitive_value(p_participation_id, 'severeDisability',
-      h.severe_disability, p_key));
-END $$;
---> statement-breakpoint
-
--- Replaced (Q85, Q192): staff in normal mode may also read the unemployment period, like the other
--- residence and social answers (the assigned consultant, back office), each read audited. It is no
--- self-service field: no assisted-mode role sees it (`assisted_sensitive_fields`). Otherwise as in
--- 0052.
-CREATE OR REPLACE FUNCTION read_sensitive_fields(
-  p_participation_id uuid, p_context audit_context, p_keys text[], p_key text, p_key_id text,
-  p_token_hash text DEFAULT NULL
+-- The unemployment period decrypted with its revision, both from one row read, for the assigned
+-- consultant or back office in normal mode (`actor_not_allowed` otherwise); the read is audited
+-- `sensitive_read` with the key `unemploymentPeriod`. Returns `{revision, period}`.
+CREATE FUNCTION read_unemployment_period(
+  p_participation_id uuid, p_context audit_context, p_key text, p_key_id text
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
-  s public.participant_session;
   v_project_id uuid;
-  v_all jsonb;
-  v_result jsonb := '{}';
-  k text;
+  rs public.participant_residence_social_data;
 BEGIN
-  IF p_keys IS NULL OR pg_catalog.cardinality(p_keys) = 0
-     OR NOT p_keys <@ (public.sensitive_group_fields('ba_details')
-       || public.sensitive_group_fields('health') || '{unemploymentPeriod}'::text[])
-     OR (SELECT pg_catalog.count(DISTINCT f) FROM pg_catalog.unnest(p_keys) f)
-       <> pg_catalog.cardinality(p_keys)
-     OR p_key IS NULL OR p_key !~ '^[0-9a-f]{64}$'
+  IF p_key IS NULL OR p_key !~ '^[0-9a-f]{64}$'
      OR p_key_id IS NULL OR p_key_id !~ '^[0-9a-f]{16}$' THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
-  PERFORM public.assert_context(p_context, p_participation_id, '{participant,user}');
+  PERFORM public.assert_context(p_context, p_participation_id, '{user}');
   SELECT project_id INTO v_project_id FROM public.participation WHERE id = p_participation_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'participation_not_found';
   END IF;
-  IF (p_context).actor_type = 'participant' THEN
-    IF 'unemploymentPeriod' = ANY (p_keys) THEN
-      RAISE EXCEPTION 'actor_not_allowed';
-    END IF;
-    IF p_token_hash IS NULL OR p_token_hash !~ '^[0-9a-f]{64}$' THEN
-      RAISE EXCEPTION 'session_invalid';
-    END IF;
-    s := public.lock_active_session(p_token_hash);
-    IF s.participation_id <> p_participation_id THEN
-      RAISE EXCEPTION 'session_invalid';
-    END IF;
-    IF p_keys && '{healthRestrictions,severeDisability}'
-       AND NOT public.participant_session_stepped_up(s) THEN
-      RAISE EXCEPTION 'step_up_required';
-    END IF;
-    UPDATE public.participant_session SET last_seen_at = now() WHERE token_hash = s.token_hash;
-  ELSIF (p_context).on_behalf_of IS NOT NULL THEN
-    -- Staff in assisted mode (Q136): the live mode of this staff session, the fields their roles
-    -- see there.
-    IF NOT p_keys <@ public.assisted_sensitive_fields(
-        public.lock_assisted_mode(p_participation_id, p_context, p_token_hash)) THEN
-      RAISE EXCEPTION 'actor_not_allowed';
-    END IF;
-  ELSIF NOT EXISTS (
-    SELECT FROM public.project_membership m
-    JOIN public.staff_user u ON u.id = m.staff_user_id
-    WHERE m.project_id = v_project_id AND m.staff_user_id = (p_context).staff_user_id
-      AND u.deactivated_at IS NULL
-      AND (m.role = 'back_office' AND NOT 'healthRestrictions' = ANY (p_keys)
-        OR m.role = 'consultant' AND EXISTS (
-          SELECT FROM public.participant_assignment a
-          WHERE a.participation_id = p_participation_id AND a.staff_user_id = m.staff_user_id
-            AND a.ended_at IS NULL))) THEN
+  IF NOT public.unemployment_reader(p_participation_id, p_context) THEN
     RAISE EXCEPTION 'actor_not_allowed';
   END IF;
-
-  v_all := public.open_sensitive_fields(p_participation_id, p_key, p_key_id);
-  FOREACH k IN ARRAY p_keys LOOP
-    v_result := v_result || pg_catalog.jsonb_build_object(k, v_all -> k);
-    PERFORM public.write_audit_event(v_project_id, p_participation_id, 'sensitive_read', p_context,
-      NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object('key', k), false);
-  END LOOP;
-  RETURN v_result;
+  SELECT * INTO rs FROM public.participant_residence_social_data
+  WHERE participation_id = p_participation_id;
+  IF rs.key_id <> p_key_id THEN
+    RAISE EXCEPTION 'key_unknown';
+  END IF;
+  PERFORM public.write_audit_event(v_project_id, p_participation_id, 'sensitive_read', p_context,
+    NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object('key', 'unemploymentPeriod'),
+    false);
+  RETURN pg_catalog.jsonb_build_object('revision', coalesce(rs.unemployment_revision, 0),
+    'period', coalesce(public.open_sensitive_value(p_participation_id, 'unemploymentPeriod',
+      rs.unemployment_period, p_key), 'null'::jsonb));
 END $$;
 --> statement-breakpoint
 
@@ -830,7 +787,7 @@ END $$;
 
 -- Grants: transfer_app selects the record and the sessions, and of the encrypted tables the keys,
 -- presence flags, key ids, revision and times, never a ciphertext column; no INSERT, UPDATE or
--- DELETE. It executes the five functions; the helpers stay internal.
+-- DELETE. It executes the six functions; the helpers stay internal.
 GRANT SELECT ON TABLE participant_profiling, profiling_session TO transfer_app;
 --> statement-breakpoint
 GRANT SELECT (participation_id, project_id, school_qualification_present,
@@ -844,16 +801,17 @@ GRANT SELECT (participation_id, project_id, school_qualification_present,
 GRANT SELECT (participation_id, project_id, health_rating_present, key_id, created_at,
   written_at) ON TABLE participant_profiling_health_assessment TO transfer_app;
 --> statement-breakpoint
-GRANT SELECT (unemployment_period_present) ON TABLE participant_residence_social_data
-  TO transfer_app;
+GRANT SELECT (unemployment_period_present, unemployment_revision)
+  ON TABLE participant_residence_social_data TO transfer_app;
 --> statement-breakpoint
 REVOKE ALL ON FUNCTION lock_profiler, profiler_may_read, berlin_today, iso_date_valid,
   profiling_sessions_valid, profiling_text_valid, profiling_rating_valid,
-  profiling_assessment_lines, profiling_other_lines, profiling_assessment_valid,
+  profiling_multiline_valid, profiling_assessment_lines, profiling_other_lines,
+  profiling_assessment_valid, unemployment_reader,
   profiling_assessment_fields, profiling_assessment_values, open_profiling_assessment,
   write_profiling_sessions, write_profiling_declarations, write_profiling_assessment,
-  read_profiling_assessment, write_unemployment_period FROM PUBLIC;
+  read_profiling_assessment, write_unemployment_period, read_unemployment_period FROM PUBLIC;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION write_profiling_sessions, write_profiling_declarations,
-  write_profiling_assessment, read_profiling_assessment, write_unemployment_period
-  TO transfer_app;
+  write_profiling_assessment, read_profiling_assessment, write_unemployment_period,
+  read_unemployment_period TO transfer_app;

@@ -126,6 +126,22 @@ export const otherAssessmentLines: ReadonlySet<AssessmentLine> = new Set([
   "otherConditions",
 ]);
 
+// oxlint-disable-next-line no-control-regex -- control characters are what this refuses
+const controlButNewline = /[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/u;
+
+/**
+ * A narrative text of 1 to `max` characters (page 7): trimmed, line breaks kept, every other
+ * control character refused (`control_characters`). `parseProfilingAssessment` normalises CRLF
+ * and CR to `\n` first. The single-line texts keep `text`.
+ */
+export const multilineText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .min(1)
+    .max(max)
+    .refine((value) => !controlButNewline.test(value), coded("control_characters"));
+
 const line = z.strictObject({
   rating: SectionCRating.nullable(),
   text: text(profilingLimits.lineText).nullable(),
@@ -154,8 +170,8 @@ export const ProfilingAssessment = z
     otherMotivation: otherLine,
     localMobility: line,
     otherConditions: otherLine,
-    overallAssessment: text(profilingLimits.pageText).nullable(),
-    nextSteps: text(profilingLimits.pageText).nullable(),
+    overallAssessment: multilineText(profilingLimits.pageText).nullable(),
+    nextSteps: multilineText(profilingLimits.pageText).nullable(),
   })
   .meta({ id: "ProfilingAssessment" });
 export type ProfilingAssessment = z.infer<typeof ProfilingAssessment>;
@@ -190,6 +206,19 @@ export function emptyAssessment(): ProfilingAssessment {
   } as ProfilingAssessment;
 }
 
+const pageTexts = ["overallAssessment", "nextSteps"] as const;
+
+/** Page 7's texts with CRLF and CR as `\n`; anything else as it came. */
+function normaliseLineBreaks(values: unknown): unknown {
+  if (typeof values !== "object" || values === null || Array.isArray(values)) return values;
+  const record = { ...(values as Record<string, unknown>) };
+  for (const key of pageTexts) {
+    const value = record[key];
+    if (typeof value === "string") record[key] = value.replace(/\r\n?/g, "\n");
+  }
+  return record;
+}
+
 /**
  * The assessment's values checked (data-protection.md, the profiling record): the parsed value, or
  * the issues by code and path. Any key on the health line but its rating is
@@ -198,7 +227,7 @@ export function emptyAssessment(): ProfilingAssessment {
 export function parseProfilingAssessment(
   values: unknown,
 ): { ok: true; value: ProfilingAssessment } | { ok: false; issues: ProfilingIssue[] } {
-  const parsed = ProfilingAssessment.safeParse(values);
+  const parsed = ProfilingAssessment.safeParse(normaliseLineBreaks(values));
   if (parsed.success) return { ok: true, value: parsed.data };
   const issues = parsed.error.issues.flatMap((issue): ProfilingIssue[] => {
     if (issue.code !== "unrecognized_keys") {
@@ -236,8 +265,21 @@ export const UnemploymentPeriod = z
   .meta({ id: "UnemploymentPeriod" });
 export type UnemploymentPeriod = z.infer<typeof UnemploymentPeriod>;
 
-/** `PUT …/profiling/unemployment`: the period, or `null` to clear it. */
+/**
+ * `PUT …/profiling/unemployment`: the period, or `null` to clear it, with the revision its logged
+ * read returned (409 if stale, also when clearing).
+ */
 export const UnemploymentPeriodInput = z
-  .strictObject({ period: UnemploymentPeriod.nullable() })
+  .strictObject({ revision: z.int().min(0), period: UnemploymentPeriod.nullable() })
   .meta({ id: "UnemploymentPeriodInput" });
 export type UnemploymentPeriodInput = z.infer<typeof UnemploymentPeriodInput>;
+
+/** A warning on a saved value the profiler sees; the form's readiness shows it again. */
+export const ProfilingWarning = z.enum(["range_reversed"]).meta({ id: "ProfilingWarning" });
+export type ProfilingWarning = z.infer<typeof ProfilingWarning>;
+
+/** `seit` after `bis` (ba-forms.md, validation: a warning, never a refusal). */
+export const unemploymentPeriodWarnings = (
+  period: UnemploymentPeriod | null,
+): ProfilingWarning[] =>
+  period?.until != null && compareIsoDates(period.from, period.until) > 0 ? ["range_reversed"] : [];

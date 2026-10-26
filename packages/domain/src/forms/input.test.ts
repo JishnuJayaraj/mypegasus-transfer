@@ -80,6 +80,16 @@ describe("tl407Input (ba-forms.md, what is filled)", () => {
     expect(Object.keys(tables.education![0]!)).not.toContain("highestSchoolQualification");
   });
 
+  it("carries page 7's paragraph breaks into the form, which prints them (Q192)", () => {
+    const text = "Erster Absatz.\n\nZweiter Absatz.";
+    const { values } = tl407Input({
+      ...syntheticTl407,
+      assessment: { ...syntheticTl407.assessment!, overallAssessment: text, nextSteps: text },
+    });
+    expect(values.overallAssessment).toBe(text);
+    expect(values.nextSteps).toBe(text);
+  });
+
   it("leaves the beE stay blank in ta_only and ticks §110 (Q181)", () => {
     const { values, projectType } = tl407Input({ ...syntheticTl407, projectType: "ta_only" });
     expect(projectType).toBe("ta_only");

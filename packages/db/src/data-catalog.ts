@@ -511,6 +511,7 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     buergergeld_present: null,
     unemployment_period: "unemploymentPeriod",
     unemployment_period_present: null,
+    unemployment_revision: null,
   },
   participant_health_data: {
     ...encryptedKeys,

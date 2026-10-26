@@ -9,6 +9,7 @@ import {
   participation,
   profilingSession,
   sql,
+  type Database,
 } from "@transfer/db";
 import {
   assessmentLines,
@@ -24,7 +25,9 @@ import {
   profilingSessionsProblems,
   ProfilingStatusInput,
   ProfilingView,
+  ProfilingWriteResult,
   UnemploymentPeriodInput,
+  unemploymentPeriodWarnings,
   UnemploymentPeriodView,
   type AssessmentFieldKey,
   type PermissionTarget,
@@ -41,7 +44,6 @@ import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
 import { auditContext, utc } from "../sql";
-import { textArray } from "./self-service";
 
 // The profiling record (process-and-lifecycle.md, the profiling record; data-protection.md, the
 // profiling record; Q49, Q60, Q85, Q192, Q193): the tab "Profiling" for the PL and the assigned
@@ -71,16 +73,15 @@ const issuesAt = (base: string, issues: readonly ProfilingIssue[]) =>
 
 /** The assessment fields with a stored value, in the domain's order. */
 function recordedFields(
-  row: Partial<typeof participantProfilingAssessment.$inferSelect> | undefined,
+  row: Record<string, unknown> | undefined,
   health: { healthRatingPresent: boolean | null } | undefined,
 ): AssessmentFieldKey[] {
-  const present = row as Record<string, unknown> | undefined;
   return [
     ...assessmentLines
-      .filter((line) => present?.[`${line}Present`] === true)
+      .filter((line) => row?.[`${line}Present`] === true)
       .map((line) => `profilingAssessment.${line}` as const),
-    ...(present?.overallAssessmentPresent ? (["overallAssessment"] as const) : []),
-    ...(present?.nextStepsPresent ? (["nextSteps"] as const) : []),
+    ...(row?.overallAssessmentPresent ? (["overallAssessment"] as const) : []),
+    ...(row?.nextStepsPresent ? (["nextSteps"] as const) : []),
     ...(health?.healthRatingPresent ? (["profilingHealthAssessment"] as const) : []),
   ];
 }
@@ -93,6 +94,93 @@ const presenceColumns = Object.fromEntries(
     ] as typeof participantProfilingAssessment.initiativePresent,
   ]),
 );
+
+/**
+ * The profiling record of one participation in **one snapshot** (data-protection.md, the profiling
+ * record; ADR-0010): a read-only REPEATABLE READ transaction, whose statements all see the database
+ * as of its first one, so the sessions and declarations go with the record's revision and the
+ * assessment's presence with its revision; independent READ COMMITTED reads could pair old values
+ * with a newer revision, and a write on that token could undo a commit without a 409. Presence
+ * flags only, never a ciphertext. The sessions are read first.
+ */
+export async function readProfilingRecord(db: Database, participationId: string) {
+  return db.transaction(
+    async (tx) => {
+      const sessions = await tx
+        .select({
+          id: profilingSession.id,
+          date: profilingSession.sessionDate,
+          from: profilingSession.timeFrom,
+          to: profilingSession.timeTo,
+          recordedAt: utc(profilingSession.recordedAt),
+        })
+        .from(profilingSession)
+        .where(eq(profilingSession.participationId, participationId))
+        .orderBy(
+          asc(profilingSession.sessionDate),
+          asc(profilingSession.timeFrom),
+          asc(profilingSession.id),
+        );
+      const [record] = await tx
+        .select({
+          revision: participantProfiling.revision,
+          jobboerseChoice: participantProfiling.jobboerseChoice,
+          baContactConsent: participantProfiling.baContactConsent,
+          recordedAt: utc(participantProfiling.declarationsRecordedAt),
+        })
+        .from(participantProfiling)
+        .where(eq(participantProfiling.participationId, participationId));
+      const [current] = await tx
+        .select({
+          status: participation.status,
+          profilingStatus: participation.profilingStatus,
+          statusVersion: participation.statusVersion,
+          profilingDoneOn: participation.profilingDoneOn,
+        })
+        .from(participation)
+        .where(eq(participation.id, participationId));
+      const [assessment] = await tx
+        .select({
+          ...presenceColumns,
+          revision: participantProfilingAssessment.revision,
+          writtenAt: utc(participantProfilingAssessment.writtenAt),
+        })
+        .from(participantProfilingAssessment)
+        .where(eq(participantProfilingAssessment.participationId, participationId));
+      const [health] = await tx
+        .select({ healthRatingPresent: participantProfilingHealthAssessment.healthRatingPresent })
+        .from(participantProfilingHealthAssessment)
+        .where(eq(participantProfilingHealthAssessment.participationId, participationId));
+      const [residence] = await tx
+        .select({ present: participantResidenceSocialData.unemploymentPeriodPresent })
+        .from(participantResidenceSocialData)
+        .where(eq(participantResidenceSocialData.participationId, participationId));
+      return {
+        profilingStatus: current!.profilingStatus,
+        statusVersion: current!.statusVersion,
+        profilingDoneOn: current!.profilingDoneOn,
+        closed: closedStatuses.has(current!.status),
+        revision: record?.revision ?? 0,
+        sessions,
+        declarations: {
+          jobboerseChoice: record?.jobboerseChoice ?? null,
+          baContactConsent: record?.baContactConsent ?? null,
+          recordedAt: record?.recordedAt ?? null,
+        },
+        unemploymentPeriodRecorded: residence?.present ?? false,
+        assessment: {
+          revision: (assessment?.revision as number | undefined) ?? 0,
+          recorded: recordedFields(assessment as Record<string, unknown> | undefined, health),
+          writtenAt: (assessment?.writtenAt as string | undefined) ?? null,
+        },
+      };
+    },
+    { isolationLevel: "repeatable read", accessMode: "read only" },
+  );
+}
+
+/** The terminal statuses: the record takes no ordinary writes (`participation_closed`). */
+const closedStatuses: ReadonlySet<string> = new Set(["withdrawn", "ta_completed", "exited"]);
 
 /** A refusal of the profiling functions as its problem, or rethrown. */
 function refused(c: Context<AppEnv>, error: unknown) {
@@ -123,6 +211,12 @@ export function profilingRoutes(deps: Deps) {
   const statusService = createStatusService({ db, clock });
   const fieldKey = fieldEncryptionKey(deps.env.fieldEncryptionKey!);
 
+  /** Calls a write function; its result is the revision of exactly what it stored. */
+  async function stored(query: ReturnType<typeof sql>): Promise<number> {
+    const { rows } = await db.execute<{ result: number }>(query);
+    return rows[0]!.result;
+  }
+
   /**
    * The participation and the viewer's access to its profiling: a 404 for no participation, a
    * project the viewer can't see, or an unassigned consultant; a 403 for a role without the tab.
@@ -152,92 +246,50 @@ export function profilingRoutes(deps: Deps) {
     return { ok: true, access: { subject, target, found } };
   }
 
-  /** The tab's view for the viewer (ProfilingView): absent where they may not know about it. */
+  /**
+   * The tab's view for the viewer (ProfilingView): absent where they may not know about it. The
+   * record is read in one snapshot (`readProfilingRecord`), so every value goes with the
+   * revision it was written under.
+   */
   async function viewOf({ subject, target }: Access): Promise<z.infer<typeof ProfilingView>> {
     const participationId = target.participationId!;
-    const [[current], sessions, [record], [assessment], [health], [residence], transitions] =
-      await Promise.all([
-        db
-          .select({
-            profilingStatus: participation.profilingStatus,
-            statusVersion: participation.statusVersion,
-            profilingDoneOn: participation.profilingDoneOn,
-          })
-          .from(participation)
-          .where(eq(participation.id, participationId)),
-        db
-          .select({
-            id: profilingSession.id,
-            date: profilingSession.sessionDate,
-            from: profilingSession.timeFrom,
-            to: profilingSession.timeTo,
-            recordedAt: utc(profilingSession.recordedAt),
-          })
-          .from(profilingSession)
-          .where(eq(profilingSession.participationId, participationId))
-          .orderBy(
-            asc(profilingSession.sessionDate),
-            asc(profilingSession.timeFrom),
-            asc(profilingSession.id),
-          ),
-        db
-          .select({
-            revision: participantProfiling.revision,
-            jobboerseChoice: participantProfiling.jobboerseChoice,
-            baContactConsent: participantProfiling.baContactConsent,
-            recordedAt: utc(participantProfiling.declarationsRecordedAt),
-          })
-          .from(participantProfiling)
-          .where(eq(participantProfiling.participationId, participationId)),
-        db
-          .select({
-            ...presenceColumns,
-            revision: participantProfilingAssessment.revision,
-            writtenAt: utc(participantProfilingAssessment.writtenAt),
-          })
-          .from(participantProfilingAssessment)
-          .where(eq(participantProfilingAssessment.participationId, participationId)),
-        db
-          .select({ healthRatingPresent: participantProfilingHealthAssessment.healthRatingPresent })
-          .from(participantProfilingHealthAssessment)
-          .where(eq(participantProfilingHealthAssessment.participationId, participationId)),
-        db
-          .select({ present: participantResidenceSocialData.unemploymentPeriodPresent })
-          .from(participantResidenceSocialData)
-          .where(eq(participantResidenceSocialData.participationId, participationId)),
-        statusService.profilingTransitions(subject, participationId),
-      ]);
+    const [record, transitions] = await Promise.all([
+      readProfilingRecord(db, participationId),
+      statusService.profilingTransitions(subject, participationId),
+    ]);
     const records = mayRecordProfiling(subject, target).ok;
     const assesses = mayUseProfilingAssessment(subject, target, "read");
+    const open = !record.closed;
     return {
       participationId,
-      profilingStatus: current!.profilingStatus,
-      statusVersion: current!.statusVersion,
-      profilingDoneOn: current!.profilingDoneOn,
-      revision: record?.revision ?? 0,
-      sessions,
+      profilingStatus: record.profilingStatus,
+      statusVersion: record.statusVersion,
+      profilingDoneOn: record.profilingDoneOn,
+      closed: record.closed,
+      revision: record.revision,
+      sessions: record.sessions,
       ...(records && {
-        declarations: {
-          jobboerseChoice: record?.jobboerseChoice ?? null,
-          baContactConsent: record?.baContactConsent ?? null,
-          recordedAt: record?.recordedAt ?? null,
-        },
-        unemploymentPeriodRecorded: residence?.present ?? false,
+        declarations: record.declarations,
+        unemploymentPeriodRecorded: record.unemploymentPeriodRecorded,
       }),
-      ...(assesses && {
-        assessment: {
-          revision: (assessment?.revision as number | undefined) ?? 0,
-          recorded: recordedFields(assessment, health),
-          writtenAt: (assessment?.writtenAt as string | undefined) ?? null,
-        },
-      }),
+      ...(assesses && { assessment: record.assessment }),
       transitions,
       capabilities: {
-        record: records,
-        assessment: assesses && mayUseProfilingAssessment(subject, target, "write"),
+        record: records && open,
+        readAssessment: assesses,
+        writeAssessment: open && mayUseProfilingAssessment(subject, target, "write"),
         readUnemploymentPeriod: mayReadUnemploymentPeriod(subject, target),
       },
     };
+  }
+
+  /** A write's answer: the revision of what it stored, its warnings and the record afterwards. */
+  async function written(
+    viewer: Access,
+    revision: number,
+    warnings: z.infer<typeof ProfilingWriteResult>["warnings"] = [],
+  ): Promise<z.infer<typeof ProfilingWriteResult>> {
+    return { revision, warnings, profiling: await viewOf(viewer) };
   }
 
   /** The profiler's write: the access, then the permission (403); else a refusal. */
@@ -288,7 +340,7 @@ export function profilingRoutes(deps: Deps) {
         },
       },
       responses: {
-        200: json(ProfilingView, "Saved; the profiling record"),
+        200: json(ProfilingWriteResult, "Saved: the record's revision of these sessions"),
         ...problemResponses(
           "validation-error",
           "unauthenticated",
@@ -306,8 +358,9 @@ export function profilingRoutes(deps: Deps) {
       if (!result.ok) return result.response as never;
       const issues = profilingSessionsProblems(input.sessions, clock.today());
       if (issues.length > 0) return domainProblem(c, issuesAt("sessions", issues));
+      let revision: number;
       try {
-        await db.execute(sql`select write_profiling_sessions(
+        revision = await stored(sql`select write_profiling_sessions(
           p_participation_id => ${participationId}::uuid, p_context => ${context(c)},
           p_sessions => ${JSON.stringify(input.sessions)}::jsonb,
           p_revision => ${input.revision}::integer) as result`);
@@ -315,7 +368,7 @@ export function profilingRoutes(deps: Deps) {
         return refused(c, error);
       }
       c.header("Cache-Control", "no-store");
-      return c.json(await viewOf(result.access), 200);
+      return c.json(await written(result.access, revision), 200);
     },
   );
 
@@ -335,7 +388,7 @@ export function profilingRoutes(deps: Deps) {
         },
       },
       responses: {
-        200: json(ProfilingView, "Saved; the profiling record"),
+        200: json(ProfilingWriteResult, "Saved: the record's revision of these declarations"),
         ...problemResponses(
           "validation-error",
           "unauthenticated",
@@ -351,8 +404,9 @@ export function profilingRoutes(deps: Deps) {
       const input = c.req.valid("json");
       const result = await profilerAccess(c, participationId);
       if (!result.ok) return result.response as never;
+      let revision: number;
       try {
-        await db.execute(sql`select write_profiling_declarations(
+        revision = await stored(sql`select write_profiling_declarations(
           p_participation_id => ${participationId}::uuid, p_context => ${context(c)},
           p_jobboerse_choice => ${input.jobboerseChoice}::jobboerse_choice,
           p_ba_contact_consent => ${input.baContactConsent}::boolean,
@@ -361,7 +415,7 @@ export function profilingRoutes(deps: Deps) {
         return refused(c, error);
       }
       c.header("Cache-Control", "no-store");
-      return c.json(await viewOf(result.access), 200);
+      return c.json(await written(result.access, revision), 200);
     },
   );
 
@@ -418,7 +472,7 @@ export function profilingRoutes(deps: Deps) {
         },
       },
       responses: {
-        200: json(ProfilingView, "Saved; the profiling record, the assessment by presence"),
+        200: json(ProfilingWriteResult, "Saved: the assessment's revision of these values"),
         ...problemResponses(
           "validation-error",
           "unauthenticated",
@@ -438,8 +492,9 @@ export function profilingRoutes(deps: Deps) {
       if (!mayUseProfilingAssessment(subject, target, "write")) return problem(c, "forbidden");
       const parsed = parseProfilingAssessment(input.values);
       if (!parsed.ok) return domainProblem(c, issuesAt("values", parsed.issues));
+      let revision: number;
       try {
-        await db.execute(sql`select write_profiling_assessment(
+        revision = await stored(sql`select write_profiling_assessment(
           p_participation_id => ${participationId}::uuid, p_context => ${context(c)},
           p_values => ${JSON.stringify(parsed.value)}::jsonb,
           p_revision => ${input.revision}::integer, p_key => ${fieldKey.key},
@@ -448,7 +503,7 @@ export function profilingRoutes(deps: Deps) {
         return refused(c, error);
       }
       c.header("Cache-Control", "no-store");
-      return c.json(await viewOf(result.access), 200);
+      return c.json(await written(result.access, revision), 200);
     },
   );
 
@@ -458,7 +513,7 @@ export function profilingRoutes(deps: Deps) {
       path: "/participations/{participationId}/profiling/unemployment",
       tags: ["participations"],
       summary:
-        "The unemployment period decrypted (the assigned consultant, back office); the read is audited (sensitive_read)",
+        "The unemployment period decrypted with its revision (the assigned consultant, back office); the read is audited (sensitive_read)",
       middleware,
       request: { params: ParticipationParams },
       responses: {
@@ -485,22 +540,21 @@ export function profilingRoutes(deps: Deps) {
           !hidden.ok && hidden.because === "not_assigned" ? "not-found" : "forbidden",
         );
       }
-      let period: z.infer<typeof UnemploymentPeriodView>["period"];
+      // The value and its revision from one row read, the read audited.
+      let read: Omit<z.infer<typeof UnemploymentPeriodView>, "participationId">;
       try {
-        const { rows } = await db.execute<{
-          result: { unemploymentPeriod: typeof period };
-        }>(
-          sql`select read_sensitive_fields(p_participation_id => ${participationId}::uuid,
-            p_context => ${context(c, user)}, p_keys => ${textArray(["unemploymentPeriod"])}::text[],
-            p_key => ${fieldKey.key}, p_key_id => ${fieldKey.keyId}) as result`,
+        const { rows } = await db.execute<{ result: typeof read }>(
+          sql`select read_unemployment_period(p_participation_id => ${participationId}::uuid,
+            p_context => ${context(c, user)}, p_key => ${fieldKey.key},
+            p_key_id => ${fieldKey.keyId}) as result`,
         );
-        period = rows[0]!.result.unemploymentPeriod;
+        read = rows[0]!.result;
       } catch (error) {
         if (functionRefusal(error) === "actor_not_allowed") return problem(c, "forbidden");
         throw error;
       }
       c.header("Cache-Control", "no-store");
-      return c.json({ participationId, period }, 200);
+      return c.json({ participationId, ...read }, 200);
     },
   );
 
@@ -510,7 +564,7 @@ export function profilingRoutes(deps: Deps) {
       path: "/participations/{participationId}/profiling/unemployment",
       tags: ["participations"],
       summary:
-        "Write the unemployment period, encrypted (the assigned consultant), or clear it; audited (sensitive_write)",
+        "Write the unemployment period, encrypted (the assigned consultant), or clear it, with the revision of its read (409 stale_revision); audited (sensitive_write)",
       middleware,
       request: {
         params: ParticipationParams,
@@ -520,7 +574,7 @@ export function profilingRoutes(deps: Deps) {
         },
       },
       responses: {
-        200: json(ProfilingView, "Saved; the profiling record, the period by presence"),
+        200: json(ProfilingWriteResult, "Saved: the period's revision, a reversed range warned"),
         ...problemResponses(
           "validation-error",
           "unauthenticated",
@@ -533,19 +587,24 @@ export function profilingRoutes(deps: Deps) {
     }),
     async (c) => {
       const { participationId } = c.req.valid("param");
-      const { period } = c.req.valid("json");
+      const { period, revision: expected } = c.req.valid("json");
       const result = await profilerAccess(c, participationId);
       if (!result.ok) return result.response as never;
+      let revision: number;
       try {
-        await db.execute(sql`select write_unemployment_period(
+        revision = await stored(sql`select write_unemployment_period(
           p_participation_id => ${participationId}::uuid, p_context => ${context(c)},
-          p_period => ${JSON.stringify(period)}::jsonb, p_key => ${fieldKey.key},
+          p_period => ${JSON.stringify(period)}::jsonb, p_revision => ${expected}::integer,
+          p_key => ${fieldKey.key},
           p_key_id => ${fieldKey.keyId}) as result`);
       } catch (error) {
         return refused(c, error);
       }
       c.header("Cache-Control", "no-store");
-      return c.json(await viewOf(result.access), 200);
+      return c.json(
+        await written(result.access, revision, unemploymentPeriodWarnings(period)),
+        200,
+      );
     },
   );
 

@@ -692,7 +692,7 @@ and highly confidential data only; ordinary person-data writes are `participant_
   | `participant_profiling` | the pending Jobbörse choice and BA contact declaration, who recorded them last and when, the record's `revision` | confidential / `confidential` | `personnel_file` |
   | `participant_profiling_assessment` | per section C line but health one ciphertext (rating, text, an "andere" line's label; 300 / 100 characters), Gesamteinschätzung and weiteres Vorgehen (2,000 each), presence flags, key id, `revision` | highly confidential / `profiling_assessment` | `personnel_file` (Q192) |
   | `participant_profiling_health_assessment` | the health line's rating ciphertext and its presence; **no text** | special category / `profiling_assessment` | `health_record` (Q40) |
-  | `participant_residence_social_data` | adds `unemployment_period` (`{from, until}`, one ciphertext) and its presence | highly confidential / `residence_social` | `personnel_file` (Q85 open, fail safe) |
+  | `participant_residence_social_data` | adds `unemployment_period` (`{from, until}`, one ciphertext), its presence and its own `unemployment_revision` | highly confidential / `residence_social` | `personnel_file` (Q85 open, fail safe) |
 
 - **The health-detail gate (Q192):** health detail beyond yes/no needs the explicit consent of
   "Legal basis and consent", which doesn't exist yet: the health line takes its rating only, and a
@@ -703,8 +703,11 @@ and highly confidential data only; ordinary person-data writes are `participant_
   the API passes per call; each changed field is audited `sensitive_write` (keys
   `profilingAssessment.<line>`, `overallAssessment`, `nextSteps`, `profilingHealthAssessment`,
   `unemploymentPeriod`), each read field `sensitive_read` (the assessment's read logs all 16
-  fields). The unemployment period is read like the other residence and social answers (the
-  assigned consultant, back office) on `GET …/profiling/unemployment`. `transfer_app` selects the
+  fields). The unemployment period is read by the assigned consultant and back office (normal
+  mode) on `GET …/profiling/unemployment` through `read_unemployment_period`, one logged read
+  that returns the value with its revision; it is not a self-service field and the portal doesn't
+  show it in this slice. That is a UI scope, not a denial of access: the data-subject export and
+  the correction route cover it (Q85's classification stays open). `transfer_app` selects the
   presence flags, never a ciphertext. The tab's view carries presence only; the values come on
   "Anzeigen" from their `no-store` routes and stay out of the browser's query cache.
 - **The pending declarations** are not our consents (Q44): no `consent_record` is written; what was
