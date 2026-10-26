@@ -897,6 +897,7 @@ export {
   type AnlageSection,
   type FilledField,
   type FormLayout,
+  type FormOverflow,
   type TextMeasure,
 } from "./forms/layout";
 export {
@@ -909,6 +910,36 @@ export {
   type TextDocument,
 } from "./forms/anlage";
 export { formVersionInUse, FormVersionManifest, isFormVersionInUse } from "./forms/version";
+export {
+  checkTl407,
+  presentSensitiveValues,
+  schoolQualificationCheck,
+  tl407FieldSource,
+  tl407FieldSources,
+  tl407Label,
+  tl407ProfilerReadiness,
+  tl407ReadinessSummary,
+  tl407WarningCodes,
+  unconfirmedWarnings,
+  type Tl407Check,
+} from "./forms/tl407";
+export {
+  Tl407ErrorCode,
+  Tl407GeneratedForm,
+  Tl407Generation,
+  Tl407GenerationInput,
+  Tl407ProfilerReadiness,
+  Tl407Readiness,
+  Tl407ReadinessSummary,
+  Tl407WarningCode,
+} from "./forms/api";
+export {
+  workingCopyDays,
+  workingCopyExpiry,
+  type WorkingCopyExpiry,
+  type WorkingCopyFacts,
+  type WorkingCopyTrigger,
+} from "./forms/working-copy";
 export {
   assessmentFieldKeys,
   assessmentLines,
@@ -933,6 +964,7 @@ export {
 } from "./profiling/record";
 export {
   mayReadUnemploymentPeriod,
+  tl407ReadinessViewer,
   mayRecordProfiling,
   mayUseProfilingAssessment,
   mayViewProfiling,

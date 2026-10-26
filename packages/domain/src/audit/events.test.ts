@@ -118,6 +118,7 @@ describe("audit event types (ADR-0002)", () => {
       "missed_appointment_resolved",
       "profiling_session_changed",
       "profiling_declarations_recorded",
+      "form_generated",
     ]);
   });
 
@@ -203,6 +204,7 @@ describe("audit event types (ADR-0002)", () => {
       // The profiling record (Slice 6): only its write functions write them.
       "profiling_session_changed",
       "profiling_declarations_recorded",
+      "form_generated",
     ]);
   });
 
@@ -1832,5 +1834,27 @@ describe("the profiling record (process-and-lifecycle.md, the profiling record; 
       AuditEvent.safeParse({ ...recorded, details: { fields: ["jobboerseChoice"], value: "full" } })
         .success,
     ).toBe(false);
+  });
+
+  it("names a generated form by its document, code, version and Anlage, never a value", () => {
+    const generated = {
+      ...base,
+      type: "form_generated",
+      details: {
+        documentId: "0b5c7a62-1c2b-4f43-9a40-6d1a3b8e9f10",
+        formCode: "tl407",
+        formVersion: "08-2025",
+        anlage: true,
+      },
+    };
+    expect(issueCodes(generated)).toEqual([]);
+    for (const bad of [
+      { ...generated, details: { ...generated.details, formVersion: "08/2025" } },
+      { ...generated, details: { ...generated.details, lastName: "Muster" } },
+      { ...generated, actor: { ...user, onBehalfOf: participationId } },
+      { ...generated, participationId: null },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
   });
 });

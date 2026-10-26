@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DocumentType } from "../documents/catalog";
+import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
 import { isoDate } from "../iso-date";
@@ -182,6 +183,9 @@ export const AuditEventType = z.enum([
   // by its functions
   "profiling_session_changed",
   "profiling_declarations_recorded",
+  // Slice 6, a generated form (data-protection.md, generated forms), written only by
+  // `record_form_generation`
+  "form_generated",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -277,6 +281,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "missed_appointment_resolved",
   "profiling_session_changed",
   "profiling_declarations_recorded",
+  "form_generated",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1200,6 +1205,20 @@ export const AuditEvent = z.discriminatedUnion("type", [
       action: z.enum(["added", "changed", "removed"]),
       sessionId: z.uuid(),
       date: isoDate,
+    }),
+  }),
+  /**
+   * A form generated as a document (data-protection.md, generated forms; Q179): the document, the
+   * form's code and version and whether an Anlage was appended; never a value of it.
+   */
+  event("form_generated", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      documentId: z.uuid(),
+      formCode: FormCode,
+      formVersion: FormVersion,
+      anlage: z.boolean(),
     }),
   }),
   /** The pending declarations to the BA changed: the keys, never the values (Q193). */

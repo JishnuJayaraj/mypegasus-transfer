@@ -40,9 +40,14 @@ export type AnlageDocument = {
   sections: AnlageSection[];
 };
 
+/** What continues on the Anlage: a table's displaced rows, or a text cut at its box. */
+export type FormOverflow = { kind: "table" | "text"; key: string };
+
 export type FormLayout = {
   fields: FilledField[];
   anlage: AnlageDocument | null;
+  /** By key in the map's order, each once (a text column of a table by `table.column`). */
+  overflow: FormOverflow[];
   /** On a form without an Anlage: texts too long even at the minimum size, left for handwriting. */
   notFitting: FormIssue<"text_not_fitting">[];
 };
@@ -158,6 +163,10 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
   const fields: FilledField[] = [];
   const sections: AnlageSection[] = [];
   const notFitting: FormIssue<"text_not_fitting">[] = [];
+  const overflow: FormOverflow[] = [];
+  const overflows = (kind: FormOverflow["kind"], key: string) => {
+    if (!overflow.some((entry) => entry.key === key)) overflow.push({ kind, key });
+  };
 
   const placeText = (
     name: string,
@@ -176,6 +185,7 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
       const { shown, rest } = cut(text, entry, map, measure);
       fields.push({ name, kind: "text", value: shown, fontSize: map.minFontSize });
       sections.push({ kind: "text", heading, text: rest });
+      overflows("text", key);
     } else {
       notFitting.push({ code: "text_not_fitting", key });
     }
@@ -206,11 +216,11 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
   };
 
   const placeTable = (table: FormTableEntry, rows: readonly FormRow[]) => {
-    const overflow = rows.length > table.rows;
-    if (overflow && (table.markerColumn === undefined || map.anlage === null)) {
+    const spills = rows.length > table.rows;
+    if (spills && (table.markerColumn === undefined || map.anlage === null)) {
       throw new RangeError("More rows than the form holds, and no Anlage");
     }
-    const onForm = overflow ? rows.slice(0, table.rows - 1) : rows;
+    const onForm = spills ? rows.slice(0, table.rows - 1) : rows;
     onForm.forEach((row, index) => {
       for (const column of table.columns) {
         const value = row[column.key];
@@ -219,7 +229,8 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
         place(column.fields[index]!, column, value, heading, `${table.key}.${column.key}`);
       }
     });
-    if (!overflow) return;
+    if (!spills) return;
+    overflows("table", table.key);
     const marker = table.columns.find((column) => column.key === table.markerColumn)!;
     fields.push({
       name: marker.fields[table.rows - 1]!,
@@ -271,6 +282,7 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
             sections,
           }
         : null,
+    overflow,
     notFitting,
   };
 }

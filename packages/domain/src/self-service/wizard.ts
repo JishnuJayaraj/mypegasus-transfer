@@ -90,7 +90,7 @@ export const wizardPages: readonly { page: SelfServicePage; fields: readonly str
  */
 export const wizardDocumentTypes: readonly DocumentType[] = documentTypeCatalog.types
   .filter(
-    (entry) => entry.operations !== "undecided" && entry.operations.add.includes("participant"),
+    (entry) => typeof entry.operations === "object" && entry.operations.add.includes("participant"),
   )
   .map((entry) => entry.type);
 

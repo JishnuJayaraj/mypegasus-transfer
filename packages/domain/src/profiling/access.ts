@@ -79,3 +79,18 @@ export function mayReadUnemploymentPeriod(subject: Subject, target: PermissionTa
     ).effect === "allow"
   );
 }
+
+/**
+ * Whose TL 407 readiness the viewer gets (data-protection.md, the readiness projection): the
+ * assigned consultant's full check, the PL's summary from presence, or none (403).
+ */
+export function tl407ReadinessViewer(
+  actor: Actor,
+  target: PermissionTarget,
+): "profiler" | "project_lead" | null {
+  if (mayRecordProfiling(actor, target).ok) return "profiler";
+  if (actor.kind !== "staff") return null;
+  return staffPermission(actor, target, (role) => role === "project_lead").ok
+    ? "project_lead"
+    : null;
+}

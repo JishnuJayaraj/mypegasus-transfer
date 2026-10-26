@@ -3,8 +3,8 @@ import type { DataClass, OrgRole, ParticipantRetentionClass, ProjectRole } from 
 import type { AccessCategory } from "../fields/catalog";
 
 /**
- * Document types (round 11, Q87 B; the first six are the completeness types of plan 5.5; `cv`
- * from catalog version 2, Q142 *assumed*).
+ * Document types (data-protection.md, documents; Q87 B; the first six are the ones completeness
+ * rules name; `cv` from catalog version 2, Q142 *assumed*; `tl407_form` from version 3, Q179).
  */
 export const DocumentType = z.enum([
   "tl407_signed_scan",
@@ -16,6 +16,7 @@ export const DocumentType = z.enum([
   "cv",
   "participant_upload",
   "qualification_certificate",
+  "tl407_form",
 ]);
 export type DocumentType = z.infer<typeof DocumentType>;
 
@@ -41,6 +42,11 @@ export type DocumentRight =
  */
 export type DocumentOperations =
   | "undecided"
+  /**
+   * Written only by the platform's generation (`record_form_generation`; data-protection.md,
+   * generated forms): never uploaded, reviewed or deleted by an ordinary operation.
+   */
+  | "generated"
   | {
       /** Staff in normal mode as themselves, or in assisted mode on the participant's behalf. */
       add: readonly AccessRole[];
@@ -96,11 +102,13 @@ const participantOwned = {
 } as const;
 
 /**
- * Version 2 (*assumed*; version 1: round 11): a new type or a changed rule is a new version.
- * Version 2 adds `cv`, file names and the operations of the participant's own documents.
+ * Version 3 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
+ * version.
+ * Version 2 adds `cv`, file names and the operations of the participant's own documents; version 3
+ * the generated TL 407 (`tl407_form`, Q179).
  */
 export const documentTypeCatalog = {
-  version: 2,
+  version: 3,
   types: [
     {
       type: "tl407_signed_scan",
@@ -156,6 +164,19 @@ export const documentTypeCatalog = {
     { type: "participant_upload", ...participantOwned },
     // back office only when funding or settlement needs it: no such purpose before Slice 8
     { type: "qualification_certificate", ...participantOwned },
+    {
+      // The unsigned working copy (data-protection.md, generated forms; Q179): the signed type's
+      // access category and class, the assigned consultant generates it, it opens only through
+      // the logged opening and its file expires (`workingCopyExpiry`).
+      type: "tl407_form",
+      accessCategory: "signed_tl407",
+      dataClass: "special_category",
+      retentionClass: "form_working_copy",
+      signed: false,
+      roles: profilerAndPl,
+      fileName: false,
+      operations: "generated",
+    },
   ] satisfies DocumentTypeEntry[],
 };
 

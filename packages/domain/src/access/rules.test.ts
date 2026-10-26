@@ -325,8 +325,8 @@ describe("evidence-set phase (Q64, rounds 11–12)", () => {
   it("never lists and never writes; signed documents stay immutable", () => {
     for (const key of ["consultant", "project_lead", "back_office", "admin"]) {
       for (const resource of personResources("evidence_set")) {
-        const signed =
-          resource.kind === "document" && documentTypeEntry(resource.documentType).signed;
+        const entry = resource.kind === "document" && documentTypeEntry(resource.documentType);
+        const signed = entry && (entry.signed || entry.operations === "generated");
         for (const mode of modes) {
           expect(evidence(key, resource, "write", mode)).toMatch(
             signed ? /^deny (immutable|never)$/ : /^deny never$/,

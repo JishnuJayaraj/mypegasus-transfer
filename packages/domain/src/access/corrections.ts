@@ -33,6 +33,9 @@ export const documentCorrectionAuthority: Readonly<
   cv: pl,
   participant_upload: pl,
   qualification_certificate: pl,
+  // A working copy is no evidence: it isn't corrected, it expires (data-protection.md, generated
+  // forms).
+  tl407_form: [],
 };
 
 /** Evidence-set fields and their requesters (round 13); no other field is corrected this way. */

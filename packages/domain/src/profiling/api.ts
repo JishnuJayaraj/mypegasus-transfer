@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Tl407GeneratedForm } from "../forms/api";
 import { JobboerseChoice } from "../forms/input";
 import { isoDate } from "../iso-date";
 import { edges, type Edge } from "../lifecycle/edges";
@@ -88,6 +89,8 @@ export const ProfilingView = z
       .optional(),
     /** Whether "arbeitslos seit / bis" is recorded (the profiler only). */
     unemploymentPeriodRecorded: z.boolean().optional(),
+    /** The generated TL 407s, latest first: metadata only (data-protection.md, generated forms). */
+    tl407Forms: z.array(Tl407GeneratedForm),
     /** The track's next steps from the current status. */
     transitions: z.array(ProfilingTransition),
     capabilities: z.strictObject({
@@ -102,6 +105,10 @@ export const ProfilingView = z
       writeAssessment: z.boolean(),
       /** Read the unemployment period (a logged read). */
       readUnemploymentPeriod: z.boolean(),
+      /** Generate the TL 407 (the profiler, while the participation is open). */
+      generateTl407: z.boolean(),
+      /** Read the TL 407's readiness as projected for the viewer (the profiler, the PL). */
+      readTl407Readiness: z.boolean(),
     }),
   })
   .meta({ id: "Profiling" });

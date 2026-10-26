@@ -14,7 +14,7 @@ export type DocumentPermissionDenial =
   | PermissionDenial
   /** Staff add in normal or assisted mode, review and delete in normal mode; break-glass never. */
   | "mode_not_allowed"
-  /** Signed documents are never deleted; only the retention job removes them. */
+  /** Signed and generated documents are never deleted; only the retention job removes them. */
   | "immutable"
   /** A participant deletes only what they added themselves… */
   | "added_by_staff"
@@ -39,9 +39,13 @@ function permission(
   operation: DocumentOperation,
 ): DocumentPermission {
   const entry = documentTypeEntry(type);
-  if (operation === "delete" && entry.signed) return no("immutable");
+  const operations = entry.operations;
+  const generated = operations === "generated";
+  if (operation === "delete" && (entry.signed || generated)) return no("immutable");
+  // Generated forms come only from their generation (data-protection.md, generated forms).
+  if (generated) return no("actor_not_allowed");
   const roles: readonly AccessRole[] | undefined =
-    entry.operations === "undecided" ? undefined : entry.operations[operation];
+    operations === "undecided" ? undefined : operations[operation];
   if (subject.kind === "participant") {
     // Participants have no modes and reach only their own participation.
     const own = subject.participationId === target.participationId && mode.kind === "normal";
