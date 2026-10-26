@@ -400,6 +400,36 @@ generator then. No action now.
   `ParticipationAppointments.bookings[]` adds `followUpOf`, `missedResolution` and `missed`
   (`{ followUp, resolve }` capabilities on a missed booking, else null).
 
+## Note 2026-10-26 (Slice 6, PR 6-2): the profiling record
+
+- `GET /participations/{id}/profiling` (`Profiling`): the track, `statusVersion`, `closed`, the
+  record's `revision`, the sessions and `transitions[]` (`{ to, allowed, refusal }`) for the PL and
+  the assigned consultant; for the assigned consultant also `declarations`, `assessment`
+  (`revision`, the recorded field keys, never a value) and `unemploymentPeriodRecorded`; absent
+  otherwise. The values and the revisions they go with are read in one snapshot (a `REPEATABLE
+  READ` read-only transaction), so a whole-list write never carries a revision newer than the list
+  it was based on. `capabilities`: `record`, `readAssessment`, `writeAssessment`,
+  `readUnemploymentPeriod`; a closed participation keeps the reads and loses the writes.
+  `ParticipationDetail.capabilities.viewProfiling` says whether the tab exists.
+- Writes (the assigned consultant): `PUT …/profiling/sessions` (`ProfilingSessionsInput`),
+  `PUT …/profiling/declarations` (`ProfilingDeclarationsInput`), `PUT …/profiling/assessment`
+  (`ProfilingAssessmentInput`, `values` checked by the domain: `422` with codes at
+  `/values/<line>/<field>`, `health_detail_not_recorded` for any text on the health line),
+  `PUT …/profiling/unemployment` (`UnemploymentPeriodInput`: `{ revision, period }`, `period` null
+  clears). Each answers `ProfilingWriteResult` `{ revision, warnings, profiling }`: `revision` is
+  the one this write produced (the record's, the assessment's or the unemployment period's), which
+  the client keeps with the values it saved, never a later one read elsewhere; `warnings` holds
+  `range_reversed` for an unemployment period whose `from` is after its `until` (stored, a warning,
+  not a refusal). `409 stale_revision` for a stale revision; session rules `422` at
+  `/sessions/<i>/<field>`.
+- Logged reads, `no-store`: `GET …/profiling/assessment` (`ProfilingAssessmentView`, the assigned
+  consultant) and `GET …/profiling/unemployment` (`UnemploymentPeriodView` `{ revision, period }`,
+  the assigned consultant and back office).
+- `POST …/profiling-status` (`ProfilingStatusInput`: `{ to, effectiveDate?, statusVersion }`):
+  `409 stale_status`, `422` with the failed guard's id (`tl407_signed`) or the lifecycle code.
+- Order: schema (400) → visibility (404, also for an unassigned consultant) → permission (403:
+  back office and the org roles have no tab; the PL writes none of the profiler's data) → state.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

@@ -470,6 +470,20 @@
       "when": 1792788445506,
       "tag": "0066_missed_appointment_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1793010672199,
+      "tag": "0067_profiling_record",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1793010673949,
+      "tag": "0068_profiling_record_functions",
+      "breakpoints": true
     }
   ]
 }

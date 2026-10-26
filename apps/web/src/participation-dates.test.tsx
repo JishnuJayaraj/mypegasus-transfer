@@ -65,6 +65,7 @@ const detail = {
     providePrivacyNotice: false,
     setPlacementAgentur: false,
     startAssistedMode: false,
+    viewProfiling: false,
   },
   refusals: { assignEntryWave: "no_other_wave", setParticipationDates: null },
 };

@@ -138,6 +138,21 @@ export const participationQuery = (api: ApiClient, participationId: string) =>
   });
 
 /** The "Selbstauskunft" tab: normal mode, values the viewer reads, presence, missing items. */
+/**
+ * The tab "Profiling" (data-protection.md, the profiling record): statuses, sessions and presence
+ * only; section C and the unemployment period are read on their own logged routes, never cached.
+ */
+export const participationProfilingQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "profiling"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/profiling", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 export const participationSelfServiceQuery = (api: ApiClient, participationId: string) =>
   queryOptions({
     queryKey: ["participations", participationId, "self-service"],

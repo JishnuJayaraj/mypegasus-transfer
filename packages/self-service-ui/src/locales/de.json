@@ -63,7 +63,8 @@
     "invalid_format": "Das Format dieser Angabe stimmt nicht.",
     "unknown_field": "Diese Angabe kann hier nicht gespeichert werden.",
     "pension_insurance_number_invalid": "Bitte geben Sie die zwölfstellige Rentenversicherungsnummer ein, zum Beispiel 12 345678 A 123.",
-    "not_applicable": "Diese Angabe gilt nur bei einer anderen Staatsangehörigkeit."
+    "not_applicable": "Diese Angabe gilt nur bei einer anderen Staatsangehörigkeit.",
+    "school_qualification_ambiguous": "Bitte kreuzen Sie nur einen höchsten Schulabschluss an."
   },
   "pages": {
     "personal": "Persönliches",
@@ -120,7 +121,10 @@
       "institution": "Schule, Betrieb oder Hochschule",
       "qualification": "Ausbildung oder Abschluss",
       "completed": "Abgeschlossen?",
-      "running": "Läuft noch"
+      "running": "Läuft noch",
+      "highestSchool": "Höchster Schulabschluss",
+      "highestSchoolHint": "Bitte kreuzen Sie die Zeile Ihres höchsten Schulabschlusses an. Die Beratung prüft die Angabe mit Ihnen.",
+      "highestSchoolShort": "höchster Schulabschluss"
     },
     "workHistory": {
       "label": "Berufliche Tätigkeiten",

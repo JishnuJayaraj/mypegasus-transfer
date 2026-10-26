@@ -33,6 +33,8 @@ export type EducationForm = {
   institution: string;
   qualification: string;
   completed: string;
+  /** The row of the highest school qualification (Q196); at most one. */
+  highestSchool: boolean;
 };
 export type WorkForm = { id: number; from: string; to: string; employer: string; activity: string };
 export type LanguageForm = { id: number; language: string; level: string };
@@ -54,6 +56,7 @@ export const emptyEducation = (): EducationForm => ({
   institution: "",
   qualification: "",
   completed: "",
+  highestSchool: false,
 });
 export const emptyWork = (): WorkForm => ({
   id: rowId(),
@@ -122,6 +125,7 @@ function toForm(key: string, values: Values): unknown {
         institution: row.institution,
         qualification: row.qualification,
         completed: row.completed === null ? "running" : yesNo(row.completed),
+        highestSchool: row.highestSchoolQualification === true,
       }));
     case "workHistory":
       return (values.workHistory ?? []).map((row) => ({
@@ -276,6 +280,7 @@ function fromForm(key: string, form: unknown, c: Converter): unknown {
         institution: row.institution,
         qualification: row.qualification,
         completed: c.yesNo(row.completed),
+        ...(row.highestSchool && { highestSchoolQualification: true as const }),
       }));
     }
     case "workHistory": {

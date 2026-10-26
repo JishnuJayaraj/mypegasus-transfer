@@ -183,6 +183,7 @@ const options = {
     providePrivacyNotice: true,
     setPlacementAgentur: true,
     startAssistedMode: true,
+    viewProfiling: true,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
@@ -221,6 +222,7 @@ describe("participationDetail", () => {
         providePrivacyNotice: true,
         setPlacementAgentur: true,
         startAssistedMode: true,
+        viewProfiling: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });

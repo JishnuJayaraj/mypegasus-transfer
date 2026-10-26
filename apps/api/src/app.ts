@@ -40,6 +40,7 @@ import { assistedModeRoutes } from "./routes/assisted-mode";
 import { createDetached } from "./detached";
 import { documentFiles } from "./documents/files";
 import { documentRoutes } from "./routes/documents";
+import { profilingRoutes } from "./routes/profiling";
 import { mountSpas } from "./static";
 
 export const openApiConfig = {
@@ -171,6 +172,7 @@ export function createApp(deps: Deps) {
   api.route("/", selfServiceRoutes(runtimeDeps));
   api.route("/", assistedModeRoutes(runtimeDeps));
   api.route("/", documentRoutes(runtimeDeps));
+  api.route("/", profilingRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 

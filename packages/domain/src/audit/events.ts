@@ -178,6 +178,10 @@ export const AuditEventType = z.enum([
   // Slice 5b, the work list's missed appointments (process-and-lifecycle.md, appointment items),
   // written only by its function
   "missed_appointment_resolved",
+  // Slice 6, the profiling record (process-and-lifecycle.md, the profiling record), written only
+  // by its functions
+  "profiling_session_changed",
+  "profiling_declarations_recorded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -271,6 +275,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "attendance_conflict_resolved",
   "appointment_notice_followed_up",
   "missed_appointment_resolved",
+  "profiling_session_changed",
+  "profiling_declarations_recorded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1185,6 +1191,24 @@ export const AuditEvent = z.discriminatedUnion("type", [
     actor: staffActor,
     reasonCode: MissedResolution,
     details: z.strictObject(ofBooking),
+  }),
+  /** One profiling session added, changed or removed by a whole write (Q193): its id and date. */
+  event("profiling_session_changed", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      action: z.enum(["added", "changed", "removed"]),
+      sessionId: z.uuid(),
+      date: isoDate,
+    }),
+  }),
+  /** The pending declarations to the BA changed: the keys, never the values (Q193). */
+  event("profiling_declarations_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      fields: z.array(z.enum(["jobboerseChoice", "baContactConsent"])).min(1),
+    }),
   }),
 ]);
 export type AuditEvent = z.infer<typeof AuditEvent>;

@@ -122,7 +122,12 @@ export function assistedSource(
  * "Assistierte Erfassung starten": the confirmation dialog (the person is present or on the phone
  * and asked for help, and how), then the wizard in assisted mode.
  */
-export function StartAssistedMode(props: { projectId: string; participationId: string }) {
+export function StartAssistedMode(props: {
+  projectId: string;
+  participationId: string;
+  /** The button's text where it isn't the generic one ("Im assistierten Modus ergänzen"). */
+  label?: string;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const navigate = useNavigate();
@@ -166,7 +171,7 @@ export function StartAssistedMode(props: { projectId: string; participationId: s
   return (
     <>
       <Button kind="secondary" onClick={() => setOpen(true)}>
-        {t("participant.assisted.start")}
+        {props.label ?? t("participant.assisted.start")}
       </Button>
       <Modal
         open={open}

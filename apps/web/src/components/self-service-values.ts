@@ -30,7 +30,13 @@ export function formatSelfServiceValue(key: string, value: unknown, text: Transl
       return formatDate(value as string);
     case "educationHistory":
       return (value as EducationRow[])
-        .map((row) => `${period(row, text)}: ${row.qualification}, ${row.institution}`)
+        .map((row) => {
+          const line = `${period(row, text)}: ${row.qualification}, ${row.institution}`;
+          // The highest school qualification as marked (Q196).
+          return row.highestSchoolQualification
+            ? `${line} (${text("fields.educationHistory.highestSchoolShort")})`
+            : line;
+        })
         .join("\n");
     case "workHistory":
       return (value as WorkRow[])

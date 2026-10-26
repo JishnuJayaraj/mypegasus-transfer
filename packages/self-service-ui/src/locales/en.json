@@ -63,7 +63,8 @@
     "invalid_format": "The format of this detail is not right.",
     "unknown_field": "This detail cannot be saved here.",
     "pension_insurance_number_invalid": "Please enter the twelve-character pension insurance number, for example 12 345678 A 123.",
-    "not_applicable": "This only applies to another nationality."
+    "not_applicable": "This only applies to another nationality.",
+    "school_qualification_ambiguous": "Please tick only one highest school qualification."
   },
   "pages": {
     "personal": "Personal details",
@@ -120,7 +121,10 @@
       "institution": "School, company or university",
       "qualification": "Training or qualification",
       "completed": "Completed?",
-      "running": "Still running"
+      "running": "Still running",
+      "highestSchool": "Highest school qualification",
+      "highestSchoolHint": "Please tick the row of your highest school qualification. Your adviser checks it with you.",
+      "highestSchoolShort": "highest school qualification"
     },
     "workHistory": {
       "label": "Work history",

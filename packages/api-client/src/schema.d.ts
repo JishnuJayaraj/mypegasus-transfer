@@ -9902,6 +9902,676 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/profiling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tab Profiling: the track and its next steps, the sessions; for the assigned consultant the pending declarations and which assessment fields are recorded (never a value) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The profiling record as the viewer may know it */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Profiling"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/profiling/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Write every profiling session whole (the assigned consultant): bis after von, no future date, no overlap on one day; 409 stale_revision */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingSessionsInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the record's revision of these sessions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/profiling/declarations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Write the pending declarations to the BA (the assigned consultant): the Jobbörse choice and the BA contact declaration; never the portal consent; 409 stale_revision */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingDeclarationsInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the record's revision of these declarations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/profiling/assessment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Section C and p. 7 decrypted for the assigned consultant; each field's read is audited (sensitive_read) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The assessment and its revision */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProfilingAssessmentView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** Write section C and p. 7 whole, encrypted (the assigned consultant); each changed field is audited (sensitive_write). The health line takes its rating only (422 health_detail_not_recorded); 409 stale_revision */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingAssessmentInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the assessment's revision of these values */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/profiling/unemployment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The unemployment period decrypted with its revision (the assigned consultant, back office); the read is audited (sensitive_read) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The period, or null */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnemploymentPeriodView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** Write the unemployment period, encrypted (the assigned consultant), or clear it, with the revision of its read (409 stale_revision); audited (sensitive_write) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UnemploymentPeriodInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the period's revision, a reversed range warned */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProfilingWriteResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/profiling-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** One step of the profiling track along its edges (the PL, the assigned consultant) through the status service; 409 stale_status, 422 with the failed guard */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingStatusInput"];
+                };
+            };
+            responses: {
+                /** @description Changed; the profiling record */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Profiling"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/outbox": {
         parameters: {
             query?: never;
@@ -10895,6 +11565,7 @@ export interface components {
                 providePrivacyNotice: boolean;
                 setPlacementAgentur: boolean;
                 startAssistedMode: boolean;
+                viewProfiling: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -11666,7 +12337,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -12342,6 +13013,8 @@ export interface components {
             institution: string;
             qualification: string;
             completed: boolean | null;
+            /** @enum {boolean} */
+            highestSchoolQualification?: true;
         };
         WorkRow: {
             /**
@@ -12879,6 +13552,231 @@ export interface components {
             decision: "accepted" | "rejected";
             /** @enum {string} */
             reasonCode?: "unreadable" | "wrong_document" | "incomplete";
+        };
+        Profiling: {
+            /** Format: uuid */
+            participationId: string;
+            /** @enum {string} */
+            profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
+            statusVersion: number;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            profilingDoneOn: string | null;
+            closed: boolean;
+            revision: number;
+            sessions: components["schemas"]["ProfilingSession"][];
+            declarations?: {
+                /** @enum {string|null} */
+                jobboerseChoice: "full" | "anonymous_callme" | "anonymous_no_contact" | "none" | null;
+                baContactConsent: boolean | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                recordedAt: string | null;
+            };
+            assessment?: {
+                revision: number;
+                recorded: components["schemas"]["AssessmentFieldKey"][];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                writtenAt: string | null;
+            };
+            unemploymentPeriodRecorded?: boolean;
+            transitions: components["schemas"]["ProfilingTransition"][];
+            capabilities: {
+                record: boolean;
+                readAssessment: boolean;
+                writeAssessment: boolean;
+                readUnemploymentPeriod: boolean;
+            };
+        };
+        ProfilingSession: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
+            from: string;
+            to: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            recordedAt: string;
+        };
+        /** @enum {string} */
+        AssessmentFieldKey: "profilingAssessment.schoolQualification" | "profilingAssessment.vocationalQualification" | "profilingAssessment.workExperience" | "profilingAssessment.languageSkills" | "profilingAssessment.otherQualification" | "profilingAssessment.intellectualCapacity" | "profilingAssessment.workAndSocialBehaviour" | "profilingAssessment.otherPerformance" | "profilingAssessment.initiative" | "profilingAssessment.learningReadiness" | "profilingAssessment.otherMotivation" | "profilingAssessment.localMobility" | "profilingAssessment.otherConditions" | "overallAssessment" | "nextSteps" | "profilingHealthAssessment";
+        ProfilingTransition: {
+            /** @enum {string} */
+            to: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
+            allowed: boolean;
+            refusal: components["schemas"]["ProfilingTransitionRefusal"];
+        };
+        /** @enum {string|null} */
+        ProfilingTransitionRefusal: "forbidden" | "project_not_active" | "track_inactive" | "tl407_signed" | "before_cutoff" | null;
+        ProfilingWriteResult: {
+            revision: number;
+            warnings: components["schemas"]["ProfilingWarning"][];
+            profiling: components["schemas"]["Profiling"];
+        };
+        /** @enum {string} */
+        ProfilingWarning: "range_reversed";
+        ProfilingSessionsInput: {
+            revision: number;
+            sessions: components["schemas"]["ProfilingSessionInput"][];
+        };
+        ProfilingSessionInput: {
+            /** Format: uuid */
+            id?: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
+            from: components["schemas"]["ProfilingTime"];
+            to: components["schemas"]["ProfilingTime"];
+        };
+        ProfilingTime: string;
+        ProfilingDeclarationsInput: {
+            revision: number;
+            /** @enum {string|null} */
+            jobboerseChoice: "full" | "anonymous_callme" | "anonymous_no_contact" | "none" | null;
+            baContactConsent: boolean | null;
+        };
+        ProfilingAssessmentView: {
+            /** Format: uuid */
+            participationId: string;
+            revision: number;
+            values: components["schemas"]["ProfilingAssessment"];
+        };
+        ProfilingAssessment: {
+            schoolQualification: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            vocationalQualification: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            workExperience: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            languageSkills: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            otherQualification: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+                label: string | null;
+            };
+            health: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+            };
+            intellectualCapacity: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            workAndSocialBehaviour: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            otherPerformance: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+                label: string | null;
+            };
+            initiative: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            learningReadiness: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            otherMotivation: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+                label: string | null;
+            };
+            localMobility: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+            };
+            otherConditions: {
+                /** @enum {string|null} */
+                rating: "no_need" | "placement_relevant" | null;
+                text: string | null;
+                label: string | null;
+            };
+            overallAssessment: string | null;
+            nextSteps: string | null;
+        };
+        ProfilingAssessmentInput: {
+            revision: number;
+            /** @description The whole assessment (ProfilingAssessment). The health line takes its rating only: a text there is refused (422 health_detail_not_recorded); unknown keys are refused. */
+            values: {
+                [key: string]: unknown;
+            };
+        };
+        UnemploymentPeriodView: {
+            /** Format: uuid */
+            participationId: string;
+            revision: number;
+            period: components["schemas"]["UnemploymentPeriod"];
+        };
+        UnemploymentPeriod: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            from: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            until: string | null;
+        } | null;
+        UnemploymentPeriodInput: {
+            revision: number;
+            period: components["schemas"]["UnemploymentPeriod"];
+        };
+        ProfilingStatusInput: {
+            /** @enum {string} */
+            to: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            effectiveDate?: string;
+            statusVersion: number;
         };
         DevStaffUser: {
             /** Format: uuid */

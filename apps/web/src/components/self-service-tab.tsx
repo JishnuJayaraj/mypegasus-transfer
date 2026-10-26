@@ -22,12 +22,21 @@ import { formatSelfServiceValue } from "./self-service-values";
 type View = components["schemas"]["ParticipationSelfService"];
 type Detail = components["schemas"]["ParticipationDetail"];
 
-export function SelfServiceTab({ detail, projectId }: { detail: Detail; projectId: string }) {
+export function SelfServiceTab({
+  detail,
+  projectId,
+  startLabel,
+}: {
+  detail: Detail;
+  projectId: string;
+  /** The assisted-mode button's text where it isn't the generic one (the tab "Profiling"). */
+  startLabel?: string;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const query = useQuery(participationSelfServiceQuery(api, detail.id));
   const start = detail.capabilities.startAssistedMode && (
-    <StartAssistedMode projectId={projectId} participationId={detail.id} />
+    <StartAssistedMode projectId={projectId} participationId={detail.id} label={startLabel} />
   );
   if (query.isPending) return <p>{t("participant.selfService.loading")}</p>;
   if (query.isError) {

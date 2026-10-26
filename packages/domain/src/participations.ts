@@ -222,6 +222,8 @@ export const ParticipationDetail = z
        * terminal, Q136).
        */
       startAssistedMode: z.boolean(),
+      /** The tab "Profiling" (the PL, the assigned consultant; data-protection.md, Q49). */
+      viewProfiling: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({

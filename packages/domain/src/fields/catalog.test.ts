@@ -88,6 +88,24 @@ describe("field catalog (AC-29)", () => {
     expect(retention("qualifications")).toBeUndefined();
   });
 
+  it("classifies the profiling record by its tables (Q88, Q192, Q193)", () => {
+    expect(retention("profilingSessions")).toBe("participation_record");
+    for (const key of ["jobboerseChoice", "baContactConsent", "unemploymentPeriod"]) {
+      expect(retention(key)).toBe("personnel_file");
+    }
+    for (const key of ["profilingAssessment", "overallAssessment", "nextSteps"]) {
+      expect(fieldEntry(key)).toMatchObject({
+        dataClass: "highly_confidential",
+        accessCategory: "profiling_assessment",
+        retentionClass: "personnel_file",
+        selfService: false,
+      });
+    }
+    expect(retention("profilingHealthAssessment")).toBe("health_record");
+    // The profiler records the unemployment period; the wizard has no page for it.
+    expect(fieldEntry("unemploymentPeriod").selfService).toBe(false);
+  });
+
   it("classifies every self-service field the wizard collects (Q141)", () => {
     const personnelFile = [
       "gender",

@@ -10,7 +10,7 @@ the readiness projection, the export lifecycle and the working copies' expiry. Q
 (the blanks are in `packages/forms`); Q177–Q194 carry the review's answers (`accepted`; Q181, Q182
 and Q185 `verify` for their Agentur or legal check; 🔒 rows still need their DPO confirmation
 before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was committed and
-checked in PR 6-1, which also opened Q196 and Q197. Q1 stays `verify`. This is not an external
+checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. Q1 stays `verify`. This is not an external
 DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
@@ -682,6 +682,11 @@ a file name, a form's content or a token.
 - The profiling track by the PL and the assigned consultant, refused by back office; `profiling_done`
   refused on `tl407_signed` until 6-3; `track_inactive` as built.
 - Sessions: overlap, from ≥ to and a future date refused; stale revision `409`.
+- Values and their revision read in one snapshot; a save keeps its own returned revision; an
+  unrelated save keeps another section's unsaved input, a changed stored value shows a conflict
+  (Q198). The unemployment period has its own revision (`409` also when clearing) and warns of a
+  reversed range when saving. p. 7 keeps its paragraph breaks through API, storage and the TL 407.
+  A closed participation is shown read-only.
 - The highest school qualification (Q196): the participant marks one education row, the profiler
   confirms or corrects it (self-service and assisted permissions); it is persisted and passed to
   `orderEducation` as `kind: "school"`, never inferred. Needed before 6-3 enables generation.
@@ -699,6 +704,10 @@ a file name, a form's content or a token.
 - e2e: session, generation, scan, acceptance, `profiling_done`.
 - Generation refuses without the persisted school designation of 6-2 (Q196); an unsupported
   character is explained per field and points to the external-paper path (Q197).
+- The school designation (Q198): an explicit, reviewed "no school qualification" answer is valid;
+  "not yet designated / clarified" is incomplete. No education row is fabricated, and the answer
+  is never inferred from names, recency or an unticked checkbox. The review is tied to the current
+  source values: a later participant edit doesn't inherit an earlier review.
 
 **6-4**
 - `asuDueDate`: both branches and their boundary; month-end clamps; no knowledge date gives the

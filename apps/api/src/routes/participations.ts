@@ -20,6 +20,7 @@ import {
   ParticipationDatesInput,
   mayListField,
   mayPerformOperation,
+  mayViewProfiling,
   ParticipationListQuery,
   participationDatesCapability,
   participationDetail,
@@ -258,6 +259,7 @@ export function participationRoutes(deps: Deps) {
           setPlacementAgentur: setPlacement,
           // Assisted mode (Q136): not for a terminal participation; no account needed.
           startAssistedMode: placementAgenturCapability(p.status, permitted("startAssistedMode")),
+          viewProfiling: mayViewProfiling(subject, target).ok,
         },
         refusals: {
           assignEntryWave: assignment.refusal,

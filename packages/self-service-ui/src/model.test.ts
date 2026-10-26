@@ -255,6 +255,46 @@ describe("the page's values for its write", () => {
     ).toEqual([{ path: "maxCommuteDistance/km", code: "out_of_range" }]);
   });
 
+  it("carries the marked highest school qualification both ways, one row at most (Q196)", () => {
+    const row = {
+      from: "1986-09-01",
+      to: "1995-06-30",
+      institution: "Schule",
+      qualification: "Abitur",
+      completed: true,
+    };
+    const state = wizardState({
+      values: {
+        ...wizardState().values,
+        educationHistory: [{ ...row, highestSchoolQualification: true }, row],
+      },
+    });
+    const draft = pageDraft(page("education", ["educationHistory"]), state);
+    expect(draft.educationHistory).toEqual([
+      expect.objectContaining({ highestSchool: true }),
+      expect.objectContaining({ highestSchool: false }),
+    ]);
+    const form = (highestSchool: [boolean, boolean]) =>
+      (draft.educationHistory as { highestSchool: boolean }[]).map((r, i) => ({
+        ...r,
+        highestSchool: highestSchool[i],
+      }));
+    const marked = pageSubmission(page("education", ["educationHistory"]), {
+      educationHistory: form([false, true]),
+    });
+    expect(marked.values.educationHistory).toEqual([
+      row,
+      { ...row, highestSchoolQualification: true },
+    ]);
+    expect(marked.issues).toEqual([]);
+    const twice = pageSubmission(page("education", ["educationHistory"]), {
+      educationHistory: form([true, true]),
+    });
+    expect(twice.issues).toEqual([
+      { path: "educationHistory", code: "school_qualification_ambiguous" },
+    ]);
+  });
+
   it("converts the row tables and warns about von > bis", () => {
     const result = pageSubmission(
       page("education", ["educationHistory", "workHistory", "languageSkills"]),

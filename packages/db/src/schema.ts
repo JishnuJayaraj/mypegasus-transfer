@@ -78,6 +78,7 @@ import {
   AttendanceAfterCloseReason,
   AttendanceConflictResolution,
   appointmentPolicy,
+  JobboerseChoice,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -428,6 +429,7 @@ export const attendanceConflictResolution = pgEnum(
   values(AttendanceConflictResolution),
 );
 export const missedResolution = pgEnum("missed_resolution", values(MissedResolution));
+export const jobboerseChoice = pgEnum("jobboerse_choice", values(JobboerseChoice));
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -915,6 +917,25 @@ function encryptedChecks(
   ];
 }
 
+/** The section C lines and p. 7 (ba-forms.md, section C), each its own ciphertext column. */
+const assessmentColumns = {
+  schoolQualification: "school_qualification",
+  vocationalQualification: "vocational_qualification",
+  workExperience: "work_experience",
+  languageSkills: "language_skills",
+  otherQualification: "other_qualification",
+  intellectualCapacity: "intellectual_capacity",
+  workAndSocialBehaviour: "work_and_social_behaviour",
+  otherPerformance: "other_performance",
+  initiative: "initiative",
+  learningReadiness: "learning_readiness",
+  otherMotivation: "other_motivation",
+  localMobility: "local_mobility",
+  otherConditions: "other_conditions",
+  overallAssessment: "overall_assessment",
+  nextSteps: "next_steps",
+} as const;
+
 /**
  * The RV-Nummer (TL 407 field 25), highly confidential, `identifiers`, class
  * `participation_record` (Q88, Q141). Written and read only by `write_sensitive_fields` and
@@ -928,23 +949,36 @@ export const participantIdentifierData = pgTable(
 
 /**
  * Nationality, entry date, residence status and Bürgergeld (TL 407 fields 31–34), highly
- * confidential, `residence_social`, class `personnel_file` (Q141); like the RV-Nummer.
+ * confidential, `residence_social`, class `personnel_file` (Q141); like the RV-Nummer. Beside
+ * them "arbeitslos seit / bis" (fields 34, 35; Q85 open, fail safe; Q192), which the profiler
+ * records through `write_unemployment_period`.
  */
 export const participantResidenceSocialData = pgTable(
   "participant_residence_social_data",
-  encryptedFields({
-    nationality: "nationality",
-    entryToGermanyDate: "entry_to_germany_date",
-    residenceStatus: "residence_status",
-    buergergeld: "buergergeld",
-  }),
+  {
+    ...encryptedFields({
+      nationality: "nationality",
+      entryToGermanyDate: "entry_to_germany_date",
+      residenceStatus: "residence_status",
+      buergergeld: "buergergeld",
+      unemploymentPeriod: "unemployment_period",
+    }),
+    /** The unemployment period's revision, which its write compares (409), clearing included. */
+    unemploymentRevision: integer("unemployment_revision").notNull().default(0),
+  },
   (t) =>
     encryptedChecks("participant_residence_social_data", t, [
       "nationality",
       "entryToGermanyDate",
       "residenceStatus",
       "buergergeld",
-    ]),
+      "unemploymentPeriod",
+    ]).concat(
+      check(
+        "participant_residence_social_data_unemployment_revision",
+        sql`${t.unemploymentRevision} >= 0`,
+      ),
+    ),
 );
 
 /**
@@ -959,6 +993,111 @@ export const participantHealthData = pgTable(
     severeDisability: "severe_disability",
   }),
   (t) => encryptedChecks("participant_health_data", t, ["healthRestrictions", "severeDisability"]),
+);
+
+/** `hh:mm`, as the profiling sessions hold their times (ba-forms.md, validation). */
+const hhmm = (column: SQL) => sql`${column} ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'`;
+
+/**
+ * The profiling record (data-protection.md, the profiling record; Q193): per participation the
+ * pending declarations to the BA (TL 407 field 50 and the BA contact declaration, `null` while
+ * undecided; never the portal consent), who recorded them last and when, and the `revision` every
+ * sessions or declarations write compares. Confidential, class `personnel_file`. Written only by
+ * `write_profiling_sessions` and `write_profiling_declarations` (ADR-0002).
+ */
+export const participantProfiling = pgTable(
+  "participant_profiling",
+  {
+    ...personKeys(),
+    jobboerseChoice: jobboerseChoice("jobboerse_choice"),
+    baContactConsent: boolean("ba_contact_consent"),
+    declarationsRecordedBy: uuid("declarations_recorded_by").references(() => staffUser.id),
+    declarationsRecordedAt: timestamp("declarations_recorded_at", {
+      withTimezone: true,
+      mode: "string",
+    }),
+    revision: integer("revision").notNull(),
+    ...personTimes(),
+  },
+  (t) => [
+    foreignKey({
+      name: "participant_profiling_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check("participant_profiling_revision", sql`${t.revision} >= 1`),
+    check(
+      "participant_profiling_declarations_recorded",
+      sql`(${t.declarationsRecordedBy} is null) = (${t.declarationsRecordedAt} is null)`,
+    ),
+  ],
+);
+
+/**
+ * One profiling session (TL 407 section A; process-and-lifecycle.md, the profiling record; Q193):
+ * its date and times, who recorded it last and when. Evidence-set data, class
+ * `participation_record` (Q88); never a booked appointment. Written only by
+ * `write_profiling_sessions`, which checks the times, the date and the overlaps again.
+ */
+export const profilingSession = pgTable(
+  "profiling_session",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    sessionDate: dateColumn("session_date").notNull(),
+    timeFrom: text("time_from").notNull(),
+    timeTo: text("time_to").notNull(),
+    recordedBy: uuid("recorded_by")
+      .notNull()
+      .references(() => staffUser.id),
+    recordedAt: timestamp("recorded_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "profiling_session_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("profiling_session_participation_idx").on(t.participationId, t.sessionDate),
+    check("profiling_session_time_from", hhmm(sql`${t.timeFrom}`)),
+    check("profiling_session_time_to", hhmm(sql`${t.timeTo}`)),
+    check("profiling_session_times_ordered", sql`${t.timeFrom} < ${t.timeTo}`),
+  ],
+);
+
+/**
+ * TL 407 section C and p. 7 but the health line (data-protection.md, the profiling record; Q192):
+ * each line's rating and text as one ciphertext (an "andere" line with its label), Gesamteinschätzung
+ * and weiteres Vorgehen; highly confidential, `profiling_assessment`, class `personnel_file`, with
+ * the assessment's `revision`. Written and read only by `write_profiling_assessment` and
+ * `read_profiling_assessment`, the assigned consultant's (ADR-0002, encryption).
+ */
+export const participantProfilingAssessment = pgTable(
+  "participant_profiling_assessment",
+  {
+    ...encryptedFields(assessmentColumns),
+    revision: integer("revision").notNull(),
+  },
+  (t) => [
+    ...encryptedChecks("participant_profiling_assessment", t, Object.keys(assessmentColumns)),
+    check("participant_profiling_assessment_revision", sql`${t.revision} >= 1`),
+  ],
+);
+
+/**
+ * The health line's rating of section C, no text (Q192: health detail beyond yes/no needs the
+ * explicit consent of data-protection.md, legal basis, which doesn't exist yet): special
+ * category, `profiling_assessment`, class `health_record` (Q40). Written with the assessment.
+ */
+export const participantProfilingHealthAssessment = pgTable(
+  "participant_profiling_health_assessment",
+  encryptedFields({ healthRating: "health_rating" }),
+  (t) => encryptedChecks("participant_profiling_health_assessment", t, ["healthRating"]),
 );
 
 /**
@@ -2445,6 +2584,10 @@ export const tables = [
   participantIdentifierData,
   participantResidenceSocialData,
   participantHealthData,
+  participantProfiling,
+  profilingSession,
+  participantProfilingAssessment,
+  participantProfilingHealthAssessment,
   selfServiceNoticeAcknowledgement,
   activationCode,
   privacyNoticeDelivery,
