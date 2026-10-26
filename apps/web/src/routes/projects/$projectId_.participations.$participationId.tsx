@@ -39,6 +39,7 @@ import { DocumentsTab } from "../../components/documents-tab";
 import { HistoryTab } from "../../components/history";
 import { MessagesTab } from "../../components/reminders";
 import { AppointmentsTab } from "../../components/participation-appointments";
+import { ProfilingTab } from "../../components/profiling-tab";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -48,18 +49,28 @@ type FieldKey = keyof typeof de.participant.fields;
 const RouterLink = createLink(Link);
 
 /**
- * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Unterlagen",
- * "Termine", "Nachrichten" or "Verlauf".
+ * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Profiling" (for
+ * the PL and the assigned consultant), "Unterlagen", "Termine", "Nachrichten" or "Verlauf".
  */
 const tabs = [
   undefined,
   "self-service",
+  "profiling",
   "documents",
   "appointments",
   "messages",
   "history",
 ] as const;
 type Search = { tab?: Exclude<(typeof tabs)[number], undefined> };
+const tabLabels = {
+  overview: "overview",
+  "self-service": "selfService",
+  profiling: "profiling",
+  documents: "documents",
+  appointments: "appointments",
+  messages: "messages",
+  history: "history",
+} as const;
 
 export const Route = createFileRoute("/projects/$projectId_/participations/$participationId")({
   validateSearch: (search: Record<string, unknown>): Search => {
@@ -121,37 +132,16 @@ function ParticipationPage() {
   }
   const { person, dates } = detail;
   const name = [person.lastName, person.firstName].filter(Boolean).join(", ");
-  return (
-    <>
-      <RouterLink to="/projects/$projectId" params={{ projectId }} search={{ tab: "participants" }}>
-        {t("participant.back", { project: project.name })}
-      </RouterLink>
-      <PageHeader title={name || t("participant.title")} />
-      {detail.hints.map((hint) => (
-        <InlineNotification
-          key={hint}
-          kind="warning"
-          title={t(`participant.hints.${hint}`)}
-          hideCloseButton
-        />
-      ))}
-      <Tabs
-        selectedIndex={tabs.indexOf(tab)}
-        onChange={({ selectedIndex }) => {
-          const next = tabs[selectedIndex];
-          void navigate({ search: next ? { tab: next } : {}, replace: true });
-        }}
-      >
-        <TabList aria-label={t("participant.tabs.label")}>
-          <Tab>{t("participant.tabs.overview")}</Tab>
-          <Tab>{t("participant.tabs.selfService")}</Tab>
-          <Tab>{t("participant.tabs.documents")}</Tab>
-          <Tab>{t("participant.tabs.appointments")}</Tab>
-          <Tab>{t("participant.tabs.messages")}</Tab>
-          <Tab>{t("participant.tabs.history")}</Tab>
-        </TabList>
-        <TabPanels>
-          <TabPanel>
+  // Back office and the org roles have no tab "Profiling" (data-protection.md, Q49).
+  const shown = tabs.filter((key) => key !== "profiling" || detail.capabilities.viewProfiling);
+  const current = shown.includes(tab) ? tab : undefined;
+  /** A tab's content; each but the overview is loaded only while it is shown. */
+  function panel(key: (typeof tabs)[number]): ReactNode {
+    if (key !== undefined && key !== current) return null;
+    switch (key) {
+      case undefined:
+        return (
+          <>
             <Facts
               title={t("participant.person")}
               rows={[
@@ -188,35 +178,66 @@ function ParticipationPage() {
             <Assignments detail={detail} projectId={projectId} />
             <ActivationPanel detail={detail} projectId={projectId} />
             {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
-          </TabPanel>
-          <TabPanel>
-            {/* Loaded only when shown: the tab reads the participant's self-service data. */}
-            {tab === "self-service" && <SelfServiceTab detail={detail} projectId={projectId} />}
-          </TabPanel>
-          <TabPanel>
-            {/* Loaded only when shown, like "Selbstauskunft". */}
-            {tab === "documents" && <DocumentsTab detail={detail} />}
-          </TabPanel>
-          <TabPanel>
-            {/* Loaded only when shown: the bookings (data-protection.md, appointments). */}
-            {tab === "appointments" && (
-              <AppointmentsTab participationId={participationId} projectId={projectId} />
-            )}
-          </TabPanel>
-          <TabPanel>
-            {/* Loaded only when shown: the participant's reminders (data-protection.md). */}
-            {tab === "messages" && <MessagesTab participationId={participationId} />}
-          </TabPanel>
-          <TabPanel>
-            {/* Loaded only when shown: opening the history is audited (data-protection.md). */}
-            {tab === "history" && (
-              <HistoryTab
-                participationId={participationId}
-                projectId={projectId}
-                withWaves={project.type === "ta_tg"}
-              />
-            )}
-          </TabPanel>
+          </>
+        );
+      // The tab reads the participant's self-service data.
+      case "self-service":
+        return <SelfServiceTab detail={detail} projectId={projectId} />;
+      // Its sensitive blocks only on "Anzeigen" (data-protection.md, the profiling record).
+      case "profiling":
+        return <ProfilingTab detail={detail} projectId={projectId} />;
+      case "documents":
+        return <DocumentsTab detail={detail} />;
+      // The bookings (data-protection.md, appointments).
+      case "appointments":
+        return <AppointmentsTab participationId={participationId} projectId={projectId} />;
+      // The participant's reminders (data-protection.md).
+      case "messages":
+        return <MessagesTab participationId={participationId} />;
+      // Opening the history is audited (data-protection.md).
+      case "history":
+        return (
+          <HistoryTab
+            participationId={participationId}
+            projectId={projectId}
+            withWaves={project.type === "ta_tg"}
+          />
+        );
+    }
+  }
+
+  return (
+    <>
+      <RouterLink to="/projects/$projectId" params={{ projectId }} search={{ tab: "participants" }}>
+        {t("participant.back", { project: project.name })}
+      </RouterLink>
+      <PageHeader title={name || t("participant.title")} />
+      {detail.hints.map((hint) => (
+        <InlineNotification
+          key={hint}
+          kind="warning"
+          title={t(`participant.hints.${hint}`)}
+          hideCloseButton
+        />
+      ))}
+      <Tabs
+        selectedIndex={shown.indexOf(current)}
+        onChange={({ selectedIndex }) => {
+          const next = shown[selectedIndex];
+          void navigate({ search: next ? { tab: next } : {}, replace: true });
+        }}
+      >
+        <TabList aria-label={t("participant.tabs.label")}>
+          {shown.map((key) => (
+            <Tab key={key ?? "overview"}>
+              {t(`participant.tabs.${tabLabels[key ?? "overview"]}`)}
+            </Tab>
+          ))}
+        </TabList>
+        <TabPanels>
+          {shown.map((key) => (
+            <TabPanel key={key ?? "overview"}>{panel(key)}</TabPanel>
+          ))}
         </TabPanels>
       </Tabs>
     </>

@@ -740,7 +740,9 @@
       "latestEntryDate": "Spätester Eintritt",
       "offerDeadline": "Angebotsfrist (erneutes Angebot)",
       "tgStart": "TG-Beginn",
-      "tgEnd": "TG-Ende"
+      "tgEnd": "TG-Ende",
+      "jobboerseChoice": "Veröffentlichung in der Jobbörse",
+      "baContactConsent": "Kontaktaufnahme durch die BA"
     },
     "chooseWave": "Welle zuordnen",
     "changeWave": "Andere Welle zuordnen",
@@ -911,7 +913,8 @@
       "documents": "Unterlagen",
       "messages": "Nachrichten",
       "history": "Verlauf",
-      "appointments": "Termine"
+      "appointments": "Termine",
+      "profiling": "Profiling"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -929,7 +932,8 @@
       "showHint": "Jedes Anzeigen einer besonders geschützten Angabe wird protokolliert.",
       "showFailed": "Die Angabe konnte nicht angezeigt werden.",
       "custom": "Weitere Angaben",
-      "maintained": "Von der Person gepflegt: {{fields}}"
+      "maintained": "Von der Person gepflegt: {{fields}}",
+      "startAssisted": "Im assistierten Modus ergänzen"
     },
     "assisted": {
       "start": "Assistierte Erfassung starten",
@@ -1565,7 +1569,9 @@
       "attendance_conflict_escalated": "Widerspruch eskaliert",
       "attendance_conflict_resolved": "Widerspruch geklärt",
       "appointment_notice_followed_up": "Nachverfolgung einer Terminnachricht",
-      "missed_appointment_resolved": "Versäumter Termin ohne weitere Nachverfolgung"
+      "missed_appointment_resolved": "Versäumter Termin ohne weitere Nachverfolgung",
+      "profiling_session_changed": "Profiling-Termin geändert",
+      "profiling_declarations_recorded": "Erklärungen gegenüber der BA geändert"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1634,7 +1640,13 @@
     "withStatusChange": "(mit Statusänderung)",
     "asBasis": "(als Grundlage, ohne Statusänderung)",
     "messageFor": "{{kind}} am {{start}}",
-    "followUp": "Folgetermin"
+    "followUp": "Folgetermin",
+    "sessionActions": {
+      "added": "hinzugefügt",
+      "changed": "geändert",
+      "removed": "entfernt"
+    },
+    "session": "{{action}}: {{date}}"
   },
   "appointments": {
     "title": "Termine",
@@ -2001,6 +2013,150 @@
       "appointment_cancelled": "Der Termin ist abgesagt. Es wurde nichts gesendet.",
       "appointment_started": "Der Termin hat begonnen. Es wurde nichts gesendet.",
       "project_not_active": "Das Projekt ist nicht aktiv. Es wurde nichts gesendet."
+    }
+  },
+  "profiling": {
+    "title": "Profiling",
+    "loading": "Das Profiling wird geladen …",
+    "failed": "Das Profiling konnte nicht geladen werden.",
+    "forbidden": "Sie dürfen das Profiling dieser Person nicht sehen.",
+    "status": {
+      "title": "Profiling-Status",
+      "current": "Aktueller Stand",
+      "doneOn": "Abgeschlossen am",
+      "inactive": "Das Profiling kann erst geändert werden, wenn die Person informiert ist.",
+      "projectNotActive": "Das Projekt ist noch nicht aktiv.",
+      "failed": "Der Status konnte nicht geändert werden.",
+      "stale": "Der Status wurde inzwischen geändert. Bitte prüfen Sie den aktuellen Stand.",
+      "actions": {
+        "profiling_accepted": "Teilnahme zugestimmt",
+        "profiling_accepted_again": "Erneut zugestimmt",
+        "profiling_in_progress": "Profiling begonnen",
+        "profiling_declined": "Abgelehnt"
+      },
+      "declineHeading": "Ablehnung des Profilings erfassen",
+      "declineText": "Die Person lehnt die Teilnahme am Profiling ab. Ohne Profiling entfällt der Anspruch auf Transfer-Kurzarbeitergeld. Die Ablehnung wird mit Datum und Ihrem Namen im Verlauf festgehalten.",
+      "declineConfirm": "Ablehnung erfassen",
+      "cancel": "Abbrechen"
+    },
+    "sessions": {
+      "title": "Termine des Profilings",
+      "intro": "Datum und Uhrzeit jedes Profiling-Gesprächs. Ein gebuchter Beratungstermin zählt nicht von selbst als Profiling-Termin.",
+      "empty": "Noch keine Termine erfasst.",
+      "date": "Datum",
+      "from": "von",
+      "to": "bis",
+      "add": "Termin hinzufügen",
+      "remove": "Entfernen",
+      "removeLabel": "Termin {{number}} entfernen",
+      "row": "Termin {{number}}",
+      "save": "Termine speichern",
+      "saved": "Die Termine wurden gespeichert.",
+      "failed": "Die Termine konnten nicht gespeichert werden.",
+      "stale": "Das Profiling wurde inzwischen geändert. Die Termine wurden neu geladen.",
+      "dateInvalid": "Bitte ein Datum TT.MM.JJJJ eingeben.",
+      "timeInvalid": "Bitte eine Uhrzeit hh:mm eingeben.",
+      "errors": {
+        "session_times_reversed": "„bis“ muss nach „von“ liegen.",
+        "session_in_future": "Ein Termin darf nicht in der Zukunft liegen.",
+        "sessions_overlap": "Der Termin überschneidet sich mit einem anderen am selben Tag.",
+        "duplicate_session": "Der Termin ist doppelt."
+      }
+    },
+    "selfService": {
+      "title": "Angaben aus der Selbstauskunft",
+      "intro": "Abschnitt B des Profilingbogens, wie die Person ihn ausgefüllt hat. Ergänzungen nur gemeinsam mit der Person im assistierten Modus."
+    },
+    "sensitive": {
+      "given": "angegeben",
+      "absent": "fehlt",
+      "show": "Anzeigen",
+      "hide": "Ausblenden",
+      "showFailed": "Die Angaben konnten nicht geladen werden.",
+      "loggedHint": "Das Anzeigen wird protokolliert. Die Angaben werden nicht zwischengespeichert."
+    },
+    "unemployment": {
+      "title": "Arbeitslos seit / bis",
+      "from": "Arbeitslos seit",
+      "until": "Arbeitslos bis",
+      "untilHint": "leer lassen, wenn noch kein Ende feststeht",
+      "none": "Nicht arbeitslos gemeldet bzw. keine Angabe",
+      "save": "Speichern",
+      "clear": "Angabe entfernen",
+      "saved": "Gespeichert.",
+      "failed": "Die Angabe konnte nicht gespeichert werden.",
+      "fromRequired": "Bitte das Datum „seit“ eingeben."
+    },
+    "assessment": {
+      "title": "Handlungsbedarf (Abschnitt C)",
+      "intro": "Ihre Einschätzung als Profiler·in. Nur Sie sehen sie; sie wird verschlüsselt gespeichert.",
+      "groups": {
+        "qualification": "Qualifikation",
+        "performance": "Leistungsfähigkeit",
+        "motivation": "Motivation",
+        "conditions": "Rahmenbedingungen"
+      },
+      "lines": {
+        "schoolQualification": "Schulische Qualifikation",
+        "vocationalQualification": "Berufliche Qualifikation",
+        "workExperience": "Berufserfahrung",
+        "languageSkills": "Sprachkenntnisse",
+        "otherQualification": "Weitere Qualifikation",
+        "health": "Vermittlungsrelevante gesundheitliche Einschränkungen",
+        "intellectualCapacity": "Intellektuelle Leistungsfähigkeit",
+        "workAndSocialBehaviour": "Arbeits- und Sozialverhalten",
+        "otherPerformance": "Sonstige Leistungsfähigkeit",
+        "initiative": "Eigeninitiative/Arbeitshaltung",
+        "learningReadiness": "Lern- und Weiterbildungsbereitschaft",
+        "otherMotivation": "Sonstige Motivation",
+        "localMobility": "Örtliche Mobilität",
+        "otherConditions": "Sonstige Rahmenbedingungen"
+      },
+      "rating": {
+        "legend": "Handlungsbedarf",
+        "no_need": "kein",
+        "placement_relevant": "vermittlungsrelevant",
+        "none": "offen"
+      },
+      "text": "Handlungsbedarf (Text)",
+      "label": "Art",
+      "healthNote": "Für diese Zeile wird nur die Einstufung erfasst. Gesundheitliche Details werden nicht gespeichert und nicht in den Bogen übernommen.",
+      "overallAssessment": "Gesamteinschätzung",
+      "nextSteps": "Weiteres Vorgehen",
+      "pageHint": "Bitte keine Diagnosen oder unnötigen persönlichen Details eintragen.",
+      "save": "Einschätzung speichern",
+      "saved": "Die Einschätzung wurde gespeichert.",
+      "failed": "Die Einschätzung konnte nicht gespeichert werden.",
+      "stale": "Die Einschätzung wurde inzwischen geändert. Bitte erneut anzeigen und bearbeiten.",
+      "recorded": "{{count}} von 16 Angaben erfasst",
+      "errors": {
+        "too_long": "Der Text ist zu lang.",
+        "control_characters": "Der Text enthält unzulässige Zeichen.",
+        "health_detail_not_recorded": "Für gesundheitliche Einschränkungen wird nur die Einstufung erfasst."
+      }
+    },
+    "declarations": {
+      "title": "Erklärungen gegenüber der BA (vorgesehen)",
+      "intro": "Vorgesehene Angaben für den Profilingbogen. Maßgeblich ist, was die Person auf dem unterschriebenen Bogen ankreuzt. Dies ist keine Einwilligung gegenüber der Transfergesellschaft.",
+      "jobboerse": "Veröffentlichung in der Jobbörse (Feld 50)",
+      "jobboerseOptions": {
+        "open": "noch offen",
+        "full": "vollständig veröffentlichen",
+        "anonymous_callme": "anonym, mit telefonischer Kontaktaufnahme",
+        "anonymous_no_contact": "anonym, ohne telefonische Kontaktaufnahme",
+        "none": "nicht veröffentlichen"
+      },
+      "baContact": "Kontaktaufnahme durch die BA über Telefon, Mobil und E-Mail",
+      "baContactOptions": {
+        "open": "noch offen",
+        "yes": "ja",
+        "no": "nein"
+      },
+      "recordedAt": "Zuletzt erfasst am {{at}}",
+      "save": "Erklärungen speichern",
+      "saved": "Die Erklärungen wurden gespeichert.",
+      "failed": "Die Erklärungen konnten nicht gespeichert werden.",
+      "stale": "Das Profiling wurde inzwischen geändert. Die Erklärungen wurden neu geladen."
     }
   }
 }

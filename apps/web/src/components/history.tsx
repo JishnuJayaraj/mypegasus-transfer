@@ -153,6 +153,14 @@ export function HistoryTab({
         }
         return appointment;
       }
+      // A profiling session by its date; the declarations by their keys, never a value (Q193).
+      case "profiling_session_changed":
+        return t("history.session", {
+          action: coded("history.sessionActions", text(details.action) ?? ""),
+          date: formatDate(text(details.date)),
+        });
+      case "profiling_declarations_recorded":
+        return list(details.fields).map(label).join(", ");
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");
       default:

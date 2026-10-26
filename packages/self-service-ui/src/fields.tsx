@@ -415,6 +415,21 @@ export function FieldEditor({ field }: { field: WizardField }) {
                 onChange={(completed) => update({ completed })}
                 options={[...yesNoOptions(t), { value: "running", label: sub("running") }]}
               />
+              {/* One row at most: marking it unmarks the others (Q196). */}
+              <Checkbox
+                id={idOf(`${key}/${index}/highestSchool`)}
+                labelText={sub("highestSchool")}
+                helperText={sub("highestSchoolHint")}
+                checked={row.highestSchool}
+                onChange={(_event, { checked }) =>
+                  change(
+                    (value as EducationForm[]).map((other) => ({
+                      ...other,
+                      highestSchool: other.id === row.id && checked,
+                    })),
+                  )
+                }
+              />
             </>
           )}
         </Rows>
