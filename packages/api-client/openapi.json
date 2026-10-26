@@ -5922,7 +5922,8 @@
           "appointment_notice_followed_up",
           "missed_appointment_resolved",
           "profiling_session_changed",
-          "profiling_declarations_recorded"
+          "profiling_declarations_recorded",
+          "form_generated"
         ]
       },
       "HistoryActor": {
@@ -8611,7 +8612,8 @@
                 "profiling_exception_evidence",
                 "cv",
                 "participant_upload",
-                "qualification_certificate"
+                "qualification_certificate",
+                "tl407_form"
               ]
             }
           }
@@ -10846,7 +10848,8 @@
                 "profiling_exception_evidence",
                 "cv",
                 "participant_upload",
-                "qualification_certificate"
+                "qualification_certificate",
+                "tl407_form"
               ]
             }
           },
@@ -10879,7 +10882,8 @@
               "profiling_exception_evidence",
               "cv",
               "participant_upload",
-              "qualification_certificate"
+              "qualification_certificate",
+              "tl407_form"
             ]
           },
           "mediaType": {
@@ -11026,7 +11030,8 @@
               "profiling_exception_evidence",
               "cv",
               "participant_upload",
-              "qualification_certificate"
+              "qualification_certificate",
+              "tl407_form"
             ]
           },
           "fileName": {
@@ -11203,6 +11208,12 @@
           "unemploymentPeriodRecorded": {
             "type": "boolean"
           },
+          "tl407Forms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tl407GeneratedForm"
+            }
+          },
           "transitions": {
             "type": "array",
             "items": {
@@ -11223,13 +11234,21 @@
               },
               "readUnemploymentPeriod": {
                 "type": "boolean"
+              },
+              "generateTl407": {
+                "type": "boolean"
+              },
+              "readTl407Readiness": {
+                "type": "boolean"
               }
             },
             "required": [
               "record",
               "readAssessment",
               "writeAssessment",
-              "readUnemploymentPeriod"
+              "readUnemploymentPeriod",
+              "generateTl407",
+              "readTl407Readiness"
             ],
             "additionalProperties": false
           }
@@ -11242,6 +11261,7 @@
           "closed",
           "revision",
           "sessions",
+          "tl407Forms",
           "transitions",
           "capabilities"
         ],
@@ -11303,6 +11323,55 @@
           "nextSteps",
           "profilingHealthAssessment"
         ]
+      },
+      "Tl407GeneratedForm": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "anlage": {
+            "type": "boolean"
+          },
+          "latest": {
+            "type": "boolean"
+          },
+          "versionInUse": {
+            "type": "boolean"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "open"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "documentId",
+          "formVersion",
+          "generatedAt",
+          "anlage",
+          "latest",
+          "versionInUse",
+          "capabilities"
+        ],
+        "additionalProperties": false
       },
       "ProfilingTransition": {
         "type": "object",
@@ -12076,6 +12145,240 @@
         "required": [
           "to",
           "statusVersion"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407Readiness": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/Tl407ProfilerReadiness"
+          },
+          {
+            "$ref": "#/components/schemas/Tl407ReadinessSummary"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "view",
+          "mapping": {
+            "profiler": "#/components/schemas/Tl407ProfilerReadiness",
+            "project_lead": "#/components/schemas/Tl407ReadinessSummary"
+          }
+        }
+      },
+      "Tl407ProfilerReadiness": {
+        "type": "object",
+        "properties": {
+          "view": {
+            "type": "string",
+            "enum": [
+              "profiler"
+            ]
+          },
+          "formVersion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "$ref": "#/components/schemas/Tl407ErrorCode"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "row": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "label": {
+                  "type": "string",
+                  "description": "As the form prints it, e.g. `7 Nachname`"
+                }
+              },
+              "required": [
+                "code",
+                "key",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "$ref": "#/components/schemas/Tl407WarningCode"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "row": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "label": {
+                  "type": "string",
+                  "description": "As the form prints it, e.g. `7 Nachname`"
+                }
+              },
+              "required": [
+                "code",
+                "key",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "overflow": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "table",
+                    "text"
+                  ]
+                },
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "As the form prints it, e.g. `7 Nachname`"
+                }
+              },
+              "required": [
+                "kind",
+                "key",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "view",
+          "formVersion",
+          "ready",
+          "errors",
+          "warnings",
+          "overflow"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407ErrorCode": {
+        "type": "string",
+        "enum": [
+          "unknown_key",
+          "value_kind_invalid",
+          "value_not_applicable",
+          "option_invalid",
+          "date_invalid",
+          "time_invalid",
+          "time_range_reversed",
+          "identifier_too_long",
+          "character_unsupported",
+          "required_missing",
+          "form_version_unavailable"
+        ]
+      },
+      "Tl407WarningCode": {
+        "type": "string",
+        "enum": [
+          "age_implausible",
+          "entry_before_birth",
+          "range_reversed",
+          "school_qualification_none"
+        ]
+      },
+      "Tl407ReadinessSummary": {
+        "type": "object",
+        "properties": {
+          "view": {
+            "type": "string",
+            "enum": [
+              "project_lead"
+            ]
+          },
+          "ready": {
+            "type": "boolean"
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "As the form prints it, e.g. `7 Nachname`"
+                }
+              },
+              "required": [
+                "key",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "view",
+          "ready",
+          "missing"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407Generation": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "anlage": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "documentId",
+          "formVersion",
+          "anlage"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407GenerationInput": {
+        "type": "object",
+        "properties": {
+          "confirmWarnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tl407WarningCode"
+            },
+            "maxItems": 4
+          }
+        },
+        "required": [
+          "confirmWarnings"
         ],
         "additionalProperties": false
       },
@@ -23281,6 +23584,188 @@
           },
           "422": {
             "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/forms/tl407/readiness": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The TL 407's readiness for the viewer: the assigned consultant every error and warning code and the overflow (each decryption audited sensitive_read); the PL ready or not and the missing fields they may know about, from presence only; others 403",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The readiness as projected for the viewer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tl407Readiness"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/forms/tl407": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Generate the TL 407 (the assigned consultant): the version in use, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated); 409 source_changed, 503 pdf_unavailable or storage_unavailable",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tl407GenerationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Generated: the document, its version and whether an Anlage was appended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tl407Generation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
             "content": {
               "application/problem+json": {
                 "schema": {

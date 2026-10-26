@@ -41,6 +41,9 @@ importers:
       '@opentelemetry/api':
         specifier: 1.9.1
         version: 1.9.1
+      '@pdf-lib/fontkit':
+        specifier: 1.1.1
+        version: 1.1.1
       csv-parse:
         specifier: 7.0.3
         version: 7.0.3
@@ -53,6 +56,9 @@ importers:
       openid-client:
         specifier: 6.8.8
         version: 6.8.8
+      pdf-lib:
+        specifier: 1.17.1
+        version: 1.17.1
       pg:
         specifier: 8.23.1
         version: 8.23.1
@@ -81,6 +87,9 @@ importers:
       '@transfer/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@transfer/forms':
+        specifier: workspace:*
+        version: link:../../packages/forms
       jose:
         specifier: 6.2.12
         version: 6.2.12

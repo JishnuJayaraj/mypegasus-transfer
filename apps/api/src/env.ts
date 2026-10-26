@@ -40,6 +40,10 @@ const schema = z.object({
     .transform((value) => (value === "mock" ? "filesystem" : value)),
   STORAGE_DIR: z.string().optional(),
   VIRUS_SCAN_ADAPTER: z.literal("mock").default("mock"),
+  // ADR-0006: forms in process with pdf-lib; our HTML documents (the Anlage) through Gotenberg,
+  // a cluster-internal service, or the mock outside production.
+  PDF_ADAPTER: z.enum(["mock", "gotenberg"]).default("mock"),
+  GOTENBERG_URL: z.url().optional(),
 });
 
 /** The route the identity provider returns to (routes/auth.ts). */
@@ -84,6 +88,9 @@ export interface Env {
   /** The filesystem store's directory; outside the web root. */
   storageDir: string;
   virusScanAdapter: "mock";
+  /** `gotenberg` needs `gotenbergUrl`; `mock` renders no HTML in production (`503 pdf_unavailable`). */
+  pdfAdapter: "mock" | "gotenberg";
+  gotenbergUrl?: string | undefined;
 }
 
 export interface OidcEnv {
@@ -133,6 +140,9 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
   if (!env.PORTAL_PUBLIC_URL && env.NODE_ENV !== "development") {
     throw new Error("PORTAL_PUBLIC_URL is required outside development");
   }
+  if (env.PDF_ADAPTER === "gotenberg" && !env.GOTENBERG_URL) {
+    throw new Error("PDF_ADAPTER=gotenberg needs GOTENBERG_URL");
+  }
   if (env.NODE_ENV !== "development" && env.PORTAL_PUBLIC_URL) {
     const portal = new URL(env.PORTAL_PUBLIC_URL);
     if (portal.protocol !== "https:") {
@@ -167,6 +177,8 @@ export function parseEnv(source: Record<string, string | undefined> = process.en
     storageDir:
       env.STORAGE_DIR ?? fileURLToPath(new URL("../../../.data/documents", import.meta.url)),
     virusScanAdapter: env.VIRUS_SCAN_ADAPTER,
+    pdfAdapter: env.PDF_ADAPTER,
+    gotenbergUrl: env.GOTENBERG_URL,
   };
 }
 

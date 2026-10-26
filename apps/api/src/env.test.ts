@@ -51,6 +51,17 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ ...dev, VIRUS_SCAN_ADAPTER: "clamav" })).toThrow(/VIRUS_SCAN_ADAPTER/);
   });
 
+  it("renders HTML with the mock or Gotenberg, which needs its URL (ADR-0006)", () => {
+    expect(parseEnv(dev)).toMatchObject({ pdfAdapter: "mock", gotenbergUrl: undefined });
+    expect(
+      parseEnv({ ...dev, PDF_ADAPTER: "gotenberg", GOTENBERG_URL: "http://gotenberg:3000" }),
+    ).toMatchObject({ pdfAdapter: "gotenberg", gotenbergUrl: "http://gotenberg:3000" });
+    expect(() => parseEnv({ ...dev, PDF_ADAPTER: "gotenberg", GOTENBERG_URL: "" })).toThrow(
+      /needs GOTENBERG_URL/,
+    );
+    expect(() => parseEnv({ ...dev, PDF_ADAPTER: "weasyprint" })).toThrow(/PDF_ADAPTER/);
+  });
+
   it("treats empty variables as unset, as in the .env copied from .env.example", () => {
     const env = parseEnv({ ...dev, SESSION_SECRET: "", PORT: "", LOG_LEVEL: "" });
     expect(env.sessionSecret.length).toBeGreaterThanOrEqual(32);
