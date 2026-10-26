@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { emptyAssessment } from "@transfer/domain";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   json,
   mockApi,
@@ -74,9 +74,25 @@ const session = {
 type Choice = "full" | "anonymous_callme" | "anonymous_no_contact" | "none" | null;
 
 /** The tab's view: the PL's (`profiler: false`) or the assigned consultant's. */
+type GeneratedForm = {
+  documentId: string;
+  formVersion: string;
+  generatedAt: string;
+  anlage: boolean;
+  latest: boolean;
+  versionInUse: boolean;
+  capabilities: { open: boolean };
+};
+
 const view = (
   profiler: boolean,
-  options: { revision?: number; jobboerseChoice?: Choice; closed?: boolean } = {},
+  options: {
+    revision?: number;
+    jobboerseChoice?: Choice;
+    closed?: boolean;
+    tl407?: boolean;
+    tl407Forms?: GeneratedForm[];
+  } = {},
 ) => ({
   participationId,
   profilingStatus: "profiling_accepted",
@@ -98,6 +114,7 @@ const view = (
     },
     unemploymentPeriodRecorded: true,
   }),
+  tl407Forms: options.tl407Forms ?? [],
   transitions: options.closed
     ? [{ to: "profiling_in_progress", allowed: false, refusal: "track_inactive" }]
     : [
@@ -109,6 +126,8 @@ const view = (
     readAssessment: profiler,
     writeAssessment: profiler && !options.closed,
     readUnemploymentPeriod: profiler,
+    generateTl407: (options.tl407 ?? false) && profiler && !options.closed,
+    readTl407Readiness: options.tl407 ?? false,
   },
 });
 
@@ -150,6 +169,8 @@ function setup(options: {
   profiler: boolean;
   viewProfiling?: boolean;
   closed?: boolean;
+  tl407?: boolean;
+  tl407Forms?: GeneratedForm[];
   routes?: Routes;
 }) {
   const mock = mockApi({
@@ -160,7 +181,14 @@ function setup(options: {
     [`GET ${projectPath}/entry-waves`]: () => json({ items: [], nextCursor: null }),
     [`GET ${detailPath}`]: () => json(detail(options.viewProfiling ?? true)),
     [`GET ${detailPath}/self-service`]: () => json(selfService),
-    [`GET ${detailPath}/profiling`]: () => json(view(options.profiler, { closed: options.closed })),
+    [`GET ${detailPath}/profiling`]: () =>
+      json(
+        view(options.profiler, {
+          closed: options.closed,
+          tl407: options.tl407,
+          tl407Forms: options.tl407Forms,
+        }),
+      ),
     [`POST ${detailPath}/profiling-status`]: () =>
       json({ ...view(options.profiler), profilingStatus: "profiling_in_progress" }),
     [`PUT ${detailPath}/profiling/sessions`]: ({ body }) => {
@@ -458,5 +486,159 @@ describe("the tab 'Profiling'", () => {
         period: null,
       }),
     );
+  });
+});
+
+const readinessPath = `GET ${detailPath}/forms/tl407/readiness`;
+const generatePath = `POST ${detailPath}/forms/tl407`;
+const documentId = "00000000-0000-4000-a000-0000000000d1";
+const generatedForm = (overrides: Partial<GeneratedForm> = {}): GeneratedForm => ({
+  documentId,
+  formVersion: "08-2025",
+  generatedAt: "2026-10-22T09:30:00.000000Z",
+  anlage: true,
+  latest: true,
+  versionInUse: true,
+  capabilities: { open: true },
+  ...overrides,
+});
+const profilerReadiness = {
+  view: "profiler",
+  formVersion: "08-2025",
+  ready: true,
+  errors: [],
+  warnings: [
+    {
+      code: "school_qualification_none",
+      key: "education",
+      label: "39 Schul- und Berufsausbildung",
+    },
+  ],
+  overflow: [{ kind: "table", key: "work", label: "40 Werdegang der letzten drei Jahre" }],
+};
+
+describe("the section 'Profilingbogen (TL 407)'", () => {
+  it("checks on 'Prüfen' only, and generates once each warning is confirmed", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: true,
+      tl407: true,
+      routes: {
+        [readinessPath]: () => json(profilerReadiness),
+        [generatePath]: () => json({ documentId, formVersion: "08-2025", anlage: true }, 201),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    expect(within(section).getByText("Noch kein Bogen erzeugt.")).toBeVisible();
+    // Each check reads the protected answers (logged): never without "Prüfen".
+    expect(callTo(calls, readinessPath)).toEqual([]);
+    await user.click(within(section).getByRole("button", { name: "Prüfen" }));
+    expect(
+      await within(section).findByText("Der Bogen (Fassung 08/2025) kann erzeugt werden."),
+    ).toBeVisible();
+    expect(within(section).getByText("40 Werdegang der letzten drei Jahre")).toBeVisible();
+    const generate = within(section).getByRole("button", { name: "Erzeugen" });
+    expect(generate).toBeDisabled();
+    await user.click(within(section).getByLabelText(/Kein Schulabschluss/));
+    await user.click(generate);
+    await waitFor(() =>
+      expect(callTo(calls, generatePath)[0]?.body).toEqual({
+        confirmWarnings: ["school_qualification_none"],
+      }),
+    );
+    expect(await screen.findByText("Profilingbogen mit Anlage erzeugt.")).toBeVisible();
+  });
+
+  it("explains a character the form can't print by field and points to paper (Q197)", async () => {
+    const user = userEvent.setup();
+    setup({
+      profiler: true,
+      tl407: true,
+      routes: {
+        [readinessPath]: () =>
+          json({
+            ...profilerReadiness,
+            ready: false,
+            errors: [{ code: "character_unsupported", key: "lastName", label: "7 Nachname" }],
+            warnings: [],
+            overflow: [],
+          }),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    await user.click(within(section).getByRole("button", { name: "Prüfen" }));
+    expect(
+      await within(section).findByText("Enthält Zeichen, die der Bogen nicht drucken kann."),
+    ).toBeVisible();
+    expect(within(section).getByText("7 Nachname:")).toBeVisible();
+    expect(within(section).getByText(/Außerhalb der Anwendung ausgefüllt/)).toBeVisible();
+    expect(within(section).queryByRole("button", { name: "Erzeugen" })).toBeNull();
+  });
+
+  it("re-checks after a refusal because the sources changed (409)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: true,
+      tl407: true,
+      routes: {
+        [readinessPath]: () => json({ ...profilerReadiness, warnings: [] }),
+        [generatePath]: () => problem(409, "conflict"),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    await user.click(within(section).getByRole("button", { name: "Prüfen" }));
+    await user.click(await within(section).findByRole("button", { name: "Erzeugen" }));
+    expect(
+      await within(section).findByText(/Die Angaben haben sich inzwischen geändert/),
+    ).toBeVisible();
+    await waitFor(() => expect(callTo(calls, readinessPath)).toHaveLength(2));
+  });
+
+  it("gives the PL the summary at once and the forms to open, never 'Erzeugen'", async () => {
+    const user = userEvent.setup();
+    const { documentNavigation } = await import("./components/documents-tab");
+    const assign = vi.spyOn(documentNavigation, "assign").mockImplementation(() => undefined);
+    const { calls } = setup({
+      profiler: false,
+      tl407: true,
+      tl407Forms: [generatedForm()],
+      routes: {
+        [readinessPath]: () =>
+          json({
+            view: "project_lead",
+            ready: false,
+            missing: [{ key: "birthDate", label: "8 Geburtsdatum" }],
+          }),
+        [`POST ${detailPath}/documents/${documentId}/opening`]: () =>
+          json({ url: "/api/v1/document-content/abc", expiresAt: "2026-10-22T09:31:00Z" }, 201),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    expect(await within(section).findByText("8 Geburtsdatum")).toBeVisible();
+    expect(within(section).queryByRole("button", { name: "Prüfen" })).toBeNull();
+    expect(within(section).queryByRole("button", { name: /erzeugen/i })).toBeNull();
+    const forms = within(section).getByRole("table", { name: "Erzeugte Bögen" });
+    expect(within(forms).getByText("mit Anlage")).toBeVisible();
+    await user.click(within(forms).getByRole("button", { name: /Öffnen/ }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/api/v1/document-content/abc"));
+    expect(callTo(calls, readinessPath)).toHaveLength(1);
+  });
+
+  it("says when the latest form's version is no longer valid and offers 'Neu erzeugen'", async () => {
+    const user = userEvent.setup();
+    setup({
+      profiler: true,
+      tl407: true,
+      tl407Forms: [
+        generatedForm({ versionInUse: false }),
+        generatedForm({ documentId: sessionId, latest: false, anlage: false }),
+      ],
+      routes: { [readinessPath]: () => json({ ...profilerReadiness, warnings: [] }) },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    expect(within(section).getByText(/nicht mehr gültig: bitte neu erzeugen/)).toBeVisible();
+    expect(within(section).getByText("ersetzt")).toBeVisible();
+    await user.click(within(section).getByRole("button", { name: "Prüfen" }));
+    expect(await within(section).findByRole("button", { name: "Neu erzeugen" })).toBeEnabled();
   });
 });

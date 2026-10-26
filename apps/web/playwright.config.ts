@@ -34,6 +34,8 @@ export default defineConfig({
       // Playwright starts the server before the global setup recreates transfer_e2e (and its
       // pgboss schema), so pg-boss stays off here; the image smoke test starts it (AC-41).
       JOBS_ENABLED: "false",
+      // The Anlage drawn by the mock, whatever a local .env names (ADR-0006).
+      PDF_ADAPTER: "mock",
       // The configuration the build copied next to the bundle (Slice 2 plan 5.8), as in the image.
       CONFIG_DIR: fileURLToPath(new URL("../api/dist/config", import.meta.url)),
     },

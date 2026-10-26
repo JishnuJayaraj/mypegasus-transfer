@@ -1571,7 +1571,8 @@
       "appointment_notice_followed_up": "Nachverfolgung einer Terminnachricht",
       "missed_appointment_resolved": "Versäumter Termin ohne weitere Nachverfolgung",
       "profiling_session_changed": "Profiling-Termin geändert",
-      "profiling_declarations_recorded": "Erklärungen gegenüber der BA geändert"
+      "profiling_declarations_recorded": "Erklärungen gegenüber der BA geändert",
+      "form_generated": "Profilingbogen (TL 407) erzeugt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1646,7 +1647,9 @@
       "changed": "geändert",
       "removed": "entfernt"
     },
-    "session": "{{action}}: {{date}}"
+    "session": "{{action}}: {{date}}",
+    "form": "Fassung {{version}}",
+    "formWithAnlage": "Fassung {{version}}, mit Anlage"
   },
   "appointments": {
     "title": "Termine",
@@ -2164,6 +2167,74 @@
     "draft": {
       "conflict": "Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind noch nicht gespeichert. „Neu laden“ übernimmt den gespeicherten Stand und verwirft Ihre Eingaben.",
       "reload": "Neu laden"
+    },
+    "tl407": {
+      "title": "Profilingbogen (TL 407)",
+      "intro": "Der Bogen wird hier erzeugt, ausgedruckt und von der teilnehmenden Person und dem Profiler auf Papier unterschrieben. Der erzeugte Bogen ist ein Arbeitsexemplar: Er wird nicht geändert und nach Fristablauf gelöscht.",
+      "loading": "Bereitschaft wird geladen …",
+      "readinessFailed": "Die Bereitschaft konnte nicht geladen werden.",
+      "readiness": "Bereitschaft",
+      "loggedHint": "Die Prüfung liest die geschützten Angaben; jeder Lesezugriff wird protokolliert.",
+      "check": "Prüfen",
+      "checkAgain": "Erneut prüfen",
+      "noVersion": "Für heute ist keine gültige Fassung des Bogens hinterlegt.",
+      "ready": "Der Bogen (Fassung {{version}}) kann erzeugt werden.",
+      "notReady": "Der Bogen (Fassung {{version}}) kann noch nicht erzeugt werden.",
+      "row": "Zeile {{row}}",
+      "errorsTitle": "Vor dem Erzeugen zu klären",
+      "errors": {
+        "unknown_key": "Angabe gehört nicht zu diesem Bogen.",
+        "value_kind_invalid": "Angabe hat nicht die erwartete Form.",
+        "value_not_applicable": "Angabe gilt für diese Projektart nicht.",
+        "option_invalid": "Auswahl ist auf dem Bogen nicht vorgesehen.",
+        "date_invalid": "Datum ist ungültig.",
+        "time_invalid": "Uhrzeit ist ungültig.",
+        "time_range_reversed": "„bis“ liegt nicht nach „von“.",
+        "identifier_too_long": "Zu lang für das Feld; Kennungen werden nie gekürzt.",
+        "character_unsupported": "Enthält Zeichen, die der Bogen nicht drucken kann.",
+        "required_missing": "Pflichtangabe fehlt.",
+        "form_version_unavailable": "Keine gültige Fassung des Bogens."
+      },
+      "externalPaper": "Zeichen, die der Bogen nicht drucken kann, werden nicht umgeschrieben. Füllen Sie den Bogen in diesem Fall auf Papier aus; der unterschriebene Bogen wird als „Außerhalb der Anwendung ausgefüllt“ hochgeladen.",
+      "warningsTitle": "Bitte prüfen und bestätigen",
+      "warnings": {
+        "age_implausible": "Alter unplausibel (außerhalb von 15 bis 67 Jahren): geprüft, die Angabe stimmt.",
+        "entry_before_birth": "Einreisedatum vor dem Geburtsdatum: geprüft, die Angaben stimmen.",
+        "range_reversed": "„von“ liegt nach „bis“: geprüft, die Angaben stimmen.",
+        "school_qualification_none": "Kein Schulabschluss: mit der teilnehmenden Person geklärt. Keine Zeile ist als höchster Schulabschluss markiert; gibt es einen, die Zeile im assistierten Modus markieren."
+      },
+      "overflow": "Wird auf der „Anlage zum Profilingbogen“ fortgesetzt:",
+      "generate": "Erzeugen",
+      "regenerate": "Neu erzeugen",
+      "generated": "Profilingbogen erzeugt.",
+      "generatedWithAnlage": "Profilingbogen mit Anlage erzeugt.",
+      "failures": {
+        "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+        "stale": "Die Angaben haben sich inzwischen geändert. Die Bereitschaft wurde neu geprüft.",
+        "refused": "Der Bogen kann so nicht erzeugt werden. Die Bereitschaft wurde neu geprüft.",
+        "pdfUnavailable": "Die Anlage kann gerade nicht erstellt werden. Bitte später erneut versuchen.",
+        "storageUnavailable": "Der Dokumentenspeicher ist gerade nicht verfügbar."
+      },
+      "summaryReady": "Aus Ihrer Sicht fehlt keine Pflichtangabe.",
+      "summaryMissing": "Es fehlen Pflichtangaben:",
+      "summaryNotReady": "Der Bogen kann noch nicht erzeugt werden.",
+      "summaryHint": "Ob der Bogen erzeugt werden kann, prüft der Profiler; er sieht auch die Angaben, die Ihnen nicht angezeigt werden.",
+      "formsTitle": "Erzeugte Bögen",
+      "formsEmpty": "Noch kein Bogen erzeugt.",
+      "columns": {
+        "generatedAt": "Erzeugt am",
+        "version": "Fassung",
+        "anlage": "Anlage",
+        "state": "Stand",
+        "actions": "Aktionen"
+      },
+      "anlageYes": "mit Anlage",
+      "anlageNo": "ohne Anlage",
+      "latest": "aktuell",
+      "superseded": "ersetzt",
+      "open": "Öffnen",
+      "openFailed": "Der Bogen konnte nicht geöffnet werden.",
+      "versionExpired": "Die Fassung des aktuellen Bogens ist nicht mehr gültig: bitte neu erzeugen, bevor er unterschrieben wird."
     }
   }
 }
