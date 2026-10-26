@@ -79,6 +79,8 @@ import {
   AttendanceConflictResolution,
   appointmentPolicy,
   JobboerseChoice,
+  FormCode,
+  tl407WarningCodes,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -430,6 +432,7 @@ export const attendanceConflictResolution = pgEnum(
 );
 export const missedResolution = pgEnum("missed_resolution", values(MissedResolution));
 export const jobboerseChoice = pgEnum("jobboerse_choice", values(JobboerseChoice));
+export const formCode = pgEnum("form_code", values(FormCode));
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1582,6 +1585,8 @@ export const documentTypePolicy = pgTable(
     retentionClass: text("retention_class").notNull(),
     fileName: boolean("file_name").notNull(),
     signed: boolean("signed").notNull(),
+    /** Written only by the platform's generation (data-protection.md, generated forms). */
+    generated: boolean("generated").notNull().default(false),
     addRoles: text("add_roles").array().notNull(),
     reviewRoles: text("review_roles").array().notNull(),
     deleteRoles: text("delete_roles").array().notNull(),
@@ -1769,6 +1774,63 @@ export const documentLink = pgTable(
     check("document_link_token_hash", sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
     check("document_link_session_hash", sql`${t.sessionHash} ~ '^[0-9a-f]{64}$'`),
     check("document_link_expires", sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+);
+
+/**
+ * A generated form's provenance (data-protection.md, generated forms; Q179): the document it
+ * stored, the form's code and version, the revisions of the sources it was built from (the
+ * self-service profile, the profiling record, section C and the unemployment period), the
+ * declarations to the BA it printed, the warnings the profiler confirmed by code and whether an
+ * Anlage was appended; who generated it and when. Confidential, class `form_working_copy`: the
+ * row stays as the tombstone when the working copy's file goes. Written only by
+ * `record_form_generation`.
+ */
+export const formGeneration = pgTable(
+  "form_generation",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    documentId: uuid("document_id")
+      .notNull()
+      .unique("form_generation_document_unique")
+      .references(() => document.id),
+    formCode: formCode("form_code").notNull(),
+    formVersion: text("form_version").notNull(),
+    profileRevision: integer("profile_revision").notNull(),
+    profilingRevision: integer("profiling_revision").notNull(),
+    assessmentRevision: integer("assessment_revision").notNull(),
+    unemploymentRevision: integer("unemployment_revision").notNull(),
+    jobboerseChoice: jobboerseChoice("jobboerse_choice"),
+    baContactConsent: boolean("ba_contact_consent"),
+    confirmedWarnings: text("confirmed_warnings").array().notNull(),
+    anlage: boolean("anlage").notNull(),
+    generatedBy: uuid("generated_by")
+      .notNull()
+      .references(() => staffUser.id),
+    generatedAt: instant("generated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "form_generation_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("form_generation_participation_idx").on(t.participationId, t.formCode, t.generatedAt),
+    check("form_generation_form_version", sql`${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$'`),
+    check(
+      "form_generation_revisions",
+      sql`${t.profileRevision} >= 0 and ${t.profilingRevision} >= 0 and ${t.assessmentRevision} >= 0 and ${t.unemploymentRevision} >= 0`,
+    ),
+    check(
+      "form_generation_confirmed_warnings",
+      sql.raw(
+        `"form_generation"."confirmed_warnings" <@ array[${tl407WarningCodes.map((code) => `'${code}'`).join(", ")}]::text[]`,
+      ),
+    ),
   ],
 );
 
@@ -2603,6 +2665,7 @@ export const tables = [
   fieldAccessCategory,
   document,
   documentLink,
+  formGeneration,
   participantReminder,
   appointment,
   appointmentBooking,

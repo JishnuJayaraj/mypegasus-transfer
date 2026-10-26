@@ -205,6 +205,8 @@ const statusFunctions = [
   "read_profiling_assessment",
   "write_unemployment_period",
   "read_unemployment_period",
+  // Slice 6: generated forms (data-protection.md, generated forms)
+  "record_form_generation",
 ];
 const helpers = [
   "assert_context",
@@ -313,6 +315,8 @@ const helpers = [
   "profiling_assessment_fields",
   "profiling_assessment_values",
   "open_profiling_assessment",
+  "form_sources_valid",
+  "form_declarations_valid",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -908,8 +912,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
+    // Catalog versions 2 and 3 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 9 },
+      { n: 19 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });
