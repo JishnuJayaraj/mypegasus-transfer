@@ -4,6 +4,7 @@ import type { Edge } from "../lifecycle/edges";
 import { profilingTransitions, ProfilingStatusInput } from "./api";
 
 const all = () => true;
+const declinedOnly = (edge: Edge) => edge.to === "profiling_declined";
 const at = (profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress") =>
   context({
     current: { status: "informed", profilingStatus, dsvStatus: "not_offered" },
@@ -25,7 +26,6 @@ describe("the profiling track's steps (process-and-lifecycle.md, profiling track
   });
 
   it("closes the steps by permission first, then the project, then the track", () => {
-    const declinedOnly = (edge: Edge) => edge.to === "profiling_declined";
     expect(profilingTransitions(at("not_started"), declinedOnly, false)).toEqual([
       { to: "profiling_accepted", allowed: false, refusal: "forbidden" },
       { to: "profiling_declined", allowed: false, refusal: "project_not_active" },

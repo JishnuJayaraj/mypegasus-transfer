@@ -49,17 +49,23 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
   const { t } = useTranslation();
   const api = useApi();
   const query = useQuery(participationProfilingQuery(api, detail.id));
+  const [stale, setStale] = useState<"sessions" | "declarations">();
   if (query.isPending) return <p aria-live="polite">{t("profiling.loading")}</p>;
   if (query.isError) {
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return <p role="alert">{t(forbidden ? "profiling.forbidden" : "profiling.failed")}</p>;
   }
   const view = query.data;
+  // A section remounts with each revision; a "changed meanwhile" notice outlives that.
+  const notice = (section: "sessions" | "declarations") => ({
+    stale: stale === section,
+    onStale: (now: boolean) => setStale(now ? section : undefined),
+  });
   return (
     <Stack gap={7}>
       <StatusSection view={view} />
       {/* Remounted with each revision: the editor starts from what was saved. */}
-      <SessionsSection key={`sessions-${view.revision}`} view={view} />
+      <SessionsSection key={`sessions-${view.revision}`} view={view} {...notice("sessions")} />
       <section className="tp-section" aria-labelledby="profiling-self-service">
         <h2 id="profiling-self-service">{t("profiling.selfService.title")}</h2>
         <p>{t("profiling.selfService.intro")}</p>
@@ -72,7 +78,11 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
       {view.capabilities.record && <UnemploymentSection view={view} />}
       {view.capabilities.assessment && view.assessment && <AssessmentSection view={view} />}
       {view.capabilities.record && view.declarations && (
-        <DeclarationsSection key={`declarations-${view.revision}`} view={view} />
+        <DeclarationsSection
+          key={`declarations-${view.revision}`}
+          view={view}
+          {...notice("declarations")}
+        />
       )}
     </Stack>
   );
@@ -193,7 +203,9 @@ type SessionRow = { key: number; id?: string; date: string; from: string; to: st
 let lastRow = 0;
 const time = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 
-function SessionsSection({ view }: { view: View }) {
+type Notice = { stale: boolean; onStale: (stale: boolean) => void };
+
+function SessionsSection({ view, stale, onStale }: { view: View } & Notice) {
   const { t } = useTranslation();
   const api = useApi();
   const showToast = useToast();
@@ -208,7 +220,8 @@ function SessionsSection({ view }: { view: View }) {
     })),
   );
   const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [failure, setFailure] = useState<"failed" | "stale">();
+  const [failed, setFailed] = useState(false);
+  const failure = failed ? "failed" : stale ? "stale" : undefined;
   const save = useMutation({
     mutationFn: async (sessions: components["schemas"]["ProfilingSessionInput"][]) => {
       const { data } = await api.PUT(
@@ -222,18 +235,19 @@ function SessionsSection({ view }: { view: View }) {
       return data;
     },
     onSuccess: (updated) => {
+      onStale(false);
       showToast({ title: t("profiling.sessions.saved") });
       saved(updated);
     },
     onError: async (error) => {
       const { status, codes } = codesAt(error);
       if (status === 409) {
-        setFailure("stale");
+        onStale(true);
         await reload();
         return;
       }
       if (status !== 422) {
-        setFailure("failed");
+        setFailed(true);
         return;
       }
       const next: Record<string, string[]> = {};
@@ -271,7 +285,8 @@ function SessionsSection({ view }: { view: View }) {
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    setFailure(undefined);
+    setFailed(false);
+    onStale(false);
     const next: Record<string, string[]> = {};
     const sessions = rows.map((row) => {
       const date = parseDisplayDate(row.date);
@@ -786,7 +801,7 @@ function LineEditor(props: {
 
 type Choice = NonNullable<View["declarations"]>["jobboerseChoice"];
 
-function DeclarationsSection({ view }: { view: View }) {
+function DeclarationsSection({ view, stale, onStale }: { view: View } & Notice) {
   const { t } = useTranslation();
   const api = useApi();
   const showToast = useToast();
@@ -794,7 +809,8 @@ function DeclarationsSection({ view }: { view: View }) {
   const declarations = view.declarations!;
   const [choice, setChoice] = useState<Choice>(declarations.jobboerseChoice);
   const [contact, setContact] = useState<boolean | null>(declarations.baContactConsent);
-  const [failure, setFailure] = useState<"failed" | "stale">();
+  const [failed, setFailed] = useState(false);
+  const failure = failed ? "failed" : stale ? "stale" : undefined;
   const save = useMutation({
     mutationFn: async () => {
       const { data } = await api.PUT(
@@ -808,13 +824,14 @@ function DeclarationsSection({ view }: { view: View }) {
       return data;
     },
     onSuccess: (updated) => {
+      onStale(false);
       showToast({ title: t("profiling.declarations.saved") });
       saved(updated);
     },
     onError: async (error) => {
-      const stale = codesAt(error).status === 409;
-      setFailure(stale ? "stale" : "failed");
-      if (stale) await reload();
+      if (codesAt(error).status !== 409) return setFailed(true);
+      onStale(true);
+      await reload();
     },
   });
   const choices = ["full", "anonymous_callme", "anonymous_no_contact", "none"] as const;
@@ -826,6 +843,8 @@ function DeclarationsSection({ view }: { view: View }) {
         className="tp-form"
         onSubmit={(event) => {
           event.preventDefault();
+          setFailed(false);
+          onStale(false);
           save.mutate();
         }}
         noValidate

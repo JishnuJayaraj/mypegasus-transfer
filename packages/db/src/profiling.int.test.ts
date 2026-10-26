@@ -188,27 +188,27 @@ describe("profiling sessions (Q193)", () => {
   });
 });
 
-describe("the pending declarations (ba-forms.md, declarations; Q193)", () => {
-  const write = (
-    participationId: string,
-    jobboerseChoice: string | null,
-    baContactConsent: boolean | null,
-    revision: number,
-    context = asConsultant,
-  ) =>
-    call<number>(app, "write_profiling_declarations", {
-      participationId,
-      context,
-      jobboerseChoice,
-      baContactConsent,
-      revision,
-    });
+const writeDeclarations = (
+  participationId: string,
+  jobboerseChoice: string | null,
+  baContactConsent: boolean | null,
+  revision: number,
+  context = asConsultant,
+) =>
+  call<number>(app, "write_profiling_declarations", {
+    participationId,
+    context,
+    jobboerseChoice,
+    baContactConsent,
+    revision,
+  });
 
+describe("the pending declarations (ba-forms.md, declarations; Q193)", () => {
   it("records the changed keys only, never the values, sharing the record's revision", async () => {
     const id = await participation();
-    expect(await write(id, "anonymous_callme", null, 0)).toBe(1);
-    expect(await write(id, "anonymous_callme", true, 1)).toBe(2);
-    expect(await write(id, "anonymous_callme", true, 2)).toBe(2);
+    expect(await writeDeclarations(id, "anonymous_callme", null, 0)).toBe(1);
+    expect(await writeDeclarations(id, "anonymous_callme", true, 1)).toBe(2);
+    expect(await writeDeclarations(id, "anonymous_callme", true, 2)).toBe(2);
     expect((await events(id, "profiling_declarations_recorded")).map((e) => e.details)).toEqual([
       { fields: ["jobboerseChoice"] },
       { fields: ["baContactConsent"] },
@@ -228,8 +228,10 @@ describe("the pending declarations (ba-forms.md, declarations; Q193)", () => {
     await expect(
       writeSessions(id, [{ date: "2026-02-20", from: "09:00", to: "10:00" }], 1),
     ).rejects.toMatchObject(failsWith("stale_revision"));
-    await expect(write(id, "full", true, 1)).rejects.toMatchObject(failsWith("stale_revision"));
-    await expect(write(id, "full", true, 2, pl)).rejects.toMatchObject(
+    await expect(writeDeclarations(id, "full", true, 1)).rejects.toMatchObject(
+      failsWith("stale_revision"),
+    );
+    await expect(writeDeclarations(id, "full", true, 2, pl)).rejects.toMatchObject(
       failsWith("actor_not_allowed"),
     );
   });
@@ -383,49 +385,49 @@ describe("section C and p. 7 (Q192)", () => {
   });
 });
 
-describe("the unemployment period (Q85, Q192)", () => {
-  const write = (participationId: string, period: unknown, context = asConsultant) =>
-    call<boolean>(app, "write_unemployment_period", {
-      participationId,
-      context,
-      period: JSON.stringify(period),
-      key,
-      keyId,
-    });
-  const read = (participationId: string, context: string) =>
-    call<Record<string, unknown>>(app, "read_sensitive_fields", {
-      participationId,
-      context,
-      keys: "{unemploymentPeriod}",
-      key,
-      keyId,
-    });
+const writePeriod = (participationId: string, period: unknown, context = asConsultant) =>
+  call<boolean>(app, "write_unemployment_period", {
+    participationId,
+    context,
+    period: JSON.stringify(period),
+    key,
+    keyId,
+  });
+const readPeriod = (participationId: string, context: string) =>
+  call<Record<string, unknown>>(app, "read_sensitive_fields", {
+    participationId,
+    context,
+    keys: "{unemploymentPeriod}",
+    key,
+    keyId,
+  });
 
+describe("the unemployment period (Q85, Q192)", () => {
   it("is written by the assigned consultant and read like the residence answers", async () => {
     const id = await participation();
     const period = { from: "2025-11-01", until: null };
-    expect(await write(id, period)).toBe(true);
-    expect(await write(id, period)).toBe(false);
-    expect(await read(id, asConsultant)).toEqual({ unemploymentPeriod: period });
-    expect(await read(id, asBackOffice)).toEqual({ unemploymentPeriod: period });
-    await expect(read(id, pl)).rejects.toMatchObject(failsWith("actor_not_allowed"));
+    expect(await writePeriod(id, period)).toBe(true);
+    expect(await writePeriod(id, period)).toBe(false);
+    expect(await readPeriod(id, asConsultant)).toEqual({ unemploymentPeriod: period });
+    expect(await readPeriod(id, asBackOffice)).toEqual({ unemploymentPeriod: period });
+    await expect(readPeriod(id, pl)).rejects.toMatchObject(failsWith("actor_not_allowed"));
     expect((await events(id, "sensitive_write")).map((e) => e.details)).toEqual([
       { key: "unemploymentPeriod" },
     ]);
     expect(await events(id, "sensitive_read")).toHaveLength(2);
-    expect(await write(id, null)).toBe(true);
-    expect(await read(id, asConsultant)).toEqual({ unemploymentPeriod: null });
+    expect(await writePeriod(id, null)).toBe(true);
+    expect(await readPeriod(id, asConsultant)).toEqual({ unemploymentPeriod: null });
   });
 
   it("refuses others, a malformed period, and leaves the participant's answers alone", async () => {
     const id = await participation();
-    await expect(write(id, { from: "2025-11-01", until: null }, pl)).rejects.toMatchObject(
+    await expect(writePeriod(id, { from: "2025-11-01", until: null }, pl)).rejects.toMatchObject(
       failsWith("actor_not_allowed"),
     );
     for (const bad of [{ from: "2025-11-31", until: null }, { from: "2025-11-01" }, "2025-11-01"]) {
-      await expect(write(id, bad)).rejects.toMatchObject(failsWith("invalid_argument"));
+      await expect(writePeriod(id, bad)).rejects.toMatchObject(failsWith("invalid_argument"));
     }
-    await write(id, { from: "2025-11-01", until: "2026-03-31" });
+    await writePeriod(id, { from: "2025-11-01", until: "2026-03-31" });
     const row = await one(
       `select nationality_present, buergergeld_present, unemployment_period_present
        from participant_residence_social_data where participation_id = $1`,
@@ -438,7 +440,7 @@ describe("the unemployment period (Q85, Q192)", () => {
     });
     // A participant reads no unemployment period of theirs here: it is the profiler's record.
     await expect(
-      read(id, auditContext({ actorType: "participant", participationId: id })),
+      readPeriod(id, auditContext({ actorType: "participant", participationId: id })),
     ).rejects.toMatchObject(failsWith("actor_not_allowed"));
   });
 });

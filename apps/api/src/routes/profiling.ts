@@ -94,6 +94,28 @@ const presenceColumns = Object.fromEntries(
   ]),
 );
 
+/** A refusal of the profiling functions as its problem, or rethrown. */
+function refused(c: Context<AppEnv>, error: unknown) {
+  const code = functionRefusal(error);
+  if (code === "stale_revision") return conflict(c, code);
+  if (code === "actor_not_allowed") return problem(c, "forbidden");
+  if (
+    code === "participation_closed" ||
+    code === "health_detail_not_recorded" ||
+    code === "session_times_reversed" ||
+    code === "session_in_future" ||
+    code === "sessions_overlap" ||
+    code === "session_not_found"
+  ) {
+    return domainProblem(c, [code]);
+  }
+  throw error;
+}
+
+/** The staff user acting for themselves in this request. */
+const context = (c: Context<AppEnv>, user: StaffUser = sessionUser(c)) =>
+  auditContext(user.id, c.get("requestId") as string);
+
 export function profilingRoutes(deps: Deps) {
   const { db, clock } = deps;
   const router = createRouter();
@@ -218,24 +240,6 @@ export function profilingRoutes(deps: Deps) {
     };
   }
 
-  /** A refusal of the profiling functions as its problem, or rethrown. */
-  function refused(c: Context<AppEnv>, error: unknown) {
-    const code = functionRefusal(error);
-    if (code === "stale_revision") return conflict(c, code);
-    if (code === "actor_not_allowed") return problem(c, "forbidden");
-    if (
-      code === "participation_closed" ||
-      code === "health_detail_not_recorded" ||
-      code === "session_times_reversed" ||
-      code === "session_in_future" ||
-      code === "sessions_overlap" ||
-      code === "session_not_found"
-    ) {
-      return domainProblem(c, [code]);
-    }
-    throw error;
-  }
-
   /** The profiler's write: the access, then the permission (403); else a refusal. */
   async function profilerAccess(c: Context<AppEnv>, participationId: string) {
     const result = await access(c, participationId);
@@ -245,9 +249,6 @@ export function profilingRoutes(deps: Deps) {
     }
     return result;
   }
-
-  const context = (c: Context<AppEnv>, user: StaffUser = sessionUser(c)) =>
-    auditContext(user.id, c.get("requestId") as string);
 
   router.openapi(
     createRoute({

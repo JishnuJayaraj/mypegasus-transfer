@@ -331,10 +331,10 @@ describe("the unemployment period (Q85)", () => {
   });
 });
 
-describe("the profiling track (process-and-lifecycle.md, profiling track; Q60)", () => {
-  const step = (id: string, body: unknown, as: string = consultant) =>
-    post(`/participations/${id}/profiling-status`, body, as);
+const step = (id: string, body: unknown, as: string = consultant) =>
+  post(`/participations/${id}/profiling-status`, body, as);
 
+describe("the profiling track (process-and-lifecycle.md, profiling track; Q60)", () => {
   it("moves the track for the PL and the assigned consultant with the status version", async () => {
     const id = await participation();
     let current = await view(id);

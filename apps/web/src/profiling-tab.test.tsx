@@ -134,6 +134,7 @@ function setup(options: { profiler: boolean; viewProfiling?: boolean }) {
       json({ ...view(options.profiler), profilingStatus: "profiling_in_progress" }),
     [`PUT ${detailPath}/profiling/sessions`]: ({ body }) => {
       const { sessions } = body as { sessions: { date: string }[] };
+      if (sessions.length === 0) return problem(409, "conflict");
       return sessions.some((s) => s.date > "2026-12-31")
         ? problem(422, "domain-error", {
             errors: [{ pointer: "/sessions/1/date", code: "session_in_future", detail: "x" }],
@@ -219,6 +220,15 @@ describe("the tab 'Profiling'", () => {
         { date: "2099-01-15", from: "13:00", to: "14:00" },
       ],
     });
+  });
+
+  it("says so and reloads when the record changed meanwhile (409)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ profiler: true });
+    await user.click(await screen.findByRole("button", { name: "Termin 1 entfernen" }));
+    await user.click(screen.getByRole("button", { name: "Termine speichern" }));
+    expect(await screen.findByText(/inzwischen geändert/)).toBeVisible();
+    await waitFor(() => expect(callTo(calls, `GET ${detailPath}/profiling`).length).toBe(2));
   });
 
   it("loads section C only on 'Anzeigen', the health line with its rating only", async () => {

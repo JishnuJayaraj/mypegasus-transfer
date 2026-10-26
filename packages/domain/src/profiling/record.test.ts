@@ -18,6 +18,9 @@ const session = (date: string, from: string, to: string, id?: string): Profiling
   from,
   to,
 });
+const parseSessions = (sessions: unknown[]) =>
+  ProfilingSessionsInput.safeParse({ revision: 0, sessions }).success;
+const parsePeriod = (period: unknown) => UnemploymentPeriodInput.safeParse({ period }).success;
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
 
 describe("profiling sessions (Q193)", () => {
@@ -82,15 +85,13 @@ describe("profiling sessions (Q193)", () => {
   });
 
   it("takes times as hh:mm only, and at most 50 sessions", () => {
-    const parse = (sessions: unknown[]) =>
-      ProfilingSessionsInput.safeParse({ revision: 0, sessions }).success;
-    expect(parse([session("2091-02-20", "09:00", "10:00")])).toBe(true);
+    expect(parseSessions([session("2091-02-20", "09:00", "10:00")])).toBe(true);
     for (const time of ["9:00", "24:00", "09:60", "09:00:00"]) {
-      expect(parse([session("2091-02-20", time, "23:00")])).toBe(false);
+      expect(parseSessions([session("2091-02-20", time, "23:00")])).toBe(false);
     }
-    expect(parse(Array.from({ length: 51 }, () => session("2091-02-20", "09:00", "10:00")))).toBe(
-      false,
-    );
+    expect(
+      parseSessions(Array.from({ length: 51 }, () => session("2091-02-20", "09:00", "10:00"))),
+    ).toBe(false);
   });
 });
 
@@ -182,11 +183,10 @@ describe("section C and p. 7 (Q192)", () => {
 
 describe("the unemployment period (Q85)", () => {
   it("takes a start with an optional end, or null; a reversed range is no refusal", () => {
-    const parse = (period: unknown) => UnemploymentPeriodInput.safeParse({ period }).success;
-    expect(parse({ from: "2090-06-01", until: null })).toBe(true);
-    expect(parse({ from: "2090-06-01", until: "2090-01-01" })).toBe(true);
-    expect(parse(null)).toBe(true);
-    expect(parse({ from: null, until: "2090-01-01" })).toBe(false);
-    expect(parse({ from: "2090-02-30", until: null })).toBe(false);
+    expect(parsePeriod({ from: "2090-06-01", until: null })).toBe(true);
+    expect(parsePeriod({ from: "2090-06-01", until: "2090-01-01" })).toBe(true);
+    expect(parsePeriod(null)).toBe(true);
+    expect(parsePeriod({ from: null, until: "2090-01-01" })).toBe(false);
+    expect(parsePeriod({ from: "2090-02-30", until: null })).toBe(false);
   });
 });
