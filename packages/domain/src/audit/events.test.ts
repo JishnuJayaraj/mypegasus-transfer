@@ -116,6 +116,8 @@ describe("audit event types (ADR-0002)", () => {
       "attendance_conflict_resolved",
       "appointment_notice_followed_up",
       "missed_appointment_resolved",
+      "profiling_session_changed",
+      "profiling_declarations_recorded",
     ]);
   });
 
@@ -198,6 +200,9 @@ describe("audit event types (ADR-0002)", () => {
       "appointment_notice_followed_up",
       // The work list (Slice 5b): only `resolve_missed_appointment` writes it.
       "missed_appointment_resolved",
+      // The profiling record (Slice 6): only its write functions write them.
+      "profiling_session_changed",
+      "profiling_declarations_recorded",
     ]);
   });
 
@@ -1789,5 +1794,43 @@ describe("attendance (data-protection.md, appointments; Q163, Q168)", () => {
     expect(issueCodes({ ...resolved, details: { ...ofBooking, basisBookingId: otherId } })).toEqual(
       ["basis_mismatch"],
     );
+  });
+});
+
+describe("the profiling record (process-and-lifecycle.md, the profiling record; Q193)", () => {
+  const session = {
+    ...base,
+    type: "profiling_session_changed",
+    details: { action: "added", sessionId: otherId, date: "2091-02-20" },
+  };
+
+  it("names a session by its id and date, the staff member acting for themselves", () => {
+    for (const action of ["added", "changed", "removed"]) {
+      expect(issueCodes({ ...session, details: { ...session.details, action } })).toEqual([]);
+    }
+    for (const bad of [
+      { ...session, details: { ...session.details, action: "moved" } },
+      { ...session, details: { ...session.details, from: "09:00" } },
+      { ...session, actor: { ...user, onBehalfOf: participationId } },
+      { ...session, participationId: null },
+    ]) {
+      expect(AuditEvent.safeParse(bad).success).toBe(false);
+    }
+  });
+
+  it("names the changed declarations by key, never their values", () => {
+    const recorded = {
+      ...base,
+      type: "profiling_declarations_recorded",
+      details: { fields: ["jobboerseChoice", "baContactConsent"] },
+    };
+    expect(issueCodes(recorded)).toEqual([]);
+    for (const fields of [[], ["gender"]]) {
+      expect(AuditEvent.safeParse({ ...recorded, details: { fields } }).success).toBe(false);
+    }
+    expect(
+      AuditEvent.safeParse({ ...recorded, details: { fields: ["jobboerseChoice"], value: "full" } })
+        .success,
+    ).toBe(false);
   });
 });

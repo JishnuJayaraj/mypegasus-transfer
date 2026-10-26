@@ -128,9 +128,12 @@ describe("auditProjection (data-protection.md, audit metadata; Q157)", () => {
     }
   });
 
-  it("holds field keys only in the `fields` detail of a person-data change", () => {
+  it("holds field keys only in the `fields` detail of a person-data or declarations change", () => {
     const withFields = auditProjectionRows().filter((row) => row.detailKeys.includes("fields"));
-    expect(withFields.map((row) => row.eventType)).toEqual(["participant_data_changed"]);
+    expect(withFields.map((row) => row.eventType)).toEqual([
+      "participant_data_changed",
+      "profiling_declarations_recorded",
+    ]);
   });
 
   it("shows a change only where the event has one", () => {

@@ -166,6 +166,9 @@ export const auditProjection: {
     reason: true,
     details: ["appointmentId", "appointmentKind", "startsAt"],
   }),
+  // The profiling record (Q193): a session by its date, the declarations by their keys.
+  profiling_session_changed: shown("profiling", { details: ["action", "sessionId", "date"] }),
+  profiling_declarations_recorded: shown("profiling", { details: ["fields"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

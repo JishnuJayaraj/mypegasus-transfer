@@ -47,13 +47,9 @@ describe("the wizard pages (Q140)", () => {
     const left = fieldCatalog
       .filter((entry) => entry.selfService && !keys.includes(entry.key))
       .map((entry) => entry.key);
-    // the profiler's (Q85), back office's (GdB), uploads, and the portal's own channels
-    expect(left.toSorted()).toEqual([
-      "disabilityDegree",
-      "portalChannels",
-      "qualifications",
-      "unemploymentPeriod",
-    ]);
+    // back office's (GdB), uploads, and the portal's own channels; the unemployment period is
+    // the profiler's (Q85, Q192), not a self-service field
+    expect(left.toSorted()).toEqual(["disabilityDegree", "portalChannels", "qualifications"]);
   });
 
   it("keep highly confidential and special-category fields on the sensitive pages only", () => {

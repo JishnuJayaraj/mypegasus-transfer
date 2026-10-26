@@ -774,6 +774,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `attendance_conflict_resolved` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
 | `appointment_notice_followed_up` | `case` | no | no | `method`, `appointmentId` |
 | `missed_appointment_resolved` | `case` | no | yes | `appointmentId`, `appointmentKind`, `startsAt` |
+| `profiling_session_changed` | `profiling` | no | no | `action`, `sessionId`, `date` |
+| `profiling_declarations_recorded` | `profiling` | no | no | `fields` |
 
 ## Aggregates
 

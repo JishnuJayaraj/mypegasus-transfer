@@ -34,6 +34,7 @@ export default defineConfig({
           "packages/domain/src/reminders/**",
           "packages/domain/src/appointments/**",
           "packages/domain/src/forms/**",
+          "packages/domain/src/profiling/**",
           "packages/config/src/**",
           "packages/forms/src/**",
         ].map((glob) => [glob, { lines: 100, functions: 100, branches: 100, statements: 100 }]),

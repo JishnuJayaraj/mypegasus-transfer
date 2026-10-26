@@ -63,6 +63,23 @@ describe("tl407Input (ba-forms.md, what is filled)", () => {
     ]);
   });
 
+  it("lists the marked highest school qualification first, never one inferred (Q196)", () => {
+    const [school, vocational] = syntheticTl407.profile.educationHistory!;
+    const marked = {
+      ...syntheticTl407,
+      profile: {
+        ...syntheticTl407.profile,
+        educationHistory: [vocational!, { ...school!, highestSchoolQualification: true as const }],
+      },
+    };
+    const { tables } = tl407Input(marked);
+    expect(tables.education!.map((row) => row.institution)).toEqual([
+      "Gesamtschule Beispielstadt",
+      "Berufsschule Nord",
+    ]);
+    expect(Object.keys(tables.education![0]!)).not.toContain("highestSchoolQualification");
+  });
+
   it("leaves the beE stay blank in ta_only and ticks §110 (Q181)", () => {
     const { values, projectType } = tl407Input({ ...syntheticTl407, projectType: "ta_only" });
     expect(projectType).toBe("ta_only");

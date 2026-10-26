@@ -73,7 +73,11 @@ export const rowLimits = { educationHistory: 20, workHistory: 20, languages: 10 
 
 const period = { from: isoDate, to: isoDate.nullable() };
 
-/** TL 407 field 39: one row of school, vocational training or university. */
+/**
+ * TL 407 field 39: one row of school, vocational training or university. The participant marks
+ * the row of their highest school qualification, the profiler confirms or corrects it (Q196); it
+ * is never inferred from the texts or from recency, and the TL 407 lists it first (Q41).
+ */
 export const EducationRow = z
   .strictObject({
     ...period,
@@ -81,6 +85,8 @@ export const EducationRow = z
     qualification: text(200),
     /** "Abschluss" yes/no; null while it is still running. */
     completed: z.boolean().nullable(),
+    /** This row is the highest school qualification; at most one row is. */
+    highestSchoolQualification: z.literal(true).optional(),
   })
   .meta({ id: "EducationRow" });
 export type EducationRow = z.infer<typeof EducationRow>;
@@ -159,7 +165,10 @@ export const selfServiceValueSchemas = {
   phone,
   mobile: phone,
   privateEmail: email,
-  educationHistory: rows(EducationRow, rowLimits.educationHistory),
+  educationHistory: rows(EducationRow, rowLimits.educationHistory).refine(
+    (list) => list.filter((row) => row.highestSchoolQualification).length <= 1,
+    coded("school_qualification_ambiguous"),
+  ),
   workHistory: rows(WorkRow, rowLimits.workHistory),
   languageSkills: LanguageSkills,
   drivingLicence: DrivingLicence,

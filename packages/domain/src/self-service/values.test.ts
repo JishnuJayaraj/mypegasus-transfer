@@ -117,6 +117,17 @@ describe("the TL 407 08/2025 value sets", () => {
     expect(codes(schemas.workHistory)([])).toEqual(["required_missing"]);
   });
 
+  it("marks at most one row as the highest school qualification, only as true (Q196)", () => {
+    const school = { ...education, highestSchoolQualification: true };
+    expect(schemas.educationHistory.parse([school, education])).toEqual([school, education]);
+    expect(codes(schemas.educationHistory)([school, school])).toEqual([
+      "school_qualification_ambiguous",
+    ]);
+    expect(
+      codes(schemas.educationHistory)([{ ...education, highestSchoolQualification: false }]),
+    ).toEqual(["value_not_allowed"]);
+  });
+
   it("checks contact values as the tables hold them", () => {
     const address = { street: "Musterweg 1", postalCode: "12345", city: "Beispielstadt" };
     expect(schemas.address.parse({ ...address, country: "DE" })).toEqual({

@@ -134,8 +134,11 @@ export const fieldCatalog: readonly FieldEntry[] = [
     personnelFile,
   ),
   field("qualifications", C, "confidential", true),
-  // recorded by the profiler on the profiling record (ba-forms.md)
-  ...fields(["profilingSessions", "jobboerseChoice", "baContactConsent"], C, "confidential", false),
+  // recorded by the profiler on the profiling record (ba-forms.md; data-protection.md, the
+  // profiling record): the sessions are evidence-set data (Q88), the pending declarations to the
+  // BA personnel file
+  field("profilingSessions", C, "confidential", false, record),
+  ...fields(["jobboerseChoice", "baContactConsent"], C, "confidential", false, personnelFile),
   field("endReason", C, "confidential", false, {
     valueClasses: { long_term_illness_reduced_earning_capacity: "special_category" },
     ...record,
@@ -162,16 +165,25 @@ export const fieldCatalog: readonly FieldEntry[] = [
     true,
     personnelFile,
   ),
-  // Q85 (open): not classified by the docs; the stricter class of its TL 407 section meanwhile
-  field("unemploymentPeriod", "highly_confidential", "residence_social", true),
-  // TL 407 section C and p. 7, profiler only; the health line is special category
+  // Q85 (open): not classified by the docs; the stricter class of its TL 407 section meanwhile,
+  // stored with the residence and social answers; the profiler records it (Q192)
+  field("unemploymentPeriod", "highly_confidential", "residence_social", false, personnelFile),
+  // TL 407 section C and p. 7, profiler only, personnel file (Q192); the health line keeps its
+  // rating only, special category, with the health answers' class (Q40)
   ...fields(
     ["profilingAssessment", "overallAssessment", "nextSteps"],
     "highly_confidential",
     "profiling_assessment",
     false,
+    personnelFile,
   ),
-  field("profilingHealthAssessment", "special_category", "profiling_assessment", false),
+  field(
+    "profilingHealthAssessment",
+    "special_category",
+    "profiling_assessment",
+    false,
+    healthRecord,
+  ),
   // payroll records, type and dates only (Q51); not listed until Q85 is answered
   field("absencePeriods", C, "absence", false, { listable: false }),
 ];

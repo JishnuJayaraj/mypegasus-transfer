@@ -79,6 +79,11 @@ describe("data catalog", () => {
       participant_identifier_data: entry("participation_record", "highly_confidential", true),
       participant_residence_social_data: entry("personnel_file", "highly_confidential", true),
       participant_health_data: entry("health_record", "special_category", true),
+      // Slice 6 (Q88, Q192, Q193): the profiling record
+      participant_profiling: entry("personnel_file", "confidential", true),
+      profiling_session: entry("participation_record", "confidential", true),
+      participant_profiling_assessment: entry("personnel_file", "highly_confidential", true),
+      participant_profiling_health_assessment: entry("health_record", "special_category", true),
       self_service_notice_acknowledgement: entry("personnel_file", "internal", true),
       // Slice 3 (Q122)
       activation_code: entry("access_credential", "confidential", true),

@@ -237,7 +237,12 @@ export function tl407Input(source: Tl407Source): FormInput {
     values,
     tables: {
       sessions: orderSessions(source.sessions).map(({ date, from, to }) => ({ date, from, to })),
-      education: orderEducation(profile.educationHistory ?? []).map((row) => ({
+      education: orderEducation(
+        (profile.educationHistory ?? []).map((row) => ({
+          ...row,
+          kind: row.highestSchoolQualification ? ("school" as const) : ("other" as const),
+        })),
+      ).map((row) => ({
         from: row.from,
         to: row.to,
         institution: row.institution,

@@ -26,8 +26,8 @@ function mostRecentFirst(a: Period, b: Period): number {
 }
 
 /**
- * Education rows. A row may say it is the school qualification (`kind`); the self-service rows
- * don't yet (Q196), so without it all rows are ordered most recent first.
+ * Education rows: the highest school qualification first (`kind: "school"`, the row the
+ * participant marked and the profiler confirmed, Q196), then the others most recent first.
  */
 export function orderEducation<T extends Period & { kind?: "school" | "other" }>(
   rows: readonly T[],

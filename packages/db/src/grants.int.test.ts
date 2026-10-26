@@ -198,6 +198,12 @@ const statusFunctions = [
   "record_notice_follow_up",
   // Slice 5b: the work list's missed appointments (process-and-lifecycle.md, appointments)
   "resolve_missed_appointment",
+  // Slice 6: the profiling record (data-protection.md, the profiling record)
+  "write_profiling_sessions",
+  "write_profiling_declarations",
+  "write_profiling_assessment",
+  "read_profiling_assessment",
+  "write_unemployment_period",
 ];
 const helpers = [
   "assert_context",
@@ -291,6 +297,19 @@ const helpers = [
   "queue_appointment_message",
   "queue_appointment_notice",
   "booking_missed",
+  "lock_profiler",
+  "profiler_may_read",
+  "berlin_today",
+  "iso_date_valid",
+  "profiling_sessions_valid",
+  "profiling_text_valid",
+  "profiling_rating_valid",
+  "profiling_assessment_lines",
+  "profiling_other_lines",
+  "profiling_assessment_valid",
+  "profiling_assessment_fields",
+  "profiling_assessment_values",
+  "open_profiling_assessment",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -678,6 +697,29 @@ describe("transfer_app and the encrypted self-service tables", () => {
     ],
     participant_health_data: ["health_restrictions", "severe_disability"],
   };
+  const profiling = {
+    participant_profiling_assessment: [
+      "school_qualification",
+      "vocational_qualification",
+      "work_experience",
+      "language_skills",
+      "other_qualification",
+      "intellectual_capacity",
+      "work_and_social_behaviour",
+      "other_performance",
+      "initiative",
+      "learning_readiness",
+      "other_motivation",
+      "local_mobility",
+      "other_conditions",
+      "overall_assessment",
+      "next_steps",
+    ],
+    participant_profiling_health_assessment: ["health_rating"],
+  };
+  // The profiler's unemployment period beside the residence and social answers (Q85, Q192).
+  ciphertexts.participant_residence_social_data.push("unemployment_period");
+  Object.assign(ciphertexts, profiling);
 
   it("may select the presence flags, key ids and times", async () => {
     for (const [table, columns] of Object.entries(ciphertexts)) {
@@ -944,6 +986,22 @@ describe("transfer_app and the document tables", () => {
     ],
     ["update a booking's follow-up link", "update appointment_booking set follow_up_of = null"],
     ["check a missed booking directly", "select booking_missed(null)"],
+    // The profiling record (data-protection.md, the profiling record): selected, written by the
+    // functions only.
+    ...writes(
+      "participant_profiling",
+      "revision",
+      `insert into participant_profiling (participation_id, project_id, revision)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', 1)`,
+    ),
+    ...writes(
+      "profiling_session",
+      "time_to",
+      `insert into profiling_session (id, project_id, participation_id, session_date, time_from, time_to, recorded_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), current_date, '09:00', '10:00', gen_random_uuid())`,
+    ),
+    ["lock as the profiler directly", "select lock_profiler(null, null)"],
+    ["decrypt the assessment directly", "select open_profiling_assessment(null, null, null)"],
   ])("may not %s (42501)", async (_label, statement) => {
     await expect(app.query(statement)).rejects.toMatchObject(permissionDenied);
   });

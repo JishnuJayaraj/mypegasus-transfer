@@ -2952,6 +2952,9 @@
               },
               "startAssistedMode": {
                 "type": "boolean"
+              },
+              "viewProfiling": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -2963,7 +2966,8 @@
               "revokeActivationCode",
               "providePrivacyNotice",
               "setPlacementAgentur",
-              "startAssistedMode"
+              "startAssistedMode",
+              "viewProfiling"
             ],
             "additionalProperties": false
           },
@@ -5916,7 +5920,9 @@
           "attendance_conflict_escalated",
           "attendance_conflict_resolved",
           "appointment_notice_followed_up",
-          "missed_appointment_resolved"
+          "missed_appointment_resolved",
+          "profiling_session_changed",
+          "profiling_declarations_recorded"
         ]
       },
       "HistoryActor": {
@@ -8443,6 +8449,12 @@
             "type": [
               "boolean",
               "null"
+            ]
+          },
+          "highestSchoolQualification": {
+            "type": "boolean",
+            "enum": [
+              true
             ]
           }
         },
@@ -11073,6 +11085,949 @@
         },
         "required": [
           "decision"
+        ],
+        "additionalProperties": false
+      },
+      "Profiling": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "profilingStatus": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "profiling_accepted",
+              "profiling_in_progress",
+              "profiling_done",
+              "profiling_declined"
+            ]
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "profilingDoneOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfilingSession"
+            }
+          },
+          "declarations": {
+            "type": "object",
+            "properties": {
+              "jobboerseChoice": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "full",
+                  "anonymous_callme",
+                  "anonymous_no_contact",
+                  "none",
+                  null
+                ]
+              },
+              "baContactConsent": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "recordedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "jobboerseChoice",
+              "baContactConsent",
+              "recordedAt"
+            ],
+            "additionalProperties": false
+          },
+          "assessment": {
+            "type": "object",
+            "properties": {
+              "revision": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "recorded": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AssessmentFieldKey"
+                }
+              },
+              "writtenAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "revision",
+              "recorded",
+              "writtenAt"
+            ],
+            "additionalProperties": false
+          },
+          "unemploymentPeriodRecorded": {
+            "type": "boolean"
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfilingTransition"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "record": {
+                "type": "boolean"
+              },
+              "assessment": {
+                "type": "boolean"
+              },
+              "readUnemploymentPeriod": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "record",
+              "assessment",
+              "readUnemploymentPeriod"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "participationId",
+          "profilingStatus",
+          "statusVersion",
+          "profilingDoneOn",
+          "revision",
+          "sessions",
+          "transitions",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingSession": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "from",
+          "to",
+          "recordedAt"
+        ],
+        "additionalProperties": false
+      },
+      "AssessmentFieldKey": {
+        "type": "string",
+        "enum": [
+          "profilingAssessment.schoolQualification",
+          "profilingAssessment.vocationalQualification",
+          "profilingAssessment.workExperience",
+          "profilingAssessment.languageSkills",
+          "profilingAssessment.otherQualification",
+          "profilingAssessment.intellectualCapacity",
+          "profilingAssessment.workAndSocialBehaviour",
+          "profilingAssessment.otherPerformance",
+          "profilingAssessment.initiative",
+          "profilingAssessment.learningReadiness",
+          "profilingAssessment.otherMotivation",
+          "profilingAssessment.localMobility",
+          "profilingAssessment.otherConditions",
+          "overallAssessment",
+          "nextSteps",
+          "profilingHealthAssessment"
+        ]
+      },
+      "ProfilingTransition": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "profiling_accepted",
+              "profiling_in_progress",
+              "profiling_done",
+              "profiling_declined"
+            ]
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "refusal": {
+            "$ref": "#/components/schemas/ProfilingTransitionRefusal"
+          }
+        },
+        "required": [
+          "to",
+          "allowed",
+          "refusal"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingTransitionRefusal": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "forbidden",
+          "project_not_active",
+          "track_inactive",
+          "tl407_signed",
+          "before_cutoff",
+          null
+        ]
+      },
+      "ProfilingSessionsInput": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfilingSessionInput"
+            },
+            "maxItems": 50
+          }
+        },
+        "required": [
+          "revision",
+          "sessions"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingSessionInput": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "from": {
+            "$ref": "#/components/schemas/ProfilingTime"
+          },
+          "to": {
+            "$ref": "#/components/schemas/ProfilingTime"
+          }
+        },
+        "required": [
+          "date",
+          "from",
+          "to"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingTime": {
+        "type": "string"
+      },
+      "ProfilingDeclarationsInput": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "jobboerseChoice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "full",
+              "anonymous_callme",
+              "anonymous_no_contact",
+              "none",
+              null
+            ]
+          },
+          "baContactConsent": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "revision",
+          "jobboerseChoice",
+          "baContactConsent"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingAssessmentView": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "values": {
+            "$ref": "#/components/schemas/ProfilingAssessment"
+          }
+        },
+        "required": [
+          "participationId",
+          "revision",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingAssessment": {
+        "type": "object",
+        "properties": {
+          "schoolQualification": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "vocationalQualification": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "workExperience": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "languageSkills": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "otherQualification": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "rating",
+              "text",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "health": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "rating"
+            ],
+            "additionalProperties": false
+          },
+          "intellectualCapacity": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "workAndSocialBehaviour": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "otherPerformance": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "rating",
+              "text",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "initiative": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "learningReadiness": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "otherMotivation": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "rating",
+              "text",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "localMobility": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              }
+            },
+            "required": [
+              "rating",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          "otherConditions": {
+            "type": "object",
+            "properties": {
+              "rating": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "no_need",
+                  "placement_relevant",
+                  null
+                ]
+              },
+              "text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "label": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "rating",
+              "text",
+              "label"
+            ],
+            "additionalProperties": false
+          },
+          "overallAssessment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "nextSteps": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "schoolQualification",
+          "vocationalQualification",
+          "workExperience",
+          "languageSkills",
+          "otherQualification",
+          "health",
+          "intellectualCapacity",
+          "workAndSocialBehaviour",
+          "otherPerformance",
+          "initiative",
+          "learningReadiness",
+          "otherMotivation",
+          "localMobility",
+          "otherConditions",
+          "overallAssessment",
+          "nextSteps"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingAssessmentInput": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "values": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "The whole assessment (ProfilingAssessment). The health line takes its rating only: a text there is refused (422 health_detail_not_recorded); unknown keys are refused."
+          }
+        },
+        "required": [
+          "revision",
+          "values"
+        ],
+        "additionalProperties": false
+      },
+      "UnemploymentPeriodView": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period": {
+            "$ref": "#/components/schemas/UnemploymentPeriod"
+          }
+        },
+        "required": [
+          "participationId",
+          "period"
+        ],
+        "additionalProperties": false
+      },
+      "UnemploymentPeriod": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "until"
+        ],
+        "additionalProperties": false
+      },
+      "UnemploymentPeriodInput": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "$ref": "#/components/schemas/UnemploymentPeriod"
+          }
+        },
+        "required": [
+          "period"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingStatusInput": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "enum": [
+              "not_started",
+              "profiling_accepted",
+              "profiling_in_progress",
+              "profiling_done",
+              "profiling_declined"
+            ]
+          },
+          "effectiveDate": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "to",
+          "statusVersion"
         ],
         "additionalProperties": false
       },
@@ -21564,6 +22519,720 @@
           },
           "503": {
             "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The tab Profiling: the track and its next steps, the sessions; for the assigned consultant the pending declarations and which assessment fields are recorded (never a value)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The profiling record as the viewer may know it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling/sessions": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Write every profiling session whole (the assigned consultant): bis after von, no future date, no overlap on one day; 409 stale_revision",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingSessionsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the profiling record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling/declarations": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Write the pending declarations to the BA (the assigned consultant): the Jobbörse choice and the BA contact declaration; never the portal consent; 409 stale_revision",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingDeclarationsInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the profiling record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling/assessment": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Section C and p. 7 decrypted for the assigned consultant; each field's read is audited (sensitive_read)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The assessment and its revision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilingAssessmentView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Write section C and p. 7 whole, encrypted (the assigned consultant); each changed field is audited (sensitive_write). The health line takes its rating only (422 health_detail_not_recorded); 409 stale_revision",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingAssessmentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the profiling record, the assessment by presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling/unemployment": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The unemployment period decrypted (the assigned consultant, back office); the read is audited (sensitive_read)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The period, or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnemploymentPeriodView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Write the unemployment period, encrypted (the assigned consultant), or clear it; audited (sensitive_write)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnemploymentPeriodInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved; the profiling record, the period by presence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling-status": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "One step of the profiling track along its edges (the PL, the assigned consultant) through the status service; 409 stale_status, 422 with the failed guard",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingStatusInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed; the profiling record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

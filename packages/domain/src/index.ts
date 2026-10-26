@@ -909,3 +909,39 @@ export {
   type TextDocument,
 } from "./forms/anlage";
 export { formVersionInUse, FormVersionManifest, isFormVersionInUse } from "./forms/version";
+export {
+  assessmentFieldKeys,
+  assessmentLines,
+  emptyAssessment,
+  otherAssessmentLines,
+  parseProfilingAssessment,
+  ProfilingAssessment,
+  ProfilingAssessmentInput,
+  ProfilingDeclarationsInput,
+  profilingLimits,
+  ProfilingSessionInput,
+  ProfilingSessionsInput,
+  profilingSessionsProblems,
+  ProfilingTime,
+  UnemploymentPeriod,
+  UnemploymentPeriodInput,
+  type AssessmentLine,
+  type ProfilingIssue,
+} from "./profiling/record";
+export {
+  mayReadUnemploymentPeriod,
+  mayRecordProfiling,
+  mayUseProfilingAssessment,
+  mayViewProfiling,
+} from "./profiling/access";
+export {
+  AssessmentFieldKey,
+  ProfilingAssessmentView,
+  ProfilingSessionView,
+  ProfilingStatusInput,
+  ProfilingTransition,
+  ProfilingTransitionRefusal,
+  profilingTransitions,
+  ProfilingView,
+  UnemploymentPeriodView,
+} from "./profiling/api";

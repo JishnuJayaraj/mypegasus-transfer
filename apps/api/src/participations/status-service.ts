@@ -24,6 +24,7 @@ import {
   mayPerformOperation,
   mayPerformTransition,
   projectFinalEntryDate,
+  profilingTransitions,
   requestProfilingException,
   revokeProfilingException,
   statusFieldOfTrack,
@@ -114,6 +115,8 @@ export type StatusChange = {
   effectiveDate?: IsoDate;
   /** The PL's explicit confirmation, where a guard needs one. */
   confirmed?: boolean;
+  /** The participation's `statusVersion` the caller saw (compare-and-set, `stale_status`). */
+  expectedVersion?: number;
 };
 
 type Deps = { db: Database; clock: Clock; facts?: GuardFactsProvider };
@@ -266,12 +269,16 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
     }
   }
 
-  /** Locks the participation (until the transaction ends) and loads what the checks need. */
-  async function load(tx: Transaction, participationId: string, actor: ServiceActor) {
-    await tx.execute(sql`select 1 from lock_participation(${participationId}::uuid)`);
-    const p = (await selectFirst(
+  /**
+   * Locks the participation (until the transaction ends) and loads what the checks need; a read
+   * that decides no change (`lock: false`) takes no lock.
+   */
+  async function load(tx: Transaction, participationId: string, actor: ServiceActor, lock = true) {
+    if (lock) await tx.execute(sql`select 1 from lock_participation(${participationId}::uuid)`);
+    const p = await selectFirst(
       tx.select().from(participation).where(eq(participation.id, participationId)),
-    ))!;
+    );
+    if (!p) return fail("not_found", "participation_not_found");
     const {
       type: projectType,
       status: projectStatus,
@@ -415,6 +422,26 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
       return null;
     },
 
+    /**
+     * The profiling track's next steps for the actor (process-and-lifecycle.md, profiling track):
+     * per edge from the current status the permission, the draft gate and the lifecycle check with
+     * the dated facts, as `changeStatus` decides them. A read: no lock, nothing written.
+     */
+    profilingTransitions(actor: ServiceActor, participationId: string) {
+      return transaction(async (tx) => {
+        const loaded = await load(tx, participationId, actor, false);
+        const context = {
+          ...loaded.context,
+          facts: await facts.facts(tx, { participationId, currentRequest: loaded.exception }),
+        };
+        return profilingTransitions(
+          context,
+          (edge) => mayPerformTransition(actor, edge, loaded.target).ok,
+          loaded.projectStatus === "active",
+        );
+      });
+    },
+
     /** Creation along the creation edge (`imported`, by the PL, Q60). */
     async createParticipation(
       actor: ServiceActor,
@@ -453,6 +480,12 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
         if (loaded.projectStatus !== "active") fail("domain", "project_not_active");
         const field = { main: "status", profiling: "profilingStatus", dsv: "dsvStatus" } as const;
         if (context.current[field[track]] !== from) fail("stale", "stale_status");
+        if (
+          change.expectedVersion !== undefined &&
+          loaded.p.statusVersion !== change.expectedVersion
+        ) {
+          fail("stale", "stale_status");
+        }
 
         const check = canTransition(track, from, to, {
           ...context,
