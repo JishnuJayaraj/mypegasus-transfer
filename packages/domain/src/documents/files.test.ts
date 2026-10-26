@@ -79,6 +79,10 @@ describe("generated file names (Q148)", () => {
     );
     expect(generatedDocumentFileName("cv", "2026-10-22", "image/jpeg")).toBe("cv-2026-10-22.jpg");
     expect(generatedDocumentFileName("cv", "2026-10-22", "image/png")).toBe("cv-2026-10-22.png");
+    // a generated form by its form code (data-protection.md, generated forms)
+    expect(generatedDocumentFileName("tl407_form", "2026-10-22", "application/pdf")).toBe(
+      "tl407-2026-10-22.pdf",
+    );
   });
 });
 

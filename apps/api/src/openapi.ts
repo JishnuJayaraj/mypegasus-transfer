@@ -33,6 +33,7 @@ export function openApiDocument(): ReturnType<
       storageAdapter: "memory",
       storageDir: "unused",
       virusScanAdapter: "mock",
+      pdfAdapter: "mock",
     },
     logger: pino({ enabled: false }),
     clock: new SystemClock(),

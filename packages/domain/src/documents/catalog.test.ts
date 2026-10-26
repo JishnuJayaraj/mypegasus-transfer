@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DocumentType, documentTypeCatalog, documentTypeEntry } from "./catalog";
+import { uploadableDocumentTypes } from "./api";
 
 describe("document-type catalog (round 11, Q87 B)", () => {
   it("has exactly one entry per type", () => {
@@ -20,13 +21,16 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(2);
+    expect(documentTypeCatalog.version).toBe(3);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
-      expect(["evidence_set", "personnel_file", "participation_record"]).toContain(
-        entry.retentionClass,
-      );
+      expect([
+        "evidence_set",
+        "personnel_file",
+        "participation_record",
+        "form_working_copy",
+      ]).toContain(entry.retentionClass);
     }
   });
 });
@@ -47,12 +51,32 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
   });
 
   it("leaves the other types' operations undecided and keeps no file name (Q65)", () => {
-    for (const entry of documentTypeCatalog.types.filter((t) => !own.includes(t.type))) {
+    const others = documentTypeCatalog.types.filter(
+      (t) => !own.includes(t.type) && t.type !== "tl407_form",
+    );
+    for (const entry of others) {
       expect([entry.type, entry.operations, entry.fileName]).toEqual([
         entry.type,
         "undecided",
         false,
       ]);
     }
+  });
+});
+
+describe("document-type catalog version 3 (Q179)", () => {
+  it("adds the generated TL 407: the signed type's category and class, its own retention", () => {
+    const form = documentTypeEntry("tl407_form");
+    const signed = documentTypeEntry("tl407_signed_scan");
+    expect(form).toMatchObject({
+      accessCategory: signed.accessCategory,
+      dataClass: signed.dataClass,
+      roles: signed.roles,
+      retentionClass: "form_working_copy",
+      signed: false,
+      fileName: false,
+      operations: "generated",
+    });
+    expect(uploadableDocumentTypes).not.toContain("tl407_form");
   });
 });

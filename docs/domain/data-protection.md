@@ -716,6 +716,70 @@ and highly confidential data only; ordinary person-data writes are `participant_
   (action, session id, date) and `profiling_declarations_recorded` (the changed keys, never the
   values); the sensitive reads and writes are `security` events, never shown.
 
+### Generated forms and the readiness projection *(accepted, Q49, Q179, Q196–Q198; as built in Slice 6, PR 6-3a; readings Q199)*
+
+- **A generated form is a document** (`tl407_form`, document catalog version 3; `kug200b_form`
+  follows with 6-4): unsigned, immutable, of the signed type's access category (`signed_tl407`)
+  and data class (special category, for section C's health rating), stored encrypted like every
+  file and opened only through the logged opening (`document_opened`) by the profiler and the PL
+  (Q49), saved as `tl407-<date>.pdf`. No ordinary operation adds, reviews or deletes it (the
+  catalog's operations `generated`: uploads refuse the type, `review_document` has no role for it,
+  `delete_document` answers `document_immutable`); back office and the participant never see it.
+  It is not evidence: no correction targets it, it expires. It counts against no upload limit:
+  the 50 live documents and 20 an hour of uploads count uploads only.
+- **Who generates:** the TL 407 only the assigned consultant (the profiler, who alone reads
+  section C), as themselves in normal mode, while the participation is open
+  (`record_form_generation` refuses anyone else and a terminal participation).
+- **Provenance** (`form_generation`, confidential, class `form_working_copy`): the document, the
+  form code and version, the revisions of the sources the generation read (the self-service
+  profile, the profiling record with its sessions and pending declarations, section C, the
+  unemployment period), the **source token** of the readiness the profiler checked and the
+  organisation's fingerprint (the Träger printed), the **declaration snapshot** the form printed
+  (the Jobbörse choice and the BA contact declaration), the warning codes the profiler confirmed,
+  whether an Anlage was appended, who generated it and when.
+- **Change detection, twice:** the profiler's readiness carries a **source token**, a SHA-256 over
+  the form version, the date, the four revisions, the identity (names, birth date), the contact
+  details, the effective contractual TG dates and the organisation's fingerprint. A generation
+  names it; the API reads every source again in one REPEATABLE READ snapshot and refuses a
+  different token **before any confirmation applies** (`409 source_changed` at `/sourceToken`), so
+  a confirmation holds only for what the profiler saw. `record_form_generation` then compares,
+  under the participation lock, the revisions, the person printed (identity, contact details and
+  effective TG dates have no revision, so their values: `form_person`) and the printed
+  declarations, and refuses a moved one the same way; the stored object is deleted at once. Audited `form_generated` (document, code, version, Anlage: the `case` history) and
+  one `warning_confirmed` per confirmed code.
+- **The working copy's expiry** (Q179; ADR-0008; `workingCopyExpiry`): the file is deleted 30 days
+  after a newer generation supersedes it or its signed scan is accepted, 30 days after the
+  participation's terminal status, and 90 days after its generation only while it is abandoned
+  (neither a successor nor an accepted scan: a scan accepted on day 80 gives day 110), whichever
+  comes first; a legal hold suspends each. The `form_generation` row and the document row stay as
+  the tombstone with the provenance and, from 6-3b, the scans' links. The periods await the DPO:
+  the class is `unset`, so no job deletes anything before Slice 7's retention job.
+- **The readiness projection** (`GET …/forms/tl407/readiness`, built per viewer; an unauthorized
+  property is absent from the response schema, not hidden by the UI):
+  - the profiler: every error and warning code by key and label and the overflow onto the Anlage
+    per table and text; the decryptions it needs are each audited `sensitive_read` (the present
+    sensitive answers, the unemployment period, and section C when one is stored, which logs all
+    16 fields). The UI asks for it on "Prüfen" only;
+  - the PL: `ready` and the missing applicable `*` fields whose source the PL may know about
+    (`staffSelfServiceAccess(…).knows`), from presence flags only, no decryption; no warning, no
+    overflow and no source token (both can derive from section C or the sensitive answers), never
+    the unemployment period or an identifier. `ready` there means nothing the PL may know about is
+    missing, a completeness summary for the PL: it is no generation guard and no entry guard, and
+    the profiler's readiness decides generation;
+  - anyone else `403`, an unassigned consultant `404`.
+- **The school designation** (Q196, Q198, Q199): a row the participant marked (and the profiler
+  confirmed or corrected in assisted mode) is the highest school qualification. Without a marked
+  row, whether rows exist or none is recorded, the answer is open ("not clarified", generation
+  refused) until the profiler confirms "Kein Schulabschluss" with the participant: the
+  confirmation `school_qualification_none` of one generation, for exactly the sources its
+  readiness's token covers. It is stored with that generation and never carried to a later one,
+  so a later edit asks again. Without any row it stands in for the empty table, which stays
+  blank; no row is made up, and the answer is never inferred from an unmarked row, the texts,
+  recency or a missing row.
+- **Characters the form can't print** (Q197): refused per field (`character_unsupported`), never
+  transliterated; the readiness names the field, and the form is then completed on paper and
+  uploaded as external paper (6-3b).
+
 ## Customer reporting *(assumed, Q5, Q13, Q47)*
 
 - **No person-level data to the customer, except a fixed whitelist**: name, Personalnummer,
@@ -815,9 +879,10 @@ them, a legal hold suspends only the affected records, never the whole participa
 | `audit_log` | `audit_event`, `staff_audit_event` (staff authentication and administration history: staff ids, codes and counts; account, org-role and region changes; removed org roles preserve role, region and reason; never a name, email, claimed identity, token or claim; no `project_id`, `internal`; Slice 3, PR 3b/3c) | 3 years; subject references pseudonymised when the subject's data is deleted; entries of an evidence set follow it (Q3, verify) |
 | `personnel_file` (Slice 2, PR 2f; Slice 3, PR 3d) | `participant_details`: street and house number, postal code, city, `addressCountry`, phone, mobile, private and work email, `oldEmploymentEndDate`; `privacy_notice_delivery`: immutable Article 14 evidence with version, language, method, staff id, time and optional activation-code id, never notice text or destination (`internal`, project-scoped); from PR 3e `participant_account` (activation time, code id, identity assurance with the staff confirmer of a photo ID, language; `internal`), `participant_channel` (the field `portalChannels`: kind, normalised private address, verification, consent id, notice, suspension and removal dates; `confidential`; the address and its hash erased 30 days after removal, Q122) and `consent_record` (purpose, source, the channel id of a portal contact consent, text version, language, actor and dates, never the address; `confidential`); from Slice 4a (Q141) `participant_profile` (the self-service profile, TL 407 section B: `confidential`), `self_service_notice_acknowledgement` (the purposes notice acknowledged: version, language, actor, time; `internal`, immutable), `participant_residence_social_data` (the encrypted nationality, entry date, residence status and Bürgergeld, their presence, key id and times; `highly_confidential`; PR 4a-4) and, on `participant_details`, which contact fields the participant maintains and when they wrote the address (metadata); from Slice 5 (Q156) `participant_reminder` (the reminder log: ids, kind, text version, language, the channel's id and kind, the consent id, the requester's id, times, status, cancel reason; `internal`, `case_internal`; non-signers with the 90-day deletion, otherwise the end of the 3rd calendar year after exit; a legal hold extends only the affected rows; the channel's address is erased under its own rule, the reminder keeps the value-free channel id); from Slice 5b (Q166) `appointment_booking` (which appointment, origin, status, closed cancel reason, the booking and cancelling staff ids, times, from 5b-2 the attendance with its basis and conflict, from 5b-4 the follow-up link and a missed appointment's closed resolution; `internal`, `case_internal`; its triggers, **mapping awaiting confirmation**: a non-signer without a fully executed DSV, funded §110 participation, legal hold or other duty 90 days after `withdrawnOn`; an executed DSV without TG entry the end of the 3rd calendar year after cancellation or contractual end; a TG participant the end of the 3rd calendar year after exit; proposed: `ta_completed` in a `ta_only` project the end of the 3rd calendar year after that change, withdrawn with a funded participation the end of the 3rd calendar year after `withdrawnOn`; a legal hold suspends only the affected rows; never BA evidence); from Slice 6 (Q192, Q193) `participant_profiling` (the pending declarations to the BA, who recorded them, the record's revision; `confidential`), `participant_profiling_assessment` (section C and p. 7, encrypted, presence and revision; `highly_confidential`) and the unemployment period on `participant_residence_social_data` | accepted in [round 32](../decisions/2026-10-19-answers-round-32.md) for the pilot (Q105): non-signer without an executed DSV or funded measure 90 days after `withdrawnOn`; TG participant or executed employment arrangement, end of the 3rd calendar year after exit, cancellation or contractual end; then the whole class is deleted unless a field was copied into a separately classified payroll, accounting or legal record; never part of the BA evidence set |
 | `health_record` (Q141) | `participant_health_data` (Slice 4a, PR 4a-4): the encrypted health restrictions and Schwerbehinderung/Gleichstellung yes/no answers, their presence, key id and times (`special_category`); from Slice 6 `participant_profiling_health_assessment` (the section C health line's encrypted rating, no text, Q40, Q192) | 3 months after beE exit or with the non-signer deletion; executable period `unset` until Slice 7 |
-| `by_document_type` (Slice 4b, PR 4b-2; Q145) | `document`: each row its type's class, held by its policy (`personnel_file` for the CV, other uploads and certificates; `evidence_set` for the signed TL 407 and Kug 200b scans; `personnel_file` for the DSV scan and cancellation; `participation_record` for the ASU proof and exception evidence). The metadata of an encrypted file (type, media type, size, the kept file name, who added and reviewed it, the content hash and the wrapped key the runtime role can't select); a deletion's tombstone (type, dates, who by kind, reason code; the file name erased) follows the type's class, its object is purged at once | the type's class; executable periods `unset` until Slice 7 |
+| `by_document_type` (Slice 4b, PR 4b-2; Q145) | `document`: each row its type's class, held by its policy (`personnel_file` for the CV, other uploads and certificates; `evidence_set` for the signed TL 407 and Kug 200b scans; `personnel_file` for the DSV scan and cancellation; `participation_record` for the ASU proof and exception evidence; from Slice 6 `form_working_copy` for the generated TL 407). The metadata of an encrypted file (type, media type, size, the kept file name, who added and reviewed it, the content hash and the wrapped key the runtime role can't select); a deletion's tombstone (type, dates, who by kind, reason code; the file name erased) follows the type's class, its object is purged at once | the type's class; executable periods `unset` until Slice 7 |
 | `evidence_set` (Slice 4b) | no table of its own: `document` rows of the signed TL 407 and Kug 200b scans | the BA evidence set (above); `unset` until Slice 7 |
-| `reference_data` | `region` (code and name of a Niederlassung; Slice 3, PR 3c), `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`), `document_type_policy` (the document type catalog per version: classes, file names, roles; Slice 4b) | no personal data; never touched by the retention job |
+| `form_working_copy` (Slice 6, PR 6-3a; Q179) | `document` rows of the generated forms (`tl407_form`), `form_generation` (their provenance and declaration snapshot; confidential) | the file 30 days after supersession or the accepted signed scan, 90 days after an abandoned generation, 30 days after the terminal status, a legal hold suspending each; the rows stay as the tombstone (generated forms, above); proposed, `unset` until the DPO confirms and Slice 7 implements |
+| `reference_data` | `region` (code and name of a Niederlassung; Slice 3, PR 3c), `lifecycle_edge`, `job_run` (job names, run dates and instants, PR 1h-1), `config_template_version` (template contents as released; global, no `project_id`), `document_type_policy` (the document type catalog per version: classes, file names, roles, from version 3 whether the type is generated; Slice 4b, Slice 6) | no personal data; never touched by the retention job |
 
 Implementation:
 - `retentionClass` per data category and document type, configured as data.

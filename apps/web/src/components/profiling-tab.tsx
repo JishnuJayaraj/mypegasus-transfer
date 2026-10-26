@@ -23,11 +23,13 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, participationQuery, useApi } from "../api";
 import { SelfServiceTab } from "./self-service-tab";
+import { Tl407Section } from "./tl407-section";
 
 // The tab "Profiling" (process-and-lifecycle.md and data-protection.md, the profiling record):
 // the track and its steps, the sessions, section B as the tab "Selbstauskunft" shows it with
 // "Im assistierten Modus ergänzen"; for the assigned consultant the unemployment period, section C
-// with p. 7 and the pending declarations to the BA. Every button follows the API's capabilities.
+// with p. 7 and the pending declarations to the BA; the TL 407 (tl407-section.tsx). Every button
+// follows the API's capabilities.
 // Section C and the unemployment period are loaded on "Anzeigen" from their logged routes and kept
 // only in this component's state, never in the query cache.
 
@@ -75,6 +77,9 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
         view.capabilities.readUnemploymentPeriod && <UnemploymentSection view={view} />}
       {view.capabilities.readAssessment && view.assessment && <AssessmentSection view={view} />}
       {view.declarations && <DeclarationsSection view={view} />}
+      {(view.capabilities.readTl407Readiness || view.tl407Forms.length > 0) && (
+        <Tl407Section view={view} />
+      )}
     </Stack>
   );
 }

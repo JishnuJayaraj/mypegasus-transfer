@@ -274,8 +274,10 @@ function documentDecision(role: AccessRole, request: Request<DocumentResource>):
   if (!right) return deny("never");
   if (request.action === "write") {
     if (right === "metadata") return deny("never");
-    // Documents never change; adding one or a new version is a document operation.
-    return deny(entry.signed ? "immutable" : "via_domain_operation");
+    // Documents never change; adding one or a new version is a document operation. Signed and
+    // generated ones are never changed by one either.
+    const immutable = entry.signed || entry.operations === "generated";
+    return deny(immutable ? "immutable" : "via_domain_operation");
   }
   const open = request.action === "open_document";
   const opened = open ? allow("full", "document_opened") : allow("metadata_only");

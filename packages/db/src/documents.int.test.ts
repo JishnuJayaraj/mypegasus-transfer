@@ -200,14 +200,15 @@ async function withdraw(participationId: string) {
 }
 
 const roles = (entry: DocumentTypeEntry, op: "add" | "review" | "delete") =>
-  entry.operations === "undecided" ? [] : [...entry.operations[op]];
+  typeof entry.operations === "object" ? [...entry.operations[op]] : [];
 
 describe("document_type_policy", () => {
-  it("is the domain's catalog, version by version (drift)", async () => {
+  it("is the domain's catalog in its current version (drift); older versions stay", async () => {
     const rows = await all(
-      `select type::text, catalog_version, retention_class, file_name, signed, add_roles,
-         review_roles, delete_roles, open_roles
-       from document_type_policy order by catalog_version, type`,
+      `select type::text, catalog_version, retention_class, file_name, signed, generated,
+         add_roles, review_roles, delete_roles, open_roles
+       from document_type_policy where catalog_version = $1 order by type`,
+      [documentTypeCatalog.version],
     );
     const expected = documentTypeCatalog.types.map((entry) => ({
       type: entry.type,
@@ -215,6 +216,7 @@ describe("document_type_policy", () => {
       retention_class: entry.retentionClass,
       file_name: entry.fileName,
       signed: entry.signed,
+      generated: entry.operations === "generated",
       add_roles: roles(entry, "add"),
       review_roles: roles(entry, "review"),
       delete_roles: roles(entry, "delete"),
@@ -234,6 +236,14 @@ describe("document_type_policy", () => {
         .toSorted((a, b) => a.type.localeCompare(b.type));
     expect(sorted(rows)).toEqual(sorted(expected));
     for (const row of rows) expect(Object.keys(retentionPeriods)).toContain(row.retention_class);
+    // The documents of an earlier version keep their policy row (ADR-0002, documents).
+    expect(
+      await all(`select catalog_version, count(*)::int as n from document_type_policy
+        group by catalog_version order by catalog_version`),
+    ).toEqual([
+      { catalog_version: 2, n: 9 },
+      { catalog_version: 3, n: 10 },
+    ]);
   });
 });
 
@@ -253,7 +263,7 @@ describe("add_document (Q146)", () => {
       ),
     ).toEqual({
       type: "cv",
-      catalog_version: 2,
+      catalog_version: 3,
       retention_class: "personnel_file",
       file_name: FILE_NAME,
       added_by: "participant",

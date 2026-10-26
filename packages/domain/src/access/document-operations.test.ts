@@ -14,7 +14,7 @@ import { accessModes, accessProfiles, sample } from "./profiles";
 // check), consultant (assigned), consultant (not assigned), PL, back office, regional operations
 // manager, regional admin, admin. The participant deletes their own upload, not accepted.
 //   yes = allowed, und = undecided (Q65), actor = actor_not_allowed, role = role_not_allowed,
-//   unass = not_assigned, imm = immutable
+//   unass = not_assigned, imm = immutable. A generated form comes only from its generation.
 const add = `
 tl407_signed_scan            actor actor und  unass und  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
@@ -24,7 +24,8 @@ asu_proof                    actor actor und  unass und  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
-qualification_certificate    yes   yes   yes  unass yes  role role role role`;
+qualification_certificate    yes   yes   yes  unass yes  role role role role
+tl407_form                   actor actor actor actor actor actor actor actor actor`;
 
 const review = `
 tl407_signed_scan            actor actor und  unass und  role role role role
@@ -35,7 +36,8 @@ asu_proof                    actor actor und  unass und  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           actor actor yes  unass yes  role role role role
 participant_upload           actor actor yes  unass yes  role role role role
-qualification_certificate    actor actor yes  unass yes  role role role role`;
+qualification_certificate    actor actor yes  unass yes  role role role role
+tl407_form                   actor actor actor actor actor actor actor actor actor`;
 
 const remove = `
 tl407_signed_scan            imm   imm   imm  imm   imm  imm  imm  imm  imm
@@ -46,7 +48,8 @@ asu_proof                    actor actor und  unass und  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
-qualification_certificate    yes   yes   yes  unass yes  role role role role`;
+qualification_certificate    yes   yes   yes  unass yes  role role role role
+tl407_form                   imm   imm   imm  imm   imm  imm  imm  imm  imm`;
 
 const codes: Record<string, string> = {
   yes: "ok",

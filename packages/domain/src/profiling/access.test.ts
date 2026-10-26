@@ -7,6 +7,7 @@ import {
   mayRecordProfiling,
   mayUseProfilingAssessment,
   mayViewProfiling,
+  tl407ReadinessViewer,
 } from "./access";
 
 const target: PermissionTarget = {
@@ -77,6 +78,18 @@ describe("the profiling record's permissions (data-protection.md, the profiling 
     expect(mayReadUnemploymentPeriod(backOffice, target)).toBe(true);
     for (const other of [pl, unassigned, admin]) {
       expect(mayReadUnemploymentPeriod(other, target)).toBe(false);
+    }
+  });
+
+  it("projects the TL 407 readiness for the profiler and the PL, nobody else", () => {
+    expect(tl407ReadinessViewer(consultant, target)).toBe("profiler");
+    expect(tl407ReadinessViewer(staff(["project_lead", "consultant"], true), target)).toBe(
+      "profiler",
+    );
+    expect(tl407ReadinessViewer(pl, target)).toBe("project_lead");
+    expect(tl407ReadinessViewer(plConsultant, target)).toBe("project_lead");
+    for (const other of [unassigned, backOffice, admin, participant]) {
+      expect(tl407ReadinessViewer(other, target)).toBeNull();
     }
   });
 });

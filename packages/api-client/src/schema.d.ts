@@ -10572,6 +10572,192 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/forms/tl407/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The TL 407's readiness for the viewer: the assigned consultant every error and warning code and the overflow (each decryption audited sensitive_read); the PL ready or not and the missing fields they may know about, from presence only; others 403 */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The readiness as projected for the viewer */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Tl407Readiness"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/forms/tl407": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate the TL 407 (the assigned consultant) for the readiness checked: its source token, every warning confirmed by code (each audited warning_confirmed); stored encrypted as a document with its provenance (form_generated)
+         * @description Refusals:
+         *     - `409 source_changed` at `/sourceToken`: a source moved since the readiness (also when found at the record); check again.
+         *     - `422` with a warning code at `/confirmWarnings`: that warning isn't confirmed.
+         *     - `422` with form-level error codes (pointer empty: `form_version_unavailable`, `required_missing`, `character_unsupported`, …; each code once): the form can't be generated. The readiness names the fields.
+         *     - `422 participation_closed`; `503 pdf_unavailable` (the Anlage can't be rendered) or `storage_unavailable`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Tl407GenerationInput"];
+                };
+            };
+            responses: {
+                /** @description Generated: the document, its version and whether an Anlage was appended */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Tl407Generation"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/outbox": {
         parameters: {
             query?: never;
@@ -12337,7 +12523,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -13052,7 +13238,7 @@ export interface components {
             sensitive: boolean;
             complete: boolean;
             fields: components["schemas"]["SelfServiceField"][];
-            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate")[];
+            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form")[];
         };
         /** @enum {string} */
         SelfServicePage: "personal" | "contact" | "ba_details" | "education" | "work_history" | "languages_mobility" | "job_wish" | "health" | "further" | "documents";
@@ -13489,14 +13675,14 @@ export interface components {
         };
         DocumentList: {
             documents: components["schemas"]["Document"][];
-            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate")[];
+            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form")[];
             limits: components["schemas"]["DocumentLimits"];
         };
         Document: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate";
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form";
             /** @enum {string} */
             mediaType: "application/pdf" | "image/jpeg" | "image/png";
             sizeBytes: number;
@@ -13534,7 +13720,7 @@ export interface components {
         };
         DocumentUploadInput: {
             /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate";
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form";
             fileName: string;
             /** @description The file, base64; decoded at most 10 MB */
             content: string;
@@ -13588,12 +13774,15 @@ export interface components {
                 writtenAt: string | null;
             };
             unemploymentPeriodRecorded?: boolean;
+            tl407Forms: components["schemas"]["Tl407GeneratedForm"][];
             transitions: components["schemas"]["ProfilingTransition"][];
             capabilities: {
                 record: boolean;
                 readAssessment: boolean;
                 writeAssessment: boolean;
                 readUnemploymentPeriod: boolean;
+                generateTl407: boolean;
+                readTl407Readiness: boolean;
             };
         };
         ProfilingSession: {
@@ -13615,6 +13804,22 @@ export interface components {
         };
         /** @enum {string} */
         AssessmentFieldKey: "profilingAssessment.schoolQualification" | "profilingAssessment.vocationalQualification" | "profilingAssessment.workExperience" | "profilingAssessment.languageSkills" | "profilingAssessment.otherQualification" | "profilingAssessment.intellectualCapacity" | "profilingAssessment.workAndSocialBehaviour" | "profilingAssessment.otherPerformance" | "profilingAssessment.initiative" | "profilingAssessment.learningReadiness" | "profilingAssessment.otherMotivation" | "profilingAssessment.localMobility" | "profilingAssessment.otherConditions" | "overallAssessment" | "nextSteps" | "profilingHealthAssessment";
+        Tl407GeneratedForm: {
+            /** Format: uuid */
+            documentId: string;
+            formVersion: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            generatedAt: string;
+            anlage: boolean;
+            latest: boolean;
+            versionInUse: boolean;
+            capabilities: {
+                open: boolean;
+            };
+        };
         ProfilingTransition: {
             /** @enum {string} */
             to: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
@@ -13777,6 +13982,66 @@ export interface components {
              */
             effectiveDate?: string;
             statusVersion: number;
+        };
+        Tl407Readiness: components["schemas"]["Tl407ProfilerReadiness"] | components["schemas"]["Tl407ReadinessSummary"];
+        Tl407ProfilerReadiness: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            view: "profiler";
+            formVersion: string | null;
+            ready: boolean;
+            sourceToken: components["schemas"]["Tl407SourceToken"];
+            errors: {
+                code: components["schemas"]["Tl407ErrorCode"];
+                key: string;
+                row?: number;
+                /** @description As the form prints it, e.g. `7 Nachname` */
+                label: string;
+            }[];
+            warnings: {
+                code: components["schemas"]["Tl407WarningCode"];
+                key: string;
+                row?: number;
+                /** @description As the form prints it, e.g. `7 Nachname` */
+                label: string;
+            }[];
+            overflow: {
+                /** @enum {string} */
+                kind: "table" | "text";
+                key: string;
+                /** @description As the form prints it, e.g. `7 Nachname` */
+                label: string;
+            }[];
+        };
+        Tl407SourceToken: string;
+        /** @enum {string} */
+        Tl407ErrorCode: "unknown_key" | "value_kind_invalid" | "value_not_applicable" | "option_invalid" | "date_invalid" | "time_invalid" | "time_range_reversed" | "identifier_too_long" | "character_unsupported" | "required_missing" | "form_version_unavailable";
+        /** @enum {string} */
+        Tl407WarningCode: "age_implausible" | "entry_before_birth" | "range_reversed" | "school_qualification_none";
+        Tl407ReadinessSummary: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            view: "project_lead";
+            ready: boolean;
+            missing: {
+                key: string;
+                /** @description As the form prints it, e.g. `7 Nachname` */
+                label: string;
+            }[];
+        };
+        Tl407Generation: {
+            /** Format: uuid */
+            documentId: string;
+            formVersion: string;
+            anlage: boolean;
+        };
+        Tl407GenerationInput: {
+            sourceToken: components["schemas"]["Tl407SourceToken"];
+            confirmWarnings: components["schemas"]["Tl407WarningCode"][];
         };
         DevStaffUser: {
             /** Format: uuid */

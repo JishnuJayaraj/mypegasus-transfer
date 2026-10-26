@@ -10,11 +10,11 @@ import { DocumentDeleteReason, DocumentReviewReason, DocumentReviewState } from 
 const utc = z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" });
 
 /**
- * The types the upload routes take (Q142, *assumed*): those whose operations are decided; any
- * other type is `document_type_not_supported` until its slice.
+ * The types the upload routes take (Q142, *assumed*): those whose operations are decided and
+ * that aren't generated; any other type is `document_type_not_supported`.
  */
 export const uploadableDocumentTypes: readonly DocumentType[] = documentTypeCatalog.types
-  .filter((entry) => entry.operations !== "undecided")
+  .filter((entry) => entry.operations !== "undecided" && entry.operations !== "generated")
   .map((entry) => entry.type);
 
 /** Where an upload came from, as `document_added` records it. */

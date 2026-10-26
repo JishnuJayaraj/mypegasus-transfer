@@ -284,6 +284,7 @@ describe("mayPerformOperation (Q60, Q80)", () => {
       cv: "PL",
       participant_upload: "PL",
       qualification_certificate: "PL",
+      tl407_form: "",
     });
   });
 

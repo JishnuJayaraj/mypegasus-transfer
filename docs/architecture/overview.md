@@ -111,7 +111,9 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   Noto Sans subset in `fonts/` (OFL). `@transfer/forms/load` (Node only) reads and checks the
   files; the rules (form input, validation, row order, overflow, the Anlage) are in
   `packages/domain/src/forms` (ba-forms.md, the registry as built). Merged versions are immutable
-  like the Agentur templates.
+  like the Agentur templates. The API reads the registry from `<CONFIG_DIR>/forms/` (the bundle
+  copies it next to the configuration) or the repo, on first use (`apps/api/src/forms`: the
+  registry and the TL 407's readiness and generation, ADR-0006 as built 2026-10-26).
 - `fixtures/`: synthetic test files only (e.g. filled test forms, `imports/` for the Excel/CSV
   import).
 

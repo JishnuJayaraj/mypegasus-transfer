@@ -254,7 +254,8 @@
       "profiling_exception_evidence": "Nachweis zur Ausnahme vom Profiling",
       "cv": "Lebenslauf",
       "participant_upload": "Sonstige Unterlagen",
-      "qualification_certificate": "Zeugnisse und Nachweise"
+      "qualification_certificate": "Zeugnisse und Nachweise",
+      "tl407_form": "Profiling-Bogen (erzeugt, nicht unterschrieben)"
     },
     "hints": {
       "cv": "Ihr aktueller Lebenslauf.",

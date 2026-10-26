@@ -53,13 +53,19 @@ export function documentFileName(name: string): string | null {
   return length >= 1 && length <= 200 ? cleaned : null;
 }
 
-/** The download name of a document that keeps no file name (Q148): `<type>-<date>.<ext>`. */
+/** A generated form is saved under its form code (data-protection.md, generated forms). */
+const downloadStems: Partial<Record<DocumentType, string>> = { tl407_form: "tl407" };
+
+/**
+ * The download name of a document that keeps no file name (Q148): `<type>-<date>.<ext>`, a
+ * generated form `<form code>-<date>.pdf`.
+ */
 export function generatedDocumentFileName(
   type: DocumentType,
   date: IsoDate,
   mediaType: DocumentMediaType,
 ): string {
-  return `${type}-${date}.${extensions[mediaType]}`;
+  return `${downloadStems[type] ?? type}-${date}.${extensions[mediaType]}`;
 }
 
 /**

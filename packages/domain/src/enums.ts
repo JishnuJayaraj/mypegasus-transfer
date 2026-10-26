@@ -33,5 +33,10 @@ export const ParticipantRetentionClass = z.enum([
   // The structured health and disability yes/no answers: 3 months after exit or with the
   // non-signer deletion (data-protection.md, retention; Q141)
   "health_record",
+  // The generated, unsigned forms (data-protection.md, generated forms; Q179): the file goes 30
+  // days after a newer generation or its accepted signed scan, 90 days after an abandoned
+  // generation, 30 days after the participation's terminal status (`workingCopyExpiry`); the row
+  // and its provenance stay as the tombstone
+  "form_working_copy",
 ]);
 export type ParticipantRetentionClass = z.infer<typeof ParticipantRetentionClass>;

@@ -254,7 +254,8 @@
       "profiling_exception_evidence": "Evidence for the profiling exception",
       "cv": "CV",
       "participant_upload": "Other documents",
-      "qualification_certificate": "Certificates and references"
+      "qualification_certificate": "Certificates and references",
+      "tl407_form": "Profiling form (generated, unsigned)"
     },
     "hints": {
       "cv": "Your current CV.",

@@ -32,6 +32,7 @@ export const testEnv: Env = {
   storageAdapter: "memory",
   storageDir: "unused",
   virusScanAdapter: "mock",
+  pdfAdapter: "mock",
 };
 
 export const origin = testEnv.appOrigins[0]!;
@@ -54,6 +55,7 @@ export function testApp(
     uploadSlots?: Deps["uploadSlots"];
     documentPurges?: Deps["documentPurges"];
     reminders?: Deps["reminders"];
+    pdfRenderer?: Deps["pdfRenderer"];
   } = {},
 ) {
   const logs: string[] = [];
@@ -77,6 +79,7 @@ export function testApp(
     uploadSlots: options.uploadSlots,
     documentPurges: options.documentPurges,
     reminders: options.reminders,
+    pdfRenderer: options.pdfRenderer,
     detached,
   });
   return { app, db, logs, detached };

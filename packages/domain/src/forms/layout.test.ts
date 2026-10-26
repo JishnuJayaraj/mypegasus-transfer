@@ -48,6 +48,19 @@ describe("layoutForm (ba-forms.md, overflow)", () => {
     expect([anlage, notFitting]).toEqual([null, []]);
   });
 
+  it("names its overflow by key, each once", () => {
+    expect(layout({}).overflow).toEqual([]);
+    expect(layout({ notes: "aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj" }).overflow).toEqual(
+      [{ kind: "text", key: "notes" }],
+    );
+    const note = "Fachkraft Lagerlogistik";
+    const sessions: FormRow[] = [1, 2, 3, 4].map((day) => ({ date: `2091-02-0${day}`, note }));
+    expect(layout({}, { sessions }).overflow).toEqual([
+      { kind: "text", key: "sessions.note" },
+      { kind: "table", key: "sessions" },
+    ]);
+  });
+
   it("skips a field that doesn't apply to the project type", () => {
     const { fields } = layoutForm(
       { ...input({ tg: true, beeFrom: "2091-04-01" }), projectType: "ta_only" },

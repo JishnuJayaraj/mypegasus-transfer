@@ -161,6 +161,11 @@ export function HistoryTab({
         });
       case "profiling_declarations_recorded":
         return list(details.fields).map(label).join(", ");
+      // A generated form by its version and Anlage (data-protection.md, generated forms).
+      case "form_generated":
+        return t(details.anlage === true ? "history.formWithAnlage" : "history.form", {
+          version: (text(details.formVersion) ?? "").replace("-", "/"),
+        });
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");
       default:

@@ -15,6 +15,9 @@ const baseDefaults = fileURLToPath(
 const organisation = fileURLToPath(
   new URL("../../packages/config/organisation.json", import.meta.url),
 );
+// The form registry and its font (ADR-0009), read by generation at runtime.
+const forms = fileURLToPath(new URL("../../packages/forms/templates", import.meta.url));
+const fonts = fileURLToPath(new URL("../../packages/forms/fonts", import.meta.url));
 
 export default defineConfig({
   build: {
@@ -47,6 +50,8 @@ export default defineConfig({
         cpSync(templates, "dist/config/templates", { recursive: true });
         cpSync(baseDefaults, "dist/config/base-defaults.json");
         cpSync(organisation, "dist/config/organisation.json");
+        cpSync(forms, "dist/config/forms/templates", { recursive: true });
+        cpSync(fonts, "dist/config/forms/fonts", { recursive: true });
       },
     },
   ],

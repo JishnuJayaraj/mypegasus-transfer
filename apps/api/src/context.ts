@@ -4,6 +4,7 @@ import type {
   DevelopmentOutbox,
   FileStorage,
   Mailer,
+  PdfRenderer,
   SmsSender,
   VirusScanner,
 } from "@transfer/adapters";
@@ -20,6 +21,7 @@ import type { PortalSession } from "./portal-session";
 import type { Detached } from "./detached";
 import type { DocumentFiles } from "./documents/files";
 import type { DocumentPurgeQueue } from "./documents/purge";
+import type { FormRegistry } from "./forms/registry";
 import type { GuardFactsProvider } from "./participations/guard-facts";
 import type { ReminderQueue } from "./reminders/send";
 
@@ -63,6 +65,10 @@ export interface Deps {
   documentPurges?: DocumentPurgeQueue | undefined;
   /** pg-boss in this process; without it each reminder's job runs after the commit (`detached`). */
   reminders?: ReminderQueue | undefined;
+  /** The form registry (ADR-0009); `CONFIG_DIR`'s copy or the repo's unless a test passes one. */
+  formRegistry?: FormRegistry | undefined;
+  /** PDF generation (ADR-0006); `PDF_ADAPTER`'s unless a test passes one. */
+  pdfRenderer?: PdfRenderer | undefined;
 }
 
 export interface AppEnv {

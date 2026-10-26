@@ -163,3 +163,17 @@ Not adapters:
   → `<kind>-v<version>.csv`, `;`-separated, UTF-8 with BOM, a header row, CRLF, quoted where a
   cell holds `;`, `"` or a line break; a cell starting with `=`, `+`, `-`, `@`, a tab or a carriage
   return gets a leading `'` (Q159). `EXPORT_ADAPTER=csv`.
+
+## As built 2026-10-26: the renderer in the API (Slice 6, PR 6-3a)
+
+- `PDF_ADAPTER` (`mock` by default, `gotenberg`) and `GOTENBERG_URL` are parsed with the API's
+  environment; `gotenberg` without its URL refuses to start. The API builds the renderer on the
+  first generation (`createPdfRenderer` with the registry's font), so a start without forms or
+  Gotenberg costs nothing; a test passes its own (`Deps.pdfRenderer`).
+- The form registry (`apps/api/src/forms/registry.ts`, ADR-0009) is loaded on first use from
+  `<CONFIG_DIR>/forms/` (the bundle copies `packages/forms/templates` and `fonts` there, next to
+  the configuration) or the repo's `packages/forms`; every version is checked by hash as it loads.
+  The bundle's npm dependencies include `pdf-lib` and `@pdf-lib/fontkit`.
+- A generated packet is stored like an upload (encrypted, `FileStorage`); without a store it is
+  `503 storage_unavailable`, without an HTML renderer a packet that needs its Anlage `503
+  pdf_unavailable`. The e2e server runs `PDF_ADAPTER=mock`.

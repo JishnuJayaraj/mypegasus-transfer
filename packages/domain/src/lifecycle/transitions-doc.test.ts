@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { fieldCorrectionAuthority } from "../access/corrections";
+import { documentCorrectionAuthority, fieldCorrectionAuthority } from "../access/corrections";
 import { OperationKind } from "../access/permissions";
 import { DocumentType } from "../documents/catalog";
 import { edges } from "./edges";
@@ -25,7 +25,8 @@ it("renders every edge, guard and operation (docs/domain/generated/lifecycle-tra
   expect(rows("Guards")).toHaveLength(guardIds.length);
   expect(rows("Operations without a status change")).toHaveLength(
     OperationKind.options.length +
-      DocumentType.options.length +
+      // a generated form is no evidence: nobody requests its correction
+      DocumentType.options.filter((type) => documentCorrectionAuthority[type].length > 0).length +
       Object.keys(fieldCorrectionAuthority).length,
   );
   expect(doc).toContain(

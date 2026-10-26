@@ -37,6 +37,11 @@ export const retentionPeriods = {
   // The BA evidence set (ADR-0008, stage two; Q3, Q64): signed TL 407 and Kug 200b scans; follows
   // the funding's retention, set by Slice 7.
   evidence_set: "unset",
+  // Q179 (accepted, periods awaiting the DPO): a generated form's file 30 days after a newer
+  // generation or its accepted signed scan, 90 days after an abandoned generation, 30 days after the
+  // participation's terminal status (`workingCopyExpiry`), a legal hold suspending each; the row
+  // and its provenance stay as the tombstone.
+  form_working_copy: "unset",
   // No personal data: the retention job never touches it.
   reference_data: "never",
 } as const;
@@ -223,6 +228,14 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   // its type's class.
   document: {
     retentionClass: perRowRetention,
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // A generated form's provenance (data-protection.md, generated forms; Q179): the document, form
+  // code and version, the source revisions, the declarations it printed, the confirmed warning
+  // codes, the Anlage, who generated it and when. Its row stays when the working copy's file goes.
+  form_generation: {
+    retentionClass: "form_working_copy",
     dataClass: "confidential",
     holdsParticipantData: true,
   },
@@ -703,6 +716,9 @@ const withoutFields = new Set([
   // Documents aren't fields: their files and metadata are classified by the document type catalog.
   "document",
   "document_link",
+  // A generated form's provenance: the declarations it holds are those the form printed, part of
+  // the generated document (data-protection.md, generated forms), not the pending fields.
+  "form_generation",
 ]);
 
 /**

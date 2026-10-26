@@ -169,6 +169,8 @@ export const auditProjection: {
   // The profiling record (Q193): a session by its date, the declarations by their keys.
   profiling_session_changed: shown("profiling", { details: ["action", "sessionId", "date"] }),
   profiling_declarations_recorded: shown("profiling", { details: ["fields"] }),
+  // A generated form (Q179): which form and version, the document and the Anlage.
+  form_generated: shown("case", { details: ["formCode", "formVersion", "documentId", "anlage"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

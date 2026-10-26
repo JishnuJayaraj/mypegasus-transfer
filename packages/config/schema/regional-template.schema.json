@@ -185,7 +185,8 @@
                         "profiling_exception_evidence",
                         "cv",
                         "participant_upload",
-                        "qualification_certificate"
+                        "qualification_certificate",
+                        "tl407_form"
                       ]
                     },
                     "accepted": {
@@ -494,7 +495,8 @@
                         "profiling_exception_evidence",
                         "cv",
                         "participant_upload",
-                        "qualification_certificate"
+                        "qualification_certificate",
+                        "tl407_form"
                       ]
                     },
                     "accepted": {
@@ -713,7 +715,8 @@
                   "participation_record",
                   "personnel_file",
                   "evidence_set",
-                  "health_record"
+                  "health_record",
+                  "form_working_copy"
                 ]
               },
               "x-label": {
@@ -937,7 +940,8 @@
                         "profiling_exception_evidence",
                         "cv",
                         "participant_upload",
-                        "qualification_certificate"
+                        "qualification_certificate",
+                        "tl407_form"
                       ]
                     },
                     "accepted": {
@@ -1164,7 +1168,8 @@
                   "participation_record",
                   "personnel_file",
                   "evidence_set",
-                  "health_record"
+                  "health_record",
+                  "form_working_copy"
                 ]
               },
               "x-label": {

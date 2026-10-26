@@ -1,7 +1,12 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import {
+  and,
   asc,
+  desc,
+  document,
   eq,
+  formGeneration,
+  isNull,
   participantProfiling,
   participantProfilingAssessment,
   participantProfilingHealthAssessment,
@@ -13,6 +18,7 @@ import {
 } from "@transfer/db";
 import {
   assessmentLines,
+  documentCapabilities,
   mayReadUnemploymentPeriod,
   mayRecordProfiling,
   mayUseProfilingAssessment,
@@ -29,7 +35,9 @@ import {
   UnemploymentPeriodInput,
   unemploymentPeriodWarnings,
   UnemploymentPeriodView,
+  tl407ReadinessViewer,
   type AssessmentFieldKey,
+  type DocumentReviewState,
   type PermissionTarget,
   type ProfilingIssue,
   type StaffUser,
@@ -39,6 +47,7 @@ import { projectAccess } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
 import { fieldEncryptionKey } from "../field-encryption";
+import { formRegistry } from "../forms/registry";
 import { createStatusService, StatusServiceError } from "../participations/status-service";
 import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -57,11 +66,13 @@ const ParticipationParams = z.object({ participationId: z.uuid() });
 
 type Found = {
   projectId: string;
+  status: string;
   profilingStatus: z.infer<typeof ProfilingView>["profilingStatus"];
   statusVersion: number;
   profilingDoneOn: string | null;
 };
-type Access = { subject: StaffSubject; target: PermissionTarget; found: Found };
+export type ProfilingAccess = { subject: StaffSubject; target: PermissionTarget; found: Found };
+type Access = ProfilingAccess;
 
 /** 409 with the code, for a stale revision or status version. */
 const conflict = (c: Context<AppEnv>, code: string) =>
@@ -155,6 +166,25 @@ export async function readProfilingRecord(db: Database, participationId: string)
         .select({ present: participantResidenceSocialData.unemploymentPeriodPresent })
         .from(participantResidenceSocialData)
         .where(eq(participantResidenceSocialData.participationId, participationId));
+      // The generated TL 407s whose file is live, latest first (data-protection.md, generated forms).
+      const tl407Forms = await tx
+        .select({
+          documentId: formGeneration.documentId,
+          formVersion: formGeneration.formVersion,
+          generatedAt: utc(formGeneration.generatedAt),
+          anlage: formGeneration.anlage,
+          reviewState: document.reviewState,
+        })
+        .from(formGeneration)
+        .innerJoin(document, eq(document.id, formGeneration.documentId))
+        .where(
+          and(
+            eq(formGeneration.participationId, participationId),
+            eq(formGeneration.formCode, "tl407"),
+            isNull(document.deletedAt),
+          ),
+        )
+        .orderBy(desc(formGeneration.generatedAt), desc(formGeneration.id));
       return {
         profilingStatus: current!.profilingStatus,
         statusVersion: current!.statusVersion,
@@ -173,6 +203,7 @@ export async function readProfilingRecord(db: Database, participationId: string)
           recorded: recordedFields(assessment as Record<string, unknown> | undefined, health),
           writtenAt: (assessment?.writtenAt as string | undefined) ?? null,
         },
+        tl407Forms,
       };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
@@ -180,7 +211,7 @@ export async function readProfilingRecord(db: Database, participationId: string)
 }
 
 /** The terminal statuses: the record takes no ordinary writes (`participation_closed`). */
-const closedStatuses: ReadonlySet<string> = new Set(["withdrawn", "ta_completed", "exited"]);
+export const closedStatuses: ReadonlySet<string> = new Set(["withdrawn", "ta_completed", "exited"]);
 
 /** A refusal of the profiling functions as its problem, or rethrown. */
 function refused(c: Context<AppEnv>, error: unknown) {
@@ -204,46 +235,51 @@ function refused(c: Context<AppEnv>, error: unknown) {
 const context = (c: Context<AppEnv>, user: StaffUser = sessionUser(c)) =>
   auditContext(user.id, c.get("requestId") as string);
 
+/**
+ * The participation and the viewer's access to its profiling: a 404 for no participation, a
+ * project the viewer can't see, or an unassigned consultant; a 403 for a role without the tab.
+ */
+export async function profilingAccess(
+  db: Database,
+  c: Context<AppEnv>,
+  participationId: string,
+): Promise<{ ok: true; access: Access } | { ok: false; response: Response }> {
+  const [found] = await db
+    .select({
+      projectId: participation.projectId,
+      status: participation.status,
+      profilingStatus: participation.profilingStatus,
+      statusVersion: participation.statusVersion,
+      profilingDoneOn: participation.profilingDoneOn,
+    })
+    .from(participation)
+    .where(eq(participation.id, participationId));
+  if (!found) return { ok: false, response: problem(c, "not-found") };
+  const { subject, visible, regionId } = await projectAccess(db, sessionUser(c), found.projectId);
+  if (!visible) return { ok: false, response: problem(c, "not-found") };
+  const target = { projectId: found.projectId, regionId, participationId };
+  const view = mayViewProfiling(subject, target);
+  if (!view.ok) {
+    const hidden = view.because === "not_assigned";
+    return { ok: false, response: problem(c, hidden ? "not-found" : "forbidden") };
+  }
+  return { ok: true, access: { subject, target, found } };
+}
+
 export function profilingRoutes(deps: Deps) {
   const { db, clock } = deps;
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const statusService = createStatusService({ db, clock });
   const fieldKey = fieldEncryptionKey(deps.env.fieldEncryptionKey!);
+  const registry = deps.formRegistry ?? formRegistry(deps.env.configDir);
+  const access = (c: Context<AppEnv>, participationId: string) =>
+    profilingAccess(db, c, participationId);
 
   /** Calls a write function; its result is the revision of exactly what it stored. */
   async function stored(query: ReturnType<typeof sql>): Promise<number> {
     const { rows } = await db.execute<{ result: number }>(query);
     return rows[0]!.result;
-  }
-
-  /**
-   * The participation and the viewer's access to its profiling: a 404 for no participation, a
-   * project the viewer can't see, or an unassigned consultant; a 403 for a role without the tab.
-   */
-  async function access(
-    c: Context<AppEnv>,
-    participationId: string,
-  ): Promise<{ ok: true; access: Access } | { ok: false; response: Response }> {
-    const [found] = await db
-      .select({
-        projectId: participation.projectId,
-        profilingStatus: participation.profilingStatus,
-        statusVersion: participation.statusVersion,
-        profilingDoneOn: participation.profilingDoneOn,
-      })
-      .from(participation)
-      .where(eq(participation.id, participationId));
-    if (!found) return { ok: false, response: problem(c, "not-found") };
-    const { subject, visible, regionId } = await projectAccess(db, sessionUser(c), found.projectId);
-    if (!visible) return { ok: false, response: problem(c, "not-found") };
-    const target = { projectId: found.projectId, regionId, participationId };
-    const view = mayViewProfiling(subject, target);
-    if (!view.ok) {
-      const hidden = view.because === "not_assigned";
-      return { ok: false, response: problem(c, hidden ? "not-found" : "forbidden") };
-    }
-    return { ok: true, access: { subject, target, found } };
   }
 
   /**
@@ -260,6 +296,14 @@ export function profilingRoutes(deps: Deps) {
     const records = mayRecordProfiling(subject, target).ok;
     const assesses = mayUseProfilingAssessment(subject, target, "read");
     const open = !record.closed;
+    const today = clock.today();
+    const opens = (reviewState: DocumentReviewState) =>
+      documentCapabilities(
+        subject,
+        target as PermissionTarget & { participationId: string },
+        { kind: "normal" },
+        { type: "tl407_form", addedByParticipant: false, reviewState },
+      ).open;
     return {
       participationId,
       profilingStatus: record.profilingStatus,
@@ -273,12 +317,20 @@ export function profilingRoutes(deps: Deps) {
         unemploymentPeriodRecorded: record.unemploymentPeriodRecorded,
       }),
       ...(assesses && { assessment: record.assessment }),
+      tl407Forms: record.tl407Forms.map(({ reviewState, ...form }, index) => ({
+        ...form,
+        latest: index === 0,
+        versionInUse: registry.versionInUse("tl407", form.formVersion, today),
+        capabilities: { open: opens(reviewState) },
+      })),
       transitions,
       capabilities: {
         record: records && open,
         readAssessment: assesses,
         writeAssessment: open && mayUseProfilingAssessment(subject, target, "write"),
         readUnemploymentPeriod: mayReadUnemploymentPeriod(subject, target),
+        generateTl407: records && open,
+        readTl407Readiness: tl407ReadinessViewer(subject, target) !== null,
       },
     };
   }

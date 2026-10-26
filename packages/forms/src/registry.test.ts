@@ -1,6 +1,11 @@
 import { readFileSync } from "node:fs";
 import fontkit from "@pdf-lib/fontkit";
-import { mappedFieldNames, printableRanges, type FieldMap } from "@transfer/domain";
+import {
+  mappedFieldNames,
+  printableRanges,
+  tl407FieldSource,
+  type FieldMap,
+} from "@transfer/domain";
 import {
   PDFCheckBox,
   PDFDict,
@@ -226,6 +231,16 @@ describe("form registry (ADR-0009)", () => {
         ({ field }) => field.split("_")[0],
       ),
     ).toEqual(["13", "14", "15", "16", "17", "18", "19"]);
+  });
+
+  it("names the source of every TL 407 key, so the PL's readiness can filter it (data-protection.md)", () => {
+    for (const { formCode, version } of versions.filter((entry) => entry.formCode === "tl407")) {
+      const { entries } = loadFormVersion(formCode, version).fieldMap;
+      const keys = entries.flatMap((entry) =>
+        entry.kind !== "table" && entry.group ? [entry.key, entry.group] : [entry.key],
+      );
+      for (const key of keys) expect(() => tl407FieldSource(key)).not.toThrow();
+    }
   });
 });
 

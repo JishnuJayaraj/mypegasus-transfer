@@ -35,6 +35,7 @@ describe("readableDocumentTypes", () => {
       "asu_proof",
       "profiling_exception_evidence",
       ...own,
+      "tl407_form",
     ]);
     expect(readableDocumentTypes(subject("back_office"), target, accessModes.normal)).toEqual([
       "dsv_signed_scan",
