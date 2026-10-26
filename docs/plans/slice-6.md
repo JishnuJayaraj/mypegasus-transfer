@@ -10,8 +10,10 @@ the readiness projection, the export lifecycle and the working copies' expiry. Q
 (the blanks are in `packages/forms`); Q177–Q194 carry the review's answers (`accepted`; Q181, Q182
 and Q185 `verify` for their Agentur or legal check; 🔒 rows still need their DPO confirmation
 before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was committed and
-checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. Q1 stays `verify`. This is not an external
-DPO, legal, works-council or Agentur confirmation.
+checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. 6-3 came to
+about 4,200 lines and splits into 6-3a and 6-3b (the owner's choice, 2026-10-26); 6-3a recorded its
+readings as Q199. Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
+confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
 `PdfRenderer`, ADR-0006), the overflow attachment, scan upload, Agentur submission status; from
@@ -104,7 +106,7 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
     data), the declarations 16 and 17 and place and date 18–19 stay blank: the participant ticks,
     writes and signs by hand. Missing data stays blank for the participant to write; staff see the
     blank `*` fields before printing, and the review checks the completed paper (D17).
-- **D8. Generated forms are documents** (Q179): types `tl407_form` (6-3) and `kug200b_form` (6-4),
+- **D8. Generated forms are documents** (Q179): types `tl407_form` (6-3a) and `kug200b_form` (6-4),
   unsigned, immutable, of the signed type's access category and class, stored encrypted like every
   file, named `tl407-<date>.pdf` on download, opened only through the logged opening. Each keeps
   its **provenance**: form code and version, the generation's id, the revisions of the profile,
@@ -278,7 +280,7 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
     "Kenntnisdatum klären", never as overdue. Informational; **no automatic reminder** until Q1 is
     confirmed (Q152). The UI never says that `ta_only` participants have no duty to register.
 - **D23. Real guard facts** (`dbGuardFacts`, replacing `failClosedFacts` for the facts it reads):
-  `tl407Signed` and `profilingDone` (6-3), `asuRegisteredWithProof` (6-4), the exception evidence
+  `tl407Signed` and `profilingDone` (6-3b), `asuRegisteredWithProof` (6-4), the exception evidence
   (6-7); each excludes quarantined and invalidated evidence and carries the database instant of the
   complete fact (the snapshot rule). The DSV facts stay fail closed until Slice 7, so no
   participation enters the TG on real facts before it; the seed overlays its synthetic facts.
@@ -401,13 +403,14 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
   function. Nothing varies per Agentur in code: channels, original, lead time, outdated versions and
   an accepted alternative to the Kug 200a are resolved settings; the Kug 200b rules are base rules.
 - **D33. Required scenarios**, each an integration test in its PR (the review's list):
-  - external paper signed before the platform's generation is recorded without re-signing (6-3);
+  - external paper signed before the platform's generation is recorded without re-signing (6-3b);
   - a BA declaration changed after printing doesn't change the signed record, also under a
-    concurrent edit during the review (6-3);
-  - the PL can't obtain section C warnings or overflow through readiness (6-3);
+    concurrent edit during the review (6-3b);
+  - the PL can't obtain section C warnings or overflow through readiness (6-3a);
   - a TL 407 scan accepted after the TG start's scheduled run counts only for a reconciliation
-    (6-3);
-  - an abandoned unsigned form has a cleanup path and its scan provenance survives the purge (6-3,
+    (6-3b);
+  - an abandoned unsigned form has a cleanup path (6-3a) and its scan provenance survives the purge
+    (6-3b; both
     as a retention-plan test while periods are `unset`);
   - an old proof linked today gives a fact recorded today, not before (6-4); the Kug 200b route
     proven by the batch submission and the `online_self` route by the attestation with its date,
@@ -434,20 +437,22 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
 ## PRs
 
 One planned PR = one branch, each based on `main` after the PRs it needs merged (none stacked).
-The approved seven PRs become nine: the official Kug 200a takes 6-5 past the limit, so it splits
+The approved seven PRs become ten: the official Kug 200a takes 6-5 past the limit, so it splits
 into 6-5a (Kug 200b batches with the Kug 200a) and 6-5b (TL 407 submission and escalation), as the
 review allowed; the approved corrections of wrong evidence are a concern of their own (6-8, after
-its three targets exist). Quarantine comes with the documents in 6-3. The last PR to merge archives
-this plan.
+its three targets exist). 6-3 came to about 4,200 lines and splits along its two halves, the
+generated form (6-3a) and the signed paper (6-3b); quarantine comes with the scans in 6-3b. The
+last PR to merge archives this plan.
 
 | PR | Scope | Needs | Est. lines |
 |---|---|---|---|
 | 6-1 | Forms and PDFs (D1–D7): `packages/forms` (manifests, field maps with applicability, font, Anlage template, generator and checks), `PdfRenderer`, `Exporter`, the domain's form input, validation, overflow and Anlage; contract tests on the committed blanks | — | ~1,300 |
 | 6-2 | Profiling record and track (D10–D13, the pending declarations of D15): sessions, encrypted section C with the health line's rating only, unemployment period, the profiling-status route, tab "Profiling" | — | ~1,400 |
-| 6-3 | TL 407 (D8, D9, D14–D18, D23): `tl407_form` with provenance, readiness projection, generation, scans `generated` and `external_paper`, signed declarations, the review, quarantine, `tl407Signed`/`profilingDone`, `profiling_done`; e2e | 6-1, 6-2 | ~1,500 |
-| 6-4 | ASU and Kug 200b (D19–D22, D24's print file): the ASU record and attestation with its date, the corrected formula and `knowledgeDate`, Kug 200b generation (single, bulk) and review, declaration 17 and withdrawals, `asu_proof`, rule `when` and base defaults 3, `asuRegisteredWithProof`, tab "Arbeitsuche" | 6-3 | ~1,500 |
+| 6-3a | Generated TL 407 (D8, D9, D16; Q196–Q198 at generation): `tl407_form` with provenance and declaration snapshot, `form_generation`, the class `form_working_copy`, the readiness projection, generation with the confirmed warnings, "Öffnen" and "Neu erzeugen"; e2e to the generated form | 6-1, 6-2 | ~1,900 |
+| 6-3b | Signed TL 407 (D14, D15, D17, D18, D23): scans `generated` and `external_paper`, signed declarations, the review, the PL's deletion before review, quarantine, `tl407Signed`/`profilingDone`, `profiling_done`; e2e to `profiling_done` | 6-3a | ~2,300 |
+| 6-4 | ASU and Kug 200b (D19–D22, D24's print file): the ASU record and attestation with its date, the corrected formula and `knowledgeDate`, Kug 200b generation (single, bulk) and review, declaration 17 and withdrawals, `asu_proof`, rule `when` and base defaults 3, `asuRegisteredWithProof`, tab "Arbeitsuche" | 6-3b | ~1,500 |
 | 6-5a | Kug 200b batches (D24, D25): the Kug 200a field map and fill (Q195), the accepted-alternative setting, the operational index, rechecks, submission, Agentur confirmation; project tab "Agentur" | 6-4 | ~1,300 |
-| 6-5b | TL 407 submission and escalation (D26, D27): attempts, originals, rejections, `tl407_submission`, `tl407_escalated`, compliance escalation, `GET /escalations`, work-list items and filter | 6-3 | ~1,100 |
+| 6-5b | TL 407 submission and escalation (D26, D27): attempts, originals, rejections, `tl407_submission`, `tl407_escalated`, compliance escalation, `GET /escalations`, work-list items and filter | 6-3b | ~1,100 |
 | 6-6 | BA reporting tasks (D28) | — | ~400 |
 | 6-7 | Profiling exceptions (D30): evidence records of both sources, evidence review, fingerprints, request, decision, revocation, the queue "Freigaben" | — | ~1,300 |
 | 6-8 | Corrections (D29): requests and decisions for documents, ASU registrations and BA outcomes in "Freigaben", the purge after an approved wrong-person invalidation, `evidence_invalidated` | 6-4, 6-6, 6-7 | ~1,000 |
@@ -469,10 +474,13 @@ Each PR that changes the document-type catalog takes its next version when it me
   `placement_relevant`), the assessment's shape (no health text) and limits; `JobboerseChoice`
   (`full`, `anonymous_callme`, `anonymous_no_contact`, `none`); `mayRecordProfiling`,
   `mayReadProfilingAssessment`.
-- 6-3: `ScanOrigin` (`generated`, `external_paper`); `scanReviewProblem`; `SignedDeclaration`;
-  `readinessView(viewer, result)` (D16); `tl407SignedFact`, `profilingDoneDefault`;
-  `QuarantineReason` (`suspected_wrong_person`, `suspected_wrong_acceptance`);
-  `ParticipantRetentionClass` adds `form_working_copy`; `workingCopyExpiry` (D9).
+- 6-3a: `ParticipantRetentionClass` adds `form_working_copy`; `workingCopyExpiry` (D9); document
+  catalog version 3 with `tl407_form` (operations `generated`); `tl407Readiness`, the PL's
+  `tl407ReadinessSummary` from presence (D16); `schoolQualificationCheck` and the confirmation
+  `school_qualification_none` (Q196, Q198); `Tl407GenerationInput`; `layoutForm` names its overflow.
+- 6-3b: `ScanOrigin` (`generated`, `external_paper`); `scanReviewProblem`; `SignedDeclaration`;
+  `tl407SignedFact`, `profilingDoneDefault`; `QuarantineReason` (`suspected_wrong_person`,
+  `suspected_wrong_acceptance`).
 - 6-4: `asuDueDate` rewritten with its branches → `{ kind: "statutory", date, branch } | { kind:
   "orientation", date }`; `AsuProofKind` (`kug200b_submission`, `ba_confirmation`,
   `ba_customer_number`), `AttestationSource`, `asuRegistrationProblem`, `asuRegisteredFact` (the
@@ -497,9 +505,9 @@ Each PR that changes the document-type catalog takes its next version when it me
 | `participant_profiling_assessment` | 6-2 | section C lines but health (rating and text ciphertexts, presence), the "andere" labels, Gesamteinschätzung, weiteres Vorgehen; key id, times | highly confidential / `profiling_assessment` | `personnel_file` (Q192) |
 | `participant_profiling_health_assessment` | 6-2 | the health line's rating ciphertext and presence; no text | special category / `profiling_assessment` | `health_record` (Q40) |
 | `participant_residence_social_data` | 6-2 | adds the unemployment period's ciphertexts and presence | highly confidential / `residence_social` | `personnel_file` |
-| `document` | 6-3, 6-4 | adds `form_code`, `form_version`, `scan_origin`, `generation_document_id`, `signed_on`, `countersigned_on`, the review's confirmations, quarantine (reason, by, at, lifted by/at), `invalidated_by_correction`; `CHECK`s by type | by type | by type: `form_working_copy` for the generated forms (Q179) |
-| `form_generation` | 6-3 | the generated document, the source revisions, the declaration snapshot | confidential / `confidential` | `form_working_copy` (its provenance survives the file as the tombstone) |
-| `signed_declaration` | 6-3 (+6-4) | the scan, form code and version, the declaration codes and values as marked, the signature date, recorded by/at; immutable | confidential / `confidential` | `participation_record` (part of the signed form's evidence) |
+| `document` | 6-3b, 6-4 | adds `form_code`, `form_version`, `scan_origin`, `generation_document_id`, `signed_on`, `countersigned_on`, the review's confirmations, quarantine (reason, by, at, lifted by/at), `invalidated_by_correction`; `CHECK`s by type | by type | by type: `form_working_copy` for the generated forms (Q179) |
+| `form_generation` | 6-3a | the generated document, form code and version, the source revisions (profile, record, assessment, unemployment period), the declaration snapshot, the confirmed warnings, the Anlage, generated by/at | confidential / `confidential` | `form_working_copy` (its provenance survives the file as the tombstone) |
+| `signed_declaration` | 6-3b (+6-4) | the scan, form code and version, the declaration codes and values as marked, the signature date, recorded by/at; immutable | confidential / `confidential` | `participation_record` (part of the signed form's evidence) |
 | `participant_identifier_data` | 6-4 | adds the BA-Kundennummer's ciphertext and presence | highly confidential / `identifiers` | `participation_record` (Q88) |
 | `participant_details` | 6-4 | adds `knowledge_date` | confidential / `confidential` | `personnel_file` |
 | `asu_registration` | 6-4 (+6-5a, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; the offer's decline, `confirmed_on`, the withdrawal's BA notice date | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
@@ -518,8 +526,10 @@ Enum values are added in their PR's generated migration (`audit_event_type`, `do
 - 6-2: `write_profiling_sessions`, `write_profiling_declarations` (pending values),
   `write_profiling_assessment` / `read_profiling_assessment` (the key per call),
   `write_unemployment_period`; the route uses the existing `change_participation_status`.
-- 6-3: `record_form_generation` (the document, its provenance and snapshot, `form_generated`, the
-  confirmed warnings' `warning_confirmed`); `add_document` takes the origin and generation of a
+- 6-3a: `record_form_generation` (the document, its provenance and snapshot, `form_generated`, the
+  confirmed warnings' `warning_confirmed`; `source_changed` when a source revision moved);
+  `delete_document` refuses a generated form (`document_immutable`).
+- 6-3b: `add_document` takes the origin and generation of a
   scan; `review_document` takes the signature dates, the confirmations and the signed declarations;
   `quarantine_document`, `lift_document_quarantine`; `delete_document` lets the PL delete a scan
   before its review; the facts' reader `tl407_facts` (excluding quarantined and invalidated ones).
@@ -544,8 +554,8 @@ Enum values are added in their PR's generated migration (`audit_event_type`, `do
 |---|---|---|
 | 6-2 | `GET /participations/{id}/profiling`; `PUT …/profiling/sessions`; `PUT …/profiling/declarations` | the tab; whole writes with `revision` (`409 stale_revision`) |
 | 6-2 | `GET`/`PUT …/profiling/assessment`; `PUT …/profiling/unemployment`; `POST …/profiling-status` | the profiler's logged read and writes (`no-store`); the track change (`{ to, effectiveDate?, statusVersion }`) |
-| 6-3 | `GET /participations/{id}/forms/tl407/readiness`; `POST /participations/{id}/forms/tl407` | the per-viewer projection (D16); generation (`{ confirmWarnings }` → `201 { documentId, formVersion, anlage }`) |
-| 6-3 | `POST …/documents` (scans: `origin`, `generationDocumentId`); `POST …/documents/{documentId}/review`; `POST …/documents/{documentId}/quarantine`; `…/quarantine-lift` | scan upload, review with dates, confirmations and declarations; quarantine |
+| 6-3a | `GET /participations/{id}/forms/tl407/readiness`; `POST /participations/{id}/forms/tl407` | the per-viewer projection (D16); generation (`{ confirmWarnings }` → `201 { documentId, formVersion, anlage }`) |
+| 6-3b | `POST …/documents` (scans: `origin`, `generationDocumentId`); `POST …/documents/{documentId}/review`; `POST …/documents/{documentId}/quarantine`; `…/quarantine-lift` | scan upload, review with dates, confirmations and declarations; quarantine |
 | 6-4 | `GET /participations/{id}/asu`; `PUT …/asu/route`; `POST …/asu/registration`; `POST …/asu/proof-link`; `POST …/asu/kug200b-decline`; `POST …/asu/withdrawal`; `POST …/asu/withdrawal-ba-notice`; `PUT …/knowledge-date` | the tab "Arbeitsuche" and its actions |
 | 6-4 | `POST /participations/{id}/forms/kug200b`; `POST /projects/{id}/forms/kug200b` (1–100); `POST /exports/{kind}` → link; `GET /export-content/{token}` | generation, bulk, exports (`attachment`, `no-store`) |
 | 6-5a | `GET /projects/{id}/kug200b-batches`; `POST /projects/{id}/kug200b-batches`; `POST /kug200b-batches/{id}/submission`; `…/discard`; `POST /participations/{id}/asu/confirmation` | candidates and batches; create; "Übermittelt am" (`422 batch_stale` with rows); discard; the Agentur's confirmation |
@@ -589,8 +599,8 @@ a file name, a form's content or a token.
   only, with the note that no health details are recorded), "Gesamteinschätzung", "Weiteres
   Vorgehen", "Erklärungen gegenüber der BA (vorgesehen)"; each sensitive block loaded on
   "Anzeigen", never cached.
-- 6-3: "Profilingbogen (TL 407)": readiness as projected, "Erzeugen", the generated forms ("Öffnen",
-  "Neu erzeugen"), "Unterschriebenen Bogen hochladen" (from a generated form, or "Außerhalb der
+- 6-3a: "Profilingbogen (TL 407)": readiness as projected, "Erzeugen", the generated forms
+  ("Öffnen", "Neu erzeugen"). 6-3b: "Unterschriebenen Bogen hochladen" (from a generated form, or "Außerhalb der
   Anwendung ausgefüllt" with the version), "Prüfen" (dates, signatures, all pages, the declarations
   as marked), "Unter Quarantäne stellen" (reason), "Profiling abschließen" with the date.
 - 6-4: tab "Arbeitsuche": Weg, Kenntnisdatum, "Fällig am" or "Orientierung … – Kenntnisdatum
@@ -691,10 +701,21 @@ a file name, a form's content or a token.
   confirms or corrects it (self-service and assisted permissions); it is persisted and passed to
   `orderEducation` as `kind: "school"`, never inferred. Needed before 6-3 enables generation.
 
-**6-3**
+**6-3a**
 - Readiness: the profiler gets codes, warnings and overflow (each decryption audited); the PL gets
   `ready` and the missing known fields, and the response schema has no warning or overflow property
   for them; generation stores the document with its provenance and declaration snapshot.
+- The working copy's class `form_working_copy` with its expiry triggers; executable periods `unset`
+  (a retention-plan test); the generated form is immutable and opens only through the logged opening.
+- e2e: session, generation.
+- Generation refuses without the persisted school designation of 6-2 (Q196); an unsupported
+  character is explained per field and points to the external-paper path (Q197).
+- The school designation (Q198): an explicit, reviewed "no school qualification" answer is valid;
+  "not yet designated / clarified" is incomplete. No education row is fabricated, and the answer
+  is never inferred from names, recency or an unticked checkbox. The review is tied to the current
+  source values: a later participant edit doesn't inherit an earlier review.
+
+**6-3b**
 - Scans: `generated` must name a generation of the same participation and form; `external_paper`
   needs a registry version; the review needs the dates, the confirmations and the declarations as
   marked; the scenarios of D33 for 6-3.
@@ -702,12 +723,7 @@ a file name, a form's content or a token.
   `profiling_done` refused on a quarantined scan; lifting restores it.
 - The PL deletes a scan before its review; an accepted one is `document_immutable`.
 - e2e: session, generation, scan, acceptance, `profiling_done`.
-- Generation refuses without the persisted school designation of 6-2 (Q196); an unsupported
-  character is explained per field and points to the external-paper path (Q197).
-- The school designation (Q198): an explicit, reviewed "no school qualification" answer is valid;
-  "not yet designated / clarified" is incomplete. No education row is fabricated, and the answer
-  is never inferred from names, recency or an unticked checkbox. The review is tied to the current
-  source values: a later participant edit doesn't inherit an earlier review.
+- The external-paper path is the way out for a name the renderer can't print (Q197).
 
 **6-4**
 - `asuDueDate`: both branches and their boundary; month-end clamps; no knowledge date gives the
@@ -763,9 +779,11 @@ a file name, a form's content or a token.
   (`packages/forms`), `.env.example` (`PDF_ADAPTER`, `GOTENBERG_URL`), organisation configuration.
 - 6-2: process-and-lifecycle.md (the profiling record and track actions), data-protection.md
   (profiling tables, section C storage, the health-detail gate, history rows), ADR-0002.
-- 6-3: data-protection.md (generated forms, provenance, working-copy expiry, scans and their
-  origins, signed declarations, the readiness projection, quarantine), ba-forms.md (declarations
-  bound to the paper), process-and-lifecycle.md (`profiling_done` from the TL 407), ADR-0002.
+- 6-3a: data-protection.md (generated forms, provenance, working-copy expiry, the readiness
+  projection), ba-forms.md (generation as built), ADR-0002, ADR-0006 (the renderer in the API).
+- 6-3b: data-protection.md (scans and their origins, signed declarations, quarantine), ba-forms.md
+  (declarations bound to the paper), process-and-lifecycle.md (`profiling_done` from the TL 407),
+  ADR-0002.
 - 6-4: process-and-lifecycle.md (the corrected ASU formula, the ASU record and its recording
   instant, the offer and withdrawals), regional-variation.md (rule `when`, base defaults 3),
   data-protection.md (declaration 17 as written, the attestation, exports), ADR-0002, ADR-0010.

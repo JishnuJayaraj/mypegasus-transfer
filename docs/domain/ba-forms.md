@@ -168,3 +168,28 @@ Files and checks: ADR-0009, amendment 2026-10-24. The rules, all in `packages/do
   column widths, so the printed PDF keeps every character; nothing is truncated or shrunk. It is
   appended to the TL 407 as one packet (`mergePdfs`) and takes the TL 407's strictest class.
 
+
+## TL 407 generation as built (Slice 6, PR 6-3a)
+
+The storage, access and retention rules are in data-protection.md, generated forms and the
+readiness projection.
+
+- **The check** (`checkTl407`): the version in use on the Berlin date of the request
+  (`form_version_unavailable` without one), `validateFormInput` over `tl407Input` of the
+  decrypted sources, the school designation (`schoolQualificationCheck`, Q196, Q198) and, without
+  errors, the layout with its overflow per table and text (`FormLayout.overflow`). The unemployment
+  period's reversed range is a warning here too (`range_reversed`, key `unemployedUntil`).
+- **Confirmations by code** (`confirmWarnings`): each warning code the check raises must be
+  confirmed, else `422` with the code at `/confirmWarnings`; the codes are the plausibility
+  warnings and `school_qualification_none`, the explicit answer that the participant has no
+  school qualification when no education row is marked (never inferred; Q198, Q199). Only the
+  confirmations the check asked for are recorded and audited (`warning_confirmed`).
+- **The packet:** the filled and flattened TL 407 and, when something overflows, the Anlage
+  rendered by `PdfRenderer.renderHtml` and appended (`mergePdfs`); without an HTML renderer
+  (production before Gotenberg) a packet that needs an Anlage is `503 pdf_unavailable`, a form
+  without one is generated in process.
+- **The declaration snapshot:** the pending Jobbörse choice and BA contact declaration the form
+  printed are stored with the generation (`form_generation`), so the review of a signed scan
+  (6-3b) can compare the paper with what was printed.
+- **Versions:** a generated form whose version is no longer in use shows "Neu erzeugen" before it
+  is signed (Q188, derived); a signed form keeps its version (Q42).
