@@ -400,6 +400,27 @@ generator then. No action now.
   `ParticipationAppointments.bookings[]` adds `followUpOf`, `missedResolution` and `missed`
   (`{ followUp, resolve }` capabilities on a missed booking, else null).
 
+## Note 2026-10-26 (Slice 6, PR 6-2): the profiling record
+
+- `GET /participations/{id}/profiling` (`Profiling`): the track, `statusVersion`, the record's
+  `revision`, the sessions and `transitions[]` (`{ to, allowed, refusal }`) for the PL and the
+  assigned consultant; for the assigned consultant also `declarations`, `assessment` (`revision`,
+  the recorded field keys, never a value) and `unemploymentPeriodRecorded`; absent otherwise.
+  `ParticipationDetail.capabilities.viewProfiling` says whether the tab exists.
+- Writes (the assigned consultant): `PUT …/profiling/sessions` (`ProfilingSessionsInput`),
+  `PUT …/profiling/declarations` (`ProfilingDeclarationsInput`), `PUT …/profiling/assessment`
+  (`ProfilingAssessmentInput`, `values` checked by the domain: `422` with codes at
+  `/values/<line>/<field>`, `health_detail_not_recorded` for any text on the health line),
+  `PUT …/profiling/unemployment` (`UnemploymentPeriodInput`); each answers the new `Profiling`.
+  `409 stale_revision` for a stale revision; session rules `422` at `/sessions/<i>/<field>`.
+- Logged reads, `no-store`: `GET …/profiling/assessment` (`ProfilingAssessmentView`, the assigned
+  consultant) and `GET …/profiling/unemployment` (`UnemploymentPeriodView`, the assigned
+  consultant and back office).
+- `POST …/profiling-status` (`ProfilingStatusInput`: `{ to, effectiveDate?, statusVersion }`):
+  `409 stale_status`, `422` with the failed guard's id (`tl407_signed`) or the lifecycle code.
+- Order: schema (400) → visibility (404, also for an unassigned consultant) → permission (403:
+  back office and the org roles have no tab; the PL writes none of the profiler's data) → state.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

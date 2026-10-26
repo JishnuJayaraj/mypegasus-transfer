@@ -339,6 +339,36 @@ stateDiagram-v2
   **revokes** one that still applies. A passed start leaves it pending for a new start date,
   but it can never authorise entry for the missed date. All closures are audited.
 
+### The profiling record *(accepted, Q192, Q193; as built in Slice 6, PR 6-2; readings Q198)*
+
+The staff app's tab "Profiling" (data-protection.md, the profiling record, for who sees what):
+- **Track actions** (`POST /participations/{id}/profiling-status`, Q60): the PL and the assigned
+  consultant take one step along an edge of the
+  [transitions table](generated/lifecycle-transitions.md) with the participation's
+  `statusVersion` (`409 stale_status`), through the status service and the status function, so
+  every step is audited `status_changed` and checked by `canTransition` with track activity as
+  built (also forward and a refusal while `active_in_tg` under an approved exception, Q74). The
+  buttons: "Teilnahme zugestimmt", "Profiling begonnen", "Abgelehnt" (after a confirmation that
+  names the loss of Transfer-KuG), "Erneut zugestimmt" (before the cutoff, Q77); each step comes
+  with its refusal (`forbidden`, `project_not_active`, `track_inactive`, the guard).
+  `profiling_done` needs `tl407_signed` and `profilingDoneOn` (Q191): refused on the guard until
+  the signed TL 407 is recorded (Slice 6, the TL 407). Back office takes no profiling step.
+- **Sessions** (Q193): date and `von`/`bis` (`hh:mm`), written whole by the assigned consultant
+  with the record's revision (`409 stale_revision`): `bis` after `von` (equal refused), no date
+  after today in Berlin, no two of one day overlapping (touching ends are fine), at most 50. Each
+  session added, changed or removed is audited `profiling_session_changed` (its id and date). The
+  PL reads them. Recording a session doesn't move the track, and a booked consultation is never a
+  session by itself. They are evidence-set data (`participation_record`, Q88).
+- **The pending declarations to the BA** (ba-forms.md, declarations): the Jobbörse choice and the
+  BA contact declaration on the record, `null` while undecided, written by the assigned consultant
+  with the same revision, audited `profiling_declarations_recorded` with the changed keys.
+- **Section C, p. 7 and the unemployment period**: the profiler's, encrypted and each field
+  audited (data-protection.md, the profiling record); the health line keeps its rating only.
+- **The highest school qualification** (Q196): the participant marks one education row in the
+  wizard, the profiler confirms or corrects it with them in assisted mode; the TL 407 lists it
+  first (ba-forms.md, row order). Never inferred.
+- A terminal participation takes no profiling writes (`participation_closed`).
+
 ### DSV track (only `ta_tg`)
 
 ```mermaid

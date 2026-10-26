@@ -10,7 +10,7 @@ the readiness projection, the export lifecycle and the working copies' expiry. Q
 (the blanks are in `packages/forms`); Q177–Q194 carry the review's answers (`accepted`; Q181, Q182
 and Q185 `verify` for their Agentur or legal check; 🔒 rows still need their DPO confirmation
 before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was committed and
-checked in PR 6-1, which also opened Q196 and Q197. Q1 stays `verify`. This is not an external
+checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. Q1 stays `verify`. This is not an external
 DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind

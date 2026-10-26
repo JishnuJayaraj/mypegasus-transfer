@@ -676,6 +676,48 @@ hardening); process-and-lifecycle.md ("Appointment items") holds the rules.
   names `followUpOf`. The internal `booking_missed(booking)` is the domain's `missedBookings` for
   one booking (never null). `record_audit_event` refuses the new type.
 
+## Amendment 2026-10-26: the profiling record (Slice 6, PR 6-2)
+
+Migrations `0067_profiling_record.sql` (generated) and `0068_profiling_record_functions.sql`
+(hand-written, the 0066 hardening); data-protection.md and process-and-lifecycle.md ("The
+profiling record") hold the rules.
+- **Tables:** `participant_profiling` (one row per participation: the pending Jobbörse choice,
+  enum `jobboerse_choice`, and BA contact declaration, who recorded them and when, the `revision`
+  of sessions and declarations), `profiling_session` (date, `time_from` < `time_to` as `hh:mm`,
+  who recorded it and when), `participant_profiling_assessment` (one ciphertext per section C line
+  and per p. 7 text with presence flags, key id, its own `revision`),
+  `participant_profiling_health_assessment` (the health line's rating only) and
+  `participant_residence_social_data.unemployment_period`. Each has `project_id` and a composite
+  FK to the participation. `transfer_app` selects the record and the sessions, of the encrypted
+  tables only keys, presence flags, key ids, revision and times; it writes none of them.
+- **The lock order** (the tables above, extended):
+
+  | Operation | Project lock | Then |
+  |---|---|---|
+  | `write_profiling_sessions`, `write_profiling_declarations` | shared (`lock_participation`) | the participation → `participant_profiling` `FOR UPDATE` → its sessions `FOR UPDATE` (id order) |
+  | `write_profiling_assessment` | shared | the participation → the assessment row → the health row (`FOR UPDATE`) |
+  | `write_unemployment_period` | shared | the participation → the residence row `FOR UPDATE` |
+
+- **Functions** (`SECURITY DEFINER`, granted): the four writes take the context of the assigned
+  consultant acting for themselves (internal `lock_profiler`: `actor_not_allowed` otherwise, also
+  for an `onBehalfOf`; `participation_closed` for a terminal participation).
+  `write_profiling_sessions(participation, context, sessions, revision)`: the whole list, an
+  existing session by id (`session_not_found`), `session_times_reversed`, `session_in_future`
+  (Berlin date, `berlin_today`), `sessions_overlap`, `stale_revision`; audited
+  `profiling_session_changed` per session. `write_profiling_declarations(participation, context,
+  choice, contact, revision)`: audited `profiling_declarations_recorded` with the changed keys.
+  `write_profiling_assessment(participation, context, values, revision, key, key id)`: the whole
+  assessment (`profiling_assessment_valid`), any key on the health line but its rating
+  `health_detail_not_recorded`; one `sensitive_write` per changed field.
+  `read_profiling_assessment(participation, context, key, key id)`: the assigned consultant only,
+  one `sensitive_read` per field. `write_unemployment_period(participation, context, period, key,
+  key id)`: one `sensitive_write`. Encryption, envelope and key id as in the field-encryption
+  amendment. `open_sensitive_fields` and `read_sensitive_fields` are replaced so staff in normal
+  mode read `unemploymentPeriod` like the residence and social answers (the assigned consultant,
+  back office); a participant's or an assisted-mode read of it is `actor_not_allowed`.
+  `record_audit_event` refuses the two new types. The profiling track's route uses the existing
+  `change_participation_status`.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:
