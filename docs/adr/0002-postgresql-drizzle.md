@@ -973,6 +973,14 @@ Functions:
     region's id in `details`. The case is wrapped in `coalesce(…, false)`, so a missing column
     fails the check instead of passing as null.
 
+Queries on one connection:
+- **Queries on one transaction or connection run one after another, never concurrently**: no
+  `Promise.all` (or un-awaited query) on a `tx`, the client of `transactionWithClient`, or a
+  function that may be given one. pg 8 queues such a query with a deprecation warning and pg 9
+  removes that queue. Parallel reads are for the pool (`db`) only, each on its own connection; a
+  read that belongs to a transaction's snapshot never leaves it to run in parallel. The `db` and
+  `api` test projects fail a test on any overlap (`packages/db/src/testing/sequential-queries.ts`).
+
 Migrations:
 - A value added with `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the
   Drizzle migrator runs all pending migrations in one transaction (`packages/db/src/migrate.ts`).
