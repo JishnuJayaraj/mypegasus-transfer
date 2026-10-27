@@ -12,7 +12,8 @@ and Q185 `verify` for their Agentur or legal check; 🔒 rows still need their D
 before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was committed and
 checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. 6-3 came to
 about 4,200 lines and splits into 6-3a and 6-3b (the owner's choice, 2026-10-26); 6-3a recorded its
-readings as Q199 (accepted in the review of PR #90). Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
+readings as Q199 (accepted in the review of PR #90); 6-3b (the signed TL 407) recorded its readings
+as Q200. Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
 confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind

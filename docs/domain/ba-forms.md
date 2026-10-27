@@ -93,6 +93,10 @@ the BA contact/research consent (notes on the contact fields) are stored on the 
 with date and form version. They are not our consents (Q44). What was signed binds to the paper:
 pending values may change until a signed form is accepted, which records the values actually
 marked on it, its form version and signature date, and a later edit never rewrites them (Q193).
+As built for the TL 407 (Slice 6, PR 6-3b): `signed_declaration`, one row per declaration of the
+accepted scan; for a form printed by the platform the reviewer confirms the generation's snapshot
+("wie gedruckt") or records what is marked, for external paper always what is marked
+(data-protection.md, signed declarations).
 The Kug 200b acknowledgement of TG access to the BA profile (declaration 17) is recorded as
 written and kept as the record `kug200b_profile_access`; whether it is a consent is to verify
 (Q185).
@@ -194,7 +198,23 @@ readiness projection.
   (production before Gotenberg) a packet that needs an Anlage is `503 pdf_unavailable`, a form
   without one is generated in process.
 - **The declaration snapshot:** the pending Jobbörse choice and BA contact declaration the form
-  printed are stored with the generation (`form_generation`), so the review of a signed scan
-  (6-3b) can compare the paper with what was printed.
+  printed are stored with the generation (`form_generation`), so the review of a signed scan can
+  record the paper "as printed" (signed TL 407, below).
 - **Versions:** a generated form whose version is no longer in use shows "Neu erzeugen" before it
   is signed (Q188, derived); a signed form keeps its version (Q42).
+
+## The signed TL 407 as built (Slice 6, PR 6-3b)
+
+The storage, access and retention rules are in data-protection.md, signed scans, signed
+declarations and quarantine; the track in process-and-lifecycle.md, the profiling record.
+
+- **Upload** ("Unterschriebenen Bogen hochladen"): from a generated form of the participation
+  (its version and printed declarations are known) or "Außerhalb der Anwendung ausgefüllt", the way
+  out for paper signed before the platform and for a name the renderer can't print (Q197).
+- **Review** ("Prüfen"): the participant's and the profiler's actual signature dates; both
+  signatures and every page of the packet, the Anlage included; for external paper the registry
+  version printed on it, an expired one included (a signed form keeps its version, Q42); the
+  declarations as printed or as marked. The later signature date is the form's: the default and
+  the earliest `profilingDoneOn` (Q191).
+- **Wrong paper:** "Löschen" by the PL before the review; "Unter Quarantäne stellen" and
+  "Quarantäne aufheben" (Q183); approved corrections follow with 6-8.

@@ -351,8 +351,21 @@ The staff app's tab "Profiling" (data-protection.md, the profiling record, for w
   buttons: "Teilnahme zugestimmt", "Profiling begonnen", "Abgelehnt" (after a confirmation that
   names the loss of Transfer-KuG), "Erneut zugestimmt" (before the cutoff, Q77); each step comes
   with its refusal (`forbidden`, `project_not_active`, `track_inactive`, the guard).
-  `profiling_done` needs `tl407_signed` and `profilingDoneOn` (Q191): refused on the guard until
-  the signed TL 407 is recorded (Slice 6, the TL 407). Back office takes no profiling step.
+  "Profiling abschließen" (`profiling_done`, Slice 6, PR 6-3b) needs `tl407_signed` and
+  `profilingDoneOn` (Q191): an accepted signed TL 407 that is neither quarantined nor invalidated
+  (data-protection.md, signed scans); `profilingDoneOn` is by default its later actual signature
+  date, never before it (`effective_date_before_signature`) and never in the future; the recording
+  instant stays apart. The status function holds that scan `FOR SHARE` until the commit. Back
+  office takes no profiling step.
+- **The TL 407 facts** (`dbGuardFacts`, the database instant of each complete fact; the snapshot
+  rule under "TG entry guard"): `tl407Signed` is valid on the earliest later signature date of the
+  accepted scans and recorded at that scan's acceptance (after a quarantine, at its lift);
+  `profilingDone` is valid on `profilingDoneOn` and recorded at the later of the status change and
+  the scan, and exists only while such a scan does. A TL 407 accepted after the TG start's
+  scheduled run therefore supports only a reconciliation, never the scheduled entry or its catch-up;
+  a quarantined scan supplies no fact to a later evaluation, and no status is reversed by it. The
+  DSV, ASU and exception-evidence facts stay fail closed until their PRs, so nobody enters the TG on
+  real facts yet; the seed overlays its synthetic facts.
 - **Sessions** (Q193): date and `von`/`bis` (`hh:mm`), written whole by the assigned consultant
   with the record's revision (`409 stale_revision`): `bis` after `von` (equal refused), no date
   after today in Berlin, no two of one day overlapping (touching ends are fine), at most 50. Each
@@ -830,9 +843,11 @@ review is final (a second one is refused, `document_reviewed`); a wrong or rejec
 replaced by a new upload, never in place. Completeness rules (`documentPresent`) count the live
 documents of a type: an `uploaded` or `accepted` one satisfies a rule, `accepted: true` needs an
 accepted one, a rejected one alone gives `not_accepted`, none gives `missing`; a deleted document
-counts nothing. A terminal participation takes no upload (`participation_closed`); staff
-deletions stay possible (a wrong-person upload). Who adds, reviews and deletes is in
-data-protection.md (document operations).
+counts nothing; a quarantined one counts nothing either. A terminal participation takes no
+upload (`participation_closed`); staff deletions stay possible (a wrong-person upload). A signed
+TL 407 scan's acceptance records its actual signature dates, the confirmations and the
+declarations as marked, and it is deleted only before its review (data-protection.md, signed
+scans). Who adds, reviews and deletes is in data-protection.md (document operations).
 
 ### Import and manual creation (Q103, Q104)
 
