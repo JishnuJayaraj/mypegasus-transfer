@@ -303,4 +303,13 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - The work list filters and searches its whole snapshot in memory and renders 25 matching rows
   at a time ("Weitere anzeigen"), so a keystroke over 2,000 participations stays under 100 ms
   without a virtualised table.
+- The work list's performance tests split a hard gate from a soft budget (CLAUDE.md, how we work).
+  The gate is deterministic and always blocks: `GET /projects/{id}/worklist` runs as many SQL
+  statements at 2,000 participations as at 10 (no statement per participation; per-row facts are
+  read for all rows at once, e.g. `GuardFactsProvider.many`); the page sends one work-list request
+  for a whole search session and never the term; 25 rows render while 1,000 match. The budgets,
+  measured on 2,000 synthetic participations: the API answers in under 1 s (best of three),
+  opening "Teilnehmende" to the first result of a typed term in under 3 s, each further keystroke
+  in under 100 ms (Chromium). They are always reported, fail above a ceiling of 5–10 times the
+  budget, and fail at the budget only with `PERF_BUDGET=strict` (`.env.example`).
 - Keep Carbon imports per-component to keep bundles small.

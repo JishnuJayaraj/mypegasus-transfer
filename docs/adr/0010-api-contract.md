@@ -228,7 +228,8 @@ generator then. No action now.
 - **The bounded snapshot, an exception to cursor pagination:** the work list answers the viewer's
   whole scope in one response, evaluated once in one `repeatable read`, read-only transaction (the
   configuration resolved once per placement Agentur, the guard facts from the `GuardFactsProvider`),
-  at most `worklistMaxRows` (5,000); above it `422 worklist_too_large` until the Slice 9
+  with the same number of SQL statements whatever the row count (each per-row fact read for all
+  rows at once, never per participation), at most `worklistMaxRows` (5,000); above it `422 worklist_too_large` until the Slice 9
   performance pass. No cursor, so no page recomputes the project and nothing is ever partial; the
   browser filters and searches it. The dashboard counts the same items by the same filters. Both
   are `Cache-Control: private, no-store`.
