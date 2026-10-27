@@ -137,12 +137,21 @@ export async function loadWorklist(
         await itemBookingsOf(tx, projectId, ids, resolvesHosts),
         await itemNoticesOf(tx, ids),
       ];
+      // Every participation's dated facts in one read where the provider can (the TL 407's).
+      const inputs = rows.map(({ p }) => ({
+        participationId: p.id,
+        currentRequest: exceptionOf(requests.find((r) => r.id === p.profilingExceptionRequestId)),
+      }));
+      const guardFacts = new Map(
+        (facts.many ? await facts.many(tx, inputs) : await eachOf(tx, facts, inputs)).map(
+          (each, index) => [inputs[index]!.participationId, each],
+        ),
+      );
       const worklistProject: WorklistProject = { id: projectId, type: found!.type, waves };
       const items: WorklistItem[] = [];
       for (const { p, ...person } of rows) {
         const record = records.get(p.id)!;
         const wave = waves.find((w) => w.id === p.entryWaveId) ?? null;
-        const request = requests.find((r) => r.id === p.profilingExceptionRequestId);
         const target = projectTarget(projectId, regionId, p.id);
         const { knows } = staffSelfServiceAccess(subject, {
           projectId,
@@ -188,10 +197,7 @@ export async function loadWorklist(
                 offerDeadline: p.offerDeadline,
                 tgEntryDate: p.tgEntryDate,
               },
-              facts: await facts.facts(tx, {
-                participationId: p.id,
-                currentRequest: exceptionOf(request),
-              }),
+              facts: guardFacts.get(p.id)!,
             },
             worklistProject,
             today,
@@ -216,6 +222,17 @@ export async function loadWorklist(
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
+}
+
+/** A provider's facts one participation after another, in one transaction. */
+async function eachOf(
+  tx: Parameters<GuardFactsProvider["facts"]>[0],
+  facts: GuardFactsProvider,
+  inputs: readonly Parameters<GuardFactsProvider["facts"]>[1][],
+) {
+  const all = [];
+  for (const input of inputs) all.push(await facts.facts(tx, input));
+  return all;
 }
 
 /** Each participation's channels: kind, verification, liveness and consent, never an address. */

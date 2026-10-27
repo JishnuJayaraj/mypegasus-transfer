@@ -13,12 +13,14 @@ import {
   participantResidenceSocialData,
   participation,
   profilingSession,
+  signedDeclaration,
   sql,
   type Database,
 } from "@transfer/db";
 import {
   assessmentLines,
   documentCapabilities,
+  mayAddDocument,
   mayReadUnemploymentPeriod,
   mayRecordProfiling,
   mayUseProfilingAssessment,
@@ -36,8 +38,10 @@ import {
   unemploymentPeriodWarnings,
   UnemploymentPeriodView,
   tl407ReadinessViewer,
+  tl407SignedOn,
   type AssessmentFieldKey,
   type DocumentReviewState,
+  type JobboerseChoice,
   type PermissionTarget,
   type ProfilingIssue,
   type StaffUser,
@@ -185,6 +189,53 @@ export async function readProfilingRecord(db: Database, participationId: string)
           ),
         )
         .orderBy(desc(formGeneration.generatedAt), desc(formGeneration.id));
+      // The signed TL 407 scans, oldest first (data-protection.md, signed scans).
+      const tl407Scans = await tx
+        .select({
+          documentId: document.id,
+          origin: document.scanOrigin,
+          generationDocumentId: document.generationDocumentId,
+          formVersion: document.formVersion,
+          addedAt: utc(document.addedAt),
+          reviewState: document.reviewState,
+          reviewReason: document.reviewReason,
+          reviewedAt: utc(document.reviewedAt),
+          participantSignedOn: document.signedOn,
+          profilerSignedOn: document.countersignedOn,
+          quarantineReason: document.quarantineReason,
+          quarantinedBy: document.quarantinedBy,
+          quarantinedAt: utc(document.quarantinedAt),
+          // Whether a fact may rest on it, and from when (`tl407_evidence`).
+          counts: sql<boolean>`${document.reviewState} = 'accepted'
+            and ${document.quarantinedAt} is null and ${document.invalidatedByCorrection} is null`,
+          countsFrom: sql<string | null>`to_char(greatest(${document.reviewedAt},
+            coalesce(${document.quarantineLiftedAt}, ${document.reviewedAt})) at time zone 'UTC',
+            'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`,
+        })
+        .from(document)
+        .where(
+          and(
+            eq(document.participationId, participationId),
+            eq(document.type, "tl407_signed_scan"),
+            isNull(document.deletedAt),
+          ),
+        )
+        .orderBy(asc(document.addedAt), asc(document.id));
+      // The signed TL 407 the guard counts (`tl407_facts`) and the declarations signed on it.
+      const signed = tl407Scans
+        .filter((row) => row.counts)
+        .toSorted(
+          (a, b) =>
+            tl407SignedOn(a as Signed).localeCompare(tl407SignedOn(b as Signed)) ||
+            a.countsFrom!.localeCompare(b.countsFrom!) ||
+            a.documentId.localeCompare(b.documentId),
+        )[0];
+      const declarations = signed
+        ? await tx
+            .select({ declaration: signedDeclaration.declaration, value: signedDeclaration.value })
+            .from(signedDeclaration)
+            .where(eq(signedDeclaration.documentId, signed.documentId))
+        : [];
       return {
         profilingStatus: current!.profilingStatus,
         statusVersion: current!.statusVersion,
@@ -204,11 +255,27 @@ export async function readProfilingRecord(db: Database, participationId: string)
           writtenAt: (assessment?.writtenAt as string | undefined) ?? null,
         },
         tl407Forms,
+        tl407Scans,
+        signed: signed && {
+          documentId: signed.documentId,
+          formVersion: signed.formVersion!,
+          signedOn: tl407SignedOn(signed as Signed),
+          jobboerseChoice: (declarations.find((d) => d.declaration === "jobboerseChoice")?.value ??
+            null) as JobboerseChoice | null,
+          baContactConsent: valueOf(declarations.find((d) => d.declaration === "baContactConsent")),
+        },
       };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },
   );
 }
+
+/** An accepted scan's actual signature dates. */
+type Signed = { participantSignedOn: string; profilerSignedOn: string };
+
+/** The BA contact declaration as stored (`yes` / `no`), or null where nothing is marked. */
+const valueOf = (row: { value: string | null } | undefined) =>
+  row?.value === "yes" ? true : row?.value === "no" ? false : null;
 
 /** The terminal statuses: the record takes no ordinary writes (`participation_closed`). */
 export const closedStatuses: ReadonlySet<string> = new Set(["withdrawn", "ta_completed", "exited"]);
@@ -297,13 +364,25 @@ export function profilingRoutes(deps: Deps) {
     const assesses = mayUseProfilingAssessment(subject, target, "read");
     const open = !record.closed;
     const today = clock.today();
+    const documentTarget = target as PermissionTarget & { participationId: string };
+    const normal = { kind: "normal" } as const;
+    // A scan is reviewed only while the participation is open (`participation_closed`).
+    const scanCapabilities = (reviewState: DocumentReviewState, quarantinedBy: string | null) => {
+      const capabilities = documentCapabilities(subject, documentTarget, normal, {
+        type: "tl407_signed_scan",
+        addedByParticipant: false,
+        reviewState,
+        quarantinedBy,
+      });
+      return { ...capabilities, review: capabilities.review && open };
+    };
     const opens = (reviewState: DocumentReviewState) =>
-      documentCapabilities(
-        subject,
-        target as PermissionTarget & { participationId: string },
-        { kind: "normal" },
-        { type: "tl407_form", addedByParticipant: false, reviewState },
-      ).open;
+      documentCapabilities(subject, documentTarget, normal, {
+        type: "tl407_form",
+        addedByParticipant: false,
+        reviewState,
+        quarantinedBy: null,
+      }).open;
     return {
       participationId,
       profilingStatus: record.profilingStatus,
@@ -323,6 +402,28 @@ export function profilingRoutes(deps: Deps) {
         versionInUse: registry.versionInUse("tl407", form.formVersion, today),
         capabilities: { open: opens(reviewState) },
       })),
+      tl407Scans: record.tl407Scans.map((scan) => ({
+        documentId: scan.documentId,
+        origin: scan.origin!,
+        generationDocumentId: scan.generationDocumentId,
+        formVersion: scan.formVersion,
+        addedAt: scan.addedAt,
+        review: {
+          state: scan.reviewState,
+          reasonCode: scan.reviewReason,
+          reviewedAt: scan.reviewedAt,
+        },
+        participantSignedOn: scan.participantSignedOn,
+        profilerSignedOn: scan.profilerSignedOn,
+        quarantine:
+          scan.quarantineReason === null
+            ? null
+            : { reasonCode: scan.quarantineReason, quarantinedAt: scan.quarantinedAt! },
+        capabilities: scanCapabilities(scan.reviewState, scan.quarantinedBy),
+      })),
+      tl407SignedOn: record.signed?.signedOn ?? null,
+      ...(records && { signedDeclarations: record.signed ?? null }),
+      tl407Versions: registry.versions("tl407"),
       transitions,
       capabilities: {
         record: records && open,
@@ -331,6 +432,8 @@ export function profilingRoutes(deps: Deps) {
         readUnemploymentPeriod: mayReadUnemploymentPeriod(subject, target),
         generateTl407: records && open,
         readTl407Readiness: tl407ReadinessViewer(subject, target) !== null,
+        addTl407Scan:
+          open && mayAddDocument(subject, "tl407_signed_scan", documentTarget, normal).ok,
       },
     };
   }

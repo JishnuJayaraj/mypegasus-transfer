@@ -24,6 +24,7 @@ import {
   mayPerformOperation,
   mayPerformTransition,
   projectFinalEntryDate,
+  profilingDoneOnProblem,
   profilingTransitions,
   requestProfilingException,
   revokeProfilingException,
@@ -49,7 +50,7 @@ import {
 import type { SQL } from "drizzle-orm";
 import { functionRefusal } from "../database-errors";
 import { jobNames } from "../jobs/names";
-import { failClosedFacts, type GuardFactsProvider, type Transaction } from "./guard-facts";
+import { dbGuardFacts, type GuardFactsProvider, type Transaction } from "./guard-facts";
 
 /**
  * The status service (plan 5.4): the only TypeScript caller of the status functions. Each call is
@@ -259,7 +260,7 @@ export async function createParticipationIn(
   };
 }
 
-export function createStatusService({ db, clock, facts = failClosedFacts }: Deps) {
+export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
   /** One transaction; a function's refusal becomes a service error. */
   async function transaction<T>(work: (tx: Transaction) => Promise<T>): Promise<T> {
     try {
@@ -487,6 +488,10 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
           fail("stale", "stale_status");
         }
 
+        const guardFacts = await facts.facts(tx, {
+          participationId: change.participationId,
+          currentRequest: exception,
+        });
         const check = canTransition(track, from, to, {
           ...context,
           entryKind,
@@ -494,10 +499,7 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
           ...(entryKind === "reconciliation" && {
             scheduledRunCompleted: await lifecycleRunCompleted(tx, context.today),
           }),
-          facts: await facts.facts(tx, {
-            participationId: change.participationId,
-            currentRequest: exception,
-          }),
+          facts: guardFacts,
           newOfferDeadline: change.offerDeadline,
           endReason: change.endReason,
           confirmed: change.confirmed,
@@ -505,6 +507,15 @@ export function createStatusService({ db, clock, facts = failClosedFacts }: Deps
         if (!check.ok) fail("domain", check.code, check.failedGuards);
 
         const effectiveDate = await effectiveDateOf(tx, change, loaded);
+        // `profilingDoneOn` not before the later signature date of the signed TL 407 (Q191).
+        if (to === "profiling_done" && guardFacts.tl407Signed) {
+          const problem = profilingDoneOnProblem(
+            effectiveDate!,
+            guardFacts.tl407Signed.validOn,
+            context.today,
+          );
+          if (problem) fail("domain", problem);
+        }
         const secondary = change.secondaryReasons ?? [];
         return {
           auditEventId: await call(

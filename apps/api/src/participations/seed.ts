@@ -11,7 +11,7 @@ import {
   type Database,
 } from "@transfer/db";
 import type { DatedFact, GuardFacts, IsoDate } from "@transfer/domain";
-import { failClosedFacts, type GuardFactsProvider, type RequestEvidence } from "./guard-facts";
+import { dbGuardFacts, type GuardFactsProvider, type RequestEvidence } from "./guard-facts";
 import { createStatusService, type ServiceActor, type StatusService } from "./status-service";
 import { staffSubject } from "./subjects";
 
@@ -119,7 +119,7 @@ export const seedFacts: Readonly<Record<string, GuardFacts>> = {
 /** The production provider plus the seed's synthetic facts and evidence. */
 const seedFactsProvider: GuardFactsProvider = {
   facts: async (tx, input) => ({
-    ...(await failClosedFacts.facts(tx, input)),
+    ...(await dbGuardFacts.facts(tx, input)),
     ...seedFacts[input.participationId],
   }),
   evidence: async (_tx, { participationId }) => evidenceFor(participationId),

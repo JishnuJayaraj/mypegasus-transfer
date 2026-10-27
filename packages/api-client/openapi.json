@@ -5923,7 +5923,10 @@
           "missed_appointment_resolved",
           "profiling_session_changed",
           "profiling_declarations_recorded",
-          "form_generated"
+          "form_generated",
+          "document_quarantined",
+          "document_quarantine_lifted",
+          "signed_declaration_recorded"
         ]
       },
       "HistoryActor": {
@@ -10958,6 +10961,27 @@
             ],
             "additionalProperties": false
           },
+          "quarantine": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "reasonCode": {
+                "$ref": "#/components/schemas/QuarantineReason"
+              },
+              "quarantinedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "reasonCode",
+              "quarantinedAt"
+            ],
+            "additionalProperties": false
+          },
           "capabilities": {
             "$ref": "#/components/schemas/DocumentCapabilities"
           }
@@ -10972,9 +10996,17 @@
           "addedBy",
           "onBehalf",
           "review",
+          "quarantine",
           "capabilities"
         ],
         "additionalProperties": false
+      },
+      "QuarantineReason": {
+        "type": "string",
+        "enum": [
+          "suspected_wrong_person",
+          "suspected_wrong_acceptance"
+        ]
       },
       "DocumentCapabilities": {
         "type": "object",
@@ -10987,12 +11019,20 @@
           },
           "delete": {
             "type": "boolean"
+          },
+          "quarantine": {
+            "type": "boolean"
+          },
+          "liftQuarantine": {
+            "type": "boolean"
           }
         },
         "required": [
           "open",
           "review",
-          "delete"
+          "delete",
+          "quarantine",
+          "liftQuarantine"
         ],
         "additionalProperties": false
       },
@@ -11042,6 +11082,13 @@
           "content": {
             "type": "string",
             "description": "The file, base64; decoded at most 10 MB"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/ScanOrigin"
+          },
+          "generationDocumentId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
@@ -11050,6 +11097,13 @@
           "content"
         ],
         "additionalProperties": false
+      },
+      "ScanOrigin": {
+        "type": "string",
+        "enum": [
+          "generated",
+          "external_paper"
+        ]
       },
       "DocumentOpening": {
         "type": "object",
@@ -11086,10 +11140,126 @@
               "wrong_document",
               "incomplete"
             ]
+          },
+          "scan": {
+            "$ref": "#/components/schemas/ScanReview"
           }
         },
         "required": [
           "decision"
+        ],
+        "additionalProperties": false
+      },
+      "ScanReview": {
+        "type": "object",
+        "properties": {
+          "participantSignedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "profilerSignedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "confirmations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScanConfirmation"
+            },
+            "maxItems": 2
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "declarations": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "as_printed"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "jobboerseChoice": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "full",
+                      "anonymous_callme",
+                      "anonymous_no_contact",
+                      "none",
+                      null
+                    ]
+                  },
+                  "baContactConsent": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "as_marked"
+                    ]
+                  }
+                },
+                "required": [
+                  "jobboerseChoice",
+                  "baContactConsent",
+                  "kind"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "required": [
+          "participantSignedOn",
+          "profilerSignedOn",
+          "confirmations",
+          "declarations"
+        ],
+        "additionalProperties": false
+      },
+      "ScanConfirmation": {
+        "type": "string",
+        "enum": [
+          "signatures_present",
+          "all_pages_present"
+        ]
+      },
+      "DocumentQuarantineInput": {
+        "type": "object",
+        "properties": {
+          "reasonCode": {
+            "$ref": "#/components/schemas/QuarantineReason"
+          }
+        },
+        "required": [
+          "reasonCode"
         ],
         "additionalProperties": false
       },
@@ -11214,6 +11384,33 @@
               "$ref": "#/components/schemas/Tl407GeneratedForm"
             }
           },
+          "tl407Scans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tl407Scan"
+            }
+          },
+          "tl407SignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "signedDeclarations": {
+            "$ref": "#/components/schemas/Tl407SignedDeclarations"
+          },
+          "tl407Versions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+            }
+          },
           "transitions": {
             "type": "array",
             "items": {
@@ -11240,6 +11437,9 @@
               },
               "readTl407Readiness": {
                 "type": "boolean"
+              },
+              "addTl407Scan": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -11248,7 +11448,8 @@
               "writeAssessment",
               "readUnemploymentPeriod",
               "generateTl407",
-              "readTl407Readiness"
+              "readTl407Readiness",
+              "addTl407Scan"
             ],
             "additionalProperties": false
           }
@@ -11262,6 +11463,9 @@
           "revision",
           "sessions",
           "tl407Forms",
+          "tl407Scans",
+          "tl407SignedOn",
+          "tl407Versions",
           "transitions",
           "capabilities"
         ],
@@ -11370,6 +11574,186 @@
           "latest",
           "versionInUse",
           "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407Scan": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/ScanOrigin"
+          },
+          "generationDocumentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "review": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "unreviewed",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "reasonCode": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "unreadable",
+                  "wrong_document",
+                  "incomplete",
+                  null
+                ]
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "state",
+              "reasonCode",
+              "reviewedAt"
+            ],
+            "additionalProperties": false
+          },
+          "participantSignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "profilerSignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "quarantine": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "reasonCode": {
+                "$ref": "#/components/schemas/QuarantineReason"
+              },
+              "quarantinedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "reasonCode",
+              "quarantinedAt"
+            ],
+            "additionalProperties": false
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/DocumentCapabilities"
+          }
+        },
+        "required": [
+          "documentId",
+          "origin",
+          "generationDocumentId",
+          "formVersion",
+          "addedAt",
+          "review",
+          "participantSignedOn",
+          "profilerSignedOn",
+          "quarantine",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407SignedDeclarations": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "jobboerseChoice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "full",
+              "anonymous_callme",
+              "anonymous_no_contact",
+              "none",
+              null
+            ]
+          },
+          "baContactConsent": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "signedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "jobboerseChoice",
+          "baContactConsent",
+          "documentId",
+          "formVersion",
+          "signedOn"
         ],
         "additionalProperties": false
       },
@@ -22310,7 +22694,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "Accept, or reject with a reason code; once and final (document_reviewed otherwise), audited",
+        "summary": "Accept, or reject with a reason code; once and final (document_reviewed otherwise), audited. Accepting a signed scan takes its record (`scan`: the actual signature dates, the confirmations, external paper's version, the declarations as printed or as marked), stored as signed declarations",
         "parameters": [
           {
             "schema": {
@@ -22405,12 +22789,202 @@
         }
       }
     },
+    "/api/v1/participations/{participationId}/documents/{documentId}/quarantine": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Quarantine a document at once with a reason (the PL, the assigned consultant; normal mode, also after the end): it opens for nobody, is not reviewed, gives no fact and counts nothing; audited",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentQuarantineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/documents/{documentId}/quarantine-lift": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Lift a quarantine (whoever quarantined it, or the PL); the document counts again from the lift, audited",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/participations/{participationId}/documents/{documentId}": {
       "delete": {
         "tags": [
           "participations"
         ],
-        "summary": "Delete a document with a reason code (also after a terminal status); the file is purged, the row kept as a tombstone, audited",
+        "summary": "Delete a document with a reason code (also after a terminal status); a signed scan only by the PL before its review, as wrong_person or wrong_file; the file is purged, the row kept as a tombstone, audited",
         "parameters": [
           {
             "schema": {

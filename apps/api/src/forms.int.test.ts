@@ -4,6 +4,7 @@ import {
   PdfLibRenderer,
   PdfUnavailable,
   pageCount,
+  scheduledAt,
 } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds } from "@transfer/db";
 import {
@@ -15,15 +16,19 @@ import {
   testDatabaseUrls,
 } from "@transfer/db/testing";
 import {
+  canTransition,
   DocumentOpening,
+  DocumentView,
   ProfilingView,
   Tl407Generation,
   Tl407Readiness,
   type EducationRow,
+  type TgEntryKind,
 } from "@transfer/domain";
 import { loadFont } from "@transfer/forms/load";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { fieldEncryptionKey } from "./field-encryption";
+import { dbGuardFacts } from "./participations/guard-facts";
 import { expectProblem, jsonRequest, login, readJson, testApp, testEnv } from "./testing";
 
 // The TL 407 on the tab "Profiling" (data-protection.md, generated forms and the readiness
@@ -416,15 +421,15 @@ describe("generation (data-protection.md, generated forms; Q179)", () => {
       expect(await pageCount(pdf)).toBeGreaterThan(7);
     }
     expect(await events(id, "document_opened")).toHaveLength(2);
-    await expectProblem(
-      await request(
-        "DELETE",
-        `/participations/${id}/documents/${documentId}?reasonCode=wrong_file`,
-        projectLead,
+    expect(
+      await codesOf(
+        await request(
+          "DELETE",
+          `/participations/${id}/documents/${documentId}?reasonCode=wrong_file`,
+          projectLead,
+        ),
       ),
-      403,
-      "forbidden",
-    );
+    ).toEqual([{ code: "document_immutable", pointer: "" }]);
   });
 
   it("lists the generated forms on the tab, latest first, for the PL and the profiler", async () => {
@@ -611,5 +616,373 @@ describe("generation (data-protection.md, generated forms; Q179)", () => {
     expect(problem.errors?.[0]?.code).toBe("pdf_unavailable");
     expect((await sql("select count(*)::int as n from form_generation")).rows).toEqual([{ n: 0 }]);
     await second.$client.end();
+  });
+});
+
+// The signed TL 407 (data-protection.md, signed scans, signed declarations and quarantine;
+// process-and-lifecycle.md, profiling track; Q183–Q185, Q191, Q193).
+const scanPdf = Buffer.from("%PDF-1.7\n1 0 obj\n<< /Title (synthetic scan) >>\nendobj\n%%EOF\n");
+const both = ["signatures_present", "all_pages_present"];
+const berlinDay = async (offset = 0) =>
+  (await sql("select (berlin_today() + $1::int)::text as d", [offset])).rows[0].d as string;
+
+/** Uploads a signed scan; its id. */
+async function upload(id: string, origin: object, as: string = consultant) {
+  return request("POST", `/participations/${id}/documents`, as, {
+    type: "tl407_signed_scan",
+    fileName: "scan.pdf",
+    content: scanPdf.toString("base64"),
+    ...origin,
+  });
+}
+async function uploaded(id: string, origin: object, as: string = consultant) {
+  const res = await upload(id, origin, as);
+  expect(res.status).toBe(201);
+  return (await readJson(res, DocumentView)).id;
+}
+const review = (id: string, documentId: string, body: object, as: string = consultant) =>
+  request("POST", `/participations/${id}/documents/${documentId}/review`, as, body);
+async function accept(id: string, documentId: string, scan: object, as: string = consultant) {
+  const today = await berlinDay();
+  const res = await review(
+    id,
+    documentId,
+    {
+      decision: "accepted",
+      scan: {
+        participantSignedOn: today,
+        profilerSignedOn: today,
+        confirmations: both,
+        declarations: { kind: "as_printed" },
+        ...scan,
+      },
+    },
+    as,
+  );
+  expect(res.status).toBe(200);
+  return res;
+}
+const profiling = async (id: string, as: string = consultant) =>
+  readJson(await request("GET", `/participations/${id}/profiling`, as), ProfilingView);
+async function inProgress(id: string) {
+  for (const [from, to] of [
+    ["not_started", "profiling_accepted"],
+    ["profiling_accepted", "profiling_in_progress"],
+  ] as const) {
+    await changeStatus(owner.$client, id, { field: "profiling_status", from, to });
+  }
+}
+const complete = async (id: string, effectiveDate: string, as: string = consultant) =>
+  request("POST", `/participations/${id}/profiling-status`, as, {
+    to: "profiling_done",
+    effectiveDate,
+    statusVersion: (await profiling(id, as)).statusVersion,
+  });
+
+describe("signed scans and their origin (Q184, Q197)", () => {
+  it("takes a scan printed from a generation of the same participation, or external paper", async () => {
+    const id = await participant();
+    const { documentId: generation } = await readJson(await generate(id), Tl407Generation);
+    const scan = await uploaded(id, { origin: "generated", generationDocumentId: generation });
+    await uploaded(id, { origin: "external_paper" }, projectLead);
+    const view = await profiling(id);
+    expect(
+      view.tl407Scans.map(({ documentId, origin, generationDocumentId, formVersion }) => ({
+        documentId,
+        origin,
+        generationDocumentId,
+        formVersion,
+      })),
+    ).toEqual([
+      {
+        documentId: scan,
+        origin: "generated",
+        generationDocumentId: generation,
+        formVersion: "08-2025",
+      },
+      {
+        documentId: expect.any(String),
+        origin: "external_paper",
+        generationDocumentId: null,
+        formVersion: null,
+      },
+    ]);
+    expect(view.capabilities.addTl407Scan).toBe(true);
+    expect(view.tl407Versions).toEqual(["08-2025"]);
+    expect(await codesOf(await upload(id, {}))).toEqual([
+      { code: "origin_required", pointer: "/origin" },
+    ]);
+    const elsewhere = await participant();
+    const other = await readJson(await generate(elsewhere), Tl407Generation);
+    expect(
+      await codesOf(
+        await upload(id, { origin: "generated", generationDocumentId: other.documentId }),
+      ),
+    ).toEqual([{ code: "generation_not_found", pointer: "/generationDocumentId" }]);
+    await expectProblem(
+      await upload(id, { origin: "external_paper" }, backOffice),
+      403,
+      "forbidden",
+    );
+  });
+
+  it("records external paper signed before the platform's generation without re-signing", async () => {
+    const id = await participant();
+    await inProgress(id);
+    // The platform generates later; the paper the participant signed earlier stays valid.
+    await generate(id);
+    const documentId = await uploaded(id, { origin: "external_paper" });
+    const signedOn = await berlinDay(-30);
+    expect(
+      await codesOf(
+        await review(id, documentId, {
+          decision: "accepted",
+          scan: {
+            participantSignedOn: signedOn,
+            profilerSignedOn: signedOn,
+            confirmations: both,
+            formVersion: "01-2001",
+            declarations: { kind: "as_printed" },
+          },
+        }),
+      ),
+    ).toEqual([
+      { code: "form_version_unknown", pointer: "/scan/formVersion" },
+      { code: "declarations_as_marked_required", pointer: "/scan/declarations" },
+    ]);
+    await accept(id, documentId, {
+      participantSignedOn: await berlinDay(-31),
+      profilerSignedOn: signedOn,
+      formVersion: "08-2025",
+      declarations: { kind: "as_marked", jobboerseChoice: "none", baContactConsent: null },
+    });
+    const view = await profiling(id);
+    expect(view.tl407SignedOn).toBe(signedOn);
+    expect(view.signedDeclarations).toEqual({
+      documentId,
+      formVersion: "08-2025",
+      signedOn,
+      jobboerseChoice: "none",
+      baContactConsent: null,
+    });
+    expect(view.transitions).toContainEqual({ to: "profiling_done", allowed: true, refusal: null });
+    // profilingDoneOn: the later signature date at the earliest, never in the future (Q191).
+    expect(await codesOf(await complete(id, await berlinDay(-31)))).toEqual([
+      { code: "effective_date_before_signature", pointer: "" },
+    ]);
+    expect((await complete(id, signedOn)).status).toBe(200);
+    expect((await profiling(id)).profilingDoneOn).toBe(signedOn);
+    expect((await events(id, "document_reviewed")).map((row) => row.details)).toEqual([
+      {
+        documentId,
+        documentType: "tl407_signed_scan",
+        decision: "accepted",
+        origin: "external_paper",
+        formVersion: "08-2025",
+      },
+    ]);
+  });
+
+  it("keeps the signed record when a declaration changes after printing, also during the review", async () => {
+    const id = await participant();
+    const { documentId: generation } = await readJson(await generate(id), Tl407Generation);
+    const write = async (jobboerseChoice: string, baContactConsent: boolean | null) =>
+      request("PUT", `/participations/${id}/profiling/declarations`, consultant, {
+        jobboerseChoice,
+        baContactConsent,
+        revision: (await profiling(id)).revision,
+      });
+    // Printed `full` / no contact; changed afterwards, before the paper comes back.
+    expect((await write("anonymous_callme", true)).status).toBe(200);
+    const documentId = await uploaded(id, {
+      origin: "generated",
+      generationDocumentId: generation,
+    });
+    const [reviewed, edited] = await Promise.all([
+      accept(id, documentId, {}),
+      write("none", false),
+    ]);
+    expect([reviewed.status, edited.status]).toEqual([200, 200]);
+    const view = await profiling(id);
+    expect(view.signedDeclarations).toMatchObject({
+      jobboerseChoice: "full",
+      baContactConsent: false,
+    });
+    expect(view.declarations).toMatchObject({ jobboerseChoice: "none", baContactConsent: false });
+    expect((await events(id, "signed_declaration_recorded")).map((row) => row.details)).toEqual([
+      {
+        documentId,
+        formCode: "tl407",
+        formVersion: "08-2025",
+        declarations: ["jobboerseChoice", "baContactConsent"],
+      },
+    ]);
+  });
+
+  it("refuses an acceptance without its record, in the future or before the generation", async () => {
+    const id = await participant();
+    const { documentId: generation } = await readJson(await generate(id), Tl407Generation);
+    const documentId = await uploaded(id, {
+      origin: "generated",
+      generationDocumentId: generation,
+    });
+    expect(await codesOf(await review(id, documentId, { decision: "accepted" }))).toEqual([
+      { code: "scan_required", pointer: "/scan" },
+    ]);
+    const scan = {
+      participantSignedOn: await berlinDay(1),
+      profilerSignedOn: await berlinDay(-1),
+      confirmations: ["signatures_present"],
+      declarations: { kind: "as_printed" },
+    };
+    expect(await codesOf(await review(id, documentId, { decision: "accepted", scan }))).toEqual([
+      { code: "signature_in_future", pointer: "/scan/participantSignedOn" },
+      { code: "signature_before_generation", pointer: "/scan/profilerSignedOn" },
+      { code: "confirmation_required", pointer: "/scan/confirmations" },
+    ]);
+    const rejected = await review(id, documentId, {
+      decision: "rejected",
+      reasonCode: "incomplete",
+    });
+    expect(rejected.status).toBe(200);
+    expect((await profiling(id)).tl407Scans[0]!.review).toMatchObject({
+      state: "rejected",
+      reasonCode: "incomplete",
+    });
+  });
+});
+
+describe("wrong paper (Q183)", () => {
+  it("lets the PL delete a scan before its review; an accepted one is immutable", async () => {
+    const id = await participant();
+    const wrong = await uploaded(id, { origin: "external_paper" });
+    const remove = (documentId: string, reason: string, as: string = projectLead) =>
+      request("DELETE", `/participations/${id}/documents/${documentId}?reasonCode=${reason}`, as);
+    await expectProblem(await remove(wrong, "wrong_person", consultant), 403, "forbidden");
+    expect(await codesOf(await remove(wrong, "duplicate"))).toEqual([
+      { code: "delete_reason_not_allowed", pointer: "/reasonCode" },
+    ]);
+    expect((await remove(wrong, "wrong_person")).status).toBe(204);
+    const accepted = await uploaded(id, { origin: "external_paper" });
+    await accept(id, accepted, {
+      formVersion: "08-2025",
+      declarations: { kind: "as_marked", jobboerseChoice: "full", baContactConsent: true },
+    });
+    expect(await codesOf(await remove(accepted, "wrong_person"))).toEqual([
+      { code: "document_immutable", pointer: "" },
+    ]);
+    expect((await profiling(id)).tl407Scans.map((scan) => scan.documentId)).toEqual([accepted]);
+  });
+
+  it("quarantines at once: no opening, no fact, no profiling_done; lifting restores them", async () => {
+    const id = await participant();
+    await inProgress(id);
+    const { documentId: generation } = await readJson(await generate(id), Tl407Generation);
+    const documentId = await uploaded(id, {
+      origin: "generated",
+      generationDocumentId: generation,
+    });
+    await accept(id, documentId, {});
+    const quarantine = await request(
+      "POST",
+      `/participations/${id}/documents/${documentId}/quarantine`,
+      projectLead,
+      { reasonCode: "suspected_wrong_acceptance" },
+    );
+    expect(quarantine.status).toBe(200);
+    expect(await readJson(quarantine, DocumentView)).toMatchObject({
+      quarantine: { reasonCode: "suspected_wrong_acceptance" },
+      capabilities: { open: false, liftQuarantine: true, quarantine: false },
+    });
+    expect(
+      await codesOf(
+        await request(
+          "POST",
+          `/participations/${id}/documents/${documentId}/opening`,
+          consultant,
+          {},
+        ),
+      ),
+    ).toEqual([{ code: "document_quarantined", pointer: "" }]);
+    const view = await profiling(id);
+    expect(view.tl407SignedOn).toBeNull();
+    expect(view.tl407Scans[0]!.capabilities).toMatchObject({ open: false, liftQuarantine: false });
+    expect(view.transitions).toContainEqual({
+      to: "profiling_done",
+      allowed: false,
+      refusal: "tl407_signed",
+    });
+    expect(await codesOf(await complete(id, await berlinDay()))).toEqual([
+      { code: "tl407_signed", pointer: "" },
+    ]);
+    // Only whoever quarantined it, or the PL, lifts it.
+    const lift = (as: string) =>
+      request("POST", `/participations/${id}/documents/${documentId}/quarantine-lift`, as, {});
+    await expectProblem(await lift(consultant), 403, "forbidden");
+    expect((await lift(projectLead)).status).toBe(200);
+    expect((await profiling(id)).tl407SignedOn).toBe(await berlinDay());
+    expect((await complete(id, await berlinDay())).status).toBe(200);
+    expect((await events(id, "document_quarantined")).map((row) => row.reason_code)).toEqual([
+      "suspected_wrong_acceptance",
+    ]);
+    expect(await events(id, "document_quarantine_lifted")).toHaveLength(1);
+  });
+});
+
+describe("the TL 407 facts and the snapshot rule (process-and-lifecycle.md, guards)", () => {
+  it("counts a TL 407 accepted after the TG start's scheduled run only for a reconciliation", async () => {
+    const id = await participant();
+    await inProgress(id);
+    const signedOn = await berlinDay(-3);
+    const documentId = await uploaded(id, { origin: "external_paper" });
+    await accept(id, documentId, {
+      participantSignedOn: signedOn,
+      profilerSignedOn: signedOn,
+      formVersion: "08-2025",
+      declarations: { kind: "as_marked", jobboerseChoice: "full", baContactConsent: true },
+    });
+    expect((await complete(id, signedOn)).status).toBe(200);
+    // The TG started yesterday; its run at 04:15 Berlin came before the acceptance just now.
+    const tgStart = await berlinDay(-1);
+    const today = await berlinDay();
+    const facts = await db.transaction((tx) =>
+      dbGuardFacts.facts(tx, { participationId: id, currentRequest: null }),
+    );
+    expect(facts.profilingDone?.validOn).toBe(signedOn);
+    expect(facts.tl407Signed).toEqual({ validOn: signedOn, recordedAt: expect.any(Date) });
+    const before = { validOn: signedOn, recordedAt: new Date(`${signedOn}T09:00:00Z`) };
+    const enter = (entryKind: TgEntryKind) =>
+      canTransition("main", "informed", "active_in_tg", {
+        projectType: "ta_tg",
+        current: {
+          status: "informed",
+          profilingStatus: "profiling_done",
+          dsvStatus: "dsv_signed",
+        },
+        actor:
+          entryKind === "reconciliation"
+            ? { type: "user", staffUserId: projectLead as string }
+            : { type: "system" },
+        entryKind,
+        today,
+        ...(entryKind !== "reconciliation" && { scheduledAt: scheduledAt(tgStart, "04:15") }),
+        wave: {
+          id: "wave-scenario",
+          code: "W",
+          signingDeadline: signedOn,
+          defaultTgStart: tgStart,
+          defaultTgEnd: "2099-12-31",
+          latestEntryDate: "2099-12-31",
+        },
+        participation: { tgStart: null, offerDeadline: null },
+        // Synthetic DSV and ASU facts recorded in time: only the profiling fact is late.
+        facts: { ...facts, dsvFullyExecuted: before, asuRegisteredWithProof: before },
+      });
+    expect(enter("scheduled_entry_catchup")).toEqual({
+      ok: false,
+      code: "guard_failed",
+      failedGuards: ["profiling_done_or_approved_exception"],
+    });
+    expect(enter("reconciliation")).toEqual({ ok: true, flagForReview: true });
   });
 });

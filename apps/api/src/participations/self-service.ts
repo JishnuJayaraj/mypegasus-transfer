@@ -13,6 +13,7 @@ import {
   participantResidenceSocialData,
   participation,
   selfServiceNoticeAcknowledgement as acknowledgement,
+  sql,
   type Database,
 } from "@transfer/db";
 import {
@@ -124,15 +125,18 @@ async function liveDocuments(db: Db, participationIds: readonly string[]) {
       participationId: document.participationId,
       type: document.type,
       reviewState: document.reviewState,
+      quarantined: sql<boolean>`${document.quarantinedAt} is not null`,
     })
     .from(document)
     .where(
       and(inArray(document.participationId, [...participationIds]), isNull(document.deletedAt)),
     );
   const byParticipation = new Map<string, Documents>();
-  for (const { participationId, type, reviewState } of live) {
+  for (const { participationId, type, reviewState, quarantined } of live) {
+    const state = documentState({ reviewState, deletedAt: null, quarantined });
+    if (state === null) continue;
     const documents = byParticipation.get(participationId) ?? {};
-    (documents[type] ??= []).push(documentState({ reviewState, deletedAt: null })!);
+    (documents[type] ??= []).push(state);
     byParticipation.set(participationId, documents);
   }
   return byParticipation;
