@@ -93,35 +93,34 @@ export async function listStatesOf(
   receivedOn: ReadonlyMap<string, string>,
 ): Promise<Map<string, ListStates>> {
   if (ids.length === 0) return new Map();
-  const [codes, deliveries, accounts] = await Promise.all([
-    db
-      .select({
-        participationId: activationCode.participationId,
-        purpose: activationCode.purpose,
-        channel: activationCode.channel,
-        issuedAt: utc(activationCode.issuedAt),
-        expiresAt: utc(activationCode.expiresAt),
-        deliveryStatus: activationCode.deliveryStatus,
-        handedOverAt: utc(activationCode.handedOverAt),
-        lockedAt: utc(activationCode.lockedAt),
-        revokedAt: utc(activationCode.revokedAt),
-        usedAt: utc(activationCode.usedAt),
-      })
-      .from(activationCode)
-      .where(inArray(activationCode.participationId, [...ids]))
-      .orderBy(desc(activationCode.issuedAt), desc(activationCode.id)),
-    db
-      .select({
-        participationId: privacyNoticeDelivery.participationId,
-        providedAt: utc(privacyNoticeDelivery.providedAt),
-      })
-      .from(privacyNoticeDelivery)
-      .where(inArray(privacyNoticeDelivery.participationId, [...ids])),
-    db
-      .select({ participationId: participantAccount.participationId })
-      .from(participantAccount)
-      .where(inArray(participantAccount.participationId, [...ids])),
-  ]);
+  // One after another: `db` may be a transaction (ADR-0002, queries on one connection).
+  const codes = await db
+    .select({
+      participationId: activationCode.participationId,
+      purpose: activationCode.purpose,
+      channel: activationCode.channel,
+      issuedAt: utc(activationCode.issuedAt),
+      expiresAt: utc(activationCode.expiresAt),
+      deliveryStatus: activationCode.deliveryStatus,
+      handedOverAt: utc(activationCode.handedOverAt),
+      lockedAt: utc(activationCode.lockedAt),
+      revokedAt: utc(activationCode.revokedAt),
+      usedAt: utc(activationCode.usedAt),
+    })
+    .from(activationCode)
+    .where(inArray(activationCode.participationId, [...ids]))
+    .orderBy(desc(activationCode.issuedAt), desc(activationCode.id));
+  const deliveries = await db
+    .select({
+      participationId: privacyNoticeDelivery.participationId,
+      providedAt: utc(privacyNoticeDelivery.providedAt),
+    })
+    .from(privacyNoticeDelivery)
+    .where(inArray(privacyNoticeDelivery.participationId, [...ids]));
+  const accounts = await db
+    .select({ participationId: participantAccount.participationId })
+    .from(participantAccount)
+    .where(inArray(participantAccount.participationId, [...ids]));
   const activated = new Set(accounts.map((account) => account.participationId));
   const latest = new Map<string, (typeof codes)[number]>();
   for (const code of codes)
