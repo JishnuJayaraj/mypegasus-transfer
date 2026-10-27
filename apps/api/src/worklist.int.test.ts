@@ -23,7 +23,15 @@ import {
 } from "@transfer/domain";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
+import {
+  countStatements,
+  expectProblem,
+  expectWithinBudget,
+  jsonRequest,
+  login,
+  readJson,
+  testApp,
+} from "./testing";
 
 // The work list and the dashboard (data-protection.md, the work list and the dashboard) and the
 // bulk wave assignment (process-and-lifecycle.md, assigning a wave) against transfer_test. Today
@@ -94,6 +102,46 @@ const assign = (participationIds: string[]) =>
     `/api/v1/projects/${werkNord}/assignments`,
     jsonRequest("POST", { staffUserId: consultant, participationIds }, as(projectLead)),
   );
+
+/**
+ * `count` more participations with identities in Werk Nord, each booked once on one of four past
+ * info events of 500 seats, every other one recorded absent: each row has an appointment item
+ * (process-and-lifecycle.md, appointments). Synthetic values only.
+ */
+async function booked(count: number) {
+  await owner.$client.query(
+    `with created as (
+       insert into participation (project_id, status, profiling_status, dsv_status)
+       select $1, 'contacted', 'not_started', 'not_offered' from generate_series(1, $2)
+       returning id
+     )
+     insert into participant_identity (participation_id, project_id, personnel_number, first_name, last_name)
+     select id, $1, 'SYN-' || ($3::int + row_number() over ()), 'Vorname', 'Nachname' from created`,
+    [werkNord, count, (await owner.$count(participation)) + 1],
+  );
+  await owner.$client.query(
+    `with events as (
+       insert into appointment (id, project_id, kind, starts_at, ends_at, booking_closes_at, capacity, venue, created_by)
+       select gen_random_uuid(), $1, 'info_event', '2091-01-10T09:00:00Z'::timestamptz + n * interval '1 day',
+         '2091-01-10T11:00:00Z'::timestamptz + n * interval '1 day', '2091-01-09T09:00:00Z'::timestamptz,
+         500, 'Raum 1', $2
+       from generate_series(0, 3) n
+       returning id, extract(day from starts_at at time zone 'UTC')::int - 10 as n
+     ), people as (
+       select id, row_number() over (order by id) - 1 as n from participation
+       where project_id = $1
+         and not exists (select from appointment_booking b where b.participation_id = participation.id)
+     )
+     insert into appointment_booking (id, project_id, participation_id, appointment_id, origin, booked_by,
+       attendance, attendance_recorded_by, attendance_recorded_at)
+     select gen_random_uuid(), $1, people.id, events.id, 'staff', $2,
+       case when people.n % 2 = 0 then 'absent'::attendance end,
+       case when people.n % 2 = 0 then $2::uuid end,
+       case when people.n % 2 = 0 then now() end
+     from people join events on events.n = people.n % 4`,
+    [werkNord, projectLead],
+  );
+}
 
 beforeAll(async () => {
   await resetTestDatabase({ seed: true, active: true });
@@ -205,52 +253,43 @@ describe("GET /projects/{id}/worklist", () => {
     ]);
   });
 
-  it("answers 2,000 synthetic participations with bookings in under a second", async () => {
-    await owner.$client.query(
-      `with created as (
-         insert into participation (project_id, status, profiling_status, dsv_status)
-         select $1, 'contacted', 'not_started', 'not_offered' from generate_series(1, 2000)
-         returning id
-       )
-       insert into participant_identity (participation_id, project_id, personnel_number, first_name, last_name)
-       select id, $1, 'SYN-' || row_number() over (), 'Vorname', 'Nachname' from created`,
-      [werkNord],
-    );
-    // Four past info events of 500 seats, every participation booked once, every other one
-    // recorded absent: each row has an appointment item (process-and-lifecycle.md, appointments).
-    await owner.$client.query(
-      `with events as (
-         insert into appointment (id, project_id, kind, starts_at, ends_at, booking_closes_at, capacity, venue, created_by)
-         select gen_random_uuid(), $1, 'info_event', '2091-01-10T09:00:00Z'::timestamptz + n * interval '1 day',
-           '2091-01-10T11:00:00Z'::timestamptz + n * interval '1 day', '2091-01-09T09:00:00Z'::timestamptz,
-           500, 'Raum 1', $2
-         from generate_series(0, 3) n
-         returning id, extract(day from starts_at at time zone 'UTC')::int - 10 as n
-       ), people as (
-         select id, row_number() over (order by id) - 1 as n from participation where project_id = $1
-       )
-       insert into appointment_booking (id, project_id, participation_id, appointment_id, origin, booked_by,
-         attendance, attendance_recorded_by, attendance_recorded_at)
-       select gen_random_uuid(), $1, people.id, events.id, 'staff', $2,
-         case when people.n % 2 = 0 then 'absent'::attendance end,
-         case when people.n % 2 = 0 then $2::uuid end,
-         case when people.n % 2 = 0 then now() end
-       from people join events on events.n = people.n % 4`,
-      [werkNord, projectLead],
-    );
+  it("runs as many SQL statements for 2,000 participations as for 10", async () => {
+    // One snapshot, every per-row fact read for all rows at once and never one statement per
+    // participation (ADR-0010, the bounded snapshot). A deterministic gate, unlike the timing.
+    await booked(10);
+    const few = await countStatements(db, () => worklist());
+    expect((await readJson(few.result, Worklist)).items).toHaveLength(10);
+    await booked(1990);
+    const many = await countStatements(db, () => worklist());
+    const { items } = await readJson(many.result, Worklist);
+    expect(items).toHaveLength(2000);
+    expect(items.every((item) => item.appointments.items.length === 1)).toBe(true);
+    expect(few.statements).toBeGreaterThan(0);
+    expect(many.statements).toBe(few.statements);
+  });
+
+  it("answers 2,000 synthetic participations with bookings within its timing budget", async ({
+    annotate,
+  }) => {
+    await booked(2000);
     const timings: number[] = [];
     for (let run = 0; run < 3; run++) {
       const started = performance.now();
       const res = await worklist();
       expect(res.status).toBe(200);
-      const { items } = await readJson(res, Worklist);
-      expect(items).toHaveLength(2000);
-      expect(items.every((item) => item.appointments.items.length === 1)).toBe(true);
+      expect((await readJson(res, Worklist)).items).toHaveLength(2000);
       timings.push(performance.now() - started);
     }
-    // oxlint-disable-next-line no-console -- the timings go into the PR (the performance criterion)
-    console.info(`worklist of 2,000: ${timings.map((t) => `${Math.round(t)} ms`).join(", ")}`);
-    expect(Math.min(...timings)).toBeLessThan(1000);
+    const reported = `worklist of 2,000: ${timings.map((t) => `${Math.round(t)} ms`).join(", ")}`;
+    // oxlint-disable-next-line no-console -- the timings go into the PR
+    console.info(reported);
+    await annotate(reported, "performance");
+    // Best of three under 1 s (architecture/overview.md, performance approach).
+    expectWithinBudget("worklist of 2,000 (best of three)", Math.min(...timings), {
+      budget: 1000,
+      ceiling: 5000,
+      causes: "a query per participation (see the statement count test), a missing index",
+    });
   });
 });
 

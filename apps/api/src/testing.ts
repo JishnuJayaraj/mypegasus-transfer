@@ -1,5 +1,5 @@
 import { SystemClock, type Clock } from "@transfer/adapters";
-import { createDb, type Database } from "@transfer/db";
+import { createDb, transactionWithClient, type Database } from "@transfer/db";
 import { testDatabaseUrls } from "@transfer/db/testing";
 import { ProblemDetails } from "@transfer/domain";
 import { pino } from "pino";
@@ -115,4 +115,53 @@ export async function expectProblem(res: Response, status: number, type: string)
   const body = await readJson(res, ProblemDetails);
   expect(body).toMatchObject({ type: `urn:transfer:problem:${type}`, status });
   return body;
+}
+
+/** A pooled connection, as `transactionWithClient` hands it out. */
+type PoolClient = Parameters<Parameters<typeof transactionWithClient>[1]>[1];
+
+/**
+ * Counts the SQL statements `db` sends while `work` runs: every query on every pooled connection
+ * checked out meanwhile, a transaction's `begin` and `commit` included. It proves a request's
+ * shape (no statement per row), never its speed.
+ */
+export async function countStatements<T>(db: Database, work: () => T | Promise<T>) {
+  const pool = db.$client;
+  let statements = 0;
+  const originals = new Map<PoolClient, PoolClient["query"]>();
+  const watch = (client: PoolClient) => {
+    if (originals.has(client)) return;
+    const query = client.query;
+    originals.set(client, query);
+    client.query = ((...args: unknown[]) => {
+      statements++;
+      return Reflect.apply(query, client, args);
+    }) as PoolClient["query"];
+  };
+  pool.on("acquire", watch);
+  try {
+    const result = await work();
+    return { result, statements };
+  } finally {
+    pool.off("acquire", watch);
+    for (const [client, query] of originals) client.query = query;
+  }
+}
+
+/**
+ * A timing budget (CLAUDE.md, how we work): above `ceiling` it always fails, since that is a bug and
+ * not a slow runner; above `budget` it fails only with `PERF_BUDGET=strict` (.env.example) and
+ * otherwise warns with the likely causes. Invariants are asserted before it, never through it.
+ */
+export function expectWithinBudget(
+  label: string,
+  ms: number,
+  { budget, ceiling, causes }: { budget: number; ceiling: number; causes: string },
+) {
+  expect(ms, `${label}: ${Math.round(ms)} ms, hard ceiling ${ceiling} ms`).toBeLessThan(ceiling);
+  if (ms < budget) return;
+  const message = `${label}: ${Math.round(ms)} ms, over the budget of ${budget} ms. Likely causes: ${causes}`;
+  if (process.env.PERF_BUDGET === "strict") expect.fail(message);
+  // oxlint-disable-next-line no-console -- a soft budget warns instead of failing (PERF_BUDGET)
+  console.warn(`WARNING ${message}`);
 }

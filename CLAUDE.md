@@ -83,6 +83,8 @@ confirmed before the pilot.
 - **One session per planned PR**; the plan and the PR are the handoff.
 - Write tests first for domain logic (lifecycle transitions, completeness rules, config
   resolution). UI gets component tests for critical flows and Playwright e2e for the happy path.
+- An invariant test is never weakened or removed to get CI green; a timing budget may be reported
+  as soft (`PERF_BUDGET`) but is never deleted.
 - **PR size:** one PR per unit the plan names. Don't split a planned PR further just for size:
   the product owner reviews at the planning stage and accepts the PRs, so extra stacked PRs only
   add merge overhead. Split only when a PR would mix unrelated concerns or exceed about 1,500

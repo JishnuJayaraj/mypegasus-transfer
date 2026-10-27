@@ -46,3 +46,23 @@ export async function expectAccessible(page: Page) {
     ),
   ).toEqual([]);
 }
+
+/**
+ * A timing budget (CLAUDE.md, how we work): above `ceiling` it always fails, since that is a bug and
+ * not a slow runner; above `budget` it fails only with `PERF_BUDGET=strict` (.env.example) and
+ * otherwise warns with the likely causes, as a console line and a test annotation. Invariants are
+ * asserted before it, never through it.
+ */
+export function expectWithinBudget(
+  label: string,
+  ms: number,
+  { budget, ceiling, causes }: { budget: number; ceiling: number; causes: string },
+) {
+  expect(ms, `${label}: ${Math.round(ms)} ms, hard ceiling ${ceiling} ms`).toBeLessThan(ceiling);
+  if (ms < budget) return;
+  const message = `${label}: ${Math.round(ms)} ms, over the budget of ${budget} ms. Likely causes: ${causes}`;
+  if (process.env.PERF_BUDGET === "strict") throw new Error(message);
+  test.info().annotations.push({ type: "performance warning", description: message });
+  // oxlint-disable-next-line no-console -- a soft budget warns instead of failing (PERF_BUDGET)
+  console.warn(`WARNING ${message}`);
+}
