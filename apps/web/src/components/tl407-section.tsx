@@ -13,12 +13,14 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, useApi } from "../api";
 import { documentNavigation } from "./documents-tab";
+import { SignedScans } from "./tl407-scans";
 
 // The section "Profilingbogen (TL 407)" of the tab "Profiling" (data-protection.md, generated
 // forms and the readiness projection; ba-forms.md): the readiness as the API projects it for the
 // viewer (the profiler's on "Prüfen", each decryption logged; the PL's summary at once),
-// "Erzeugen" with each warning confirmed, and the generated forms with "Öffnen" (a logged opening)
-// and "Neu erzeugen". Every button follows the API's capabilities; German only.
+// "Erzeugen" with each warning confirmed, the generated forms with "Öffnen" (a logged opening)
+// and "Neu erzeugen", and the signed paper (tl407-scans.tsx). Every button follows the API's
+// capabilities; German only.
 
 type View = components["schemas"]["Profiling"];
 type Readiness = components["schemas"]["Tl407Readiness"];
@@ -54,6 +56,7 @@ export function Tl407Section({ view }: { view: View }) {
           <SummaryBlock participationId={view.participationId} />
         )}
         <GeneratedForms view={view} />
+        <SignedScans key={view.tl407SignedOn ?? "unsigned"} view={view} />
       </Stack>
     </section>
   );

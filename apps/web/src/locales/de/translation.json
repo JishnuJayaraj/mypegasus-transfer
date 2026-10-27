@@ -1026,7 +1026,8 @@
           "scan_unavailable": "Die Virenprüfung ist gerade nicht erreichbar. Bitte später erneut versuchen.",
           "storage_unavailable": "Der Dokumentenspeicher ist gerade nicht verfügbar."
         }
-      }
+      },
+      "quarantined": "unter Quarantäne"
     }
   },
   "manual": {
@@ -1572,7 +1573,10 @@
       "missed_appointment_resolved": "Versäumter Termin ohne weitere Nachverfolgung",
       "profiling_session_changed": "Profiling-Termin geändert",
       "profiling_declarations_recorded": "Erklärungen gegenüber der BA geändert",
-      "form_generated": "Profilingbogen (TL 407) erzeugt"
+      "form_generated": "Profilingbogen (TL 407) erzeugt",
+      "document_quarantined": "Unterlage unter Quarantäne gestellt",
+      "document_quarantine_lifted": "Quarantäne aufgehoben",
+      "signed_declaration_recorded": "Erklärungen gegenüber der BA unterschrieben"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1633,7 +1637,9 @@
       "consent_required": "Keine Einwilligung in Benachrichtigungen",
       "appointment_unavailable": "Termin nicht mehr buchbar",
       "participant_declined": "Teilnehmende Person lehnt ab",
-      "no_longer_needed": "Nicht mehr erforderlich"
+      "no_longer_needed": "Nicht mehr erforderlich",
+      "suspected_wrong_person": "Verdacht: andere Person",
+      "suspected_wrong_acceptance": "Verdacht: irrtümlich angenommen"
     },
     "appointment": "{{kind}} am {{start}}",
     "appointmentBy": "{{kind}} am {{start}} ({{origin}})",
@@ -1649,7 +1655,14 @@
     },
     "session": "{{action}}: {{date}}",
     "form": "Fassung {{version}}",
-    "formWithAnlage": "Fassung {{version}}, mit Anlage"
+    "formWithAnlage": "Fassung {{version}}, mit Anlage",
+    "scanReviewed": "{{type}}: {{decision}} ({{origin}}, Fassung {{version}})",
+    "scanRejected": "{{type}}: {{decision}} ({{origin}})",
+    "origins": {
+      "generated": "aus erzeugtem Bogen",
+      "external_paper": "außerhalb der Anwendung ausgefüllt"
+    },
+    "signedDeclarations": "Fassung {{version}}: {{declarations}}"
   },
   "appointments": {
     "title": "Termine",
@@ -2235,6 +2248,112 @@
       "open": "Öffnen",
       "openFailed": "Der Bogen konnte nicht geöffnet werden.",
       "versionExpired": "Die Fassung des aktuellen Bogens ist nicht mehr gültig: bitte neu erzeugen, bevor er unterschrieben wird."
+    },
+    "scans": {
+      "title": "Unterschriebene Bögen",
+      "empty": "Noch kein unterschriebener Bogen hochgeladen.",
+      "columns": {
+        "addedAt": "Hochgeladen am",
+        "origin": "Herkunft",
+        "version": "Fassung",
+        "signedOn": "Unterschrieben am",
+        "state": "Stand",
+        "actions": "Aktionen"
+      },
+      "fromForm": "Ausdruck des Bogens vom {{at}}",
+      "external": "Außerhalb der Anwendung ausgefüllt",
+      "externalHint": "Ein Bogen, der außerhalb der Anwendung ausgefüllt wurde, auch vor ihrer Einführung oder bei Zeichen, die der erzeugte Bogen nicht drucken kann. Niemand muss ihn neu erzeugen oder neu unterschreiben; bei der Prüfung wird die gedruckte Fassung angegeben.",
+      "signedBy": "Teilnehmer·in {{participant}}, Profiler {{profiler}}",
+      "states": {
+        "unreviewed": "ungeprüft",
+        "accepted": "angenommen",
+        "rejected": "abgelehnt: {{reason}}",
+        "quarantined": "unter Quarantäne: {{reason}}"
+      },
+      "rejectReasons": {
+        "unreadable": "nicht lesbar",
+        "wrong_document": "falsches Dokument",
+        "incomplete": "unvollständig"
+      },
+      "quarantineReasons": {
+        "suspected_wrong_person": "Verdacht: andere Person",
+        "suspected_wrong_acceptance": "Verdacht: irrtümlich angenommen"
+      },
+      "deleteReasons": {
+        "wrong_person": "falsche Person",
+        "wrong_file": "falsche Datei"
+      },
+      "open": "Öffnen",
+      "review": "Prüfen",
+      "reject": "Ablehnen",
+      "delete": "Löschen",
+      "quarantine": "Unter Quarantäne stellen",
+      "lift": "Quarantäne aufheben",
+      "cancel": "Abbrechen",
+      "reason": "Grund",
+      "chooseReason": "Grund auswählen",
+      "rejectTitle": "Bogen ablehnen",
+      "rejectText": "Der Bogen bleibt als abgelehnt erhalten; ein neuer Scan folgt.",
+      "quarantineTitle": "Bogen unter Quarantäne stellen",
+      "quarantineText": "Der Bogen lässt sich dann von niemandem öffnen, zählt für keinen Nachweis und für keine Vollständigkeit, bis die Quarantäne aufgehoben wird.",
+      "deleteTitle": "Bogen löschen",
+      "deleteText": "Nur vor der Prüfung: Die Datei wird sofort gelöscht, der Eintrag bleibt mit dem Grund erhalten.",
+      "upload": "Unterschriebenen Bogen hochladen",
+      "origin": "Herkunft des Bogens",
+      "file": "Datei auswählen (PDF, JPEG oder PNG)",
+      "reviewDialog": {
+        "title": "Unterschriebenen Bogen prüfen",
+        "intro": "Erfassen Sie, was auf dem Papier steht. Maßgeblich sind die tatsächlichen Unterschriftsdaten und die angekreuzten Erklärungen.",
+        "participantSignedOn": "Unterschrieben von der teilnehmenden Person am",
+        "profilerSignedOn": "Unterschrieben vom Profiler am",
+        "dateInvalid": "Bitte ein gültiges Datum (TT.MM.JJJJ) angeben.",
+        "signatures_present": "Beide Unterschriften sind vorhanden.",
+        "all_pages_present": "Alle Seiten des Bogens sind vorhanden, die Anlage eingeschlossen.",
+        "version": "Gedruckte Fassung des Bogens",
+        "declarations": "Erklärungen gegenüber der BA",
+        "printed": "Wie gedruckt angekreuzt",
+        "marked": "Abweichend angekreuzt",
+        "notMarked": "nicht angekreuzt",
+        "accept": "Annehmen"
+      },
+      "complete": "Profiling abschließen",
+      "completeDate": "Profiling abgeschlossen am",
+      "completeHint": "Vorgeschlagen ist das spätere der beiden Unterschriftsdaten; früher geht nicht, ein Datum in der Zukunft auch nicht.",
+      "completeWaits": "„Profiling abschließen“ ist möglich, sobald ein unterschriebener Bogen angenommen ist und nicht unter Quarantäne steht.",
+      "done": {
+        "uploaded": "Der Bogen wurde hochgeladen.",
+        "accepted": "Der Bogen wurde angenommen.",
+        "rejected": "Der Bogen wurde abgelehnt.",
+        "deleted": "Der Bogen wurde gelöscht.",
+        "quarantined": "Der Bogen steht unter Quarantäne.",
+        "lifted": "Die Quarantäne wurde aufgehoben."
+      },
+      "messages": {
+        "failed": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+        "forbidden": "Dafür fehlt Ihnen die Berechtigung.",
+        "stale": "Der Stand hat sich inzwischen geändert. Bitte erneut versuchen.",
+        "codes": {
+          "document_quarantined": "Der Bogen steht unter Quarantäne.",
+          "document_not_quarantined": "Der Bogen steht nicht unter Quarantäne.",
+          "document_immutable": "Ein geprüfter Bogen wird nicht gelöscht; für einen Fehler gibt es die Quarantäne.",
+          "document_reviewed": "Der Bogen wurde bereits geprüft.",
+          "participation_closed": "Die Teilnahme ist beendet.",
+          "signature_in_future": "Ein Unterschriftsdatum liegt in der Zukunft.",
+          "signature_before_generation": "Ein Unterschriftsdatum liegt vor der Erzeugung des Bogens.",
+          "confirmation_required": "Bitte beide Bestätigungen setzen.",
+          "form_version_unknown": "Diese Fassung ist nicht hinterlegt.",
+          "generation_not_found": "Der gewählte Bogen gehört nicht zu dieser Teilnahme.",
+          "delete_reason_not_allowed": "Dieser Grund ist für einen unterschriebenen Bogen nicht vorgesehen.",
+          "effective_date_before_signature": "Das Datum liegt vor der letzten Unterschrift.",
+          "effective_date_in_future": "Das Datum liegt in der Zukunft.",
+          "tl407_signed": "Es ist kein angenommener unterschriebener Bogen vorhanden.",
+          "file_empty": "Die Datei ist leer.",
+          "file_too_large": "Die Datei ist zu groß (höchstens 10 MB).",
+          "file_type_not_allowed": "Nur PDF, JPEG oder PNG.",
+          "file_infected": "Die Datei wurde abgelehnt: Schadsoftware gefunden.",
+          "file_unscannable": "Die Datei konnte nicht geprüft werden."
+        }
+      }
     }
   }
 }

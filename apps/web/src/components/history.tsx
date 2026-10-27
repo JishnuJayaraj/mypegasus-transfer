@@ -87,10 +87,28 @@ export function HistoryTab({
       case "document_added":
       case "document_deleted":
         return label(text(details.documentType) ?? "");
-      case "document_reviewed":
-        return t("history.reviewed", {
+      case "document_reviewed": {
+        const values = {
           type: label(text(details.documentType) ?? ""),
           decision: coded("history.decisions", text(details.decision) ?? ""),
+        };
+        // A signed scan's origin and accepted version (data-protection.md, signed scans).
+        const origin = text(details.origin);
+        if (!origin) return t("history.reviewed", values);
+        const version = text(details.formVersion);
+        const scan = { ...values, origin: coded("history.origins", origin) };
+        return version
+          ? t("history.scanReviewed", { ...scan, version: version.replace("-", "/") })
+          : t("history.scanRejected", scan);
+      }
+      case "document_quarantined":
+      case "document_quarantine_lifted":
+        return label(text(details.documentType) ?? "");
+      // The declarations of an accepted signed form by their keys, never a value (Q193).
+      case "signed_declaration_recorded":
+        return t("history.signedDeclarations", {
+          version: (text(details.formVersion) ?? "").replace("-", "/"),
+          declarations: list(details.declarations).map(label).join(", "),
         });
       // A message: its kind, the channel, an appointment's start as written then (Q168).
       case "reminder_queued": {

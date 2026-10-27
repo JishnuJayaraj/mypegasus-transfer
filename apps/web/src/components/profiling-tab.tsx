@@ -77,9 +77,9 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
         view.capabilities.readUnemploymentPeriod && <UnemploymentSection view={view} />}
       {view.capabilities.readAssessment && view.assessment && <AssessmentSection view={view} />}
       {view.declarations && <DeclarationsSection view={view} />}
-      {(view.capabilities.readTl407Readiness || view.tl407Forms.length > 0) && (
-        <Tl407Section view={view} />
-      )}
+      {(view.capabilities.readTl407Readiness ||
+        view.tl407Forms.length > 0 ||
+        view.tl407Scans.length > 0) && <Tl407Section view={view} />}
     </Stack>
   );
 }
@@ -175,7 +175,7 @@ function StatusSection({ view }: { view: View }) {
       await reload();
     },
   });
-  // `profiling_done` comes with the signed TL 407 (its own section).
+  // `profiling_done` comes with the signed TL 407 (its own section, tl407-scans.tsx).
   const steps = view.transitions.filter((s) => s.to !== "profiling_done");
   const allowed = steps.filter((s) => s.allowed);
   const refusal = steps.find((s) => !s.allowed)?.refusal;

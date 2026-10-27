@@ -14,8 +14,11 @@ import { expect, expectAccessible, test } from "./helpers";
 // projection): the assigned consultant completes section B with the participant in assisted mode,
 // records a session, the unemployment period and the declarations, checks the readiness, confirms
 // "no school qualification" and generates the form; it opens through the logged opening. The PL
-// then sees the summary and the generated form. Synthetic data only; the suite fails on any CSP
-// violation. The signed scan, its review and `profiling_done` follow with the scans.
+// then sees the summary and the generated form. The signed paper comes back: the scan is uploaded
+// from the generated form, reviewed (dates, signatures, all pages, the declarations as printed)
+// and accepted, and "Profiling abschließen" records `profiling_done` on the later signature date
+// (data-protection.md, signed scans; process-and-lifecycle.md, the profiling record). Synthetic
+// data only; the suite fails on any CSP violation.
 
 const projectId = seedProjectIds.verwaltung;
 const { projectLead, consultant } = seedStaffUserIds;
@@ -143,7 +146,23 @@ async function completeSectionB(api: APIRequestContext, baseURL: string, partici
   await ok(api.delete(`${base}/assisted-mode${query}`, { headers }));
 }
 
-test("slice 6-3a: the profiler generates the TL 407, the PL sees the summary", async ({
+/** Today in Berlin as the forms print it (TT.MM.JJJJ). */
+const berlinToday = () =>
+  new Intl.DateTimeFormat("de-DE", {
+    timeZone: "Europe/Berlin",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date());
+
+/** A synthetic one-page scan of the signed paper. */
+const scan = {
+  name: "unterschriebener-bogen.pdf",
+  mimeType: "application/pdf",
+  buffer: Buffer.from("%PDF-1.7\n1 0 obj\n<< /Title (synthetic signed TL 407) >>\nendobj\n%%EOF\n"),
+};
+
+test("slice 6-3: the profiler generates the TL 407, the signed paper completes profiling", async ({
   page,
   baseURL,
 }) => {
@@ -218,4 +237,39 @@ test("slice 6-3a: the profiler generates the TL 407, the PL sees the summary", a
   await expect(lead.getByRole("table", { name: "Erzeugte Bögen" })).toContainText("08/2025");
   await expectAccessible(page);
   await lead.screenshot({ path: test.info().outputPath("3-project-lead.png") });
+
+  // 6. The signed paper comes back: the consultant uploads it from the generated form.
+  await staffSession(api, baseURL!, consultant);
+  await page.goto(`/projects/${projectId}/participations/${participationId}?tab=profiling`);
+  const signed = page.getByRole("region", { name: "Profilingbogen (TL 407)" });
+  await expect(signed).toContainText("„Profiling abschließen“ ist möglich, sobald");
+  await signed.getByLabel(/Datei auswählen/).setInputFiles(scan);
+  await expect(page.getByText("Der Bogen wurde hochgeladen.")).toBeVisible();
+  const scans = signed.getByRole("table", { name: "Unterschriebene Bögen" });
+  await expect(scans).toContainText("Ausdruck des Bogens vom");
+  await expect(scans).toContainText("ungeprüft");
+
+  // 7. "Prüfen": both signature dates, both confirmations, the declarations as printed.
+  await scans.getByRole("button", { name: /^Prüfen:/ }).click();
+  const review = page.getByRole("dialog", { name: "Unterschriebenen Bogen prüfen" });
+  await review.getByLabel(/von der teilnehmenden Person am/).fill(berlinToday());
+  await review.getByLabel(/vom Profiler am/).fill(berlinToday());
+  await review.getByText("Beide Unterschriften sind vorhanden.").click();
+  await review.getByText(/Alle Seiten des Bogens sind vorhanden/).click();
+  await expect(review.getByLabel("Wie gedruckt angekreuzt")).toBeChecked();
+  await expectAccessible(page);
+  await review.screenshot({ path: test.info().outputPath("4-review.png") });
+  await review.getByRole("button", { name: "Annehmen" }).click();
+  await expect(page.getByText("Der Bogen wurde angenommen.")).toBeVisible();
+  await expect(scans).toContainText("angenommen");
+  await scans.screenshot({ path: test.info().outputPath("5-accepted.png") });
+
+  // 8. "Profiling abschließen" on the later signature date, the default.
+  await expect(signed.getByLabel("Profiling abgeschlossen am")).toHaveValue(berlinToday());
+  await signed.getByRole("button", { name: "Profiling abschließen" }).click();
+  const status = page.getByRole("region", { name: "Profiling-Status" });
+  await expect(status).toContainText("Abgeschlossen");
+  await expect(status).toContainText(berlinToday());
+  await expectAccessible(page);
+  await status.screenshot({ path: test.info().outputPath("6-profiling-done.png") });
 });

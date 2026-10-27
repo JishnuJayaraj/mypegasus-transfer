@@ -92,6 +92,9 @@ const view = (
     closed?: boolean;
     tl407?: boolean;
     tl407Forms?: GeneratedForm[];
+    tl407Scans?: ReturnType<typeof scanOf>[];
+    tl407SignedOn?: string | null;
+    done?: "allowed" | "refused";
   } = {},
 ) => ({
   participationId,
@@ -115,12 +118,23 @@ const view = (
     unemploymentPeriodRecorded: true,
   }),
   tl407Forms: options.tl407Forms ?? [],
+  tl407Scans: options.tl407Scans ?? [],
+  tl407SignedOn: options.tl407SignedOn ?? null,
+  ...(profiler && { signedDeclarations: null }),
+  tl407Versions: ["08-2025"],
   transitions: options.closed
     ? [{ to: "profiling_in_progress", allowed: false, refusal: "track_inactive" }]
-    : [
-        { to: "profiling_in_progress", allowed: true, refusal: null },
-        { to: "profiling_declined", allowed: true, refusal: null },
-      ],
+    : options.done
+      ? [
+          options.done === "allowed"
+            ? { to: "profiling_done", allowed: true, refusal: null }
+            : { to: "profiling_done", allowed: false, refusal: "tl407_signed" },
+          { to: "profiling_declined", allowed: true, refusal: null },
+        ]
+      : [
+          { to: "profiling_in_progress", allowed: true, refusal: null },
+          { to: "profiling_declined", allowed: true, refusal: null },
+        ],
   capabilities: {
     record: profiler && !options.closed,
     readAssessment: profiler,
@@ -128,8 +142,38 @@ const view = (
     readUnemploymentPeriod: profiler,
     generateTl407: (options.tl407 ?? false) && profiler && !options.closed,
     readTl407Readiness: options.tl407 ?? false,
+    addTl407Scan: (options.tl407 ?? false) && !options.closed,
   },
 });
+
+const scanId = "00000000-0000-4000-a000-0000000000e1";
+const capabilities = {
+  open: true,
+  review: true,
+  delete: false,
+  quarantine: true,
+  liftQuarantine: false,
+};
+/** A signed TL 407 scan as the tab lists it. */
+function scanOf(overrides: Record<string, unknown> = {}) {
+  return {
+    documentId: scanId,
+    origin: "external_paper" as "external_paper" | "generated",
+    generationDocumentId: null as string | null,
+    formVersion: null as string | null,
+    addedAt: "2026-10-23T08:00:00.000000Z",
+    review: {
+      state: "unreviewed" as "unreviewed" | "accepted" | "rejected",
+      reasonCode: null,
+      reviewedAt: null,
+    },
+    participantSignedOn: null as string | null,
+    profilerSignedOn: null as string | null,
+    quarantine: null,
+    capabilities,
+    ...overrides,
+  };
+}
 
 /** A write's answer: its own revision, its warnings and the record as read after it. */
 const written = (
@@ -171,6 +215,9 @@ function setup(options: {
   closed?: boolean;
   tl407?: boolean;
   tl407Forms?: GeneratedForm[];
+  tl407Scans?: ReturnType<typeof scanOf>[];
+  tl407SignedOn?: string;
+  done?: "allowed" | "refused";
   routes?: Routes;
 }) {
   const mock = mockApi({
@@ -187,6 +234,9 @@ function setup(options: {
           closed: options.closed,
           tl407: options.tl407,
           tl407Forms: options.tl407Forms,
+          tl407Scans: options.tl407Scans,
+          tl407SignedOn: options.tl407SignedOn,
+          done: options.done,
         }),
       ),
     [`POST ${detailPath}/profiling-status`]: () =>
@@ -573,7 +623,9 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
       await within(section).findByText("Enthält Zeichen, die der Bogen nicht drucken kann."),
     ).toBeVisible();
     expect(within(section).getByText("7 Nachname:")).toBeVisible();
-    expect(within(section).getByText(/Außerhalb der Anwendung ausgefüllt/)).toBeVisible();
+    expect(
+      within(section).getByText(/Füllen Sie den Bogen in diesem Fall auf Papier aus/),
+    ).toBeVisible();
     expect(within(section).queryByRole("button", { name: "Erzeugen" })).toBeNull();
   });
 
@@ -642,5 +694,146 @@ describe("the section 'Profilingbogen (TL 407)'", () => {
     expect(within(section).getByText("ersetzt")).toBeVisible();
     await user.click(within(section).getByRole("button", { name: "Prüfen" }));
     expect(await within(section).findByRole("button", { name: "Neu erzeugen" })).toBeEnabled();
+  });
+});
+
+describe("the signed TL 407 (data-protection.md, signed scans)", () => {
+  const scanPath = `${detailPath}/documents/${scanId}`;
+
+  it("uploads a scan from a generated form, or as external paper", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: true,
+      tl407: true,
+      tl407Forms: [generatedForm()],
+      routes: { [`POST ${detailPath}/documents`]: () => json({}, 201) },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    expect(
+      within(section).getByText("Noch kein unterschriebener Bogen hochgeladen."),
+    ).toBeVisible();
+    const file = new File(["%PDF-1.7 synthetic"], "scan.pdf", { type: "application/pdf" });
+    await user.upload(within(section).getByLabelText(/Datei auswählen/), file);
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/documents`)[0]?.body).toMatchObject({
+        type: "tl407_signed_scan",
+        origin: "generated",
+        generationDocumentId: documentId,
+      }),
+    );
+    await user.selectOptions(
+      within(section).getByLabelText("Herkunft des Bogens"),
+      "Außerhalb der Anwendung ausgefüllt",
+    );
+    expect(within(section).getByText(/Niemand muss ihn neu erzeugen/)).toBeVisible();
+  });
+
+  it("reviews external paper with the dates, both confirmations, the version and the declarations as marked", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: true,
+      tl407: true,
+      tl407Scans: [scanOf()],
+      routes: { [`POST ${scanPath}/review`]: () => json({}) },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    const scans = within(section).getByRole("table", { name: "Unterschriebene Bögen" });
+    expect(within(scans).getByText("Außerhalb der Anwendung ausgefüllt")).toBeVisible();
+    await user.click(within(scans).getByRole("button", { name: /^Prüfen:/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Unterschriebenen Bogen prüfen" });
+    const accept = within(dialog).getByRole("button", { name: "Annehmen" });
+    await user.type(within(dialog).getByLabelText(/teilnehmenden Person am/), "02.10.2026");
+    await user.type(within(dialog).getByLabelText(/vom Profiler am/), "03.10.2026");
+    await user.click(within(dialog).getByLabelText(/Beide Unterschriften/));
+    expect(accept).toBeDisabled();
+    await user.click(within(dialog).getByLabelText(/Alle Seiten/));
+    await user.selectOptions(
+      within(dialog).getByLabelText(/Jobbörse/),
+      "anonym, ohne telefonische Kontaktaufnahme",
+    );
+    await user.click(accept);
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${scanPath}/review`)[0]?.body).toEqual({
+        decision: "accepted",
+        scan: {
+          participantSignedOn: "2026-10-02",
+          profilerSignedOn: "2026-10-03",
+          confirmations: ["signatures_present", "all_pages_present"],
+          formVersion: "08-2025",
+          declarations: {
+            kind: "as_marked",
+            jobboerseChoice: "anonymous_no_contact",
+            baContactConsent: null,
+          },
+        },
+      }),
+    );
+  });
+
+  it("quarantines with a reason, and completes profiling on the later signature date", async () => {
+    const user = userEvent.setup();
+    const accepted = scanOf({
+      formVersion: "08-2025",
+      review: { state: "accepted", reasonCode: null, reviewedAt: "2026-10-23T09:00:00.000000Z" },
+      participantSignedOn: "2026-10-20",
+      profilerSignedOn: "2026-10-21",
+      capabilities: { ...capabilities, review: false },
+    });
+    const { calls } = setup({
+      profiler: true,
+      tl407: true,
+      tl407Scans: [accepted],
+      tl407SignedOn: "2026-10-21",
+      done: "allowed",
+      routes: { [`POST ${scanPath}/quarantine`]: () => json({}) },
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    expect(
+      within(section).getByText("Teilnehmer·in 20.10.2026, Profiler 21.10.2026"),
+    ).toBeVisible();
+    expect(within(section).getByLabelText("Profiling abgeschlossen am")).toHaveValue("21.10.2026");
+    await user.click(within(section).getByRole("button", { name: "Profiling abschließen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/profiling-status`)[0]?.body).toEqual({
+        to: "profiling_done",
+        effectiveDate: "2026-10-21",
+        statusVersion: 3,
+      }),
+    );
+    await user.click(within(section).getByRole("button", { name: /^Unter Quarantäne stellen:/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Bogen unter Quarantäne stellen" });
+    await user.selectOptions(within(dialog).getByLabelText("Grund"), "Verdacht: andere Person");
+    await user.click(within(dialog).getByRole("button", { name: "Unter Quarantäne stellen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${scanPath}/quarantine`)[0]?.body).toEqual({
+        reasonCode: "suspected_wrong_person",
+      }),
+    );
+  });
+
+  it("says why 'Profiling abschließen' waits, and shows a quarantined scan without 'Öffnen'", async () => {
+    setup({
+      profiler: false,
+      tl407: true,
+      done: "refused",
+      tl407Scans: [
+        scanOf({
+          quarantine: {
+            reasonCode: "suspected_wrong_acceptance",
+            quarantinedAt: "2026-10-24T08:00:00.000000Z",
+          },
+          capabilities: { ...capabilities, open: false, review: false, quarantine: false },
+        }),
+      ],
+    });
+    const section = await screen.findByRole("region", { name: "Profilingbogen (TL 407)" });
+    expect(
+      await within(section).findByText("unter Quarantäne: Verdacht: irrtümlich angenommen"),
+    ).toBeVisible();
+    expect(within(section).queryByRole("button", { name: /^Öffnen:/ })).toBeNull();
+    expect(
+      within(section).getByText(/sobald ein unterschriebener Bogen angenommen ist/),
+    ).toBeVisible();
+    expect(within(section).queryByRole("button", { name: "Profiling abschließen" })).toBeNull();
   });
 });

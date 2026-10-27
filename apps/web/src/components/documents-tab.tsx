@@ -3,6 +3,7 @@ import type { components } from "@transfer/api-client";
 import {
   DocumentDeleteReason,
   DocumentReviewReason,
+  isScanType,
   type DocumentType,
   type DocumentView,
 } from "@transfer/domain";
@@ -33,7 +34,8 @@ import { participationDocumentsQuery, useApi } from "../api";
 // types the viewer may read in normal mode, with "Öffnen" (a logged opening, then a download from
 // its short-lived link), "Annehmen", "Ablehnen" (a reason) and "Löschen" (a reason and a
 // confirmation) as each document's capabilities say, and "Unterlagen hinzufügen" for the addable
-// types. The API checks every action again. German only.
+// types; signed scans are added and reviewed on the tab "Profiling". The API checks every action
+// again. German only.
 
 type Detail = components["schemas"]["ParticipationDetail"];
 type Message =
@@ -83,7 +85,9 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
       />
     );
   }
-  const { documents, addableTypes, limits } = query.data;
+  const { documents, limits } = query.data;
+  // Signed scans are added and reviewed on the tab "Profiling" with their origin and record.
+  const addableTypes = query.data.addableTypes.filter((type) => !isScanType(type));
   const typeLabel = (type: DocumentType) => ts(`documents.types.${type}`);
 
   /** Runs an action; afterwards the list is read again (capabilities change with it). */
@@ -178,8 +182,9 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
           `participant.documents.addedBy.${document.addedBy === "participant" ? "participant" : document.onBehalf ? "assisted" : "staff"}`,
         ),
       }),
-      state:
-        state.state === "rejected" && state.reasonCode
+      state: document.quarantine
+        ? t("participant.documents.quarantined")
+        : state.state === "rejected" && state.reasonCode
           ? ts("documents.states.rejectedBecause", {
               reason: ts(`documents.reasons.${state.reasonCode}`),
             })
@@ -197,7 +202,7 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
               {t("participant.documents.open")}
             </Button>
           )}
-          {capabilities.review && (
+          {capabilities.review && !isScanType(document.type) && (
             <>
               <Button
                 kind="ghost"
