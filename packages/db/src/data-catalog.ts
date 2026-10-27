@@ -224,7 +224,8 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   },
   // Documents (data-protection.md, uploads and documents; Q145): the metadata of an encrypted file
   // in the store (type, media type, size, the kept file name, who added and reviewed it, a deletion's
-  // tombstone), its wrapped key and content hash, which the runtime role can't select; each row of
+  // tombstone; a signed scan's origin, generation, version, signature dates and confirmations; a
+  // quarantine), its wrapped key and content hash, which the runtime role can't select; each row of
   // its type's class.
   document: {
     retentionClass: perRowRetention,
@@ -236,6 +237,14 @@ export const dataCatalog: Record<string, CatalogEntry> = {
   // codes, the Anlage, who generated it and when. Its row stays when the working copy's file goes.
   form_generation: {
     retentionClass: "form_working_copy",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
+  // The declarations of an accepted signed form (data-protection.md, signed declarations; Q193):
+  // the scan, the form's code and version, each declaration as marked, the signature date, who
+  // recorded it and when; immutable, part of the signed form's evidence.
+  signed_declaration: {
+    retentionClass: "participation_record",
     dataClass: "confidential",
     holdsParticipantData: true,
   },
@@ -719,6 +728,9 @@ const withoutFields = new Set([
   // A generated form's provenance: the declarations it holds are those the form printed, part of
   // the generated document (data-protection.md, generated forms), not the pending fields.
   "form_generation",
+  // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
+  // declarations to the BA).
+  "signed_declaration",
 ]);
 
 /**

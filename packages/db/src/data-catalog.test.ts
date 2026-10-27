@@ -101,6 +101,8 @@ describe("data catalog", () => {
       document_link: entry("access_credential", "internal", true),
       // Slice 6 (Q179): a generated form's provenance, its tombstone when the file goes.
       form_generation: entry("form_working_copy", "confidential", true),
+      // Slice 6 (Q193): the declarations of an accepted signed form.
+      signed_declaration: entry("participation_record", "confidential", true),
       participant_reminder: entry("personnel_file", "internal", true),
       // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.
       appointment: entry("project_master", "internal"),

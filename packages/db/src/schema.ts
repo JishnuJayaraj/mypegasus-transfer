@@ -81,6 +81,9 @@ import {
   JobboerseChoice,
   FormCode,
   tl407WarningCodes,
+  QuarantineReason,
+  ScanConfirmation,
+  ScanOrigin,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -101,6 +104,7 @@ import {
   unique,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
   type PgTableExtraConfigValue,
 } from "drizzle-orm/pg-core";
 
@@ -433,6 +437,11 @@ export const attendanceConflictResolution = pgEnum(
 export const missedResolution = pgEnum("missed_resolution", values(MissedResolution));
 export const jobboerseChoice = pgEnum("jobboerse_choice", values(JobboerseChoice));
 export const formCode = pgEnum("form_code", values(FormCode));
+export const scanOrigin = pgEnum("scan_origin", values(ScanOrigin));
+export const documentQuarantineReason = pgEnum(
+  "document_quarantine_reason",
+  values(QuarantineReason),
+);
 export const assistedModeEndReason = pgEnum(
   "assisted_mode_end_reason",
   values(AssistedModeEndReason),
@@ -1700,12 +1709,41 @@ export const document = pgTable(
     deletedByStaffUserId: uuid("deleted_by_staff_user_id").references(() => staffUser.id),
     deleteReason: documentDeleteReason("delete_reason"),
     purgedAt: instant("purged_at"),
+    // A signed scan (data-protection.md, signed scans): its origin, the generation it was printed
+    // from, its form (a generated one's from the add, external paper's from the acceptance) and
+    // the acceptance's record: the participant's and the profiler's actual signature dates and the
+    // reviewer's confirmations.
+    scanOrigin: scanOrigin("scan_origin"),
+    generationDocumentId: uuid("generation_document_id"),
+    formCode: formCode("form_code"),
+    formVersion: text("form_version"),
+    signedOn: dateColumn("signed_on"),
+    countersignedOn: dateColumn("countersigned_on"),
+    reviewConfirmations: text("review_confirmations").array(),
+    // Quarantine (data-protection.md, quarantine; Q183): while set, it opens for nobody and gives
+    // no fact; the last lift's instant stays for the fact's recording instant.
+    quarantineReason: documentQuarantineReason("quarantine_reason"),
+    quarantinedBy: uuid("quarantined_by").references(() => staffUser.id),
+    quarantinedAt: instant("quarantined_at"),
+    quarantineLiftedAt: instant("quarantine_lifted_at"),
+    /** Set by an approved correction (data-protection.md, evidence corrections); none yet. */
+    invalidatedByCorrection: uuid("invalidated_by_correction"),
   },
   (t) => [
     foreignKey({
       name: "document_participation_fk",
       columns: [t.participationId, t.projectId],
       foreignColumns: [participation.id, participation.projectId],
+    }),
+    // A scan's generation is one of the same participation and form.
+    foreignKey({
+      name: "document_generation_fk",
+      columns: [t.generationDocumentId, t.participationId, t.formCode],
+      foreignColumns: [
+        formGeneration.documentId,
+        formGeneration.participationId,
+        formGeneration.formCode,
+      ],
     }),
     foreignKey({
       name: "document_policy_fk",
@@ -1739,6 +1777,20 @@ export const document = pgTable(
       sql`(${t.deletedAt} is null) = (${t.deletedBy} is null) and (${t.deletedBy} is null or ${t.deletedBy} in ('participant', 'user')) and coalesce(${t.deletedBy} = 'user', false) = (${t.deletedByStaffUserId} is not null) and coalesce(${t.deletedBy} = 'user', false) = (${t.deleteReason} is not null) and (${t.deletedAt} is null or ${t.fileName} is null)`,
     ),
     check("document_purged", sql`${t.purgedAt} is null or ${t.deletedAt} is not null`),
+    check(
+      "document_scan",
+      sql`(${t.type} = 'tl407_signed_scan') = (${t.scanOrigin} is not null) and coalesce(${t.scanOrigin} = 'generated', false) = (${t.generationDocumentId} is not null) and (${t.formCode} is null) = (${t.formVersion} is null) and (${t.formVersion} is null or ${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$') and (${t.scanOrigin} is null or ${t.formCode} is not null or ${t.scanOrigin} = 'external_paper' and ${t.reviewState} <> 'accepted')`,
+    ),
+    check(
+      "document_scan_review",
+      sql.raw(
+        `("document"."signed_on" is null) = ("document"."countersigned_on" is null) and ("document"."signed_on" is null) = ("document"."review_confirmations" is null) and ("document"."signed_on" is not null) = ("document"."scan_origin" is not null and "document"."review_state" = 'accepted') and ("document"."review_confirmations" is null or "document"."review_confirmations" @> array[${ScanConfirmation.options.map((code) => `'${code}'`).join(", ")}]::text[])`,
+      ),
+    ),
+    check(
+      "document_quarantine",
+      sql`(${t.quarantineReason} is null) = (${t.quarantinedAt} is null) and (${t.quarantinedAt} is null) = (${t.quarantinedBy} is null)`,
+    ),
   ],
 );
 
@@ -1798,7 +1850,7 @@ export const formGeneration = pgTable(
     documentId: uuid("document_id")
       .notNull()
       .unique("form_generation_document_unique")
-      .references(() => document.id),
+      .references((): AnyPgColumn => document.id),
     formCode: formCode("form_code").notNull(),
     formVersion: text("form_version").notNull(),
     profileRevision: integer("profile_revision").notNull(),
@@ -1830,10 +1882,60 @@ export const formGeneration = pgTable(
     ),
     check("form_generation_source_token", sql`${t.sourceToken} ~ '^[0-9a-f]{64}$'`),
     check("form_generation_organisation_sha256", sql`${t.organisationSha256} ~ '^[0-9a-f]{64}$'`),
+    // The target of a scan's composite FK (data-protection.md, signed scans).
+    unique("form_generation_scan_target").on(t.documentId, t.participationId, t.formCode),
     check(
       "form_generation_confirmed_warnings",
       sql.raw(
         `"form_generation"."confirmed_warnings" <@ array[${tl407WarningCodes.map((code) => `'${code}'`).join(", ")}]::text[]`,
+      ),
+    ),
+  ],
+);
+
+/**
+ * The declarations of an accepted signed form, one row per declaration (ba-forms.md, declarations
+ * to the BA; data-protection.md, signed declarations; Q185, Q193): the scan, the form's code and
+ * version, the value as marked on the paper (null where nothing is marked; the Jobbörse choice's
+ * code, `yes` / `no` for the BA contact declaration), the later actual signature date, who
+ * recorded it and when. Immutable: written only by `review_document`, never changed; a later
+ * signed form adds its own rows. Confidential, class `participation_record` (part of the signed
+ * form's evidence).
+ */
+export const signedDeclaration = pgTable(
+  "signed_declaration",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => document.id),
+    formCode: formCode("form_code").notNull(),
+    formVersion: text("form_version").notNull(),
+    declaration: text("declaration").notNull(),
+    value: text("value"),
+    signedOn: dateColumn("signed_on").notNull(),
+    recordedBy: uuid("recorded_by")
+      .notNull()
+      .references(() => staffUser.id),
+    recordedAt: instant("recorded_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "signed_declaration_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    unique("signed_declaration_unique").on(t.documentId, t.declaration),
+    index("signed_declaration_participation_idx").on(t.participationId, t.recordedAt),
+    check("signed_declaration_form_version", sql`${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$'`),
+    check(
+      "signed_declaration_value",
+      sql.raw(
+        `"signed_declaration"."declaration" = 'jobboerseChoice' and ("signed_declaration"."value" is null or "signed_declaration"."value" in (${JobboerseChoice.options.map((code) => `'${code}'`).join(", ")})) or "signed_declaration"."declaration" = 'baContactConsent' and ("signed_declaration"."value" is null or "signed_declaration"."value" in ('yes', 'no'))`,
       ),
     ),
   ],
@@ -2671,6 +2773,7 @@ export const tables = [
   document,
   documentLink,
   formGeneration,
+  signedDeclaration,
   participantReminder,
   appointment,
   appointmentBooking,

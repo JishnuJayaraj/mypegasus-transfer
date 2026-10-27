@@ -120,7 +120,7 @@ describe("record_form_generation (Q179)", () => {
       ),
     ).toEqual({
       type: "tl407_form",
-      catalog_version: 3,
+      catalog_version: 4,
       retention_class: "form_working_copy",
       media_type: "application/pdf",
       file_name: null,

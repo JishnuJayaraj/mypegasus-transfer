@@ -207,6 +207,10 @@ const statusFunctions = [
   "read_unemployment_period",
   // Slice 6: generated forms (data-protection.md, generated forms)
   "record_form_generation",
+  // Slice 6: signed scans, quarantine and the TL 407 facts (data-protection.md, signed scans)
+  "quarantine_document",
+  "lift_document_quarantine",
+  "tl407_facts",
 ];
 const helpers = [
   "assert_context",
@@ -319,6 +323,9 @@ const helpers = [
   "form_person",
   "form_person_valid",
   "form_declarations_valid",
+  "scan_form",
+  "scan_declarations_valid",
+  "tl407_evidence",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -914,9 +921,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 and 3 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 4 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 19 },
+      { n: 29 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });

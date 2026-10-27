@@ -243,6 +243,7 @@ describe("document_type_policy", () => {
     ).toEqual([
       { catalog_version: 2, n: 9 },
       { catalog_version: 3, n: 10 },
+      { catalog_version: 4, n: 10 },
     ]);
   });
 });
@@ -263,7 +264,7 @@ describe("add_document (Q146)", () => {
       ),
     ).toEqual({
       type: "cv",
-      catalog_version: 3,
+      catalog_version: 4,
       retention_class: "personnel_file",
       file_name: FILE_NAME,
       added_by: "participant",
