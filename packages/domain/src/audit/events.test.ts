@@ -119,6 +119,9 @@ describe("audit event types (ADR-0002)", () => {
       "profiling_session_changed",
       "profiling_declarations_recorded",
       "form_generated",
+      "document_quarantined",
+      "document_quarantine_lifted",
+      "signed_declaration_recorded",
     ]);
   });
 
@@ -205,6 +208,9 @@ describe("audit event types (ADR-0002)", () => {
       "profiling_session_changed",
       "profiling_declarations_recorded",
       "form_generated",
+      "document_quarantined",
+      "document_quarantine_lifted",
+      "signed_declaration_recorded",
     ]);
   });
 

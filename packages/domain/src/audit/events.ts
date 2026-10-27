@@ -18,7 +18,8 @@ import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
 import { AssistedModeEndReason, AssistedModeHow } from "../self-service/assisted";
 import { DocumentSource } from "../documents/api";
-import { DocumentDeleteReason, DocumentReviewReason } from "../documents/state";
+import { ScanOrigin } from "../documents/scans";
+import { DocumentDeleteReason, DocumentReviewReason, QuarantineReason } from "../documents/state";
 import {
   ActivationChannel,
   ActivationDeliveryKind,
@@ -186,6 +187,11 @@ export const AuditEventType = z.enum([
   // Slice 6, a generated form (data-protection.md, generated forms), written only by
   // `record_form_generation`
   "form_generated",
+  // Slice 6, signed paper (data-protection.md, signed scans and quarantine), written only by
+  // their functions
+  "document_quarantined",
+  "document_quarantine_lifted",
+  "signed_declaration_recorded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -282,6 +288,9 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "profiling_session_changed",
   "profiling_declarations_recorded",
   "form_generated",
+  "document_quarantined",
+  "document_quarantine_lifted",
+  "signed_declaration_recorded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -531,11 +540,17 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
 /** Every document event names its row and type, never its name or content. */
 const ofDocument = { documentId: z.uuid(), documentType: DocumentType };
 
+/** A review; a signed scan's also names its origin and, once accepted, its form version. */
 const documentReviewed = event("document_reviewed", {
   ...ofParticipation,
   actor: staffActor,
   reasonCode: DocumentReviewReason.nullable(),
-  details: z.strictObject({ ...ofDocument, decision: z.enum(["accepted", "rejected"]) }),
+  details: z.strictObject({
+    ...ofDocument,
+    decision: z.enum(["accepted", "rejected"]),
+    origin: ScanOrigin.optional(),
+    formVersion: FormVersion.optional(),
+  }),
 }).superRefine(({ reasonCode, details }, ctx) => {
   if ((details.decision === "rejected") !== (reasonCode !== null)) issue(ctx, "reason_mismatch");
 });
@@ -1219,6 +1234,32 @@ export const AuditEvent = z.discriminatedUnion("type", [
       formCode: FormCode,
       formVersion: FormVersion,
       anlage: z.boolean(),
+    }),
+  }),
+  /** A document quarantined at once, with its reason (data-protection.md, quarantine; Q183). */
+  event("document_quarantined", {
+    ...ofParticipation,
+    actor: staffActor,
+    reasonCode: QuarantineReason,
+    details: z.strictObject(ofDocument),
+  }),
+  event("document_quarantine_lifted", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject(ofDocument),
+  }),
+  /**
+   * The declarations of an accepted signed form (ba-forms.md, declarations to the BA; Q193): the
+   * scan, the form's code and version and the declaration codes, never their values.
+   */
+  event("signed_declaration_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      documentId: z.uuid(),
+      formCode: FormCode,
+      formVersion: FormVersion,
+      declarations: z.array(z.enum(["jobboerseChoice", "baContactConsent"])).min(1),
     }),
   }),
   /** The pending declarations to the BA changed: the keys, never the values (Q193). */

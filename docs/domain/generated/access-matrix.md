@@ -511,7 +511,7 @@ open it.
 
 | Subject | Type | `add` | `review` | `delete` |
 | --- | --- | --- | --- | --- |
-| Participant (own) | `tl407_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Participant (own) | `tl407_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: actor_not_allowed |
 | Participant (own) | `kug200b_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own) | `dsv_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own) | `dsv_cancellation` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
@@ -521,7 +521,7 @@ open it.
 | Participant (own) | `participant_upload` | yes | no: actor_not_allowed | yes |
 | Participant (own) | `qualification_certificate` | yes | no: actor_not_allowed | yes |
 | Participant (own) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Participant (own, no birth-date check) | `tl407_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Participant (own, no birth-date check) | `tl407_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: actor_not_allowed |
 | Participant (own, no birth-date check) | `kug200b_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own, no birth-date check) | `dsv_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own, no birth-date check) | `dsv_cancellation` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
@@ -531,7 +531,7 @@ open it.
 | Participant (own, no birth-date check) | `participant_upload` | yes | no: actor_not_allowed | yes |
 | Participant (own, no birth-date check) | `qualification_certificate` | yes | no: actor_not_allowed | yes |
 | Participant (own, no birth-date check) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Consultant/profiler (assigned) | `tl407_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
+| Consultant/profiler (assigned) | `tl407_signed_scan` | yes | yes | no: role_not_allowed |
 | Consultant/profiler (assigned) | `kug200b_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Consultant/profiler (assigned) | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -541,7 +541,7 @@ open it.
 | Consultant/profiler (assigned) | `participant_upload` | yes | yes | yes |
 | Consultant/profiler (assigned) | `qualification_certificate` | yes | yes | yes |
 | Consultant/profiler (assigned) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Consultant/profiler (not assigned) | `tl407_signed_scan` | no: not_assigned | no: not_assigned | no: immutable |
+| Consultant/profiler (not assigned) | `tl407_signed_scan` | no: not_assigned | no: not_assigned | no: role_not_allowed |
 | Consultant/profiler (not assigned) | `kug200b_signed_scan` | no: not_assigned | no: not_assigned | no: immutable |
 | Consultant/profiler (not assigned) | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Consultant/profiler (not assigned) | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -551,7 +551,7 @@ open it.
 | Consultant/profiler (not assigned) | `participant_upload` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `qualification_certificate` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| PL | `tl407_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
+| PL | `tl407_signed_scan` | yes | yes | yes |
 | PL | `kug200b_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
 | PL | `dsv_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
 | PL | `dsv_cancellation` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
@@ -561,7 +561,7 @@ open it.
 | PL | `participant_upload` | yes | yes | yes |
 | PL | `qualification_certificate` | yes | yes | yes |
 | PL | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Back office | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
+| Back office | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Back office | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Back office | `dsv_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
 | Back office | `dsv_cancellation` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
@@ -571,7 +571,7 @@ open it.
 | Back office | `participant_upload` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Back office | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Back office | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Regional operations manager | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
+| Regional operations manager | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional operations manager | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Regional operations manager | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Regional operations manager | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -581,7 +581,7 @@ open it.
 | Regional operations manager | `participant_upload` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional operations manager | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional operations manager | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Regional admin | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
+| Regional admin | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional admin | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Regional admin | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Regional admin | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -591,7 +591,7 @@ open it.
 | Regional admin | `participant_upload` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional admin | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional admin | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
-| Admin | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
+| Admin | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Admin | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Admin | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Admin | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -608,12 +608,17 @@ Only the staff cells that differ from normal mode.
 
 | Subject | Type | Action | Normal mode | This mode |
 | --- | --- | --- | --- | --- |
+| Consultant/profiler (assigned) | `tl407_signed_scan` | `add` | yes | no: mode_not_allowed |
+| Consultant/profiler (assigned) | `tl407_signed_scan` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `delete` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `participant_upload` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `participant_upload` | `delete` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `qualification_certificate` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `qualification_certificate` | `delete` | yes | no: mode_not_allowed |
+| PL | `tl407_signed_scan` | `add` | yes | no: mode_not_allowed |
+| PL | `tl407_signed_scan` | `review` | yes | no: mode_not_allowed |
+| PL | `tl407_signed_scan` | `delete` | yes | no: mode_not_allowed |
 | PL | `cv` | `review` | yes | no: mode_not_allowed |
 | PL | `cv` | `delete` | yes | no: mode_not_allowed |
 | PL | `participant_upload` | `review` | yes | no: mode_not_allowed |
@@ -627,6 +632,8 @@ Only the staff cells that differ from normal mode.
 
 | Subject | Type | Action | Normal mode | This mode |
 | --- | --- | --- | --- | --- |
+| Consultant/profiler (assigned) | `tl407_signed_scan` | `add` | yes | no: mode_not_allowed |
+| Consultant/profiler (assigned) | `tl407_signed_scan` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `add` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `delete` | yes | no: mode_not_allowed |
@@ -636,6 +643,9 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `qualification_certificate` | `add` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `qualification_certificate` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `qualification_certificate` | `delete` | yes | no: mode_not_allowed |
+| PL | `tl407_signed_scan` | `add` | yes | no: mode_not_allowed |
+| PL | `tl407_signed_scan` | `review` | yes | no: mode_not_allowed |
+| PL | `tl407_signed_scan` | `delete` | yes | no: mode_not_allowed |
 | PL | `cv` | `add` | yes | no: mode_not_allowed |
 | PL | `cv` | `review` | yes | no: mode_not_allowed |
 | PL | `cv` | `delete` | yes | no: mode_not_allowed |
@@ -787,7 +797,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `assisted_mode_started` | `security` | no | no | — |
 | `assisted_mode_ended` | `security` | no | no | — |
 | `document_added` | `case` | no | no | `documentType`, `source` |
-| `document_reviewed` | `case` | no | yes | `documentType`, `decision` |
+| `document_reviewed` | `case` | no | yes | `documentType`, `decision`, `origin`, `formVersion` |
 | `document_deleted` | `case` | no | yes | `documentType` |
 | `document_upload_rejected` | `security` | no | no | — |
 | `reminder_queued` | `case` | no | no | `kind`, `channelKind`, `appointmentId`, `startsAt` |
@@ -808,6 +818,9 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `profiling_session_changed` | `profiling` | no | no | `action`, `sessionId`, `date` |
 | `profiling_declarations_recorded` | `profiling` | no | no | `fields` |
 | `form_generated` | `case` | no | no | `formCode`, `formVersion`, `documentId`, `anlage` |
+| `document_quarantined` | `case` | no | yes | `documentType` |
+| `document_quarantine_lifted` | `case` | no | no | `documentType` |
+| `signed_declaration_recorded` | `profiling` | no | no | `formCode`, `formVersion`, `declarations` |
 
 ## Aggregates
 
@@ -838,8 +851,6 @@ slice (Slices 6 and 7).
 
 | Question | Subject | Key | Action | Phase and mode |
 | --- | --- | --- | --- | --- |
-| Q65 | Consultant/profiler (assigned) | `tl407_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | Consultant/profiler (assigned) | `tl407_signed_scan` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Consultant/profiler (assigned) | `kug200b_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Consultant/profiler (assigned) | `kug200b_signed_scan` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Consultant/profiler (assigned) | `asu_proof` | `add` | any phase normal, any phase assisted, any phase break_glass |
@@ -848,8 +859,6 @@ slice (Slices 6 and 7).
 | Q65 | Consultant/profiler (assigned) | `profiling_exception_evidence` | `add` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Consultant/profiler (assigned) | `profiling_exception_evidence` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Consultant/profiler (assigned) | `profiling_exception_evidence` | `delete` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | PL | `tl407_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | PL | `tl407_signed_scan` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `kug200b_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `kug200b_signed_scan` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `dsv_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |

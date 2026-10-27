@@ -7,7 +7,8 @@ import {
   documentState,
 } from "./state";
 
-const live = (reviewState: DocumentReviewState) => documentState({ reviewState, deletedAt: null });
+const live = (reviewState: DocumentReviewState) =>
+  documentState({ reviewState, deletedAt: null, quarantined: false });
 
 describe("documentState (process-and-lifecycle.md, document review)", () => {
   it("maps a live document's review to the completeness engine's states", () => {
@@ -17,7 +18,15 @@ describe("documentState (process-and-lifecycle.md, document review)", () => {
 
   it("counts a deleted document as nothing", () => {
     for (const reviewState of DocumentReviewState.options) {
-      expect(documentState({ reviewState, deletedAt: "2026-10-22T08:00:00Z" })).toBeNull();
+      expect(
+        documentState({ reviewState, deletedAt: "2026-10-22T08:00:00Z", quarantined: false }),
+      ).toBeNull();
+    }
+  });
+
+  it("counts a quarantined document as nothing (data-protection.md, quarantine)", () => {
+    for (const reviewState of DocumentReviewState.options) {
+      expect(documentState({ reviewState, deletedAt: null, quarantined: true })).toBeNull();
     }
   });
 

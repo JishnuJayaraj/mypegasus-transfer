@@ -112,7 +112,10 @@ export const auditProjection: {
   assisted_mode_started: security,
   assisted_mode_ended: security,
   document_added: shown("case", { details: ["documentType", "source"] }),
-  document_reviewed: shown("case", { reason: true, details: ["documentType", "decision"] }),
+  document_reviewed: shown("case", {
+    reason: true,
+    details: ["documentType", "decision", "origin", "formVersion"],
+  }),
   document_deleted: shown("case", { reason: true, details: ["documentType"] }),
   document_upload_rejected: security,
   // Messages (Q168): the kind and, for an appointment's message, the appointment and its start
@@ -171,6 +174,13 @@ export const auditProjection: {
   profiling_declarations_recorded: shown("profiling", { details: ["fields"] }),
   // A generated form (Q179): which form and version, the document and the Anlage.
   form_generated: shown("case", { details: ["formCode", "formVersion", "documentId", "anlage"] }),
+  // Signed paper (Q183, Q193): a quarantine with its reason, its lift; the declarations of an
+  // accepted form by their codes, never a value.
+  document_quarantined: shown("case", { reason: true, details: ["documentType"] }),
+  document_quarantine_lifted: shown("case", { details: ["documentType"] }),
+  signed_declaration_recorded: shown("profiling", {
+    details: ["formCode", "formVersion", "declarations"],
+  }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

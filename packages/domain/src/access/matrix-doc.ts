@@ -172,7 +172,7 @@ function operationCells(mode: Mode): Cell[] {
     add: mayAddDocument,
     review: mayReviewDocument,
     delete: (...args: Parameters<typeof mayAddDocument>) =>
-      mayDeleteDocument(...args, { addedByParticipant: true, accepted: false }),
+      mayDeleteDocument(...args, { addedByParticipant: true, reviewState: "unreviewed" }),
   };
   return accessProfiles.flatMap(({ label, subject }) =>
     DocumentType.options.flatMap((key) =>

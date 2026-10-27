@@ -326,13 +326,28 @@ export {
   DocumentReviewReason,
   DocumentReviewState,
   documentState,
+  QuarantineReason,
 } from "./documents/state";
+export {
+  isScanType,
+  profilingDoneOnProblem,
+  ScanConfirmation,
+  scanForms,
+  ScanOrigin,
+  ScanReview,
+  scanReviewProblems,
+  scanUploadProblems,
+  tl407SignedOn,
+  Tl407Declarations,
+  type ScanProblem,
+} from "./documents/scans";
 export {
   DocumentCapabilities,
   DocumentContentParams,
   DocumentDeleteQuery,
   DocumentList,
   DocumentOpening,
+  DocumentQuarantineInput,
   DocumentReviewInput,
   DocumentSource,
   DocumentUploadInput,
@@ -346,8 +361,11 @@ export {
   readableDocumentTypes,
 } from "./documents/view";
 export {
+  documentDeleteReasons,
   mayAddDocument,
   mayDeleteDocument,
+  mayLiftDocumentQuarantine,
+  mayQuarantineDocument,
   mayReviewDocument,
   type DocumentOperation,
   type DocumentPermission,
@@ -926,6 +944,8 @@ export {
 export {
   Tl407ErrorCode,
   Tl407GeneratedForm,
+  Tl407ScanView,
+  Tl407SignedDeclarations,
   Tl407Generation,
   Tl407GenerationInput,
   Tl407ProfilerReadiness,

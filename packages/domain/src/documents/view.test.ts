@@ -20,9 +20,9 @@ const subject = (key: string) => accessProfiles.find((p) => p.key === key)!.subj
 const target = sample;
 const own = ["cv", "participant_upload", "qualification_certificate"];
 
-describe("uploadableDocumentTypes (Q142)", () => {
-  it("are the participant's own types, the only ones with decided operations", () => {
-    expect(uploadableDocumentTypes).toEqual(own);
+describe("uploadableDocumentTypes (Q142, Q184)", () => {
+  it("are the participant's own types and the signed TL 407, those with decided operations", () => {
+    expect(uploadableDocumentTypes).toEqual(["tl407_signed_scan", ...own]);
   });
 });
 
@@ -66,7 +66,12 @@ describe("addableDocumentTypes", () => {
 });
 
 describe("documentCapabilities", () => {
-  const cv = { type: "cv", addedByParticipant: true, reviewState: "unreviewed" } as const;
+  const cv = {
+    type: "cv",
+    addedByParticipant: true,
+    reviewState: "unreviewed",
+    quarantinedBy: null,
+  } as const;
 
   it("lets the consultant and PL open, review and delete in normal mode", () => {
     for (const key of ["consultant", "project_lead"]) {
@@ -74,6 +79,8 @@ describe("documentCapabilities", () => {
         open: true,
         review: true,
         delete: true,
+        quarantine: true,
+        liftQuarantine: false,
       });
     }
   });
@@ -83,11 +90,15 @@ describe("documentCapabilities", () => {
       open: true,
       review: false,
       delete: false,
+      quarantine: false,
+      liftQuarantine: false,
     });
     expect(documentCapabilities(subject("back_office"), target, accessModes.normal, cv)).toEqual({
       open: false,
       review: false,
       delete: false,
+      quarantine: false,
+      liftQuarantine: false,
     });
   });
 
@@ -100,6 +111,8 @@ describe("documentCapabilities", () => {
       open: true,
       review: false,
       delete: true,
+      quarantine: false,
+      liftQuarantine: false,
     });
     expect(documentCapabilities(participant, target, accessModes.normal, accepted).delete).toBe(
       false,
@@ -112,6 +125,31 @@ describe("documentCapabilities", () => {
     expect(documentCapabilities(participant, target, accessModes.normal, rejected).delete).toBe(
       true,
     );
+  });
+
+  it("opens and reviews a quarantined document for nobody; lifts it as its permission says", () => {
+    const pl = subject("project_lead");
+    const scan = {
+      type: "tl407_signed_scan",
+      addedByParticipant: false,
+      reviewState: "unreviewed",
+      quarantinedBy: "someone",
+    } as const;
+    expect(documentCapabilities(pl, target, accessModes.normal, scan)).toEqual({
+      open: false,
+      review: false,
+      delete: true,
+      quarantine: false,
+      liftQuarantine: true,
+    });
+    const accepted = { ...scan, reviewState: "accepted", quarantinedBy: null } as const;
+    expect(documentCapabilities(pl, target, accessModes.normal, accepted)).toEqual({
+      open: true,
+      review: false,
+      delete: false,
+      quarantine: true,
+      liftQuarantine: false,
+    });
   });
 });
 
@@ -130,6 +168,14 @@ describe("the documents API schemas (ADR-0010)", () => {
     expect(parse({ decision: "rejected", reasonCode: "unreadable" })).toBe(true);
     expect(parse({ decision: "rejected" })).toBe(false);
     expect(parse({ decision: "accepted", reasonCode: "unreadable" })).toBe(false);
+    const scan = {
+      participantSignedOn: "2026-10-20",
+      profilerSignedOn: "2026-10-20",
+      confirmations: ["signatures_present", "all_pages_present"],
+      declarations: { kind: "as_printed" },
+    };
+    expect(parse({ decision: "accepted", scan })).toBe(true);
+    expect(parse({ decision: "rejected", reasonCode: "incomplete", scan })).toBe(false);
   });
 
   it("answers same-origin content links and the list", () => {
