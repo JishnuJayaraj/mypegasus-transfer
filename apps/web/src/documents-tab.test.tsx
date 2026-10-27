@@ -96,7 +96,14 @@ const certificate = {
   addedBy: "staff",
   onBehalf: true,
   review: { state: "rejected", reasonCode: "unreadable", reviewedAt: "2026-10-22T09:30:00.000Z" },
-  capabilities: { open: true, review: false, delete: true },
+  quarantine: null,
+  capabilities: {
+    open: true,
+    review: false,
+    delete: true,
+    quarantine: false,
+    liftQuarantine: false,
+  },
 };
 
 const list = (

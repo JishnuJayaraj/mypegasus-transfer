@@ -10,7 +10,7 @@ import {
 import type { Context } from "hono";
 import { projectAccess, projectTarget } from "../access";
 import { createRouter, json, type Deps } from "../context";
-import { failClosedFacts } from "../participations/guard-facts";
+import { dbGuardFacts } from "../participations/guard-facts";
 import {
   BulkRefusal,
   createStatusService,
@@ -39,7 +39,7 @@ export function worklistRoutes(deps: Deps) {
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const release = loadRelease(deps.env.configDir);
-  const facts = deps.facts ?? failClosedFacts;
+  const facts = deps.facts ?? dbGuardFacts;
   const statusService = createStatusService({ db, clock, facts });
   const snapshot = (c: Context, projectId: string) =>
     loadWorklist({ db, clock, release, facts }, sessionUser(c), projectId);

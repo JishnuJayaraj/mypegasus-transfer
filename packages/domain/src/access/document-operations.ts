@@ -1,4 +1,5 @@
 import { documentTypeEntry, type AccessRole, type DocumentType } from "../documents/catalog";
+import type { DocumentDeleteReason, DocumentReviewState } from "../documents/state";
 import type { AccessMode, AccessQuestion, Subject } from "./decide";
 import { staffPermission, type PermissionDenial, type PermissionTarget } from "./permissions";
 
@@ -14,7 +15,10 @@ export type DocumentPermissionDenial =
   | PermissionDenial
   /** Staff add in normal or assisted mode, review and delete in normal mode; break-glass never. */
   | "mode_not_allowed"
-  /** Signed and generated documents are never deleted; only the retention job removes them. */
+  /**
+   * Generated documents are never deleted, signed ones not once reviewed; only the retention job
+   * or an approved correction removes them.
+   */
   | "immutable"
   /** A participant deletes only what they added themselves… */
   | "added_by_staff"
@@ -41,7 +45,9 @@ function permission(
   const entry = documentTypeEntry(type);
   const operations = entry.operations;
   const generated = operations === "generated";
-  if (operation === "delete" && (entry.signed || generated)) return no("immutable");
+  // A signed type whose operations are undecided keeps the rule it had: never deleted.
+  const undecidedSigned = entry.signed && operations === "undecided";
+  if (operation === "delete" && (generated || undecidedSigned)) return no("immutable");
   // Generated forms come only from their generation (data-protection.md, generated forms).
   if (generated) return no("actor_not_allowed");
   const roles: readonly AccessRole[] | undefined =
@@ -61,7 +67,9 @@ function permission(
   }
   const allowed = staffPermission(subject, target, (role) => roles.includes(role));
   if (!allowed.ok) return allowed;
-  const onBehalf = mode.kind === "assisted" && mode.onBehalfOf === target.participationId;
+  // Signed paper is the staff's own act in normal mode (data-protection.md, signed scans).
+  const onBehalf =
+    mode.kind === "assisted" && mode.onBehalfOf === target.participationId && !entry.signed;
   return mode.kind === "normal" || (operation === "add" && onBehalf) ? ok : no("mode_not_allowed");
 }
 
@@ -85,16 +93,61 @@ export function mayReviewDocument(
   return permission(subject, type, target, mode, "review");
 }
 
-/** Staff any document of the type (with a reason code); the participant their own, not accepted. */
+/**
+ * Staff any document of the type (with a reason code), a signed one only before its review; the
+ * participant their own, not accepted.
+ */
 export function mayDeleteDocument(
   subject: Subject,
   type: DocumentType,
   target: DocumentTarget,
   mode: AccessMode,
-  document: { addedByParticipant: boolean; accepted: boolean },
+  document: { addedByParticipant: boolean; reviewState: DocumentReviewState },
 ): DocumentPermission {
   const allowed = permission(subject, type, target, mode, "delete");
-  if (!allowed.ok || subject.kind === "staff") return allowed;
+  if (!allowed.ok) return allowed;
+  if (subject.kind === "staff") {
+    const reviewed = document.reviewState !== "unreviewed";
+    return documentTypeEntry(type).signed && reviewed ? no("immutable") : ok;
+  }
   if (!document.addedByParticipant) return no("added_by_staff");
-  return document.accepted ? no("document_accepted") : ok;
+  return document.reviewState === "accepted" ? no("document_accepted") : ok;
+}
+
+/**
+ * The reasons a staff deletion of the type may give: a signed scan's only `wrong_person` or
+ * `wrong_file` (data-protection.md, signed scans; Q183).
+ */
+export function documentDeleteReasons(type: DocumentType): readonly DocumentDeleteReason[] {
+  return documentTypeEntry(type).signed
+    ? ["wrong_person", "wrong_file"]
+    : ["wrong_person", "wrong_file", "duplicate", "participant_request"];
+}
+
+/**
+ * Quarantine at once (data-protection.md, quarantine; Q183): whoever may review the type, in
+ * normal mode, whatever its review state.
+ */
+export function mayQuarantineDocument(
+  subject: Subject,
+  type: DocumentType,
+  target: DocumentTarget,
+  mode: AccessMode,
+): DocumentPermission {
+  return permission(subject, type, target, mode, "review");
+}
+
+/** The lift: whoever quarantined it, while they may still quarantine it, or the PL. */
+export function mayLiftDocumentQuarantine(
+  subject: Subject,
+  type: DocumentType,
+  target: DocumentTarget,
+  mode: AccessMode,
+  quarantinedBy: string,
+): DocumentPermission {
+  const allowed = mayQuarantineDocument(subject, type, target, mode);
+  if (!allowed.ok || subject.kind !== "staff" || subject.staffUserId === quarantinedBy) {
+    return allowed;
+  }
+  return staffPermission(subject, target, (role) => role === "project_lead");
 }

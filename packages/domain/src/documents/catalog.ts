@@ -4,7 +4,8 @@ import type { AccessCategory } from "../fields/catalog";
 
 /**
  * Document types (data-protection.md, documents; Q87 B; the first six are the ones completeness
- * rules name; `cv` from catalog version 2, Q142 *assumed*; `tl407_form` from version 3, Q179).
+ * rules name; `cv` from catalog version 2, Q142 *assumed*; `tl407_form` from version 3, Q179; the
+ * signed TL 407's operations from version 4, Q184).
  */
 export const DocumentType = z.enum([
   "tl407_signed_scan",
@@ -48,13 +49,17 @@ export type DocumentOperations =
    */
   | "generated"
   | {
-      /** Staff in normal mode as themselves, or in assisted mode on the participant's behalf. */
+      /**
+       * Staff in normal mode as themselves, or in assisted mode on the participant's behalf; a
+       * signed type in normal mode only.
+       */
       add: readonly AccessRole[];
       /** Once and final; staff in normal mode. */
       review: readonly ProjectRole[];
       /**
-       * Staff any document, with a reason code, in normal mode; the participant only what they
-       * added themselves while it isn't accepted.
+       * Staff any document, with a reason code, in normal mode (a signed one only before its
+       * review, as `wrong_person` or `wrong_file`); the participant only what they added
+       * themselves while it isn't accepted.
        */
       delete: readonly AccessRole[];
     };
@@ -102,22 +107,29 @@ const participantOwned = {
 } as const;
 
 /**
- * Version 3 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
+ * Version 4 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
  * version.
  * Version 2 adds `cv`, file names and the operations of the participant's own documents; version 3
- * the generated TL 407 (`tl407_form`, Q179).
+ * the generated TL 407 (`tl407_form`, Q179); version 4 the signed TL 407's operations (Q183, Q184).
  */
 export const documentTypeCatalog = {
-  version: 3,
+  version: 4,
   types: [
     {
+      // The signed paper (data-protection.md, signed scans; Q183, Q184): the assigned consultant
+      // and the PL add and review it in normal mode; only the PL deletes it, before its review.
       type: "tl407_signed_scan",
       accessCategory: "signed_tl407",
       dataClass: "special_category", // the health line of section C
       retentionClass: "evidence_set",
       signed: true,
       roles: profilerAndPl,
-      ...undecided,
+      fileName: false,
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant", "project_lead"],
+        delete: ["project_lead"],
+      },
     },
     {
       type: "kug200b_signed_scan",

@@ -8,7 +8,7 @@ import { loadDotEnv, parseEnv } from "./env";
 import { activationNoticeQueue, documentPurgeQueue, reminderQueue, startJobs } from "./jobs/jobs";
 import { loadRelease } from "./projects/template-pins";
 import { documentFiles } from "./documents/files";
-import { failClosedFacts } from "./participations/guard-facts";
+import { dbGuardFacts } from "./participations/guard-facts";
 import { createLogger } from "./logger";
 import { createShutdown } from "./shutdown";
 import { createDetached } from "./detached";
@@ -32,11 +32,11 @@ const jobs = env.jobsEnabled
       connectionString: env.databaseUrl,
       lifecycleTime: env.jobsLifecycleTime,
       logger,
-      // Slice 1 fails closed (D4): nobody enters the TG until the facts are recorded.
+      // The recorded facts; the DSV's stay fail closed, so nobody enters the TG before Slice 7.
       work: {
         db,
         clock,
-        facts: failClosedFacts,
+        facts: dbGuardFacts,
         notices: {
           mailer: senders.mailer,
           smsSender: senders.smsSender,

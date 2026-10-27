@@ -3,7 +3,7 @@ import type { Database } from "@transfer/db";
 import { isoDate, type IsoDate } from "@transfer/domain";
 import type { Logger } from "pino";
 import type { Env } from "../env";
-import { failClosedFacts, type GuardFactsProvider } from "../participations/guard-facts";
+import { dbGuardFacts, type GuardFactsProvider } from "../participations/guard-facts";
 import { JobError } from "./errors";
 import { inlineDispatch, runLifecycleSweep, type SweepResult } from "./lifecycle-sweep";
 import { jobNames } from "./names";
@@ -30,7 +30,7 @@ export async function runLifecycleCli({
   env,
   db,
   logger,
-  facts = failClosedFacts,
+  facts = dbGuardFacts,
 }: {
   argv: readonly string[];
   env: Env;

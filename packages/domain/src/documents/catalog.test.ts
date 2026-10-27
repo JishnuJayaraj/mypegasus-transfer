@@ -21,7 +21,7 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(3);
+    expect(documentTypeCatalog.version).toBe(4);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
@@ -52,7 +52,7 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
 
   it("leaves the other types' operations undecided and keeps no file name (Q65)", () => {
     const others = documentTypeCatalog.types.filter(
-      (t) => !own.includes(t.type) && t.type !== "tl407_form",
+      (t) => !own.includes(t.type) && t.type !== "tl407_form" && t.type !== "tl407_signed_scan",
     );
     for (const entry of others) {
       expect([entry.type, entry.operations, entry.fileName]).toEqual([
@@ -78,5 +78,20 @@ describe("document-type catalog version 3 (Q179)", () => {
       operations: "generated",
     });
     expect(uploadableDocumentTypes).not.toContain("tl407_form");
+  });
+});
+
+describe("document-type catalog version 4 (Q183, Q184)", () => {
+  it("gives the signed TL 407 its operations: add and review by the PL and the consultant, delete by the PL", () => {
+    expect(documentTypeEntry("tl407_signed_scan")).toMatchObject({
+      signed: true,
+      fileName: false,
+      retentionClass: "evidence_set",
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant", "project_lead"],
+        delete: ["project_lead"],
+      },
+    });
   });
 });

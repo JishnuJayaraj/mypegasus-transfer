@@ -3,13 +3,20 @@ import { and, asc, document, eq, inArray, isNull, sql, transactionWithClient } f
 import {
   detectFileType,
   documentCapabilities,
+  documentDeleteReasons,
   documentFileName,
   documentLimits,
   documentTypeEntry,
+  isScanType,
   mayAddDocument,
   mayDeleteDocument,
+  mayLiftDocumentQuarantine,
+  mayQuarantineDocument,
   mayReviewDocument,
   readableDocumentTypes,
+  scanForms,
+  scanReviewProblems,
+  scanUploadProblems,
   uploadableDocumentTypes,
   addableDocumentTypes,
   type AccessMode,
@@ -24,6 +31,8 @@ import {
   type DocumentTarget,
   type DocumentUploadInput,
   type DocumentView,
+  type QuarantineReason,
+  type ScanOrigin,
   type Subject,
 } from "@transfer/domain";
 import type { SQL } from "drizzle-orm";
@@ -36,6 +45,7 @@ import { ImportBusyError, uploadSlots } from "../imports/slots";
 import { errorForLog } from "../logger";
 import { domainProblem, problem } from "../problem";
 import { assistedModeRequired } from "../routes/assisted-mode";
+import { formRegistry } from "../forms/registry";
 import { utc } from "../sql";
 import { objectKey } from "./files";
 import { purgeDocumentObject } from "./purge";
@@ -71,6 +81,14 @@ const selected = {
   reviewState: document.reviewState,
   reviewReason: document.reviewReason,
   reviewedAt: utc(document.reviewedAt),
+  quarantineReason: document.quarantineReason,
+  quarantinedBy: document.quarantinedBy,
+  quarantinedAt: utc(document.quarantinedAt),
+  scanOrigin: document.scanOrigin,
+  generationDocumentId: document.generationDocumentId,
+  formVersion: document.formVersion,
+  signedOn: document.signedOn,
+  countersignedOn: document.countersignedOn,
 };
 type Row = {
   id: string;
@@ -84,6 +102,14 @@ type Row = {
   reviewState: DocumentReviewState;
   reviewReason: DocumentReviewReason | null;
   reviewedAt: string | null;
+  quarantineReason: QuarantineReason | null;
+  quarantinedBy: string | null;
+  quarantinedAt: string | null;
+  scanOrigin: ScanOrigin | null;
+  generationDocumentId: string | null;
+  formVersion: string | null;
+  signedOn: string | null;
+  countersignedOn: string | null;
 };
 
 /** Log a size by its bucket only (data-protection.md, uploads as built). */
@@ -105,9 +131,10 @@ const busy = (c: Context<AppEnv>, code: string, retryAfter?: number) => {
 /** 503 while no store or scanner is wired (production before the pilot, Q149). */
 export const storageUnavailable = (c: Context<AppEnv>) => busy(c, "storage_unavailable");
 
-/** A permission's denial as its problem: 422 for an accepted document, else 403. */
+/** A permission's denial as its problem: 422 for an accepted or immutable document, else 403. */
 function denied(c: Context<AppEnv>, permission: Exclude<DocumentPermission, { ok: true }>) {
   if (permission.because === "document_accepted") return domainProblem(c, ["document_accepted"]);
+  if (permission.because === "immutable") return domainProblem(c, ["document_immutable"]);
   return problem(c, "forbidden");
 }
 
@@ -135,10 +162,27 @@ function refused(c: Context<AppEnv>, error: unknown) {
     case "document_reviewed":
     case "document_accepted":
     case "document_immutable":
+    case "document_quarantined":
+    case "document_not_quarantined":
+    case "delete_reason_not_allowed":
+    case "signature_in_future":
+    case "signature_before_generation":
       return domainProblem(c, [code]);
+    case "generation_not_found":
+      return domainProblem(c, [{ code, field: "generationDocumentId" }]);
     default:
       throw error;
   }
+}
+
+/** What the actor may do with a row now. */
+export function capabilitiesOf(actor: DocumentActor, row: Row) {
+  return documentCapabilities(actor.subject, actor.target, actor.mode, {
+    type: row.type,
+    addedByParticipant: row.addedBy === "participant",
+    reviewState: row.reviewState,
+    quarantinedBy: row.quarantinedBy,
+  });
 }
 
 /** A row as the actor sees it, with what they may do with it now. */
@@ -153,17 +197,18 @@ function view(actor: DocumentActor, row: Row): DocumentView {
     addedBy: row.addedBy === "participant" ? "participant" : "staff",
     onBehalf: row.onBehalf,
     review: { state: row.reviewState, reasonCode: row.reviewReason, reviewedAt: row.reviewedAt },
-    capabilities: documentCapabilities(actor.subject, actor.target, actor.mode, {
-      type: row.type,
-      addedByParticipant: row.addedBy === "participant",
-      reviewState: row.reviewState,
-    }),
+    quarantine:
+      row.quarantineReason === null
+        ? null
+        : { reasonCode: row.quarantineReason, quarantinedAt: row.quarantinedAt! },
+    capabilities: capabilitiesOf(actor, row),
   };
 }
 
 export function documentService(deps: Deps) {
-  const { db, logger } = deps;
+  const { db, logger, clock } = deps;
   const files = deps.documentFiles;
+  const registry = deps.formRegistry ?? formRegistry(deps.env.configDir);
   const slots = deps.uploadSlots ?? uploadSlots;
   const key = documentEncryptionKey(deps.env.documentEncryptionKey);
 
@@ -231,6 +276,8 @@ export function documentService(deps: Deps) {
     }
     const permission = mayAddDocument(actor.subject, type, actor.target, actor.mode);
     if (!permission.ok) return denied(c, permission);
+    const origin = scanUploadProblems(type, input);
+    if (origin.length > 0) return domainProblem(c, origin);
     if (!files) return storageUnavailable(c);
     let fileName: string | null = null;
     if (documentTypeEntry(type).fileName) {
@@ -300,7 +347,9 @@ export function documentService(deps: Deps) {
           p_size_bytes => ${content.length}::integer, p_content_sha256 => ${sha256},
           p_file_name => ${fileName}::text, p_key_id => ${sealed.keyId},
           p_wrapped_key => ${Buffer.from(sealed.wrappedKey)}::bytea,
-          p_token_hash => ${actor.tokenHash}::text) as result`);
+          p_token_hash => ${actor.tokenHash}::text,
+          p_scan_origin => ${input.origin ?? null}::scan_origin,
+          p_generation_document_id => ${input.generationDocumentId ?? null}::uuid) as result`);
       } catch (error) {
         await files.storage.delete(objectKey(id)).catch((cleanup: unknown) => {
           logger.error(
@@ -324,6 +373,7 @@ export function documentService(deps: Deps) {
   async function open(c: Context<AppEnv>, actor: DocumentActor, documentId: string) {
     const row = await one(actor, documentId);
     if (!row) return problem(c, "not-found");
+    if (row.quarantinedBy !== null) return domainProblem(c, ["document_quarantined"]);
     if (!view(actor, row).capabilities.open) return problem(c, "forbidden");
     if (!files) return storageUnavailable(c);
     const token = randomBytes(32).toString("base64url");
@@ -355,11 +405,40 @@ export function documentService(deps: Deps) {
     const permission = mayReviewDocument(actor.subject, row.type, actor.target, actor.mode);
     if (!permission.ok) return denied(c, permission);
     if (row.reviewState !== "unreviewed") return domainProblem(c, ["document_reviewed"]);
+    if (row.quarantinedBy !== null) return domainProblem(c, ["document_quarantined"]);
+    const { scan } = input;
+    // A signed scan's acceptance takes its record (data-protection.md, signed scans); no other.
+    const needsScan = isScanType(row.type) && input.decision === "accepted";
+    if (needsScan !== (scan !== undefined)) {
+      const code = needsScan ? "scan_required" : "scan_not_allowed";
+      return domainProblem(c, [{ code, field: "scan" }]);
+    }
+    if (scan) {
+      const generatedOn = await generationDateOf(row.generationDocumentId);
+      const form = scanForms[row.type]!;
+      const issues = scanReviewProblems(
+        scan,
+        { origin: row.scanOrigin!, generatedOn },
+        clock.today(),
+        (version) => registry.versions(form).includes(version),
+      );
+      if (issues.length > 0) {
+        return domainProblem(
+          c,
+          issues.map(({ code, field }) => ({ code, field: `scan/${field}` })),
+        );
+      }
+    }
     try {
       await db.execute(sql`select review_document(
         p_context => ${actor.context}, p_document_id => ${documentId}::uuid,
         p_decision => ${input.decision}::document_review_state,
-        p_reason => ${input.reasonCode ?? null}::document_review_reason) as result`);
+        p_reason => ${input.reasonCode ?? null}::document_review_reason,
+        p_signed_on => ${scan?.participantSignedOn ?? null}::date,
+        p_countersigned_on => ${scan?.profilerSignedOn ?? null}::date,
+        p_confirmations => ${scan ? `{${scan.confirmations.join(",")}}` : null}::text[],
+        p_form_version => ${scan?.formVersion ?? null}::text,
+        p_declarations => ${scan ? JSON.stringify(scan.declarations) : null}::jsonb) as result`);
     } catch (error) {
       return refused(c, error);
     }
@@ -381,9 +460,12 @@ export function documentService(deps: Deps) {
     if (!row) return problem(c, "not-found");
     const permission = mayDeleteDocument(actor.subject, row.type, actor.target, actor.mode, {
       addedByParticipant: row.addedBy === "participant",
-      accepted: row.reviewState === "accepted",
+      reviewState: row.reviewState,
     });
     if (!permission.ok) return denied(c, permission);
+    if (reason !== null && !documentDeleteReasons(row.type).includes(reason)) {
+      return domainProblem(c, [{ code: "delete_reason_not_allowed", field: "reasonCode" }]);
+    }
     try {
       await transactionWithClient(db, async (tx, client) => {
         await tx.execute(sql`select delete_document(
@@ -406,7 +488,55 @@ export function documentService(deps: Deps) {
     return c.body(null, 204);
   }
 
-  return { rows, list, upload, open, review, remove };
+  /**
+   * Quarantine at once, or its lift (data-protection.md, quarantine; Q183): staff in normal mode as
+   * the permissions say; the functions check again under the lock.
+   */
+  async function quarantine(
+    c: Context<AppEnv>,
+    actor: DocumentActor,
+    documentId: string,
+    reason: QuarantineReason | null,
+  ) {
+    const row = await one(actor, documentId);
+    if (!row) return problem(c, "not-found");
+    const { subject, target, mode } = actor;
+    const permission =
+      reason !== null || row.quarantinedBy === null
+        ? mayQuarantineDocument(subject, row.type, target, mode)
+        : mayLiftDocumentQuarantine(subject, row.type, target, mode, row.quarantinedBy);
+    if (!permission.ok) return denied(c, permission);
+    if ((reason !== null) !== (row.quarantinedBy === null)) {
+      return domainProblem(c, [
+        reason !== null ? "document_quarantined" : "document_not_quarantined",
+      ]);
+    }
+    try {
+      await db.execute(
+        reason === null
+          ? sql`select lift_document_quarantine(p_context => ${actor.context},
+              p_document_id => ${documentId}::uuid) as result`
+          : sql`select quarantine_document(p_context => ${actor.context},
+              p_document_id => ${documentId}::uuid,
+              p_reason => ${reason}::document_quarantine_reason) as result`,
+      );
+    } catch (error) {
+      return refused(c, error);
+    }
+    const [after] = await rows(actor.target.participationId, [row.type], documentId);
+    return c.json(view(actor, after!), 200);
+  }
+
+  /** The Berlin date a generated form was generated on, or null. */
+  async function generationDateOf(generationDocumentId: string | null) {
+    if (generationDocumentId === null) return null;
+    const { rows: found } = await db.execute<{ day: string }>(sql`select
+      (generated_at at time zone 'Europe/Berlin')::date::text as day
+      from form_generation where document_id = ${generationDocumentId}::uuid`);
+    return found[0]?.day ?? null;
+  }
+
+  return { rows, list, upload, open, review, remove, quarantine };
 }
 
 export type DocumentService = ReturnType<typeof documentService>;

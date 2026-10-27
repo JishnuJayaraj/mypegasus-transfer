@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { DocumentCapabilities } from "../documents/api";
+import { ScanOrigin, Tl407Declarations } from "../documents/scans";
+import { DocumentReviewReason, DocumentReviewState, QuarantineReason } from "../documents/state";
+import { isoDate } from "../iso-date";
 import { FormVersion } from "./field-map";
 import { tl407WarningCodes } from "./tl407";
 import { FormErrorCode } from "./validate";
@@ -125,3 +129,40 @@ export const Tl407GeneratedForm = z
   })
   .meta({ id: "Tl407GeneratedForm" });
 export type Tl407GeneratedForm = z.infer<typeof Tl407GeneratedForm>;
+
+/**
+ * A signed TL 407 scan as the tab lists it (data-protection.md, signed scans): metadata only, the
+ * file through the logged opening; the generation it was printed from, its version (for external
+ * paper once accepted), the actual signature dates, the review and a quarantine.
+ */
+export const Tl407ScanView = z
+  .strictObject({
+    documentId: z.uuid(),
+    origin: ScanOrigin,
+    generationDocumentId: z.uuid().nullable(),
+    formVersion: FormVersion.nullable(),
+    addedAt: instant,
+    review: z.strictObject({
+      state: DocumentReviewState,
+      reasonCode: DocumentReviewReason.nullable(),
+      reviewedAt: instant.nullable(),
+    }),
+    participantSignedOn: isoDate.nullable(),
+    profilerSignedOn: isoDate.nullable(),
+    quarantine: z.strictObject({ reasonCode: QuarantineReason, quarantinedAt: instant }).nullable(),
+    capabilities: DocumentCapabilities,
+  })
+  .meta({ id: "Tl407Scan" });
+export type Tl407ScanView = z.infer<typeof Tl407ScanView>;
+
+/**
+ * The declarations to the BA as signed (ba-forms.md, declarations to the BA): those of the latest
+ * usable signed paper, with its scan, version, later signature date and acceptance; each paper's
+ * own record is never rewritten.
+ */
+export const Tl407SignedDeclarations = Tl407Declarations.extend({
+  documentId: z.uuid(),
+  formVersion: FormVersion,
+  signedOn: isoDate,
+  acceptedAt: instant,
+}).meta({ id: "Tl407SignedDeclarations" });

@@ -12,7 +12,8 @@ and Q185 `verify` for their Agentur or legal check; 🔒 rows still need their D
 before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was committed and
 checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. 6-3 came to
 about 4,200 lines and splits into 6-3a and 6-3b (the owner's choice, 2026-10-26); 6-3a recorded its
-readings as Q199 (accepted in the review of PR #90). Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
+readings as Q199 (accepted in the review of PR #90); 6-3b (the signed TL 407) recorded its readings
+as Q200 (accepted with amendments in the review of PR #91). Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
 confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
@@ -775,6 +776,9 @@ a file name, a form's content or a token.
   invalidation stops its fact, purges a wrong person's file and keeps the tombstone and history; an
   ASU supersession is recorded at the approval instant; a status that rested on invalidated evidence
   stays and shows `evidence_invalidated`.
+- Before any invalidation is written, an invalidated document counts nothing in completeness and
+  isn't opened by the ordinary opening (the facts reader already skips it; Q200, the review of
+  PR #91).
 
 ## Docs updated by the PRs
 

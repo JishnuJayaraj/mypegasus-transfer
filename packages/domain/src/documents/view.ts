@@ -2,6 +2,8 @@ import { decideAccess, type AccessAction, type AccessMode, type Subject } from "
 import {
   mayAddDocument,
   mayDeleteDocument,
+  mayLiftDocumentQuarantine,
+  mayQuarantineDocument,
   mayReviewDocument,
   type DocumentTarget,
 } from "../access/document-operations";
@@ -59,20 +61,33 @@ export function addableDocumentTypes(
   return uploadableDocumentTypes.filter((type) => mayAddDocument(subject, type, target, mode).ok);
 }
 
-/** What the viewer may do with one live document now. */
+/**
+ * What the viewer may do with one live document now. A quarantined one opens for nobody and is
+ * not reviewed (data-protection.md, quarantine); a deletion before review stays possible.
+ */
 export function documentCapabilities(
   subject: Subject,
   target: DocumentTarget,
   mode: AccessMode,
-  document: { type: DocumentType; addedByParticipant: boolean; reviewState: DocumentReviewState },
+  document: {
+    type: DocumentType;
+    addedByParticipant: boolean;
+    reviewState: DocumentReviewState;
+    /** Who quarantined it, while it is; else null. */
+    quarantinedBy: string | null;
+  },
 ): DocumentCapabilities {
-  const { type, addedByParticipant, reviewState } = document;
+  const { type, addedByParticipant, reviewState, quarantinedBy } = document;
+  const quarantined = quarantinedBy !== null;
   return {
-    open: decision(subject, target, type, "open_document", mode).effect === "allow",
-    review: reviewState === "unreviewed" && mayReviewDocument(subject, type, target, mode).ok,
-    delete: mayDeleteDocument(subject, type, target, mode, {
-      addedByParticipant,
-      accepted: reviewState === "accepted",
-    }).ok,
+    open: !quarantined && decision(subject, target, type, "open_document", mode).effect === "allow",
+    review:
+      !quarantined &&
+      reviewState === "unreviewed" &&
+      mayReviewDocument(subject, type, target, mode).ok,
+    delete: mayDeleteDocument(subject, type, target, mode, { addedByParticipant, reviewState }).ok,
+    quarantine: !quarantined && mayQuarantineDocument(subject, type, target, mode).ok,
+    liftQuarantine:
+      quarantined && mayLiftDocumentQuarantine(subject, type, target, mode, quarantinedBy).ok,
   };
 }

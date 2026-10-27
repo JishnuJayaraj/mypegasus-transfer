@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { Tl407GeneratedForm } from "../forms/api";
+import { Tl407GeneratedForm, Tl407ScanView, Tl407SignedDeclarations } from "../forms/api";
+import { FormVersion } from "../forms/field-map";
 import { JobboerseChoice } from "../forms/input";
 import { isoDate } from "../iso-date";
 import { edges, type Edge } from "../lifecycle/edges";
@@ -91,6 +92,26 @@ export const ProfilingView = z
     unemploymentPeriodRecorded: z.boolean().optional(),
     /** The generated TL 407s, latest first: metadata only (data-protection.md, generated forms). */
     tl407Forms: z.array(Tl407GeneratedForm),
+    /** The signed TL 407 scans, oldest first (data-protection.md, signed scans). */
+    tl407Scans: z.array(Tl407ScanView),
+    /**
+     * The later actual signature date of the signed TL 407 the guard counts (an accepted scan, not
+     * quarantined): the default and the earliest `profilingDoneOn` (Q191); null without one.
+     */
+    tl407SignedOn: isoDate.nullable(),
+    /**
+     * Whether a usable signed TL 407 signed by `profilingDoneOn` supports the recorded completion;
+     * false withholds the fact `profilingDone` (the status and date stay for a controlled
+     * resolution); null before `profiling_done`.
+     */
+    profilingDoneSupported: z.boolean().nullable(),
+    /**
+     * The current declarations as signed: those of the latest usable signed TL 407 (the latest
+     * later signature date), with that paper; the profiler only; null without one.
+     */
+    signedDeclarations: Tl407SignedDeclarations.nullable().optional(),
+    /** The registry's TL 407 versions, expired ones included: external paper names one. */
+    tl407Versions: z.array(FormVersion),
     /** The track's next steps from the current status. */
     transitions: z.array(ProfilingTransition),
     capabilities: z.strictObject({
@@ -109,6 +130,8 @@ export const ProfilingView = z
       generateTl407: z.boolean(),
       /** Read the TL 407's readiness as projected for the viewer (the profiler, the PL). */
       readTl407Readiness: z.boolean(),
+      /** Upload a signed TL 407 (the assigned consultant, the PL; while the participation is open). */
+      addTl407Scan: z.boolean(),
     }),
   })
   .meta({ id: "Profiling" });

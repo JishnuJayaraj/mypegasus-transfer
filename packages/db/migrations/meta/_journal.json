@@ -498,6 +498,20 @@
       "when": 1793029259200,
       "tag": "0070_generated_form_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1793104581325,
+      "tag": "0071_signed_scans",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793104599280,
+      "tag": "0072_signed_scan_functions",
+      "breakpoints": true
     }
   ]
 }

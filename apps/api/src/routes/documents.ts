@@ -7,6 +7,7 @@ import {
   DocumentDeleteQuery,
   DocumentList,
   DocumentOpening,
+  DocumentQuarantineInput,
   DocumentReviewInput,
   DocumentUploadInput,
   DocumentView,
@@ -293,7 +294,7 @@ export function documentRoutes(deps: Deps) {
       path: "/participations/{participationId}/documents/{documentId}/review",
       tags: ["participations"],
       summary:
-        "Accept, or reject with a reason code; once and final (document_reviewed otherwise), audited",
+        "Accept, or reject with a reason code; once and final (document_reviewed otherwise), audited. Accepting a signed scan takes its record (`scan`: the actual signature dates, the confirmations, external paper's version, the declarations as printed or as marked), stored as signed declarations",
       middleware: staff,
       request: {
         params: ParticipationDocumentParams,
@@ -321,13 +322,69 @@ export function documentRoutes(deps: Deps) {
     },
   );
 
+  const quarantineResponses = {
+    200: json(DocumentView, "Changed"),
+    ...problemResponses(
+      "validation-error",
+      "unauthenticated",
+      "forbidden",
+      "not-found",
+      "domain-error",
+    ),
+  };
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/documents/{documentId}/quarantine",
+      tags: ["participations"],
+      summary:
+        "Quarantine a document at once with a reason (the PL, the assigned consultant; normal mode, also after the end): it opens for nobody, is not reviewed, gives no fact and counts nothing; audited",
+      middleware: staff,
+      request: {
+        params: ParticipationDocumentParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: DocumentQuarantineInput } },
+        },
+      },
+      responses: quarantineResponses,
+    }),
+    async (c) => {
+      const { participationId, documentId } = c.req.valid("param");
+      const found = await staffActor(c, participationId);
+      if ("response" in found) return found.response as never;
+      const { reasonCode } = c.req.valid("json");
+      return service.quarantine(c, found.actor, documentId, reasonCode) as never;
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/documents/{documentId}/quarantine-lift",
+      tags: ["participations"],
+      summary:
+        "Lift a quarantine (whoever quarantined it, or the PL); the document counts again from the lift, audited",
+      middleware: staff,
+      request: { params: ParticipationDocumentParams },
+      responses: quarantineResponses,
+    }),
+    async (c) => {
+      const { participationId, documentId } = c.req.valid("param");
+      const found = await staffActor(c, participationId);
+      if ("response" in found) return found.response as never;
+      return service.quarantine(c, found.actor, documentId, null) as never;
+    },
+  );
+
   router.openapi(
     createRoute({
       method: "delete",
       path: "/participations/{participationId}/documents/{documentId}",
       tags: ["participations"],
       summary:
-        "Delete a document with a reason code (also after a terminal status); the file is purged, the row kept as a tombstone, audited",
+        "Delete a document with a reason code (also after a terminal status); a signed scan only by the PL before its review, as wrong_person or wrong_file; the file is purged, the row kept as a tombstone, audited",
       middleware: staff,
       request: { params: ParticipationDocumentParams, query: DocumentDeleteQuery },
       responses: {

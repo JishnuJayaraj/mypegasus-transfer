@@ -9408,7 +9408,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Accept, or reject with a reason code; once and final (document_reviewed otherwise), audited */
+        /** Accept, or reject with a reason code; once and final (document_reviewed otherwise), audited. Accepting a signed scan takes its record (`scan`: the actual signature dates, the confirmations, external paper's version, the declarations as printed or as marked), stored as signed declarations */
         post: {
             parameters: {
                 query?: never;
@@ -9487,6 +9487,178 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/documents/{documentId}/quarantine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Quarantine a document at once with a reason (the PL, the assigned consultant; normal mode, also after the end): it opens for nobody, is not reviewed, gives no fact and counts nothing; audited */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DocumentQuarantineInput"];
+                };
+            };
+            responses: {
+                /** @description Changed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Document"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/documents/{documentId}/quarantine-lift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Lift a quarantine (whoever quarantined it, or the PL); the document counts again from the lift, audited */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                    documentId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Changed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Document"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/documents/{documentId}": {
         parameters: {
             query?: never;
@@ -9497,7 +9669,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a document with a reason code (also after a terminal status); the file is purged, the row kept as a tombstone, audited */
+        /** Delete a document with a reason code (also after a terminal status); a signed scan only by the PL before its review, as wrong_person or wrong_file; the file is purged, the row kept as a tombstone, audited */
         delete: {
             parameters: {
                 query: {
@@ -12523,7 +12695,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -13706,12 +13878,24 @@ export interface components {
                  */
                 reviewedAt: string | null;
             };
+            quarantine: {
+                reasonCode: components["schemas"]["QuarantineReason"];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                quarantinedAt: string;
+            } | null;
             capabilities: components["schemas"]["DocumentCapabilities"];
         };
+        /** @enum {string} */
+        QuarantineReason: "suspected_wrong_person" | "suspected_wrong_acceptance";
         DocumentCapabilities: {
             open: boolean;
             review: boolean;
             delete: boolean;
+            quarantine: boolean;
+            liftQuarantine: boolean;
         };
         DocumentLimits: {
             maxBytes: number;
@@ -13724,7 +13908,12 @@ export interface components {
             fileName: string;
             /** @description The file, base64; decoded at most 10 MB */
             content: string;
+            origin?: components["schemas"]["ScanOrigin"];
+            /** Format: uuid */
+            generationDocumentId?: string;
         };
+        /** @enum {string} */
+        ScanOrigin: "generated" | "external_paper";
         DocumentOpening: {
             url: string;
             /**
@@ -13738,6 +13927,38 @@ export interface components {
             decision: "accepted" | "rejected";
             /** @enum {string} */
             reasonCode?: "unreadable" | "wrong_document" | "incomplete";
+            scan?: components["schemas"]["ScanReview"];
+        };
+        ScanReview: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            participantSignedOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            profilerSignedOn: string;
+            confirmations: components["schemas"]["ScanConfirmation"][];
+            formVersion?: string;
+            declarations: {
+                /** @enum {string} */
+                kind: "as_printed";
+            } | {
+                /** @enum {string|null} */
+                jobboerseChoice: "full" | "anonymous_callme" | "anonymous_no_contact" | "none" | null;
+                baContactConsent: boolean | null;
+                /** @enum {string} */
+                kind: "as_marked";
+            };
+        };
+        /** @enum {string} */
+        ScanConfirmation: "signatures_present" | "all_pages_present";
+        DocumentQuarantineInput: {
+            reasonCode: components["schemas"]["QuarantineReason"];
         };
         Profiling: {
             /** Format: uuid */
@@ -13775,6 +13996,16 @@ export interface components {
             };
             unemploymentPeriodRecorded?: boolean;
             tl407Forms: components["schemas"]["Tl407GeneratedForm"][];
+            tl407Scans: components["schemas"]["Tl407Scan"][];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tl407SignedOn: string | null;
+            profilingDoneSupported: boolean | null;
+            signedDeclarations?: components["schemas"]["Tl407SignedDeclarations"];
+            tl407Versions: string[];
             transitions: components["schemas"]["ProfilingTransition"][];
             capabilities: {
                 record: boolean;
@@ -13783,6 +14014,7 @@ export interface components {
                 readUnemploymentPeriod: boolean;
                 generateTl407: boolean;
                 readTl407Readiness: boolean;
+                addTl407Scan: boolean;
             };
         };
         ProfilingSession: {
@@ -13820,6 +14052,70 @@ export interface components {
                 open: boolean;
             };
         };
+        Tl407Scan: {
+            /** Format: uuid */
+            documentId: string;
+            origin: components["schemas"]["ScanOrigin"];
+            /** Format: uuid */
+            generationDocumentId: string | null;
+            formVersion: string | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            addedAt: string;
+            review: {
+                /** @enum {string} */
+                state: "unreviewed" | "accepted" | "rejected";
+                /** @enum {string|null} */
+                reasonCode: "unreadable" | "wrong_document" | "incomplete" | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                reviewedAt: string | null;
+            };
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            participantSignedOn: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            profilerSignedOn: string | null;
+            quarantine: {
+                reasonCode: components["schemas"]["QuarantineReason"];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                quarantinedAt: string;
+            } | null;
+            capabilities: components["schemas"]["DocumentCapabilities"];
+        };
+        Tl407SignedDeclarations: {
+            /** @enum {string|null} */
+            jobboerseChoice: "full" | "anonymous_callme" | "anonymous_no_contact" | "none" | null;
+            baContactConsent: boolean | null;
+            /** Format: uuid */
+            documentId: string;
+            formVersion: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            signedOn: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            acceptedAt: string;
+        } | null;
         ProfilingTransition: {
             /** @enum {string} */
             to: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";

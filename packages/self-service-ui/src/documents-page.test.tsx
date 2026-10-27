@@ -24,7 +24,14 @@ const document = (overrides: Partial<DocumentView> = {}): DocumentView => ({
   addedBy: "participant",
   onBehalf: false,
   review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
-  capabilities: { open: true, review: false, delete: true },
+  quarantine: null,
+  capabilities: {
+    open: true,
+    review: false,
+    delete: true,
+    quarantine: false,
+    liftQuarantine: false,
+  },
   ...overrides,
 });
 
@@ -236,7 +243,15 @@ describe("the documents page", () => {
   });
 
   it("follows the capabilities, and offers no deletion without one in the source", async () => {
-    const locked = document({ capabilities: { open: false, review: false, delete: false } });
+    const locked = document({
+      capabilities: {
+        open: false,
+        review: false,
+        delete: false,
+        quarantine: false,
+        liftQuarantine: false,
+      },
+    });
     setup({ list: { ...emptyDocuments(), documents: [locked] } });
     await screen.findByText("lebenslauf-beispiel.pdf");
     expect(screen.queryByRole("button", { name: /öffnen$/ })).toBeNull();

@@ -24,10 +24,23 @@ const states: Record<DocumentReviewState, DocumentState> = {
   rejected: "rejected",
 };
 
-/** The completeness engine's state of a document; a deleted one counts nothing (null). */
+/**
+ * Why a document is quarantined at once (data-protection.md, quarantine; Q183): it may belong to
+ * another person, or it was accepted by mistake.
+ */
+export const QuarantineReason = z
+  .enum(["suspected_wrong_person", "suspected_wrong_acceptance"])
+  .meta({ id: "QuarantineReason" });
+export type QuarantineReason = z.infer<typeof QuarantineReason>;
+
+/**
+ * The completeness engine's state of a document; a deleted or quarantined one counts nothing
+ * (null; data-protection.md, quarantine).
+ */
 export function documentState(document: {
   reviewState: DocumentReviewState;
   deletedAt: string | null;
+  quarantined: boolean;
 }): DocumentState | null {
-  return document.deletedAt === null ? states[document.reviewState] : null;
+  return document.deletedAt === null && !document.quarantined ? states[document.reviewState] : null;
 }

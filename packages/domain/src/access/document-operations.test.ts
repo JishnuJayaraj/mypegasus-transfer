@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DocumentType } from "../documents/catalog";
 import type { AccessMode, Subject } from "./decide";
+import { DocumentDeleteReason } from "../documents/state";
 import {
+  documentDeleteReasons,
   mayAddDocument,
   mayDeleteDocument,
+  mayLiftDocumentQuarantine,
+  mayQuarantineDocument,
   mayReviewDocument,
   type DocumentPermission,
 } from "./document-operations";
@@ -12,11 +16,12 @@ import { accessModes, accessProfiles, sample } from "./profiles";
 // Document operations in normal mode (data-protection.md, documents; Q146 *assumed*), restated
 // by hand. Columns as in matrix.test.ts: participant (birth-date check passed), participant (no
 // check), consultant (assigned), consultant (not assigned), PL, back office, regional operations
-// manager, regional admin, admin. The participant deletes their own upload, not accepted.
+// manager, regional admin, admin. The participant deletes their own upload, not accepted; staff
+// delete an unreviewed document.
 //   yes = allowed, und = undecided (Q65), actor = actor_not_allowed, role = role_not_allowed,
 //   unass = not_assigned, imm = immutable. A generated form comes only from its generation.
 const add = `
-tl407_signed_scan            actor actor und  unass und  role role role role
+tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
@@ -28,7 +33,7 @@ qualification_certificate    yes   yes   yes  unass yes  role role role role
 tl407_form                   actor actor actor actor actor actor actor actor actor`;
 
 const review = `
-tl407_signed_scan            actor actor und  unass und  role role role role
+tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
@@ -40,7 +45,7 @@ qualification_certificate    actor actor yes  unass yes  role role role role
 tl407_form                   actor actor actor actor actor actor actor actor actor`;
 
 const remove = `
-tl407_signed_scan            imm   imm   imm  imm   imm  imm  imm  imm  imm
+tl407_signed_scan            actor actor role role  yes  role role role role
 kug200b_signed_scan          imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_signed_scan              imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
@@ -68,7 +73,7 @@ const target = {
   regionId: sample.regionId,
   participationId: sample.participationId,
 };
-const own = { addedByParticipant: true, accepted: false };
+const own = { addedByParticipant: true, reviewState: "unreviewed" } as const;
 
 type Check = (subject: Subject, type: DocumentType, mode: AccessMode) => DocumentPermission;
 const checks: Record<string, Check> = {
@@ -161,7 +166,7 @@ const deletion = (subject: Subject, addedByParticipant: boolean, accepted: boole
   result(
     mayDeleteDocument(subject, "participant_upload", target, accessModes.normal, {
       addedByParticipant,
-      accepted,
+      reviewState: accepted ? "accepted" : "unreviewed",
     }),
   );
 
@@ -180,5 +185,52 @@ describe("deleting a document (Q146)", () => {
       expect(deletion(profile(key), true, true)).toBe("ok");
     }
     expect(deletion(profile("consultant_unassigned"), false, false)).toBe("not_assigned");
+  });
+});
+
+const quarantine = (subject: Subject, mode: AccessMode = accessModes.normal) =>
+  result(mayQuarantineDocument(subject, "tl407_signed_scan", target, mode));
+const lift = (subject: Subject, by: string) =>
+  result(mayLiftDocumentQuarantine(subject, "tl407_signed_scan", target, accessModes.normal, by));
+
+describe("signed scans (data-protection.md, signed scans; Q183, Q184)", () => {
+  const pl = profile("project_lead");
+  const consultant = profile("consultant");
+  const scan = (reviewState: "unreviewed" | "accepted" | "rejected") =>
+    result(
+      mayDeleteDocument(pl, "tl407_signed_scan", target, accessModes.normal, {
+        addedByParticipant: false,
+        reviewState,
+      }),
+    );
+
+  it("are added in normal mode only, never on the participant's behalf", () => {
+    for (const subject of [pl, consultant]) {
+      expect(result(checks.add!(subject, "tl407_signed_scan", accessModes.normal))).toBe("ok");
+      expect(result(checks.add!(subject, "tl407_signed_scan", accessModes.assisted))).toBe(
+        "mode_not_allowed",
+      );
+    }
+  });
+
+  it("are deleted by the PL before their review only, as wrong person or wrong file", () => {
+    expect(scan("unreviewed")).toBe("ok");
+    expect(scan("accepted")).toBe("immutable");
+    expect(scan("rejected")).toBe("immutable");
+    expect(documentDeleteReasons("tl407_signed_scan")).toEqual(["wrong_person", "wrong_file"]);
+    expect(documentDeleteReasons("cv")).toEqual(DocumentDeleteReason.options);
+  });
+
+  it("are quarantined by the PL or the assigned consultant; lifted by whoever did, or the PL", () => {
+    expect(quarantine(pl)).toBe("ok");
+    expect(quarantine(consultant)).toBe("ok");
+    expect(quarantine(profile("consultant_unassigned"))).toBe("not_assigned");
+    expect(quarantine(profile("back_office"))).toBe("role_not_allowed");
+    expect(quarantine(pl, accessModes.assisted)).toBe("mode_not_allowed");
+    const consultantId = consultant.kind === "staff" ? consultant.staffUserId : "";
+    expect(lift(consultant, consultantId)).toBe("ok");
+    expect(lift(consultant, "someone-else")).toBe("role_not_allowed");
+    expect(lift(pl, consultantId)).toBe("ok");
+    expect(lift(profile("back_office"), consultantId)).toBe("role_not_allowed");
   });
 });

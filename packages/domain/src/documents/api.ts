@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { DocumentType, documentTypeCatalog } from "./catalog";
 import { DocumentMediaType } from "./files";
-import { DocumentDeleteReason, DocumentReviewReason, DocumentReviewState } from "./state";
+import { ScanOrigin, ScanReview } from "./scans";
+import {
+  DocumentDeleteReason,
+  DocumentReviewReason,
+  DocumentReviewState,
+  QuarantineReason,
+} from "./state";
 
 // The documents API (ADR-0010, uploads; data-protection.md, uploads): metadata and capabilities,
 // never content, a hash or a key. The file travels base64 in JSON on the upload routes only, and
@@ -24,19 +30,28 @@ export type DocumentSource = z.infer<typeof DocumentSource>;
 /**
  * An upload (ADR-0010, "uploads are JSON"): the type, the original file name (kept only for the
  * types whose catalog entry says so) and the file as base64. The client's MIME type isn't asked
- * for: the type is detected from the content.
+ * for: the type is detected from the content. A signed scan names its origin, and the generated
+ * form it was printed from when `generated` (`scanUploadProblems`).
  */
 export const DocumentUploadInput = z
   .strictObject({
     type: DocumentType,
     fileName: z.string().min(1).max(1000),
     content: z.base64().meta({ description: "The file, base64; decoded at most 10 MB" }),
+    origin: ScanOrigin.optional(),
+    generationDocumentId: z.uuid().optional(),
   })
   .meta({ id: "DocumentUploadInput" });
 export type DocumentUploadInput = z.infer<typeof DocumentUploadInput>;
 
 export const DocumentCapabilities = z
-  .strictObject({ open: z.boolean(), review: z.boolean(), delete: z.boolean() })
+  .strictObject({
+    open: z.boolean(),
+    review: z.boolean(),
+    delete: z.boolean(),
+    quarantine: z.boolean(),
+    liftQuarantine: z.boolean(),
+  })
   .meta({ id: "DocumentCapabilities" });
 export type DocumentCapabilities = z.infer<typeof DocumentCapabilities>;
 
@@ -58,6 +73,8 @@ export const DocumentView = z
       reasonCode: DocumentReviewReason.nullable(),
       reviewedAt: utc.nullable(),
     }),
+    /** Quarantined (data-protection.md, quarantine): it opens for nobody and counts nothing. */
+    quarantine: z.strictObject({ reasonCode: QuarantineReason, quarantinedAt: utc }).nullable(),
     capabilities: DocumentCapabilities,
   })
   .meta({ id: "Document" });
@@ -88,22 +105,38 @@ export const DocumentOpening = z
   .meta({ id: "DocumentOpening" });
 export type DocumentOpening = z.infer<typeof DocumentOpening>;
 
-/** Accept, or reject with a reason code; once and final (process-and-lifecycle.md). */
+/**
+ * Accept, or reject with a reason code; once and final (process-and-lifecycle.md). Accepting a
+ * signed scan takes its record (`scan`: dates, confirmations, version, declarations); nothing
+ * else does.
+ */
 export const DocumentReviewInput = z
   .strictObject({
     decision: z.enum(["accepted", "rejected"]),
     reasonCode: DocumentReviewReason.optional(),
+    scan: ScanReview.optional(),
   })
   .refine(({ decision, reasonCode }) => (decision === "rejected") === (reasonCode !== undefined), {
     message: "A rejection needs a reason code, an acceptance none",
     params: { code: "reason_code_mismatch" },
     path: ["reasonCode"],
   })
+  .refine(({ decision, scan }) => decision === "accepted" || scan === undefined, {
+    message: "A rejection records no scan",
+    params: { code: "scan_not_allowed" },
+    path: ["scan"],
+  })
   .meta({ id: "DocumentReviewInput" });
 export type DocumentReviewInput = z.infer<typeof DocumentReviewInput>;
 
 /** A staff deletion names why. */
 export const DocumentDeleteQuery = z.strictObject({ reasonCode: DocumentDeleteReason });
+
+/** Quarantine at once, with its reason (data-protection.md, quarantine; Q183). */
+export const DocumentQuarantineInput = z
+  .strictObject({ reasonCode: QuarantineReason })
+  .meta({ id: "DocumentQuarantineInput" });
+export type DocumentQuarantineInput = z.infer<typeof DocumentQuarantineInput>;
 
 /** The opening's token: 32 random bytes, base64url. */
 export const DocumentContentParams = z.object({

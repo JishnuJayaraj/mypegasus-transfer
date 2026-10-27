@@ -29,6 +29,8 @@ export type FormRegistry = {
   inUse(formCode: FormCode, today: IsoDate): FormVersionFiles | null;
   /** Whether a committed version is in use on `today`. */
   versionInUse(formCode: FormCode, version: string, today: IsoDate): boolean;
+  /** Every committed version of the form, expired ones included (a signed form keeps its own). */
+  versions(formCode: FormCode): string[];
   template(ref: string): HtmlTemplate;
   /** The font's text metrics for the layout (measured once). */
   measure(): Promise<TextMeasure>;
@@ -64,6 +66,10 @@ export function formRegistry(configDir: string | undefined): FormRegistry {
     inUse: (formCode, today) => formVersionInUse(versions(), formCode, today)?.files ?? null,
     versionInUse: (formCode, version, today) =>
       formVersionInUse(versions(), formCode, today)?.version === version,
+    versions: (formCode) =>
+      versions()
+        .filter((entry) => entry.formCode === formCode)
+        .map((entry) => entry.version),
     template(ref) {
       let template = templates.get(ref);
       if (!template) templates.set(ref, (template = loadOwnTemplate(ref, forms)));

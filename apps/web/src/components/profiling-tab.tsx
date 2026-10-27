@@ -77,9 +77,9 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
         view.capabilities.readUnemploymentPeriod && <UnemploymentSection view={view} />}
       {view.capabilities.readAssessment && view.assessment && <AssessmentSection view={view} />}
       {view.declarations && <DeclarationsSection view={view} />}
-      {(view.capabilities.readTl407Readiness || view.tl407Forms.length > 0) && (
-        <Tl407Section view={view} />
-      )}
+      {(view.capabilities.readTl407Readiness ||
+        view.tl407Forms.length > 0 ||
+        view.tl407Scans.length > 0) && <Tl407Section view={view} />}
     </Stack>
   );
 }
@@ -175,7 +175,7 @@ function StatusSection({ view }: { view: View }) {
       await reload();
     },
   });
-  // `profiling_done` comes with the signed TL 407 (its own section).
+  // `profiling_done` comes with the signed TL 407 (its own section, tl407-scans.tsx).
   const steps = view.transitions.filter((s) => s.to !== "profiling_done");
   const allowed = steps.filter((s) => s.allowed);
   const refusal = steps.find((s) => !s.allowed)?.refusal;
@@ -198,6 +198,14 @@ function StatusSection({ view }: { view: View }) {
           </div>
         )}
       </dl>
+      {view.profilingDoneSupported === false && (
+        <InlineNotification
+          kind="warning"
+          title={t("profiling.status.unsupported", { date: formatDate(view.profilingDoneOn) })}
+          hideCloseButton
+          lowContrast
+        />
+      )}
       {failure && (
         <InlineNotification
           kind="error"
@@ -1062,6 +1070,7 @@ function DeclarationsSection({ view }: { view: View }) {
               {t("profiling.declarations.recordedAt", { at: formatTimestamp(recordedAt) })}
             </p>
           )}
+          {view.signedDeclarations && <SignedDeclarations signed={view.signedDeclarations} />}
           {writable && (
             <div>
               <Button type="submit" disabled={save.isPending}>
@@ -1072,5 +1081,45 @@ function DeclarationsSection({ view }: { view: View }) {
         </Stack>
       </Form>
     </section>
+  );
+}
+
+/**
+ * The declarations as signed (ba-forms.md, declarations to the BA): the latest accepted paper's,
+ * with that paper, whatever the pending values above are now.
+ */
+function SignedDeclarations({ signed }: { signed: NonNullable<View["signedDeclarations"]> }) {
+  const { t } = useTranslation();
+  const choice = signed.jobboerseChoice;
+  const contact = signed.baContactConsent;
+  return (
+    <div>
+      <h3>{t("profiling.declarations.signedTitle")}</h3>
+      <p className="tp-hint">
+        {t("profiling.declarations.signedSource", {
+          signedOn: formatDate(signed.signedOn),
+          version: signed.formVersion.replace("-", "/"),
+          acceptedAt: formatTimestamp(signed.acceptedAt),
+        })}
+      </p>
+      <dl className="tp-facts">
+        <div>
+          <dt>{t("profiling.declarations.jobboerse")}</dt>
+          <dd>
+            {choice
+              ? t(`profiling.declarations.jobboerseOptions.${choice}`)
+              : t("profiling.declarations.notMarked")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("profiling.declarations.baContact")}</dt>
+          <dd>
+            {contact === null
+              ? t("profiling.declarations.notMarked")
+              : t(`profiling.declarations.baContactOptions.${contact ? "yes" : "no"}`)}
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }

@@ -157,7 +157,14 @@ describe("Meine Angaben", () => {
       addedBy: "participant",
       onBehalf: false,
       review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
-      capabilities: { open: true, review: false, delete: true },
+      quarantine: null,
+      capabilities: {
+        open: true,
+        review: false,
+        delete: true,
+        quarantine: false,
+        liftQuarantine: false,
+      },
     };
     let documents: (typeof cv)[] = [];
     const documentsPage = {
