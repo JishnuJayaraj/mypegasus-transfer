@@ -198,6 +198,14 @@ function StatusSection({ view }: { view: View }) {
           </div>
         )}
       </dl>
+      {view.profilingDoneSupported === false && (
+        <InlineNotification
+          kind="warning"
+          title={t("profiling.status.unsupported", { date: formatDate(view.profilingDoneOn) })}
+          hideCloseButton
+          lowContrast
+        />
+      )}
       {failure && (
         <InlineNotification
           kind="error"
@@ -1062,6 +1070,7 @@ function DeclarationsSection({ view }: { view: View }) {
               {t("profiling.declarations.recordedAt", { at: formatTimestamp(recordedAt) })}
             </p>
           )}
+          {view.signedDeclarations && <SignedDeclarations signed={view.signedDeclarations} />}
           {writable && (
             <div>
               <Button type="submit" disabled={save.isPending}>
@@ -1072,5 +1081,45 @@ function DeclarationsSection({ view }: { view: View }) {
         </Stack>
       </Form>
     </section>
+  );
+}
+
+/**
+ * The declarations as signed (ba-forms.md, declarations to the BA): the latest accepted paper's,
+ * with that paper, whatever the pending values above are now.
+ */
+function SignedDeclarations({ signed }: { signed: NonNullable<View["signedDeclarations"]> }) {
+  const { t } = useTranslation();
+  const choice = signed.jobboerseChoice;
+  const contact = signed.baContactConsent;
+  return (
+    <div>
+      <h3>{t("profiling.declarations.signedTitle")}</h3>
+      <p className="tp-hint">
+        {t("profiling.declarations.signedSource", {
+          signedOn: formatDate(signed.signedOn),
+          version: signed.formVersion.replace("-", "/"),
+          acceptedAt: formatTimestamp(signed.acceptedAt),
+        })}
+      </p>
+      <dl className="tp-facts">
+        <div>
+          <dt>{t("profiling.declarations.jobboerse")}</dt>
+          <dd>
+            {choice
+              ? t(`profiling.declarations.jobboerseOptions.${choice}`)
+              : t("profiling.declarations.notMarked")}
+          </dd>
+        </div>
+        <div>
+          <dt>{t("profiling.declarations.baContact")}</dt>
+          <dd>
+            {contact === null
+              ? t("profiling.declarations.notMarked")
+              : t(`profiling.declarations.baContactOptions.${contact ? "yes" : "no"}`)}
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }

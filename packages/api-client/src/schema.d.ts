@@ -14003,6 +14003,7 @@ export interface components {
              * @example 2027-03-01
              */
             tl407SignedOn: string | null;
+            profilingDoneSupported: boolean | null;
             signedDeclarations?: components["schemas"]["Tl407SignedDeclarations"];
             tl407Versions: string[];
             transitions: components["schemas"]["ProfilingTransition"][];
@@ -14109,6 +14110,11 @@ export interface components {
              * @example 2027-03-01
              */
             signedOn: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            acceptedAt: string;
         } | null;
         ProfilingTransition: {
             /** @enum {string} */

@@ -532,6 +532,9 @@ who may open a document; requesting grants no read access.
   eyes; corrected sensitive values encrypted; audit events with IDs, field key, actor and
   timestamps, never the values; the approver sees category, basis and references, no value they
   couldn't otherwise read.
+- An invalidated document (`invalidated_by_correction`, Slice 6, PR 6-8) supplies no fact (the
+  TL 407 facts reader already skips it), counts nothing in completeness and is not opened by the
+  ordinary opening; 6-8 adds the last two before it writes any invalidation (Q200).
 - A correction alone never bypasses lifecycle guards or changes Transfer-KuG eligibility,
   contractual dates or payments: that takes a reconciliation, contractual amendment or recorded
   BA/legal determination.
@@ -811,7 +814,11 @@ and highly confidential data only; ordinary person-data writes are `participant_
   copied from the generation under the lock) or records what the paper shows; for external paper
   always what is marked. The pending values stay editable and are never rewritten by an
   acceptance, and an acceptance never rewrites an earlier signed record. The profiler's tab shows
-  the declarations of the signed TL 407 the guard counts; the PL none (as the pending ones).
+  the current declarations as signed: those of the latest usable paper (accepted, not quarantined,
+  not invalidated; the latest later signature date, then the latest acceptance), with that paper's
+  signature date, version and acceptance, apart from the pending values; the PL none (as the
+  pending ones). Which paper the guard counts is a separate question (process-and-lifecycle.md,
+  the TL 407 facts).
 - **Wrong paper** (Q183): before its review the PL deletes a scan as `wrong_person` or
   `wrong_file` (the tombstone keeps its origin and generation, the object is purged at once); a
   reviewed scan is `document_immutable`.
@@ -822,8 +829,9 @@ and highly confidential data only; ordinary person-data writes are `participant_
   slice; a link opened before answers nothing), is not reviewed, supplies no fact to any future
   evaluation (`tl407_facts` skips it; a past snapshot stays as it was) and counts nothing in
   completeness. Whoever quarantined it, while they still may, or the PL lifts it, audited
-  `document_quarantine_lifted`; its fact counts as recorded from the lift. A pending correction
-  will refuse the lift once corrections exist (6-8).
+  `document_quarantine_lifted`; its fact counts as recorded from the lift, and past snapshots stay
+  as they were (Q200). A pending correction will refuse the lift once corrections exist (6-8). The
+  approved correction workflow is still required before live use.
 - **History** (`case`, the PL and the assigned consultant): `document_quarantined` (its reason),
   `document_quarantine_lifted`; `signed_declaration_recorded` in `profiling` (form code, version,
   the declaration codes, never a value).

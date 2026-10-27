@@ -585,11 +585,14 @@ $$;
 
 -- The dated TL 407 facts of the guards (process-and-lifecycle.md, guards and the snapshot rule;
 -- the status service's provider reads them inside its transaction, after the participation's
--- lock; the work list for all its participations at once): per participation with such a scan,
--- `tl407Signed`, valid on the earliest later signature date of the accepted scans, recorded when
--- that scan was; `profilingDone` while the profiling track is `profiling_done`, valid on
--- `profiling_done_on`, recorded at the later of the status change and the earliest scan. No row
--- without a scan. Dates and instants only.
+-- lock; the work list for all its participations at once), from the usable scans (accepted, live,
+-- not quarantined, not invalidated) only. Per participation with such a scan: `tl407Signed`,
+-- valid on the earliest later signature date, recorded when that scan was. `profilingDone` only
+-- while the profiling track is `profiling_done` and a usable scan signed by `profiling_done_on`
+-- supports that date: valid on `profiling_done_on`, recorded at the later of the status change and
+-- the earliest such scan; without one it is withheld (null), the status and its date stay as
+-- recorded for a controlled resolution and are never moved. No row without a usable scan. Dates
+-- and instants only.
 CREATE FUNCTION tl407_facts(p_participation_ids uuid[])
 RETURNS TABLE (
   participation_id uuid, tl407_signed_on date, tl407_recorded_at timestamptz,
@@ -603,17 +606,26 @@ RETURNS TABLE (
       AND d.review_state = 'accepted' AND d.deleted_at IS NULL AND d.quarantined_at IS NULL
       AND d.invalidated_by_correction IS NULL
   ), scan AS (
-    SELECT DISTINCT ON (e.participation_id) e.participation_id, e.valid_on, e.recorded_at,
-      pg_catalog.min(e.recorded_at) OVER (PARTITION BY e.participation_id) AS first_recorded_at
+    SELECT DISTINCT ON (e.participation_id) e.participation_id, e.valid_on, e.recorded_at
     FROM evidence e
     ORDER BY e.participation_id, e.valid_on, e.recorded_at
+  ), support AS (
+    -- The scans that support the recorded completion date: signed by it.
+    SELECT e.participation_id, pg_catalog.min(e.recorded_at) AS recorded_at
+    FROM evidence e
+    JOIN public.participation p ON p.id = e.participation_id
+    WHERE e.valid_on <= p.profiling_done_on
+    GROUP BY e.participation_id
   )
-  SELECT s.participation_id, s.valid_on, s.recorded_at, p.profiling_done_on,
-    CASE WHEN p.profiling_done_on IS NOT NULL THEN greatest(s.first_recorded_at, (
+  SELECT s.participation_id, s.valid_on, s.recorded_at,
+    CASE WHEN u.recorded_at IS NOT NULL THEN p.profiling_done_on END,
+    CASE WHEN u.recorded_at IS NOT NULL THEN greatest(u.recorded_at, (
       SELECT pg_catalog.max(a.occurred_at) FROM public.audit_event a
       WHERE a.participation_id = p.id AND a.event_type = 'status_changed'
         AND a.field = 'profiling_status' AND a.to_value = 'profiling_done')) END
-  FROM scan s JOIN public.participation p ON p.id = s.participation_id
+  FROM scan s
+  JOIN public.participation p ON p.id = s.participation_id
+  LEFT JOIN support u ON u.participation_id = s.participation_id
 $$;
 --> statement-breakpoint
 

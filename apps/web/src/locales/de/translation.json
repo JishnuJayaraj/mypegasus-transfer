@@ -2053,7 +2053,8 @@
       "declineHeading": "Ablehnung des Profilings erfassen",
       "declineText": "Die Person lehnt die Teilnahme am Profiling ab. Ohne Profiling entfällt der Anspruch auf Transfer-Kurzarbeitergeld. Die Ablehnung wird mit Datum und Ihrem Namen im Verlauf festgehalten.",
       "declineConfirm": "Ablehnung erfassen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "unsupported": "Der Abschluss am {{date}} ist derzeit durch keinen verwendbaren unterschriebenen Bogen belegt (zum Beispiel wegen einer Quarantäne). Er zählt nicht als Nachweis, bleibt aber erfasst, bis er geklärt ist."
     },
     "sessions": {
       "title": "Termine des Profilings",
@@ -2174,7 +2175,10 @@
       "save": "Erklärungen speichern",
       "saved": "Die Erklärungen wurden gespeichert.",
       "failed": "Die Erklärungen konnten nicht gespeichert werden.",
-      "stale": "Das Profiling wurde inzwischen geändert. Ihre Eingaben sind erhalten; bitte prüfen Sie den Stand und speichern Sie erneut."
+      "stale": "Das Profiling wurde inzwischen geändert. Ihre Eingaben sind erhalten; bitte prüfen Sie den Stand und speichern Sie erneut.",
+      "signedTitle": "Wie unterschrieben",
+      "signedSource": "Aus dem zuletzt unterschriebenen Bogen: unterschrieben am {{signedOn}}, Fassung {{version}}, angenommen am {{acceptedAt}}. Spätere Änderungen oben gelten erst mit dem nächsten unterschriebenen Bogen.",
+      "notMarked": "nicht angekreuzt"
     },
     "closed": "Die Teilnahme ist beendet. Das Profiling kann nur noch gelesen werden; Korrekturen laufen über das vorgesehene Korrekturverfahren.",
     "draft": {

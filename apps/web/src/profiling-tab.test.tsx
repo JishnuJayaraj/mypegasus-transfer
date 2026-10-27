@@ -120,6 +120,7 @@ const view = (
   tl407Forms: options.tl407Forms ?? [],
   tl407Scans: options.tl407Scans ?? [],
   tl407SignedOn: options.tl407SignedOn ?? null,
+  profilingDoneSupported: null as boolean | null,
   ...(profiler && { signedDeclarations: null }),
   tl407Versions: ["08-2025"],
   transitions: options.closed
@@ -809,6 +810,38 @@ describe("the signed TL 407 (data-protection.md, signed scans)", () => {
         reasonCode: "suspected_wrong_person",
       }),
     );
+  });
+
+  it("shows the latest signed paper's declarations and a completion no paper supports", async () => {
+    setup({
+      profiler: true,
+      routes: {
+        [`GET ${detailPath}/profiling`]: () =>
+          json({
+            ...view(true),
+            profilingStatus: "profiling_done",
+            profilingDoneOn: "2026-10-17",
+            profilingDoneSupported: false,
+            signedDeclarations: {
+              documentId: scanId,
+              formVersion: "08-2025",
+              signedOn: "2026-10-22",
+              acceptedAt: "2026-10-23T09:00:00.000000Z",
+              jobboerseChoice: "none",
+              baContactConsent: null,
+            },
+          }),
+      },
+    });
+    expect(
+      await screen.findByText(/Der Abschluss am 17.10.2026 ist derzeit durch keinen/),
+    ).toBeVisible();
+    const signed = screen.getByRole("heading", { name: "Wie unterschrieben" }).parentElement!;
+    expect(
+      within(signed).getByText(/unterschrieben am 22.10.2026, Fassung 08\/2025/),
+    ).toBeVisible();
+    expect(within(signed).getByText("nicht veröffentlichen")).toBeVisible();
+    expect(within(signed).getByText("nicht angekreuzt")).toBeVisible();
   });
 
   it("says why 'Profiling abschließen' waits, and shows a quarantined scan without 'Öffnen'", async () => {

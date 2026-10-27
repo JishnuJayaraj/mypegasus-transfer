@@ -221,21 +221,31 @@ export async function readProfilingRecord(db: Database, participationId: string)
           ),
         )
         .orderBy(asc(document.addedAt), asc(document.id));
-      // The signed TL 407 the guard counts (`tl407_facts`) and the declarations signed on it.
-      const signed = tl407Scans
+      // The usable scans (`tl407_facts`): accepted, not quarantined, not invalidated. The guard
+      // counts the earliest signed one; the current signed declarations are the latest paper's.
+      const usable = tl407Scans
         .filter((row) => row.counts)
-        .toSorted(
-          (a, b) =>
-            tl407SignedOn(a as Signed).localeCompare(tl407SignedOn(b as Signed)) ||
-            a.countsFrom!.localeCompare(b.countsFrom!) ||
-            a.documentId.localeCompare(b.documentId),
-        )[0];
-      const declarations = signed
+        .map((row) => ({ ...row, signedOn: tl407SignedOn(row as Signed) }));
+      const earliest = usable.toSorted(
+        (a, b) =>
+          a.signedOn.localeCompare(b.signedOn) ||
+          a.countsFrom!.localeCompare(b.countsFrom!) ||
+          a.documentId.localeCompare(b.documentId),
+      )[0];
+      const latest = usable.toSorted(
+        (a, b) =>
+          b.signedOn.localeCompare(a.signedOn) ||
+          b.reviewedAt!.localeCompare(a.reviewedAt!) ||
+          b.documentId.localeCompare(a.documentId),
+      )[0];
+      const declarations = latest
         ? await tx
             .select({ declaration: signedDeclaration.declaration, value: signedDeclaration.value })
             .from(signedDeclaration)
-            .where(eq(signedDeclaration.documentId, signed.documentId))
+            .where(eq(signedDeclaration.documentId, latest.documentId))
         : [];
+      // A recorded completion is supported only by a usable scan signed by its date.
+      const doneOn = current!.profilingDoneOn;
       return {
         profilingStatus: current!.profilingStatus,
         statusVersion: current!.statusVersion,
@@ -256,10 +266,14 @@ export async function readProfilingRecord(db: Database, participationId: string)
         },
         tl407Forms,
         tl407Scans,
-        signed: signed && {
-          documentId: signed.documentId,
-          formVersion: signed.formVersion!,
-          signedOn: tl407SignedOn(signed as Signed),
+        tl407SignedOn: earliest?.signedOn ?? null,
+        profilingDoneSupported:
+          doneOn === null ? null : usable.some((scan) => scan.signedOn <= doneOn),
+        signed: latest && {
+          documentId: latest.documentId,
+          formVersion: latest.formVersion!,
+          signedOn: latest.signedOn,
+          acceptedAt: latest.reviewedAt!,
           jobboerseChoice: (declarations.find((d) => d.declaration === "jobboerseChoice")?.value ??
             null) as JobboerseChoice | null,
           baContactConsent: valueOf(declarations.find((d) => d.declaration === "baContactConsent")),
@@ -421,7 +435,8 @@ export function profilingRoutes(deps: Deps) {
             : { reasonCode: scan.quarantineReason, quarantinedAt: scan.quarantinedAt! },
         capabilities: scanCapabilities(scan.reviewState, scan.quarantinedBy),
       })),
-      tl407SignedOn: record.signed?.signedOn ?? null,
+      tl407SignedOn: record.tl407SignedOn,
+      profilingDoneSupported: record.profilingDoneSupported,
       ...(records && { signedDeclarations: record.signed ?? null }),
       tl407Versions: registry.versions("tl407"),
       transitions,

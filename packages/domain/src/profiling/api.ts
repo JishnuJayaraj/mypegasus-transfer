@@ -99,7 +99,16 @@ export const ProfilingView = z
      * quarantined): the default and the earliest `profilingDoneOn` (Q191); null without one.
      */
     tl407SignedOn: isoDate.nullable(),
-    /** The declarations as signed on that TL 407 (the profiler only); null without one. */
+    /**
+     * Whether a usable signed TL 407 signed by `profilingDoneOn` supports the recorded completion;
+     * false withholds the fact `profilingDone` (the status and date stay for a controlled
+     * resolution); null before `profiling_done`.
+     */
+    profilingDoneSupported: z.boolean().nullable(),
+    /**
+     * The current declarations as signed: those of the latest usable signed TL 407 (the latest
+     * later signature date), with that paper; the profiler only; null without one.
+     */
     signedDeclarations: Tl407SignedDeclarations.nullable().optional(),
     /** The registry's TL 407 versions, expired ones included: external paper names one. */
     tl407Versions: z.array(FormVersion),

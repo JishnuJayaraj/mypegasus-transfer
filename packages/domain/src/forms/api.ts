@@ -156,11 +156,13 @@ export const Tl407ScanView = z
 export type Tl407ScanView = z.infer<typeof Tl407ScanView>;
 
 /**
- * The declarations to the BA as signed (ba-forms.md, declarations to the BA): those of the scan
- * the signed TL 407 counts from, with its version and later signature date; never rewritten.
+ * The declarations to the BA as signed (ba-forms.md, declarations to the BA): those of the latest
+ * usable signed paper, with its scan, version, later signature date and acceptance; each paper's
+ * own record is never rewritten.
  */
 export const Tl407SignedDeclarations = Tl407Declarations.extend({
   documentId: z.uuid(),
   formVersion: FormVersion,
   signedOn: isoDate,
+  acceptedAt: instant,
 }).meta({ id: "Tl407SignedDeclarations" });

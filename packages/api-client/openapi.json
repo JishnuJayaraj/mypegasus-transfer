@@ -11401,6 +11401,12 @@
               "2027-03-01"
             ]
           },
+          "profilingDoneSupported": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "signedDeclarations": {
             "$ref": "#/components/schemas/Tl407SignedDeclarations"
           },
@@ -11465,6 +11471,7 @@
           "tl407Forms",
           "tl407Scans",
           "tl407SignedOn",
+          "profilingDoneSupported",
           "tl407Versions",
           "transitions",
           "capabilities"
@@ -11746,6 +11753,11 @@
             "examples": [
               "2027-03-01"
             ]
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
           }
         },
         "required": [
@@ -11753,7 +11765,8 @@
           "baContactConsent",
           "documentId",
           "formVersion",
-          "signedOn"
+          "signedOn",
+          "acceptedAt"
         ],
         "additionalProperties": false
       },

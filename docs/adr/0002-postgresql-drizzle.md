@@ -816,9 +816,11 @@ rules.
   quarantined document. `tl407_facts(uuid[])` (SECURITY DEFINER, read-only, one row per
   participation with a fact, so the work list reads all at once) returns the dated `tl407Signed`
   and `profilingDone` from the accepted, live, unquarantined, uninvalidated scans (internally
-  `tl407_evidence` for one participation); `apply_status_change` holds that scan for `profiling_done` and
+  `tl407_evidence` for one participation), `profilingDone` only while such a scan signed by
+  `profiling_done_on` supports it; `apply_status_change` holds that scan for `profiling_done` and
   refuses a date before its later signature date (`effective_date_before_signature`); the guard
-  itself stays the status service's. `record_audit_event` refuses the three new types.
+  itself stays the status service's, since dated guards are checked in TypeScript by this ADR's
+  architecture (Q200). `record_audit_event` refuses the three new types.
 - **Catalog version 4:** the signed TL 407's add and review roles (the consultant and the PL) and
   delete role (the PL); documents of earlier versions keep their rows.
 

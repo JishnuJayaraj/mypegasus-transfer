@@ -359,9 +359,13 @@ The staff app's tab "Profiling" (data-protection.md, the profiling record, for w
   office takes no profiling step.
 - **The TL 407 facts** (`dbGuardFacts`, the database instant of each complete fact; the snapshot
   rule under "TG entry guard"): `tl407Signed` is valid on the earliest later signature date of the
-  accepted scans and recorded at that scan's acceptance (after a quarantine, at its lift);
-  `profilingDone` is valid on `profilingDoneOn` and recorded at the later of the status change and
-  the scan, and exists only while such a scan does. A TL 407 accepted after the TG start's
+  usable scans (accepted, not quarantined, not invalidated) and recorded at that scan's acceptance
+  (after a quarantine, at its lift); `profilingDone` exists only while a usable scan signed by
+  `profilingDoneOn` supports that date (Q200): valid on `profilingDoneOn`, recorded at the later of
+  the status change and the earliest supporting scan. Without one (the supporting paper was
+  quarantined and only later-signed paper remains) the fact is withheld: the status and its date
+  stay as recorded for a controlled resolution, are never moved automatically, and the tab says the
+  completion isn't supported. A TL 407 accepted after the TG start's
   scheduled run therefore supports only a reconciliation, never the scheduled entry or its catch-up;
   a quarantined scan supplies no fact to a later evaluation, and no status is reversed by it. The
   DSV, ASU and exception-evidence facts stay fail closed until their PRs, so nobody enters the TG on

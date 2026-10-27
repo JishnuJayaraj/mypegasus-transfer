@@ -762,6 +762,7 @@ describe("signed scans and their origin (Q184, Q197)", () => {
       documentId,
       formVersion: "08-2025",
       signedOn,
+      acceptedAt: expect.any(String),
       jobboerseChoice: "none",
       baContactConsent: null,
     });
@@ -849,6 +850,76 @@ describe("signed scans and their origin (Q184, Q197)", () => {
       state: "rejected",
       reasonCode: "incomplete",
     });
+  });
+});
+
+describe("the projection of signed paper (ba-forms.md, declarations to the BA)", () => {
+  it("shows the latest signed paper's declarations; the guard keeps the earliest", async () => {
+    const id = await participant();
+    await inProgress(id);
+    const paper = async (signedOn: string, jobboerseChoice: string) => {
+      const documentId = await uploaded(id, { origin: "external_paper" });
+      await accept(id, documentId, {
+        participantSignedOn: signedOn,
+        profilerSignedOn: signedOn,
+        formVersion: "08-2025",
+        declarations: { kind: "as_marked", jobboerseChoice, baContactConsent: true },
+      });
+      return documentId;
+    };
+    const older = await berlinDay(-10);
+    const newer = await berlinDay(-3);
+    await paper(older, "full");
+    const latest = await paper(newer, "none");
+    const view = await profiling(id);
+    expect(view.tl407SignedOn).toBe(older);
+    expect(view.signedDeclarations).toEqual({
+      documentId: latest,
+      formVersion: "08-2025",
+      signedOn: newer,
+      acceptedAt: expect.any(String),
+      jobboerseChoice: "none",
+      baContactConsent: true,
+    });
+    expect(view.profilingDoneSupported).toBeNull();
+  });
+
+  it("withholds a completion no usable paper supports, keeping its date (Q191, Q200)", async () => {
+    const id = await participant();
+    await inProgress(id);
+    const external = async (signedOn: string) => {
+      const documentId = await uploaded(id, { origin: "external_paper" });
+      await accept(id, documentId, {
+        participantSignedOn: signedOn,
+        profilerSignedOn: signedOn,
+        formVersion: "08-2025",
+        declarations: { kind: "as_marked", jobboerseChoice: null, baContactConsent: null },
+      });
+      return documentId;
+    };
+    const completedOn = await berlinDay(-10);
+    const first = await external(completedOn);
+    expect((await complete(id, completedOn)).status).toBe(200);
+    await external(await berlinDay(-5));
+    expect((await profiling(id)).profilingDoneSupported).toBe(true);
+    const quarantined = await request(
+      "POST",
+      `/participations/${id}/documents/${first}/quarantine`,
+      projectLead,
+      { reasonCode: "suspected_wrong_person" },
+    );
+    expect(quarantined.status).toBe(200);
+    const view = await profiling(id);
+    expect(view).toMatchObject({
+      profilingStatus: "profiling_done",
+      profilingDoneOn: completedOn,
+      profilingDoneSupported: false,
+    });
+    const facts = await db.transaction((tx) =>
+      dbGuardFacts.facts(tx, { participationId: id, currentRequest: null }),
+    );
+    expect(facts.profilingDone).toBeUndefined();
+    expect(facts.tl407Signed?.validOn).toBe(await berlinDay(-5));
   });
 });
 

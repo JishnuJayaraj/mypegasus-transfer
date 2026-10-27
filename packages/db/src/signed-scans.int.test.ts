@@ -535,6 +535,52 @@ describe("quarantine, the TL 407 facts and profiling_done (Q183, Q191)", () => {
     ]);
   });
 
+  it("withholds profilingDone when no usable scan signed by its date remains; the date stays", async () => {
+    const id = await participation();
+    await inProgress(id);
+    const external = (signedOn: string) =>
+      scan(id, "external_paper").then(async (documentId) => {
+        await accept(documentId, {
+          signedOn,
+          formVersion: "08-2025",
+          declarations: { kind: "as_marked", jobboerseChoice: null, baContactConsent: null },
+        });
+        return documentId;
+      });
+    // Completed on the 10th on scan A; scan B, signed on the 5th after it, can't support that date.
+    const first = await external(await daysAgo(10));
+    await done(id, await daysAgo(10));
+    const later = await external(await daysAgo(5));
+    await call(app, "quarantine_document", {
+      context: pl,
+      documentId: first,
+      reason: "suspected_wrong_person",
+    });
+    expect(await facts(id)).toMatchObject({
+      tl407_signed_on: await daysAgo(5),
+      profiling_done_on: null,
+      profiling_done_recorded_at: null,
+    });
+    // The historical status and date stay for a controlled resolution; nothing moves them.
+    expect(
+      await one(
+        "select profiling_status::text, profiling_done_on::text from participation where id = $1",
+        [id],
+      ),
+    ).toEqual({ profiling_status: "profiling_done", profiling_done_on: await daysAgo(10) });
+    // Supported again from the lift: recorded at the later of the change and the lift.
+    await call(app, "lift_document_quarantine", { context: pl, documentId: first });
+    const { quarantine_lifted_at } = await one(
+      "select quarantine_lifted_at from document where id = $1",
+      [first],
+    );
+    expect(await facts(id)).toMatchObject({
+      profiling_done_on: await daysAgo(10),
+      profiling_done_recorded_at: quarantine_lifted_at,
+    });
+    expect(later).toEqual(expect.any(String));
+  });
+
   it("excludes invalidated evidence (data-protection.md, evidence corrections)", async () => {
     const id = await participation();
     const documentId = await signed(id);
