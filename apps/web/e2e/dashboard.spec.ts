@@ -1,5 +1,5 @@
 import type { Page, Request } from "@playwright/test";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, expectWithinBudget, test } from "./helpers";
 import { seedProjectIds } from "@transfer/db";
 import { worklistParticipations } from "./participants";
 
@@ -19,9 +19,17 @@ function recordRequests(page: Page) {
 
 /**
  * Runs in the page: types one character into the search and returns the milliseconds until the
- * status line shows `expected` matches.
+ * status line shows `expected` matches, or until `giveUp` ms passed (the count is asserted after).
  */
-async function timeKeystroke({ key, expected }: { key: string; expected: number }) {
+async function timeKeystroke({
+  key,
+  expected,
+  giveUp,
+}: {
+  key: string;
+  expected: number;
+  giveUp: number;
+}) {
   const input = document.querySelector<HTMLInputElement>("#worklist-search")!;
   const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
   const shown = () =>
@@ -31,7 +39,9 @@ async function timeKeystroke({ key, expected }: { key: string; expected: number 
   const start = performance.now();
   setValue.call(input, input.value + key);
   input.dispatchEvent(new Event("input", { bubbles: true }));
-  while (!shown()) await new Promise((resolve) => requestAnimationFrame(resolve));
+  while (!shown() && performance.now() - start < giveUp) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
   return performance.now() - start;
 }
 
@@ -94,7 +104,12 @@ test("follow a count to its rows, search a name and assign a wave", async ({ pag
   expect(requests.filter((r) => /gross|jurgen/i.test(r))).toEqual([]);
 });
 
-test("search 2,000 participations: under 3 s to the first result, 100 ms per keystroke", async ({
+// The performance criterion as a hard gate and a soft budget (architecture/overview.md,
+// performance approach; CLAUDE.md, how we work). The gate is deterministic and asserted first:
+// one request, the term never sent, one page of rows. The timings are reported, fail above a
+// generous ceiling, and fail at the budget (3 s to the first result, 100 ms per keystroke) only
+// with PERF_BUDGET=strict (.env.example).
+test("search 2,000 participations in the browser: one request, one page of rows, timing budget", async ({
   page,
   baseURL,
 }) => {
@@ -113,27 +128,55 @@ test("search 2,000 participations: under 3 s to the first result, 100 ms per key
   const requests = recordRequests(page);
   const started = Date.now();
   await page.goto(`/projects/${projectId}?tab=participants`);
-  const search = page.getByLabel("Name oder Personalnummer suchen");
+  const list = page.getByRole("region", { name: "Teilnehmende" });
+  const search = list.getByLabel("Name oder Personalnummer suchen");
   await expect(search).toBeEnabled();
   await search.fill("PERF-1");
   await expect(matches(page, 1000)).toBeVisible();
   const firstResult = Date.now() - started;
+  // The work list renders 25 matching rows at a time (architecture/overview.md, performance
+  // approach): 25 rows and the header while 1,000 match.
+  await expect(list.getByRole("row")).toHaveCount(26);
 
-  // Each further keystroke, timed in the page: from the input event to the new count.
+  // Each further keystroke, timed in the page from the input event to the new count; the count
+  // and the rows are asserted after each one, whatever the time.
   const keystrokes: number[] = [];
   for (const [char, count] of [
     ["9", 100],
     ["9", 10],
     ["9", 1],
   ] as const) {
-    keystrokes.push(await page.evaluate(timeKeystroke, { key: char, expected: count }));
+    keystrokes.push(
+      await page.evaluate(timeKeystroke, { key: char, expected: count, giveUp: 5000 }),
+    );
+    await expect(matches(page, count)).toBeVisible();
+    await expect(list.getByRole("row")).toHaveCount(Math.min(count, 25) + 1);
   }
-  // oxlint-disable-next-line no-console -- the timings go into the PR (the performance criterion)
-  console.info(
-    `first result ${firstResult} ms; keystrokes ${keystrokes.map((ms) => `${Math.round(ms)} ms`).join(", ")}`,
-  );
-  expect(firstResult).toBeLessThan(3000);
-  for (const ms of keystrokes) expect(ms).toBeLessThan(100);
-  expect(requests.filter((r) => r.includes(`/projects/${projectId}/worklist`))).toHaveLength(1);
+  const reported = `first result ${firstResult} ms; keystrokes ${keystrokes.map((ms) => `${Math.round(ms)} ms`).join(", ")}`;
+  test.info().annotations.push({ type: "performance", description: reported });
+  // oxlint-disable-next-line no-console -- the timings go into the PR
+  console.info(reported);
+
+  // The hard gate. One snapshot answers the whole session, whatever was typed (ADR-0010, the
+  // bounded snapshot; architecture/overview.md, the project page).
+  const snapshots = requests.filter((r) => r.includes(`/projects/${projectId}/worklist`));
+  expect(snapshots).toHaveLength(1);
+  expect(snapshots[0]).toMatch(/^GET /);
+  // The search runs in the browser: the term is in no request URL or body (data-protection.md,
+  // the work list and the dashboard).
   expect(requests.filter((r) => /perf-1/i.test(r))).toEqual([]);
+
+  // The soft budget, last.
+  expectWithinBudget("first result of 2,000", firstResult, {
+    budget: 3000,
+    ceiling: 15_000,
+    causes: "a slow work-list query, rendering every row instead of one page",
+  });
+  for (const ms of keystrokes) {
+    expectWithinBudget("keystroke over 2,000", ms, {
+      budget: 100,
+      ceiling: 1000,
+      causes: "a request per keystroke, rendering every row instead of one page",
+    });
+  }
 });
