@@ -70,6 +70,10 @@ confirmed before the pilot.
 
 ## How we work (workflow)
 
+For implementation, fixes and reviews, follow [the agent workflow](docs/engineering/agent-workflow.md):
+turn the approved task into observable checks, complete one tested step at a time, and hand off
+the exact state. These are execution checkpoints, not additional human approval gates.
+
 - Work in **vertical slices** from `docs/roadmap.md`. A slice's plan divides it into PRs (e.g.
   2g-1, 2g-2); one planned PR = one branch = one PR.
 - For each slice: **plan first** (write the plan to `docs/plans/<slice>.md`, wait for approval
