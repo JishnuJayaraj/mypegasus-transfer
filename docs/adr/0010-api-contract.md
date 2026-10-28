@@ -438,15 +438,18 @@ generator then. No action now.
   `defaultChannel`), for readers of the knowledge date `knowledgeDate`, `oldEmploymentEndDate` and
   `dueDate` (`{ kind: "statutory", date, branch } | { kind: "orientation", date }` while it
   applies), `registration` (`channel`, `registeredOn`, `recordedAt`, `proof` with `kind`,
-  `attestationSource`, `documentId`, `linkedAt`; `withProofSince`, the fact's instant or null),
-  `proofDocuments` (metadata and `DocumentCapabilities`, `linked`), `missing` (the
+  `attestationSource`, `documentId` for the readers of `asu_proof` only, `linkedAt`;
+  `withProofSince`, the fact's instant or null), `proofDocuments` (metadata and
+  `DocumentCapabilities`, `linked`; absent for a viewer without the right to read `asu_proof`'s
+  metadata, i.e. back office, which reads the case summary only), `missing` (the
   `asu_registration` step's items, field keys only where the viewer may know them) and
   `capabilities` (`setRoute`, `recordRegistration`, `attest`, `linkProof`, `setKnowledgeDate`,
   `addProof`). Never the BA-Kundennummer. `ParticipationDetail.capabilities.viewAsu` says whether
   the tab exists.
 - Writes, each answering the `AsuView`: `PUT …/asu/route` (`AsuRouteInput` `{ channel, version }`,
   `409 stale_revision`), `POST …/asu/registration` (`AsuRegistrationInput` `{ registeredOn,
-  attestation?: { customerNumber, source } }`; the number is write-only and never echoed, also not
+  routeVersion, attestation?: { customerNumber, source } }`: the route version the recorder
+  reviewed, `409 stale_revision` once it changed; the number is write-only and never echoed, also not
   by a `400`), `POST …/asu/proof-link` (`AsuProofLinkInput` `{ registrationId, documentId }`),
   `PUT /participations/{id}/knowledge-date` (`KnowledgeDateInput` `{ knowledgeDate, previous }`,
   `409 stale_value`). `422` codes: `registered_on_in_future` (`/registeredOn`),

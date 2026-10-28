@@ -134,19 +134,22 @@ describe("the registration's input", () => {
     }
   });
 
-  it("needs the attestation's source with its number", () => {
-    expect(parse({ registeredOn: "2027-02-20" })).toBe(true);
+  it("needs the route version reviewed, and the attestation's source with its number", () => {
+    const base = { registeredOn: "2027-02-20", routeVersion: 1 };
+    expect(parse(base)).toBe(true);
+    expect(parse({ registeredOn: "2027-02-20" })).toBe(false);
     expect(
       parse({
-        registeredOn: "2027-02-20",
+        ...base,
         attestation: { customerNumber: "123A456789", source: "ba_online_account_inspected" },
       }),
     ).toBe(true);
+    expect(parse({ ...base, attestation: { customerNumber: "123A456789" } })).toBe(false);
     expect(
-      parse({ registeredOn: "2027-02-20", attestation: { customerNumber: "123A456789" } }),
-    ).toBe(false);
-    expect(
-      parse({ attestation: { customerNumber: "123A456789", source: "ba_confirmed_by_phone" } }),
+      parse({
+        routeVersion: 1,
+        attestation: { customerNumber: "123A456789", source: "ba_confirmed_by_phone" },
+      }),
     ).toBe(false);
   });
 

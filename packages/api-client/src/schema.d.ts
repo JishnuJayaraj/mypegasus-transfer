@@ -10923,7 +10923,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Record the registration on online_self or in_person: its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards */
+        /** Record the registration on online_self or in_person with the route version reviewed (409 stale_revision): its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards */
         post: {
             parameters: {
                 query?: never;
@@ -14775,7 +14775,7 @@ export interface components {
             oldEmploymentEndDate?: string | null;
             dueDate?: components["schemas"]["AsuDueDate"];
             registration: components["schemas"]["AsuRegistration"];
-            proofDocuments: components["schemas"]["AsuProofDocument"][];
+            proofDocuments?: components["schemas"]["AsuProofDocument"][];
             missing: components["schemas"]["AsuMissingItem"][];
             capabilities: {
                 setRoute: boolean;
@@ -14828,7 +14828,7 @@ export interface components {
                 /** @enum {string|null} */
                 attestationSource: "ba_document_inspected" | "ba_online_account_inspected" | "ba_confirmed_by_phone" | null;
                 /** Format: uuid */
-                documentId: string | null;
+                documentId?: string | null;
                 /**
                  * Format: date-time
                  * @description UTC timestamp (ISO 8601)
@@ -14893,6 +14893,7 @@ export interface components {
              * @example 2027-03-01
              */
             registeredOn: string;
+            routeVersion: number;
             attestation?: {
                 /** @description Write-only; never returned */
                 customerNumber: string;

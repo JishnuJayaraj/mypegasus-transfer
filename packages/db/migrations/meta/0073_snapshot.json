@@ -2765,6 +2765,13 @@
           "type": "text[]",
           "primaryKey": false,
           "notNull": true
+        },
+        "quarantine_roles": {
+          "name": "quarantine_roles",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
         }
       },
       "indexes": {},
@@ -8327,6 +8334,7 @@
         "firstName",
         "birthDate",
         "oldEmploymentEndDate",
+        "knowledgeDate",
         "addressStreet",
         "addressPostalCode",
         "addressCity",

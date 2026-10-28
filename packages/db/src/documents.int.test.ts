@@ -206,7 +206,7 @@ describe("document_type_policy", () => {
   it("is the domain's catalog in its current version (drift); older versions stay", async () => {
     const rows = await all(
       `select type::text, catalog_version, retention_class, file_name, signed, generated,
-         add_roles, review_roles, delete_roles, open_roles
+         add_roles, review_roles, delete_roles, open_roles, quarantine_roles
        from document_type_policy where catalog_version = $1 order by type`,
       [documentTypeCatalog.version],
     );
@@ -220,6 +220,14 @@ describe("document_type_policy", () => {
       add_roles: roles(entry, "add"),
       review_roles: roles(entry, "review"),
       delete_roles: roles(entry, "delete"),
+      // The quarantine's roles: the review roles unless the catalog names others (Q201).
+      quarantine_roles:
+        typeof entry.operations === "object"
+          ? [
+              ...(("quarantine" in entry.operations && entry.operations.quarantine) ||
+                entry.operations.review),
+            ]
+          : [],
       open_roles: Object.entries(entry.roles)
         .filter(([, right]) => right === "open")
         .map(([role]) => role),
@@ -231,6 +239,7 @@ describe("document_type_policy", () => {
           add_roles: row.add_roles.toSorted(),
           review_roles: row.review_roles.toSorted(),
           delete_roles: row.delete_roles.toSorted(),
+          quarantine_roles: row.quarantine_roles.toSorted(),
           open_roles: row.open_roles.toSorted(),
         }))
         .toSorted((a, b) => a.type.localeCompare(b.type));

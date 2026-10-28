@@ -469,12 +469,13 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
   register themselves.
 - `asuDueDate` (see Dates) gives the deadline `asu_due`; no automatic reminder until Q1 is
   confirmed (Q152).
-- **As built (Slice 6, PR 6-4a; Q186, readings Q201):** the PL or the assigned consultant sets the
+- **As built (Slice 6, PR 6-4a; Q186, Q201):** the PL or the assigned consultant sets the
   route with its version (`set_asu_route`, `asu_route_set`), the placement Agentur's
   `defaultChannel` preselected, never a blocker; it is fixed once a registration is recorded (an
   entry error is corrected through an approved correction, PR 6-8). On `online_self` /
   `in_person` the PL or the assigned consultant records the actual date (`record_asu_registration`,
-  not after today); its proof is either the PL's **attestation** given with it (the BA-Kundennummer,
+  not after today) with the route version they reviewed (a route changed since is
+  `409 stale_revision`, never frozen unseen); its proof is either the PL's **attestation** given with it (the BA-Kundennummer,
   write-only and encrypted, with where it was verified: `ba_document_inspected`,
   `ba_online_account_inspected`, `ba_confirmed_by_phone`) or an accepted BA confirmation
   (`asu_proof`) the assigned consultant links afterwards (`link_asu_proof`, `asu_proof_linked`). A

@@ -824,7 +824,8 @@ and highly confidential data only; ordinary person-data writes are `participant_
   `wrong_file` (the tombstone keeps its origin and generation, the object is purged at once); a
   reviewed scan is `document_immutable`.
 - **Quarantine, at once** (`quarantine_document`, `lift_document_quarantine`): the PL or the
-  assigned consultant (the type's review roles, normal mode, also after the end) quarantines a
+  assigned consultant (the type's quarantine roles: its review roles unless the catalog names
+  others, as for the ASU proof; normal mode, also after the end) quarantines a
   document with `suspected_wrong_person` or `suspected_wrong_acceptance`, audited
   `document_quarantined`. While quarantined it opens for nobody (break-glass opening comes with its
   slice; a link opened before answers nothing), is not reviewed, supplies no fact to any future
@@ -837,15 +838,19 @@ and highly confidential data only; ordinary person-data writes are `participant_
   `document_quarantine_lifted`; `signed_declaration_recorded` in `profiling` (form code, version,
   the declaration codes, never a value).
 
-### The ASU record *(accepted, Q49, Q184, Q186; as built in Slice 6, PR 6-4a; readings Q201)*
+### The ASU record *(accepted, Q49, Q184, Q186, Q201; as built in Slice 6, PR 6-4a)*
 
 - **The route and the registration** (`asu_record`, `asu_registration`; `internal`, `case_internal`
   as `asuChannel` and `asuRegistration`, listable as codes and dates; class
   `participation_record`, part of the evidence of entry, Q88): written only by `set_asu_route`,
   `record_asu_registration` and `link_asu_proof`, read by the case readers (the PL, the assigned
   consultant, back office) on the tab "Arbeitsuche" (`ta_tg` only). The route and a registration
-  without the attestation are the PL's or the assigned consultant's; the history shows the route,
-  the registration's route, date, proof kind and attestation source, and the link.
+  without the attestation are the PL's or the assigned consultant's; a registration names the
+  route version its recorder reviewed (`409 stale_revision` once changed, so no unseen route is
+  frozen). The history shows the route, the registration's route, date, proof kind and attestation
+  source, and the link. **Back office reads the case summary only**: the route, the registration
+  with its proof's kind, source and instants, and the step's items, never the BA confirmations'
+  metadata (no list, no document id; it has no right on `asu_proof`).
 - **The attestation** (Q184, Q186): the PL alone records the BA-Kundennummer together with the
   actual registration date and where it was verified; a number alone says nothing about when the
   person registered. The number is highly confidential (`identifiers`): encrypted beside the
@@ -855,10 +860,14 @@ and highly confidential data only; ordinary person-data writes are `participant_
   presence. Its reading by the assigned consultant and back office comes with the slice that needs
   it.
 - **The BA confirmation** (`asu_proof`, document catalog version 5, the owner's choice of
-  2026-10-28): evidence, so the catalog marks it `signed`: added by the assigned consultant or the
-  PL in normal mode (the PL sees its metadata and opens the file only through break-glass),
-  reviewed (and so quarantined and lifted) by the assigned consultant, deleted by the PL before its
-  review only, as `wrong_person` or `wrong_file`; never by back office or the participant (D34).
+  2026-10-28): evidence, so the catalog marks it `signed` for immutability only (normal mode, never
+  changed once reviewed; a BA confirmation needs no wet signature): added by the assigned
+  consultant or the PL in normal mode (the PL sees its metadata and opens the file only through
+  break-glass), reviewed by the assigned consultant, deleted by the PL before its review only, as
+  `wrong_person` or `wrong_file`; never by back office or the participant. **Quarantined at once
+  by the PL or the assigned consultant** (the catalog's quarantine roles, a type's review roles
+  unless it names others), the PL without any right to open, review or link it; the lift is the
+  quarantining person's or the PL's. The permanent correction comes with Slice 6, PR 6-8.
   The assigned consultant, who opens it, links an accepted one as the registration's proof,
   confirming it supports the registration's date. A quarantined or invalidated proving document
   supplies no fact.

@@ -1,6 +1,7 @@
 CREATE TYPE "public"."asu_attestation_source" AS ENUM('ba_document_inspected', 'ba_online_account_inspected', 'ba_confirmed_by_phone');--> statement-breakpoint
 CREATE TYPE "public"."asu_channel" AS ENUM('kug_200b', 'online_self', 'in_person');--> statement-breakpoint
 CREATE TYPE "public"."asu_proof_kind" AS ENUM('kug200b_submission', 'ba_confirmation', 'ba_customer_number');--> statement-breakpoint
+ALTER TYPE "public"."import_target" ADD VALUE 'knowledgeDate' BEFORE 'addressStreet';--> statement-breakpoint
 ALTER TYPE "public"."audit_event_type" ADD VALUE 'asu_route_set';--> statement-breakpoint
 ALTER TYPE "public"."audit_event_type" ADD VALUE 'asu_registration_recorded';--> statement-breakpoint
 ALTER TYPE "public"."audit_event_type" ADD VALUE 'asu_proof_linked';--> statement-breakpoint
@@ -35,6 +36,7 @@ CREATE TABLE "asu_registration" (
 	CONSTRAINT "asu_registration_linked_after" CHECK ("asu_registration"."proof_linked_at" >= "asu_registration"."recorded_at")
 );
 --> statement-breakpoint
+ALTER TABLE "document_type_policy" ADD COLUMN "quarantine_roles" text[] DEFAULT '{}'::text[] NOT NULL;--> statement-breakpoint
 ALTER TABLE "participant_details" ADD COLUMN "knowledge_date" date;--> statement-breakpoint
 ALTER TABLE "participant_identifier_data" ADD COLUMN "ba_customer_number" "bytea";--> statement-breakpoint
 ALTER TABLE "participant_identifier_data" ADD COLUMN "ba_customer_number_present" boolean DEFAULT false NOT NULL;--> statement-breakpoint

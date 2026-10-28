@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
-import { DocumentReviewReason } from "@transfer/domain";
+import { DocumentReviewReason, QuarantineReason } from "@transfer/domain";
 import {
   DOCUMENT_ACCEPT,
   readFileAsBase64,
@@ -25,13 +25,16 @@ import { useId, useState, type ChangeEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationAsuQuery, useApi } from "../api";
 import { documentNavigation } from "./documents-tab";
+import { ReloadNotice, useDraft } from "./draft";
 
 // The tab "Arbeitsuche" (process-and-lifecycle.md, Arbeitsuchendmeldung and dates;
 // data-protection.md, the ASU record): the route, the knowledge date with the due date or its
 // orientation, the registration with its proof ("Meldung erfassen": the date and either a BA
 // confirmation linked afterwards or the BA-Kundennummer, masked as typed and never shown back),
 // the BA confirmations and the step's missing items. Every button by its capability; the API
-// checks each again. German only. No reminder is sent from here (Q1, Q152).
+// checks each again. Each editor keeps the value or version it was read with (ADR-0010; no silent
+// loss): clean, it follows a refresh; dirty, it keeps its input and shows a change from elsewhere
+// as a conflict. German only. No reminder is sent from here (Q1, Q152).
 
 type Detail = components["schemas"]["ParticipationDetail"];
 type View = components["schemas"]["AsuView"];
@@ -115,12 +118,12 @@ export function AsuTab({ detail }: { detail: Detail }) {
       <RouteSection
         view={view}
         busy={busy}
-        onSave={(channel) =>
+        onSave={(channel, version) =>
           act(async () =>
             ok(
               await api.PUT("/api/v1/participations/{participationId}/asu/route", {
                 params: { path },
-                body: { channel, version: view.route.version },
+                body: { channel, version },
               }),
             ),
           )
@@ -129,12 +132,12 @@ export function AsuTab({ detail }: { detail: Detail }) {
       <KnowledgeSection
         view={view}
         busy={busy}
-        onSave={(knowledgeDate) =>
+        onSave={(knowledgeDate, previous) =>
           act(async () =>
             ok(
               await api.PUT("/api/v1/participations/{participationId}/knowledge-date", {
                 params: { path },
-                body: { knowledgeDate, previous: view.knowledgeDate ?? null },
+                body: { knowledgeDate, previous },
               }),
             ),
           )
@@ -200,6 +203,30 @@ export function AsuTab({ detail }: { detail: Detail }) {
             ),
           )
         }
+        onQuarantine={(documentId, reasonCode) =>
+          act(
+            async () =>
+              ok(
+                await api.POST(
+                  "/api/v1/participations/{participationId}/documents/{documentId}/quarantine",
+                  { params: { path: { ...path, documentId } }, body: { reasonCode } },
+                ),
+              ),
+            t("asu.messages.quarantined"),
+          )
+        }
+        onLift={(documentId) =>
+          act(
+            async () =>
+              ok(
+                await api.POST(
+                  "/api/v1/participations/{participationId}/documents/{documentId}/quarantine-lift",
+                  { params: { path: { ...path, documentId } } },
+                ),
+              ),
+            t("asu.messages.lifted"),
+          )
+        }
         onLink={(documentId) =>
           act(async () =>
             ok(
@@ -228,12 +255,21 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** "Weg": the placement Agentur's default preselected, never a blocker (process-and-lifecycle.md, Arbeitsuchendmeldung). */
-function RouteSection(props: { view: View; busy: boolean; onSave: (channel: Channel) => unknown }) {
+function RouteSection(props: {
+  view: View;
+  busy: boolean;
+  onSave: (channel: Channel, version: number) => Promise<boolean>;
+}) {
   const { t } = useTranslation();
   const { route, capabilities } = props.view;
-  const [channel, setChannel] = useState<Channel>(
-    route.channel ?? route.defaultChannel ?? "kug_200b",
+  // The stored route with its version; unset, the editor shows the preselection. A save is
+  // followed by the tab's new state (an equal draft is clean again), so it adopts nothing itself.
+  const current = { revision: route.version, value: route.channel };
+  const { draft, setDraft, conflict, token, adopt } = useDraft<Channel | null>(
+    current,
+    (a, b) => a === b,
   );
+  const shown = draft ?? route.defaultChannel ?? "kug_200b";
   const label = (value: Channel) => t(`asu.channels.${value}`);
   return (
     <Section title={t("asu.route.title")}>
@@ -243,18 +279,19 @@ function RouteSection(props: { view: View; busy: boolean; onSave: (channel: Chan
           {route.channel === null && route.defaultChannel && (
             <p>{t("asu.route.preselected", { channel: label(route.defaultChannel) })}</p>
           )}
+          {conflict && <ReloadNotice title={t("draft.conflict")} onReload={() => adopt(current)} />}
           <Select
             id="asu-route"
             labelText={t("asu.route.label")}
-            value={channel}
-            onChange={(event) => setChannel(event.target.value as Channel)}
+            value={shown}
+            onChange={(event) => setDraft(event.target.value as Channel)}
           >
             {channels.map((value) => (
               <SelectItem key={value} value={value} text={label(value)} />
             ))}
           </Select>
           <div>
-            <Button size="md" disabled={props.busy} onClick={() => void props.onSave(channel)}>
+            <Button size="md" disabled={props.busy} onClick={() => void props.onSave(shown, token)}>
               {t("asu.route.save")}
             </Button>
           </div>
@@ -266,26 +303,43 @@ function RouteSection(props: { view: View; busy: boolean; onSave: (channel: Chan
   );
 }
 
+/** A typed date as the ISO date it names, else the text itself (so "1.1.2026" equals "01.01.2026"). */
+const dateKey = (text: string) => {
+  const parsed = parseDisplayDate(text);
+  return parsed.ok && parsed.value !== undefined ? parsed.value : text.trim();
+};
+
 /** "Kenntnisdatum" and the due date: statutory, or an orientation only (process-and-lifecycle.md, dates). */
 function KnowledgeSection(props: {
   view: View;
   busy: boolean;
-  onSave: (date: string | null) => unknown;
+  onSave: (date: string | null, previous: string | null) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const { view } = props;
-  const [text, setText] = useState(view.knowledgeDate ? formatDate(view.knowledgeDate) : "");
+  const stored = view.knowledgeDate ?? null;
+  // The date read is the save's `previous` (409 stale_value when it changed meanwhile).
+  const current = { revision: stored, value: stored ? formatDate(stored) : "" };
+  const { draft, setDraft, conflict, token, adopt } = useDraft<string, string | null>(
+    current,
+    (a, b) => dateKey(a) === dateKey(b),
+  );
   const [invalid, setInvalid] = useState(false);
   if (view.knowledgeDate === undefined) return null;
   const due = view.dueDate;
-  const save = () => {
-    const parsed = parseDisplayDate(text);
+  // A save is followed by the tab's new state, which a draft naming the same date equals.
+  const save = (date: string | null) => {
+    if (date === null) setDraft("");
+    void props.onSave(date, token);
+  };
+  const submit = () => {
+    const parsed = parseDisplayDate(draft);
     if (!parsed.ok || parsed.value === undefined) {
       setInvalid(true);
       return;
     }
     setInvalid(false);
-    void props.onSave(parsed.value);
+    save(parsed.value);
   };
   return (
     <Section title={t("asu.knowledge.title")}>
@@ -308,25 +362,23 @@ function KnowledgeSection(props: {
       </p>
       {view.capabilities.setKnowledgeDate && (
         <>
+          {conflict && <ReloadNotice title={t("draft.conflict")} onReload={() => adopt(current)} />}
           <DateField
+            // A new baseline (a refresh of a clean editor, a save, "Neu laden") shows its date.
+            key={token ?? ""}
             id="asu-knowledge-date"
             labelText={t("asu.knowledge.label")}
-            defaultValue={text}
-            onChange={setText}
+            defaultValue={draft}
+            onChange={setDraft}
             invalidText={invalid ? t("asu.knowledge.invalid") : undefined}
           />
           <p className="tp-hint">{t("asu.knowledge.helper")}</p>
           <div className="tp-inline-actions">
-            <Button size="md" disabled={props.busy} onClick={save}>
+            <Button size="md" disabled={props.busy} onClick={submit}>
               {t("asu.knowledge.save")}
             </Button>
-            {view.knowledgeDate && (
-              <Button
-                kind="ghost"
-                size="md"
-                disabled={props.busy}
-                onClick={() => void props.onSave(null)}
-              >
+            {token && (
+              <Button kind="ghost" size="md" disabled={props.busy} onClick={() => save(null)}>
                 {t("asu.knowledge.clear")}
               </Button>
             )}
@@ -353,6 +405,12 @@ function RegistrationSection(props: {
   const [number, setNumber] = useState("");
   const [source, setSource] = useState<Source>("ba_online_account_inspected");
   const [invalid, setInvalid] = useState(false);
+  // The route the recorder reviewed: followed while the form is empty, kept once they type, so a
+  // route changed elsewhere meanwhile shows here and its save is refused (409), never frozen.
+  const [reviewed, setReviewed] = useState(view.route.version);
+  const typing = date !== "" || number !== "";
+  if (!typing && reviewed !== view.route.version) setReviewed(view.route.version);
+  const routeChanged = typing && reviewed !== view.route.version;
 
   if (registration) {
     const { proof } = registration;
@@ -392,6 +450,7 @@ function RegistrationSection(props: {
     setInvalid(false);
     const done = await props.onRecord({
       registeredOn: parsed.value,
+      routeVersion: reviewed,
       ...(kind === "customer_number" && { attestation: { customerNumber: number, source } }),
     });
     // The number is never kept in the page once sent.
@@ -405,6 +464,15 @@ function RegistrationSection(props: {
         <fieldset className="tp-fieldset">
           <legend>{t("asu.registration.record")}</legend>
           <Stack gap={5}>
+            {routeChanged && (
+              <ReloadNotice
+                title={t("asu.registration.routeChanged", {
+                  channel: view.route.channel ? t(`asu.channels.${view.route.channel}`) : "",
+                })}
+                action={t("asu.registration.adoptRoute")}
+                onReload={() => setReviewed(view.route.version)}
+              />
+            )}
             <DateField
               id="asu-registered-on"
               labelText={t("asu.registration.date")}
@@ -472,12 +540,17 @@ function ProofSection(props: {
   onUpload: (file: File) => unknown;
   onOpen: (documentId: string) => unknown;
   onReview: (documentId: string, reasonCode?: DocumentReviewReason) => unknown;
+  onQuarantine: (documentId: string, reasonCode: QuarantineReason) => unknown;
+  onLift: (documentId: string) => unknown;
   onLink: (documentId: string) => unknown;
 }) {
   const { t } = useTranslation();
   const { t: ts } = useTranslation(SELF_SERVICE_NAMESPACE);
   const { view } = props;
   const [reason, setReason] = useState<DocumentReviewReason>("unreadable");
+  const [suspicion, setSuspicion] = useState<QuarantineReason>("suspected_wrong_person");
+  // Back office reads the registration's summary only, never the documents.
+  if (view.proofDocuments === undefined) return null;
   return (
     <Section title={t("asu.proofs.title")}>
       {view.proofDocuments.length === 0 && <p>{t("asu.proofs.empty")}</p>}
@@ -495,7 +568,9 @@ function ProofSection(props: {
                   {[
                     t("asu.proofs.added", { at: formatTimestamp(proof.addedAt) }),
                     proof.quarantine
-                      ? t("asu.proofs.quarantined")
+                      ? t("asu.proofs.quarantined", {
+                          reason: t(`asu.proofs.quarantineReasons.${proof.quarantine.reasonCode}`),
+                        })
                       : ts(`documents.states.${proof.review.state}`),
                     ...(proof.linked ? [t("asu.proofs.linked")] : []),
                   ].join(" – ")}
@@ -545,6 +620,43 @@ function ProofSection(props: {
                       </Button>
                     </>
                   )}
+                  {can.quarantine && (
+                    <>
+                      <Select
+                        id={`asu-quarantine-reason-${proof.documentId}`}
+                        labelText={t("asu.proofs.quarantineReason")}
+                        size="sm"
+                        value={suspicion}
+                        onChange={(event) => setSuspicion(event.target.value as QuarantineReason)}
+                      >
+                        {QuarantineReason.options.map((value) => (
+                          <SelectItem
+                            key={value}
+                            value={value}
+                            text={t(`asu.proofs.quarantineReasons.${value}`)}
+                          />
+                        ))}
+                      </Select>
+                      <Button
+                        kind="danger--ghost"
+                        size="sm"
+                        disabled={props.busy}
+                        onClick={() => void props.onQuarantine(proof.documentId, suspicion)}
+                      >
+                        {t("asu.proofs.quarantine")}
+                      </Button>
+                    </>
+                  )}
+                  {can.liftQuarantine && (
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      disabled={props.busy}
+                      onClick={() => void props.onLift(proof.documentId)}
+                    >
+                      {t("asu.proofs.lift")}
+                    </Button>
+                  )}
                   {linkable && !proof.linked && (
                     <Button
                       kind="tertiary"
@@ -562,6 +674,9 @@ function ProofSection(props: {
         })}
       </ul>
       {view.capabilities.linkProof && <p className="tp-hint">{t("asu.proofs.linkHint")}</p>}
+      {view.proofDocuments.some((proof) => proof.capabilities.quarantine) && (
+        <p className="tp-hint">{t("asu.proofs.quarantineHint")}</p>
+      )}
       {view.capabilities.addProof && (
         <div>
           <FileUploaderButton

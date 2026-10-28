@@ -22,6 +22,7 @@ import {
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, participationQuery, useApi } from "../api";
+import { ReloadNotice, useDraft } from "./draft";
 import { SelfServiceTab } from "./self-service-tab";
 import { Tl407Section } from "./tl407-section";
 
@@ -81,52 +82,6 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
         view.tl407Forms.length > 0 ||
         view.tl407Scans.length > 0) && <Tl407Section view={view} />}
     </Stack>
-  );
-}
-
-/**
- * A section's draft over the server's value and the revision it was read with (ADR-0010; no
- * silent loss). Clean, it follows every new server state. Dirty, it keeps the input; its token
- * moves on only while the server's value of this section is still the one the draft started from
- * (another section's save shares the revision); a draft equal to the new value is clean again; any
- * other changed value is a conflict, shown, which only
- * "Neu laden" resolves by taking the server's state. A save sends `token`, so a conflict's save is
- * refused (409), never silently applied.
- */
-function useDraft<T>(server: { revision: number; value: T }, same: (a: T, b: T) => boolean) {
-  const [base, setBase] = useState(server);
-  const [draft, setDraft] = useState(server.value);
-  const dirty = !same(draft, base.value);
-  if (server.revision !== base.revision) {
-    if (!dirty || same(draft, server.value)) {
-      setBase(server);
-      setDraft(server.value);
-    } else if (same(server.value, base.value)) {
-      setBase({ revision: server.revision, value: base.value });
-    }
-  }
-  const conflict = dirty && server.revision !== base.revision && !same(server.value, base.value);
-  /** Takes this server state as the draft's (after a save, or "Neu laden"). */
-  const adopt = (next: { revision: number; value: T }) => {
-    setBase(next);
-    setDraft(next.value);
-  };
-  return { draft, setDraft, dirty, conflict, token: base.revision, adopt };
-}
-
-/**
- * A warning that the stored value changed elsewhere, with "Neu laden" beside it (Carbon's inline
- * notification takes no interactive children).
- */
-function ReloadNotice({ title, onReload }: { title: string; onReload: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <div>
-      <InlineNotification kind="warning" title={title} hideCloseButton lowContrast />
-      <Button kind="ghost" size="sm" onClick={onReload}>
-        {t("profiling.draft.reload")}
-      </Button>
-    </div>
   );
 }
 
@@ -396,7 +351,7 @@ function SessionsSection({ view }: { view: View }) {
           )}
           {conflict && (
             <ReloadNotice
-              title={t("profiling.draft.conflict")}
+              title={t("draft.conflict")}
               onReload={() => {
                 setFailure(undefined);
                 adopt({ revision: view.revision, value: sessionRows(view.sessions) });
@@ -1015,7 +970,7 @@ function DeclarationsSection({ view }: { view: View }) {
           )}
           {conflict && (
             <ReloadNotice
-              title={t("profiling.draft.conflict")}
+              title={t("draft.conflict")}
               onReload={() => {
                 setFailure(undefined);
                 adopt({ revision: view.revision, value: declarationsOf(view) });

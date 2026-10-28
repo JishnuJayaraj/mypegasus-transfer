@@ -62,6 +62,11 @@ export type DocumentOperations =
        * themselves while it isn't accepted.
        */
       delete: readonly AccessRole[];
+      /**
+       * Quarantine at once and its lift (data-protection.md, quarantine), in normal mode; the
+       * review roles where absent. Grants no opening, review or link.
+       */
+      quarantine?: readonly ProjectRole[];
     };
 
 export type DocumentTypeEntry = {
@@ -151,10 +156,11 @@ export const documentTypeCatalog = {
       ...undecided,
     })),
     {
-      // A BA confirmation of the registration (data-protection.md, the ASU record; Q186, the owner's
-      // choice in PR 6-4a): evidence like signed paper, so `signed` (normal mode only, never
-      // changed once reviewed). The assigned consultant and the PL add it (the PL can't open it),
-      // the assigned consultant reviews it; only the PL deletes it, before its review.
+      // A BA confirmation of the registration (data-protection.md, the ASU record; Q186, Q201):
+      // evidence like signed paper, so `signed` (normal mode only, never changed once reviewed; no
+      // signature is asked of it). The assigned consultant and the PL add it (the PL can't open
+      // it), the assigned consultant reviews it, both quarantine it at once; only the PL deletes
+      // it, before its review.
       type: "asu_proof",
       accessCategory: "identifiers",
       dataClass: "highly_confidential",
@@ -166,6 +172,7 @@ export const documentTypeCatalog = {
         add: ["consultant", "project_lead"],
         review: ["consultant"],
         delete: ["project_lead"],
+        quarantine: ["consultant", "project_lead"],
       },
     },
     {

@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -113,6 +113,8 @@ function setup(first: ReturnType<typeof view>, afterWrite = first, viewAsu = tru
         : answer(),
     [`POST ${detailPath}/asu/registration`]: answer,
     [`POST ${detailPath}/asu/proof-link`]: answer,
+    [`POST ${detailPath}/documents/${proofId}/quarantine`]: answer,
+    [`POST ${detailPath}/documents/${proofId}/quarantine-lift`]: answer,
   });
   renderApp(`/projects/${project.id}/participations/${participationId}?tab=asu`, mock.api);
   return mock;
@@ -120,6 +122,27 @@ function setup(first: ReturnType<typeof view>, afterWrite = first, viewAsu = tru
 
 const callTo = (calls: { key: string; body: unknown }[], key: string) =>
   calls.filter((call) => call.key === key);
+
+/** A section of the tab by its heading. */
+const section = async (name: string) => within(await screen.findByRole("region", { name }));
+
+/** A BA confirmation as the PL lists it: metadata only, quarantined at once if suspect. */
+const plProof = (quarantined: boolean) => ({
+  documentId: proofId,
+  addedAt: "2026-11-04T10:00:00.000000Z",
+  review: { state: "accepted", reasonCode: null, reviewedAt: "2026-11-04T11:00:00.000000Z" },
+  quarantine: quarantined
+    ? { reasonCode: "suspected_wrong_person", quarantinedAt: "2026-11-05T08:00:00.000000Z" }
+    : null,
+  linked: false,
+  capabilities: {
+    open: false,
+    review: false,
+    delete: false,
+    quarantine: !quarantined,
+    liftQuarantine: quarantined,
+  },
+});
 
 describe("the tab Arbeitsuche", () => {
   it("has no tab without the capability", async () => {
@@ -181,6 +204,181 @@ describe("the tab Arbeitsuche", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/Inzwischen geändert/);
   });
 
+  it("keeps a typed knowledge date with the date it was read against; a change elsewhere is a conflict", async () => {
+    const user = userEvent.setup();
+    const can = { setKnowledgeDate: true, setRoute: true };
+    const { calls } = setup(
+      view({ knowledgeDate: "2027-01-01", capabilities: can }),
+      view({
+        knowledgeDate: "2027-01-05",
+        route: { channel: "in_person", version: 1, defaultChannel: "online_self" },
+        capabilities: can,
+      }),
+    );
+    const field = await screen.findByLabelText("Kenntnisdatum (TT.MM.JJJJ)");
+    await user.clear(field);
+    await user.type(field, "02.01.2027");
+    // Another write reads the tab again: the date was changed elsewhere meanwhile.
+    await user.click(screen.getByRole("button", { name: "Weg speichern" }));
+    const knowledge = await section("Kenntnisdatum und Frist");
+    expect(
+      await knowledge.findByText(/Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert/),
+    ).toBeVisible();
+    expect(knowledge.getByLabelText("Kenntnisdatum (TT.MM.JJJJ)")).toHaveValue("02.01.2027");
+    await user.click(knowledge.getByRole("button", { name: "Kenntnisdatum speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/knowledge-date`)[0]?.body).toEqual({
+        knowledgeDate: "2027-01-02",
+        previous: "2027-01-01",
+      }),
+    );
+    await user.click(knowledge.getByRole("button", { name: "Neu laden" }));
+    expect(knowledge.getByLabelText("Kenntnisdatum (TT.MM.JJJJ)")).toHaveValue("05.01.2027");
+    expect(knowledge.queryByText(/an anderer Stelle gespeichert/)).toBeNull();
+  });
+
+  it("refreshes clean editors with the new state and its baseline", async () => {
+    const user = userEvent.setup();
+    const can = { setKnowledgeDate: true, setRoute: true };
+    const { calls } = setup(
+      view({ knowledgeDate: "2027-01-01", capabilities: can }),
+      view({
+        knowledgeDate: "2027-01-05",
+        route: { channel: "in_person", version: 1, defaultChannel: "online_self" },
+        capabilities: can,
+      }),
+    );
+    // Another write reads the tab again; both editors are clean.
+    await user.click(await screen.findByRole("button", { name: "Weg speichern" }));
+    const knowledge = await section("Kenntnisdatum und Frist");
+    expect(await knowledge.findByText("Kenntnisdatum: 05.01.2027")).toBeVisible();
+    expect(knowledge.getByLabelText("Kenntnisdatum (TT.MM.JJJJ)")).toHaveValue("05.01.2027");
+    expect((await section("Weg der Arbeitsuchendmeldung")).getByRole("combobox")).toHaveValue(
+      "in_person",
+    );
+    await user.click(screen.getByRole("button", { name: "Weg speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/asu/route`)[1]?.body).toEqual({
+        channel: "in_person",
+        version: 1,
+      }),
+    );
+  });
+
+  it("keeps a chosen route with the version it was read with; a change elsewhere is a conflict", async () => {
+    const user = userEvent.setup();
+    const can = { setKnowledgeDate: true, setRoute: true };
+    const { calls } = setup(
+      view({ capabilities: can }),
+      view({
+        knowledgeDate: "2026-10-01",
+        route: { channel: "kug_200b", version: 1, defaultChannel: "online_self" },
+        capabilities: can,
+      }),
+    );
+    const route = await section("Weg der Arbeitsuchendmeldung");
+    await user.selectOptions(await route.findByRole("combobox", { name: "Weg" }), "in_person");
+    const field = screen.getByLabelText("Kenntnisdatum (TT.MM.JJJJ)");
+    await user.type(field, "01.10.2026");
+    await user.click(screen.getByRole("button", { name: "Kenntnisdatum speichern" }));
+    expect(
+      await route.findByText(/Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert/),
+    ).toBeVisible();
+    expect(route.getByRole("combobox", { name: "Weg" })).toHaveValue("in_person");
+    await user.click(route.getByRole("button", { name: "Weg speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `PUT ${detailPath}/asu/route`)[0]?.body).toEqual({
+        channel: "in_person",
+        version: 0,
+      }),
+    );
+  });
+
+  it("records the registration against the route reviewed and shows a route changed meanwhile", async () => {
+    const user = userEvent.setup();
+    const can = { setKnowledgeDate: true, recordRegistration: true };
+    const { calls } = setup(
+      view({
+        route: { channel: "online_self", version: 1, defaultChannel: "online_self" },
+        capabilities: can,
+      }),
+      view({
+        knowledgeDate: "2026-10-01",
+        route: { channel: "in_person", version: 2, defaultChannel: "online_self" },
+        capabilities: can,
+      }),
+    );
+    await user.type(await screen.findByLabelText("Datum der Meldung (TT.MM.JJJJ)"), "02.11.2026");
+    await user.type(screen.getByLabelText("Kenntnisdatum (TT.MM.JJJJ)"), "01.10.2026");
+    await user.click(screen.getByRole("button", { name: "Kenntnisdatum speichern" }));
+    const registration = await section("Meldung");
+    expect(
+      await registration.findByText(
+        /Der Weg wurde inzwischen an anderer Stelle geändert \(jetzt: Persönlich/,
+      ),
+    ).toBeVisible();
+    await user.click(registration.getByRole("button", { name: "Meldung speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/asu/registration`)[0]?.body).toMatchObject({
+        routeVersion: 1,
+      }),
+    );
+    await user.click(registration.getByRole("button", { name: "Geänderten Weg übernehmen" }));
+    expect(registration.queryByText(/Der Weg wurde inzwischen/)).toBeNull();
+    await user.click(registration.getByRole("button", { name: "Meldung speichern" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/asu/registration`)[1]?.body).toMatchObject({
+        registeredOn: "2026-11-02",
+        routeVersion: 2,
+      }),
+    );
+  });
+
+  it("lets the PL quarantine a suspect BA confirmation at once and lift it, never open it", async () => {
+    const user = userEvent.setup();
+    const quarantined = view({ proofDocuments: [plProof(true)] });
+    const { calls } = setup(view({ proofDocuments: [plProof(false)] }), quarantined);
+    const proofs = await section("BA-Bestätigungen");
+    expect(await proofs.findByText(/Hochgeladen am/)).toBeVisible();
+    expect(proofs.queryByRole("button", { name: "Öffnen" })).toBeNull();
+    await user.selectOptions(
+      proofs.getByRole("combobox", { name: "Grund der Quarantäne" }),
+      "suspected_wrong_acceptance",
+    );
+    await user.click(proofs.getByRole("button", { name: "Unter Quarantäne stellen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/documents/${proofId}/quarantine`)[0]?.body).toEqual({
+        reasonCode: "suspected_wrong_acceptance",
+      }),
+    );
+    expect(await proofs.findByText(/Unter Quarantäne: Verdacht: andere Person/)).toBeVisible();
+    await user.click(proofs.getByRole("button", { name: "Quarantäne aufheben" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/documents/${proofId}/quarantine-lift`)).toHaveLength(
+        1,
+      ),
+    );
+  });
+
+  it("shows back office the registration's summary without the BA confirmations", async () => {
+    const registration = {
+      id: registrationId,
+      channel: "in_person",
+      registeredOn: "2026-11-01",
+      recordedAt: "2026-11-01T09:00:00.000000Z",
+      proof: {
+        kind: "ba_confirmation",
+        attestationSource: null,
+        linkedAt: "2026-11-02T09:00:00.000000Z",
+      },
+      withProofSince: "2026-11-02T09:00:00.000000Z",
+    };
+    const { proofDocuments: _, ...summary } = view({ registration, missing: [] });
+    setup(summary as ReturnType<typeof view>);
+    expect(await screen.findByText("Nachweis: BA-Bestätigung")).toBeVisible();
+    expect(screen.queryByRole("region", { name: "BA-Bestätigungen" })).toBeNull();
+  });
+
   it("records the PL's attestation with the number masked, and never shows it back", async () => {
     const user = userEvent.setup();
     const registered = view({
@@ -221,6 +419,7 @@ describe("the tab Arbeitsuche", () => {
     await waitFor(() =>
       expect(callTo(calls, `POST ${detailPath}/asu/registration`)[0]?.body).toEqual({
         registeredOn: "2026-11-02",
+        routeVersion: 1,
         attestation: { customerNumber: number, source: "ba_online_account_inspected" },
       }),
     );

@@ -15,8 +15,9 @@ about 4,200 lines and splits into 6-3a and 6-3b (the owner's choice, 2026-10-26)
 readings as Q199 (accepted in the review of PR #90); 6-3b (the signed TL 407) recorded its readings
 as Q200 (accepted with amendments in the review of PR #91). 6-4 is estimated at about 5,000 lines
 and splits into 6-4a (the ASU record) and 6-4b (the Kug 200b) (the owner's choice, 2026-10-28,
-with the ASU proof's operations); 6-4a recorded its readings as Q201. Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
-confirmation.
+with the ASU proof's operations); 6-4a recorded its readings as Q201 (accepted with amendments in
+the review of PR #95). Q1 stays `verify`. This is not an external DPO, legal, works-council or
+Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
 `PdfRenderer`, ADR-0006), the overflow attachment, scan upload, Agentur submission status; from

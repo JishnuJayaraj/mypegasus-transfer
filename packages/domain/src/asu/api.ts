@@ -34,8 +34,11 @@ export const AsuRegistrationView = z
         kind: AsuProofKind,
         /** Where the PL verified it (the attestation only); a schema of its own, nullable. */
         attestationSource: z.enum(AttestationSource.options).nullable(),
-        /** The proving `asu_proof` document (a BA confirmation only). */
-        documentId: z.uuid().nullable(),
+        /**
+         * The proving `asu_proof` document (a BA confirmation only); for viewers of the BA
+         * confirmations' metadata.
+         */
+        documentId: z.uuid().nullable().optional(),
         linkedAt: instant,
       })
       .nullable(),
@@ -94,7 +97,11 @@ export const AsuView = z
     /** While it applies (`applicableAsuDueDate`); for viewers of the knowledge date. */
     dueDate: AsuDueDateView.nullable().optional(),
     registration: AsuRegistrationView.nullable(),
-    proofDocuments: z.array(AsuProofDocumentView),
+    /**
+     * For viewers of the BA confirmations' metadata (data-protection.md, documents): back office
+     * reads the case summary above, never the documents.
+     */
+    proofDocuments: z.array(AsuProofDocumentView).optional(),
     /** The step `asu_registration` of the resolved rules (the Kug 200b ones on its route only). */
     missing: z.array(AsuMissingItem),
     capabilities: z.strictObject({
@@ -115,13 +122,15 @@ export const AsuRouteInput = z
   .meta({ id: "AsuRouteInput" });
 
 /**
- * `POST …/asu/registration` on `online_self` / `in_person`: the actual date and, for the PL's
- * attestation, the BA-Kundennummer with where it was verified; without it the proof is a BA
- * confirmation linked afterwards.
+ * `POST …/asu/registration` on `online_self` / `in_person`: the actual date, the route's version
+ * the recorder reviewed (a route changed since is 409 stale_revision, never frozen unseen) and,
+ * for the PL's attestation, the BA-Kundennummer with where it was verified; without it the proof
+ * is a BA confirmation linked afterwards.
  */
 export const AsuRegistrationInput = z
   .strictObject({
     registeredOn: isoDate,
+    routeVersion: z.int().min(0),
     attestation: z
       .strictObject({
         customerNumber: BaCustomerNumber.meta({ description: "Write-only; never returned" }),

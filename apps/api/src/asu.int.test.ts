@@ -77,8 +77,12 @@ const view = async (id: string, as: string = projectLead) => {
 };
 const route = (id: string, channel: string, version: number, as: string = projectLead) =>
   request("PUT", `/participations/${id}/asu/route`, as, { channel, version });
-const register = (id: string, body: unknown, as: string = projectLead) =>
-  request("POST", `/participations/${id}/asu/registration`, as, body);
+/** A registration naming the route version the recorder reviewed, unless the body names one. */
+const register = async (id: string, body: object, as: string = projectLead) =>
+  request("POST", `/participations/${id}/asu/registration`, as, {
+    routeVersion: (await view(id)).route.version,
+    ...body,
+  });
 
 /** An accepted BA confirmation added and reviewed by the consultant; its id. */
 async function acceptedProof(id: string) {
@@ -268,6 +272,25 @@ describe("POST …/asu/registration (process-and-lifecycle.md, Arbeitsuchendmeld
     expect(answered.join("\n")).not.toContain(bad);
   });
 
+  it("refuses a route changed since the recorder reviewed it, freezing nothing (409 stale_revision)", async () => {
+    const id = await participation();
+    await route(id, "online_self", 0);
+    const reviewed = (await view(id, consultant)).route.version;
+    await route(id, "in_person", reviewed);
+    const res = await register(
+      id,
+      { registeredOn: await today(), routeVersion: reviewed },
+      consultant,
+    );
+    expect((await expectProblem(res, 409, "conflict")).errors?.[0]).toMatchObject({
+      code: "stale_revision",
+    });
+    const tab = await view(id);
+    expect(tab.registration).toBeNull();
+    expect(tab.route).toMatchObject({ channel: "in_person", version: reviewed + 1 });
+    expect(tab.capabilities.setRoute).toBe(true);
+  });
+
   it("refuses a registration on the route kug_200b (the batch submission records it)", async () => {
     const id = await participation();
     await route(id, "kug_200b", 0);
@@ -319,8 +342,62 @@ describe("the BA confirmation and its link (process-and-lifecycle.md, Arbeitsuch
     expect(res.status).toBe(200);
     const tab = await readJson(res, AsuView);
     expect(tab.registration!.proof).toMatchObject({ kind: "ba_confirmation", documentId });
-    expect(tab.proofDocuments[0]!.linked).toBe(true);
+    expect(tab.proofDocuments![0]!.linked).toBe(true);
     expect(tab.registration!.withProofSince).toBe(tab.registration!.proof!.linkedAt);
+  });
+
+  it("gives back office the case summary only, never the documents' metadata (data-protection.md, documents)", async () => {
+    const id = await participation();
+    await route(id, "online_self", 0);
+    await register(id, { registeredOn: addDays(await today(), -2) }, consultant);
+    const documentId = await acceptedProof(id);
+    const unlinked = await view(id, backOffice);
+    expect(unlinked).not.toHaveProperty("proofDocuments");
+    expect(JSON.stringify(unlinked)).not.toContain(documentId);
+    expect(unlinked.registration).toMatchObject({ proof: null, withProofSince: null });
+    expect(unlinked.missing.map((m) => [m.key, m.reason])).toEqual([["asu_proof", "not_accepted"]]);
+    const registrationId = unlinked.registration!.id;
+    await request("POST", `/participations/${id}/asu/proof-link`, consultant, {
+      registrationId,
+      documentId,
+    });
+    const linked = await view(id, backOffice);
+    expect(linked.registration!.proof).toEqual({
+      kind: "ba_confirmation",
+      attestationSource: null,
+      linkedAt: expect.any(String),
+    });
+    expect(linked.registration!.withProofSince).not.toBeNull();
+    expect(JSON.stringify(linked)).not.toContain(documentId);
+  });
+
+  it("lets the PL quarantine a proof at once without opening it; the PL lifts it (Q201)", async () => {
+    const id = await participation();
+    await route(id, "online_self", 0);
+    const documentId = await acceptedProof(id);
+    const before = (await view(id)).proofDocuments![0]!;
+    expect(before.capabilities).toMatchObject({ open: false, review: false, quarantine: true });
+    const res = await request(
+      "POST",
+      `/participations/${id}/documents/${documentId}/quarantine`,
+      projectLead,
+      { reasonCode: "suspected_wrong_person" },
+    );
+    expect(res.status).toBe(200);
+    const quarantined = (await view(id)).proofDocuments![0]!;
+    expect(quarantined.quarantine?.reasonCode).toBe("suspected_wrong_person");
+    expect(quarantined.capabilities).toMatchObject({ quarantine: false, liftQuarantine: true });
+    expect((await view(id, consultant)).proofDocuments![0]!.capabilities).toMatchObject({
+      open: false,
+      liftQuarantine: false,
+    });
+    const lift = await request(
+      "POST",
+      `/participations/${id}/documents/${documentId}/quarantine-lift`,
+      projectLead,
+    );
+    expect(lift.status).toBe(200);
+    expect((await view(id)).proofDocuments![0]!.quarantine).toBeNull();
   });
 
   it("an old proof linked today gives a fact recorded today, not before (the snapshot rule)", async () => {

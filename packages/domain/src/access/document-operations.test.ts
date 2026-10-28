@@ -197,6 +197,12 @@ const quarantine = (subject: Subject, mode: AccessMode = accessModes.normal) =>
 const lift = (subject: Subject, by: string) =>
   result(mayLiftDocumentQuarantine(subject, "tl407_signed_scan", target, accessModes.normal, by));
 
+/** An ASU proof's operation for the subject (Q201). */
+const asu = (check: typeof mayQuarantineDocument, subject: Subject) =>
+  result(check(subject, "asu_proof", target, accessModes.normal));
+const lifted = (subject: Subject, by: string) =>
+  result(mayLiftDocumentQuarantine(subject, "asu_proof", target, accessModes.normal, by));
+
 describe("signed scans (data-protection.md, signed scans; Q183, Q184)", () => {
   const pl = profile("project_lead");
   const consultant = profile("consultant");
@@ -236,5 +242,14 @@ describe("signed scans (data-protection.md, signed scans; Q183, Q184)", () => {
     expect(lift(consultant, "someone-else")).toBe("role_not_allowed");
     expect(lift(pl, consultantId)).toBe("ok");
     expect(lift(profile("back_office"), consultantId)).toBe("role_not_allowed");
+  });
+
+  it("lets the PL quarantine an ASU proof at once without reviewing or opening it (Q201)", () => {
+    expect(asu(mayQuarantineDocument, pl)).toBe("ok");
+    expect(asu(mayQuarantineDocument, consultant)).toBe("ok");
+    expect(asu(mayQuarantineDocument, profile("back_office"))).toBe("role_not_allowed");
+    expect(asu(mayReviewDocument, pl)).toBe("role_not_allowed");
+    expect(lifted(pl, "someone-else")).toBe("ok");
+    expect(lifted(consultant, "someone-else")).toBe("role_not_allowed");
   });
 });

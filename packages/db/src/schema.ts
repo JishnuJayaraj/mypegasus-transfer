@@ -1619,6 +1619,11 @@ export const documentTypePolicy = pgTable(
     reviewRoles: text("review_roles").array().notNull(),
     deleteRoles: text("delete_roles").array().notNull(),
     openRoles: text("open_roles").array().notNull(),
+    /** Who quarantines and lifts (data-protection.md, quarantine): the review roles but where named. */
+    quarantineRoles: text("quarantine_roles")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
   },
   (t) => [
     primaryKey({ name: "document_type_policy_pkey", columns: [t.type, t.catalogVersion] }),

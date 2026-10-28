@@ -2045,6 +2045,10 @@
       "project_not_active": "Das Projekt ist nicht aktiv. Es wurde nichts gesendet."
     }
   },
+  "draft": {
+    "conflict": "Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind noch nicht gespeichert. „Neu laden“ übernimmt den gespeicherten Stand und verwirft Ihre Eingaben.",
+    "reload": "Neu laden"
+  },
   "profiling": {
     "title": "Profiling",
     "loading": "Das Profiling wird geladen …",
@@ -2195,10 +2199,6 @@
       "notMarked": "nicht angekreuzt"
     },
     "closed": "Die Teilnahme ist beendet. Das Profiling kann nur noch gelesen werden; Korrekturen laufen über das vorgesehene Korrekturverfahren.",
-    "draft": {
-      "conflict": "Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind noch nicht gespeichert. „Neu laden“ übernimmt den gespeicherten Stand und verwirft Ihre Eingaben.",
-      "reload": "Neu laden"
-    },
     "tl407": {
       "title": "Profilingbogen (TL 407)",
       "intro": "Der Bogen wird hier erzeugt, ausgedruckt und von der teilnehmenden Person und dem Profiler auf Papier unterschrieben. Der erzeugte Bogen ist ein Arbeitsexemplar: Er wird nicht geändert und nach Fristablauf gelöscht.",
@@ -2431,7 +2431,9 @@
       "customerNumberHelper": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
       "source": "Wo geprüft",
       "save": "Meldung speichern",
-      "kugHint": "Auf dem Weg Kug 200b erfasst die Sammelmeldung die Meldung."
+      "kugHint": "Auf dem Weg Kug 200b erfasst die Sammelmeldung die Meldung.",
+      "routeChanged": "Der Weg wurde inzwischen an anderer Stelle geändert (jetzt: {{channel}}). Ihre Meldung ist noch nicht gespeichert; bitte prüfen, ob sie zu diesem Weg passt.",
+      "adoptRoute": "Geänderten Weg übernehmen"
     },
     "sources": {
       "ba_document_inspected": "BA-Dokument eingesehen",
@@ -2444,13 +2446,21 @@
       "upload": "BA-Bestätigung hochladen",
       "added": "Hochgeladen am {{at}}",
       "linked": "verknüpft",
-      "quarantined": "Unter Quarantäne",
+      "quarantined": "Unter Quarantäne: {{reason}}",
       "open": "Öffnen",
       "accept": "Annehmen",
       "reject": "Ablehnen",
       "rejectReason": "Grund der Ablehnung",
       "link": "Als Nachweis verknüpfen",
-      "linkHint": "Nur verknüpfen, wenn die Bestätigung das Datum der Meldung belegt."
+      "linkHint": "Nur verknüpfen, wenn die Bestätigung das Datum der Meldung belegt.",
+      "quarantineReason": "Grund der Quarantäne",
+      "quarantineReasons": {
+        "suspected_wrong_person": "Verdacht: andere Person",
+        "suspected_wrong_acceptance": "Verdacht: irrtümlich angenommen"
+      },
+      "quarantine": "Unter Quarantäne stellen",
+      "lift": "Quarantäne aufheben",
+      "quarantineHint": "Bei Verdacht sofort unter Quarantäne stellen: Die Bestätigung lässt sich dann von niemandem öffnen und belegt keine Meldung, bis die Quarantäne aufgehoben wird."
     },
     "missing": {
       "title": "Für die Arbeitsuchendmeldung fehlt",
@@ -2480,8 +2490,11 @@
         "document_not_accepted": "Die BA-Bestätigung ist noch nicht angenommen.",
         "document_quarantined": "Die BA-Bestätigung steht unter Quarantäne.",
         "document_invalidated": "Die BA-Bestätigung ist ungültig.",
-        "knowledge_date_in_future": "Das Kenntnisdatum liegt in der Zukunft."
-      }
+        "knowledge_date_in_future": "Das Kenntnisdatum liegt in der Zukunft.",
+        "document_not_quarantined": "Die BA-Bestätigung steht nicht unter Quarantäne."
+      },
+      "quarantined": "Die BA-Bestätigung steht jetzt unter Quarantäne.",
+      "lifted": "Die Quarantäne wurde aufgehoben."
     }
   }
 }

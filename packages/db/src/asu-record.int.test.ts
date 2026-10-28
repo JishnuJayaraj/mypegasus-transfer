@@ -55,17 +55,24 @@ async function participation(projectId: string = werkNord) {
 const route = (id: string, channel: string, version: number, context = pl) =>
   call<number>(app, "set_asu_route", { context, participationId: id, channel, version });
 
-const register = (
+/** The participation's route version as the recorder reviewed it: the current one. */
+const routeVersion = async (id: string) =>
+  ((await one("select version from asu_record where participation_id = $1", [id]))?.version ??
+    0) as number;
+
+const register = async (
   id: string,
   registeredOn: string,
   attestation?: { customerNumber: string; source: string },
   context = attestation ? pl : asConsultant,
+  reviewed?: number,
 ) =>
   call(app, "record_asu_registration", {
     context,
     participationId: id,
     id: randomUUID(),
     registeredOn,
+    routeVersion: reviewed ?? (await routeVersion(id)),
     ...(attestation && {
       customerNumber: attestation.customerNumber,
       attestationSource: attestation.source,
@@ -246,6 +253,21 @@ describe("record_asu_registration (process-and-lifecycle.md, Arbeitsuchendmeldun
     expect(JSON.stringify(await all("select * from audit_event"))).not.toContain(number);
   });
 
+  it("refuses a route changed after the recorder reviewed it (stale_revision, Q201)", async () => {
+    const id = await participation();
+    await route(id, "online_self", 0);
+    // Changed elsewhere while the recorder looked at version 1.
+    await route(id, "in_person", 1, asConsultant);
+    await expect(register(id, await today(), undefined, asConsultant, 1)).rejects.toMatchObject(
+      failsWith("stale_revision"),
+    );
+    expect(await one("select count(*)::int as n from asu_registration")).toEqual({ n: 0 });
+    await register(id, await today(), undefined, asConsultant, 2);
+    expect(await one("select channel::text from asu_registration")).toEqual({
+      channel: "in_person",
+    });
+  });
+
   it("refuses a malformed number or a half attestation without echoing it", async () => {
     const id = await participation();
     await route(id, "in_person", 0);
@@ -263,6 +285,7 @@ describe("record_asu_registration (process-and-lifecycle.md, Arbeitsuchendmeldun
         participationId: id,
         id: randomUUID(),
         registeredOn: await today(),
+        routeVersion: 1,
         customerNumber: number,
         key,
         keyId,
@@ -302,12 +325,38 @@ describe("the BA confirmation (asu_proof, catalog version 5; Q186)", () => {
     );
     await review(byPl);
     await expect(proof(id, asBackOffice)).rejects.toMatchObject(failsWith("actor_not_allowed"));
+    // A BA confirmation is accepted without any signature data (no wet-signature requirement).
+    expect(
+      await one(
+        "select review_state::text, signed_on, review_confirmations from document where id = $1",
+        [byPl],
+      ),
+    ).toEqual({ review_state: "accepted", signed_on: null, review_confirmations: null });
     const assisted = auditContext({
       actorType: "user",
       staffUserId: seedStaffUserIds.projectLead,
       onBehalfOf: id,
     });
     await expect(proof(id, assisted)).rejects.toBeTruthy();
+  });
+
+  it("is quarantined at once by the PL or the consultant, the PL lifting any (Q201)", async () => {
+    const id = await participation();
+    const documentId = await proof(id);
+    const quarantine = (context: string) =>
+      call(app, "quarantine_document", { context, documentId, reason: "suspected_wrong_person" });
+    const lift = (context: string) =>
+      call(app, "lift_document_quarantine", { context, documentId });
+    await expect(quarantine(asBackOffice)).rejects.toMatchObject(failsWith("actor_not_allowed"));
+    await quarantine(pl);
+    await expect(lift(asConsultant)).rejects.toMatchObject(failsWith("actor_not_allowed"));
+    await lift(pl);
+    await quarantine(asConsultant);
+    await lift(pl);
+    // The quarantine grants the PL no review.
+    await expect(review(documentId, "accepted", pl)).rejects.toMatchObject(
+      failsWith("actor_not_allowed"),
+    );
   });
 
   it("is deleted by the PL before its review only, as wrong_person or wrong_file", async () => {

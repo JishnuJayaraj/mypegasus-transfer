@@ -12725,7 +12725,6 @@
           "closed",
           "route",
           "registration",
-          "proofDocuments",
           "missing",
           "capabilities"
         ],
@@ -12862,7 +12861,6 @@
             "required": [
               "kind",
               "attestationSource",
-              "documentId",
               "linkedAt"
             ],
             "additionalProperties": false
@@ -13048,6 +13046,10 @@
               "2027-03-01"
             ]
           },
+          "routeVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
           "attestation": {
             "type": "object",
             "properties": {
@@ -13068,7 +13070,8 @@
           }
         },
         "required": [
-          "registeredOn"
+          "registeredOn",
+          "routeVersion"
         ],
         "additionalProperties": false
       },
@@ -24956,7 +24959,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "Record the registration on online_self or in_person: its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards",
+        "summary": "Record the registration on online_self or in_person with the route version reviewed (409 stale_revision): its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards",
         "parameters": [
           {
             "schema": {

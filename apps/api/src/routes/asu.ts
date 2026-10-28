@@ -28,6 +28,7 @@ import {
   mayRecordAsu,
   maySetKnowledgeDate,
   mayViewAsu,
+  readableDocumentTypes,
   staffSelfServiceAccess,
   type PermissionTarget,
 } from "@transfer/domain";
@@ -142,28 +143,32 @@ export function asuRoutes(deps: Deps) {
           .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
           .where(eq(participation.id, participationId));
         const asu = (await asuStatesOf(tx, [participationId])).get(participationId)!;
-        const proofs = await tx
-          .select({
-            documentId: document.id,
-            addedAt: utc(document.addedAt),
-            reviewState: document.reviewState,
-            reviewReason: document.reviewReason,
-            reviewedAt: sql<string | null>`case when ${document.reviewedAt} is not null
+        // The BA confirmations' metadata only for its readers; back office gets the summary.
+        const readsProofs = readableDocumentTypes(subject, target, normal).includes("asu_proof");
+        const proofs = !readsProofs
+          ? []
+          : await tx
+              .select({
+                documentId: document.id,
+                addedAt: utc(document.addedAt),
+                reviewState: document.reviewState,
+                reviewReason: document.reviewReason,
+                reviewedAt: sql<string | null>`case when ${document.reviewedAt} is not null
               then ${utc(document.reviewedAt)} end`,
-            quarantineReason: document.quarantineReason,
-            quarantinedBy: document.quarantinedBy,
-            quarantinedAt: sql<string | null>`case when ${document.quarantinedAt} is not null
+                quarantineReason: document.quarantineReason,
+                quarantinedBy: document.quarantinedBy,
+                quarantinedAt: sql<string | null>`case when ${document.quarantinedAt} is not null
               then ${utc(document.quarantinedAt)} end`,
-          })
-          .from(document)
-          .where(
-            and(
-              eq(document.participationId, participationId),
-              eq(document.type, "asu_proof"),
-              isNull(document.deletedAt),
-            ),
-          )
-          .orderBy(asc(document.addedAt), asc(document.id));
+              })
+              .from(document)
+              .where(
+                and(
+                  eq(document.participationId, participationId),
+                  eq(document.type, "asu_proof"),
+                  isNull(document.deletedAt),
+                ),
+              )
+              .orderBy(asc(document.addedAt), asc(document.id));
         const record = (await loadSelfService(tx, release, participationId))!;
         const { projectType } = record.wizard;
         const applies = projectType === "ta_tg";
@@ -214,31 +219,33 @@ export function asuRoutes(deps: Deps) {
                 : {
                     kind: registration.proofKind,
                     attestationSource: registration.attestationSource,
-                    documentId: registration.proofDocumentId,
+                    ...(readsProofs && { documentId: registration.proofDocumentId }),
                     linkedAt: registration.proofLinkedAt!,
                   },
             withProofSince: asuRegisteredSince(registrationFacts(registration)),
           },
-          proofDocuments: proofs.map((proof) => ({
-            documentId: proof.documentId,
-            addedAt: proof.addedAt,
-            review: {
-              state: proof.reviewState,
-              reasonCode: proof.reviewReason,
-              reviewedAt: proof.reviewedAt,
-            },
-            quarantine:
-              proof.quarantineReason === null
-                ? null
-                : { reasonCode: proof.quarantineReason, quarantinedAt: proof.quarantinedAt! },
-            linked: registration?.proofDocumentId === proof.documentId,
-            capabilities: documentCapabilities(subject, target, normal, {
-              type: "asu_proof",
-              addedByParticipant: false,
-              reviewState: proof.reviewState,
-              quarantinedBy: proof.quarantinedBy,
-            }),
-          })),
+          ...(readsProofs && {
+            proofDocuments: proofs.map((proof) => ({
+              documentId: proof.documentId,
+              addedAt: proof.addedAt,
+              review: {
+                state: proof.reviewState,
+                reasonCode: proof.reviewReason,
+                reviewedAt: proof.reviewedAt,
+              },
+              quarantine:
+                proof.quarantineReason === null
+                  ? null
+                  : { reasonCode: proof.quarantineReason, quarantinedAt: proof.quarantinedAt! },
+              linked: registration?.proofDocumentId === proof.documentId,
+              capabilities: documentCapabilities(subject, target, normal, {
+                type: "asu_proof",
+                addedByParticipant: false,
+                reviewState: proof.reviewState,
+                quarantinedBy: proof.quarantinedBy,
+              }),
+            })),
+          }),
           missing,
           capabilities: {
             setRoute: unregistered && records,
@@ -340,7 +347,7 @@ export function asuRoutes(deps: Deps) {
       path: "/participations/{participationId}/asu/registration",
       tags: ["participations"],
       summary:
-        "Record the registration on online_self or in_person: its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards",
+        "Record the registration on online_self or in_person with the route version reviewed (409 stale_revision): its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards",
       middleware,
       request: {
         params: ParticipationParams,
@@ -366,6 +373,7 @@ export function asuRoutes(deps: Deps) {
         await db.execute(sql`select record_asu_registration(p_context => ${context(c)},
           p_participation_id => ${participationId}::uuid, p_id => ${randomUUID()}::uuid,
           p_registered_on => ${input.registeredOn}::date,
+          p_route_version => ${input.routeVersion}::integer,
           p_customer_number => ${attestation?.customerNumber ?? null}::text,
           p_attestation_source => ${attestation?.source ?? null}::asu_attestation_source,
           p_key => ${attestation ? fieldKey.key : null}::text,

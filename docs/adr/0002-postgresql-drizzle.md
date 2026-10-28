@@ -828,7 +828,7 @@ rules.
 
 Migrations `0073_asu_record.sql` (generated) and `0074_asu_record_functions.sql` (hand-written,
 the 0072 hardening); process-and-lifecycle.md (Arbeitsuchendmeldung, dates) and data-protection.md
-("The ASU record") hold the rules, Q201 the readings.
+("The ASU record") hold the rules, Q201 the accepted readings (the owner's review of PR #95).
 - **Columns and tables:** `asu_record` (one row per participation: `channel` `asu_channel`,
   `version` ≥ 1, who set it and when) and `asu_registration` (`project_id`, the participation,
   unique per participation until corrections exist; `channel`, `registered_on`, who recorded it
@@ -837,7 +837,9 @@ the 0072 hardening); process-and-lifecycle.md (Arbeitsuchendmeldung, dates) and 
   and each kind with exactly its own columns: `asu_registration_proof_whole`,
   `asu_registration_proof_kind`); `participant_identifier_data` adds the BA-Kundennummer's
   ciphertext and presence (the presence `CHECK` of every encrypted field); `participant_details`
-  adds `knowledge_date`. `transfer_app` selects both ASU tables and the number's presence, never its
+  adds `knowledge_date`; `document_type_policy` adds `quarantine_roles` (filled from
+  `review_roles` for the earlier versions); the enum `import_target` adds `knowledgeDate`.
+  `transfer_app` selects both ASU tables and the number's presence, never its
   ciphertext, and writes none. `field_access_category` gains `asuChannel` and `asuRegistration`.
 - **Changed signature:** `write_participant_data` gains `p_knowledge_date` (not after the Berlin
   date, `knowledge_date_in_future`; a null keeps the stored value): dropped by its old signature,
@@ -857,7 +859,9 @@ the 0072 hardening); process-and-lifecycle.md (Arbeitsuchendmeldung, dates) and 
   `set_asu_route` (the PL, the assigned consultant; `stale_revision` against the version;
   `asu_registered` once a registration exists; an unchanged route writes nothing; audited
   `asu_route_set`). `record_asu_registration` (the PL or the assigned consultant, the attestation
-  the PL only): a route (`asu_route_unset`), not `kug_200b` (`asu_route_kug200b`), one per
+  the PL only): a route (`asu_route_unset`) of the version the recorder reviewed (`p_route_version`,
+  `stale_revision`; read under the `FOR SHARE` lock, so a route changed meanwhile is never frozen
+  unseen), not `kug_200b` (`asu_route_kug200b`), one per
   participation (`asu_registered`), a date not after the Berlin date (`registered_on_in_future`);
   with the attestation the number upper case, 4–20 letters and digits (`invalid_argument`, never
   the value), sealed with the key passed per call under the row's key (`key_unknown`), audited
@@ -871,9 +875,12 @@ the 0072 hardening); process-and-lifecycle.md (Arbeitsuchendmeldung, dates) and 
   four new types. The fact `asuRegisteredWithProof` is the domain's `asuRegisteredSince` of the
   registration and its proving document as `dbGuardFacts` reads them in the caller's transaction,
   after the participation's lock (no reader function: the runtime role selects both).
-- **Catalog version 5:** the ASU proof as `signed` evidence with its operations (add: the consultant
-  and the PL; review: the consultant; delete: the PL, before its review); the document functions
-  apply the policy unchanged.
+- **Catalog version 5:** the ASU proof as `signed` evidence (immutability only, no wet signature)
+  with its operations (add: the consultant and the PL; review: the consultant; delete: the PL,
+  before its review; quarantine: the consultant and the PL). `quarantine_document` and
+  `lift_document_quarantine` check the policy's `quarantine_roles` instead of its `review_roles`
+  (replaced by `CREATE OR REPLACE`, signatures unchanged); the other document functions apply the
+  policy unchanged.
 
 ## Conventions as built (Slices 0–2)
 

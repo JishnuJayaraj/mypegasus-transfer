@@ -2,7 +2,8 @@
 -- dates; data-protection.md, the ASU record; Q184, Q186; readings Q201): the document type
 -- catalog's version 5 with the ASU proof's operations, the route, the registration with the PL's
 -- attestation, the proof's link, the knowledge date's correction and the person-data writer that
--- learns it, the history's projection rows and the grants. Same hardening as 0072: SECURITY
+-- learns it, the quarantine by its own roles (the PL may quarantine a BA confirmation), the
+-- history's projection rows and the grants. Same hardening as 0072: SECURITY
 -- DEFINER owned by transfer_owner, a fixed search_path with pg_temp last, schema-qualified names,
 -- no dynamic SQL, EXECUTE only for transfer_app, database time, refusals as P0001 with a stable
 -- code, never a value. Audit details carry ids, codes and dates only: never the BA-Kundennummer
@@ -57,18 +58,24 @@ INSERT INTO field_access_category (field_key, access_category) VALUES
   ('asuChannel', 'case_internal'), ('asuRegistration', 'case_internal');
 --> statement-breakpoint
 
+-- The quarantine's roles (data-protection.md, quarantine), the column 0073 added: the review roles
+-- in every earlier version, as `quarantine_document` used them.
+UPDATE document_type_policy SET quarantine_roles = review_roles;
+--> statement-breakpoint
+
 -- Catalog version 5 (packages/domain/src/documents/catalog.ts): version 4's rows, the ASU proof as
--- evidence (`signed`: normal mode only, never changed once reviewed) with its operations (Q186):
--- added by the assigned consultant and the PL, reviewed (and so quarantined) by the assigned
--- consultant, deleted by the PL before its review. The document functions apply the policy as
--- they do for the signed TL 407. Documents of earlier versions keep their rows.
+-- evidence (`signed`: normal mode only, never changed once reviewed; no signature is asked of it)
+-- with its operations (Q186, Q201): added by the assigned consultant and the PL, reviewed by the
+-- assigned consultant, quarantined at once by either (the PL without opening, reviewing or
+-- linking it), deleted by the PL before its review. Documents of earlier versions keep their rows.
 INSERT INTO document_type_policy (type, catalog_version, retention_class, file_name, signed,
-  generated, add_roles, review_roles, delete_roles, open_roles)
+  generated, add_roles, review_roles, delete_roles, open_roles, quarantine_roles)
 SELECT type, 5, retention_class, file_name, signed OR type = 'asu_proof', generated,
   CASE WHEN type = 'asu_proof' THEN '{consultant,project_lead}' ELSE add_roles END,
   CASE WHEN type = 'asu_proof' THEN '{consultant}' ELSE review_roles END,
   CASE WHEN type = 'asu_proof' THEN '{project_lead}' ELSE delete_roles END,
-  open_roles
+  open_roles,
+  CASE WHEN type = 'asu_proof' THEN '{consultant,project_lead}' ELSE quarantine_roles END
 FROM document_type_policy WHERE catalog_version = 4;
 --> statement-breakpoint
 
@@ -103,10 +110,11 @@ END $$;
 
 -- The functions transfer_app may execute.
 
--- The route (process-and-lifecycle.md, Arbeitsuchendmeldung): set by the PL or the assigned consultant with the version read
--- (`stale_revision`), changeable until a registration is recorded (`asu_registered`; an entry
--- error is corrected through an approved correction, never by a new route). An unchanged route
--- writes nothing. Audited `asu_route_set` (the route and the one it replaced). Returns the version.
+-- The route (process-and-lifecycle.md, Arbeitsuchendmeldung): set by the PL or the assigned
+-- consultant with the version read (`stale_revision`), changeable until a registration is recorded
+-- (`asu_registered`; an entry error is corrected through an approved correction, never by a new
+-- route). An unchanged route writes nothing. Audited `asu_route_set` (the route and the one it
+-- replaced). Returns the version.
 CREATE FUNCTION set_asu_route(
   p_context audit_context, p_participation_id uuid, p_channel asu_channel, p_version integer
 ) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
@@ -139,29 +147,34 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- A registration on the route `online_self` or `in_person` (process-and-lifecycle.md, Arbeitsuchendmeldung; Q184, Q186): its actual date, not
--- after today in Berlin (`registered_on_in_future`); on an unset route `asu_route_unset`, on
--- `kug_200b` `asu_route_kug200b` (the batch's submission records it, Slice 6, PR 6-5a); one per
--- participation (`asu_registered`). With the attestation (the PL only) its proof comes at once: the
--- BA-Kundennummer, upper case, 4–20 letters and digits (`invalid_argument`, never the value),
--- encrypted beside the RV-Nummer under the row's key (`key_unknown` for another) and audited
--- `sensitive_write`, and the source where the PL verified it; a number alone is no proof of the
--- date (Q184). Without it (the PL or the assigned consultant) the proof is a BA confirmation linked
--- by `link_asu_proof`. Audited `asu_registration_recorded`. Returns the registration's id.
+-- A registration on the route `online_self` or `in_person` (process-and-lifecycle.md,
+-- Arbeitsuchendmeldung; Q184, Q186): its actual date, not after today in Berlin
+-- (`registered_on_in_future`); on an unset route `asu_route_unset`; on the route the recorder
+-- reviewed (`p_route_version`, `stale_revision` when it moved meanwhile, so an unseen change is
+-- never frozen, Q201); on `kug_200b` `asu_route_kug200b` (the batch's submission records it, Slice
+-- 6, PR 6-5a); one per participation (`asu_registered`). With the attestation (the PL only) its
+-- proof comes at once: the BA-Kundennummer, upper case, 4–20 letters and digits
+-- (`invalid_argument`, never the value), encrypted beside the RV-Nummer under the row's key
+-- (`key_unknown` for another) and audited `sensitive_write`, and the source where the PL verified
+-- it; a number alone is no proof of the date (Q184). Without it (the PL or the assigned consultant)
+-- the proof is a BA confirmation linked by `link_asu_proof`. Audited `asu_registration_recorded`.
+-- Returns the registration's id.
 CREATE FUNCTION record_asu_registration(
   p_context audit_context, p_participation_id uuid, p_id uuid, p_registered_on date,
-  p_customer_number text DEFAULT NULL, p_attestation_source asu_attestation_source DEFAULT NULL,
-  p_key text DEFAULT NULL, p_key_id text DEFAULT NULL
+  p_route_version integer, p_customer_number text DEFAULT NULL,
+  p_attestation_source asu_attestation_source DEFAULT NULL, p_key text DEFAULT NULL,
+  p_key_id text DEFAULT NULL
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   r public.participation;
+  a public.asu_record;
   v_channel public.asu_channel;
   v_attested boolean := p_customer_number IS NOT NULL;
   v_number text := pg_catalog.upper(pg_catalog.btrim(p_customer_number));
   v_key_id text;
 BEGIN
   IF p_participation_id IS NULL OR p_id IS NULL OR p_registered_on IS NULL
-     OR v_attested <> (p_attestation_source IS NOT NULL)
+     OR p_route_version IS NULL OR v_attested <> (p_attestation_source IS NOT NULL)
      OR v_attested AND (v_number !~ '^[0-9A-Z]{4,20}$'
        OR p_key IS NULL OR p_key !~ '^[0-9a-f]{64}$'
        OR p_key_id IS NULL OR p_key_id !~ '^[0-9a-f]{16}$') THEN
@@ -169,9 +182,13 @@ BEGIN
   END IF;
   r := public.lock_asu_actor(p_participation_id, p_context,
     CASE WHEN v_attested THEN '{project_lead}' ELSE '{project_lead,consultant}' END::text[]);
-  SELECT channel INTO v_channel FROM public.asu_record WHERE participation_id = r.id FOR SHARE;
+  SELECT * INTO a FROM public.asu_record WHERE participation_id = r.id FOR SHARE;
+  v_channel := a.channel;
   IF v_channel IS NULL THEN
     RAISE EXCEPTION 'asu_route_unset';
+  END IF;
+  IF a.version <> p_route_version THEN
+    RAISE EXCEPTION 'stale_revision';
   END IF;
   IF v_channel = 'kug_200b' THEN
     RAISE EXCEPTION 'asu_route_kug200b';
@@ -215,12 +232,13 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- The proof's link (process-and-lifecycle.md, Arbeitsuchendmeldung; Q201): the assigned consultant, who reviewed and opens the BA
--- confirmation, confirms that it supports the registration's date. The document is an accepted,
--- live `asu_proof` of the participation (`document_not_found`, `document_not_accepted`), not
--- quarantined (`document_quarantined`) or invalidated (`document_invalidated`), held `FOR SHARE`;
--- the registration has no proof yet (`asu_registration_not_found`, `asu_proof_present`). The complete
--- fact is recorded now, so a proof accepted earlier counts from its link. Audited `asu_proof_linked`.
+-- The proof's link (process-and-lifecycle.md, Arbeitsuchendmeldung; Q201): the assigned consultant,
+-- who reviewed and opens the BA confirmation, confirms that it supports the registration's date.
+-- The document is an accepted, live `asu_proof` of the participation (`document_not_found`,
+-- `document_not_accepted`), not quarantined (`document_quarantined`) or invalidated
+-- (`document_invalidated`), held `FOR SHARE`; the registration has no proof yet
+-- (`asu_registration_not_found`, `asu_proof_present`). The complete fact is recorded now, so a
+-- proof accepted earlier counts from its link. Audited `asu_proof_linked`.
 CREATE FUNCTION link_asu_proof(
   p_context audit_context, p_participation_id uuid, p_registration_id uuid, p_document_id uuid
 ) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
@@ -316,8 +334,9 @@ END $$;
 --> statement-breakpoint
 
 -- The person-data writer (Q112), as 0048 wrote it, and the knowledge date the import carries
--- (process-and-lifecycle.md, dates): not after today in Berlin (`knowledge_date_in_future`); a null keeps the stored one, like
--- every other value. Audited in `participant_data_changed` as `knowledgeDate`.
+-- (process-and-lifecycle.md, dates): not after today in Berlin (`knowledge_date_in_future`); a null
+-- keeps the stored one, like every other value. Audited in `participant_data_changed` as
+-- `knowledgeDate`.
 DROP FUNCTION "public"."write_participant_data"(uuid, "public"."audit_context", text, text, text, date, date, text, text, text, text, text, text, text, text);
 --> statement-breakpoint
 CREATE FUNCTION write_participant_data(
@@ -436,6 +455,92 @@ BEGIN
   RETURN public.write_audit_event(r.project_id, p_participation_id, 'participant_data_changed', p_context,
     NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object('fields', pg_catalog.to_jsonb(v_fields)),
     false);
+END $$;
+--> statement-breakpoint
+
+-- Quarantine at once (data-protection.md, quarantine; Q183), as 0072 wrote it, by the policy's
+-- quarantine roles: the review roles, and for the ASU proof the PL too (Q201), who gains no
+-- opening, review or link by it.
+CREATE OR REPLACE FUNCTION quarantine_document(
+  p_context audit_context, p_document_id uuid, p_reason document_quarantine_reason
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  d public.document;
+  v_participation_id uuid;
+  v_roles text[];
+BEGIN
+  IF p_document_id IS NULL OR p_reason IS NULL THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  SELECT participation_id INTO v_participation_id FROM public.document WHERE id = p_document_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+  PERFORM public.assert_context(p_context, v_participation_id, '{user}');
+  IF (p_context).on_behalf_of IS NOT NULL THEN
+    RAISE EXCEPTION 'actor_not_allowed';
+  END IF;
+  v_roles := public.lock_document_actor(v_participation_id, p_context, NULL, false);
+  SELECT * INTO d FROM public.document WHERE id = p_document_id AND deleted_at IS NULL FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+  IF NOT v_roles && (SELECT quarantine_roles FROM public.document_type_policy
+                     WHERE type = d.type AND catalog_version = d.catalog_version) THEN
+    RAISE EXCEPTION 'actor_not_allowed';
+  END IF;
+  IF d.quarantined_at IS NOT NULL THEN
+    RAISE EXCEPTION 'document_quarantined';
+  END IF;
+  UPDATE public.document SET quarantine_reason = p_reason,
+    quarantined_by = (p_context).staff_user_id, quarantined_at = now()
+  WHERE id = d.id;
+  PERFORM public.write_audit_event(d.project_id, d.participation_id, 'document_quarantined',
+    p_context, NULL, NULL, NULL, p_reason::text, NULL,
+    pg_catalog.jsonb_build_object('documentId', d.id, 'documentType', d.type), false);
+END $$;
+--> statement-breakpoint
+
+-- The lift, as 0072 wrote it, by the quarantine roles: whoever quarantined it, while they may
+-- still, or the PL.
+CREATE OR REPLACE FUNCTION lift_document_quarantine(p_context audit_context, p_document_id uuid)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  d public.document;
+  v_participation_id uuid;
+  v_roles text[];
+BEGIN
+  IF p_document_id IS NULL THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  SELECT participation_id INTO v_participation_id FROM public.document WHERE id = p_document_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+  PERFORM public.assert_context(p_context, v_participation_id, '{user}');
+  IF (p_context).on_behalf_of IS NOT NULL THEN
+    RAISE EXCEPTION 'actor_not_allowed';
+  END IF;
+  v_roles := public.lock_document_actor(v_participation_id, p_context, NULL, false);
+  SELECT * INTO d FROM public.document WHERE id = p_document_id AND deleted_at IS NULL FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+  IF NOT v_roles && (SELECT quarantine_roles FROM public.document_type_policy
+                     WHERE type = d.type AND catalog_version = d.catalog_version)
+     OR d.quarantined_by IS DISTINCT FROM (p_context).staff_user_id
+       AND NOT 'project_lead' = ANY (v_roles) THEN
+    RAISE EXCEPTION 'actor_not_allowed';
+  END IF;
+  IF d.quarantined_at IS NULL THEN
+    RAISE EXCEPTION 'document_not_quarantined';
+  END IF;
+  UPDATE public.document SET quarantine_reason = NULL, quarantined_by = NULL,
+    quarantined_at = NULL, quarantine_lifted_at = now()
+  WHERE id = d.id;
+  PERFORM public.write_audit_event(d.project_id, d.participation_id,
+    'document_quarantine_lifted', p_context, NULL, NULL, NULL, NULL, NULL,
+    pg_catalog.jsonb_build_object('documentId', d.id, 'documentType', d.type), false);
 END $$;
 --> statement-breakpoint
 
