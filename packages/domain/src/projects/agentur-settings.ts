@@ -11,6 +11,7 @@ export const AgenturKey = z.string().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
 // Allowed channel values (Slice 1 plan 5.7). Base defaults carry the values, never an Agentur's
 // choice.
 export const AsuChannel = z.enum(["kug_200b", "online_self", "in_person"]);
+export type AsuChannel = z.infer<typeof AsuChannel>;
 export const Kug200bBatchChannel = z.enum(["paper_courier", "paper_post", "scan_email", "upload"]);
 export const Tl407SubmissionChannel = z.enum(["email", "upload", "paper_original"]);
 

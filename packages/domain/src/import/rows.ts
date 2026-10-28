@@ -74,7 +74,7 @@ function age(birth: IsoDate, on: IsoDate): number {
   return on.slice(5) < birth.slice(5) ? years - 1 : years;
 }
 
-const dateTargets = new Set<ImportTarget>(["birthDate", "oldEmploymentEndDate"]);
+const dateTargets = new Set<ImportTarget>(["birthDate", "oldEmploymentEndDate", "knowledgeDate"]);
 const droppable = new Set<ImportTarget>(["phone", "mobile", "privateEmail", "workEmail"]);
 
 /**
@@ -113,6 +113,12 @@ export function validateRow(input: RowInput): ValidatedRow {
   }
   if (values.birthDate !== undefined && compareIsoDates(values.birthDate, input.today) > 0) {
     error("birthDate", "birth_date_in_future");
+  }
+  if (
+    values.knowledgeDate !== undefined &&
+    compareIsoDates(values.knowledgeDate, input.today) > 0
+  ) {
+    error("knowledgeDate", "knowledge_date_in_future");
   }
   checkAddress(input, values, issues, error);
   return { row, values, issues };

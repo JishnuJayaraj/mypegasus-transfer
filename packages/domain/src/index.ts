@@ -7,8 +7,41 @@ export {
   compareIsoDates,
   daysBetween,
   laterIsoDate,
+  type AsuDueDate,
   type AsuDueDateParams,
 } from "./dates";
+export {
+  applicableAsuDueDate,
+  asuProofState,
+  asuRegisteredSince,
+  asuRegistrationProblem,
+  AsuProofKind,
+  AttestationSource,
+  BaCustomerNumber,
+  directAsuChannels,
+  type AsuRegistrationFacts,
+  type AsuRegistrationProblem,
+} from "./asu/model";
+export {
+  mayAttestAsu,
+  mayLinkAsuProof,
+  mayReadKnowledgeDate,
+  mayRecordAsu,
+  maySetKnowledgeDate,
+  mayViewAsu,
+} from "./asu/access";
+export {
+  AsuDueDateView,
+  AsuMissingItem,
+  AsuProofDocumentView,
+  AsuProofLinkInput,
+  AsuRegistrationInput,
+  AsuRegistrationView,
+  AsuRouteInput,
+  AsuView,
+  isDirectAsuChannel,
+  KnowledgeDateInput,
+} from "./asu/api";
 export {
   checkProjectUpdate,
   CreateProjectInput,
@@ -732,6 +765,7 @@ export {
 } from "./worklist/funnel";
 export {
   Worklist,
+  WorklistCaseItem,
   WorklistItem,
   worklistMaxRows,
   worklistProjection,

@@ -13,8 +13,11 @@ before the pilot). Q195 (the Kug 200a blank) is confirmed since its blank was co
 checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings as Q198. 6-3 came to
 about 4,200 lines and splits into 6-3a and 6-3b (the owner's choice, 2026-10-26); 6-3a recorded its
 readings as Q199 (accepted in the review of PR #90); 6-3b (the signed TL 407) recorded its readings
-as Q200 (accepted with amendments in the review of PR #91). Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
-confirmation.
+as Q200 (accepted with amendments in the review of PR #91). 6-4 is estimated at about 5,000 lines
+and splits into 6-4a (the ASU record) and 6-4b (the Kug 200b) (the owner's choice, 2026-10-28,
+with the ASU proof's operations); 6-4a recorded its readings as Q201 (accepted with amendments in
+the review of PR #95). Q1 stays `verify`. This is not an external DPO, legal, works-council or
+Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
 `PdfRenderer`, ADR-0006), the overflow attachment, scan upload, Agentur submission status; from
@@ -107,7 +110,7 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
     data), the declarations 16 and 17 and place and date 18–19 stay blank: the participant ticks,
     writes and signs by hand. Missing data stays blank for the participant to write; staff see the
     blank `*` fields before printing, and the review checks the completed paper (D17).
-- **D8. Generated forms are documents** (Q179): types `tl407_form` (6-3a) and `kug200b_form` (6-4),
+- **D8. Generated forms are documents** (Q179): types `tl407_form` (6-3a) and `kug200b_form` (6-4b),
   unsigned, immutable, of the signed type's access category and class, stored encrypted like every
   file, named `tl407-<date>.pdf` on download, opened only through the logged opening. Each keeps
   its **provenance**: form code and version, the generation's id, the revisions of the profile,
@@ -281,7 +284,7 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
     "Kenntnisdatum klären", never as overdue. Informational; **no automatic reminder** until Q1 is
     confirmed (Q152). The UI never says that `ta_only` participants have no duty to register.
 - **D23. Real guard facts** (`dbGuardFacts`, replacing `failClosedFacts` for the facts it reads):
-  `tl407Signed` and `profilingDone` (6-3b), `asuRegisteredWithProof` (6-4), the exception evidence
+  `tl407Signed` and `profilingDone` (6-3b), `asuRegisteredWithProof` (6-4a), the exception evidence
   (6-7); each excludes quarantined and invalidated evidence and carries the database instant of the
   complete fact (the snapshot rule). The DSV facts stay fail closed until Slice 7, so no
   participation enters the TG on real facts before it; the seed overlays its synthetic facts.
@@ -413,12 +416,12 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
   - an abandoned unsigned form has a cleanup path (6-3a) and its scan provenance survives the purge
     (6-3b; both
     as a retention-plan test while periods are `unset`);
-  - an old proof linked today gives a fact recorded today, not before (6-4); the Kug 200b route
+  - an old proof linked today gives a fact recorded today, not before (6-4a); the Kug 200b route
     proven by the batch submission and the `online_self` route by the attestation with its date,
-    each passing `asu_registered_with_proof` on the TG start (6-4, 6-5a); a declined offer or a
-    withdrawal leaves the registration intact (6-4);
+    each passing `asu_registered_with_proof` on the TG start (6-4a, 6-5a); a declined offer or a
+    withdrawal leaves the registration intact (6-4b);
   - a missing knowledge date is no overdue finding, and the branch boundary (knowledge on, one day
-    before and one day after the reference date) exposes the old maximum's defect (6-4);
+    before and one day after the reference date) exposes the old maximum's defect (6-4a);
   - a required Kug 200a is generated and checked, or an accepted alternative is used (6-5a); two
     batches racing for one scan give one; a stale batch refuses submission; a terminal member gets
     no registration (6-5a);
@@ -438,12 +441,16 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
 ## PRs
 
 One planned PR = one branch, each based on `main` after the PRs it needs merged (none stacked).
-The approved seven PRs become ten: the official Kug 200a takes 6-5 past the limit, so it splits
+The approved seven PRs become eleven: the official Kug 200a takes 6-5 past the limit, so it splits
 into 6-5a (Kug 200b batches with the Kug 200a) and 6-5b (TL 407 submission and escalation), as the
 review allowed; the approved corrections of wrong evidence are a concern of their own (6-8, after
 its three targets exist). 6-3 came to about 4,200 lines and splits along its two halves, the
 generated form (6-3a) and the signed paper (6-3b); quarantine comes with the scans in 6-3b. The
-last PR to merge archives this plan.
+last PR to merge archives this plan. 6-4 is estimated at about 5,000 lines (its functions alone
+redo the generation, upload and review functions for a second form, as 6-3a and 6-3b did for the
+first) and splits the same way (the owner's choice, 2026-10-28): the ASU record that proves the
+registration (6-4a) and the Kug 200b offer on paper (6-4b), which needs the tab and the record of
+6-4a.
 
 | PR | Scope | Needs | Est. lines |
 |---|---|---|---|
@@ -451,12 +458,13 @@ last PR to merge archives this plan.
 | 6-2 | Profiling record and track (D10–D13, the pending declarations of D15): sessions, encrypted section C with the health line's rating only, unemployment period, the profiling-status route, tab "Profiling" | — | ~1,400 |
 | 6-3a | Generated TL 407 (D8, D9, D16; Q196–Q198 at generation): `tl407_form` with provenance and declaration snapshot, `form_generation`, the class `form_working_copy`, the readiness projection, generation with the confirmed warnings, "Öffnen" and "Neu erzeugen"; e2e to the generated form | 6-1, 6-2 | ~1,900 |
 | 6-3b | Signed TL 407 (D14, D15, D17, D18, D23): scans `generated` and `external_paper`, signed declarations, the review, the PL's deletion before review, quarantine, `tl407Signed`/`profilingDone`, `profiling_done`; e2e to `profiling_done` | 6-3a | ~2,300 |
-| 6-4 | ASU and Kug 200b (D19–D22, D24's print file): the ASU record and attestation with its date, the corrected formula and `knowledgeDate`, Kug 200b generation (single, bulk) and review, declaration 17 and withdrawals, `asu_proof`, rule `when` and base defaults 3, `asuRegisteredWithProof`, tab "Arbeitsuche" | 6-3b | ~1,500 |
-| 6-5a | Kug 200b batches (D24, D25): the Kug 200a field map and fill (Q195), the accepted-alternative setting, the operational index, rechecks, submission, Agentur confirmation; project tab "Agentur" | 6-4 | ~1,300 |
+| 6-4a | ASU record and due date (D19, D21, D22, D23's `asuRegisteredWithProof`): `asu_registration` with the route and registrations, the attestation with its date and the write-only BA-Kundennummer, `asu_proof` upload, review and link, the complete fact's instant, the corrected formula, `knowledgeDate`, `asu_due` and `knowledge_date_missing`, rule `when`, `asuChannel` and base defaults 3, `asuProofState` from the record; tab "Arbeitsuche"; e2e to a registration with proof | 6-3b | ~2,400 |
+| 6-4b | Kug 200b (D8's `kug200b_form`, D17's Kug 200b review, D20, D24's export link and print file): generation single and bulk (1–100, all or nothing), the handwriting checklist, `export_link`, scans and review with 16 and 17, signed declarations and `consent_given`, decline, withdrawal and "BA informiert am", `kug200b_offer_open` and `kug200b_withdrawal_ba_notice`; work-list bulk "Kug 200b erzeugen"; e2e generation to acceptance | 6-4a | ~2,600 |
+| 6-5a | Kug 200b batches (D24, D25): the Kug 200a field map and fill (Q195), the accepted-alternative setting, the operational index, rechecks, submission, Agentur confirmation; project tab "Agentur" | 6-4b | ~1,300 |
 | 6-5b | TL 407 submission and escalation (D26, D27): attempts, originals, rejections, `tl407_submission`, `tl407_escalated`, compliance escalation, `GET /escalations`, work-list items and filter | 6-3b | ~1,100 |
 | 6-6 | BA reporting tasks (D28) | — | ~400 |
 | 6-7 | Profiling exceptions (D30): evidence records of both sources, evidence review, fingerprints, request, decision, revocation, the queue "Freigaben" | — | ~1,300 |
-| 6-8 | Corrections (D29): requests and decisions for documents, ASU registrations and BA outcomes in "Freigaben", the purge after an approved wrong-person invalidation, `evidence_invalidated` | 6-4, 6-6, 6-7 | ~1,000 |
+| 6-8 | Corrections (D29): requests and decisions for documents, ASU registrations and BA outcomes in "Freigaben", the purge after an approved wrong-person invalidation, `evidence_invalidated` | 6-4a, 6-6, 6-7 | ~1,000 |
 
 Each PR that changes the document-type catalog takes its next version when it merges.
 
@@ -482,11 +490,13 @@ Each PR that changes the document-type catalog takes its next version when it me
 - 6-3b: `ScanOrigin` (`generated`, `external_paper`); `scanReviewProblem`; `SignedDeclaration`;
   `tl407SignedFact`, `profilingDoneDefault`; `QuarantineReason` (`suspected_wrong_person`,
   `suspected_wrong_acceptance`).
-- 6-4: `asuDueDate` rewritten with its branches → `{ kind: "statutory", date, branch } | { kind:
+- 6-4a: `asuDueDate` rewritten with its branches → `{ kind: "statutory", date, branch } | { kind:
   "orientation", date }`; `AsuProofKind` (`kug200b_submission`, `ba_confirmation`,
-  `ba_customer_number`), `AttestationSource`, `asuRegistrationProblem`, `asuRegisteredFact` (the
-  complete fact's instant), `kug200bOfferOutcome`; the rule `when` and `asuProofState`;
-  `DeadlineKind` adds `asu_due` after `tg_start`.
+  `ba_customer_number`), `AttestationSource`, `asuRegistrationProblem`, `asuRegisteredSince` (the
+  complete fact's instant); the rule `when` and `asuProofState`; `DeadlineKind` adds `asu_due` after
+  `tg_start`; the `asu_proof` operations in the document catalog's next version.
+- 6-4b: `kug200bOfferOutcome`, the handwriting checklist from the field map; `kug200b_form`
+  (operations `generated`) and the `kug200b_signed_scan` operations in the catalog's next version.
 - 6-5a: `batchEligibility`, `batchRecheck` (D25), `kug200aInput`.
 - 6-5b: `tl407SubmissionProblem`, `agenturItems(...)` with `AgenturItemKind`; `AgenturFilter`, the
   tile "Agentur offen" and the group "Agentur" in `funnelFilters`; `DeadlineKind` adds
@@ -506,15 +516,15 @@ Each PR that changes the document-type catalog takes its next version when it me
 | `participant_profiling_assessment` | 6-2 | section C lines but health (rating and text ciphertexts, presence), the "andere" labels, Gesamteinschätzung, weiteres Vorgehen; key id, times | highly confidential / `profiling_assessment` | `personnel_file` (Q192) |
 | `participant_profiling_health_assessment` | 6-2 | the health line's rating ciphertext and presence; no text | special category / `profiling_assessment` | `health_record` (Q40) |
 | `participant_residence_social_data` | 6-2 | adds the unemployment period's ciphertexts and presence | highly confidential / `residence_social` | `personnel_file` |
-| `document` | 6-3b, 6-4 | adds `form_code`, `form_version`, `scan_origin`, `generation_document_id`, `signed_on`, `countersigned_on`, the review's confirmations, quarantine (reason, by, at, lifted by/at), `invalidated_by_correction`; `CHECK`s by type | by type | by type: `form_working_copy` for the generated forms (Q179) |
+| `document` | 6-3b, 6-4b | adds `form_code`, `form_version`, `scan_origin`, `generation_document_id`, `signed_on`, `countersigned_on`, the review's confirmations, quarantine (reason, by, at, lifted by/at), `invalidated_by_correction`; `CHECK`s by type | by type | by type: `form_working_copy` for the generated forms (Q179) |
 | `form_generation` | 6-3a | the generated document, form code and version, the source revisions (profile, record, assessment, unemployment period), the declaration snapshot, the confirmed warnings, the Anlage, generated by/at | confidential / `confidential` | `form_working_copy` (its provenance survives the file as the tombstone) |
-| `signed_declaration` | 6-3b (+6-4) | the scan, form code and version, the declaration codes and values as marked, the signature date, recorded by/at; immutable | confidential / `confidential` | `participation_record` (part of the signed form's evidence) |
-| `participant_identifier_data` | 6-4 | adds the BA-Kundennummer's ciphertext and presence | highly confidential / `identifiers` | `participation_record` (Q88) |
-| `participant_details` | 6-4 | adds `knowledge_date` | confidential / `confidential` | `personnel_file` |
-| `asu_registration` | 6-4 (+6-5a, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; the offer's decline, `confirmed_on`, the withdrawal's BA notice date | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
+| `signed_declaration` | 6-3b (+6-4b) | the scan, form code and version, the declaration codes and values as marked, the signature date, recorded by/at; immutable | confidential / `confidential` | `participation_record` (part of the signed form's evidence) |
+| `participant_identifier_data` | 6-4a | adds the BA-Kundennummer's ciphertext and presence | highly confidential / `identifiers` | `participation_record` (Q88) |
+| `participant_details` | 6-4a | adds `knowledge_date` | confidential / `confidential` | `personnel_file` |
+| `asu_registration` | 6-4a (+6-4b, 6-5a, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; the offer's decline, `confirmed_on`, the withdrawal's BA notice date | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
 | `kug200b_batch` | 6-5a | project, Agentur key, channel, artifact (`kug200a` or `accepted_alternative`), status (`open`, `submitted`, `discarded`), created by/at, `submitted_on`, submitted by/at | internal / project data | `project_master` |
 | `agentur_submission` | 6-5a, 6-5b | participation, document, form code and version, Agentur key, channel, batch, `submitted_on`, recorded by/at, `original_sent_on`, rejection (date, reason); one row per attempt | internal / `case_internal` (`agenturSubmissions`) | `participation_record` (proof of submission) |
-| `export_link` | 6-4 | a link's token SHA-256, the export (kind and the ids it covers), the session's kind and hash, `expires_at` (60 s); no privilege for `transfer_app` | internal | `access_credential` |
+| `export_link` | 6-4b | a link's token SHA-256, the export (kind and the ids it covers), the session's kind and hash, `expires_at` (60 s); no privilege for `transfer_app` | internal | `access_credential` |
 | `ba_reporting_task` | 6-6 (+6-8) | adds `outcome`, `reported_on`, `not_required_reason`, decided by/at, `superseded_by`, `replaces_task_id` | as before | as before |
 | `profiling_exception_evidence_record` | 6-7 | kind; the accepted document ids or the normalised BA confirmation (Agentur key, contact or reference, date) | confidential / `confidential`; its documents `health` | `participation_record` (Q81) |
 | `evidence_correction` | 6-8 | target kind and id, reason, source, the corrected facts (encrypted where sensitive), requested by/at, decided by/at, decision; append-only | internal / `case_internal` | the target's class |
@@ -534,11 +544,13 @@ Enum values are added in their PR's generated migration (`audit_event_type`, `do
   scan; `review_document` takes the signature dates, the confirmations and the signed declarations;
   `quarantine_document`, `lift_document_quarantine`; `delete_document` lets the PL delete a scan
   before its review; the facts' reader `tl407_facts` (excluding quarantined and invalidated ones).
-- 6-4: `set_asu_route`, `record_asu_registration`, `link_asu_proof`, `decline_kug200b_offer`,
-  `record_declaration_withdrawal`, `record_withdrawal_ba_notice`, `set_knowledge_date`;
-  `review_document` for the Kug 200b; `record_form_generation` for 1–100 participations;
-  `create_export_link` / `export_link_content` (re-authorizes, `export_downloaded`);
-  `write_participant_data` and the import learn `knowledgeDate`.
+- 6-4a: `set_asu_route`, `record_asu_registration`, `link_asu_proof`, `set_knowledge_date`;
+  `review_document` for the `asu_proof`; the facts' reader `asu_facts`; `write_participant_data`
+  and the import learn `knowledgeDate`.
+- 6-4b: `decline_kug200b_offer`, `record_declaration_withdrawal`, `record_withdrawal_ba_notice`;
+  `add_document` and `review_document` for the Kug 200b; `record_form_generation` for the Kug 200b
+  and 1–100 participations; `create_export_link` / `export_link_content` (re-authorizes,
+  `export_downloaded`).
 - 6-5a: `create_kug200b_batch`, `discard_kug200b_batch`, `submit_kug200b_batch` (rechecks, the
   members' submissions and ASU registrations), `record_asu_confirmation`.
 - 6-5b: `submit_tl407`, `record_original_sent`, `record_agentur_rejection`.
@@ -557,8 +569,9 @@ Enum values are added in their PR's generated migration (`audit_event_type`, `do
 | 6-2 | `GET`/`PUT …/profiling/assessment`; `PUT …/profiling/unemployment`; `POST …/profiling-status` | the profiler's logged read and writes (`no-store`); the track change (`{ to, effectiveDate?, statusVersion }`) |
 | 6-3a | `GET /participations/{id}/forms/tl407/readiness`; `POST /participations/{id}/forms/tl407` | the per-viewer projection (D16); generation (`{ confirmWarnings }` → `201 { documentId, formVersion, anlage }`) |
 | 6-3b | `POST …/documents` (scans: `origin`, `generationDocumentId`); `POST …/documents/{documentId}/review`; `POST …/documents/{documentId}/quarantine`; `…/quarantine-lift` | scan upload, review with dates, confirmations and declarations; quarantine |
-| 6-4 | `GET /participations/{id}/asu`; `PUT …/asu/route`; `POST …/asu/registration`; `POST …/asu/proof-link`; `POST …/asu/kug200b-decline`; `POST …/asu/withdrawal`; `POST …/asu/withdrawal-ba-notice`; `PUT …/knowledge-date` | the tab "Arbeitsuche" and its actions |
-| 6-4 | `POST /participations/{id}/forms/kug200b`; `POST /projects/{id}/forms/kug200b` (1–100); `POST /exports/{kind}` → link; `GET /export-content/{token}` | generation, bulk, exports (`attachment`, `no-store`) |
+| 6-4a | `GET /participations/{id}/asu`; `PUT …/asu/route`; `POST …/asu/registration`; `POST …/asu/proof-link`; `PUT …/knowledge-date` | the tab "Arbeitsuche" and its actions |
+| 6-4b | `POST …/asu/kug200b-decline`; `POST …/asu/withdrawal`; `POST …/asu/withdrawal-ba-notice` | the offer's decline, the withdrawal and its BA notice |
+| 6-4b | `POST /participations/{id}/forms/kug200b`; `POST /projects/{id}/forms/kug200b` (1–100); `POST /exports/{kind}` → link; `GET /export-content/{token}` | generation, bulk, exports (`attachment`, `no-store`) |
 | 6-5a | `GET /projects/{id}/kug200b-batches`; `POST /projects/{id}/kug200b-batches`; `POST /kug200b-batches/{id}/submission`; `…/discard`; `POST /participations/{id}/asu/confirmation` | candidates and batches; create; "Übermittelt am" (`422 batch_stale` with rows); discard; the Agentur's confirmation |
 | 6-5b | `POST /participations/{id}/tl407-submissions`; `POST /agentur-submissions/{id}/original`; `…/rejection`; `GET /escalations`; `GET /projects/{id}/worklist`, `/dashboard` | submission, original, rejection; the regional admin's counts; the new deadlines, items, filter and counts |
 | 6-6 | `POST /ba-reporting-tasks/{id}/outcome` | `{ outcome: "reported", reportedOn } \| { outcome: "not_required", reason }` |
@@ -604,9 +617,11 @@ a file name, a form's content or a token.
   ("Öffnen", "Neu erzeugen"). 6-3b: "Unterschriebenen Bogen hochladen" (from a generated form, or "Außerhalb der
   Anwendung ausgefüllt" with the version), "Prüfen" (dates, signatures, all pages, the declarations
   as marked), "Unter Quarantäne stellen" (reason), "Profiling abschließen" with the date.
-- 6-4: tab "Arbeitsuche": Weg, Kenntnisdatum, "Fällig am" or "Orientierung … – Kenntnisdatum
+- 6-4a: tab "Arbeitsuche": Weg, Kenntnisdatum, "Fällig am" or "Orientierung … – Kenntnisdatum
   klären", "Meldung erfassen" (date and proof: BA-Bestätigung, or BA-Kundennummer with the date and
-  where it was checked, masked as typed and never shown back), Kug 200b ("Erzeugen", "Öffnen", scan,
+  where it was checked, masked as typed and never shown back), the BA-Bestätigung's upload and
+  "Prüfen".
+- 6-4b: on "Arbeitsuche" Kug 200b ("Erzeugen" with the handwriting checklist, "Öffnen", scan,
   "Prüfen" with "16 und 17 angekreuzt, Pflichtangaben ausgefüllt, unterschrieben", "Abgelehnt"),
   "Erklärung zum Profilzugriff" (since, "Widerruf erfasst", "BA informiert am"). Work list bulk
   "Kug 200b erzeugen".
@@ -730,20 +745,25 @@ a file name, a form's content or a token.
 - e2e: session, generation, scan, acceptance, `profiling_done`.
 - The external-paper path is the way out for a name the renderer can't print (Q197).
 
-**6-4**
+**6-4a**
 - `asuDueDate`: both branches and their boundary; month-end clamps; no knowledge date gives the
   orientation item, never `overdue`; `asu_due` gone once registered with proof; never in `ta_only`.
 - The attestation needs its date and source; the number is never returned, logged or in an audit
   detail; the PL can't open an `asu_proof` file.
 - The complete fact's `recordedAt` is the link's instant when the proof was accepted earlier.
+- The rules with `when` apply only on the route `kug_200b`.
+- e2e: route, knowledge date, a registration with proof on the tab "Arbeitsuche".
+
+**6-4b**
 - Kug 200b acceptance without the confirmations is refused; accepted, signed declarations and one
   `consent_given` (`paper_form`); a withdrawal ends it and opens the BA-notice item; the registration
   stays.
-- The rules with `when` apply only on the route `kug_200b`; a declined offer is never missing.
+- A declined offer is never missing.
 - Exports: the download re-authorizes, refuses a quarantined document, writes `export_downloaded`;
   no file is stored; bulk generation of 100 is all or nothing.
 - Before printing, a handwriting/clarification checklist shows the Kug 200b's blank `*` fields
   and every `text_not_fitting` field (Q197); nothing disappears silently.
+- e2e: Kug 200b generation, checklist, scan, acceptance.
 
 **6-5a**
 - The Kug 200a fills from its field map and reads back; with a recorded accepted alternative the
@@ -792,9 +812,11 @@ a file name, a form's content or a token.
 - 6-3b: data-protection.md (scans and their origins, signed declarations, quarantine), ba-forms.md
   (declarations bound to the paper), process-and-lifecycle.md (`profiling_done` from the TL 407),
   ADR-0002.
-- 6-4: process-and-lifecycle.md (the corrected ASU formula, the ASU record and its recording
-  instant, the offer and withdrawals), regional-variation.md (rule `when`, base defaults 3),
-  data-protection.md (declaration 17 as written, the attestation, exports), ADR-0002, ADR-0010.
+- 6-4a: process-and-lifecycle.md (the corrected ASU formula, the ASU record and its recording
+  instant), regional-variation.md (rule `when`, base defaults 3), data-protection.md (the
+  attestation, `knowledgeDate`), ADR-0002, ADR-0010.
+- 6-4b: process-and-lifecycle.md (the offer and withdrawals), data-protection.md (declaration 17 as
+  written, exports), ADR-0002, ADR-0010.
 - 6-5a: process-and-lifecycle.md (batches, the Kug 200a), regional-variation.md (the accepted
   alternative; the batch blocker no longer a warning only, Q91), data-protection.md (the Kug 200a's
   values), architecture/overview.md (tab "Agentur").

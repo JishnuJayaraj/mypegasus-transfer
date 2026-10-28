@@ -2,7 +2,7 @@
   "$schema": "../../config/schema/regional-template.schema.json",
   "schemaVersion": 1,
   "kind": "base_defaults",
-  "version": 2,
+  "version": 3,
   "nationwide": {
     "asuDueDate": {
       "monthsBeforeEnd": 3,
@@ -22,6 +22,23 @@
         "documentType": "asu_proof",
         "accepted": true,
         "basis": "statutory",
+        "projectTypes": ["ta_tg"]
+      },
+      {
+        "id": "base-kug200b-rv-nummer",
+        "kind": "requiredIf",
+        "field": "pensionInsuranceNumber",
+        "when": { "field": "asuChannel", "equals": "kug_200b" },
+        "basis": "ba_form",
+        "projectTypes": ["ta_tg"]
+      },
+      {
+        "id": "base-kug200b-signed-scan",
+        "kind": "documentPresent",
+        "documentType": "kug200b_signed_scan",
+        "accepted": true,
+        "when": { "field": "asuChannel", "equals": "kug_200b" },
+        "basis": "ba_form",
         "projectTypes": ["ta_tg"]
       }
     ],

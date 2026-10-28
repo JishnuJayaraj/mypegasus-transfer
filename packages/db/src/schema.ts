@@ -84,6 +84,9 @@ import {
   QuarantineReason,
   ScanConfirmation,
   ScanOrigin,
+  AsuChannel,
+  AsuProofKind,
+  AttestationSource,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -438,6 +441,9 @@ export const missedResolution = pgEnum("missed_resolution", values(MissedResolut
 export const jobboerseChoice = pgEnum("jobboerse_choice", values(JobboerseChoice));
 export const formCode = pgEnum("form_code", values(FormCode));
 export const scanOrigin = pgEnum("scan_origin", values(ScanOrigin));
+export const asuChannel = pgEnum("asu_channel", values(AsuChannel));
+export const asuProofKind = pgEnum("asu_proof_kind", values(AsuProofKind));
+export const asuAttestationSource = pgEnum("asu_attestation_source", values(AttestationSource));
 export const documentQuarantineReason = pgEnum(
   "document_quarantine_reason",
   values(QuarantineReason),
@@ -761,6 +767,11 @@ export const participantDetails = pgTable(
     privateEmail: text("private_email"),
     workEmail: text("work_email"),
     oldEmploymentEndDate: dateColumn("old_employment_end_date"),
+    /**
+     * When the person learned of the end (the ASU due date; process-and-lifecycle.md, dates): the
+     * individual's fact, from the import or the PL's `set_knowledge_date`, never a wave's.
+     */
+    knowledgeDate: dateColumn("knowledge_date"),
     /** The contact fields the participant wrote, also assisted; the import never overwrites them. */
     participantMaintained: text("participant_maintained")
       .array()
@@ -951,12 +962,20 @@ const assessmentColumns = {
 /**
  * The RV-Nummer (TL 407 field 25), highly confidential, `identifiers`, class
  * `participation_record` (Q88, Q141). Written and read only by `write_sensitive_fields` and
- * `read_sensitive_fields` (ADR-0002, encryption).
+ * `read_sensitive_fields` (ADR-0002, encryption). Beside it the BA-Kundennummer of the PL's ASU
+ * attestation (Q186), written only by `record_asu_registration` and never read back in the MVP.
  */
 export const participantIdentifierData = pgTable(
   "participant_identifier_data",
-  encryptedFields({ pensionInsuranceNumber: "pension_insurance_number" }),
-  (t) => encryptedChecks("participant_identifier_data", t, ["pensionInsuranceNumber"]),
+  encryptedFields({
+    pensionInsuranceNumber: "pension_insurance_number",
+    baCustomerNumber: "ba_customer_number",
+  }),
+  (t) =>
+    encryptedChecks("participant_identifier_data", t, [
+      "pensionInsuranceNumber",
+      "baCustomerNumber",
+    ]),
 );
 
 /**
@@ -1600,6 +1619,11 @@ export const documentTypePolicy = pgTable(
     reviewRoles: text("review_roles").array().notNull(),
     deleteRoles: text("delete_roles").array().notNull(),
     openRoles: text("open_roles").array().notNull(),
+    /** Who quarantines and lifts (data-protection.md, quarantine): the review roles but where named. */
+    quarantineRoles: text("quarantine_roles")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
   },
   (t) => [
     primaryKey({ name: "document_type_policy_pkey", columns: [t.type, t.catalogVersion] }),
@@ -1938,6 +1962,81 @@ export const signedDeclaration = pgTable(
         `"signed_declaration"."declaration" = 'jobboerseChoice' and ("signed_declaration"."value" is null or "signed_declaration"."value" in (${JobboerseChoice.options.map((code) => `'${code}'`).join(", ")})) or "signed_declaration"."declaration" = 'baContactConsent' and ("signed_declaration"."value" is null or "signed_declaration"."value" in ('yes', 'no'))`,
       ),
     ),
+  ],
+);
+
+/**
+ * The ASU route of a participation (process-and-lifecycle.md, Arbeitsuchendmeldung): set by
+ * the PL or the assigned consultant, changeable until a registration is recorded; `version` is the
+ * token a change names. Codes only, `case_internal` (`asuChannel`). Written only by `set_asu_route`.
+ */
+export const asuRecord = pgTable(
+  "asu_record",
+  {
+    ...personKeys(),
+    channel: asuChannel("channel").notNull(),
+    version: integer("version").notNull(),
+    setBy: uuid("set_by")
+      .notNull()
+      .references(() => staffUser.id),
+    setAt: instant("set_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "asu_record_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check("asu_record_version", sql`${t.version} >= 1`),
+  ],
+);
+
+/**
+ * A participation's ASU registration (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route it was made on, the actual date, who
+ * recorded it and when, and its proof once linked: the PL's attestation (its source; the number
+ * itself is encrypted on `participant_identifier_data`) with the registration, or an accepted
+ * `asu_proof` document linked by the assigned consultant. Never edited: a proof is added once, and
+ * an entry error is corrected through an approved correction (Slice 6, PR 6-8). One per
+ * participation until corrections exist. Codes and dates only, `case_internal`
+ * (`asuRegistration`). Written only by `record_asu_registration` and `link_asu_proof`.
+ */
+export const asuRegistration = pgTable(
+  "asu_registration",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    channel: asuChannel("channel").notNull(),
+    registeredOn: dateColumn("registered_on").notNull(),
+    recordedBy: uuid("recorded_by")
+      .notNull()
+      .references(() => staffUser.id),
+    recordedAt: instant("recorded_at").notNull().defaultNow(),
+    proofKind: asuProofKind("proof_kind"),
+    proofDocumentId: uuid("proof_document_id").references(() => document.id),
+    attestationSource: asuAttestationSource("attestation_source"),
+    proofLinkedBy: uuid("proof_linked_by").references(() => staffUser.id),
+    proofLinkedAt: instant("proof_linked_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "asu_registration_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    unique("asu_registration_participation_unique").on(t.participationId),
+    unique("asu_registration_proof_document_unique").on(t.proofDocumentId),
+    check(
+      "asu_registration_proof_whole",
+      sql`(${t.proofKind} is null) = (${t.proofLinkedAt} is null) and (${t.proofLinkedAt} is null) = (${t.proofLinkedBy} is null)`,
+    ),
+    check(
+      "asu_registration_proof_kind",
+      sql`coalesce(${t.proofKind} = 'ba_confirmation', false) = (${t.proofDocumentId} is not null) and coalesce(${t.proofKind} = 'ba_customer_number', false) = (${t.attestationSource} is not null) and (${t.proofKind} is null or (${t.proofKind} = 'kug200b_submission') = (${t.channel} = 'kug_200b'))`,
+    ),
+    check("asu_registration_linked_after", sql`${t.proofLinkedAt} >= ${t.recordedAt}`),
   ],
 );
 
@@ -2774,6 +2873,8 @@ export const tables = [
   documentLink,
   formGeneration,
   signedDeclaration,
+  asuRecord,
+  asuRegistration,
   participantReminder,
   appointment,
   appointmentBooking,

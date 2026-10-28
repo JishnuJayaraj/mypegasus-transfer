@@ -122,6 +122,10 @@ describe("audit event types (ADR-0002)", () => {
       "document_quarantined",
       "document_quarantine_lifted",
       "signed_declaration_recorded",
+      "asu_route_set",
+      "asu_registration_recorded",
+      "asu_proof_linked",
+      "knowledge_date_set",
     ]);
   });
 
@@ -211,6 +215,10 @@ describe("audit event types (ADR-0002)", () => {
       "document_quarantined",
       "document_quarantine_lifted",
       "signed_declaration_recorded",
+      "asu_route_set",
+      "asu_registration_recorded",
+      "asu_proof_linked",
+      "knowledge_date_set",
     ]);
   });
 

@@ -255,7 +255,8 @@ describe("break-glass (Q63)", () => {
     expect(decide(pl, field("health"), "write", breakGlass)).toBe("deny needs_assisted_mode");
     expect(decide(pl, field("health"), "list", breakGlass)).toBe("deny not_in_list_payloads");
     expect(decide(pl, field("profiling_assessment"), "read", breakGlass)).toBe("deny never");
-    expect(decide(pl, doc("asu_proof"), "write", breakGlass)).toBe("deny via_domain_operation");
+    expect(decide(pl, doc("cv"), "write", breakGlass)).toBe("deny via_domain_operation");
+    expect(decide(pl, doc("asu_proof"), "write", breakGlass)).toBe("deny immutable");
     expect(decide(profile("back_office"), field("health"), "read", breakGlass)).toBe("deny never");
     expect(decide(profile("admin"), field("health"), "read", breakGlass)).toBe("deny never");
     expect(decide(profile("consultant"), field("health"), "read", breakGlass)).toBe(

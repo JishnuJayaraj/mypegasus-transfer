@@ -103,6 +103,9 @@ describe("data catalog", () => {
       form_generation: entry("form_working_copy", "confidential", true),
       // Slice 6 (Q193): the declarations of an accepted signed form.
       signed_declaration: entry("participation_record", "confidential", true),
+      // Slice 6 (Q186): the ASU route and registration, codes and dates.
+      asu_record: entry("participation_record", "internal", true),
+      asu_registration: entry("participation_record", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
       // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.
       appointment: entry("project_master", "internal"),
@@ -290,9 +293,9 @@ describe("field columns", () => {
   });
 
   it("fails for a retention class on a field no column stores", () => {
-    const unstored = withField("knowledgeDate", { retentionClass: "personnel_file" });
+    const unstored = withField("taxId", { retentionClass: "personnel_file" });
     expect(check(fieldColumns, unstored)).toEqual([
-      "knowledgeDate: has a retention class but no column stores it",
+      "taxId: has a retention class but no column stores it",
     ]);
   });
 

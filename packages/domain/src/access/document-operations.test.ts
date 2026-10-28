@@ -25,7 +25,7 @@ tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
-asu_proof                    actor actor und  unass und  role role role role
+asu_proof                    actor actor yes  unass yes  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
@@ -37,7 +37,7 @@ tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
-asu_proof                    actor actor und  unass und  role role role role
+asu_proof                    actor actor yes  unass role role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           actor actor yes  unass yes  role role role role
 participant_upload           actor actor yes  unass yes  role role role role
@@ -49,7 +49,7 @@ tl407_signed_scan            actor actor role role  yes  role role role role
 kug200b_signed_scan          imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_signed_scan              imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
-asu_proof                    actor actor und  unass und  role role role role
+asu_proof                    actor actor role role  yes  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
@@ -130,7 +130,11 @@ describe("document operations by mode", () => {
       expect(result(checks.add!(subject, "cv", other))).toBe("mode_not_allowed");
     }
     expect(result(checks.add!(backOffice, "cv", accessModes.assisted))).toBe("role_not_allowed");
-    expect(result(checks.add!(pl, "asu_proof", accessModes.assisted))).toBe("undecided Q65");
+    expect(result(checks.add!(pl, "kug200b_signed_scan", accessModes.assisted))).toBe(
+      "undecided Q65",
+    );
+    // Signed paper and the ASU proof are added in normal mode only (Q184, Q186).
+    expect(result(checks.add!(pl, "asu_proof", accessModes.assisted))).toBe("mode_not_allowed");
   });
 
   it("reviews and deletes in normal mode only; break-glass never writes", () => {
@@ -193,6 +197,12 @@ const quarantine = (subject: Subject, mode: AccessMode = accessModes.normal) =>
 const lift = (subject: Subject, by: string) =>
   result(mayLiftDocumentQuarantine(subject, "tl407_signed_scan", target, accessModes.normal, by));
 
+/** An ASU proof's operation for the subject (Q201). */
+const asu = (check: typeof mayQuarantineDocument, subject: Subject) =>
+  result(check(subject, "asu_proof", target, accessModes.normal));
+const lifted = (subject: Subject, by: string) =>
+  result(mayLiftDocumentQuarantine(subject, "asu_proof", target, accessModes.normal, by));
+
 describe("signed scans (data-protection.md, signed scans; Q183, Q184)", () => {
   const pl = profile("project_lead");
   const consultant = profile("consultant");
@@ -232,5 +242,14 @@ describe("signed scans (data-protection.md, signed scans; Q183, Q184)", () => {
     expect(lift(consultant, "someone-else")).toBe("role_not_allowed");
     expect(lift(pl, consultantId)).toBe("ok");
     expect(lift(profile("back_office"), consultantId)).toBe("role_not_allowed");
+  });
+
+  it("lets the PL quarantine an ASU proof at once without reviewing or opening it (Q201)", () => {
+    expect(asu(mayQuarantineDocument, pl)).toBe("ok");
+    expect(asu(mayQuarantineDocument, consultant)).toBe("ok");
+    expect(asu(mayQuarantineDocument, profile("back_office"))).toBe("role_not_allowed");
+    expect(asu(mayReviewDocument, pl)).toBe("role_not_allowed");
+    expect(lifted(pl, "someone-else")).toBe("ok");
+    expect(lifted(consultant, "someone-else")).toBe("role_not_allowed");
   });
 });

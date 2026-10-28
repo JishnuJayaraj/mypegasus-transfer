@@ -211,6 +211,11 @@ const statusFunctions = [
   "quarantine_document",
   "lift_document_quarantine",
   "tl407_facts",
+  // Slice 6: the ASU record (data-protection.md, the ASU record)
+  "set_asu_route",
+  "record_asu_registration",
+  "link_asu_proof",
+  "set_knowledge_date",
 ];
 const helpers = [
   "assert_context",
@@ -326,6 +331,7 @@ const helpers = [
   "scan_form",
   "scan_declarations_valid",
   "tl407_evidence",
+  "lock_asu_actor",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -921,9 +927,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 to 4 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 5 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 29 },
+      { n: 39 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });

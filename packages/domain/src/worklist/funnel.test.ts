@@ -173,7 +173,7 @@ describe("projectFunnel", () => {
     const filters = funnelFilters(project);
     expect(filters.waves.map((w) => w.key)).toEqual([waveId, "none"]);
     expect(filters.dsvStatuses).toHaveLength(5);
-    expect(filters.deadlines).toHaveLength(10);
+    expect(filters.deadlines).toHaveLength(12);
     expect(filters.flags.map((f) => f.key)).toEqual([
       "conflict_dsv_signed_profiling_declined",
       "dsv_never_offered",

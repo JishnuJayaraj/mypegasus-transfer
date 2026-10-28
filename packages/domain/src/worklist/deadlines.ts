@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { addMonths, daysBetween } from "../dates";
+import { addMonths, daysBetween, type AsuDueDate } from "../dates";
 import { profilingExceptionDeadlineMonths } from "../eligibility/transfer-kug";
 import { isoDate, type IsoDate } from "../iso-date";
 import type { LifecycleFlag } from "../lifecycle/enums";
@@ -22,6 +22,7 @@ export const DeadlineKind = z
   .enum([
     "offer_deadline",
     "tg_start",
+    "asu_due",
     "latest_entry_cutoff",
     "privacy_notice",
     "profiling_exception",
@@ -58,6 +59,11 @@ export type DeadlineFacts = {
   snapshot: ParticipationSnapshot;
   project: PlannerProject;
   privacyNotice: PrivacyNoticeState;
+  /**
+   * The applicable ASU due date (`applicableAsuDueDate`); only a statutory one is a deadline, an
+   * orientation is the item `knowledge_date_missing` (process-and-lifecycle.md, dates).
+   */
+  asuDueDate?: AsuDueDate | null;
 };
 
 /**
@@ -73,6 +79,7 @@ export function deadlinesOf(facts: DeadlineFacts, today: IsoDate): Deadline[] {
       dsvStatus === "dsv_offered" ? effectiveOfferDeadline(s.participation, s.wave) : null,
     ],
     ["tg_start", status === "informed" ? effectiveTgStart(s.participation, s.wave) : null],
+    ["asu_due", facts.asuDueDate?.kind === "statutory" ? facts.asuDueDate.date : null],
     ["latest_entry_cutoff", latestEntryCutoff(s, project)],
     ["privacy_notice", privacyNotice.state === "provided" ? null : privacyNotice.dueOn],
     ["profiling_exception", profilingExceptionDeadline(s, today)],

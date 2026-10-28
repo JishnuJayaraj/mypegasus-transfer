@@ -93,13 +93,21 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["withdrawnOn", "profilingDoneOn"], "internal", "case_internal", false, record),
   // The Agentur the participant is placed with (Q139), a key; listed with the case data
   field("placementAgenturKey", "internal", "case_internal", false, { listable: true, ...record }),
+  // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route and the
+  // registrations with their proof, codes and dates only, listable
+  ...fields(["asuChannel", "asuRegistration"], "internal", "case_internal", false, {
+    listable: true,
+    ...record,
+  }),
   // identity and case data (confidential); identity fields come from the import, on
   // `participant_identity` (participation record) and `participant_details` (personnel file,
   // Q105); `address` is street, postal code, city and country as one unit (round 32)
   ...fields(["firstName", "lastName", "personnelNumber"], C, "confidential", false, customer),
   field("birthDate", C, "confidential", false, record),
   ...fields(["workEmail", "oldEmploymentEndDate"], C, "confidential", false, personnelFile),
-  field("knowledgeDate", C, "confidential", false),
+  // When the person learned of the end (process-and-lifecycle.md, dates): the individual's fact, imported or
+  // set by the PL, never inherited from a wave or project
+  field("knowledgeDate", C, "confidential", false, personnelFile),
   ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true, personnelFile),
   // The reminders sent to the participant (data-protection.md, reminders; Q156): kind, version,
   // language, channel kind, times and outcome; read with the case data, never an address
@@ -157,7 +165,9 @@ export const fieldCatalog: readonly FieldEntry[] = [
   field("disabilityDegree", "special_category", "disability", true),
   // highly confidential; the RV-Nummer is in the evidence set (Q88, Q141)
   field("pensionInsuranceNumber", "highly_confidential", "identifiers", true, record),
-  ...fields(["taxId", "iban", "baCustomerNumber"], "highly_confidential", "identifiers", false),
+  ...fields(["taxId", "iban"], "highly_confidential", "identifiers", false),
+  // written by the PL's attestation of an ASU registration only, never read back (Q186)
+  field("baCustomerNumber", "highly_confidential", "identifiers", false, record),
   ...fields(
     ["nationality", "entryToGermanyDate", "residenceStatus", "buergergeld"],
     "highly_confidential",

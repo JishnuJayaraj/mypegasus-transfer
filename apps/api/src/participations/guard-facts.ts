@@ -1,4 +1,5 @@
 import { sql, type Database } from "@transfer/db";
+import { asuStatesOf } from "./asu";
 import {
   approvedExceptionFact,
   type DatedFact,
@@ -35,7 +36,8 @@ type FactsInput = Parameters<GuardFactsProvider["facts"]>[1];
 /**
  * The facts not recorded yet fail closed (process-and-lifecycle.md, guards): no DSV, ASU,
  * cancellation or TA-completion fact, so their guards fail, nobody enters the TG, and every
- * exception request is refused with `evidence_missing`; `dbGuardFacts` adds the TL 407's. This
+ * exception request is refused with `evidence_missing`; `dbGuardFacts` adds the TL 407's and the
+ * ASU record's. This
  * is a temporary implementation state, not a rule about whether employment legally exists. The
  * one fact it gives is the participation's own approved exception (decision date and recorded
  * instant): the approval is our record, not evidence.
@@ -82,23 +84,25 @@ async function tl407Facts(tx: Transaction, participationIds: readonly string[]) 
 /**
  * The facts recorded in the database (process-and-lifecycle.md, guards and the snapshot rule):
  * `tl407Signed` and `profilingDone` from `tl407_facts`, which counts only accepted TL 407 scans
- * that are neither quarantined nor invalidated, each with the database instant its complete fact
- * was recorded at. Everything else stays fail closed until its slice records it (the DSV in
- * Slice 7, the ASU proof and the exception evidence in later PRs of Slice 6).
+ * that are neither quarantined nor invalidated, and `asuRegisteredWithProof` from the ASU record
+ * (`asuRegisteredSince`: a usable proof, recorded when the complete registration-with-proof was),
+ * each with the database instant its complete fact was recorded at. Everything else stays fail
+ * closed until its slice records it (the DSV in Slice 7, the exception evidence in PR 6-7).
  */
 export const dbGuardFacts: GuardFactsProvider = {
   facts: async (tx, input) => (await dbGuardFacts.many!(tx, [input]))[0]!,
   evidence: failClosedFacts.evidence,
   many: async (tx, inputs) => {
-    const recorded = await tl407Facts(
-      tx,
-      inputs.map((input) => input.participationId),
-    );
+    const ids = inputs.map((input) => input.participationId);
+    const recorded = await tl407Facts(tx, ids);
+    const asu = await asuStatesOf(tx, ids);
     const all: GuardFacts[] = [];
     for (const input of inputs) {
+      const registered = asu.get(input.participationId)?.fact;
       all.push({
         ...(await failClosedFacts.facts(tx, input)),
         ...recorded.get(input.participationId),
+        ...(registered && { asuRegisteredWithProof: registered }),
       });
     }
     return all;

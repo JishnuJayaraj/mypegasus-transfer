@@ -81,25 +81,58 @@ describe("comparing", () => {
   });
 });
 
-// verify Q1: asuDueDate = max(endDate − 3 months, knowledgeDate + 3 days)
+const statutory = (date: string, branch: string) => ({ kind: "statutory", date, branch });
+
+// verify Q1, Q178: the two branches of §38(1) SGB III around the reference date end − 3 months
 describe("asuDueDate (verify Q1)", () => {
   it.each([
-    ["early knowledge: 3 months before the end", "2027-06-30", "2027-01-10", "2027-03-30"],
-    ["late knowledge: 3 days after it", "2027-06-30", "2027-05-20", "2027-05-23"],
-    ["both on the same day", "2027-06-30", "2027-03-27", "2027-03-30"],
-    ["month end clamped", "2027-05-31", "2027-01-04", "2027-02-28"],
-    ["month end clamped, leap year", "2028-05-31", "2028-01-04", "2028-02-29"],
-    ["31.12. gives 30.09.", "2027-12-31", "2027-06-01", "2027-09-30"],
-    ["knowledge across the year end", "2027-01-15", "2026-12-30", "2027-01-02"],
-    ["knowledge after the end", "2027-03-31", "2027-04-02", "2027-04-05"],
-  ])("%s", (_, endDate, knowledgeDate, expected) => {
-    expect(asuDueDate({ endDate, knowledgeDate })).toBe(expected);
+    [
+      "early knowledge: the reference date",
+      "2027-06-30",
+      "2027-01-10",
+      "2027-03-30",
+      "reference_date",
+    ],
+    ["knowledge on the reference date", "2027-06-30", "2027-03-30", "2027-03-30", "reference_date"],
+    // The old maximum gave 01.04.2027 here (Q178).
+    [
+      "one day before it: still the reference date",
+      "2027-06-30",
+      "2027-03-29",
+      "2027-03-30",
+      "reference_date",
+    ],
+    [
+      "one day after it: 3 days after the knowledge",
+      "2027-06-30",
+      "2027-03-31",
+      "2027-04-03",
+      "after_knowledge",
+    ],
+    ["late knowledge", "2027-06-30", "2027-05-20", "2027-05-23", "after_knowledge"],
+    ["month end clamped", "2027-05-31", "2027-01-04", "2027-02-28", "reference_date"],
+    ["month end clamped, leap year", "2028-05-31", "2028-01-04", "2028-02-29", "reference_date"],
+    ["31.12. gives 30.09.", "2027-12-31", "2027-06-01", "2027-09-30", "reference_date"],
+    ["knowledge across the year end", "2027-01-15", "2026-12-30", "2027-01-02", "after_knowledge"],
+    ["knowledge after the end", "2027-03-31", "2027-04-02", "2027-04-05", "after_knowledge"],
+  ])("%s", (_, endDate, knowledgeDate, date, branch) => {
+    expect(asuDueDate({ endDate, knowledgeDate })).toEqual(statutory(date, branch));
   });
 
-  it("takes the formula's parameters as data (base defaults, plan 5.7)", () => {
+  it("without a knowledge date gives the reference date as an orientation only", () => {
+    expect(asuDueDate({ endDate: "2027-05-31", knowledgeDate: null })).toEqual({
+      kind: "orientation",
+      date: "2027-02-28",
+    });
+  });
+
+  it("takes the formula's parameters as data (base defaults)", () => {
     const params = { monthsBeforeEnd: 2, daysAfterKnowledge: 7 };
-    expect(asuDueDate({ endDate: "2027-06-30", knowledgeDate: "2027-01-10" }, params)).toBe(
-      "2027-04-30",
+    expect(asuDueDate({ endDate: "2027-06-30", knowledgeDate: "2027-01-10" }, params)).toEqual(
+      statutory("2027-04-30", "reference_date"),
+    );
+    expect(asuDueDate({ endDate: "2027-06-30", knowledgeDate: "2027-05-01" }, params)).toEqual(
+      statutory("2027-05-08", "after_knowledge"),
     );
   });
 });

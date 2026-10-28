@@ -512,6 +512,20 @@
       "when": 1793104599280,
       "tag": "0072_signed_scan_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1793182453639,
+      "tag": "0073_asu_record",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793182462370,
+      "tag": "0074_asu_record_functions",
+      "breakpoints": true
     }
   ]
 }

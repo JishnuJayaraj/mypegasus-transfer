@@ -41,6 +41,7 @@ import { createDetached } from "./detached";
 import { documentFiles } from "./documents/files";
 import { documentRoutes } from "./routes/documents";
 import { profilingRoutes } from "./routes/profiling";
+import { asuRoutes } from "./routes/asu";
 import { formRoutes } from "./routes/forms";
 import { formRegistry } from "./forms/registry";
 import { mountSpas } from "./static";
@@ -176,6 +177,7 @@ export function createApp(deps: Deps) {
   api.route("/", assistedModeRoutes(runtimeDeps));
   api.route("/", documentRoutes(runtimeDeps));
   api.route("/", profilingRoutes(runtimeDeps));
+  api.route("/", asuRoutes(runtimeDeps));
   api.route("/", formRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);

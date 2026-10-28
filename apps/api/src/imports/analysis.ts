@@ -102,6 +102,7 @@ const valueColumns = [
   "firstName",
   "birthDate",
   "oldEmploymentEndDate",
+  "knowledgeDate",
   "addressStreet",
   "addressPostalCode",
   "addressCity",
@@ -136,6 +137,7 @@ export async function loadState(
       firstName: participantIdentity.firstName,
       birthDate: participantIdentity.birthDate,
       oldEmploymentEndDate: participantDetails.oldEmploymentEndDate,
+      knowledgeDate: participantDetails.knowledgeDate,
       addressStreet: participantDetails.addressStreet,
       addressPostalCode: participantDetails.addressPostalCode,
       addressCity: participantDetails.addressCity,
@@ -465,6 +467,7 @@ export function writeParticipantData(
       p_address_country => ${v.addressCountry ?? null}::text,
       p_phone => ${v.phone ?? null}::text, p_mobile => ${v.mobile ?? null}::text,
       p_private_email => ${v.privateEmail ?? null}::text,
-      p_work_email => ${v.workEmail ?? null}::text)`,
+      p_work_email => ${v.workEmail ?? null}::text,
+      p_knowledge_date => ${v.knowledgeDate ?? null}::date)`,
   );
 }

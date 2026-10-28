@@ -40,7 +40,7 @@ function permission(
   type: DocumentType,
   target: DocumentTarget,
   mode: AccessMode,
-  operation: DocumentOperation,
+  operation: DocumentOperation | "quarantine",
 ): DocumentPermission {
   const entry = documentTypeEntry(type);
   const operations = entry.operations;
@@ -51,7 +51,11 @@ function permission(
   // Generated forms come only from their generation (data-protection.md, generated forms).
   if (generated) return no("actor_not_allowed");
   const roles: readonly AccessRole[] | undefined =
-    operations === "undecided" ? undefined : operations[operation];
+    operations === "undecided"
+      ? undefined
+      : operation === "quarantine"
+        ? (operations.quarantine ?? operations.review)
+        : operations[operation];
   if (subject.kind === "participant") {
     // Participants have no modes and reach only their own participation.
     const own = subject.participationId === target.participationId && mode.kind === "normal";
@@ -125,8 +129,9 @@ export function documentDeleteReasons(type: DocumentType): readonly DocumentDele
 }
 
 /**
- * Quarantine at once (data-protection.md, quarantine; Q183): whoever may review the type, in
- * normal mode, whatever its review state.
+ * Quarantine at once (data-protection.md, quarantine; Q183): the type's quarantine roles (its
+ * review roles unless the catalog names others, as for the ASU proof, Q201), in normal mode,
+ * whatever its review state.
  */
 export function mayQuarantineDocument(
   subject: Subject,
@@ -134,7 +139,7 @@ export function mayQuarantineDocument(
   target: DocumentTarget,
   mode: AccessMode,
 ): DocumentPermission {
-  return permission(subject, type, target, mode, "review");
+  return permission(subject, type, target, mode, "quarantine");
 }
 
 /** The lift: whoever quarantined it, while they may still quarantine it, or the PL. */

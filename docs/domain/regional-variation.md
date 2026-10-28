@@ -143,13 +143,18 @@ Participation
   source code cannot be configuration. Core fields are real columns. Custom fields are `jsonb`,
   validated by the resolved schema.
 - **Completeness rules** use a minimal declarative format (ADR-0004): `required`, `requiredIf` (field
-  equals / exists), `documentPresent` (+ accepted). No scripting. The engine
+  equals / exists), `documentPresent` (+ accepted, and from Slice 6, PR 6-4a, an optional `when` of
+  `requiredIf`'s shape: the rule applies only while its condition holds; older layers stay valid).
+  No scripting. The engine
   (`packages/domain/src/completeness/`):
   - Absent is `null`, `undefined`, a string blank after trim and `[]`; `false`, `0` and `{}` are
     present. Completeness checks presence; validity is checked on write.
   - `equals` compares strictly, without coercion; `exists` means present.
   - `documentPresent`: a rejected document doesn't count, and `accepted: true` needs an accepted
-    one. An unmet rule is `not_accepted` when documents of the type exist, `missing` when none.
+    one. An unmet rule is `not_accepted` when documents of the type exist, `missing` when none. A
+    rule whose `when` doesn't hold gives no item. The state of `asu_proof` comes from the ASU record
+    (process-and-lifecycle.md, Arbeitsuchendmeldung): accepted once a registration with proof
+    exists, so the attestation and the batch submission satisfy it without a file.
   - Rule ids are unique across all steps (`duplicate_id`). Each failed rule gives one item (step,
     rule id, kind, key), never a value.
 - **What may be relaxed** (Q75): every base rule is classified `statutory`, `ba_form` or
@@ -171,6 +176,8 @@ Participation
   | Step | Rule id | Requires | Basis | Project types |
   |---|---|---|---|---|
   | `asu_registration` | `base-asu-proof` | accepted `asu_proof` document | `statutory` | `ta_tg` |
+  | `asu_registration` | `base-kug200b-rv-nummer` | `pensionInsuranceNumber` (`requiredIf`) while `asuChannel` equals `kug_200b` | `ba_form` | `ta_tg` |
+  | `asu_registration` | `base-kug200b-signed-scan` | accepted `kug200b_signed_scan` document, `when` `asuChannel` equals `kug_200b` | `ba_form` | `ta_tg` |
   | `data_collection` | `base-import-<field>` for `personnelNumber`, `lastName`, `firstName`, `birthDate`, `oldEmploymentEndDate`, `address` | the field | `operational_default` | all |
   | `profiling` | `base-tl407-<field>` for `gender`, `maritalStatus`, `nationality`, `pensionInsuranceNumber`, `buergergeld`, `healthRestrictions`, `severeDisability`, `educationHistory`, `workHistory`, `languageSkills`, `drivingLicence`, `vehicleAvailable`, `workingTimePreferences`, `jobWishes`, `desiredWorkLocations`, `maxCommuteDistance`, `earliestStartDate` | the field | `ba_form` | all |
   | `dsv` | `base-dsv-signed-scan` | accepted `dsv_signed_scan` document | `statutory` | `ta_tg` |
@@ -181,8 +188,10 @@ Participation
   rules. The entry date and the residence status aren't starred (asked when the nationality
   isn't German, never required); the unemployment period (Q85, the profiler records it) and the
   Jobbörse choice (a declaration to the BA, the profiler's) are not base rules. As `ba_form`
-  rules they are locked: no project relaxes them, and `relaxableRules` doesn't offer them. The
-  base defaults hold no Kug 200b rule yet (Slice 6).
+  rules they are locked: no project relaxes them, and `relaxableRules` doesn't offer them. Base
+  defaults **version 3** (Slice 6, PR 6-4a) add the two Kug 200b rules, applying only on the ASU
+  route `kug_200b` (the field `asuChannel`, `case_internal`, listable); a declined offer is never a
+  missing item (PR 6-4b).
 - **Required import targets** (`isRequired` in `packages/domain/src/import/targets.ts`,
   `apps/api/src/imports/analysis.ts`): Personalnummer, last and first name always (the import
   ignores a relaxation of their rules); date of birth, Austrittsdatum and the address unless the
@@ -193,7 +202,7 @@ Participation
 - **Project types** (Q89): a rule may name the project types it applies to (`projectTypes`;
   absent = every type). Completeness skips a rule for another type, so it is never a missing
   item or a reminder. The ASU proof and the DSV scan are `ta_tg` only; the Kug 200b rules apply
-  only on the `kug_200b` ASU route and come with Slice 6 (round 14).
+  only on the `kug_200b` ASU route (base defaults version 3, round 14).
 - **Agentur-scoped project settings** are recorded in the project override **scoped to that
   Agentur**, with source, confirmer and confirmation date, and audited: a fallback while the
   Agentur has no template, or a confirmed project-specific exception to its pinned template

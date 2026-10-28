@@ -248,6 +248,18 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route and the
+  // registration with its proof, codes, dates and staff ids; part of the evidence of entry (Q88).
+  asu_record: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  asu_registration: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Opening links (Q147): a token's SHA-256, the document, the session's kind and hash, expiry.
   document_link: {
     retentionClass: "access_credential",
@@ -486,6 +498,7 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     private_email: "privateEmail",
     work_email: "workEmail",
     old_employment_end_date: "oldEmploymentEndDate",
+    knowledge_date: "knowledgeDate",
     // Which contact fields the participant wrote, and when the address (Q112, Q139): metadata
     participant_maintained: null,
     participant_address_written_at: null,
@@ -520,6 +533,30 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     ...encryptedKeys,
     pension_insurance_number: "pensionInsuranceNumber",
     pension_insurance_number_present: null,
+    ba_customer_number: "baCustomerNumber",
+    ba_customer_number_present: null,
+  },
+  asu_record: {
+    participation_id: null,
+    project_id: null,
+    channel: "asuChannel",
+    version: null,
+    set_by: null,
+    set_at: "asuChannel",
+  },
+  asu_registration: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    channel: "asuRegistration",
+    registered_on: "asuRegistration",
+    recorded_by: null,
+    recorded_at: "asuRegistration",
+    proof_kind: "asuRegistration",
+    proof_document_id: null,
+    attestation_source: "asuRegistration",
+    proof_linked_by: null,
+    proof_linked_at: "asuRegistration",
   },
   participant_residence_social_data: {
     ...encryptedKeys,

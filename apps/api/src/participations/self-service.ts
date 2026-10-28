@@ -17,8 +17,10 @@ import {
   type Database,
 } from "@transfer/db";
 import {
+  asuProofState,
   documentState,
   SELF_SERVICE_NOTICE_VERSION,
+  type AsuChannel,
   type CompletenessFacts,
   type ContactField,
   type DocumentState,
@@ -30,6 +32,7 @@ import {
 } from "@transfer/domain";
 import type { z } from "zod";
 import { projectSnapshot, type Release } from "../projects/template-pins";
+import { asuStatesOf, type AsuState } from "./asu";
 import { utc } from "../sql";
 
 // What the self-service routes read (data-protection.md, self-service; Q140): a participation's
@@ -56,6 +59,8 @@ export type SelfServiceRecord = {
   participantMaintained: ContactField[];
   /** The wizard's input: the participation's chain and its facts. */
   wizard: WizardInput;
+  /** The placement Agentur's resolved ASU `defaultChannel`, preselected on the route (process-and-lifecycle.md, Arbeitsuchendmeldung). */
+  asuDefaultChannel: AsuChannel | null;
   /** The compiled validators of the chain's confidential custom fields. */
   customValidators: ReadonlyMap<string, z.ZodType>;
 };
@@ -152,7 +157,8 @@ export async function loadSelfService(
   if (!row) return undefined;
   const snapshot = (await projectSnapshot(db, release, row.projectId))!;
   const documents = (await liveDocuments(db, [participationId])).get(participationId) ?? {};
-  return recordOf(row, snapshot, documents, resolveForParticipation);
+  const asu = (await asuStatesOf(db, [participationId])).get(participationId)!;
+  return recordOf(row, snapshot, documents, asu, resolveForParticipation);
 }
 
 /**
@@ -171,6 +177,7 @@ export async function loadSelfServiceRecords(
   );
   const snapshot = (await projectSnapshot(db, release, projectId))!;
   const documents = await liveDocuments(db, participationIds);
+  const asu = await asuStatesOf(db, participationIds);
   const configs = new Map<string | null, ReturnType<typeof resolveForParticipation>>();
   const resolve: typeof resolveForParticipation = (input) => {
     let resolved = configs.get(input.placementAgenturKey);
@@ -179,7 +186,10 @@ export async function loadSelfServiceRecords(
     return resolved;
   };
   return new Map(
-    rows.map((row) => [row.id, recordOf(row, snapshot, documents.get(row.id) ?? {}, resolve)]),
+    rows.map((row) => [
+      row.id,
+      recordOf(row, snapshot, documents.get(row.id) ?? {}, asu.get(row.id)!, resolve),
+    ]),
   );
 }
 
@@ -187,6 +197,7 @@ function recordOf(
   row: Row,
   snapshot: Snapshot,
   documents: Documents,
+  asu: AsuState,
   resolve: typeof resolveForParticipation,
 ): SelfServiceRecord {
   const { identity, details, profile } = row;
@@ -276,9 +287,16 @@ function recordOf(
         ...values,
         ...sensitiveFacts,
         ...customValues,
+        // The ASU route the Kug 200b rules apply on (regional-variation.md, rule `when`).
+        asuChannel: asu.channel,
       },
-      documents: documents satisfies CompletenessFacts["documents"],
+      // The ASU proof's state comes from the record: a registration with proof, any route (regional-variation.md, the base rules).
+      documents: {
+        ...documents,
+        asu_proof: asuProofState(asu.fact !== null, documents.asu_proof ?? []),
+      } satisfies CompletenessFacts["documents"],
     },
+    asuDefaultChannel: config.settings.asu_registration?.defaultChannel ?? null,
     customValidators: new Map(custom.map(([key, schema]) => [key, validatorOf(schema)])),
   };
 }

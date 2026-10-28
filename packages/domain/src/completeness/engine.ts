@@ -2,7 +2,12 @@ import { z } from "zod";
 import type { DocumentType } from "../documents/catalog";
 import { Step } from "../lifecycle/enums";
 import type { ProjectType } from "../project";
-import { ruleAppliesTo, type CompletenessRule, type RulesByStep } from "./rules";
+import {
+  ruleAppliesTo,
+  type CompletenessRule,
+  type RuleCondition,
+  type RulesByStep,
+} from "./rules";
 
 /** Review states of a stored document (process-and-lifecycle.md, document review). */
 export const DocumentState = z.enum(["uploaded", "accepted", "rejected"]);
@@ -75,9 +80,13 @@ export function requiredField(
 ): string | null {
   if (rule.kind === "documentPresent") return null;
   if (rule.kind === "required") return rule.field;
-  const condition = Object.hasOwn(fields, rule.when.field) ? fields[rule.when.field] : undefined;
-  const applies = "exists" in rule.when ? isPresent(condition) : condition === rule.when.equals;
-  return applies ? rule.field : null;
+  return holds(rule.when, fields) ? rule.field : null;
+}
+
+/** Whether a rule's condition holds: the field equals the value, strictly, or is present. */
+function holds(condition: RuleCondition, fields: CompletenessFacts["fields"]): boolean {
+  const value = Object.hasOwn(fields, condition.field) ? fields[condition.field] : undefined;
+  return "exists" in condition ? isPresent(value) : value === condition.equals;
 }
 
 function check(step: Step, rule: CompletenessRule, facts: CompletenessFacts): MissingItem[] {
@@ -92,6 +101,7 @@ function check(step: Step, rule: CompletenessRule, facts: CompletenessFacts): Mi
       return item("field", field, "missing");
     }
     case "documentPresent": {
+      if (rule.when && !holds(rule.when, facts.fields)) return [];
       // a rejected document is not present; `accepted: true` needs an accepted one
       const states = facts.documents[rule.documentType] ?? [];
       const satisfied = rule.accepted

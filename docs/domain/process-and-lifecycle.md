@@ -80,9 +80,14 @@ Agentur".
   reference date → due on the reference date; knowledge after it (less than three months before
   the end) → due 3 days after the knowledge. The earlier unconditional `max(endDate − 3 months,
   knowledgeDate + 3 days)` is wrong (end 30.06.2027, knowledge 29.03.2027: due 30.03.2027, not
-  01.04.2027); the code follows it until Slice 6 replaces it. Without a knowledge date the due date
-  is unknown: the reference date is only an orientation, never an overdue finding. Calendar,
-  boundary, weekend/holiday and unusual cases stay under Q1.
+  01.04.2027); `asuDueDate` (`packages/domain/src/dates.ts`) follows the two branches since Slice 6
+  (PR 6-4a) and names the branch. Without a knowledge date the due date is unknown: the reference
+  date is only an orientation, never an overdue finding. Calendar, boundary, weekend/holiday and
+  unusual cases stay under Q1.
+- **The knowledge date** (`knowledgeDate`, `participant_details`, `personnel_file`, confidential) is
+  the individual's fact: an optional import target and the PL's audited correction on the tab
+  "Arbeitsuche" (`set_knowledge_date`, `knowledge_date_set` without the date; not after today;
+  `409 stale_value` against the date read), never inherited from a wave or a project (Q201).
 - **Signing and entry deadlines come from the Sozialplan / DSV / entry wave** (Q69), never from
   an Agentur template and never invented by the system.
 - **Entry waves** (Q79): every `ta_tg` project has **one or more entry waves**, each with a
@@ -148,7 +153,7 @@ with profiling** (round 4). So a participation has:
 | **Main status** | `status` | `imported`, `contacted`, `unreachable`, `informed`, `active_in_tg`; terminal: `withdrawn`, `ta_completed`, `exited` |
 | **Profiling track** | `profilingStatus` | `not_started`, `profiling_accepted`, `profiling_in_progress`, `profiling_done`, `profiling_declined` |
 | **DSV track** | `dsvStatus` | `not_offered`, `dsv_offered`, `dsv_signed`, `dsv_declined`, `dsv_expired` (only in `ta_tg` projects) |
-| **ASU record** | `asu` | not a state machine: `submittedOn`, `channel`, optional `confirmedOn` |
+| **ASU record** | `asu` | not a state machine: the route (`asuChannel`) and a registration with its channel, `registeredOn`, proof and the instant of the complete fact; optional `confirmedOn` (Slice 6, PR 6-5a) |
 
 - The tracks start when the main status reaches `informed`. Before that they stay at
   `not_started` / `not_offered`. **Track activity** (domain and database function): the tracks
@@ -181,6 +186,7 @@ with profiling** (round 4). So a participation has:
   |---|---|---|---|
   | `offer_deadline` | `dsv_offered` | the effective offer deadline | — |
   | `tg_start` | `informed` | the effective TG start | `tg_start_missed` |
+  | `asu_due` | `ta_tg`, before `active_in_tg`, not terminal, no registration with proof, a knowledge date and the end of the old employment known (Slice 6) | the statutory ASU due date (Dates) | — |
   | `latest_entry_cutoff` | the cutoff would withdraw or flag it, as it will be at the cutoff (`latestEntryCutoff`, the warning's condition) | the applicable latest entry date (the wave's, else the project's final one, Q84) | `cutoff_warning`, `cutoff_final_reminder` |
   | `privacy_notice` | the Article 14 notice isn't provided (Q124; any status, *assumed*, Q160) | its due date | — |
   | `profiling_exception` | `active_in_tg` under an approved exception, profiling neither done nor declined | entry + 1 month (Q74) | `profiling_exception_deadline_missed` |
@@ -190,7 +196,9 @@ with profiling** (round 4). So a participation has:
   that stay flags are `conflict_dsv_signed_profiling_declined`, `dsv_never_offered`,
   `informed_without_wave_at_cutoff` and `profiling_declined_after_entry`. A row shows its most
   urgent deadline: the oldest overdue one, else the earliest upcoming one, a tie by kind order.
-  The ASU due date joins with Slice 6 (Q1).
+  Without a knowledge date the row carries the item `knowledge_date_missing` with the reference
+  date as a labelled orientation ("Orientierung … – Kenntnisdatum klären"), shown when no dated
+  deadline is due and never overdue; no automatic reminder (Q1, Q152).
 - **Participant actions** (Slice 5; Q151; `participantActions`): what the participant still has
   to do in the portal, from the wizard's steps (`data_collection`, `profiling`) of the
   participation's own resolved chain: one action per missing field on a wizard page (custom fields
@@ -367,9 +375,13 @@ The staff app's tab "Profiling" (data-protection.md, the profiling record, for w
   stay as recorded for a controlled resolution, are never moved automatically, and the tab says the
   completion isn't supported. A TL 407 accepted after the TG start's
   scheduled run therefore supports only a reconciliation, never the scheduled entry or its catch-up;
-  a quarantined scan supplies no fact to a later evaluation, and no status is reversed by it. The
-  DSV, ASU and exception-evidence facts stay fail closed until their PRs, so nobody enters the TG on
-  real facts yet; the seed overlays its synthetic facts.
+  a quarantined scan supplies no fact to a later evaluation, and no status is reversed by it.
+  `asuRegisteredWithProof` (Slice 6, PR 6-4a; `asuRegisteredSince`) is valid on the actual
+  registration date and recorded at the later of the registration, the link of its accepted proof
+  and a lifted quarantine of the proving document: a proof accepted yesterday and linked today is
+  recorded today. Without a proof, or with a quarantined or invalidated proving document, there is
+  none. The DSV and exception-evidence facts stay fail closed until their PRs, so nobody enters the
+  TG on real facts yet; the seed overlays its synthetic facts.
 - **Sessions** (Q193): date and `von`/`bis` (`hh:mm`), written whole by the assigned consultant
   with the record's revision (`409 stale_revision`): `bis` after `von` (equal refused), no date
   after today in Berlin, no two of one day overlapping (touching ends are fine), at most 50. Each
@@ -455,7 +467,24 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
   handwritten signature.
 - The ASU completeness rules apply in `ta_tg` projects only (Q89); `ta_only` participants
   register themselves.
-- `asuDueDate` (see Dates) drives reminders.
+- `asuDueDate` (see Dates) gives the deadline `asu_due`; no automatic reminder until Q1 is
+  confirmed (Q152).
+- **As built (Slice 6, PR 6-4a; Q186, Q201):** the PL or the assigned consultant sets the
+  route with its version (`set_asu_route`, `asu_route_set`), the placement Agentur's
+  `defaultChannel` preselected, never a blocker; it is fixed once a registration is recorded (an
+  entry error is corrected through an approved correction, PR 6-8). On `online_self` /
+  `in_person` the PL or the assigned consultant records the actual date (`record_asu_registration`,
+  not after today) with the route version they reviewed (a route changed since is
+  `409 stale_revision`, never frozen unseen); its proof is either the PL's **attestation** given with it (the BA-Kundennummer,
+  write-only and encrypted, with where it was verified: `ba_document_inspected`,
+  `ba_online_account_inspected`, `ba_confirmed_by_phone`) or an accepted BA confirmation
+  (`asu_proof`) the assigned consultant links afterwards (`link_asu_proof`, `asu_proof_linked`). A
+  registration without its proof gives no fact. On `kug_200b` the batch's submission records the
+  registration (PR 6-5a). One registration per participation (`asu_registered`).
+- **Completeness** (regional-variation.md, the base rules): the engine's state for `asu_proof`
+  comes from the record: accepted once a registration with proof exists, on any route, without a
+  file; else the live BA confirmations', an accepted but unlinked one still awaiting its link. The
+  Kug 200b rules apply on the route `kug_200b` only (`asuChannel`, the rule `when`).
 
 ### TG entry guard (`informed → active_in_tg`)
 

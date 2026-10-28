@@ -439,7 +439,8 @@
       "mobile": "Mobil",
       "privateEmail": "E-Mail privat",
       "workEmail": "E-Mail dienstlich",
-      "address": "Anschrift"
+      "address": "Anschrift",
+      "knowledgeDate": "Kenntnisdatum"
     },
     "issues": {
       "file_too_large": "Die Datei ist größer als 5 MB.",
@@ -722,6 +723,7 @@
       "firstName": "Vorname",
       "birthDate": "Geburtsdatum",
       "oldEmploymentEndDate": "Austrittsdatum (bisheriges Arbeitsverhältnis)",
+      "knowledgeDate": "Kenntnisdatum",
       "address": "Anschrift",
       "phone": "Telefon",
       "mobile": "Mobil",
@@ -914,7 +916,8 @@
       "messages": "Nachrichten",
       "history": "Verlauf",
       "appointments": "Termine",
-      "profiling": "Profiling"
+      "profiling": "Profiling",
+      "asu": "Arbeitsuche"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -1271,7 +1274,8 @@
       "tg_start": "TG-Beginn",
       "latest_entry_cutoff": "Letzter Eintritt",
       "privacy_notice": "Datenschutzhinweis",
-      "profiling_exception": "Profiling nach Ausnahme"
+      "profiling_exception": "Profiling nach Ausnahme",
+      "asu_due": "Arbeitsuche fällig"
     },
     "deadlineStates": {
       "upcoming": "In 14 Tagen",
@@ -1333,7 +1337,8 @@
     },
     "appointmentItem": "{{kind}} vom {{date}}",
     "appointmentNext": "{{kind}} am {{date}}, {{time}} Uhr",
-    "appointmentMore": "+{{count}} weitere"
+    "appointmentMore": "+{{count}} weitere",
+    "knowledgeDateMissing": "Orientierung {{date}} – Kenntnisdatum klären"
   },
   "dashboard": {
     "title": "Übersicht",
@@ -1576,7 +1581,11 @@
       "form_generated": "Profilingbogen (TL 407) erzeugt",
       "document_quarantined": "Unterlage unter Quarantäne gestellt",
       "document_quarantine_lifted": "Quarantäne aufgehoben",
-      "signed_declaration_recorded": "Erklärungen gegenüber der BA unterschrieben"
+      "signed_declaration_recorded": "Erklärungen gegenüber der BA unterschrieben",
+      "asu_route_set": "Weg der Arbeitsuchendmeldung festgelegt",
+      "asu_registration_recorded": "Arbeitsuchendmeldung erfasst",
+      "asu_proof_linked": "BA-Bestätigung als Nachweis verknüpft",
+      "knowledge_date_set": "Kenntnisdatum geändert"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1662,7 +1671,12 @@
       "generated": "aus erzeugtem Bogen",
       "external_paper": "außerhalb der Anwendung ausgefüllt"
     },
-    "signedDeclarations": "Fassung {{version}}: {{declarations}}"
+    "signedDeclarations": "Fassung {{version}}: {{declarations}}",
+    "knowledgeDateChanges": {
+      "set": "erfasst",
+      "changed": "geändert",
+      "cleared": "gelöscht"
+    }
   },
   "appointments": {
     "title": "Termine",
@@ -2031,6 +2045,10 @@
       "project_not_active": "Das Projekt ist nicht aktiv. Es wurde nichts gesendet."
     }
   },
+  "draft": {
+    "conflict": "Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind noch nicht gespeichert. „Neu laden“ übernimmt den gespeicherten Stand und verwirft Ihre Eingaben.",
+    "reload": "Neu laden"
+  },
   "profiling": {
     "title": "Profiling",
     "loading": "Das Profiling wird geladen …",
@@ -2181,10 +2199,6 @@
       "notMarked": "nicht angekreuzt"
     },
     "closed": "Die Teilnahme ist beendet. Das Profiling kann nur noch gelesen werden; Korrekturen laufen über das vorgesehene Korrekturverfahren.",
-    "draft": {
-      "conflict": "Dieser Abschnitt wurde inzwischen an anderer Stelle gespeichert. Ihre Eingaben sind noch nicht gespeichert. „Neu laden“ übernimmt den gespeicherten Stand und verwirft Ihre Eingaben.",
-      "reload": "Neu laden"
-    },
     "tl407": {
       "title": "Profilingbogen (TL 407)",
       "intro": "Der Bogen wird hier erzeugt, ausgedruckt und von der teilnehmenden Person und dem Profiler auf Papier unterschrieben. Der erzeugte Bogen ist ein Arbeitsexemplar: Er wird nicht geändert und nach Fristablauf gelöscht.",
@@ -2358,6 +2372,129 @@
           "file_unscannable": "Die Datei konnte nicht geprüft werden."
         }
       }
+    }
+  },
+  "asu": {
+    "loading": "Arbeitsuche wird geladen …",
+    "failed": "Die Arbeitsuche konnte nicht geladen werden.",
+    "notApplicable": "In diesem Projekt wird keine Arbeitsuchendmeldung erfasst.",
+    "closed": "Die Teilnahme ist beendet; es wird nichts mehr erfasst.",
+    "route": {
+      "title": "Weg der Arbeitsuchendmeldung",
+      "label": "Weg",
+      "none": "Noch nicht festgelegt",
+      "preselected": "Vorschlag der Vermittlungs-Agentur: {{channel}}",
+      "save": "Weg speichern",
+      "fixed": "Der Weg steht fest, weil eine Meldung erfasst ist."
+    },
+    "channels": {
+      "kug_200b": "Kug 200b über die Sammelmeldung",
+      "online_self": "Selbst online gemeldet",
+      "in_person": "Persönlich bei der Agentur gemeldet"
+    },
+    "knowledge": {
+      "title": "Kenntnisdatum und Frist",
+      "label": "Kenntnisdatum (TT.MM.JJJJ)",
+      "helper": "Wann die Person von der Beendigung erfahren hat.",
+      "value": "Kenntnisdatum: {{date}}",
+      "missing": "Kenntnisdatum: nicht erfasst",
+      "endDate": "Austrittsdatum: {{date}}",
+      "endDateMissing": "Austrittsdatum fehlt – ohne es lässt sich keine Frist berechnen.",
+      "save": "Kenntnisdatum speichern",
+      "clear": "Kenntnisdatum löschen",
+      "invalid": "Bitte ein gültiges Datum im Format TT.MM.JJJJ eingeben."
+    },
+    "due": {
+      "reference_date": "Fällig am {{date}} (drei Monate vor dem Austritt)",
+      "after_knowledge": "Fällig am {{date}} (drei Tage nach der Kenntnis)",
+      "orientation": "Orientierung {{date}} – Kenntnisdatum klären",
+      "none": "Keine Frist offen."
+    },
+    "registration": {
+      "title": "Meldung",
+      "none": "Noch keine Meldung erfasst.",
+      "registeredOn": "Gemeldet am {{date}} ({{channel}})",
+      "proofMissing": "Nachweis fehlt: eine geprüfte BA-Bestätigung verknüpfen.",
+      "withProofSince": "Mit Nachweis erfasst am {{at}}",
+      "proofUnusable": "Der Nachweis zählt derzeit nicht (Quarantäne).",
+      "proof": {
+        "ba_customer_number": "Nachweis: BA-Kundennummer, geprüft – {{source}}",
+        "ba_confirmation": "Nachweis: BA-Bestätigung",
+        "kug200b_submission": "Nachweis: Kug 200b-Sammelmeldung"
+      },
+      "record": "Meldung erfassen",
+      "date": "Datum der Meldung (TT.MM.JJJJ)",
+      "proofKind": "Nachweis",
+      "kindConfirmation": "BA-Bestätigung (wird danach verknüpft)",
+      "kindCustomerNumber": "BA-Kundennummer mit Datum geprüft",
+      "customerNumber": "BA-Kundennummer",
+      "customerNumberHelper": "Wird verschlüsselt gespeichert und nie wieder angezeigt.",
+      "source": "Wo geprüft",
+      "save": "Meldung speichern",
+      "kugHint": "Auf dem Weg Kug 200b erfasst die Sammelmeldung die Meldung.",
+      "routeChanged": "Der Weg wurde inzwischen an anderer Stelle geändert (jetzt: {{channel}}). Ihre Meldung ist noch nicht gespeichert; bitte prüfen, ob sie zu diesem Weg passt.",
+      "adoptRoute": "Geänderten Weg übernehmen"
+    },
+    "sources": {
+      "ba_document_inspected": "BA-Dokument eingesehen",
+      "ba_online_account_inspected": "BA-Onlinekonto eingesehen",
+      "ba_confirmed_by_phone": "Von der BA telefonisch bestätigt"
+    },
+    "proofs": {
+      "title": "BA-Bestätigungen",
+      "empty": "Keine BA-Bestätigung hochgeladen.",
+      "upload": "BA-Bestätigung hochladen",
+      "added": "Hochgeladen am {{at}}",
+      "linked": "verknüpft",
+      "quarantined": "Unter Quarantäne: {{reason}}",
+      "open": "Öffnen",
+      "accept": "Annehmen",
+      "reject": "Ablehnen",
+      "rejectReason": "Grund der Ablehnung",
+      "link": "Als Nachweis verknüpfen",
+      "linkHint": "Nur verknüpfen, wenn die Bestätigung das Datum der Meldung belegt.",
+      "quarantineReason": "Grund der Quarantäne",
+      "quarantineReasons": {
+        "suspected_wrong_person": "Verdacht: andere Person",
+        "suspected_wrong_acceptance": "Verdacht: irrtümlich angenommen"
+      },
+      "quarantine": "Unter Quarantäne stellen",
+      "lift": "Quarantäne aufheben",
+      "quarantineHint": "Bei Verdacht sofort unter Quarantäne stellen: Die Bestätigung lässt sich dann von niemandem öffnen und belegt keine Meldung, bis die Quarantäne aufgehoben wird."
+    },
+    "missing": {
+      "title": "Für die Arbeitsuchendmeldung fehlt",
+      "none": "Für die Arbeitsuchendmeldung fehlt nichts.",
+      "keys": {
+        "asu_proof": "eine Meldung mit Nachweis",
+        "kug200b_signed_scan": "ein angenommener, unterschriebener Kug 200b",
+        "pensionInsuranceNumber": "die RV-Nummer"
+      }
+    },
+    "messages": {
+      "saved": "Gespeichert.",
+      "uploaded": "Die BA-Bestätigung wurde hochgeladen.",
+      "conflict": "Inzwischen geändert – bitte die Angaben prüfen und erneut speichern.",
+      "forbidden": "Dafür fehlt die Berechtigung.",
+      "failed": "Das hat nicht geklappt.",
+      "codes": {
+        "participation_closed": "Die Teilnahme ist beendet.",
+        "asu_not_applicable": "In diesem Projekt wird keine Arbeitsuchendmeldung erfasst.",
+        "asu_registered": "Es ist schon eine Meldung erfasst; ein Fehler wird über eine Korrektur berichtigt.",
+        "asu_route_unset": "Bitte zuerst den Weg festlegen.",
+        "asu_route_kug200b": "Auf dem Weg Kug 200b erfasst die Sammelmeldung die Meldung.",
+        "registered_on_in_future": "Das Datum der Meldung liegt in der Zukunft.",
+        "asu_registration_not_found": "Die Meldung gibt es nicht mehr.",
+        "asu_proof_present": "Die Meldung hat schon einen Nachweis.",
+        "document_not_found": "Die BA-Bestätigung gibt es nicht mehr.",
+        "document_not_accepted": "Die BA-Bestätigung ist noch nicht angenommen.",
+        "document_quarantined": "Die BA-Bestätigung steht unter Quarantäne.",
+        "document_invalidated": "Die BA-Bestätigung ist ungültig.",
+        "knowledge_date_in_future": "Das Kenntnisdatum liegt in der Zukunft.",
+        "document_not_quarantined": "Die BA-Bestätigung steht nicht unter Quarantäne."
+      },
+      "quarantined": "Die BA-Bestätigung steht jetzt unter Quarantäne.",
+      "lifted": "Die Quarantäne wurde aufgehoben."
     }
   }
 }

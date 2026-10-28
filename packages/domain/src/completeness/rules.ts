@@ -18,6 +18,13 @@ const projectTypes = z
 const base = { id: z.string().min(1), basis: RuleBasis.optional(), projectTypes };
 const fieldKey = z.string().min(1);
 
+/** A field equals a value, or exists (`requiredIf`'s condition; a `documentPresent` rule's too). */
+const condition = z.union([
+  z.strictObject({ field: fieldKey, equals: z.union([z.string(), z.number(), z.boolean()]) }),
+  z.strictObject({ field: fieldKey, exists: z.literal(true) }),
+]);
+export type RuleCondition = z.infer<typeof condition>;
+
 /**
  * The minimal rule language of ADR-0004 (plan 5.5): data in a closed schema, no scripting.
  * Unknown keys are rejected at every level.
@@ -28,16 +35,15 @@ export const CompletenessRule = z.discriminatedUnion("kind", [
     ...base,
     kind: z.literal("requiredIf"),
     field: fieldKey,
-    when: z.union([
-      z.strictObject({ field: fieldKey, equals: z.union([z.string(), z.number(), z.boolean()]) }),
-      z.strictObject({ field: fieldKey, exists: z.literal(true) }),
-    ]),
+    when: condition,
   }),
   z.strictObject({
     ...base,
     kind: z.literal("documentPresent"),
     documentType: DocumentType,
     accepted: z.boolean().optional(),
+    /** Applies only while the condition holds (regional-variation.md, rule language). */
+    when: condition.optional(),
   }),
 ]);
 export type CompletenessRule = z.infer<typeof CompletenessRule>;
@@ -107,8 +113,9 @@ export function validateRules(
       if (rule.kind !== "documentPresent" && !knownField(rule.field)) {
         issues.push({ code: "unknown_field", path: at("field"), key: rule.field });
       }
-      if (rule.kind === "requiredIf" && !knownField(rule.when.field)) {
-        issues.push({ code: "unknown_field", path: at("when", "field"), key: rule.when.field });
+      const when = rule.kind === "required" ? undefined : rule.when;
+      if (when && !knownField(when.field)) {
+        issues.push({ code: "unknown_field", path: at("when", "field"), key: when.field });
       }
       if (ids.has(rule.id)) issues.push({ code: "duplicate_id", path: at("id"), key: rule.id });
       ids.add(rule.id);

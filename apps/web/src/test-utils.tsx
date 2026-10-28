@@ -176,6 +176,7 @@ export const worklistItem = (
   },
   actions: [],
   deadlines: [],
+  caseItems: [],
   flags: [],
   portal: "not_reachable",
   reminder: null,

@@ -82,16 +82,37 @@ export type AsuDueDateParams = { monthsBeforeEnd: number; daysAfterKnowledge: nu
 export const asuDueDateDefaults: AsuDueDateParams = { monthsBeforeEnd: 3, daysAfterKnowledge: 3 };
 
 /**
- * Due date of the Arbeitsuchendmeldung (§38 SGB III, verify Q1): the later of `endDate − 3 months`
- * (month end clamped) and `knowledgeDate + 3 days`. `endDate` is the end of the old employment,
- * `knowledgeDate` when the person learned of it. Drives reminders, never a status change.
+ * The ASU due date (§38(1) SGB III; process-and-lifecycle.md, dates; verify Q1, Q178): a
+ * statutory date from one of the two branches, or without a knowledge date only an orientation.
+ */
+export type AsuDueDate =
+  | {
+      kind: "statutory";
+      date: IsoDate;
+      /** Knowledge on or before the reference date, or after it (less than 3 months before the end). */
+      branch: "reference_date" | "after_knowledge";
+    }
+  | { kind: "orientation"; date: IsoDate };
+
+/**
+ * Due date of the Arbeitsuchendmeldung (§38(1) SGB III, verify Q1): with the reference date
+ * `endDate − 3 months` (month end clamped), knowledge on or before it is due on the reference
+ * date, knowledge after it 3 days after the knowledge. `endDate` is the end of the old
+ * employment, `knowledgeDate` when the person learned of it; without it the reference date is an
+ * orientation, never an overdue finding. Informs, never a status change or a reminder (Q152).
  */
 export function asuDueDate(
-  { endDate, knowledgeDate }: { endDate: IsoDate; knowledgeDate: IsoDate },
+  { endDate, knowledgeDate }: { endDate: IsoDate; knowledgeDate: IsoDate | null },
   params: AsuDueDateParams = asuDueDateDefaults,
-): IsoDate {
-  return laterIsoDate(
-    addMonths(endDate, -params.monthsBeforeEnd),
-    addDays(knowledgeDate, params.daysAfterKnowledge),
-  );
+): AsuDueDate {
+  const reference = addMonths(endDate, -params.monthsBeforeEnd);
+  if (knowledgeDate === null) return { kind: "orientation", date: reference };
+  if (compareIsoDates(knowledgeDate, reference) <= 0) {
+    return { kind: "statutory", date: reference, branch: "reference_date" };
+  }
+  return {
+    kind: "statutory",
+    date: addDays(knowledgeDate, params.daysAfterKnowledge),
+    branch: "after_knowledge",
+  };
 }

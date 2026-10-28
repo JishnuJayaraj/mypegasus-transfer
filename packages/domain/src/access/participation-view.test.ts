@@ -184,6 +184,7 @@ const options = {
     setPlacementAgentur: true,
     startAssistedMode: true,
     viewProfiling: true,
+    viewAsu: true,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
@@ -223,6 +224,7 @@ describe("participationDetail", () => {
         setPlacementAgentur: true,
         startAssistedMode: true,
         viewProfiling: true,
+        viewAsu: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });

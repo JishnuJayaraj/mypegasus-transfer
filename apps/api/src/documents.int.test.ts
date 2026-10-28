@@ -340,7 +340,7 @@ describe("the portal (data-protection.md, uploads)", () => {
     expect(await codes(upload(Buffer.concat([PDF, Buffer.alloc(10 * 1024 * 1024)])))).toEqual([
       "file_too_large",
     ]);
-    expect(await codes(upload(PDF, { type: "asu_proof" }))).toEqual([
+    expect(await codes(upload(PDF, { type: "kug200b_signed_scan" }))).toEqual([
       "document_type_not_supported",
     ]);
     expect(

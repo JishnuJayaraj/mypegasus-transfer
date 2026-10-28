@@ -10744,6 +10744,464 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/asu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tab Arbeitsuche: the route, the knowledge and due date, the registration and its proof, the step's missing items (never the BA-Kundennummer) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The ASU record as the viewer may know it */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/asu/route": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set the ASU route (the PL or the assigned consultant) with the version read; fixed once a registration is recorded (422 asu_registered); 409 stale_revision */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AsuRouteInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/asu/registration": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record the registration on online_self or in_person with the route version reviewed (409 stale_revision): its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AsuRegistrationInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/asu/proof-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link an accepted BA confirmation (asu_proof) as the registration's proof (the assigned consultant); the complete fact counts from the link */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AsuProofLinkInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/knowledge-date": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set, change or clear the knowledge date (the PL) against the date read (409 stale_value); audited without the date */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDateInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/forms/tl407/readiness": {
         parameters: {
             query?: never;
@@ -11609,16 +12067,16 @@ export interface components {
             suggestedMapping: {
                 column: number;
                 /** @enum {string} */
-                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
                 /** @enum {string} */
                 source: "project" | "customer" | "builtin";
             }[];
             mapping: {
                 column: number;
                 /** @enum {string} */
-                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
             }[];
-            missingTargets: ("personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address")[];
+            missingTargets: ("personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address")[];
             mappingIssues: components["schemas"]["ImportIssue"][];
             report: {
                 counts: components["schemas"]["ImportCounts"];
@@ -11629,9 +12087,9 @@ export interface components {
         ImportIssue: {
             row: number | null;
             /** @enum {string|null} */
-            target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address" | null;
+            target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address" | null;
             /** @enum {string} */
-            code: "required_missing" | "invalid_date" | "date_has_time" | "birth_date_in_future" | "end_before_birth" | "too_long" | "control_characters" | "invalid_cell_type" | "duplicate_in_file" | "identifier_cell_numeric" | "postal_code_invalid" | "foreign_address_unsupported" | "country_required" | "country_source_conflict" | "address_incomplete" | "target_mapped_twice" | "age_implausible" | "value_invalid_dropped" | "identifier_cell_converted" | "possible_duplicate" | "terminal_not_updated" | "kept_existing" | "participant_maintained";
+            code: "required_missing" | "invalid_date" | "date_has_time" | "birth_date_in_future" | "knowledge_date_in_future" | "end_before_birth" | "too_long" | "control_characters" | "invalid_cell_type" | "duplicate_in_file" | "identifier_cell_numeric" | "postal_code_invalid" | "foreign_address_unsupported" | "country_required" | "country_source_conflict" | "address_incomplete" | "target_mapped_twice" | "age_implausible" | "value_invalid_dropped" | "identifier_cell_converted" | "possible_duplicate" | "terminal_not_updated" | "kept_existing" | "participant_maintained";
             /** @enum {string} */
             severity: "error" | "warning";
         };
@@ -11653,13 +12111,13 @@ export interface components {
             issues: components["schemas"]["ImportIssue"][];
             changes?: {
                 /** @enum {string} */
-                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
                 old: string | null;
                 new: string;
             }[];
             kept?: {
                 /** @enum {string} */
-                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address";
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail" | "address";
                 value: string;
             }[];
         };
@@ -11680,7 +12138,7 @@ export interface components {
             mapping?: {
                 column: number;
                 /** @enum {string} */
-                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
             }[];
         };
         ImportResult: {
@@ -11707,7 +12165,7 @@ export interface components {
             mapping: {
                 column: number;
                 /** @enum {string} */
-                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
+                target: "personnelNumber" | "lastName" | "firstName" | "birthDate" | "oldEmploymentEndDate" | "knowledgeDate" | "addressStreet" | "addressPostalCode" | "addressCity" | "addressCountry" | "phone" | "mobile" | "privateEmail" | "workEmail";
             }[];
             decisions: components["schemas"]["ImportDecisions"];
             previewToken: string;
@@ -11924,6 +12382,7 @@ export interface components {
                 setPlacementAgentur: boolean;
                 startAssistedMode: boolean;
                 viewProfiling: boolean;
+                viewAsu: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -12125,7 +12584,7 @@ export interface components {
             appointment?: components["schemas"]["AppointmentFilter"];
         };
         /** @enum {string} */
-        DeadlineKind: "offer_deadline" | "tg_start" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
+        DeadlineKind: "offer_deadline" | "tg_start" | "asu_due" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
         /** @enum {string} */
         DeadlineState: "upcoming" | "overdue";
         /** @enum {string} */
@@ -12160,6 +12619,7 @@ export interface components {
             privacyNoticeState: components["schemas"]["PrivacyNoticeState"];
             actions: components["schemas"]["ParticipantAction"][];
             deadlines: components["schemas"]["Deadline"][];
+            caseItems: components["schemas"]["WorklistCaseItem"][];
             flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
             portal: components["schemas"]["PortalReach"];
             reminder: components["schemas"]["WorklistReminder"];
@@ -12195,6 +12655,16 @@ export interface components {
             date: string;
             state: components["schemas"]["DeadlineState"];
             final?: boolean;
+        };
+        WorklistCaseItem: {
+            /** @enum {string} */
+            kind: "knowledge_date_missing";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
         };
         WorklistReminder: {
             /**
@@ -12695,7 +13165,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -14278,6 +14748,179 @@ export interface components {
              */
             effectiveDate?: string;
             statusVersion: number;
+        };
+        AsuView: {
+            /** Format: uuid */
+            participationId: string;
+            applies: boolean;
+            closed: boolean;
+            route: {
+                /** @enum {string|null} */
+                channel: "kug_200b" | "online_self" | "in_person" | null;
+                version: number;
+                /** @enum {string|null} */
+                defaultChannel: "kug_200b" | "online_self" | "in_person" | null;
+            };
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            knowledgeDate?: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            oldEmploymentEndDate?: string | null;
+            dueDate?: components["schemas"]["AsuDueDate"];
+            registration: components["schemas"]["AsuRegistration"];
+            proofDocuments?: components["schemas"]["AsuProofDocument"][];
+            missing: components["schemas"]["AsuMissingItem"][];
+            capabilities: {
+                setRoute: boolean;
+                recordRegistration: boolean;
+                attest: boolean;
+                linkProof: boolean;
+                setKnowledgeDate: boolean;
+                addProof: boolean;
+            };
+        };
+        AsuDueDate: {
+            /** @enum {string} */
+            kind: "statutory";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
+            /** @enum {string} */
+            branch: "reference_date" | "after_knowledge";
+        } | {
+            /** @enum {string} */
+            kind: "orientation";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
+        } | null;
+        AsuRegistration: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            channel: "kug_200b" | "online_self" | "in_person";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            registeredOn: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            recordedAt: string;
+            proof: {
+                kind: components["schemas"]["AsuProofKind"];
+                /** @enum {string|null} */
+                attestationSource: "ba_document_inspected" | "ba_online_account_inspected" | "ba_confirmed_by_phone" | null;
+                /** Format: uuid */
+                documentId?: string | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                linkedAt: string;
+            } | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            withProofSince: string | null;
+        } | null;
+        /** @enum {string} */
+        AsuProofKind: "kug200b_submission" | "ba_confirmation" | "ba_customer_number";
+        AsuProofDocument: {
+            /** Format: uuid */
+            documentId: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            addedAt: string;
+            review: {
+                /** @enum {string} */
+                state: "unreviewed" | "accepted" | "rejected";
+                /** @enum {string|null} */
+                reasonCode: "unreadable" | "wrong_document" | "incomplete" | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                reviewedAt: string | null;
+            };
+            quarantine: {
+                reasonCode: components["schemas"]["QuarantineReason"];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                quarantinedAt: string;
+            } | null;
+            linked: boolean;
+            capabilities: components["schemas"]["DocumentCapabilities"];
+        };
+        AsuMissingItem: {
+            ruleId: string;
+            /** @enum {string} */
+            kind: "field" | "document";
+            key: string;
+            /** @enum {string} */
+            reason: "missing" | "not_accepted";
+        };
+        AsuRouteInput: {
+            /** @enum {string} */
+            channel: "kug_200b" | "online_self" | "in_person";
+            version: number;
+        };
+        AsuRegistrationInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            registeredOn: string;
+            routeVersion: number;
+            attestation?: {
+                /** @description Write-only; never returned */
+                customerNumber: string;
+                source: components["schemas"]["AttestationSource"];
+            };
+        };
+        /** @enum {string} */
+        AttestationSource: "ba_document_inspected" | "ba_online_account_inspected" | "ba_confirmed_by_phone";
+        AsuProofLinkInput: {
+            /** Format: uuid */
+            registrationId: string;
+            /** Format: uuid */
+            documentId: string;
+        };
+        KnowledgeDateInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            knowledgeDate: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            previous: string | null;
         };
         Tl407Readiness: components["schemas"]["Tl407ProfilerReadiness"] | components["schemas"]["Tl407ReadinessSummary"];
         Tl407ProfilerReadiness: {
