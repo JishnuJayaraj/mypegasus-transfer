@@ -95,7 +95,8 @@ export const fieldCatalog: readonly FieldEntry[] = [
   field("placementAgenturKey", "internal", "case_internal", false, { listable: true, ...record }),
   // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route and the
   // registrations with their proof, codes and dates only, listable
-  ...fields(["asuChannel", "asuRegistration"], "internal", "case_internal", false, {
+  // and the Kug 200b offer's decline, withdrawals and their BA notice (Q185)
+  ...fields(["asuChannel", "asuRegistration", "kug200bOffer"], "internal", "case_internal", false, {
     listable: true,
     ...record,
   }),

@@ -120,7 +120,7 @@ describe("record_form_generation (Q179)", () => {
       ),
     ).toEqual({
       type: "tl407_form",
-      catalog_version: 5,
+      catalog_version: 6,
       retention_class: "form_working_copy",
       media_type: "application/pdf",
       file_name: null,
@@ -224,7 +224,7 @@ describe("record_form_generation (Q179)", () => {
 
   it("refuses another form, a malformed provenance and an unknown or repeated warning", async () => {
     const id = await participation();
-    await expect(generate(id, { formCode: "kug200b" })).rejects.toMatchObject(
+    await expect(generate(id, { formCode: "kug200a" })).rejects.toMatchObject(
       failsWith("form_not_supported"),
     );
     for (const bad of [
