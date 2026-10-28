@@ -253,7 +253,11 @@ export function asuRoutes(deps: Deps) {
               registration.proofKind === null &&
               mayLinkAsuProof(subject, target).ok,
             setKnowledgeDate: !closed && maySetKnowledgeDate(subject, target).ok,
-            addProof: open && mayAddDocument(subject, "asu_proof", target, normal).ok,
+            // Nothing to prove once the registration has its proof.
+            addProof:
+              open &&
+              !registration?.proofKind &&
+              mayAddDocument(subject, "asu_proof", target, normal).ok,
           },
         };
       },
