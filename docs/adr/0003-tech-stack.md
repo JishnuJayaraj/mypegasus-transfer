@@ -210,4 +210,7 @@ Approved by the owner as a test-infrastructure change, without a slice plan.
   the Drizzle schema, the db testing helpers or a Vitest config changed. `pnpm verify`, `pnpm build`
   and `pnpm test:e2e` stay the gate before a push (agent-workflow.md).
 - **Measured** on the same 4-core cloud session (Node 22.22.0, PostgreSQL 16), `pnpm
-  test:coverage`: 941 s before; after, see the PR that introduced it.
+  test:coverage`, wall clock: 941 s before, 349 s after (2.7x; 6 workers). The `db` project went
+  from 351 s to 134 s and `api` from 457 s to 140 s (first to last file). About 250 ms of each
+  integration test is the truncate of ~170 relations; it stays, since a `DELETE` would meet the
+  append-only triggers.
