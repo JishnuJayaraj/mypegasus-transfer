@@ -3,7 +3,14 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": ".tsbuild/config",
-    "types": ["node"]
+    "types": ["node"],
+    // Vite's native config loader needs the extension on the shared vitest.workers.ts.
+    "allowImportingTsExtensions": true
   },
-  "include": ["vitest.config.ts", "packages/*/vitest.config.ts", "apps/*/vitest.config.ts"]
+  "include": [
+    "vitest.config.ts",
+    "vitest.workers.ts",
+    "packages/*/vitest.config.ts",
+    "apps/*/vitest.config.ts"
+  ]
 }

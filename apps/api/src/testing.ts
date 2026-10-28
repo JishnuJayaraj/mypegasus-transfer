@@ -37,7 +37,7 @@ export const testEnv: Env = {
 
 export const origin = testEnv.appOrigins[0]!;
 
-/** An app on `transfer_test` whose log lines are captured as strings. */
+/** An app on the worker's test database whose log lines are captured as strings. */
 export function testApp(
   options: {
     env?: Partial<Env>;
