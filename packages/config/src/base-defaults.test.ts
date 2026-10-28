@@ -99,6 +99,14 @@ describe("base-defaults.json (regional-variation.md, base defaults)", () => {
         key: "asu_proof",
         projectTypes: tg,
       },
+      ...["pensionInsuranceNumber", "kug200b_signed_scan"].map((key) => ({
+        step: "asu_registration",
+        id:
+          key === "pensionInsuranceNumber" ? "base-kug200b-rv-nummer" : "base-kug200b-signed-scan",
+        basis: "ba_form",
+        key,
+        projectTypes: tg,
+      })),
       ...[
         "personnelNumber",
         "lastName",
@@ -130,13 +138,29 @@ describe("base-defaults.json (regional-variation.md, base defaults)", () => {
     ]);
   });
 
-  it("is version 2, which adds the TL 407 rules (Q140)", () => {
-    expect(layer.version).toBe(2);
+  it("is version 3: version 2 added the TL 407 rules (Q140), 3 the Kug 200b rules", () => {
+    expect(layer.version).toBe(3);
     expect(JSON.stringify(layer.rules)).not.toMatch(/unemploymentPeriod|jobboerseChoice/);
   });
 
-  it("leaves out the Kug 200b rules until the ASU route and the offer outcome exist (Slice 6)", () => {
-    expect(JSON.stringify(layer.rules)).not.toMatch(/kug200b/);
+  it("applies the Kug 200b rules only on the route kug_200b (round 14)", () => {
+    const asu = (asuChannel: unknown, documents = {}) =>
+      evaluateCompleteness(layer.rules ?? {}, {
+        projectType: "ta_tg",
+        fields: { asuChannel },
+        documents,
+      }).byStep.asu_registration.missing.map((item) => item.ruleId);
+    expect(asu("kug_200b")).toEqual([
+      "base-asu-proof",
+      "base-kug200b-rv-nummer",
+      "base-kug200b-signed-scan",
+    ]);
+    for (const route of ["online_self", "in_person", null]) {
+      expect(asu(route)).toEqual(["base-asu-proof"]);
+    }
+    expect(asu("kug_200b", { kug200b_signed_scan: ["accepted"], asu_proof: ["accepted"] })).toEqual(
+      ["base-kug200b-rv-nummer"],
+    );
   });
 
   const missing = (projectType: ProjectType) =>

@@ -26,6 +26,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   },
   channels: [],
   lastReminder: null,
+  asuDueDate: null,
   appointments: { bookings: [], notices: [], closedAt: null },
   ...overrides,
 });
@@ -48,6 +49,22 @@ const at = (v: WorklistViewer, s = snapshot()) =>
   worklistProjection(facts(), s, project, "2027-03-10", now, v).capabilities.assignEntryWave;
 
 describe("worklistProjection", () => {
+  it("lists a statutory ASU due date as `asu_due`, an orientation as `knowledge_date_missing` (D22)", () => {
+    const s = snapshot({ wave: null });
+    const row = (asuDueDate: WorklistFacts["asuDueDate"]) =>
+      worklistProjection(facts({ asuDueDate }), s, project, "2027-03-25", now, viewer());
+    const statutory = row({ kind: "statutory", date: "2027-03-30", branch: "reference_date" });
+    expect(statutory.deadlines).toContainEqual({
+      kind: "asu_due",
+      date: "2027-03-30",
+      state: "upcoming",
+    });
+    expect(statutory.caseItems).toEqual([]);
+    const orientation = row({ kind: "orientation", date: "2027-03-20" });
+    expect(orientation.deadlines.map((d) => d.kind)).not.toContain("asu_due");
+    expect(orientation.caseItems).toEqual([{ kind: "knowledge_date_missing", date: "2027-03-20" }]);
+  });
+
   it("projects statuses, listable person fields, actions, deadlines, flags, portal and capabilities", () => {
     const s = snapshot({ wave: null });
     expect(worklistProjection(facts(), s, project, "2027-03-10", now, viewer())).toEqual({
@@ -64,6 +81,7 @@ describe("worklistProjection", () => {
       privacyNoticeState: { state: "due", dueOn: "2027-03-20", providedAt: null },
       actions: [{ kind: "field", key: "mobile", state: "missing" }],
       deadlines: [{ kind: "privacy_notice", date: "2027-03-20", state: "upcoming" }],
+      caseItems: [],
       flags: [],
       portal: "not_reachable",
       reminder: null,

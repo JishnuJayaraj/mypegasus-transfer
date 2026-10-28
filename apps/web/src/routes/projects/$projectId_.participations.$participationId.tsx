@@ -40,6 +40,7 @@ import { HistoryTab } from "../../components/history";
 import { MessagesTab } from "../../components/reminders";
 import { AppointmentsTab } from "../../components/participation-appointments";
 import { ProfilingTab } from "../../components/profiling-tab";
+import { AsuTab } from "../../components/asu-tab";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -50,12 +51,14 @@ const RouterLink = createLink(Link);
 
 /**
  * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Profiling" (for
- * the PL and the assigned consultant), "Unterlagen", "Termine", "Nachrichten" or "Verlauf".
+ * the PL and the assigned consultant), "Arbeitsuche" (`ta_tg`, the case readers), "Unterlagen",
+ * "Termine", "Nachrichten" or "Verlauf".
  */
 const tabs = [
   undefined,
   "self-service",
   "profiling",
+  "asu",
   "documents",
   "appointments",
   "messages",
@@ -66,6 +69,7 @@ const tabLabels = {
   overview: "overview",
   "self-service": "selfService",
   profiling: "profiling",
+  asu: "asu",
   documents: "documents",
   appointments: "appointments",
   messages: "messages",
@@ -132,8 +136,13 @@ function ParticipationPage() {
   }
   const { person, dates } = detail;
   const name = [person.lastName, person.firstName].filter(Boolean).join(", ");
-  // Back office and the org roles have no tab "Profiling" (data-protection.md, Q49).
-  const shown = tabs.filter((key) => key !== "profiling" || detail.capabilities.viewProfiling);
+  // Back office and the org roles have no tab "Profiling" (data-protection.md, Q49); the tab
+  // "Arbeitsuche" is the case readers' in a `ta_tg` project (Q89).
+  const shown = tabs.filter(
+    (key) =>
+      (key !== "profiling" || detail.capabilities.viewProfiling) &&
+      (key !== "asu" || detail.capabilities.viewAsu),
+  );
   const current = shown.includes(tab) ? tab : undefined;
   /** A tab's content; each but the overview is loaded only while it is shown. */
   function panel(key: (typeof tabs)[number]): ReactNode {
@@ -186,6 +195,9 @@ function ParticipationPage() {
       // Its sensitive blocks only on "Anzeigen" (data-protection.md, the profiling record).
       case "profiling":
         return <ProfilingTab detail={detail} projectId={projectId} />;
+      // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung).
+      case "asu":
+        return <AsuTab detail={detail} />;
       case "documents":
         return <DocumentsTab detail={detail} />;
       // The bookings (data-protection.md, appointments).

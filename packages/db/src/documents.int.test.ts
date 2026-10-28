@@ -244,6 +244,7 @@ describe("document_type_policy", () => {
       { catalog_version: 2, n: 9 },
       { catalog_version: 3, n: 10 },
       { catalog_version: 4, n: 10 },
+      { catalog_version: 5, n: 10 },
     ]);
   });
 });
@@ -264,7 +265,7 @@ describe("add_document (Q146)", () => {
       ),
     ).toEqual({
       type: "cv",
-      catalog_version: 4,
+      catalog_version: 5,
       retention_class: "personnel_file",
       file_name: FILE_NAME,
       added_by: "participant",
@@ -374,9 +375,9 @@ describe("add_document (Q146)", () => {
   });
 
   it("refuses an undecided type, a closed participation and a name for a type that keeps none", async () => {
-    await expect(byParticipant(p, { type: "asu_proof", fileName: null })).rejects.toMatchObject(
-      failsWith("document_type_not_supported"),
-    );
+    await expect(
+      byParticipant(p, { type: "kug200b_signed_scan", fileName: null }),
+    ).rejects.toMatchObject(failsWith("document_type_not_supported"));
     await expect(
       add({
         context: lead,

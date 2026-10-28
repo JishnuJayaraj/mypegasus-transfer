@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AsuProofKind, AttestationSource } from "../asu/model";
 import { DocumentType } from "../documents/catalog";
 import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
@@ -10,6 +11,7 @@ import { AssignmentEndReason, MemberRemovalReason } from "../projects/team";
 import {
   AgenturKey as agenturKey,
   AgenturSettingSource,
+  AsuChannel,
   OverrideChange,
 } from "../projects/agentur-settings";
 import { BaReportingKind } from "../projects/participation-dates";
@@ -192,6 +194,12 @@ export const AuditEventType = z.enum([
   "document_quarantined",
   "document_quarantine_lifted",
   "signed_declaration_recorded",
+  // Slice 6, the ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung), written only by its
+  // functions
+  "asu_route_set",
+  "asu_registration_recorded",
+  "asu_proof_linked",
+  "knowledge_date_set",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -291,6 +299,10 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "document_quarantined",
   "document_quarantine_lifted",
   "signed_declaration_recorded",
+  "asu_route_set",
+  "asu_registration_recorded",
+  "asu_proof_linked",
+  "knowledge_date_set",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -870,7 +882,12 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("participant_data_changed", {
     ...ofParticipation,
     details: z.strictObject({
-      fields: z.array(z.union([ParticipantDataField, ProfileField, CustomFieldKey])).min(1),
+      // the knowledge date as the import writes it (D22); the tab "Arbeitsuche" shows it
+      fields: z
+        .array(
+          z.union([ParticipantDataField, z.literal("knowledgeDate"), ProfileField, CustomFieldKey]),
+        )
+        .min(1),
     }),
   }),
   /**
@@ -1261,6 +1278,39 @@ export const AuditEvent = z.discriminatedUnion("type", [
       formVersion: FormVersion,
       declarations: z.array(z.enum(["jobboerseChoice", "baContactConsent"])).min(1),
     }),
+  }),
+  /** The ASU route set or changed (D19): the new route and the one it replaced. */
+  event("asu_route_set", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ channel: AsuChannel, previousChannel: AsuChannel.optional() }),
+  }),
+  /**
+   * An ASU registration recorded (D19; Q186): its route and actual date, and the proof it came
+   * with, the attestation's source; never the BA-Kundennummer (its write is `sensitive_write`).
+   */
+  event("asu_registration_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      registrationId: z.uuid(),
+      channel: AsuChannel,
+      registeredOn: isoDate,
+      proofKind: AsuProofKind.optional(),
+      attestationSource: AttestationSource.optional(),
+    }),
+  }),
+  /** An accepted BA confirmation linked as the registration's proof (D19). */
+  event("asu_proof_linked", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ registrationId: z.uuid(), documentId: z.uuid() }),
+  }),
+  /** The knowledge date set, changed or cleared by the PL (D22): never the date. */
+  event("knowledge_date_set", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ change: z.enum(["set", "changed", "cleared"]) }),
   }),
   /** The pending declarations to the BA changed: the keys, never the values (Q193). */
   event("profiling_declarations_recorded", {

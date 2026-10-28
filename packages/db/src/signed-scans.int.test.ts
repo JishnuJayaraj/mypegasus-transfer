@@ -196,7 +196,7 @@ describe("add_document for a signed scan (Q184)", () => {
         [documentId],
       ),
     ).toEqual({
-      catalog_version: 4,
+      catalog_version: 5,
       retention_class: "evidence_set",
       scan_origin: "generated",
       generation_document_id: generation,

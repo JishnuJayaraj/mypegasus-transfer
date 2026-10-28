@@ -25,7 +25,7 @@ tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
-asu_proof                    actor actor und  unass und  role role role role
+asu_proof                    actor actor yes  unass yes  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
@@ -37,7 +37,7 @@ tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor und  unass und  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
-asu_proof                    actor actor und  unass und  role role role role
+asu_proof                    actor actor yes  unass role role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           actor actor yes  unass yes  role role role role
 participant_upload           actor actor yes  unass yes  role role role role
@@ -49,7 +49,7 @@ tl407_signed_scan            actor actor role role  yes  role role role role
 kug200b_signed_scan          imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_signed_scan              imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
-asu_proof                    actor actor und  unass und  role role role role
+asu_proof                    actor actor role role  yes  role role role role
 profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
@@ -130,7 +130,11 @@ describe("document operations by mode", () => {
       expect(result(checks.add!(subject, "cv", other))).toBe("mode_not_allowed");
     }
     expect(result(checks.add!(backOffice, "cv", accessModes.assisted))).toBe("role_not_allowed");
-    expect(result(checks.add!(pl, "asu_proof", accessModes.assisted))).toBe("undecided Q65");
+    expect(result(checks.add!(pl, "kug200b_signed_scan", accessModes.assisted))).toBe(
+      "undecided Q65",
+    );
+    // Signed paper and the ASU proof are added in normal mode only (Q184, Q186).
+    expect(result(checks.add!(pl, "asu_proof", accessModes.assisted))).toBe("mode_not_allowed");
   });
 
   it("reviews and deletes in normal mode only; break-glass never writes", () => {

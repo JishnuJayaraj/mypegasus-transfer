@@ -35,6 +35,8 @@ import {
   type AppointmentItemNotice,
 } from "./appointments";
 import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
+import type { AsuDueDate } from "../dates";
+import { isoDate } from "../iso-date";
 
 // The work list (data-protection.md, the work list and the dashboard): one projection of a
 // participation's facts for the list and the dashboard alike.
@@ -59,6 +61,16 @@ export const WorklistCapabilities = z.strictObject({
 });
 
 /**
+ * Staff work on a row that isn't a dated deadline (process-and-lifecycle.md, deadline warnings):
+ * `knowledge_date_missing` with the ASU reference date as a labelled orientation, never overdue
+ * ("Kenntnisdatum klären", D22).
+ */
+export const WorklistCaseItem = z
+  .strictObject({ kind: z.enum(["knowledge_date_missing"]), date: isoDate })
+  .meta({ id: "WorklistCaseItem" });
+export type WorklistCaseItem = z.infer<typeof WorklistCaseItem>;
+
+/**
  * One row of the work list: the list item's fields, the participant's actions, the deadlines,
  * the flags no deadline represents, the portal and what the viewer may do. Person fields only
  * where the viewer may list them.
@@ -79,6 +91,7 @@ export const WorklistItem = z
     privacyNoticeState: PrivacyNoticeState,
     actions: z.array(ParticipantAction),
     deadlines: z.array(Deadline),
+    caseItems: z.array(WorklistCaseItem),
     flags: z.array(LifecycleFlag),
     portal: PortalReach,
     /** The latest reminder requested for the participation, whatever its outcome. */
@@ -111,6 +124,8 @@ export type WorklistFacts = Pick<
   completeness: ActionFacts;
   channels: readonly ReminderChannelFacts[];
   lastReminder: { requestedOn: IsoDate; status: ReminderStatus } | null;
+  /** The applicable ASU due date (`applicableAsuDueDate`), or null. */
+  asuDueDate: AsuDueDate | null;
   appointments: {
     bookings: readonly AppointmentItemBooking[];
     notices: readonly AppointmentItemNotice[];
@@ -195,7 +210,14 @@ export function worklistProjection(
     activationStatus: facts.activationStatus,
     privacyNoticeState: facts.privacyNoticeState,
     actions,
-    deadlines: deadlinesOf({ snapshot, project, privacyNotice: facts.privacyNoticeState }, today),
+    deadlines: deadlinesOf(
+      { snapshot, project, privacyNotice: facts.privacyNoticeState, asuDueDate: facts.asuDueDate },
+      today,
+    ),
+    caseItems:
+      facts.asuDueDate?.kind === "orientation"
+        ? [{ kind: "knowledge_date_missing", date: facts.asuDueDate.date }]
+        : [],
     flags: remainingFlags(lifecycleFlags(snapshot, project, today)),
     portal,
     reminder: facts.lastReminder

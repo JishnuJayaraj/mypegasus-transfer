@@ -153,6 +153,21 @@ export const participationProfilingQuery = (api: ApiClient, participationId: str
       ),
   });
 
+/**
+ * The tab "Arbeitsuche" (data-protection.md, the ASU record): codes, dates and instants; never the
+ * BA-Kundennummer.
+ */
+export const participationAsuQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "asu"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/asu", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 export const participationSelfServiceQuery = (api: ApiClient, participationId: string) =>
   queryOptions({
     queryKey: ["participations", participationId, "self-service"],

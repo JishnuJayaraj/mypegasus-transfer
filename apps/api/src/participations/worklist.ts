@@ -7,6 +7,7 @@ import {
   eq,
   inArray,
   participantChannel,
+  participantDetails,
   participantIdentity,
   participantReminder,
   participation,
@@ -17,6 +18,7 @@ import {
   type Database,
 } from "@transfer/db";
 import {
+  applicableAsuDueDate,
   mayListField,
   mayPerformOperation,
   mayRemind,
@@ -104,9 +106,13 @@ export async function loadWorklist(
           personnelNumber: participantIdentity.personnelNumber,
           lastName: participantIdentity.lastName,
           firstName: participantIdentity.firstName,
+          // The ASU due date's inputs (process-and-lifecycle.md, dates)
+          endDate: participantDetails.oldEmploymentEndDate,
+          knowledgeDate: participantDetails.knowledgeDate,
         })
         .from(participation)
         .leftJoin(participantIdentity, eq(participantIdentity.participationId, participation.id))
+        .leftJoin(participantDetails, eq(participantDetails.participationId, participation.id))
         .where(
           and(
             eq(participation.projectId, projectId),
@@ -149,8 +155,9 @@ export async function loadWorklist(
       );
       const worklistProject: WorklistProject = { id: projectId, type: found!.type, waves };
       const items: WorklistItem[] = [];
-      for (const { p, ...person } of rows) {
+      for (const { p, endDate, knowledgeDate, ...person } of rows) {
         const record = records.get(p.id)!;
+        const facts = guardFacts.get(p.id)!;
         const wave = waves.find((w) => w.id === p.entryWaveId) ?? null;
         const target = projectTarget(projectId, regionId, p.id);
         const { knows } = staffSelfServiceAccess(subject, {
@@ -176,6 +183,13 @@ export async function loadWorklist(
               },
               channels: channels.get(p.id) ?? [],
               lastReminder: reminders.get(p.id) ?? null,
+              asuDueDate: applicableAsuDueDate({
+                projectType: found!.type,
+                status: p.status,
+                registered: facts.asuRegisteredWithProof !== undefined,
+                endDate,
+                knowledgeDate,
+              }),
               appointments: {
                 bookings: bookings.get(p.id) ?? [],
                 notices: notices.get(p.id) ?? [],
@@ -197,7 +211,7 @@ export async function loadWorklist(
                 offerDeadline: p.offerDeadline,
                 tgEntryDate: p.tgEntryDate,
               },
-              facts: guardFacts.get(p.id)!,
+              facts,
             },
             worklistProject,
             today,

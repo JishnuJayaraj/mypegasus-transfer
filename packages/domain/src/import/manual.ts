@@ -10,9 +10,13 @@ import { ImportTarget, type ImportIssue, type ImportIssueCode } from "./targets"
 // Germany (the only one the MVP accepts), and warnings and a possible duplicate need the PL's
 // explicit word in the same request. Pure; codes only, never a value.
 
-/** The import's targets except the country, which is always Germany (round 32). */
+/**
+ * The import's targets except the country, which is always Germany (round 32), and the knowledge
+ * date, which the PL sets on the tab "Arbeitsuche" (`set_knowledge_date`, Q201).
+ */
 export const manualTargets = ImportTarget.options.filter(
-  (target): target is Exclude<ImportTarget, "addressCountry"> => target !== "addressCountry",
+  (target): target is Exclude<ImportTarget, "addressCountry" | "knowledgeDate"> =>
+    target !== "addressCountry" && target !== "knowledgeDate",
 );
 export type ManualTarget = (typeof manualTargets)[number];
 export type ManualValues = Partial<Record<ManualTarget, string>>;

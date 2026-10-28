@@ -5,7 +5,7 @@ import type { AccessCategory } from "../fields/catalog";
 /**
  * Document types (data-protection.md, documents; Q87 B; the first six are the ones completeness
  * rules name; `cv` from catalog version 2, Q142 *assumed*; `tl407_form` from version 3, Q179; the
- * signed TL 407's operations from version 4, Q184).
+ * signed TL 407's operations from version 4, Q184; the ASU proof's from version 5, Q186).
  */
 export const DocumentType = z.enum([
   "tl407_signed_scan",
@@ -107,13 +107,14 @@ const participantOwned = {
 } as const;
 
 /**
- * Version 4 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
+ * Version 5 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
  * version.
  * Version 2 adds `cv`, file names and the operations of the participant's own documents; version 3
- * the generated TL 407 (`tl407_form`, Q179); version 4 the signed TL 407's operations (Q183, Q184).
+ * the generated TL 407 (`tl407_form`, Q179); version 4 the signed TL 407's operations (Q183, Q184);
+ * version 5 the ASU proof's (Q186).
  */
 export const documentTypeCatalog = {
-  version: 4,
+  version: 5,
   types: [
     {
       // The signed paper (data-protection.md, signed scans; Q183, Q184): the assigned consultant
@@ -150,13 +151,22 @@ export const documentTypeCatalog = {
       ...undecided,
     })),
     {
+      // A BA confirmation of the registration (data-protection.md, the ASU record; Q186, the owner's
+      // choice in PR 6-4a): evidence like signed paper, so `signed` (normal mode only, never
+      // changed once reviewed). The assigned consultant and the PL add it (the PL can't open it),
+      // the assigned consultant reviews it; only the PL deletes it, before its review.
       type: "asu_proof",
       accessCategory: "identifiers",
       dataClass: "highly_confidential",
       retentionClass: "participation_record",
-      signed: false,
+      signed: true,
       roles: { consultant: "open", project_lead: "metadata_break_glass_open" },
-      ...undecided,
+      fileName: false,
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant"],
+        delete: ["project_lead"],
+      },
     },
     {
       type: "profiling_exception_evidence",

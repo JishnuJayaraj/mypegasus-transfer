@@ -186,6 +186,24 @@ export function HistoryTab({
         });
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");
+      // The ASU record (D19, D22): codes and dates, never the BA-Kundennummer or the knowledge date.
+      case "asu_route_set": {
+        const previous = text(details.previousChannel);
+        return arrow(
+          previous === null ? null : coded("asu.channels", previous),
+          coded("asu.channels", text(details.channel) ?? ""),
+        );
+      }
+      case "asu_registration_recorded": {
+        const source = text(details.attestationSource);
+        const registered = t("asu.registration.registeredOn", {
+          date: formatDate(text(details.registeredOn)),
+          channel: coded("asu.channels", text(details.channel) ?? ""),
+        });
+        return source ? `${registered}, ${coded("asu.sources", source)}` : registered;
+      }
+      case "knowledge_date_set":
+        return coded("history.knowledgeDateChanges", text(details.change) ?? "");
       default:
         return "";
     }

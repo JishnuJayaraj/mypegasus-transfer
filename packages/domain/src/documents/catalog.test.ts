@@ -21,7 +21,7 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(4);
+    expect(documentTypeCatalog.version).toBe(5);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
@@ -52,7 +52,8 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
 
   it("leaves the other types' operations undecided and keeps no file name (Q65)", () => {
     const others = documentTypeCatalog.types.filter(
-      (t) => !own.includes(t.type) && t.type !== "tl407_form" && t.type !== "tl407_signed_scan",
+      (t) =>
+        !own.includes(t.type) && !["tl407_form", "tl407_signed_scan", "asu_proof"].includes(t.type),
     );
     for (const entry of others) {
       expect([entry.type, entry.operations, entry.fileName]).toEqual([
@@ -90,6 +91,22 @@ describe("document-type catalog version 4 (Q183, Q184)", () => {
       operations: {
         add: ["consultant", "project_lead"],
         review: ["consultant", "project_lead"],
+        delete: ["project_lead"],
+      },
+    });
+  });
+});
+
+describe("document-type catalog version 5 (Q186)", () => {
+  it("gives the ASU proof its operations: added by the consultant and the PL, reviewed by the consultant, deleted by the PL", () => {
+    expect(documentTypeEntry("asu_proof")).toMatchObject({
+      signed: true,
+      fileName: false,
+      retentionClass: "participation_record",
+      roles: { consultant: "open", project_lead: "metadata_break_glass_open" },
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant"],
         delete: ["project_lead"],
       },
     });

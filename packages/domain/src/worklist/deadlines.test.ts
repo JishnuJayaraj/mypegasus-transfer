@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays } from "../dates";
+import { addDays, type AsuDueDate } from "../dates";
 import type { IsoDate } from "../iso-date";
 import { LifecycleFlag } from "../lifecycle/enums";
 import { lifecycleFlags, type ParticipationSnapshot } from "../lifecycle/planner";
@@ -25,7 +25,10 @@ const provided: PrivacyNoticeState = {
 const approved = { validOn: "2027-03-20", recordedAt: new Date("2027-03-20T09:00:00Z") };
 
 /** One participation whose only applicable deadline is `kind`, on its date. */
-const only: Record<DeadlineKind, { date: IsoDate; s: ParticipationSnapshot; notice?: IsoDate }> = {
+const only: Record<
+  DeadlineKind,
+  { date: IsoDate; s: ParticipationSnapshot; notice?: IsoDate; asu?: AsuDueDate }
+> = {
   offer_deadline: {
     date: "2027-03-15",
     // Signed nothing yet, but the TG start and cutoff are out of the way (no wave cutoff).
@@ -40,6 +43,14 @@ const only: Record<DeadlineKind, { date: IsoDate; s: ParticipationSnapshot; noti
       current: state("informed", "profiling_done", "dsv_signed"),
       wave: { ...wave, latestEntryDate: null },
     }),
+  },
+  asu_due: {
+    date: "2027-03-30",
+    s: snapshot({
+      current: state("contacted"),
+      wave: { ...wave, defaultTgStart: null, latestEntryDate: null },
+    }),
+    asu: { kind: "statutory", date: "2027-03-30", branch: "reference_date" },
   },
   latest_entry_cutoff: {
     date: "2027-04-30",
@@ -64,11 +75,12 @@ const notice = (dueOn: IsoDate | undefined): PrivacyNoticeState =>
   dueOn ? { state: "due", dueOn, providedAt: null } : provided;
 
 const at = (kind: DeadlineKind, daysBefore: number) => {
-  const { date, s, notice: dueOn } = only[kind];
+  const { date, s, notice: dueOn, asu } = only[kind];
   const facts = {
     snapshot: s,
     project: { ...project, waves: [s.wave ?? wave] },
     privacyNotice: notice(dueOn),
+    asuDueDate: asu ?? null,
   };
   return deadlinesOf(facts, addDays(date, -daysBefore));
 };
@@ -82,6 +94,19 @@ const facts = (s: ParticipationSnapshot) => ({
 const final = (days: number) => at("latest_entry_cutoff", days)[0]!.final;
 
 describe("deadlinesOf (process-and-lifecycle.md, deadline warnings)", () => {
+  it("lists an ASU orientation never as a deadline, so never overdue (D22)", () => {
+    const s = only.asu_due.s;
+    const orientation = { kind: "orientation" as const, date: "2027-03-30" };
+    for (const today of ["2027-03-20", "2027-05-01"]) {
+      expect(
+        deadlinesOf(
+          { snapshot: s, project, privacyNotice: provided, asuDueDate: orientation },
+          today,
+        ),
+      ).toEqual([]);
+    }
+  });
+
   it.each(Object.keys(only) as DeadlineKind[])(
     "%s: not listed at 15 days, upcoming at 14 and 0, overdue at -1",
     (kind) => {

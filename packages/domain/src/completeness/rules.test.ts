@@ -35,6 +35,15 @@ describe("validateRules (AC-22)", () => {
       { id: "dsv-1", kind: "documentPresent", documentType: "dsv_signed_scan", basis: "statutory" },
       { id: "dsv-2", kind: "documentPresent", documentType: "asu_proof", accepted: true },
     ],
+    asu_registration: [
+      {
+        id: "asu-1",
+        kind: "documentPresent",
+        documentType: "kug200b_signed_scan",
+        accepted: true,
+        when: { field: "asuChannel", equals: "kug_200b" },
+      },
+    ],
     profiling: [],
   };
 
@@ -57,6 +66,15 @@ describe("validateRules (AC-22)", () => {
     [
       "unknown condition field",
       { kind: "requiredIf", field: "iban", when: { field: "shoeSize", exists: true } },
+      "shoeSize",
+    ],
+    [
+      "unknown document condition field",
+      {
+        kind: "documentPresent",
+        documentType: "asu_proof",
+        when: { field: "shoeSize", exists: true },
+      },
       "shoeSize",
     ],
   ])("rejects an %s", (_, rule, key) => {

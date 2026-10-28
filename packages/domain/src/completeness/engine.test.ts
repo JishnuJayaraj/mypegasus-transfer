@@ -135,6 +135,38 @@ describe("documentPresent (AC-21)", () => {
   });
 });
 
+describe("documentPresent with when (regional-variation.md, rule language)", () => {
+  const onRoute = (when: object): CompletenessRule => ({
+    id: "r",
+    kind: "documentPresent",
+    documentType: "kug200b_signed_scan",
+    accepted: true,
+    when: { field: "asuChannel", ...when } as never,
+  });
+
+  it.each<[string, unknown, string[]]>([
+    ["the route the condition names", "kug_200b", ["missing"]],
+    ["another route", "online_self", []],
+    ["no route", null, []],
+  ])("equals: applies on %s", (_, asuChannel, expected) => {
+    expect(missing(onRoute({ equals: "kug_200b" }), { fields: { asuChannel } })).toEqual(expected);
+  });
+
+  it("exists: applies while the field is present", () => {
+    expect(missing(onRoute({ exists: true }), { fields: { asuChannel: "in_person" } })).toEqual([
+      "missing",
+    ]);
+    expect(missing(onRoute({ exists: true }), { fields: {} })).toEqual([]);
+  });
+
+  it("an accepted document satisfies it while it applies", () => {
+    const documents = { kug200b_signed_scan: ["accepted" as const] };
+    expect(
+      missing(onRoute({ equals: "kug_200b" }), { fields: { asuChannel: "kug_200b" }, documents }),
+    ).toEqual([]);
+  });
+});
+
 describe("evaluateCompleteness", () => {
   const rules: RulesByStep = {
     data_collection: [

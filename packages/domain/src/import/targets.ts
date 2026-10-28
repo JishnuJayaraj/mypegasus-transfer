@@ -10,6 +10,8 @@ export const ImportTarget = z.enum([
   "firstName",
   "birthDate",
   "oldEmploymentEndDate",
+  // optional: when the person learned of the end (the ASU due date, process-and-lifecycle.md)
+  "knowledgeDate",
   "addressStreet",
   "addressPostalCode",
   "addressCity",
@@ -30,6 +32,7 @@ export const ImportIssueCode = z.enum([
   "invalid_date",
   "date_has_time",
   "birth_date_in_future",
+  "knowledge_date_in_future",
   "end_before_birth",
   "too_long",
   "control_characters",
@@ -173,6 +176,7 @@ const headerSynonyms: Record<ImportTarget, readonly string[]> = {
     "Beschäftigungsende",
     "Ende Arbeitsverhältnis",
   ],
+  knowledgeDate: ["Kenntnisdatum", "Kenntnis der Beendigung"],
   addressStreet: [
     "Straße",
     "Strasse",

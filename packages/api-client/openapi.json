@@ -1683,6 +1683,7 @@
                     "firstName",
                     "birthDate",
                     "oldEmploymentEndDate",
+                    "knowledgeDate",
                     "addressStreet",
                     "addressPostalCode",
                     "addressCity",
@@ -1728,6 +1729,7 @@
                     "firstName",
                     "birthDate",
                     "oldEmploymentEndDate",
+                    "knowledgeDate",
                     "addressStreet",
                     "addressPostalCode",
                     "addressCity",
@@ -1756,6 +1758,7 @@
                 "firstName",
                 "birthDate",
                 "oldEmploymentEndDate",
+                "knowledgeDate",
                 "addressStreet",
                 "addressPostalCode",
                 "addressCity",
@@ -1842,6 +1845,7 @@
               "firstName",
               "birthDate",
               "oldEmploymentEndDate",
+              "knowledgeDate",
               "addressStreet",
               "addressPostalCode",
               "addressCity",
@@ -1861,6 +1865,7 @@
               "invalid_date",
               "date_has_time",
               "birth_date_in_future",
+              "knowledge_date_in_future",
               "end_before_birth",
               "too_long",
               "control_characters",
@@ -1985,6 +1990,7 @@
                     "firstName",
                     "birthDate",
                     "oldEmploymentEndDate",
+                    "knowledgeDate",
                     "addressStreet",
                     "addressPostalCode",
                     "addressCity",
@@ -2026,6 +2032,7 @@
                     "firstName",
                     "birthDate",
                     "oldEmploymentEndDate",
+                    "knowledgeDate",
                     "addressStreet",
                     "addressPostalCode",
                     "addressCity",
@@ -2127,6 +2134,7 @@
                     "firstName",
                     "birthDate",
                     "oldEmploymentEndDate",
+                    "knowledgeDate",
                     "addressStreet",
                     "addressPostalCode",
                     "addressCity",
@@ -2255,6 +2263,7 @@
                     "firstName",
                     "birthDate",
                     "oldEmploymentEndDate",
+                    "knowledgeDate",
                     "addressStreet",
                     "addressPostalCode",
                     "addressCity",
@@ -2955,6 +2964,9 @@
               },
               "viewProfiling": {
                 "type": "boolean"
+              },
+              "viewAsu": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -2967,7 +2979,8 @@
               "providePrivacyNotice",
               "setPlacementAgentur",
               "startAssistedMode",
-              "viewProfiling"
+              "viewProfiling",
+              "viewAsu"
             ],
             "additionalProperties": false
           },
@@ -3714,6 +3727,7 @@
         "enum": [
           "offer_deadline",
           "tg_start",
+          "asu_due",
           "latest_entry_cutoff",
           "privacy_notice",
           "profiling_exception"
@@ -3855,6 +3869,12 @@
               "$ref": "#/components/schemas/Deadline"
             }
           },
+          "caseItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorklistCaseItem"
+            }
+          },
           "flags": {
             "type": "array",
             "items": {
@@ -3950,6 +3970,7 @@
           "privacyNoticeState",
           "actions",
           "deadlines",
+          "caseItems",
           "flags",
           "portal",
           "reminder",
@@ -4011,6 +4032,30 @@
           "kind",
           "date",
           "state"
+        ],
+        "additionalProperties": false
+      },
+      "WorklistCaseItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "knowledge_date_missing"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "date"
         ],
         "additionalProperties": false
       },
@@ -5926,7 +5971,11 @@
           "form_generated",
           "document_quarantined",
           "document_quarantine_lifted",
-          "signed_declaration_recorded"
+          "signed_declaration_recorded",
+          "asu_route_set",
+          "asu_registration_recorded",
+          "asu_proof_linked",
+          "knowledge_date_set"
         ]
       },
       "HistoryActor": {
@@ -12542,6 +12591,542 @@
         "required": [
           "to",
           "statusVersion"
+        ],
+        "additionalProperties": false
+      },
+      "AsuView": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "applies": {
+            "type": "boolean"
+          },
+          "closed": {
+            "type": "boolean"
+          },
+          "route": {
+            "type": "object",
+            "properties": {
+              "channel": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "kug_200b",
+                  "online_self",
+                  "in_person",
+                  null
+                ]
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "defaultChannel": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "kug_200b",
+                  "online_self",
+                  "in_person",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "channel",
+              "version",
+              "defaultChannel"
+            ],
+            "additionalProperties": false
+          },
+          "knowledgeDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "oldEmploymentEndDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "dueDate": {
+            "$ref": "#/components/schemas/AsuDueDate"
+          },
+          "registration": {
+            "$ref": "#/components/schemas/AsuRegistration"
+          },
+          "proofDocuments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AsuProofDocument"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AsuMissingItem"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "setRoute": {
+                "type": "boolean"
+              },
+              "recordRegistration": {
+                "type": "boolean"
+              },
+              "attest": {
+                "type": "boolean"
+              },
+              "linkProof": {
+                "type": "boolean"
+              },
+              "setKnowledgeDate": {
+                "type": "boolean"
+              },
+              "addProof": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "setRoute",
+              "recordRegistration",
+              "attest",
+              "linkProof",
+              "setKnowledgeDate",
+              "addProof"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "participationId",
+          "applies",
+          "closed",
+          "route",
+          "registration",
+          "proofDocuments",
+          "missing",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "AsuDueDate": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "statutory"
+                ]
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "branch": {
+                "type": "string",
+                "enum": [
+                  "reference_date",
+                  "after_knowledge"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "date",
+              "branch"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "orientation"
+                ]
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "date"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "AsuRegistration": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "kug_200b",
+              "online_self",
+              "in_person"
+            ]
+          },
+          "registeredOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "proof": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "kind": {
+                "$ref": "#/components/schemas/AsuProofKind"
+              },
+              "attestationSource": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "ba_document_inspected",
+                  "ba_online_account_inspected",
+                  "ba_confirmed_by_phone",
+                  null
+                ]
+              },
+              "documentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "linkedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "kind",
+              "attestationSource",
+              "documentId",
+              "linkedAt"
+            ],
+            "additionalProperties": false
+          },
+          "withProofSince": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "registeredOn",
+          "recordedAt",
+          "proof",
+          "withProofSince"
+        ],
+        "additionalProperties": false
+      },
+      "AsuProofKind": {
+        "type": "string",
+        "enum": [
+          "kug200b_submission",
+          "ba_confirmation",
+          "ba_customer_number"
+        ]
+      },
+      "AsuProofDocument": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "review": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "unreviewed",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "reasonCode": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "unreadable",
+                  "wrong_document",
+                  "incomplete",
+                  null
+                ]
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "state",
+              "reasonCode",
+              "reviewedAt"
+            ],
+            "additionalProperties": false
+          },
+          "quarantine": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "reasonCode": {
+                "$ref": "#/components/schemas/QuarantineReason"
+              },
+              "quarantinedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "reasonCode",
+              "quarantinedAt"
+            ],
+            "additionalProperties": false
+          },
+          "linked": {
+            "type": "boolean"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/DocumentCapabilities"
+          }
+        },
+        "required": [
+          "documentId",
+          "addedAt",
+          "review",
+          "quarantine",
+          "linked",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "AsuMissingItem": {
+        "type": "object",
+        "properties": {
+          "ruleId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "field",
+              "document"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "not_accepted"
+            ]
+          }
+        },
+        "required": [
+          "ruleId",
+          "kind",
+          "key",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "AsuRouteInput": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "enum": [
+              "kug_200b",
+              "online_self",
+              "in_person"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "channel",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "AsuRegistrationInput": {
+        "type": "object",
+        "properties": {
+          "registeredOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "attestation": {
+            "type": "object",
+            "properties": {
+              "customerNumber": {
+                "type": "string",
+                "pattern": "^[0-9A-Za-z]{4,20}$",
+                "description": "Write-only; never returned"
+              },
+              "source": {
+                "$ref": "#/components/schemas/AttestationSource"
+              }
+            },
+            "required": [
+              "customerNumber",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "registeredOn"
+        ],
+        "additionalProperties": false
+      },
+      "AttestationSource": {
+        "type": "string",
+        "enum": [
+          "ba_document_inspected",
+          "ba_online_account_inspected",
+          "ba_confirmed_by_phone"
+        ]
+      },
+      "AsuProofLinkInput": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "registrationId",
+          "documentId"
+        ],
+        "additionalProperties": false
+      },
+      "KnowledgeDateInput": {
+        "type": "object",
+        "properties": {
+          "knowledgeDate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "previous": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "knowledgeDate",
+          "previous"
         ],
         "additionalProperties": false
       },
@@ -24127,6 +24712,481 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Profiling"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/asu": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The tab Arbeitsuche: the route, the knowledge and due date, the registration and its proof, the step's missing items (never the BA-Kundennummer)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The ASU record as the viewer may know it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/asu/route": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Set the ASU route (the PL or the assigned consultant) with the version read; fixed once a registration is recorded (422 asu_registered); 409 stale_revision",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsuRouteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/asu/registration": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record the registration on online_self or in_person: its actual date and, for the PL, the attestation (the BA-Kundennummer, write-only, with where it was verified); otherwise the BA confirmation is linked afterwards",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsuRegistrationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/asu/proof-link": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Link an accepted BA confirmation (asu_proof) as the registration's proof (the assigned consultant); the complete fact counts from the link",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsuProofLinkInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/knowledge-date": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Set, change or clear the knowledge date (the PL) against the date read (409 stale_value); audited without the date",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeDateInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
                 }
               }
             }

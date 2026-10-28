@@ -20,9 +20,9 @@ const subject = (key: string) => accessProfiles.find((p) => p.key === key)!.subj
 const target = sample;
 const own = ["cv", "participant_upload", "qualification_certificate"];
 
-describe("uploadableDocumentTypes (Q142, Q184)", () => {
-  it("are the participant's own types and the signed TL 407, those with decided operations", () => {
-    expect(uploadableDocumentTypes).toEqual(["tl407_signed_scan", ...own]);
+describe("uploadableDocumentTypes (Q142, Q184, Q186)", () => {
+  it("are the participant's own types, the signed TL 407 and the ASU proof, those with decided operations", () => {
+    expect(uploadableDocumentTypes).toEqual(["tl407_signed_scan", "asu_proof", ...own]);
   });
 });
 

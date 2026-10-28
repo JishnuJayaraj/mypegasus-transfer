@@ -181,6 +181,13 @@ export const auditProjection: {
   signed_declaration_recorded: shown("profiling", {
     details: ["formCode", "formVersion", "declarations"],
   }),
+  // The ASU record (D19, D22): codes and dates, never the BA-Kundennummer or the knowledge date.
+  asu_route_set: shown("case", { details: ["channel", "previousChannel"] }),
+  asu_registration_recorded: shown("case", {
+    details: ["channel", "registeredOn", "proofKind", "attestationSource"],
+  }),
+  asu_proof_linked: shown("case", { details: ["documentId"] }),
+  knowledge_date_set: shown("case", { details: ["change"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */
