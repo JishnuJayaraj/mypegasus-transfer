@@ -34,6 +34,7 @@ export function item(overrides: Partial<WorklistItem> = {}): WorklistItem {
       providePrivacyNotice: false,
       remind: { allowed: false, code: null, channel: null },
       invite: { allowed: false, channel: null },
+      generateKug200b: false,
     },
     ...overrides,
   };

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   isScanType,
+  Kug200bScanConfirmation,
+  Kug200bScanReview,
+  kug200bScanReviewProblems,
   profilingDoneOnProblem,
+  scanForms,
   ScanReview,
   scanReviewProblems,
   scanUploadProblems,
@@ -135,5 +139,61 @@ describe("tl407SignedOn and profilingDoneOn (Q191)", () => {
       "effective_date_before_signature",
     );
     expect(profilingDoneOnProblem("2026-10-28", signedOn, today)).toBe("effective_date_in_future");
+  });
+});
+
+describe("kug200bScanReviewProblems (Q184, Q185)", () => {
+  const kug = (overrides: Partial<Kug200bScanReview> = {}): Kug200bScanReview => ({
+    signedOn: "2026-10-21",
+    confirmations: ["declarations_ticked", "mandatory_completed", "signature_present"],
+    ...overrides,
+  });
+  const knownKug = (version: string) => version === "09-2021";
+
+  it("is a scan type of the Kug 200b", () => {
+    expect(isScanType("kug200b_signed_scan")).toBe(true);
+    expect(scanForms.kug200b_signed_scan).toBe("kug200b");
+  });
+
+  it("accepts with all three confirmations, signed on or after the generation, not in the future", () => {
+    expect(kug200bScanReviewProblems(kug(), generated, today, knownKug)).toEqual([]);
+    expect(kug200bScanReviewProblems(kug({ signedOn: today }), generated, today, knownKug)).toEqual(
+      [],
+    );
+    expect(
+      codes(kug200bScanReviewProblems(kug({ signedOn: "2026-10-28" }), generated, today, knownKug)),
+    ).toEqual(["signedOn:signature_in_future"]);
+    expect(
+      codes(kug200bScanReviewProblems(kug({ signedOn: "2026-10-19" }), generated, today, knownKug)),
+    ).toEqual(["signedOn:signature_before_generation"]);
+  });
+
+  it("refuses without every confirmation: 16 and 17 ticked, mandatory completed, signed", () => {
+    for (const missing of Kug200bScanConfirmation.options) {
+      const confirmations = Kug200bScanConfirmation.options.filter((code) => code !== missing);
+      expect(
+        codes(kug200bScanReviewProblems(kug({ confirmations }), generated, today, knownKug)),
+      ).toEqual(["confirmations:confirmation_required"]);
+    }
+    expect(
+      Kug200bScanReview.safeParse(
+        kug({ confirmations: ["signature_present", "signature_present"] }),
+      ).success,
+    ).toBe(false);
+  });
+
+  it("names a known version exactly for external paper", () => {
+    expect(codes(kug200bScanReviewProblems(kug(), external, today, knownKug))).toEqual([
+      "formVersion:form_version_required",
+    ]);
+    expect(
+      kug200bScanReviewProblems(kug({ formVersion: "09-2021" }), external, today, knownKug),
+    ).toEqual([]);
+    expect(
+      codes(kug200bScanReviewProblems(kug({ formVersion: "01-2019" }), external, today, knownKug)),
+    ).toEqual(["formVersion:form_version_unknown"]);
+    expect(
+      codes(kug200bScanReviewProblems(kug({ formVersion: "09-2021" }), generated, today, knownKug)),
+    ).toEqual(["formVersion:form_version_not_allowed"]);
   });
 });

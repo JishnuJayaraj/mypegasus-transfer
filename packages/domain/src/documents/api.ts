@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DocumentType, documentTypeCatalog } from "./catalog";
 import { DocumentMediaType } from "./files";
-import { ScanOrigin, ScanReview } from "./scans";
+import { Kug200bScanReview, ScanOrigin, ScanReview } from "./scans";
 import {
   DocumentDeleteReason,
   DocumentReviewReason,
@@ -107,25 +107,31 @@ export type DocumentOpening = z.infer<typeof DocumentOpening>;
 
 /**
  * Accept, or reject with a reason code; once and final (process-and-lifecycle.md). Accepting a
- * signed scan takes its record (`scan`: dates, confirmations, version, declarations); nothing
- * else does.
+ * signed TL 407 takes its record (`scan`: dates, confirmations, version, declarations), a signed
+ * Kug 200b its own (`kug200bScan`: the field-19 date, the confirmations of 16, 17, the mandatory
+ * information and the signature, version); nothing else does.
  */
 export const DocumentReviewInput = z
   .strictObject({
     decision: z.enum(["accepted", "rejected"]),
     reasonCode: DocumentReviewReason.optional(),
     scan: ScanReview.optional(),
+    kug200bScan: Kug200bScanReview.optional(),
   })
   .refine(({ decision, reasonCode }) => (decision === "rejected") === (reasonCode !== undefined), {
     message: "A rejection needs a reason code, an acceptance none",
     params: { code: "reason_code_mismatch" },
     path: ["reasonCode"],
   })
-  .refine(({ decision, scan }) => decision === "accepted" || scan === undefined, {
-    message: "A rejection records no scan",
-    params: { code: "scan_not_allowed" },
-    path: ["scan"],
-  })
+  .refine(
+    ({ decision, scan, kug200bScan }) =>
+      decision === "accepted" || (scan === undefined && kug200bScan === undefined),
+    {
+      message: "A rejection records no scan",
+      params: { code: "scan_not_allowed" },
+      path: ["scan"],
+    },
+  )
   .meta({ id: "DocumentReviewInput" });
 export type DocumentReviewInput = z.infer<typeof DocumentReviewInput>;
 

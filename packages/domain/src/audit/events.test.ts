@@ -126,6 +126,10 @@ describe("audit event types (ADR-0002)", () => {
       "asu_registration_recorded",
       "asu_proof_linked",
       "knowledge_date_set",
+      "kug200b_offer_declined",
+      "declaration_withdrawal_recorded",
+      "declaration_withdrawal_ba_notified",
+      "export_downloaded",
     ]);
   });
 
@@ -219,6 +223,11 @@ describe("audit event types (ADR-0002)", () => {
       "asu_registration_recorded",
       "asu_proof_linked",
       "knowledge_date_set",
+      "kug200b_offer_declined",
+      "declaration_withdrawal_recorded",
+      "declaration_withdrawal_ba_notified",
+      "export_created",
+      "export_downloaded",
     ]);
   });
 
@@ -468,7 +477,23 @@ describe("the other event types", () => {
     ],
     ["document_opened", { details: { documentType: "dsv_signed_scan", documentId: otherId } }],
     ["warning_confirmed", { reasonCode: "implausible_date", details: {} }],
-    ["export_created", { participationId: null, reasonCode: "monthly_report", details: {} }],
+    [
+      "export_created",
+      { participationId: null, details: { exportKind: "kug200b_print", count: 35 } },
+    ],
+    [
+      "export_downloaded",
+      { participationId: null, details: { exportKind: "kug200b_print", count: 35 } },
+    ],
+    ["kug200b_offer_declined", { details: { declinedOn: "2026-11-02" } }],
+    [
+      "declaration_withdrawal_recorded",
+      { details: { withdrawalId: otherId, consentId: otherId, receivedOn: "2026-11-02" } },
+    ],
+    [
+      "declaration_withdrawal_ba_notified",
+      { details: { withdrawalId: otherId, notifiedOn: "2026-11-03" } },
+    ],
     [
       "config_override_changed",
       {

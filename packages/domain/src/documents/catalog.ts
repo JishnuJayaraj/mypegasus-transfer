@@ -5,7 +5,8 @@ import type { AccessCategory } from "../fields/catalog";
 /**
  * Document types (data-protection.md, documents; Q87 B; the first six are the ones completeness
  * rules name; `cv` from catalog version 2, Q142 *assumed*; `tl407_form` from version 3, Q179; the
- * signed TL 407's operations from version 4, Q184; the ASU proof's from version 5, Q186).
+ * signed TL 407's operations from version 4, Q184; the ASU proof's from version 5, Q186; the
+ * generated Kug 200b and the signed Kug 200b's operations from version 6, Q179, Q184).
  */
 export const DocumentType = z.enum([
   "tl407_signed_scan",
@@ -18,6 +19,7 @@ export const DocumentType = z.enum([
   "participant_upload",
   "qualification_certificate",
   "tl407_form",
+  "kug200b_form",
 ]);
 export type DocumentType = z.infer<typeof DocumentType>;
 
@@ -112,14 +114,15 @@ const participantOwned = {
 } as const;
 
 /**
- * Version 5 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
+ * Version 6 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
  * version.
  * Version 2 adds `cv`, file names and the operations of the participant's own documents; version 3
  * the generated TL 407 (`tl407_form`, Q179); version 4 the signed TL 407's operations (Q183, Q184);
- * version 5 the ASU proof's (Q186).
+ * version 5 the ASU proof's (Q186); version 6 the generated Kug 200b (`kug200b_form`, Q179) and the
+ * signed Kug 200b's operations (Q184).
  */
 export const documentTypeCatalog = {
-  version: 5,
+  version: 6,
   types: [
     {
       // The signed paper (data-protection.md, signed scans; Q183, Q184): the assigned consultant
@@ -138,13 +141,21 @@ export const documentTypeCatalog = {
       },
     },
     {
+      // The signed paper (data-protection.md, signed scans; Q184, Q185): as the TL 407, the
+      // assigned consultant and the PL add and review it in normal mode; only the PL deletes it,
+      // before its review. Back office never opens it (Q49).
       type: "kug200b_signed_scan",
       accessCategory: "signed_kug200b",
       dataClass: "highly_confidential",
       retentionClass: "evidence_set",
       signed: true,
       roles: profilerAndPl,
-      ...undecided,
+      fileName: false,
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant", "project_lead"],
+        delete: ["project_lead"],
+      },
     },
     ...(["dsv_signed_scan", "dsv_cancellation"] as const).map((type) => ({
       type,
@@ -200,6 +211,20 @@ export const documentTypeCatalog = {
       type: "tl407_form",
       accessCategory: "signed_tl407",
       dataClass: "special_category",
+      retentionClass: "form_working_copy",
+      signed: false,
+      roles: profilerAndPl,
+      fileName: false,
+      operations: "generated",
+    },
+    {
+      // The unsigned Kug 200b (data-protection.md, generated forms; Q179): the signed type's
+      // access category and class; the PL or the assigned consultant generates it (the PL also
+      // 1–100 at once), it opens only through the logged opening or a print file's export link,
+      // and its file expires like the TL 407's.
+      type: "kug200b_form",
+      accessCategory: "signed_kug200b",
+      dataClass: "highly_confidential",
       retentionClass: "form_working_copy",
       signed: false,
       roles: profilerAndPl,

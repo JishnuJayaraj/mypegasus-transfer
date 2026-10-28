@@ -36,6 +36,7 @@ export const documentCorrectionAuthority: Readonly<
   // A working copy is no evidence: it isn't corrected, it expires (data-protection.md, generated
   // forms).
   tl407_form: [],
+  kug200b_form: [],
 };
 
 /** Evidence-set fields and their requesters (round 13); no other field is corrected this way. */

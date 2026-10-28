@@ -21,7 +21,7 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(5);
+    expect(documentTypeCatalog.version).toBe(6);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
@@ -53,7 +53,14 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
   it("leaves the other types' operations undecided and keeps no file name (Q65)", () => {
     const others = documentTypeCatalog.types.filter(
       (t) =>
-        !own.includes(t.type) && !["tl407_form", "tl407_signed_scan", "asu_proof"].includes(t.type),
+        !own.includes(t.type) &&
+        ![
+          "tl407_form",
+          "tl407_signed_scan",
+          "asu_proof",
+          "kug200b_form",
+          "kug200b_signed_scan",
+        ].includes(t.type),
     );
     for (const entry of others) {
       expect([entry.type, entry.operations, entry.fileName]).toEqual([
@@ -110,5 +117,28 @@ describe("document-type catalog version 5 (Q186)", () => {
         delete: ["project_lead"],
       },
     });
+  });
+});
+
+describe("document-type catalog version 6 (Q179, Q184)", () => {
+  it("adds the generated Kug 200b: the signed type's category, class and roles, its own retention", () => {
+    const form = documentTypeEntry("kug200b_form");
+    const signed = documentTypeEntry("kug200b_signed_scan");
+    expect(form).toMatchObject({
+      accessCategory: signed.accessCategory,
+      dataClass: signed.dataClass,
+      roles: signed.roles,
+      retentionClass: "form_working_copy",
+      signed: false,
+      fileName: false,
+      operations: "generated",
+    });
+  });
+
+  it("gives the signed Kug 200b the signed TL 407's operations (Q184)", () => {
+    expect(documentTypeEntry("kug200b_signed_scan").operations).toEqual(
+      documentTypeEntry("tl407_signed_scan").operations,
+    );
+    expect("back_office" in documentTypeEntry("kug200b_signed_scan").roles).toBe(false);
   });
 });

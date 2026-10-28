@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { DocumentCapabilities } from "../documents/api";
+import { ScanOrigin } from "../documents/scans";
 import { DocumentReviewReason, DocumentReviewState, QuarantineReason } from "../documents/state";
+import { FormVersion } from "../forms/field-map";
+import { Kug200bChecklistItem } from "../forms/api";
 import { isoDate } from "../iso-date";
 import { AsuChannel } from "../projects/agentur-settings";
 import { AsuProofKind, AttestationSource, BaCustomerNumber, directAsuChannels } from "./model";
@@ -78,6 +81,78 @@ export const AsuMissingItem = z
   })
   .meta({ id: "AsuMissingItem" });
 
+/** A generated Kug 200b as the tab lists it: metadata and its checklist (Q179, Q197 (8)). */
+export const Kug200bGeneratedForm = z
+  .strictObject({
+    documentId: z.uuid(),
+    formVersion: FormVersion,
+    generatedAt: instant,
+    /** The latest generation; an earlier one is superseded. */
+    latest: z.boolean(),
+    /** Its version is still in use today; else "Neu erzeugen" (ba-forms.md, versions). */
+    versionInUse: z.boolean(),
+    checklist: z.array(Kug200bChecklistItem),
+    capabilities: z.strictObject({ open: z.boolean() }),
+  })
+  .meta({ id: "Kug200bGeneratedForm" });
+
+/** A signed Kug 200b scan: metadata only, the file through the logged opening. */
+export const Kug200bScanView = z
+  .strictObject({
+    documentId: z.uuid(),
+    origin: ScanOrigin,
+    generationDocumentId: z.uuid().nullable(),
+    formVersion: FormVersion.nullable(),
+    addedAt: instant,
+    review: z.strictObject({
+      state: DocumentReviewState,
+      reasonCode: DocumentReviewReason.nullable(),
+      reviewedAt: instant.nullable(),
+    }),
+    /** The date written in field 19, once accepted. */
+    signedOn: isoDate.nullable(),
+    quarantine: z.strictObject({ reasonCode: QuarantineReason, quarantinedAt: instant }).nullable(),
+    capabilities: DocumentCapabilities,
+  })
+  .meta({ id: "Kug200bScan" });
+
+/**
+ * The Kug 200b offer on the tab (process-and-lifecycle.md, the Kug 200b offer; Q185): its date and
+ * outcome, declaration 17 as written ("Erklärung zum Profilzugriff") and the withdrawals with their
+ * BA notice. The forms and scans only for the readers of the Kug 200b types (back office reads
+ * the summary).
+ */
+export const Kug200bOfferView = z
+  .strictObject({
+    offeredOn: isoDate.nullable(),
+    outcome: z.enum(["signed", "declined"]).nullable(),
+    declinedOn: isoDate.nullable(),
+    /** Declaration 17 while its record is in force: the date written on the paper. */
+    profileAccess: z.strictObject({ consentId: z.uuid(), givenOn: isoDate }).nullable(),
+    withdrawals: z.array(
+      z.strictObject({
+        id: z.uuid(),
+        receivedOn: isoDate,
+        recordedAt: instant,
+        /** "BA informiert am"; the platform never claims BA access was disabled. */
+        baNotifiedOn: isoDate.nullable(),
+      }),
+    ),
+    forms: z.array(Kug200bGeneratedForm).optional(),
+    scans: z.array(Kug200bScanView).optional(),
+    /** Every registry version, expired ones included (external paper keeps its own). */
+    versions: z.array(FormVersion).optional(),
+    capabilities: z.strictObject({
+      generate: z.boolean(),
+      addScan: z.boolean(),
+      decline: z.boolean(),
+      recordWithdrawal: z.boolean(),
+      recordBaNotice: z.boolean(),
+    }),
+  })
+  .meta({ id: "Kug200bOffer" });
+export type Kug200bOfferView = z.infer<typeof Kug200bOfferView>;
+
 export const AsuView = z
   .strictObject({
     participationId: z.uuid(),
@@ -104,6 +179,7 @@ export const AsuView = z
     proofDocuments: z.array(AsuProofDocumentView).optional(),
     /** The step `asu_registration` of the resolved rules (the Kug 200b ones on its route only). */
     missing: z.array(AsuMissingItem),
+    kug200b: Kug200bOfferView,
     capabilities: z.strictObject({
       setRoute: z.boolean(),
       recordRegistration: z.boolean(),
@@ -154,3 +230,18 @@ export const KnowledgeDateInput = z
 /** A registration is recorded directly on these routes only. */
 export const isDirectAsuChannel = (channel: z.infer<typeof AsuChannel> | null) =>
   (directAsuChannels as readonly string[]).includes(channel ?? "");
+
+/** `POST …/asu/kug200b-decline`: the date the participant declined. */
+export const Kug200bDeclineInput = z
+  .strictObject({ declinedOn: isoDate })
+  .meta({ id: "Kug200bDeclineInput" });
+
+/** `POST …/asu/withdrawal`: the declaration's record it ends, and the date it was received. */
+export const Kug200bWithdrawalInput = z
+  .strictObject({ consentId: z.uuid(), receivedOn: isoDate })
+  .meta({ id: "Kug200bWithdrawalInput" });
+
+/** `POST …/asu/withdrawal-ba-notice`: "BA informiert am" for one withdrawal. */
+export const Kug200bBaNoticeInput = z
+  .strictObject({ withdrawalId: z.uuid(), notifiedOn: isoDate })
+  .meta({ id: "Kug200bBaNoticeInput" });
