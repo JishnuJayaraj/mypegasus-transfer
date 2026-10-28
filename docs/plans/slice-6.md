@@ -16,7 +16,8 @@ readings as Q199 (accepted in the review of PR #90); 6-3b (the signed TL 407) re
 as Q200 (accepted with amendments in the review of PR #91). 6-4 is estimated at about 5,000 lines
 and splits into 6-4a (the ASU record) and 6-4b (the Kug 200b) (the owner's choice, 2026-10-28,
 with the ASU proof's operations); 6-4a recorded its readings as Q201 (accepted with amendments in
-the review of PR #95). Q1 stays `verify`. This is not an external DPO, legal, works-council or
+the review of PR #95); 6-4b stays one PR (the owner's choice, 2026-10-28) and records its readings
+as Q202. Q1 stays `verify`. This is not an external DPO, legal, works-council or
 Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
@@ -521,7 +522,8 @@ Each PR that changes the document-type catalog takes its next version when it me
 | `signed_declaration` | 6-3b (+6-4b) | the scan, form code and version, the declaration codes and values as marked, the signature date, recorded by/at; immutable | confidential / `confidential` | `participation_record` (part of the signed form's evidence) |
 | `participant_identifier_data` | 6-4a | adds the BA-Kundennummer's ciphertext and presence | highly confidential / `identifiers` | `participation_record` (Q88) |
 | `participant_details` | 6-4a | adds `knowledge_date` | confidential / `confidential` | `personnel_file` |
-| `asu_registration` | 6-4a (+6-4b, 6-5a, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; the offer's decline, `confirmed_on`, the withdrawal's BA notice date | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
+| `asu_registration` | 6-4a (+6-5a, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; `confirmed_on` | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
+| `kug200b_decline`, `kug200b_withdrawal` | 6-4b | the offer's decline date; a withdrawal's receipt, the consent record it ended and its BA notice date (own tables: an offer exists without a route or registration, Q202) | internal / `case_internal` (`kug200bOffer`) | `participation_record` |
 | `kug200b_batch` | 6-5a | project, Agentur key, channel, artifact (`kug200a` or `accepted_alternative`), status (`open`, `submitted`, `discarded`), created by/at, `submitted_on`, submitted by/at | internal / project data | `project_master` |
 | `agentur_submission` | 6-5a, 6-5b | participation, document, form code and version, Agentur key, channel, batch, `submitted_on`, recorded by/at, `original_sent_on`, rejection (date, reason); one row per attempt | internal / `case_internal` (`agenturSubmissions`) | `participation_record` (proof of submission) |
 | `export_link` | 6-4b | a link's token SHA-256, the export (kind and the ids it covers), the session's kind and hash, `expires_at` (60 s); no privilege for `transfer_app` | internal | `access_credential` |

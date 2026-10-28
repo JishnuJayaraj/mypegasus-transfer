@@ -101,6 +101,26 @@ function kug200bRefused(
   throw refusal.error;
 }
 
+const kug200bResponses = (schema: typeof Kug200bGeneration | typeof Kug200bBulkGeneration) => ({
+  201: json(schema, "Generated: the document(s), the version and the handwriting checklist"),
+  ...problemResponses(
+    "validation-error",
+    "unauthenticated",
+    "forbidden",
+    "not-found",
+    "conflict",
+    "domain-error",
+    "service-unavailable",
+  ),
+});
+
+const kug200bRefusals = [
+  "Refusals:",
+  "- `422` with form-level error codes (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …), `participation_closed`, `asu_not_applicable` (a `ta_only` project); in a bulk at `/participationIds/<index>`.",
+  "- `409 source_changed`: a source moved between the read and the record; generate again.",
+  "- `503 storage_unavailable`.",
+].join("\n");
+
 export function formRoutes(deps: Deps) {
   const { db, clock, logger } = deps;
   const router = createRouter();
@@ -249,25 +269,6 @@ export function formRoutes(deps: Deps) {
       return c.json(outcome.generation, 201);
     },
   );
-
-  const kug200bResponses = (schema: typeof Kug200bGeneration | typeof Kug200bBulkGeneration) => ({
-    201: json(schema, "Generated: the document(s), the version and the handwriting checklist"),
-    ...problemResponses(
-      "validation-error",
-      "unauthenticated",
-      "forbidden",
-      "not-found",
-      "conflict",
-      "domain-error",
-      "service-unavailable",
-    ),
-  });
-  const kug200bRefusals = [
-    "Refusals:",
-    "- `422` with form-level error codes (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …), `participation_closed`, `asu_not_applicable` (a `ta_only` project); in a bulk at `/participationIds/<index>`.",
-    "- `409 source_changed`: a source moved between the read and the record; generate again.",
-    "- `503 storage_unavailable`.",
-  ].join("\n");
 
   router.openapi(
     createRoute({

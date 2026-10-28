@@ -92,7 +92,7 @@ export function Kug200bSection(props: {
         </div>
       )}
       {generated && (
-        <div role="status" className="tp-fieldset" data-testid="kug200b-checklist">
+        <div aria-live="polite" className="tp-fieldset" data-testid="kug200b-checklist">
           <ChecklistText checklist={generated} />
         </div>
       )}

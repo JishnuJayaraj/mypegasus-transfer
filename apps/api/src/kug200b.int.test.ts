@@ -303,22 +303,23 @@ describe("the bulk generation and its print file (data-protection.md, exports)",
   });
 });
 
-describe("the signed Kug 200b's review (Q184, Q185)", () => {
-  async function scanOf(id: string, generationDocumentId: string | null, as: string = consultant) {
-    const res = await request("POST", `/participations/${id}/documents`, as, {
-      type: "kug200b_signed_scan",
-      fileName: "scan.pdf",
-      content: scanPdf.toString("base64"),
-      ...(generationDocumentId
-        ? { origin: "generated", generationDocumentId }
-        : { origin: "external_paper" }),
-    });
-    expect(res.status).toBe(201);
-    return (await readJson(res, DocumentView)).id;
-  }
-  const review = (id: string, documentId: string, body: object, as: string = consultant) =>
-    request("POST", `/participations/${id}/documents/${documentId}/review`, as, body);
+async function scanOf(id: string, generationDocumentId: string | null, as: string = consultant) {
+  const res = await request("POST", `/participations/${id}/documents`, as, {
+    type: "kug200b_signed_scan",
+    fileName: "scan.pdf",
+    content: scanPdf.toString("base64"),
+    ...(generationDocumentId
+      ? { origin: "generated", generationDocumentId }
+      : { origin: "external_paper" }),
+  });
+  expect(res.status).toBe(201);
+  return (await readJson(res, DocumentView)).id;
+}
 
+const review = (id: string, documentId: string, body: object, as: string = consultant) =>
+  request("POST", `/participations/${id}/documents/${documentId}/review`, as, body);
+
+describe("the signed Kug 200b's review (Q184, Q185)", () => {
   it("is refused without 16, 17, the mandatory information and the signature confirmed", async () => {
     const id = await participant();
     const scan = await scanOf(id, (await generated(id)).documentId);
@@ -431,14 +432,15 @@ describe("the signed Kug 200b's review (Q184, Q185)", () => {
   });
 });
 
-describe("the offer's decline and the work list (process-and-lifecycle.md, the Kug 200b offer)", () => {
-  const decline = (id: string, declinedOn: string, as: string = projectLead) =>
-    request("POST", `/participations/${id}/asu/kug200b-decline`, as, { declinedOn });
-  const caseItems = async (id: string) =>
-    (
-      await readJson(await request("GET", `/projects/${werkNord}/worklist`, projectLead), Worklist)
-    ).items.find((row) => row.id === id)!;
+const decline = (id: string, declinedOn: string, as: string = projectLead) =>
+  request("POST", `/participations/${id}/asu/kug200b-decline`, as, { declinedOn });
 
+const caseItems = async (id: string) =>
+  (
+    await readJson(await request("GET", `/projects/${werkNord}/worklist`, projectLead), Worklist)
+  ).items.find((row) => row.id === id)!;
+
+describe("the offer's decline and the work list (process-and-lifecycle.md, the Kug 200b offer)", () => {
   it("shows an open offer on another route until it is declined; a declined offer is never missing", async () => {
     const id = await participant();
     await generated(id);

@@ -274,10 +274,10 @@ describe("record_form_generation for the Kug 200b (Q179, Q197)", () => {
   });
 });
 
-describe("lock_bulk_form_generation (Q179)", () => {
-  const lock = (context: string, projectId: string, participationIds: string[]) =>
-    call(app, "lock_bulk_form_generation", { context, projectId, participationIds });
+const lock = (context: string, projectId: string, participationIds: string[]) =>
+  call(app, "lock_bulk_form_generation", { context, projectId, participationIds });
 
+describe("lock_bulk_form_generation (Q179)", () => {
   it("is the PL's, takes the exclusive project lock, and the generations go all or nothing", async () => {
     const ids = [await participation(), await participation()];
     await app.query("begin");
@@ -507,10 +507,10 @@ describe("review_document for the signed Kug 200b (Q184, Q185)", () => {
   });
 });
 
-describe("decline_kug200b_offer (process-and-lifecycle.md, the Kug 200b offer)", () => {
-  const decline = (id: string, declinedOn: string, context = pl) =>
-    call(app, "decline_kug200b_offer", { context, participationId: id, declinedOn });
+const decline = (id: string, declinedOn: string, context = pl) =>
+  call(app, "decline_kug200b_offer", { context, participationId: id, declinedOn });
 
+describe("decline_kug200b_offer (process-and-lifecycle.md, the Kug 200b offer)", () => {
   it("records the decline once, by the PL or the assigned consultant, audited by its date", async () => {
     const id = await participation();
     const on = await today();
@@ -574,31 +574,32 @@ describe("decline_kug200b_offer (process-and-lifecycle.md, the Kug 200b offer)",
   });
 });
 
-describe("a withdrawal and its BA notice (Q185)", () => {
-  const withdraw = async (id: string, receivedOn: string, context = pl) => {
-    const consentId = (
-      await one(
-        `select id from consent_record where participation_id = $1
-           and purpose = 'kug200b_profile_access' and ended_at is null`,
-        [id],
-      )
-    )?.id;
-    return call<string>(app, "record_declaration_withdrawal", {
-      context,
-      participationId: id,
-      id: randomUUID(),
-      consentId: consentId ?? randomUUID(),
-      receivedOn,
-    });
-  };
-  const notice = (id: string, withdrawalId: string, notifiedOn: string, context = pl) =>
-    call(app, "record_withdrawal_ba_notice", {
-      context,
-      participationId: id,
-      withdrawalId,
-      notifiedOn,
-    });
+const withdraw = async (id: string, receivedOn: string, context = pl) => {
+  const consentId = (
+    await one(
+      `select id from consent_record where participation_id = $1
+         and purpose = 'kug200b_profile_access' and ended_at is null`,
+      [id],
+    )
+  )?.id;
+  return call<string>(app, "record_declaration_withdrawal", {
+    context,
+    participationId: id,
+    id: randomUUID(),
+    consentId: consentId ?? randomUUID(),
+    receivedOn,
+  });
+};
 
+const notice = (id: string, withdrawalId: string, notifiedOn: string, context = pl) =>
+  call(app, "record_withdrawal_ba_notice", {
+    context,
+    participationId: id,
+    withdrawalId,
+    notifiedOn,
+  });
+
+describe("a withdrawal and its BA notice (Q185)", () => {
   it("ends the record revoked, keeps the registration intact and closes with the BA notice", async () => {
     const id = await participation();
     await call(app, "set_asu_route", {
@@ -688,42 +689,45 @@ describe("a withdrawal and its BA notice (Q185)", () => {
   });
 });
 
-describe("the export link (data-protection.md, exports)", () => {
-  async function session(staffUserId: string) {
-    const tokenHash = hex();
-    await call(app, "start_staff_session", {
-      staffUserId,
-      tokenHash,
-      method: "dev",
-      oidcIssuer: null,
-      oidcSubject: null,
-      supersededTokenHash: null,
-      requestId: "req-login",
-    });
-    return tokenHash;
-  }
-  const create = (context: string, documentIds: string[], sessionHash: string, linkHash = hex()) =>
-    call<string>(app, "create_export_link", {
-      context,
-      kind: "kug200b_print",
-      documentIds,
-      sessionHash,
-      linkHash,
-    });
-  const content = async (context: string, linkHash: string, sessionHash: string) =>
-    (
-      await app.query(
-        `select document_id, document_type::text from export_link_content(
-           p_context => $1::audit_context, p_link_hash => $2, p_session_hash => $3)`,
-        [context, linkHash, sessionHash],
-      )
-    ).rows;
-  const exportEvents = () =>
-    all(
-      `select event_type::text as type, participation_id, details from audit_event
-       where event_type::text in ('export_created', 'export_downloaded') order by seq`,
-    );
+async function session(staffUserId: string) {
+  const tokenHash = hex();
+  await call(app, "start_staff_session", {
+    staffUserId,
+    tokenHash,
+    method: "dev",
+    oidcIssuer: null,
+    oidcSubject: null,
+    supersededTokenHash: null,
+    requestId: "req-login",
+  });
+  return tokenHash;
+}
 
+const create = (context: string, documentIds: string[], sessionHash: string, linkHash = hex()) =>
+  call<string>(app, "create_export_link", {
+    context,
+    kind: "kug200b_print",
+    documentIds,
+    sessionHash,
+    linkHash,
+  });
+
+const content = async (context: string, linkHash: string, sessionHash: string) =>
+  (
+    await app.query(
+      `select document_id, document_type::text from export_link_content(
+         p_context => $1::audit_context, p_link_hash => $2, p_session_hash => $3)`,
+      [context, linkHash, sessionHash],
+    )
+  ).rows;
+
+const exportEvents = () =>
+  all(
+    `select event_type::text as type, participation_id, details from audit_event
+     where event_type::text in ('export_created', 'export_downloaded') order by seq`,
+  );
+
+describe("the export link (data-protection.md, exports)", () => {
   it("is created for the asking session, re-authorized at the download, audited, no file", async () => {
     const forms = [await generate(await participation()), await generate(await participation())];
     const hash = await session(projectLead);

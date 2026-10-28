@@ -142,14 +142,15 @@ describe("tl407SignedOn and profilingDoneOn (Q191)", () => {
   });
 });
 
-describe("kug200bScanReviewProblems (Q184, Q185)", () => {
-  const kug = (overrides: Partial<Kug200bScanReview> = {}): Kug200bScanReview => ({
-    signedOn: "2026-10-21",
-    confirmations: ["declarations_ticked", "mandatory_completed", "signature_present"],
-    ...overrides,
-  });
-  const knownKug = (version: string) => version === "09-2021";
+const kug = (overrides: Partial<Kug200bScanReview> = {}): Kug200bScanReview => ({
+  signedOn: "2026-10-21",
+  confirmations: ["declarations_ticked", "mandatory_completed", "signature_present"],
+  ...overrides,
+});
 
+const knownKug = (version: string) => version === "09-2021";
+
+describe("kug200bScanReviewProblems (Q184, Q185)", () => {
   it("is a scan type of the Kug 200b", () => {
     expect(isScanType("kug200b_signed_scan")).toBe(true);
     expect(scanForms.kug200b_signed_scan).toBe("kug200b");

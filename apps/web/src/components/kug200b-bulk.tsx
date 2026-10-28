@@ -98,7 +98,7 @@ export function BulkKug200b({
         />
       )}
       {result && (
-        <section className="tp-fieldset" role="status" data-testid="kug200b-bulk-result">
+        <section className="tp-fieldset" aria-live="polite" data-testid="kug200b-bulk-result">
           <Stack gap={3}>
             <p>{t("worklist.kug200b.done", { count: result.generations.length })}</p>
             {open.length === 0 ? (

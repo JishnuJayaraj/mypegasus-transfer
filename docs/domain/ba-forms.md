@@ -218,3 +218,22 @@ declarations and quarantine; the track in process-and-lifecycle.md, the profilin
   the earliest `profilingDoneOn` (Q191).
 - **Wrong paper:** "Löschen" by the PL before the review; "Unter Quarantäne stellen" and
   "Quarantäne aufheben" (Q183); approved corrections follow with 6-8.
+
+## The Kug 200b as built (Slice 6, PR 6-4b)
+
+The storage, access and retention rules are in data-protection.md (generated forms, the signed
+Kug 200b, declaration 17, exports); the offer and withdrawals in process-and-lifecycle.md, the
+Kug 200b offer.
+
+- **The check** (`checkKug200b`): the version in use on the Berlin date, `validateFormInput` over
+  `kug200bInput`; an error (`character_unsupported`, `identifier_too_long`, …) refuses the
+  generation (the external-paper path stays, Q197). A Kug 200b has no plausibility warnings.
+- **The handwriting and clarification checklist** (Q197 (8)): every applicable `*` field left
+  blank (`required_blank`, e.g. "11 Rentenversicherungsnummer" when it isn't recorded) and every
+  text too long for its box at the 7 pt floor (`text_not_fitting`), left blank for handwriting
+  rather than cut; by key and label, never a value. The generation answers it and stores it with
+  the form; the tab and the work list show it before printing.
+- **The print file:** the generated forms of a bulk generation are merged at the download of an
+  export link (`kug200b_print`), never stored as one file.
+- **The review** checks the completed paper: 16 and 17 ticked, the mandatory information
+  completed (also what the checklist named), signed, and the date in field 19 (Q185).

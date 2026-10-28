@@ -486,6 +486,42 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
   file; else the live BA confirmations', an accepted but unlinked one still awaiting its link. The
   Kug 200b rules apply on the route `kug_200b` only (`asuChannel`, the rule `when`).
 
+#### The Kug 200b offer *(accepted, Q179, Q184, Q185; as built in Slice 6, PR 6-4b; readings Q202)*
+
+`ta_tg` only (Q89). The offer is separate from the ASU proof; neither its outcome nor a withdrawal
+touches a registration.
+
+- **Offered** once a Kug 200b was generated (the PL or the assigned consultant on the tab
+  "Arbeitsuche", the PL also for 1–100 participations from the work list, all or nothing) or a
+  signed external paper was received. Generation prints fields 1–12; 13–19, the declarations 16
+  and 17 and the signature are the participant's hand. Before printing, a **handwriting and
+  clarification checklist** names every blank `*` field (`required_blank`) and every text too
+  long for its box (`text_not_fitting`), stored with the generation (ba-forms.md, Kug 200b as
+  built).
+- **Outcome `signed`:** an accepted, usable signed scan (generated or external paper). The review
+  needs the date written in field 19 (not after today; for a generated scan not before its
+  generation) and three confirmations made on the actual paper: **16 and 17 ticked, the mandatory
+  information completed, signed**; nothing is preselected. It records the signed declarations 16
+  and 17 and declaration 17 as written as one consent record (purpose `kug200b_profile_access`,
+  source `paper_form`, given on the field-19 date, the scan; data-protection.md, signed
+  declarations). A later accepted paper supersedes the earlier record (`consent_ended`,
+  `superseded`), so one is in force.
+- **Outcome `declined`:** recorded with its date by the PL or the assigned consultant, once, while
+  nothing is signed and the route isn't `kug_200b` (`asu_route_kug200b`: the route changes first,
+  so a declined offer is never a missing scan). A later signed paper still makes the outcome
+  `signed`.
+- **A withdrawal** of declaration 17 that reaches the TG in writing is recorded by the same roles
+  with the date received (not after today, not before the date on the paper), also after the
+  participation's end: the record ends `revoked` (`consent_ended`), and the item
+  `kug200b_withdrawal_ba_notice` stays open until "BA informiert am" is recorded (not before the
+  receipt). The platform records that the BA was told, never that its access was disabled; what a
+  withdrawal effects stays with the DPO/legal check (Q185 `verify`).
+- **Work-list items** (`caseItems`, beside the deadlines): `kug200b_offer_open` with the offer's
+  date while an open participation's offer has no outcome and its route isn't `kug_200b` (there the
+  step's rule `base-kug200b-signed-scan` names the missing scan); never a guard.
+  `kug200b_withdrawal_ba_notice` with the earliest unnotified withdrawal's date of receipt, also
+  after the end. Filters and counts follow with 6-5b.
+
 ### TG entry guard (`informed → active_in_tg`)
 
 A system job checks this **on** the participant's TG start date. Each condition must have

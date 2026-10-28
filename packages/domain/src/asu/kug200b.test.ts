@@ -84,6 +84,13 @@ describe("the offer's dates", () => {
   });
 });
 
+const input = (values: FormInput["values"]): FormInput => ({
+  formCode: "kug200b",
+  projectType: "ta_tg",
+  values,
+  tables: {},
+});
+
 describe("checkKug200b (Q197 (8))", () => {
   const box = { width: 40, height: 14 };
   const map = FieldMap.parse({
@@ -126,12 +133,6 @@ describe("checkKug200b (Q197 (8))", () => {
         identifier: { maxLength: 12 },
       },
     ],
-  });
-  const input = (values: FormInput["values"]): FormInput => ({
-    formCode: "kug200b",
-    projectType: "ta_tg",
-    values,
-    tables: {},
   });
 
   it("lists every blank `*` field and every text that doesn't fit, by key and label", () => {
