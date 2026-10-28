@@ -4,8 +4,26 @@ import { loadEnv, requireEnv } from "../env";
 import { runMigrations } from "../migrate";
 import { seed, seedProjectIds, seedStaffUserIds } from "../seed";
 
-/** Integration tests use transfer_test, Playwright uses transfer_e2e. */
-export type TestDatabase = "transfer_test" | "transfer_e2e";
+/**
+ * Integration tests run on their Vitest worker's clone of the template transfer_test
+ * (`transfer_test_<n>`), Playwright on transfer_e2e (ADR-0003, testing).
+ */
+export type TestDatabase = "transfer_test" | "transfer_e2e" | `transfer_test_${number}`;
+
+/** Migrated once per run by the global setup, then cloned for each worker; no test uses it. */
+export const templateDatabase = "transfer_test";
+
+/** The worker clones' names; the global setup drops what an earlier run left behind. */
+export const workerDatabasePattern = /^transfer_test_[0-9]+$/;
+
+/** The clone of the Vitest worker running this file (`VITEST_POOL_ID`, 1 to maxWorkers). */
+export function workerDatabase(): TestDatabase {
+  const pool = Number(process.env.VITEST_POOL_ID);
+  if (!Number.isInteger(pool) || pool < 1) {
+    throw new Error("No Vitest worker (VITEST_POOL_ID): name the test database explicitly");
+  }
+  return `${templateDatabase}_${pool}`;
+}
 
 function pointAt(name: string, database: TestDatabase): string {
   const url = new URL(requireEnv(name));
@@ -13,8 +31,11 @@ function pointAt(name: string, database: TestDatabase): string {
   return url.toString();
 }
 
-/** The dev URLs pointed at a test database, so tests can never touch the dev database. */
-export function testDatabaseUrls(database: TestDatabase = "transfer_test") {
+/**
+ * The dev URLs pointed at a test database, by default the worker's clone, so tests can never
+ * touch the dev database.
+ */
+export function testDatabaseUrls(database: TestDatabase = workerDatabase()) {
   loadEnv();
   return {
     app: pointAt("DATABASE_URL", database),
@@ -27,7 +48,7 @@ export function testDatabaseUrls(database: TestDatabase = "transfer_test") {
  * optionally seeds the synthetic data.
  */
 export async function recreateTestDatabase(
-  database: TestDatabase = "transfer_test",
+  database: TestDatabase,
   options: { seed?: boolean } = {},
 ): Promise<void> {
   const { owner } = testDatabaseUrls(database);
@@ -62,7 +83,7 @@ export async function activateAsOwner(
 }
 
 /**
- * Empties all tables of transfer_test (as owner) before a test; optionally seeds, and with
+ * Empties all tables of the worker's test database (as owner) before a test; optionally seeds, and with
  * `active` makes the seeded Werk Nord and Verwaltung active (the draft gate, process-and-lifecycle.md).
  */
 export async function resetTestDatabase(

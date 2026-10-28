@@ -654,8 +654,9 @@ a file name, a form's content or a token.
 - Zod: an enum with `.meta({ id })` that is also used `.nullable()` makes the OpenAPI component
   nullable everywhere (keep a separate nullable schema); a `.default()` in an input schema becomes
   required in the client body (no defaults in inputs).
-- `pnpm verify` takes about 15 minutes; DB tests run from the repo root, never in parallel with it
-  (they share `transfer_test`); `pnpm generate` after API schema and form-registry changes;
+- `pnpm verify:changed` while working, `pnpm verify` before a push; DB tests run from the repo
+  root, never two runs at once (each run recreates the template `transfer_test` and its worker
+  clones, ADR-0003); `pnpm generate` after API schema and form-registry changes;
   `pnpm format` before committing.
 
 ## User flows

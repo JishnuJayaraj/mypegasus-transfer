@@ -1,12 +1,12 @@
 import { defineConfig } from "vitest/config";
+import { maxWorkers } from "./vitest.workers.ts";
 
 export default defineConfig({
   test: {
     projects: ["packages/*/vitest.config.ts", "apps/*/vitest.config.ts"],
-    // Integration tests share one database (transfer_test), migrated from scratch once per run
-    // and truncated before each test. The projects that use it run one file at a time, each in
-    // its own sequence group (ADR-0003, testing).
-    globalSetup: ["packages/db/src/testing/global-setup.ts"],
+    // The integration projects (db, api) set up their databases themselves: one clone of the
+    // migrated template per worker, so their files run in parallel too (ADR-0003, testing).
+    maxWorkers,
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**", "apps/*/src/**"],

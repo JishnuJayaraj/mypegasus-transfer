@@ -886,8 +886,9 @@ the 0072 hardening); process-and-lifecycle.md (Arbeitsuchendmeldung, dates) and 
 
 Roles and grants:
 - **Two roles, the same names on the cluster** (`packages/db/sql/setup.sql`; CloudNativePG manages
-  them there). `transfer_owner` owns the databases and tables and runs migrations and seeds.
-  `transfer_app` is the runtime role: `CONNECT`, `USAGE` on `public` and only the per-table grants
+  them there). `transfer_owner` owns the databases and tables and runs migrations and seeds; in
+  dev, CI and Compose only it also has `CREATEDB`, for the per-worker test databases (ADR-0003,
+  testing). `transfer_app` is the runtime role: `CONNECT`, `USAGE` on `public` and only the per-table grants
   the hand-written migrations give it (`0001_grants.sql` onwards). No default privileges; no
   `UPDATE`/`DELETE` unless a feature needs it.
 - On every table added in Slice 2 `transfer_app` has `SELECT` only; the functions write. The one

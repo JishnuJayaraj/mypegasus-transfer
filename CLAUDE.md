@@ -178,6 +178,8 @@ pnpm lint             # oxlint + oxfmt --check + tsconfig guard + template immut
 pnpm format           # oxfmt write
 pnpm typecheck        # tsc -b
 pnpm verify           # what CI runs minus e2e and image: typecheck, lint, test:coverage, drift
+pnpm verify:changed   # while working: typecheck, lint, tests related to changes vs origin/main;
+                      # never instead of verify, build and test:e2e before a push
 pnpm db:setup         # dev/CI only: roles + transfer, transfer_test, transfer_e2e databases
 pnpm db:generate      # drizzle-kit: SQL migration from the schema
 pnpm db:migrate       # app migrations, then pg-boss's schema and its grants

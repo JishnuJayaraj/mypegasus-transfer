@@ -158,14 +158,61 @@ allow one only with a reason (`pnpm.onlyBuiltDependencies`).
   `vitest.config.ts` (the domain rule folders, `dates.ts`, `project.ts`, `packages/config/src`); a
   new domain-rule path joins the list in its PR. CI's Node 24 leg runs `test:coverage` and
   enforces them.
-- **Database tests:** `transfer_test` is emptied (`drop owned by transfer_owner`) and migrated
-  once per run (Vitest global setup). The integration projects (`db`, `api`) run serially, one
-  file at a time, and truncate every table before each test except `lifecycle_edge` (reference
-  data from the migrations); a new table joins the truncate list in
-  `packages/db/src/testing/index.ts`. Playwright recreates `transfer_e2e` with the base seed.
+- **Database tests:** one database per Vitest worker (amendment 2026-10-28 below). The template
+  `transfer_test` is emptied (`drop owned by transfer_owner`) and migrated once per run; each
+  worker's files run on its clone `transfer_test_<VITEST_POOL_ID>`, so the integration projects
+  (`db`, `api`) run their files in parallel. Tests truncate every table of their clone before each
+  test except `lifecycle_edge` (reference data from the migrations); a new table joins the
+  truncate list in `packages/db/src/testing/index.ts`. Playwright recreates `transfer_e2e` with the
+  base seed.
 - **Test fixtures:** the base seed (`packages/db/src/seed.ts`), used by integration tests and
   Playwright, pins no template, so tests make projects active as the owner (`activateAsOwner`).
   Rows written directly as the owner are only for test states the functions refuse.
 - **e2e** fails on any axe violation of impact serious or critical (and on any CSP violation, see
   PR 0d). The portal's `locales.test.ts` checks that `de` and `en` have identical key sets and that
   every key the code uses exists.
+
+## Amendment 2026-10-28: one database per test worker
+
+`pnpm verify` took about 20 minutes in a 4-core cloud session, the Vitest run 941 s (on main at
+a3279d9: the `db` project 351 s, `api` 457 s, one file at a time on the shared `transfer_test`).
+Approved by the owner as a test-infrastructure change, without a slice plan.
+
+- **Template and clones.** The Vitest global setup (`packages/db/src/testing/global-setup.ts`,
+  declared by the `db` and `api` projects and run once per process) empties and migrates the
+  template `transfer_test` (app migrations, pg-boss's schema and its grants), then creates
+  `transfer_test_1` to `transfer_test_<maxWorkers>` with `CREATE DATABASE … TEMPLATE
+  transfer_test`. Objects, ownership and grants inside come with the copy; `CONNECT` for
+  `transfer_app` is granted on each clone as `setup.sql` does. `testDatabaseUrls()` and
+  `resetTestDatabase()` default to the clone of the running worker (`VITEST_POOL_ID`); no test
+  uses the template. Outside Vitest (Playwright) the database is named explicitly
+  (`transfer_e2e`, unchanged).
+- **Cleanup.** At the start of a run the setup drops every `transfer_test_<n>` that
+  `transfer_owner` owns, so the clones of a crashed or interrupted run are never reused and never
+  block the next one. Two runs at the same time on one server are not supported, as before.
+- **Roles.** `transfer_owner` has `CREATEDB` in dev, CI and Compose (`setup.sql`, re-applied by
+  `pnpm db:setup`; a missing grant fails the setup with that hint). It owns the clones and drops
+  them without further rights. The cluster's roles are unchanged (ADR-0002).
+- **Throwaway durability.** Each clone runs with `synchronous_commit = off` (a database setting):
+  commits don't wait for the WAL flush, which the per-test truncate makes expensive. What a test
+  observes is the same; only a server crash could lose the last commits of a clone.
+- **Worker count.** Every project and the root share `maxWorkers` from `vitest.workers.ts`
+  (Vitest requires one value across projects that run together): 1.5 × the available cores, since
+  the integration tests wait on PostgreSQL much of the time. The run's projects are no longer
+  ordered by `sequence.groupOrder`; `fileParallelism` is the default again.
+- **Unchanged.** The overlap check of `sequential-queries.ts` (ADR-0002), the truncate before each
+  test, the coverage thresholds and the timing budgets (soft by default, `PERF_BUDGET=strict`).
+  A test file still runs alone on its database, so files only meet through what lies outside it
+  (roles, files on disk, ports); none needed a change.
+- **Two tiers.** `pnpm verify:changed` (`scripts/verify-changed.mjs`) is the fast check while
+  working: typecheck, lint and Vitest without coverage on the tests related to the changes against
+  `origin/main` (`--changed`), and the full `db` and `api` projects when a migration, `setup.sql`,
+  the Drizzle schema, the db testing helpers or a Vitest config changed. `pnpm verify`, `pnpm build`
+  and `pnpm test:e2e` stay the gate before a push (agent-workflow.md). Every domain module is
+  exported through the `@transfer/domain` barrel, so a change to one reaches most api tests too
+  (198 of 255 files for `dates.ts`); a test, a UI component or an adapter stays small.
+- **Measured** on the same 4-core cloud session (Node 22.22.0, PostgreSQL 16), `pnpm
+  test:coverage`, wall clock: 941 s before, 349 s after (2.7x; 6 workers). The `db` project went
+  from 351 s to 134 s and `api` from 457 s to 140 s (first to last file). About 250 ms of each
+  integration test is the truncate of ~170 relations; it stays, since a `DELETE` would meet the
+  append-only triggers.
