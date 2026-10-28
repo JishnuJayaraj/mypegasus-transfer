@@ -103,6 +103,39 @@ async function acceptedProof(id: string) {
   return documentId;
 }
 
+/** The step's missing rule ids on the tab. */
+const asu = (tab: AsuView) => tab.missing.map((m) => m.ruleId);
+
+/** The end of the old employment, as the import writes it. */
+async function withEnd(id: string, endDate: string) {
+  await call(owner.$client, "write_participant_data", {
+    participationId: id,
+    context: pl,
+    oldEmploymentEndDate: endDate,
+  });
+}
+
+const setKnowledge = (
+  id: string,
+  knowledgeDate: string | null,
+  previous: string | null,
+  as: string = projectLead,
+) => request("PUT", `/participations/${id}/knowledge-date`, as, { knowledgeDate, previous });
+
+/** The participation's row of Werk Nord's work list, as the PL sees it. */
+async function row(id: string) {
+  const res = await request("GET", `/projects/${werkNord}/worklist`, projectLead);
+  return (await readJson(res, Worklist)).items.find((item) => item.id === id)!;
+}
+
+/** Whether the detail opens the tab for the viewer. */
+const detail = async (participationId: string, as: string) =>
+  (
+    (await (await request("GET", `/participations/${participationId}`, as)).json()) as {
+      capabilities: { viewAsu: boolean };
+    }
+  ).capabilities.viewAsu;
+
 /** The facts the guards read, as the status service reads them. */
 const factsOf = (id: string) =>
   db.transaction((tx) => dbGuardFacts.facts(tx, { participationId: id, currentRequest: null }));
@@ -163,10 +196,9 @@ describe("GET /participations/{id}/asu (the tab Arbeitsuche)", () => {
   });
 });
 
-describe("the route and the Kug 200b rules (D19, D21)", () => {
+describe("the route and the Kug 200b rules (process-and-lifecycle.md, Arbeitsuchendmeldung; regional-variation.md, the base rules)", () => {
   it("applies the rules with when only on kug_200b, the RV item only for whom may know it", async () => {
     const id = await participation();
-    const asu = (tab: AsuView) => tab.missing.map((m) => m.ruleId);
     expect(asu(await view(id))).toEqual(["base-asu-proof"]);
     expect((await route(id, "kug_200b", 0)).status).toBe(200);
     expect(asu(await view(id, consultant))).toEqual([
@@ -185,7 +217,7 @@ describe("the route and the Kug 200b rules (D19, D21)", () => {
   });
 });
 
-describe("POST …/asu/registration (D19; Q184, Q186)", () => {
+describe("POST …/asu/registration (process-and-lifecycle.md, Arbeitsuchendmeldung; Q184, Q186)", () => {
   it("records the PL's attestation with its date and source; the number never leaves", async () => {
     const id = await participation();
     await route(id, "online_self", 0);
@@ -217,7 +249,7 @@ describe("POST …/asu/registration (D19; Q184, Q186)", () => {
     expect(tab.capabilities).toMatchObject({ setRoute: false, recordRegistration: false });
     const again = await expectProblem(await register(id, { registeredOn }), 422, "domain-error");
     expect(again.errors?.[0]).toMatchObject({ code: "asu_registered" });
-    // Never returned, logged, in an error or in an audit detail (D19).
+    // Never returned, logged, in an error or in an audit detail (process-and-lifecycle.md, Arbeitsuchendmeldung).
     expect(answered.join("\n")).not.toContain(number);
     expect(JSON.stringify(logs)).not.toContain(number);
     const audit = await owner.$client.query("select details::text from audit_event");
@@ -246,7 +278,7 @@ describe("POST …/asu/registration (D19; Q184, Q186)", () => {
   });
 });
 
-describe("the BA confirmation and its link (D19; Q201)", () => {
+describe("the BA confirmation and its link (process-and-lifecycle.md, Arbeitsuchendmeldung; Q201)", () => {
   it("is linked by the consultant; the PL sees metadata only and can't open it", async () => {
     const id = await participation();
     await route(id, "online_self", 0);
@@ -291,7 +323,7 @@ describe("the BA confirmation and its link (D19; Q201)", () => {
     expect(tab.registration!.withProofSince).toBe(tab.registration!.proof!.linkedAt);
   });
 
-  it("an old proof linked today gives a fact recorded today, not before (D33)", async () => {
+  it("an old proof linked today gives a fact recorded today, not before (the snapshot rule)", async () => {
     const id = await participation();
     await route(id, "online_self", 0);
     const registeredOn = addDays(await today(), -10);
@@ -328,7 +360,7 @@ describe("the BA confirmation and its link (D19; Q201)", () => {
     expect(failed(entry(new Date()))).not.toContain("asu_registered_with_proof");
   });
 
-  it("the online_self route proven by the attestation passes the guard on the TG start (D33)", async () => {
+  it("the online_self route proven by the attestation passes the guard on the TG start (the snapshot rule)", async () => {
     const id = await participation();
     await route(id, "online_self", 0);
     const registeredOn = addDays(await today(), -3);
@@ -384,25 +416,7 @@ describe("the BA confirmation and its link (D19; Q201)", () => {
   });
 });
 
-describe("the knowledge date and the due date (D22)", () => {
-  async function withEnd(id: string, endDate: string) {
-    await call(owner.$client, "write_participant_data", {
-      participationId: id,
-      context: pl,
-      oldEmploymentEndDate: endDate,
-    });
-  }
-  const setKnowledge = (
-    id: string,
-    knowledgeDate: string | null,
-    previous: string | null,
-    as: string = projectLead,
-  ) => request("PUT", `/participations/${id}/knowledge-date`, as, { knowledgeDate, previous });
-  const row = async (id: string) => {
-    const res = await request("GET", `/projects/${werkNord}/worklist`, projectLead);
-    return (await readJson(res, Worklist)).items.find((item) => item.id === id)!;
-  };
-
+describe("the knowledge date and the due date (process-and-lifecycle.md, dates)", () => {
   it("without a knowledge date gives the orientation item, never an overdue deadline", async () => {
     const id = await participation();
     const end = addMonths(await today(), 2); // the reference date lies in the past
@@ -464,12 +478,6 @@ describe("the knowledge date and the due date (D22)", () => {
 describe("the detail's capability", () => {
   it("opens the tab in ta_tg for the case readers only", async () => {
     const id = await participation();
-    const detail = async (participationId: string, as: string) =>
-      (
-        (await (await request("GET", `/participations/${participationId}`, as)).json()) as {
-          capabilities: { viewAsu: boolean };
-        }
-      ).capabilities.viewAsu;
     expect(await detail(id, projectLead)).toBe(true);
     expect(await detail(id, backOffice)).toBe(true);
     expect(await detail(await participation(verwaltung), projectLead)).toBe(false);

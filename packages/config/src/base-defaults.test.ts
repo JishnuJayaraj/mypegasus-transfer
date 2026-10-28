@@ -143,13 +143,15 @@ describe("base-defaults.json (regional-variation.md, base defaults)", () => {
     expect(JSON.stringify(layer.rules)).not.toMatch(/unemploymentPeriod|jobboerseChoice/);
   });
 
-  it("applies the Kug 200b rules only on the route kug_200b (round 14)", () => {
-    const asu = (asuChannel: unknown, documents = {}) =>
-      evaluateCompleteness(layer.rules ?? {}, {
-        projectType: "ta_tg",
-        fields: { asuChannel },
-        documents,
-      }).byStep.asu_registration.missing.map((item) => item.ruleId);
+  /** The missing items of `asu_registration` on a route. */
+  const asu = (asuChannel: unknown, documents = {}) =>
+    evaluateCompleteness(layer.rules ?? {}, {
+      projectType: "ta_tg",
+      fields: { asuChannel },
+      documents,
+    }).byStep.asu_registration.missing.map((item) => item.ruleId);
+
+  it("applies the Kug 200b rules only on the route kug_200b (regional-variation.md, the base rules)", () => {
     expect(asu("kug_200b")).toEqual([
       "base-asu-proof",
       "base-kug200b-rv-nummer",

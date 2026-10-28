@@ -105,7 +105,7 @@ export const fieldCatalog: readonly FieldEntry[] = [
   ...fields(["firstName", "lastName", "personnelNumber"], C, "confidential", false, customer),
   field("birthDate", C, "confidential", false, record),
   ...fields(["workEmail", "oldEmploymentEndDate"], C, "confidential", false, personnelFile),
-  // When the person learned of the end (the ASU due date, D22): the individual's fact, imported or
+  // When the person learned of the end (process-and-lifecycle.md, dates): the individual's fact, imported or
   // set by the PL, never inherited from a wave or project
   field("knowledgeDate", C, "confidential", false, personnelFile),
   ...fields(["address", "phone", "mobile", "privateEmail"], C, "confidential", true, personnelFile),

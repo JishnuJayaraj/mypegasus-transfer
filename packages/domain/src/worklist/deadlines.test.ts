@@ -94,7 +94,7 @@ const facts = (s: ParticipationSnapshot) => ({
 const final = (days: number) => at("latest_entry_cutoff", days)[0]!.final;
 
 describe("deadlinesOf (process-and-lifecycle.md, deadline warnings)", () => {
-  it("lists an ASU orientation never as a deadline, so never overdue (D22)", () => {
+  it("lists an ASU orientation never as a deadline, so never overdue (process-and-lifecycle.md, dates)", () => {
     const s = only.asu_due.s;
     const orientation = { kind: "orientation" as const, date: "2027-03-30" };
     for (const today of ["2027-03-20", "2027-05-01"]) {

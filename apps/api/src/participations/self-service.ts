@@ -59,7 +59,7 @@ export type SelfServiceRecord = {
   participantMaintained: ContactField[];
   /** The wizard's input: the participation's chain and its facts. */
   wizard: WizardInput;
-  /** The placement Agentur's resolved ASU `defaultChannel`, preselected on the route (D19). */
+  /** The placement Agentur's resolved ASU `defaultChannel`, preselected on the route (process-and-lifecycle.md, Arbeitsuchendmeldung). */
   asuDefaultChannel: AsuChannel | null;
   /** The compiled validators of the chain's confidential custom fields. */
   customValidators: ReadonlyMap<string, z.ZodType>;
@@ -290,7 +290,7 @@ function recordOf(
         // The ASU route the Kug 200b rules apply on (regional-variation.md, rule `when`).
         asuChannel: asu.channel,
       },
-      // The ASU proof's state comes from the record: a registration with proof, any route (D21).
+      // The ASU proof's state comes from the record: a registration with proof, any route (regional-variation.md, the base rules).
       documents: {
         ...documents,
         asu_proof: asuProofState(asu.fact !== null, documents.asu_proof ?? []),

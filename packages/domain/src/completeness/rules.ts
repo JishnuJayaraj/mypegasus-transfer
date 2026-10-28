@@ -113,9 +113,9 @@ export function validateRules(
       if (rule.kind !== "documentPresent" && !knownField(rule.field)) {
         issues.push({ code: "unknown_field", path: at("field"), key: rule.field });
       }
-      const condition = rule.kind === "required" ? undefined : rule.when;
-      if (condition && !knownField(condition.field)) {
-        issues.push({ code: "unknown_field", path: at("when", "field"), key: condition.field });
+      const when = rule.kind === "required" ? undefined : rule.when;
+      if (when && !knownField(when.field)) {
+        issues.push({ code: "unknown_field", path: at("when", "field"), key: when.field });
       }
       if (ids.has(rule.id)) issues.push({ code: "duplicate_id", path: at("id"), key: rule.id });
       ids.add(rule.id);

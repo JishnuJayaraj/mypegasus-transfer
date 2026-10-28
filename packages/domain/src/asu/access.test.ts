@@ -59,9 +59,7 @@ describe("the ASU record's permissions (data-protection.md, the ASU record; Q201
     ["the knowledge date", maySetKnowledgeDate, [pl]],
   ] as const)("%s", (_, may, allowed) => {
     for (const actor of [pl, consultant, unassigned, backOffice, admin, participant]) {
-      expect(may(actor, target).ok, JSON.stringify(actor)).toBe(
-        (allowed as readonly unknown[]).includes(actor),
-      );
+      expect(may(actor, target).ok).toBe((allowed as readonly unknown[]).includes(actor));
     }
   });
 });

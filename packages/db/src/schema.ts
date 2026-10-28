@@ -1961,7 +1961,7 @@ export const signedDeclaration = pgTable(
 );
 
 /**
- * The ASU route of a participation (process-and-lifecycle.md, Arbeitsuchendmeldung; D19): set by
+ * The ASU route of a participation (process-and-lifecycle.md, Arbeitsuchendmeldung): set by
  * the PL or the assigned consultant, changeable until a registration is recorded; `version` is the
  * token a change names. Codes only, `case_internal` (`asuChannel`). Written only by `set_asu_route`.
  */
@@ -1987,7 +1987,7 @@ export const asuRecord = pgTable(
 );
 
 /**
- * A participation's ASU registration (D19; Q186): the route it was made on, the actual date, who
+ * A participation's ASU registration (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route it was made on, the actual date, who
  * recorded it and when, and its proof once linked: the PL's attestation (its source; the number
  * itself is encrypted on `participant_identifier_data`) with the registration, or an accepted
  * `asu_proof` document linked by the assigned consultant. Never edited: a proof is added once, and

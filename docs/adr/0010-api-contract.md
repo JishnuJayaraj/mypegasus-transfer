@@ -431,6 +431,35 @@ generator then. No action now.
 - Order: schema (400) → visibility (404, also for an unassigned consultant) → permission (403:
   back office and the org roles have no tab; the PL writes none of the profiler's data) → state.
 
+## Note 2026-10-28 (Slice 6, PR 6-4a): the tab "Arbeitsuche"
+
+- `GET /participations/{id}/asu` (`AsuView`, `no-store`, one read-only `REPEATABLE READ`
+  snapshot): `applies` (`ta_tg`), `closed`, `route` (`channel`, `version`, the placement Agentur's
+  `defaultChannel`), for readers of the knowledge date `knowledgeDate`, `oldEmploymentEndDate` and
+  `dueDate` (`{ kind: "statutory", date, branch } | { kind: "orientation", date }` while it
+  applies), `registration` (`channel`, `registeredOn`, `recordedAt`, `proof` with `kind`,
+  `attestationSource`, `documentId`, `linkedAt`; `withProofSince`, the fact's instant or null),
+  `proofDocuments` (metadata and `DocumentCapabilities`, `linked`), `missing` (the
+  `asu_registration` step's items, field keys only where the viewer may know them) and
+  `capabilities` (`setRoute`, `recordRegistration`, `attest`, `linkProof`, `setKnowledgeDate`,
+  `addProof`). Never the BA-Kundennummer. `ParticipationDetail.capabilities.viewAsu` says whether
+  the tab exists.
+- Writes, each answering the `AsuView`: `PUT …/asu/route` (`AsuRouteInput` `{ channel, version }`,
+  `409 stale_revision`), `POST …/asu/registration` (`AsuRegistrationInput` `{ registeredOn,
+  attestation?: { customerNumber, source } }`; the number is write-only and never echoed, also not
+  by a `400`), `POST …/asu/proof-link` (`AsuProofLinkInput` `{ registrationId, documentId }`),
+  `PUT /participations/{id}/knowledge-date` (`KnowledgeDateInput` `{ knowledgeDate, previous }`,
+  `409 stale_value`). `422` codes: `registered_on_in_future` (`/registeredOn`),
+  `knowledge_date_in_future` (`/knowledgeDate`), `asu_not_applicable`, `participation_closed`,
+  `asu_registered`, `asu_route_unset`, `asu_route_kug200b`, `asu_registration_not_found`,
+  `asu_proof_present`, `document_not_found`, `document_not_accepted`, `document_quarantined`,
+  `document_invalidated`.
+- The work list: `WorklistItem.caseItems` (`WorklistCaseItem` `{ kind: "knowledge_date_missing",
+  date }`) and the deadline kind `asu_due`.
+- Order: schema (400) → visibility (404, also for an unassigned consultant) → permission (403: the
+  org roles; back office reads only; the attestation and the knowledge date the PL's, the link the
+  assigned consultant's) → state.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

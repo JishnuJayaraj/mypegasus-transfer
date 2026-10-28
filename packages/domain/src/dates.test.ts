@@ -81,9 +81,10 @@ describe("comparing", () => {
   });
 });
 
+const statutory = (date: string, branch: string) => ({ kind: "statutory", date, branch });
+
 // verify Q1, Q178: the two branches of §38(1) SGB III around the reference date end − 3 months
 describe("asuDueDate (verify Q1)", () => {
-  const statutory = (date: string, branch: string) => ({ kind: "statutory", date, branch });
   it.each([
     [
       "early knowledge: the reference date",

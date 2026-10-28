@@ -135,15 +135,16 @@ describe("documentPresent (AC-21)", () => {
   });
 });
 
-describe("documentPresent with when (regional-variation.md, rule language)", () => {
-  const onRoute = (when: object): CompletenessRule => ({
-    id: "r",
-    kind: "documentPresent",
-    documentType: "kug200b_signed_scan",
-    accepted: true,
-    when: { field: "asuChannel", ...when } as never,
-  });
+/** A Kug 200b rule that applies on a route, as base defaults version 3 has them. */
+const onRoute = (when: object): CompletenessRule => ({
+  id: "r",
+  kind: "documentPresent",
+  documentType: "kug200b_signed_scan",
+  accepted: true,
+  when: { field: "asuChannel", ...when } as never,
+});
 
+describe("documentPresent with when (regional-variation.md, rule language)", () => {
   it.each<[string, unknown, string[]]>([
     ["the route the condition names", "kug_200b", ["missing"]],
     ["another route", "online_self", []],

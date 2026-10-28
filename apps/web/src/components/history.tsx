@@ -186,7 +186,7 @@ export function HistoryTab({
         });
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");
-      // The ASU record (D19, D22): codes and dates, never the BA-Kundennummer or the knowledge date.
+      // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung and dates): codes and dates, never the BA-Kundennummer or the knowledge date.
       case "asu_route_set": {
         const previous = text(details.previousChannel);
         return arrow(

@@ -101,6 +101,20 @@ const review = (documentId: string, decision = "accepted", context = asConsultan
 const link = (id: string, registrationId: string, documentId: string, context = asConsultant) =>
   call(app, "link_asu_proof", { context, participationId: id, registrationId, documentId });
 
+const remove = (documentId: string, reason: string, context = pl) =>
+  call(app, "delete_document", { context, documentId, reason });
+
+/** A participation on `online_self` with a registration of 20 days ago, without proof. */
+async function registered() {
+  const id = await participation();
+  await route(id, "online_self", 0);
+  const registrationId = await register(id, await daysAgo(20));
+  return { id, registrationId };
+}
+
+const set = (id: string, knowledgeDate: string | null, previous: string | null, context = pl) =>
+  call(app, "set_knowledge_date", { context, participationId: id, knowledgeDate, previous });
+
 const events = (id: string, types: string[]) =>
   all(
     `select event_type::text as type, details from audit_event
@@ -108,7 +122,7 @@ const events = (id: string, types: string[]) =>
     [id, types],
   );
 
-describe("set_asu_route (D19)", () => {
+describe("set_asu_route (process-and-lifecycle.md, Arbeitsuchendmeldung)", () => {
   it("is set by the PL or the assigned consultant with the version read, audited", async () => {
     const id = await participation();
     expect(await route(id, "kug_200b", 0)).toBe(1);
@@ -133,7 +147,7 @@ describe("set_asu_route (D19)", () => {
     );
   });
 
-  it("is fixed once a registration is recorded (an entry error is corrected, D29)", async () => {
+  it("is fixed once a registration is recorded (an entry error is corrected through an approved correction)", async () => {
     const id = await participation();
     await route(id, "online_self", 0);
     await register(id, await today());
@@ -155,7 +169,7 @@ describe("set_asu_route (D19)", () => {
   });
 });
 
-describe("record_asu_registration (D19; Q184, Q186)", () => {
+describe("record_asu_registration (process-and-lifecycle.md, Arbeitsuchendmeldung; Q184, Q186)", () => {
   it("needs a direct route, a date not after today and is recorded once", async () => {
     const id = await participation();
     await expect(register(id, await today())).rejects.toMatchObject(failsWith("asu_route_unset"));
@@ -298,8 +312,6 @@ describe("the BA confirmation (asu_proof, catalog version 5; Q186)", () => {
 
   it("is deleted by the PL before its review only, as wrong_person or wrong_file", async () => {
     const id = await participation();
-    const remove = (documentId: string, reason: string, context = pl) =>
-      call(app, "delete_document", { context, documentId, reason });
     const first = await proof(id);
     await expect(remove(first, "duplicate")).rejects.toMatchObject(
       failsWith("delete_reason_not_allowed"),
@@ -316,15 +328,8 @@ describe("the BA confirmation (asu_proof, catalog version 5; Q186)", () => {
   });
 });
 
-describe("link_asu_proof (D19; Q201)", () => {
-  async function registered() {
-    const id = await participation();
-    await route(id, "online_self", 0);
-    const registrationId = await register(id, await daysAgo(20));
-    return { id, registrationId };
-  }
-
-  it("links an accepted proof by the consultant; a proof accepted earlier counts from today (D33)", async () => {
+describe("link_asu_proof (process-and-lifecycle.md, Arbeitsuchendmeldung; Q201)", () => {
+  it("links an accepted proof by the consultant; a proof accepted earlier counts from today (the snapshot rule)", async () => {
     const { id, registrationId } = await registered();
     const documentId = await proof(id);
     await review(documentId);
@@ -403,10 +408,7 @@ describe("link_asu_proof (D19; Q201)", () => {
   });
 });
 
-describe("the knowledge date (D22)", () => {
-  const set = (id: string, knowledgeDate: string | null, previous: string | null, context = pl) =>
-    call(app, "set_knowledge_date", { context, participationId: id, knowledgeDate, previous });
-
+describe("the knowledge date (process-and-lifecycle.md, dates)", () => {
   it("is set, changed and cleared by the PL against the date read, audited without the date", async () => {
     const id = await participation();
     const first = await daysAgo(40);
@@ -474,7 +476,7 @@ describe("the knowledge date (D22)", () => {
   });
 });
 
-describe("the ASU events (D32)", () => {
+describe("the ASU events (ADR-0002)", () => {
   it.each(["asu_route_set", "asu_registration_recorded", "asu_proof_linked", "knowledge_date_set"])(
     "record_audit_event refuses %s",
     async (type) => {

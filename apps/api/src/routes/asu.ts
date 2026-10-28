@@ -8,7 +8,6 @@ import {
   participation,
   participantDetails,
   sql,
-  type Database,
 } from "@transfer/db";
 import {
   applicableAsuDueDate,
@@ -131,7 +130,6 @@ export function asuRoutes(deps: Deps) {
    */
   async function viewOf({ subject, target }: Access): Promise<z.infer<typeof AsuView>> {
     const participationId = target.participationId;
-    const today = clock.today();
     return db.transaction(
       async (tx) => {
         const [current] = await tx

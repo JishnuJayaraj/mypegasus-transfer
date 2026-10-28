@@ -46,6 +46,12 @@ const sources: Source[] = [
   "ba_confirmed_by_phone",
 ];
 
+/** A write's answer, or its refusal thrown (the client rejects problems already). */
+const ok = <T,>(result: { data?: T; error?: unknown }) => {
+  if (result.data === undefined) throw result.error ?? new Error("No answer");
+  return result.data;
+};
+
 /** A refusal's first code, if the API named one. */
 const codeOf = (error: unknown) =>
   error instanceof ApiProblemError ? error.problem.errors?.[0]?.code : undefined;
@@ -93,10 +99,6 @@ export function AsuTab({ detail }: { detail: Detail }) {
       await queryClient.invalidateQueries({ queryKey: asuQuery.queryKey });
     }
   }
-  const ok = <T,>(result: { data?: T; error?: unknown }) => {
-    if (result.data === undefined) throw result.error ?? new Error("No answer");
-    return result.data;
-  };
 
   return (
     <Stack gap={6}>
@@ -225,7 +227,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-/** "Weg": the placement Agentur's default preselected, never a blocker (D19). */
+/** "Weg": the placement Agentur's default preselected, never a blocker (process-and-lifecycle.md, Arbeitsuchendmeldung). */
 function RouteSection(props: { view: View; busy: boolean; onSave: (channel: Channel) => unknown }) {
   const { t } = useTranslation();
   const { route, capabilities } = props.view;
@@ -264,7 +266,7 @@ function RouteSection(props: { view: View; busy: boolean; onSave: (channel: Chan
   );
 }
 
-/** "Kenntnisdatum" and the due date: statutory, or an orientation only (D22). */
+/** "Kenntnisdatum" and the due date: statutory, or an orientation only (process-and-lifecycle.md, dates). */
 function KnowledgeSection(props: {
   view: View;
   busy: boolean;
@@ -337,7 +339,7 @@ function KnowledgeSection(props: {
 
 type RegistrationBody = components["schemas"]["AsuRegistrationInput"];
 
-/** "Meldung" and "Meldung erfassen" (D19): the date and its proof, the number write-only. */
+/** "Meldung" and "Meldung erfassen" (process-and-lifecycle.md, Arbeitsuchendmeldung): the date and its proof, the number write-only. */
 function RegistrationSection(props: {
   view: View;
   busy: boolean;
@@ -490,11 +492,13 @@ function ProofSection(props: {
             <li key={proof.documentId}>
               <Stack gap={3}>
                 <span>
-                  {t("asu.proofs.added", { at: formatTimestamp(proof.addedAt) })} –{" "}
-                  {proof.quarantine
-                    ? t("asu.proofs.quarantined")
-                    : ts(`documents.states.${proof.review.state}`)}
-                  {proof.linked && ` – ${t("asu.proofs.linked")}`}
+                  {[
+                    t("asu.proofs.added", { at: formatTimestamp(proof.addedAt) }),
+                    proof.quarantine
+                      ? t("asu.proofs.quarantined")
+                      : ts(`documents.states.${proof.review.state}`),
+                    ...(proof.linked ? [t("asu.proofs.linked")] : []),
+                  ].join(" – ")}
                 </span>
                 <span className="tp-inline-actions">
                   {can.open && (

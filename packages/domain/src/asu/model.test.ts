@@ -20,14 +20,14 @@ const registration = (proof: AsuRegistrationFacts["proof"]): AsuRegistrationFact
   proof,
 });
 
-describe("asuRegisteredFact (process-and-lifecycle.md, guards; D19)", () => {
+describe("asuRegisteredFact (process-and-lifecycle.md, guards)", () => {
   it("is valid on the actual registration date, recorded with the attestation", () => {
     expect(
       asuRegisteredFact(registration({ kind: "ba_customer_number", linkedAt: yesterday })),
     ).toEqual({ validOn: "2027-02-20", recordedAt: new Date(yesterday) });
   });
 
-  it("an old proof linked today gives a fact recorded today, not before (D33)", () => {
+  it("an old proof linked today gives a fact recorded today, not before (the snapshot rule)", () => {
     const fact = asuRegisteredFact(
       registration({
         kind: "ba_confirmation",
@@ -64,7 +64,7 @@ describe("asuRegisteredFact (process-and-lifecycle.md, guards; D19)", () => {
   });
 });
 
-describe("asuProofState (regional-variation.md, base rules; D21)", () => {
+describe("asuProofState (regional-variation.md, the base rules)", () => {
   it("is accepted once a registration with proof exists, without a file", () => {
     expect(asuProofState(true, [])).toEqual(["accepted"]);
     expect(asuProofState(true, ["rejected"])).toEqual(["accepted"]);
@@ -80,7 +80,7 @@ describe("asuProofState (regional-variation.md, base rules; D21)", () => {
   });
 });
 
-describe("applicableAsuDueDate (process-and-lifecycle.md, dates; D22)", () => {
+describe("applicableAsuDueDate (process-and-lifecycle.md, dates)", () => {
   const facts = {
     projectType: "ta_tg" as const,
     status: "informed" as const,
@@ -119,6 +119,8 @@ describe("applicableAsuDueDate (process-and-lifecycle.md, dates; D22)", () => {
   });
 });
 
+const parse = (body: unknown) => AsuRegistrationInput.safeParse(body).success;
+
 describe("the registration's input", () => {
   it("refuses a date after today", () => {
     expect(asuRegistrationProblem("2027-03-03", "2027-03-02")).toBe("registered_on_in_future");
@@ -133,7 +135,6 @@ describe("the registration's input", () => {
   });
 
   it("needs the attestation's source with its number", () => {
-    const parse = (body: unknown) => AsuRegistrationInput.safeParse(body).success;
     expect(parse({ registeredOn: "2027-02-20" })).toBe(true);
     expect(
       parse({

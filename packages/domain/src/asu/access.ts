@@ -48,7 +48,7 @@ export function mayReadKnowledgeDate(subject: Subject, target: PermissionTarget)
 }
 
 /**
- * The route and a registration without the attestation (D19, D31): the PL or the assigned
+ * The route and a registration without the attestation (process-and-lifecycle.md, Arbeitsuchendmeldung): the PL or the assigned
  * consultant.
  */
 export function mayRecordAsu(actor: Actor, target: PermissionTarget): Permission {
@@ -56,7 +56,7 @@ export function mayRecordAsu(actor: Actor, target: PermissionTarget): Permission
   return staffPermission(actor, target, (role) => role === "project_lead" || role === "consultant");
 }
 
-/** The attestation with the BA-Kundennummer, write-only (D19): the PL. */
+/** The attestation with the BA-Kundennummer, write-only (process-and-lifecycle.md, Arbeitsuchendmeldung): the PL. */
 export function mayAttestAsu(actor: Actor, target: PermissionTarget): Permission {
   if (actor.kind !== "staff") return denied;
   return staffPermission(actor, target, (role) => role === "project_lead");
@@ -71,7 +71,7 @@ export function mayLinkAsuProof(actor: Actor, target: PermissionTarget): Permiss
   return staffPermission(actor, target, (role) => role === "consultant");
 }
 
-/** The knowledge date's audited correction (D22): the PL. */
+/** The knowledge date's audited correction (process-and-lifecycle.md, dates): the PL. */
 export function maySetKnowledgeDate(actor: Actor, target: PermissionTarget): Permission {
   if (actor.kind !== "staff") return denied;
   return staffPermission(actor, target, (role) => role === "project_lead");

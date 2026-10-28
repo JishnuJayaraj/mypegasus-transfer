@@ -112,7 +112,7 @@ const preEntry: ReadonlySet<MainStatus> = new Set([
 ]);
 
 /**
- * The ASU due date that applies (process-and-lifecycle.md, dates; D22): in `ta_tg`, before
+ * The ASU due date that applies (process-and-lifecycle.md, dates): in `ta_tg`, before
  * `active_in_tg`, not terminal, while no registration with proof exists and the end of the old
  * employment is known; statutory with a knowledge date, else an orientation ("Kenntnisdatum
  * klären"), never an overdue finding. Informational, no automatic reminder (Q1, Q152).

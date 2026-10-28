@@ -14,8 +14,8 @@ checked in PR 6-1, which also opened Q196 and Q197; PR 6-2 recorded its readings
 about 4,200 lines and splits into 6-3a and 6-3b (the owner's choice, 2026-10-26); 6-3a recorded its
 readings as Q199 (accepted in the review of PR #90); 6-3b (the signed TL 407) recorded its readings
 as Q200 (accepted with amendments in the review of PR #91). 6-4 is estimated at about 5,000 lines
-and is **proposed** to split into 6-4a (the ASU record) and 6-4b (the Kug 200b), awaiting the
-owner's choice. Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
+and splits into 6-4a (the ASU record) and 6-4b (the Kug 200b) (the owner's choice, 2026-10-28,
+with the ASU proof's operations); 6-4a recorded its readings as Q201. Q1 stays `verify`. This is not an external DPO, legal, works-council or Agentur
 confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
@@ -447,8 +447,9 @@ its three targets exist). 6-3 came to about 4,200 lines and splits along its two
 generated form (6-3a) and the signed paper (6-3b); quarantine comes with the scans in 6-3b. The
 last PR to merge archives this plan. 6-4 is estimated at about 5,000 lines (its functions alone
 redo the generation, upload and review functions for a second form, as 6-3a and 6-3b did for the
-first) and is proposed to split the same way: the ASU record that proves the registration (6-4a)
-and the Kug 200b offer on paper (6-4b), which needs the tab and the record of 6-4a.
+first) and splits the same way (the owner's choice, 2026-10-28): the ASU record that proves the
+registration (6-4a) and the Kug 200b offer on paper (6-4b), which needs the tab and the record of
+6-4a.
 
 | PR | Scope | Needs | Est. lines |
 |---|---|---|---|

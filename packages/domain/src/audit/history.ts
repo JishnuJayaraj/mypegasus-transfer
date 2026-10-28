@@ -181,7 +181,7 @@ export const auditProjection: {
   signed_declaration_recorded: shown("profiling", {
     details: ["formCode", "formVersion", "declarations"],
   }),
-  // The ASU record (D19, D22): codes and dates, never the BA-Kundennummer or the knowledge date.
+  // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung and dates): codes and dates, never the BA-Kundennummer or the knowledge date.
   asu_route_set: shown("case", { details: ["channel", "previousChannel"] }),
   asu_registration_recorded: shown("case", {
     details: ["channel", "registeredOn", "proofKind", "attestationSource"],

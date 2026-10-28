@@ -882,7 +882,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
   event("participant_data_changed", {
     ...ofParticipation,
     details: z.strictObject({
-      // the knowledge date as the import writes it (D22); the tab "Arbeitsuche" shows it
+      // the knowledge date as the import writes it (process-and-lifecycle.md, dates); the tab "Arbeitsuche" shows it
       fields: z
         .array(
           z.union([ParticipantDataField, z.literal("knowledgeDate"), ProfileField, CustomFieldKey]),
@@ -1279,14 +1279,14 @@ export const AuditEvent = z.discriminatedUnion("type", [
       declarations: z.array(z.enum(["jobboerseChoice", "baContactConsent"])).min(1),
     }),
   }),
-  /** The ASU route set or changed (D19): the new route and the one it replaced. */
+  /** The ASU route set or changed (process-and-lifecycle.md, Arbeitsuchendmeldung): the new route and the one it replaced. */
   event("asu_route_set", {
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ channel: AsuChannel, previousChannel: AsuChannel.optional() }),
   }),
   /**
-   * An ASU registration recorded (D19; Q186): its route and actual date, and the proof it came
+   * An ASU registration recorded (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): its route and actual date, and the proof it came
    * with, the attestation's source; never the BA-Kundennummer (its write is `sensitive_write`).
    */
   event("asu_registration_recorded", {
@@ -1300,13 +1300,13 @@ export const AuditEvent = z.discriminatedUnion("type", [
       attestationSource: AttestationSource.optional(),
     }),
   }),
-  /** An accepted BA confirmation linked as the registration's proof (D19). */
+  /** An accepted BA confirmation linked as the registration's proof (process-and-lifecycle.md, Arbeitsuchendmeldung). */
   event("asu_proof_linked", {
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ registrationId: z.uuid(), documentId: z.uuid() }),
   }),
-  /** The knowledge date set, changed or cleared by the PL (D22): never the date. */
+  /** The knowledge date set, changed or cleared by the PL (process-and-lifecycle.md, dates): never the date. */
   event("knowledge_date_set", {
     ...ofParticipation,
     actor: staffActor,

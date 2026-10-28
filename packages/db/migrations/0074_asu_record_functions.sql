@@ -9,7 +9,7 @@
 -- (its write is `sensitive_write` with its key) or the knowledge date. The event types 0073 added
 -- are compared as text here, since this runs after it in the same migration run.
 --
--- Lock order (ADR-0002; the plan's D31): the project's advisory lock shared through
+-- Lock order (ADR-0002, the ASU record): the project's advisory lock shared through
 -- `lock_participation`, the participation row, its documents (`FOR SHARE` the proof a link
 -- names), `participant_details`, `asu_record`, `asu_registration`, then the sensitive row.
 -- Staff act as themselves in normal mode; assisted mode and break-glass grant nothing here.
@@ -103,7 +103,7 @@ END $$;
 
 -- The functions transfer_app may execute.
 
--- The route (D19): set by the PL or the assigned consultant with the version read
+-- The route (process-and-lifecycle.md, Arbeitsuchendmeldung): set by the PL or the assigned consultant with the version read
 -- (`stale_revision`), changeable until a registration is recorded (`asu_registered`; an entry
 -- error is corrected through an approved correction, never by a new route). An unchanged route
 -- writes nothing. Audited `asu_route_set` (the route and the one it replaced). Returns the version.
@@ -139,7 +139,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- A registration on the route `online_self` or `in_person` (D19; Q184, Q186): its actual date, not
+-- A registration on the route `online_self` or `in_person` (process-and-lifecycle.md, Arbeitsuchendmeldung; Q184, Q186): its actual date, not
 -- after today in Berlin (`registered_on_in_future`); on an unset route `asu_route_unset`, on
 -- `kug_200b` `asu_route_kug200b` (the batch's submission records it, Slice 6, PR 6-5a); one per
 -- participation (`asu_registered`). With the attestation (the PL only) its proof comes at once: the
@@ -215,7 +215,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- The proof's link (D19; Q201): the assigned consultant, who reviewed and opens the BA
+-- The proof's link (process-and-lifecycle.md, Arbeitsuchendmeldung; Q201): the assigned consultant, who reviewed and opens the BA
 -- confirmation, confirms that it supports the registration's date. The document is an accepted,
 -- live `asu_proof` of the participation (`document_not_found`, `document_not_accepted`), not
 -- quarantined (`document_quarantined`) or invalidated (`document_invalidated`), held `FOR SHARE`;
@@ -266,7 +266,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- The knowledge date's correction (D22; process-and-lifecycle.md, dates): the PL, with the date
+-- The knowledge date's correction (process-and-lifecycle.md, dates): the PL, with the date
 -- read (`stale_value`), set, changed or cleared, not after today in Berlin
 -- (`knowledge_date_in_future`); the individual's fact, never a wave's. A terminal participation
 -- takes none (`participation_closed`). An unchanged date writes nothing. Audited
@@ -316,7 +316,7 @@ END $$;
 --> statement-breakpoint
 
 -- The person-data writer (Q112), as 0048 wrote it, and the knowledge date the import carries
--- (D22): not after today in Berlin (`knowledge_date_in_future`); a null keeps the stored one, like
+-- (process-and-lifecycle.md, dates): not after today in Berlin (`knowledge_date_in_future`); a null keeps the stored one, like
 -- every other value. Audited in `participant_data_changed` as `knowledgeDate`.
 DROP FUNCTION "public"."write_participant_data"(uuid, "public"."audit_context", text, text, text, date, date, text, text, text, text, text, text, text, text);
 --> statement-breakpoint

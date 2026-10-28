@@ -49,7 +49,7 @@ const at = (v: WorklistViewer, s = snapshot()) =>
   worklistProjection(facts(), s, project, "2027-03-10", now, v).capabilities.assignEntryWave;
 
 describe("worklistProjection", () => {
-  it("lists a statutory ASU due date as `asu_due`, an orientation as `knowledge_date_missing` (D22)", () => {
+  it("lists a statutory ASU due date as `asu_due`, an orientation as `knowledge_date_missing` (process-and-lifecycle.md, dates)", () => {
     const s = snapshot({ wave: null });
     const row = (asuDueDate: WorklistFacts["asuDueDate"]) =>
       worklistProjection(facts({ asuDueDate }), s, project, "2027-03-25", now, viewer());

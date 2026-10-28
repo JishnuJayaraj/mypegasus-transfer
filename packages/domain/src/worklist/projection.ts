@@ -63,7 +63,7 @@ export const WorklistCapabilities = z.strictObject({
 /**
  * Staff work on a row that isn't a dated deadline (process-and-lifecycle.md, deadline warnings):
  * `knowledge_date_missing` with the ASU reference date as a labelled orientation, never overdue
- * ("Kenntnisdatum klären", D22).
+ * ("Kenntnisdatum klären").
  */
 export const WorklistCaseItem = z
   .strictObject({ kind: z.enum(["knowledge_date_missing"]), date: isoDate })

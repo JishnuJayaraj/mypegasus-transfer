@@ -84,6 +84,8 @@ const items = [
     lastName: "Beispiel",
     firstName: "Bernd",
     status: "informed",
+    // No knowledge date: the ASU reference date as an orientation (process-and-lifecycle.md, dates).
+    caseItems: [{ kind: "knowledge_date_missing", date: "2026-12-31" }],
     appointments: {
       next: { kind: "info_event", startsAt: "2026-10-27T08:00:00.000Z" },
       items: [],
@@ -190,6 +192,13 @@ describe("Teilnehmende", () => {
       }),
     ).toBeInTheDocument();
     expect(within(other).getByRole("cell", { name: "Einwilligung fehlt" })).toBeInTheDocument();
+    // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
+    const orientation = list().getByRole("link", { name: "BSP-0003" }).closest("tr")!;
+    expect(
+      within(orientation).getByRole("cell", {
+        name: "Orientierung 31.12.2026 – Kenntnisdatum klären",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("shows the most urgent appointment item, else the next booking, and filters by Termine", async () => {

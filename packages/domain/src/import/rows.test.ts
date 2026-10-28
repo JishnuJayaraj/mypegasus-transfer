@@ -131,7 +131,7 @@ describe("validateRow (5.11, AC-24)", () => {
       expect(issues({ knowledgeDate: "31.02.2026" })).toEqual(["knowledgeDate:invalid_date"]);
     });
 
-    it("takes an optional knowledge date, never after today (D22)", () => {
+    it("takes an optional knowledge date, never after today (process-and-lifecycle.md, dates)", () => {
       expect(issues({ knowledgeDate: "19.10.2026" })).toEqual([]);
       expect(issues({ knowledgeDate: "20.10.2026" })).toEqual([
         "knowledgeDate:knowledge_date_in_future",

@@ -419,7 +419,7 @@ const WorklistTable = memo(function WorklistTable({
   const label = useSelfServiceLabel();
   const deadline = (item: ListItem) => {
     const urgent = mostUrgent(item.deadlines);
-    // Without a dated deadline the ASU orientation, never as overdue (D22).
+    // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
     const orientation = item.caseItems.find((case_) => case_.kind === "knowledge_date_missing");
     if (!urgent) {
       return orientation

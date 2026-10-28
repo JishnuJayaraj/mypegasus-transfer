@@ -157,7 +157,7 @@ export async function loadWorklist(
       const items: WorklistItem[] = [];
       for (const { p, endDate, knowledgeDate, ...person } of rows) {
         const record = records.get(p.id)!;
-        const facts = guardFacts.get(p.id)!;
+        const dated = guardFacts.get(p.id)!;
         const wave = waves.find((w) => w.id === p.entryWaveId) ?? null;
         const target = projectTarget(projectId, regionId, p.id);
         const { knows } = staffSelfServiceAccess(subject, {
@@ -186,7 +186,7 @@ export async function loadWorklist(
               asuDueDate: applicableAsuDueDate({
                 projectType: found!.type,
                 status: p.status,
-                registered: facts.asuRegisteredWithProof !== undefined,
+                registered: dated.asuRegisteredWithProof !== undefined,
                 endDate,
                 knowledgeDate,
               }),
@@ -211,7 +211,7 @@ export async function loadWorklist(
                 offerDeadline: p.offerDeadline,
                 tgEntryDate: p.tgEntryDate,
               },
-              facts,
+              facts: dated,
             },
             worklistProject,
             today,
