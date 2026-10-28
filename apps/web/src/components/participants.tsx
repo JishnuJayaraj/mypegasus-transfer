@@ -35,6 +35,7 @@ import { useSelfServiceLabel } from "./self-service-tab";
 import { useConsultants } from "./team";
 import { BulkWave, WorklistFilters } from "./worklist-tools";
 import { BulkInvite } from "./invitations";
+import { BulkKug200b } from "./kug200b-bulk";
 import { BulkRemind } from "./reminders";
 
 const RouterLink = createLink(Link);
@@ -62,6 +63,7 @@ const columns = [
 const pageSize = 25;
 
 type ListItem = components["schemas"]["WorklistItem"];
+type Kug200bItemKind = "kug200b_offer_open" | "kug200b_withdrawal_ba_notice";
 type ActivationPrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
 type PrivacyNoticePrintItem = components["schemas"]["PrivacyNoticeBatchResult"]["items"][number];
 type PrintState =
@@ -168,7 +170,10 @@ export function Participants({
   );
   // "Zu Termin einladen" (data-protection.md, invitations): the PL and the assigned consultant.
   const mayInvite = items.some(({ capabilities: { invite } }) => invite.allowed);
-  const selectable = mayAssign || mayActivate || mayAssignWave || mayRemind || mayInvite;
+  // "Kug 200b erzeugen" (data-protection.md, generated forms): the PL of a ta_tg project.
+  const mayGenerateKug200b = items.some((item) => item.capabilities.generateKug200b);
+  const selectable =
+    mayAssign || mayActivate || mayAssignWave || mayRemind || mayInvite || mayGenerateKug200b;
   const visibleColumns = useMemo(
     () =>
       columns.filter(
@@ -352,6 +357,16 @@ export function Participants({
                   onSent={() => setSelected(new Set())}
                 />
               )}
+              {mayGenerateKug200b && (
+                <BulkKug200b
+                  projectId={projectId}
+                  selected={selectedItems}
+                  onGenerated={() => {
+                    setSelected(new Set());
+                    void refresh();
+                  }}
+                />
+              )}
               {mayActivate && (
                 <BulkActivation
                   projectId={projectId}
@@ -503,7 +518,23 @@ const WorklistTable = memo(function WorklistTable({
           </Tag>
         </>
       ),
-    deadline: deadline(item),
+    deadline: (
+      <>
+        {deadline(item)}
+        {item.caseItems
+          .filter((case_) => case_.kind !== "knowledge_date_missing")
+          .map((case_) => (
+            <span key={case_.kind}>
+              {" "}
+              <Tag type="purple" size="sm">
+                {t(`worklist.caseItems.${case_.kind as Kug200bItemKind}`, {
+                  date: formatDate(case_.date),
+                })}
+              </Tag>
+            </span>
+          ))}
+      </>
+    ),
     appointment: appointment(item),
     portal: t(`worklist.portal.${item.portal}`),
     reminded: item.reminder

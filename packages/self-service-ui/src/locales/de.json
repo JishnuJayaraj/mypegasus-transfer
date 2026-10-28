@@ -255,7 +255,8 @@
       "cv": "Lebenslauf",
       "participant_upload": "Sonstige Unterlagen",
       "qualification_certificate": "Zeugnisse und Nachweise",
-      "tl407_form": "Profiling-Bogen (erzeugt, nicht unterschrieben)"
+      "tl407_form": "Profiling-Bogen (erzeugt, nicht unterschrieben)",
+      "kug200b_form": "Kug 200b (erzeugt, nicht unterschrieben)"
     },
     "hints": {
       "cv": "Ihr aktueller Lebenslauf.",

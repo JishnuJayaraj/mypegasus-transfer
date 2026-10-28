@@ -255,7 +255,8 @@
       "cv": "CV",
       "participant_upload": "Other documents",
       "qualification_certificate": "Certificates and references",
-      "tl407_form": "Profiling form (generated, unsigned)"
+      "tl407_form": "Profiling form (generated, unsigned)",
+      "kug200b_form": "Kug 200b (generated, unsigned)"
     },
     "hints": {
       "cv": "Your current CV.",

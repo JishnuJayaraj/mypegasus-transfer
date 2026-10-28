@@ -204,6 +204,18 @@ export function HistoryTab({
       }
       case "knowledge_date_set":
         return coded("history.knowledgeDateChanges", text(details.change) ?? "");
+      // The Kug 200b offer (Q185): by their dates; a consent by its purpose and where it was given.
+      case "kug200b_offer_declined":
+        return t("history.dated", { date: formatDate(text(details.declinedOn)) });
+      case "declaration_withdrawal_recorded":
+        return t("history.dated", { date: formatDate(text(details.receivedOn)) });
+      case "declaration_withdrawal_ba_notified":
+        return t("history.dated", { date: formatDate(text(details.notifiedOn)) });
+      case "consent_given":
+      case "consent_ended": {
+        const source = text(details.source);
+        return source ? coded("history.consentSources", source) : "";
+      }
       default:
         return "";
     }

@@ -21,6 +21,10 @@ const detailPath = `/api/v1/participations/${participationId}`;
 const proofId = "00000000-0000-4000-a000-0000000000d1";
 const registrationId = "00000000-0000-4000-a000-0000000000e1";
 const number = "555X123456";
+const formId = "00000000-0000-4000-a000-0000000000f1";
+const scanId = "00000000-0000-4000-a000-0000000000f2";
+const consentId = "00000000-0000-4000-a000-0000000000f3";
+const withdrawalId = "00000000-0000-4000-a000-0000000000f4";
 
 const detail = (viewAsu: boolean) => ({
   id: participationId,
@@ -75,6 +79,29 @@ const capabilities = {
   addProof: false,
 };
 
+const kugCapabilities = {
+  generate: false,
+  addScan: false,
+  decline: false,
+  recordWithdrawal: false,
+  recordBaNotice: false,
+};
+type Kug = Record<string, unknown> & { capabilities?: Partial<typeof kugCapabilities> };
+
+/** The Kug 200b block: nothing offered yet, no forms or scans. */
+const kug200b = (overrides: Kug = {}) => ({
+  offeredOn: null,
+  outcome: null,
+  declinedOn: null,
+  profileAccess: null,
+  withdrawals: [],
+  forms: [],
+  scans: [],
+  versions: ["09-2021"],
+  ...overrides,
+  capabilities: { ...kugCapabilities, ...overrides.capabilities },
+});
+
 type View = Record<string, unknown> & { capabilities?: Partial<typeof capabilities> };
 
 const view = (overrides: View = {}) => ({
@@ -88,6 +115,7 @@ const view = (overrides: View = {}) => ({
   registration: null,
   proofDocuments: [],
   missing: [{ ruleId: "base-asu-proof", kind: "document", key: "asu_proof", reason: "missing" }],
+  kug200b: kug200b(),
   ...overrides,
   capabilities: { ...capabilities, ...overrides.capabilities },
 });
@@ -115,6 +143,26 @@ function setup(first: ReturnType<typeof view>, afterWrite = first, viewAsu = tru
     [`POST ${detailPath}/asu/proof-link`]: answer,
     [`POST ${detailPath}/documents/${proofId}/quarantine`]: answer,
     [`POST ${detailPath}/documents/${proofId}/quarantine-lift`]: answer,
+    [`POST ${detailPath}/forms/kug200b`]: () =>
+      json(
+        {
+          participationId,
+          documentId: formId,
+          formVersion: "09-2021",
+          checklist: [
+            {
+              code: "required_blank",
+              key: "pensionInsuranceNumber",
+              label: "11 Rentenversicherungsnummer",
+            },
+          ],
+        },
+        201,
+      ),
+    [`POST ${detailPath}/documents/${scanId}/review`]: answer,
+    [`POST ${detailPath}/asu/kug200b-decline`]: answer,
+    [`POST ${detailPath}/asu/withdrawal`]: answer,
+    [`POST ${detailPath}/asu/withdrawal-ba-notice`]: answer,
   });
   renderApp(`/projects/${project.id}/participations/${participationId}?tab=asu`, mock.api);
   return mock;
@@ -494,5 +542,127 @@ describe("the tab Arbeitsuche", () => {
     expect(
       await screen.findByText("In diesem Projekt wird keine Arbeitsuchendmeldung erfasst."),
     ).toBeVisible();
+  });
+});
+
+/** A signed Kug 200b scan awaiting its review, printed from the generated form. */
+const unreviewedScan = {
+  documentId: scanId,
+  origin: "generated",
+  generationDocumentId: formId,
+  formVersion: "09-2021",
+  addedAt: "2026-11-04T10:00:00.000000Z",
+  review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
+  signedOn: null,
+  quarantine: null,
+  capabilities: { open: true, review: true, delete: true, quarantine: true, liftQuarantine: false },
+};
+
+describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
+  it("shows the handwriting checklist of a generated form before printing", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup(view({ kug200b: kug200b({ capabilities: { generate: true } }) }));
+    const kug = await section("Kug 200b");
+    await user.click(kug.getByRole("button", { name: "Kug 200b erzeugen" }));
+    const checklist = await screen.findByTestId("kug200b-checklist");
+    expect(checklist).toHaveTextContent("11 Rentenversicherungsnummer: fehlt – von Hand eintragen");
+    expect(callTo(calls, `POST ${detailPath}/forms/kug200b`)).toHaveLength(1);
+  });
+
+  it("accepts a scan only with the field-19 date and all three confirmations, nothing preselected", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup(view({ kug200b: kug200b({ scans: [unreviewedScan] }) }));
+    const kug = await section("Kug 200b");
+    await user.click(kug.getByRole("button", { name: "Prüfen" }));
+    const dialog = await screen.findByRole("dialog", { name: "Unterschriebenen Kug 200b prüfen" });
+    const accept = within(dialog).getByRole("button", { name: "Annehmen" });
+    for (const name of ["16 und 17 angekreuzt", "Pflichtangaben ausgefüllt", "unterschrieben"]) {
+      expect(within(dialog).getByLabelText(name)).not.toBeChecked();
+    }
+    await user.type(within(dialog).getByLabelText("Datum in Feld 19 (TT.MM.JJJJ)"), "04.11.2026");
+    await user.click(within(dialog).getByLabelText("16 und 17 angekreuzt"));
+    await user.click(within(dialog).getByLabelText("Pflichtangaben ausgefüllt"));
+    expect(accept).toBeDisabled();
+    await user.click(within(dialog).getByLabelText("unterschrieben"));
+    await user.click(accept);
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/documents/${scanId}/review`)[0]?.body).toEqual({
+        decision: "accepted",
+        kug200bScan: {
+          signedOn: "2026-11-04",
+          confirmations: ["declarations_ticked", "mandatory_completed", "signature_present"],
+        },
+      }),
+    );
+  });
+
+  it("records a decline with its date", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup(
+      view({ kug200b: kug200b({ offeredOn: "2026-11-02", capabilities: { decline: true } }) }),
+    );
+    const kug = await section("Kug 200b");
+    expect(kug.getByTestId("kug200b-outcome")).toHaveTextContent("Angeboten am 02.11.2026");
+    await user.type(kug.getByLabelText("Abgelehnt am (TT.MM.JJJJ)"), "03.11.2026");
+    await user.click(kug.getByRole("button", { name: "Ablehnung erfassen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/asu/kug200b-decline`)[0]?.body).toEqual({
+        declinedOn: "2026-11-03",
+      }),
+    );
+  });
+
+  it('records a withdrawal and "BA informiert am", never claiming the BA\'s access was disabled', async () => {
+    const user = userEvent.setup();
+    const signed = kug200b({
+      outcome: "signed",
+      profileAccess: { consentId, givenOn: "2026-11-04" },
+      capabilities: { recordWithdrawal: true },
+    });
+    const withdrawn = kug200b({
+      outcome: "signed",
+      withdrawals: [
+        {
+          id: withdrawalId,
+          receivedOn: "2026-11-10",
+          recordedAt: "2026-11-10T09:00:00.000000Z",
+          baNotifiedOn: null,
+        },
+      ],
+      capabilities: { recordBaNotice: true },
+    });
+    const { calls } = setup(view({ kug200b: signed }), view({ kug200b: withdrawn }));
+    const kug = await section("Kug 200b");
+    expect(kug.getByText("Erklärt seit 04.11.2026 (wie unterschrieben).")).toBeVisible();
+    await user.type(kug.getByLabelText("Widerruf eingegangen am (TT.MM.JJJJ)"), "10.11.2026");
+    await user.click(kug.getByRole("button", { name: "Widerruf erfassen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/asu/withdrawal`)[0]?.body).toEqual({
+        consentId,
+        receivedOn: "2026-11-10",
+      }),
+    );
+    expect(await kug.findByText(/BA noch nicht informiert/)).toBeVisible();
+    expect(kug.getByText(/nicht, ob sie den Zugriff gesperrt hat/)).toBeVisible();
+    await user.type(kug.getByLabelText("BA informiert am (TT.MM.JJJJ)"), "11.11.2026");
+    await user.click(kug.getByRole("button", { name: "BA informiert am erfassen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/asu/withdrawal-ba-notice`)[0]?.body).toEqual({
+        withdrawalId,
+        notifiedOn: "2026-11-11",
+      }),
+    );
+  });
+
+  it("shows back office the outcome only, no forms or scans (Q49)", async () => {
+    setup(
+      view({
+        kug200b: { ...kug200b({ outcome: "signed" }), forms: undefined, scans: undefined },
+      }),
+    );
+    const kug = await section("Kug 200b");
+    expect(kug.getByText("Unterschrieben (angenommen).")).toBeVisible();
+    expect(kug.queryByRole("table")).toBeNull();
+    expect(kug.queryAllByRole("button").map((b) => b.textContent)).toEqual([]);
   });
 });
