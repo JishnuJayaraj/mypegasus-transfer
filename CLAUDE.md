@@ -84,7 +84,8 @@ the exact state. These are execution checkpoints, not additional human approval 
   ADRs and `docs/architecture/`; a rule found only in an archived plan moves there in your PR.
 - **Comments cite the doc that holds a rule** (e.g. "process-and-lifecycle.md, BA reporting"),
   never rounds, plan items (R12, AC-40) or plan sections; replace such citations where you touch.
-- **One session per planned PR**; the plan and the PR are the handoff.
+- **One session per planned PR**; the plan and the PR are the handoff (what goes in it: the agent
+  workflow, §6).
 - Write tests first for domain logic (lifecycle transitions, completeness rules, config
   resolution). UI gets component tests for critical flows and Playwright e2e for the happy path.
 - An invariant test is never weakened or removed to get CI green; a timing budget may be reported

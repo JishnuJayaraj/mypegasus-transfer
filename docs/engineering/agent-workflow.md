@@ -2,14 +2,12 @@
 
 Use this routine for an implementation PR, a bounded fix or its review. Project rules and
 approval boundaries remain in [CLAUDE.md](../../CLAUDE.md); domain rules remain in the domain
-docs and ADRs. Use the existing plan, issue and PR as the handoff, rather than creating a new
-tracking document for each step.
+docs and ADRs.
 
 ## 1. Establish the task
 
-Read the approved PR unit, its dependencies and the relevant domain/ADR sections. Inspect the
-current code and git state, including existing user changes. For an expressly authorized
-maintenance fix, the task itself can be the brief; a new slice plan is unnecessary.
+Inspect the current code and git state, including existing user changes. For an expressly
+authorized maintenance fix, the task itself can be the brief; a new slice plan is unnecessary.
 
 Write a short working brief before editing:
 
@@ -18,8 +16,9 @@ Write a short working brief before editing:
 - The first small implementation step and the check that will prove it works.
 - Any unresolved decision and which part of the work depends on it.
 
-**Checkpoint:** the intended behavior, its evidence and the next step are clear. This brief is
-a progress update or part of the existing plan/issue, not another approval request.
+**Checkpoint:** the intended behavior, its evidence and the next step are clear. The brief is a
+progress update in the session or part of the PR description, never added to the plan file, and
+it is not another approval request.
 
 ## 2. Resolve uncertainty at the right level
 
@@ -32,8 +31,10 @@ retention, a lifecycle rule, regional policy or the agreed scope. Link the confl
 give a concrete scenario, propose an answer and identify the affected work. Continue independent
 work while the decision is pending; keep dependent behavior gated until it is authorized.
 
-Use existing provisional answers only within their documented approval/use boundaries. Keep
-`assumed`, `verify` and `accepted` distinct, and cite the owner's answer when recording acceptance.
+Use existing provisional answers only within their documented approval/use boundaries. Keep the
+status values of [open-questions.md](../open-questions.md) (`open`, `assumed`, `verify`,
+`accepted`, `confirmed`) distinct, and cite the owner's answer when recording acceptance or
+confirmation.
 If implementation exposes a contradiction, propose the documentation change explicitly rather
 than rewriting the requirement to fit the code.
 
@@ -44,8 +45,7 @@ approved provisional rule. Remaining questions have a clear owner and impact.
 
 Build one coherent behavior through the necessary layers, then verify it before expanding the
 rest of the PR. For a domain-rule change or bug, first demonstrate the failing behavior at the
-boundary where the rule is enforced. A step can cross DB, domain, API and UI; it is not necessarily
-a separate PR or commit.
+boundary where the rule is enforced.
 
 Choose the failure scenarios that apply to the change:
 
@@ -70,7 +70,8 @@ the touched layers. Run the focused checks, then take the next step within the s
 
 Run the required repository checks for the change after the small steps pass. Reuse successful
 results when the files/behavior they cover have not changed; rerun affected checks after a fix,
-and broaden when there is a concrete remaining concern. Preserve every required CI gate.
+and broaden when there is a concrete remaining concern. The final run of the checks the task
+names as done (at least `pnpm verify`) is on the final head, never reused from an earlier commit.
 
 Record skipped checks as skipped, with the reason and where they will run. A mock or a lower-level
 test supports the behavior it exercises; name the missing boundary if the intended integration
@@ -80,17 +81,19 @@ separate from production permissions and invariants.
 For UI or generated documents, inspect the actual result as well as test assertions. For a
 performance claim, record the same workload, environment, before/after values and aggregation;
 check the arithmetic and distinguish observed results from an unproven improvement.
-At an integrated slice milestone, walk a complete staff/participant journey with synthetic data,
-including recovery from a mistake, and record any dead end or missing next action.
+At an integrated slice milestone, walk a complete staff/participant journey with Playwright on
+the seeded synthetic data (the `pnpm test:e2e` setup), including recovery from a mistake. Keep it
+as a spec in `apps/web/e2e/` when the journey should stay covered, and save its screenshots to
+`docs/screenshots/<pr>/` as `attendance.spec.ts` does. Record a dead end or missing next action
+as a question in `docs/open-questions.md` or, for a defect, in `docs/issues/`.
 
 **Checkpoint:** the final diff has evidence appropriate to its claims, required checks are
 accounted for, and any limitation is explicit.
 
 ## 5. Review the implementation and close the loop
 
-Review the actual diff against both the approved behavior and repository standards. When using
-an independent reviewer, provide the base/head commits and the original requirements, not only
-the implementer's summary. Delegate bounded independent work; keep ownership of the final result.
+When using an independent reviewer, provide the base/head commits and the original requirements,
+not only the implementer's summary.
 
 Classify feedback as a merge blocker, a nonblocking correction or a future improvement. Include
 the concrete failing scenario, the applicable rule and the smallest sufficient fix. A review
@@ -106,7 +109,9 @@ existing authorization; a green build is not that authorization by itself.
 
 ## 6. Leave a resumable handoff
 
-Use the PR and a compact session summary to record:
+Record the handoff in the PR description (for unfinished work, one PR comment), not in a new
+tracking document, since the next session reads the repository and the PR, not this session's
+chat:
 
 - Branch, head commit and PR; the behavior delivered and what remains.
 - Checks run, their results, skips and unresolved limitations.
