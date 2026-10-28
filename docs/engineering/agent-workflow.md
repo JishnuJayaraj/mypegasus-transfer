@@ -2,8 +2,7 @@
 
 Use this routine for an implementation PR, a bounded fix or its review. Project rules and
 approval boundaries remain in [CLAUDE.md](../../CLAUDE.md); domain rules remain in the domain
-docs and ADRs. Use the existing plan, issue and PR as the handoff, rather than creating a new
-tracking document for each step.
+docs and ADRs.
 
 ## 1. Establish the task
 
@@ -73,7 +72,6 @@ Run the required repository checks for the change after the small steps pass. Re
 results when the files/behavior they cover have not changed; rerun affected checks after a fix,
 and broaden when there is a concrete remaining concern. The final run of the checks the task
 names as done (at least `pnpm verify`) is on the final head, never reused from an earlier commit.
-Preserve every required CI gate.
 
 Record skipped checks as skipped, with the reason and where they will run. A mock or a lower-level
 test supports the behavior it exercises; name the missing boundary if the intended integration
@@ -111,8 +109,9 @@ existing authorization; a green build is not that authorization by itself.
 
 ## 6. Leave a resumable handoff
 
-Record the handoff in the PR description (for unfinished work, one PR comment), since the next
-session reads the repository and the PR, not this session's chat:
+Record the handoff in the PR description (for unfinished work, one PR comment), not in a new
+tracking document, since the next session reads the repository and the PR, not this session's
+chat:
 
 - Branch, head commit and PR; the behavior delivered and what remains.
 - Checks run, their results, skips and unresolved limitations.
