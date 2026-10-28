@@ -60,7 +60,10 @@ const seal = (field: string, value: unknown) =>
  * prints: the identity and address as fixtures, the sensitive answers sealed with the test key as
  * `write_sensitive_fields` would; `complete: false` leaves the RV-Nummer out.
  */
-async function participant({ projectId = werkNord, complete = true } = {}) {
+async function participant({
+  projectId = werkNord as string,
+  complete = true,
+}: { projectId?: string; complete?: boolean } = {}) {
   const id = await call(owner.$client, "create_participation", { projectId, context: pl });
   await changeStatus(owner.$client, id, { field: "status", from: "imported", to: "contacted" });
   await changeStatus(owner.$client, id, { field: "status", from: "contacted", to: "informed" });
@@ -301,7 +304,7 @@ describe("the bulk generation and its print file (data-protection.md, exports)",
 });
 
 describe("the signed Kug 200b's review (Q184, Q185)", () => {
-  async function scanOf(id: string, generationDocumentId: string | null, as = consultant) {
+  async function scanOf(id: string, generationDocumentId: string | null, as: string = consultant) {
     const res = await request("POST", `/participations/${id}/documents`, as, {
       type: "kug200b_signed_scan",
       fileName: "scan.pdf",
@@ -313,7 +316,7 @@ describe("the signed Kug 200b's review (Q184, Q185)", () => {
     expect(res.status).toBe(201);
     return (await readJson(res, DocumentView)).id;
   }
-  const review = (id: string, documentId: string, body: object, as = consultant) =>
+  const review = (id: string, documentId: string, body: object, as: string = consultant) =>
     request("POST", `/participations/${id}/documents/${documentId}/review`, as, body);
 
   it("is refused without 16, 17, the mandatory information and the signature confirmed", async () => {
