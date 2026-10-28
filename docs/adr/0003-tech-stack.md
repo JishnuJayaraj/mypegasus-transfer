@@ -208,7 +208,9 @@ Approved by the owner as a test-infrastructure change, without a slice plan.
   working: typecheck, lint and Vitest without coverage on the tests related to the changes against
   `origin/main` (`--changed`), and the full `db` and `api` projects when a migration, `setup.sql`,
   the Drizzle schema, the db testing helpers or a Vitest config changed. `pnpm verify`, `pnpm build`
-  and `pnpm test:e2e` stay the gate before a push (agent-workflow.md).
+  and `pnpm test:e2e` stay the gate before a push (agent-workflow.md). Every domain module is
+  exported through the `@transfer/domain` barrel, so a change to one reaches most api tests too
+  (198 of 255 files for `dates.ts`); a test, a UI component or an adapter stays small.
 - **Measured** on the same 4-core cloud session (Node 22.22.0, PostgreSQL 16), `pnpm
   test:coverage`, wall clock: 941 s before, 349 s after (2.7x; 6 workers). The `db` project went
   from 351 s to 134 s and `api` from 457 s to 140 s (first to last file). About 250 ms of each
