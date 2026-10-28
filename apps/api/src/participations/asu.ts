@@ -8,7 +8,7 @@ import {
   type Database,
 } from "@transfer/db";
 import {
-  asuRegisteredFact,
+  asuRegisteredSince,
   type AsuChannel,
   type AsuProofKind,
   type AsuRegistrationFacts,
@@ -19,7 +19,7 @@ import { utc } from "../sql";
 
 // The ASU record as the API reads it (process-and-lifecycle.md, Arbeitsuchendmeldung; ADR-0002,
 // the ASU record): the route and the registration with its proof's state, codes, dates and
-// instants only. The fact `asuRegisteredWithProof` is the domain's `asuRegisteredFact` of it.
+// instants only. The fact `asuRegisteredWithProof` is dated by the domain's `asuRegisteredSince`.
 // Reads run one after another on the caller's connection (ADR-0002, queries on one connection).
 
 type Db = Pick<Database, "select">;
@@ -65,6 +65,17 @@ export function registrationFacts(row: AsuRegistrationRow): AsuRegistrationFacts
             }),
           },
   };
+}
+
+/**
+ * `asuRegisteredWithProof` (process-and-lifecycle.md, guards): valid on the actual registration
+ * date, recorded at `asuRegisteredSince`; none without a usable proof.
+ */
+function factOf(registration: AsuRegistrationRow): DatedFact | null {
+  const since = asuRegisteredSince(registrationFacts(registration));
+  return since === null
+    ? null
+    : { validOn: registration.registeredOn, recordedAt: new Date(since) };
 }
 
 /** Each participation's ASU state; a participation without a route or registration has the empty one. */
@@ -115,7 +126,7 @@ export async function asuStatesOf(
     states.set(participationId, {
       ...states.get(participationId)!,
       registration,
-      fact: asuRegisteredFact(registrationFacts(registration)),
+      fact: factOf(registration),
     });
   }
   return states;

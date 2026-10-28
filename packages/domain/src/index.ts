@@ -13,7 +13,6 @@ export {
 export {
   applicableAsuDueDate,
   asuProofState,
-  asuRegisteredFact,
   asuRegisteredSince,
   asuRegistrationProblem,
   AsuProofKind,

@@ -376,7 +376,7 @@ The staff app's tab "Profiling" (data-protection.md, the profiling record, for w
   completion isn't supported. A TL 407 accepted after the TG start's
   scheduled run therefore supports only a reconciliation, never the scheduled entry or its catch-up;
   a quarantined scan supplies no fact to a later evaluation, and no status is reversed by it.
-  `asuRegisteredWithProof` (Slice 6, PR 6-4a; `asuRegisteredFact`) is valid on the actual
+  `asuRegisteredWithProof` (Slice 6, PR 6-4a; `asuRegisteredSince`) is valid on the actual
   registration date and recorded at the later of the registration, the link of its accepted proof
   and a lifted quarantine of the proving document: a proof accepted yesterday and linked today is
   recorded today. Without a proof, or with a quarantined or invalidated proving document, there is

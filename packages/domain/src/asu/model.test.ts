@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applicableAsuDueDate,
   asuProofState,
-  asuRegisteredFact,
+  asuRegisteredSince,
   asuRegistrationProblem,
   BaCustomerNumber,
   type AsuRegistrationFacts,
@@ -20,40 +20,40 @@ const registration = (proof: AsuRegistrationFacts["proof"]): AsuRegistrationFact
   proof,
 });
 
-describe("asuRegisteredFact (process-and-lifecycle.md, guards)", () => {
-  it("is valid on the actual registration date, recorded with the attestation", () => {
+describe("asuRegisteredSince (process-and-lifecycle.md, guards)", () => {
+  it("is recorded with the attestation", () => {
     expect(
-      asuRegisteredFact(registration({ kind: "ba_customer_number", linkedAt: yesterday })),
-    ).toEqual({ validOn: "2027-02-20", recordedAt: new Date(yesterday) });
+      asuRegisteredSince(registration({ kind: "ba_customer_number", linkedAt: yesterday })),
+    ).toBe(yesterday);
   });
 
   it("an old proof linked today gives a fact recorded today, not before (the snapshot rule)", () => {
-    const fact = asuRegisteredFact(
+    const fact = asuRegisteredSince(
       registration({
         kind: "ba_confirmation",
         linkedAt: today,
         document: { usable: true, quarantineLiftedAt: null },
       }),
     );
-    expect(fact).toEqual({ validOn: "2027-02-20", recordedAt: new Date(today) });
+    expect(fact).toBe(today);
   });
 
   it("counts from a lifted quarantine of the proving document", () => {
-    const fact = asuRegisteredFact(
+    const fact = asuRegisteredSince(
       registration({
         kind: "ba_confirmation",
         linkedAt: today,
         document: { usable: true, quarantineLiftedAt: later },
       }),
     );
-    expect(fact?.recordedAt).toEqual(new Date(later));
+    expect(fact).toBe(later);
   });
 
   it("gives nothing without a proof, a registration or a usable document", () => {
-    expect(asuRegisteredFact(null)).toBeNull();
-    expect(asuRegisteredFact(registration(null))).toBeNull();
+    expect(asuRegisteredSince(null)).toBeNull();
+    expect(asuRegisteredSince(registration(null))).toBeNull();
     expect(
-      asuRegisteredFact(
+      asuRegisteredSince(
         registration({
           kind: "ba_confirmation",
           linkedAt: today,

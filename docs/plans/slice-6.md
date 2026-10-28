@@ -491,7 +491,7 @@ Each PR that changes the document-type catalog takes its next version when it me
   `suspected_wrong_acceptance`).
 - 6-4a: `asuDueDate` rewritten with its branches → `{ kind: "statutory", date, branch } | { kind:
   "orientation", date }`; `AsuProofKind` (`kug200b_submission`, `ba_confirmation`,
-  `ba_customer_number`), `AttestationSource`, `asuRegistrationProblem`, `asuRegisteredFact` (the
+  `ba_customer_number`), `AttestationSource`, `asuRegistrationProblem`, `asuRegisteredSince` (the
   complete fact's instant); the rule `when` and `asuProofState`; `DeadlineKind` adds `asu_due` after
   `tg_start`; the `asu_proof` operations in the document catalog's next version.
 - 6-4b: `kug200bOfferOutcome`, the handwriting checklist from the field map; `kug200b_form`

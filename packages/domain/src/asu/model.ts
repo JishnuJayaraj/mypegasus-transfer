@@ -2,7 +2,6 @@ import { z } from "zod";
 import { asuDueDate, type AsuDueDate, type AsuDueDateParams } from "../dates";
 import type { DocumentState } from "../completeness/engine";
 import type { IsoDate } from "../iso-date";
-import type { DatedFact } from "../lifecycle/guards";
 import type { MainStatus } from "../lifecycle/enums";
 import type { ProjectType } from "../project";
 import type { AsuChannel } from "../projects/agentur-settings";
@@ -63,22 +62,12 @@ export type AsuRegistrationFacts = {
 };
 
 /**
- * `asuRegisteredWithProof` (process-and-lifecycle.md, guards and the snapshot rule): valid on the
- * actual registration date, recorded when the complete registration-with-proof was committed,
- * the later of the registration, its proof's link and a lifted quarantine of the proving document.
- * A proof accepted earlier and linked today is recorded today. Without a proof, or with an
- * unusable document, there is no fact.
- */
-export function asuRegisteredFact(registration: AsuRegistrationFacts | null): DatedFact | null {
-  const since = asuRegisteredSince(registration);
-  return since === null
-    ? null
-    : { validOn: registration!.registeredOn, recordedAt: new Date(since) };
-}
-
-/**
- * The instant `asuRegisteredFact` is recorded at, as the row's own ISO 8601 text (instants of one
- * format, so they compare as strings), or null without the fact.
+ * When `asuRegisteredWithProof` was recorded (process-and-lifecycle.md, guards and the snapshot
+ * rule), as the row's own ISO 8601 text (instants of one format, so they compare as strings): the
+ * later of the registration, its proof's link and a lifted quarantine of the proving document, so
+ * a proof accepted earlier and linked today is recorded today. Null without a proof or with an
+ * unusable document: then there is no fact. The fact is valid on the actual registration date;
+ * the caller makes the instant a `Date` (the domain reads no time of its own).
  */
 export function asuRegisteredSince(registration: AsuRegistrationFacts | null): string | null {
   const proof = registration?.proof;

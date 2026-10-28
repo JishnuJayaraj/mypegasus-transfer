@@ -723,6 +723,7 @@
       "firstName": "Vorname",
       "birthDate": "Geburtsdatum",
       "oldEmploymentEndDate": "Austrittsdatum (bisheriges Arbeitsverhältnis)",
+      "knowledgeDate": "Kenntnisdatum",
       "address": "Anschrift",
       "phone": "Telefon",
       "mobile": "Mobil",

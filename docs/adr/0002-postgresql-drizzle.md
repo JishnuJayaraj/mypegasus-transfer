@@ -868,7 +868,7 @@ the 0072 hardening); process-and-lifecycle.md (Arbeitsuchendmeldung, dates) and 
   `asu_proof_present`); audited `asu_proof_linked`. `set_knowledge_date` (the PL;
   `stale_value` against the date read, `knowledge_date_in_future`; an unchanged date writes
   nothing; audited `knowledge_date_set` with the kind of change). `record_audit_event` refuses the
-  four new types. The fact `asuRegisteredWithProof` is the domain's `asuRegisteredFact` of the
+  four new types. The fact `asuRegisteredWithProof` is the domain's `asuRegisteredSince` of the
   registration and its proving document as `dbGuardFacts` reads them in the caller's transaction,
   after the participation's lock (no reader function: the runtime role selects both).
 - **Catalog version 5:** the ASU proof as `signed` evidence with its operations (add: the consultant

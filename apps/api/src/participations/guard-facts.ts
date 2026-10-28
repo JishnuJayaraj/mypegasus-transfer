@@ -85,7 +85,7 @@ async function tl407Facts(tx: Transaction, participationIds: readonly string[]) 
  * The facts recorded in the database (process-and-lifecycle.md, guards and the snapshot rule):
  * `tl407Signed` and `profilingDone` from `tl407_facts`, which counts only accepted TL 407 scans
  * that are neither quarantined nor invalidated, and `asuRegisteredWithProof` from the ASU record
- * (`asuRegisteredFact`: a usable proof, recorded when the complete registration-with-proof was),
+ * (`asuRegisteredSince`: a usable proof, recorded when the complete registration-with-proof was),
  * each with the database instant its complete fact was recorded at. Everything else stays fail
  * closed until its slice records it (the DSV in Slice 7, the exception evidence in PR 6-7).
  */

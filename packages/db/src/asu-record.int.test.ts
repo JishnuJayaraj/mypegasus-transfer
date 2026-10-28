@@ -118,7 +118,7 @@ const set = (id: string, knowledgeDate: string | null, previous: string | null, 
 const events = (id: string, types: string[]) =>
   all(
     `select event_type::text as type, details from audit_event
-     where participation_id = $1 and event_type::text = any($2) order by occurred_at, id`,
+     where participation_id = $1 and event_type::text = any($2) order by seq`,
     [id, types],
   );
 
