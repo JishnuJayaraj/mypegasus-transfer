@@ -20,6 +20,7 @@
     "start": "pnpm --filter @transfer/api start",
     "api:generate": "pnpm --filter @transfer/api-client run generate",
     "generate": "pnpm api:generate && pnpm --filter @transfer/domain --filter @transfer/config --filter @transfer/forms run generate",
+    "verify:changed": "node scripts/verify-changed.mjs",
     "verify": "pnpm typecheck && pnpm lint && pnpm test:coverage && pnpm generate && git diff --exit-code -- packages/api-client/openapi.json packages/api-client/src/schema.d.ts packages/config/schema packages/config/templates/manifest.json packages/forms/templates/manifest.json docs/domain/generated",
     "test:e2e": "pnpm --filter @transfer/web test:e2e"
   },
