@@ -66,12 +66,20 @@ Coverage thresholds remain required; a passing coverage number does not establis
 **Checkpoint:** the behavior and its material failure case work, with matching contracts across
 the touched layers. Run the focused checks, then take the next step within the same approved PR.
 
+The fast tier while working is `pnpm verify:changed`: typecheck, lint and, without coverage, the
+tests related to the files changed against `origin/main`. A change to a migration, `setup.sql`,
+`packages/db/src/schema.ts`, the db testing helpers or a Vitest config runs the db and api
+projects in full, since imports don't reveal what depends on them. It prints what it runs and
+why. It is never the gate before a push (§4).
+
 ## 4. Verify the final change
 
 Run the required repository checks for the change after the small steps pass. Reuse successful
 results when the files/behavior they cover have not changed; rerun affected checks after a fix,
-and broaden when there is a concrete remaining concern. The final run of the checks the task
-names as done (at least `pnpm verify`) is on the final head, never reused from an earlier commit.
+and broaden when there is a concrete remaining concern. The full gate before every push is
+`pnpm verify`, `pnpm build` and `pnpm test:e2e`; `pnpm verify:changed` (§3) does not replace any
+of them. The final run of the checks the task names as done (at least `pnpm verify`) is on the
+final head, never reused from an earlier commit.
 
 Record skipped checks as skipped, with the reason and where they will run. A mock or a lower-level
 test supports the behavior it exercises; name the missing boundary if the intended integration
