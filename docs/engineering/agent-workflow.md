@@ -7,9 +7,8 @@ tracking document for each step.
 
 ## 1. Establish the task
 
-Read the approved PR unit, its dependencies and the relevant domain/ADR sections. Inspect the
-current code and git state, including existing user changes. For an expressly authorized
-maintenance fix, the task itself can be the brief; a new slice plan is unnecessary.
+Inspect the current code and git state, including existing user changes. For an expressly
+authorized maintenance fix, the task itself can be the brief; a new slice plan is unnecessary.
 
 Write a short working brief before editing:
 
@@ -47,8 +46,7 @@ approved provisional rule. Remaining questions have a clear owner and impact.
 
 Build one coherent behavior through the necessary layers, then verify it before expanding the
 rest of the PR. For a domain-rule change or bug, first demonstrate the failing behavior at the
-boundary where the rule is enforced. A step can cross DB, domain, API and UI; it is not necessarily
-a separate PR or commit.
+boundary where the rule is enforced.
 
 Choose the failure scenarios that apply to the change:
 
@@ -96,9 +94,8 @@ accounted for, and any limitation is explicit.
 
 ## 5. Review the implementation and close the loop
 
-Review the actual diff against both the approved behavior and repository standards. When using
-an independent reviewer, provide the base/head commits and the original requirements, not only
-the implementer's summary. Delegate bounded independent work; keep ownership of the final result.
+When using an independent reviewer, provide the base/head commits and the original requirements,
+not only the implementer's summary.
 
 Classify feedback as a merge blocker, a nonblocking correction or a future improvement. Include
 the concrete failing scenario, the applicable rule and the smallest sufficient fix. A review
