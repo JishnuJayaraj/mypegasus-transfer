@@ -3944,6 +3944,9 @@
                   "channel"
                 ],
                 "additionalProperties": false
+              },
+              "generateKug200b": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -3953,7 +3956,8 @@
               "revokeActivationCode",
               "providePrivacyNotice",
               "remind",
-              "invite"
+              "invite",
+              "generateKug200b"
             ],
             "additionalProperties": false
           }
@@ -4041,7 +4045,9 @@
           "kind": {
             "type": "string",
             "enum": [
-              "knowledge_date_missing"
+              "knowledge_date_missing",
+              "kug200b_offer_open",
+              "kug200b_withdrawal_ba_notice"
             ]
           },
           "date": {
@@ -5975,7 +5981,10 @@
           "asu_route_set",
           "asu_registration_recorded",
           "asu_proof_linked",
-          "knowledge_date_set"
+          "knowledge_date_set",
+          "kug200b_offer_declined",
+          "declaration_withdrawal_recorded",
+          "declaration_withdrawal_ba_notified"
         ]
       },
       "HistoryActor": {
@@ -8665,7 +8674,8 @@
                 "cv",
                 "participant_upload",
                 "qualification_certificate",
-                "tl407_form"
+                "tl407_form",
+                "kug200b_form"
               ]
             }
           }
@@ -10901,7 +10911,8 @@
                 "cv",
                 "participant_upload",
                 "qualification_certificate",
-                "tl407_form"
+                "tl407_form",
+                "kug200b_form"
               ]
             }
           },
@@ -10935,7 +10946,8 @@
               "cv",
               "participant_upload",
               "qualification_certificate",
-              "tl407_form"
+              "tl407_form",
+              "kug200b_form"
             ]
           },
           "mediaType": {
@@ -11120,7 +11132,8 @@
               "cv",
               "participant_upload",
               "qualification_certificate",
-              "tl407_form"
+              "tl407_form",
+              "kug200b_form"
             ]
           },
           "fileName": {
@@ -11192,6 +11205,9 @@
           },
           "scan": {
             "$ref": "#/components/schemas/ScanReview"
+          },
+          "kug200bScan": {
+            "$ref": "#/components/schemas/Kug200bScanReview"
           }
         },
         "required": [
@@ -11298,6 +11314,43 @@
         "enum": [
           "signatures_present",
           "all_pages_present"
+        ]
+      },
+      "Kug200bScanReview": {
+        "type": "object",
+        "properties": {
+          "signedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "confirmations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bScanConfirmation"
+            },
+            "maxItems": 3
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          }
+        },
+        "required": [
+          "signedOn",
+          "confirmations"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bScanConfirmation": {
+        "type": "string",
+        "enum": [
+          "declarations_ticked",
+          "mandatory_completed",
+          "signature_present"
         ]
       },
       "DocumentQuarantineInput": {
@@ -12686,6 +12739,9 @@
               "$ref": "#/components/schemas/AsuMissingItem"
             }
           },
+          "kug200b": {
+            "$ref": "#/components/schemas/Kug200bOffer"
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -12726,6 +12782,7 @@
           "route",
           "registration",
           "missing",
+          "kug200b",
           "capabilities"
         ],
         "additionalProperties": false
@@ -13013,6 +13070,362 @@
         ],
         "additionalProperties": false
       },
+      "Kug200bOffer": {
+        "type": "object",
+        "properties": {
+          "offeredOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "signed",
+              "declined",
+              null
+            ]
+          },
+          "declinedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "profileAccess": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "consentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "givenOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "consentId",
+              "givenOn"
+            ],
+            "additionalProperties": false
+          },
+          "withdrawals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "receivedOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "recordedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "UTC timestamp (ISO 8601)"
+                },
+                "baNotifiedOn": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "receivedOn",
+                "recordedAt",
+                "baNotifiedOn"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "forms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bGeneratedForm"
+            }
+          },
+          "scans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bScan"
+            }
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "generate": {
+                "type": "boolean"
+              },
+              "addScan": {
+                "type": "boolean"
+              },
+              "decline": {
+                "type": "boolean"
+              },
+              "recordWithdrawal": {
+                "type": "boolean"
+              },
+              "recordBaNotice": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "generate",
+              "addScan",
+              "decline",
+              "recordWithdrawal",
+              "recordBaNotice"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "offeredOn",
+          "outcome",
+          "declinedOn",
+          "profileAccess",
+          "withdrawals",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bGeneratedForm": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "latest": {
+            "type": "boolean"
+          },
+          "versionInUse": {
+            "type": "boolean"
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bChecklistItem"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "open"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "documentId",
+          "formVersion",
+          "generatedAt",
+          "latest",
+          "versionInUse",
+          "checklist",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bChecklistItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "required_blank",
+              "text_not_fitting"
+            ]
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "description": "As the form prints it, e.g. `7 Nachname`"
+          }
+        },
+        "required": [
+          "code",
+          "key",
+          "label"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bScan": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/ScanOrigin"
+          },
+          "generationDocumentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "addedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "review": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "unreviewed",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "reasonCode": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "unreadable",
+                  "wrong_document",
+                  "incomplete",
+                  null
+                ]
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "state",
+              "reasonCode",
+              "reviewedAt"
+            ],
+            "additionalProperties": false
+          },
+          "signedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "quarantine": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "reasonCode": {
+                "$ref": "#/components/schemas/QuarantineReason"
+              },
+              "quarantinedAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "UTC timestamp (ISO 8601)"
+              }
+            },
+            "required": [
+              "reasonCode",
+              "quarantinedAt"
+            ],
+            "additionalProperties": false
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/DocumentCapabilities"
+          }
+        },
+        "required": [
+          "documentId",
+          "origin",
+          "generationDocumentId",
+          "formVersion",
+          "addedAt",
+          "review",
+          "signedOn",
+          "quarantine",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
       "AsuRouteInput": {
         "type": "object",
         "properties": {
@@ -13130,6 +13543,67 @@
         "required": [
           "knowledgeDate",
           "previous"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bDeclineInput": {
+        "type": "object",
+        "properties": {
+          "declinedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "declinedOn"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bWithdrawalInput": {
+        "type": "object",
+        "properties": {
+          "consentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receivedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "consentId",
+          "receivedOn"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBaNoticeInput": {
+        "type": "object",
+        "properties": {
+          "withdrawalId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "notifiedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "withdrawalId",
+          "notifiedOn"
         ],
         "additionalProperties": false
       },
@@ -13376,6 +13850,111 @@
         "required": [
           "sourceToken",
           "confirmWarnings"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bGeneration": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bChecklistItem"
+            }
+          }
+        },
+        "required": [
+          "participationId",
+          "documentId",
+          "formVersion",
+          "checklist"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBulkGeneration": {
+        "type": "object",
+        "properties": {
+          "generations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bGeneration"
+            }
+          }
+        },
+        "required": [
+          "generations"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBulkInput": {
+        "type": "object",
+        "properties": {
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
+      "ExportLink": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          }
+        },
+        "required": [
+          "url",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "ExportKind": {
+        "type": "string",
+        "enum": [
+          "kug200b_print"
+        ]
+      },
+      "ExportInput": {
+        "type": "object",
+        "properties": {
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "documentIds"
         ],
         "additionalProperties": false
       },
@@ -25257,6 +25836,309 @@
         }
       }
     },
+    "/api/v1/participations/{participationId}/asu/kug200b-decline": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record that the participant declined the Kug 200b (the PL or the assigned consultant) with the date; once, not once signed, not on the route kug_200b (change the route first); the registration stays as it is",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kug200bDeclineInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/asu/withdrawal": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record a written withdrawal of Kug 200b declaration 17 that reached the TG (the PL or the assigned consultant, also after the end), with the date received: ends its record (consent_ended, revoked) and opens \"BA informiert am\"; the registration stays as it is",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kug200bWithdrawalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/asu/withdrawal-ba-notice": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record \"BA informiert am\" for a withdrawal (the PL or the assigned consultant, also after the end): once, not before the receipt; it records that the BA was told, never that its access was disabled",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kug200bBaNoticeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/participations/{participationId}/forms/tl407/readiness": {
       "get": {
         "tags": [
@@ -25409,6 +26291,393 @@
           },
           "409": {
             "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/forms/kug200b": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Generate the Kug 200b (the PL or the assigned consultant; ta_tg): 1–12 filled, 13–19 and the declarations left for the participant's hand; stored encrypted with its handwriting checklist (blank * fields, text that doesn't fit), audited form_generated; the values it prints from the sensitive answers each read audited",
+        "description": "Refusals:\n- `422` with form-level error codes (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …), `participation_closed`, `asu_not_applicable` (a `ta_only` project); in a bulk at `/participationIds/<index>`.\n- `409 source_changed`: a source moved between the read and the record; generate again.\n- `503 storage_unavailable`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Generated: the document(s), the version and the handwriting checklist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kug200bGeneration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/forms/kug200b": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Generate the Kug 200b for 1–100 participations of a ta_tg project at once (the PL): all or nothing under the project's exclusive lock, in the order asked; the print file is an export (POST /exports/kug200b_print)",
+        "description": "Refusals:\n- `422` with form-level error codes (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …), `participation_closed`, `asu_not_applicable` (a `ta_only` project); in a bulk at `/participationIds/<index>`.\n- `409 source_changed`: a source moved between the read and the record; generate again.\n- `503 storage_unavailable`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kug200bBulkInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Generated: the document(s), the version and the handwriting checklist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kug200bBulkGeneration"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/exports/{kind}": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored",
+        "description": "Refusals:\n- `404` for a form that doesn't exist, is deleted or isn't a generated Kug 200b (each form must be the viewer's to open, else `403`).\n- `422 document_quarantined`; `422 invalid_argument` for forms of more than one project.",
+        "parameters": [
+          {
+            "schema": {
+              "$ref": "#/components/schemas/ExportKind"
+            },
+            "required": true,
+            "name": "kind",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportLink"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export-content/{token}": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "The export of a link as an attachment (no-store, nosniff): only with the staff session that asked and within 60 s, else 404; every form re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined); rendered at the download, stored nowhere, audited export_downloaded",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            },
+            "required": true,
+            "name": "token",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The print file",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/problem+json": {
                 "schema": {

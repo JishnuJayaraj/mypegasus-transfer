@@ -11202,6 +11202,294 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/asu/kug200b-decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record that the participant declined the Kug 200b (the PL or the assigned consultant) with the date; once, not once signed, not on the route kug_200b (change the route first); the registration stays as it is */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Kug200bDeclineInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/asu/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record a written withdrawal of Kug 200b declaration 17 that reached the TG (the PL or the assigned consultant, also after the end), with the date received: ends its record (consent_ended, revoked) and opens "BA informiert am"; the registration stays as it is */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Kug200bWithdrawalInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/asu/withdrawal-ba-notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record "BA informiert am" for a withdrawal (the PL or the assigned consultant, also after the end): once, not before the receipt; it records that the BA was told, never that its access was disabled */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Kug200bBaNoticeInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/forms/tl407/readiness": {
         parameters: {
             query?: never;
@@ -11382,6 +11670,399 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/forms/kug200b": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate the Kug 200b (the PL or the assigned consultant; ta_tg): 1–12 filled, 13–19 and the declarations left for the participant's hand; stored encrypted with its handwriting checklist (blank * fields, text that doesn't fit), audited form_generated; the values it prints from the sensitive answers each read audited
+         * @description Refusals:
+         *     - `422` with form-level error codes (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …), `participation_closed`, `asu_not_applicable` (a `ta_only` project); in a bulk at `/participationIds/<index>`.
+         *     - `409 source_changed`: a source moved between the read and the record; generate again.
+         *     - `503 storage_unavailable`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Generated: the document(s), the version and the handwriting checklist */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Kug200bGeneration"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/forms/kug200b": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate the Kug 200b for 1–100 participations of a ta_tg project at once (the PL): all or nothing under the project's exclusive lock, in the order asked; the print file is an export (POST /exports/kug200b_print)
+         * @description Refusals:
+         *     - `422` with form-level error codes (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …), `participation_closed`, `asu_not_applicable` (a `ta_only` project); in a bulk at `/participationIds/<index>`.
+         *     - `409 source_changed`: a source moved between the read and the record; generate again.
+         *     - `503 storage_unavailable`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Kug200bBulkInput"];
+                };
+            };
+            responses: {
+                /** @description Generated: the document(s), the version and the handwriting checklist */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Kug200bBulkGeneration"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exports/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored
+         * @description Refusals:
+         *     - `404` for a form that doesn't exist, is deleted or isn't a generated Kug 200b (each form must be the viewer's to open, else `403`).
+         *     - `422 document_quarantined`; `422 invalid_argument` for forms of more than one project.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    kind: components["schemas"]["ExportKind"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ExportInput"];
+                };
+            };
+            responses: {
+                /** @description The link */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExportLink"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/export-content/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The export of a link as an attachment (no-store, nosniff): only with the staff session that asked and within 60 s, else 404; every form re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined); rendered at the download, stored nowhere, audited export_downloaded */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The print file */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12636,6 +13317,7 @@ export interface components {
                     /** @enum {string|null} */
                     channel: "email" | "sms" | null;
                 };
+                generateKug200b: boolean;
             };
         };
         ParticipantAction: {
@@ -12658,7 +13340,7 @@ export interface components {
         };
         WorklistCaseItem: {
             /** @enum {string} */
-            kind: "knowledge_date_missing";
+            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice";
             /**
              * Format: date
              * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
@@ -13165,7 +13847,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -13880,7 +14562,7 @@ export interface components {
             sensitive: boolean;
             complete: boolean;
             fields: components["schemas"]["SelfServiceField"][];
-            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form")[];
+            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form")[];
         };
         /** @enum {string} */
         SelfServicePage: "personal" | "contact" | "ba_details" | "education" | "work_history" | "languages_mobility" | "job_wish" | "health" | "further" | "documents";
@@ -14317,14 +14999,14 @@ export interface components {
         };
         DocumentList: {
             documents: components["schemas"]["Document"][];
-            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form")[];
+            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form")[];
             limits: components["schemas"]["DocumentLimits"];
         };
         Document: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form";
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form";
             /** @enum {string} */
             mediaType: "application/pdf" | "image/jpeg" | "image/png";
             sizeBytes: number;
@@ -14374,7 +15056,7 @@ export interface components {
         };
         DocumentUploadInput: {
             /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form";
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form";
             fileName: string;
             /** @description The file, base64; decoded at most 10 MB */
             content: string;
@@ -14398,6 +15080,7 @@ export interface components {
             /** @enum {string} */
             reasonCode?: "unreadable" | "wrong_document" | "incomplete";
             scan?: components["schemas"]["ScanReview"];
+            kug200bScan?: components["schemas"]["Kug200bScanReview"];
         };
         ScanReview: {
             /**
@@ -14427,6 +15110,18 @@ export interface components {
         };
         /** @enum {string} */
         ScanConfirmation: "signatures_present" | "all_pages_present";
+        Kug200bScanReview: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            signedOn: string;
+            confirmations: components["schemas"]["Kug200bScanConfirmation"][];
+            formVersion?: string;
+        };
+        /** @enum {string} */
+        Kug200bScanConfirmation: "declarations_ticked" | "mandatory_completed" | "signature_present";
         DocumentQuarantineInput: {
             reasonCode: components["schemas"]["QuarantineReason"];
         };
@@ -14777,6 +15472,7 @@ export interface components {
             registration: components["schemas"]["AsuRegistration"];
             proofDocuments?: components["schemas"]["AsuProofDocument"][];
             missing: components["schemas"]["AsuMissingItem"][];
+            kug200b: components["schemas"]["Kug200bOffer"];
             capabilities: {
                 setRoute: boolean;
                 recordRegistration: boolean;
@@ -14881,6 +15577,125 @@ export interface components {
             /** @enum {string} */
             reason: "missing" | "not_accepted";
         };
+        Kug200bOffer: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            offeredOn: string | null;
+            /** @enum {string|null} */
+            outcome: "signed" | "declined" | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            declinedOn: string | null;
+            profileAccess: {
+                /** Format: uuid */
+                consentId: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                givenOn: string;
+            } | null;
+            withdrawals: {
+                /** Format: uuid */
+                id: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                receivedOn: string;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                recordedAt: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                baNotifiedOn: string | null;
+            }[];
+            forms?: components["schemas"]["Kug200bGeneratedForm"][];
+            scans?: components["schemas"]["Kug200bScan"][];
+            versions?: string[];
+            capabilities: {
+                generate: boolean;
+                addScan: boolean;
+                decline: boolean;
+                recordWithdrawal: boolean;
+                recordBaNotice: boolean;
+            };
+        };
+        Kug200bGeneratedForm: {
+            /** Format: uuid */
+            documentId: string;
+            formVersion: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            generatedAt: string;
+            latest: boolean;
+            versionInUse: boolean;
+            checklist: components["schemas"]["Kug200bChecklistItem"][];
+            capabilities: {
+                open: boolean;
+            };
+        };
+        Kug200bChecklistItem: {
+            /** @enum {string} */
+            code: "required_blank" | "text_not_fitting";
+            key: string;
+            /** @description As the form prints it, e.g. `7 Nachname` */
+            label: string;
+        };
+        Kug200bScan: {
+            /** Format: uuid */
+            documentId: string;
+            origin: components["schemas"]["ScanOrigin"];
+            /** Format: uuid */
+            generationDocumentId: string | null;
+            formVersion: string | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            addedAt: string;
+            review: {
+                /** @enum {string} */
+                state: "unreviewed" | "accepted" | "rejected";
+                /** @enum {string|null} */
+                reasonCode: "unreadable" | "wrong_document" | "incomplete" | null;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                reviewedAt: string | null;
+            };
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            signedOn: string | null;
+            quarantine: {
+                reasonCode: components["schemas"]["QuarantineReason"];
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                quarantinedAt: string;
+            } | null;
+            capabilities: components["schemas"]["DocumentCapabilities"];
+        };
         AsuRouteInput: {
             /** @enum {string} */
             channel: "kug_200b" | "online_self" | "in_person";
@@ -14921,6 +15736,34 @@ export interface components {
              * @example 2027-03-01
              */
             previous: string | null;
+        };
+        Kug200bDeclineInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            declinedOn: string;
+        };
+        Kug200bWithdrawalInput: {
+            /** Format: uuid */
+            consentId: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            receivedOn: string;
+        };
+        Kug200bBaNoticeInput: {
+            /** Format: uuid */
+            withdrawalId: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            notifiedOn: string;
         };
         Tl407Readiness: components["schemas"]["Tl407ProfilerReadiness"] | components["schemas"]["Tl407ReadinessSummary"];
         Tl407ProfilerReadiness: {
@@ -14981,6 +15824,33 @@ export interface components {
         Tl407GenerationInput: {
             sourceToken: components["schemas"]["Tl407SourceToken"];
             confirmWarnings: components["schemas"]["Tl407WarningCode"][];
+        };
+        Kug200bGeneration: {
+            /** Format: uuid */
+            participationId: string;
+            /** Format: uuid */
+            documentId: string;
+            formVersion: string;
+            checklist: components["schemas"]["Kug200bChecklistItem"][];
+        };
+        Kug200bBulkGeneration: {
+            generations: components["schemas"]["Kug200bGeneration"][];
+        };
+        Kug200bBulkInput: {
+            participationIds: string[];
+        };
+        ExportLink: {
+            url: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            expiresAt: string;
+        };
+        /** @enum {string} */
+        ExportKind: "kug200b_print";
+        ExportInput: {
+            documentIds: string[];
         };
         DevStaffUser: {
             /** Format: uuid */

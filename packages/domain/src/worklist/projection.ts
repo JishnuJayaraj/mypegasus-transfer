@@ -156,7 +156,9 @@ export type WorklistViewer = {
   /** Whether a self-service field may be named (the "Selbstauskunft" tab's rule). */
   knows: (key: string) => boolean;
   /** The operation's permission; the domain's preconditions follow. */
-  may: (operation: Exclude<keyof WorklistItem["capabilities"], "remind" | "invite">) => boolean;
+  may: (
+    operation: Exclude<keyof WorklistItem["capabilities"], "remind" | "invite" | "generateKug200b">,
+  ) => boolean;
   /** `mayRemind` in an active project; the reminder rules follow. */
   remind: boolean;
   /** `mayGenerateKug200bBulk`: the PL. */
