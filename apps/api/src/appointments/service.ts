@@ -92,19 +92,18 @@ export async function hostRule(
   const hosts = [...new Set(hostIds)];
   if (hosts.length === 0) return () => false;
   const list = `{${hosts.join(",")}}`;
-  const [{ rows: roles }, { rows: assigned }] = await Promise.all([
-    db.execute<{ staffUserId: string; role: ProjectRole }>(
-      sql`select m.staff_user_id as "staffUserId", m.role from project_membership m
-        join staff_user u on u.id = m.staff_user_id and u.deactivated_at is null
-        where m.project_id = ${projectId}::uuid and m.staff_user_id = any(${list}::uuid[])`,
-    ),
-    db.execute<{ staffUserId: string; participationId: string }>(
-      sql`select a.staff_user_id as "staffUserId", a.participation_id as "participationId"
-        from participant_assignment a join participation p on p.id = a.participation_id
-        where p.project_id = ${projectId}::uuid and a.ended_at is null
-          and a.staff_user_id = any(${list}::uuid[])`,
-    ),
-  ]);
+  // One after another: `db` may be a transaction (ADR-0002, queries on one connection).
+  const { rows: roles } = await db.execute<{ staffUserId: string; role: ProjectRole }>(
+    sql`select m.staff_user_id as "staffUserId", m.role from project_membership m
+      join staff_user u on u.id = m.staff_user_id and u.deactivated_at is null
+      where m.project_id = ${projectId}::uuid and m.staff_user_id = any(${list}::uuid[])`,
+  );
+  const { rows: assigned } = await db.execute<{ staffUserId: string; participationId: string }>(
+    sql`select a.staff_user_id as "staffUserId", a.participation_id as "participationId"
+      from participant_assignment a join participation p on p.id = a.participation_id
+      where p.project_id = ${projectId}::uuid and a.ended_at is null
+        and a.staff_user_id = any(${list}::uuid[])`,
+  );
   const subjects = new Map<string, StaffSubject>(
     hosts.map((staffUserId) => [
       staffUserId,
