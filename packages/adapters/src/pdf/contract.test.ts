@@ -296,8 +296,8 @@ describe("PdfRenderer contract: Kug 200a 07/2025", () => {
         dateTNVeranstaltung: "20.11.2026",
       });
       // Nothing below the map's floor: what didn't fit at 6 pt would be on the checklist.
-      for (const field of fields)
-        if (field.kind === "text") expect(field.fontSize).toBeGreaterThanOrEqual(6);
+      const sizes = fields.flatMap((field) => (field.kind === "text" ? [field.fontSize] : []));
+      expect(Math.min(...sizes)).toBeGreaterThanOrEqual(6);
       parts.push(await fill(true));
     }
     const first = await readAcroFormValues(

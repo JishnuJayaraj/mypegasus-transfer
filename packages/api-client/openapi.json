@@ -14418,6 +14418,15 @@
               "$ref": "#/components/schemas/Kug200bBatchStaleRow"
             }
           },
+          "checklist": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kug200aChecklistItem"
+            }
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -14429,12 +14438,20 @@
               },
               "exportIndex": {
                 "type": "boolean"
+              },
+              "exportArtifact": {
+                "type": "boolean"
+              },
+              "exportScans": {
+                "type": "boolean"
               }
             },
             "required": [
               "submit",
               "discard",
-              "exportIndex"
+              "exportIndex",
+              "exportArtifact",
+              "exportScans"
             ],
             "additionalProperties": false
           }
@@ -14452,6 +14469,7 @@
           "discardedAt",
           "members",
           "staleRows",
+          "checklist",
           "capabilities"
         ],
         "additionalProperties": false
@@ -14514,6 +14532,44 @@
           "asuChannel"
         ],
         "additionalProperties": false
+      },
+      "Kug200aChecklistItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/Kug200aChecklistCode"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "participationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "key",
+          "label",
+          "participationIds"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200aChecklistCode": {
+        "type": "string",
+        "enum": [
+          "not_recorded",
+          "not_decided",
+          "text_not_fitting",
+          "character_unsupported",
+          "identifier_too_long"
+        ]
       },
       "Kug200bBatchCreated": {
         "type": "object",
@@ -27270,8 +27326,8 @@
         "tags": [
           "documents"
         ],
-        "summary": "Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open; kug200b_batch_index: an open Kug 200b batch's work list, its PL only), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored",
-        "description": "Refusals:\n- `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, and for a batch the viewer doesn't lead, whatever its state.\n- `403` in assisted mode.\n- Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project or a body of another kind.\n- Only for a batch the viewer leads: `422 batch_not_open`; `422 batch_stale` with `staleRows`.",
+        "summary": "Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open; of an open Kug 200b batch, its PL only: kug200b_batch_index its work list, kug200b_batch_artifact the Kug 200a or the accepted alternative list, kug200b_batch_scans the members' scans for the channels scan_email and upload), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored",
+        "description": "Refusals:\n- `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, and for a batch the viewer doesn't lead, whatever its state.\n- `403` in assisted mode.\n- Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project or a body of another kind.\n- Only for a batch the viewer leads: `422 batch_not_open`; `422 batch_stale` with `staleRows`; `422 export_not_applicable` for the scans of a paper channel (the Kug 200a goes with the originals).",
         "parameters": [
           {
             "schema": {
@@ -27361,7 +27417,7 @@
         "tags": [
           "documents"
         ],
-        "summary": "The export of a link as an attachment (no-store, nosniff, the download policy): only with the staff session that asked and within 60 s, else 404; every form or batch member re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined, or a member moved); rendered at the download, stored nowhere, audited export_downloaded",
+        "summary": "The export of a link as an attachment (no-store, nosniff, the download policy): only with the staff session that asked and within 60 s, else 404; every form or batch member re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined, or a member moved; an official artifact also when the Agentur's settings changed); an official artifact's sources compared again after rendering (409 source_changed); 422 form_version_unavailable without a Kug 200a in use; 503 pdf_unavailable for the alternative list without an HTML renderer; rendered at the download, stored nowhere, audited export_downloaded",
         "parameters": [
           {
             "schema": {
@@ -27375,7 +27431,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The print file, or a batch's work list",
+            "description": "The print file, a batch's work list, its Kug 200a or alternative list, or its scans",
             "content": {
               "application/pdf": {
                 "schema": {
@@ -27421,6 +27477,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Refused by a domain rule",
             "content": {
@@ -27449,7 +27515,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck",
+        "summary": "The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck and, when current, its artifact's handwriting checklist (codes, keys and members, never a value)",
         "parameters": [
           {
             "schema": {

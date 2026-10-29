@@ -56,10 +56,10 @@ const projectEvents = (type: string) =>
     [werkNord, type],
   );
 
-describe("update_project and the Kug 200a's header", () => {
-  const update = (kug200a: unknown) =>
-    call(app, "update_project", { id: werkNord, context: pl, kug200a });
+const update = (kug200a: unknown) =>
+  call(app, "update_project", { id: werkNord, context: pl, kug200a });
 
+describe("update_project and the Kug 200a's header", () => {
   it("sets and clears each key in any status, audited by field name only", async () => {
     await update({
       tKugNumber: "123-456-7890",
@@ -174,6 +174,24 @@ async function acceptedScan(id: string) {
   return documentId;
 }
 
+function batch(scans: string[], channel = "scan_email") {
+  return call<string>(app, "create_kug200b_batch", {
+    context: pl,
+    projectId: werkNord,
+    batchId: randomUUID(),
+    agenturKey: nord,
+    channel,
+    artifact: "kug200a",
+    documentIds: scans,
+    outdatedVersions: [],
+  });
+}
+const settings = (channel = "scan_email", artifact = "kug200a") => ({
+  channel,
+  artifact,
+  outdatedVersions: [],
+});
+
 describe("the official artifacts of a batch (Q203 (6))", () => {
   let session: string;
   beforeEach(async () => {
@@ -185,18 +203,6 @@ describe("the official artifacts of a batch (Q203 (6))", () => {
     );
   });
 
-  async function batch(scans: string[], channel = "scan_email") {
-    return call<string>(app, "create_kug200b_batch", {
-      context: pl,
-      projectId: werkNord,
-      batchId: randomUUID(),
-      agenturKey: nord,
-      channel,
-      artifact: "kug200a",
-      documentIds: scans,
-      outdatedVersions: [],
-    });
-  }
   const link = (batchId: string, kind: string, linkHash = hex(), channel = "scan_email") =>
     call(app, "create_kug200b_batch_export_link", {
       context: pl,
@@ -208,11 +214,6 @@ describe("the official artifacts of a batch (Q203 (6))", () => {
       artifact: "kug200a",
       outdatedVersions: [],
     }).then(() => linkHash);
-  const settings = (channel = "scan_email", artifact = "kug200a") => ({
-    channel,
-    artifact,
-    outdatedVersions: [],
-  });
   type Read = {
     kind: string;
     fingerprint: string;
@@ -385,6 +386,26 @@ describe("the official artifacts of a batch (Q203 (6))", () => {
     const batchId = await batch([await acceptedScan(id)]);
     const index = await link(batchId, "kug200b_batch_index");
     await expect(read(index)).rejects.toMatchObject(failsWith("export_link_invalid"));
+    const linkBatch = (linkHash: string) =>
+      call(app, "export_link_batch", { context: pl, linkHash, sessionHash: session });
+    await expect(linkBatch(index)).rejects.toMatchObject(failsWith("export_link_invalid"));
+    expect(await linkBatch(await link(batchId, "kug200b_batch_scans"))).toBe(batchId);
+    // The checklist's sources: the PL's alone, the RV-Nummer as a digest, nothing audited.
+    const sources = await call<{ members: { insuranceNumberSha256: string | null }[] }>(
+      app,
+      "kug200b_batch_print_sources",
+      { context: pl, batchId },
+    );
+    expect(sources.members[0]!.insuranceNumberSha256).toMatch(/^[0-9a-f]{64}$/);
+    for (const [context, other] of [
+      [asConsultant, batchId],
+      [pl, randomUUID()],
+    ] as const) {
+      await expect(
+        call(app, "kug200b_batch_print_sources", { context, batchId: other }),
+      ).rejects.toMatchObject(failsWith("batch_not_found"));
+    }
+    expect(await all(`select 1 from audit_event where event_type = 'sensitive_read'`)).toEqual([]);
     await expect(read(hex())).rejects.toMatchObject(failsWith("export_link_invalid"));
     const linkHash = await link(batchId, "kug200b_batch_artifact");
     await expect(

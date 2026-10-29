@@ -450,10 +450,45 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- Grants: the two steps; the helpers none.
+-- The batch of a live official link of this staff user and session (`export_link_invalid`
+-- otherwise), so the API takes its project's lock and resolves the Agentur's settings before the
+-- read. Reads nothing else; not audited.
+CREATE FUNCTION export_link_batch(p_context audit_context, p_link_hash text, p_session_hash text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  l public.export_link;
+BEGIN
+  l := public.live_export_link(p_context, p_link_hash, p_session_hash);
+  IF l.batch_id IS NULL
+     OR l.kind::text NOT IN ('kug200b_batch_artifact', 'kug200b_batch_scans') THEN
+    RAISE EXCEPTION 'export_link_invalid';
+  END IF;
+  RETURN l.batch_id;
+END $$;
+--> statement-breakpoint
+
+-- What an open batch's Kug 200a would print, for its PL's handwriting checklist before printing
+-- (the tab "Agentur"; Q197 (8)): the sources as the read takes them, the RV-Nummer as its
+-- ciphertext's digest (its presence only; nothing is decrypted, nothing audited). A batch the user
+-- doesn't lead is `batch_not_found` whatever its state.
+CREATE FUNCTION kug200b_batch_print_sources(p_context audit_context, p_batch_id uuid)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  b public.kug200b_batch;
+BEGIN
+  PERFORM public.assert_context(p_context, NULL, '{user}');
+  SELECT * INTO b FROM public.kug200b_batch WHERE id = p_batch_id;
+  IF NOT FOUND OR NOT public.kug200b_batch_lead(b.project_id, (p_context).staff_user_id) THEN
+    RAISE EXCEPTION 'batch_not_found';
+  END IF;
+  RETURN public.kug200b_batch_export_sources(b, 'kug200b_batch_artifact');
+END $$;
+--> statement-breakpoint
+
+-- Grants: the two steps, the link's batch and the checklist's sources; the helpers none.
 REVOKE ALL ON FUNCTION lock_kug200b_official_export, kug200b_batch_export_sources,
   kug200b_batch_export_fingerprint, read_kug200b_batch_export, record_kug200b_batch_export,
-  update_project FROM PUBLIC;
+  export_link_batch, kug200b_batch_print_sources, update_project FROM PUBLIC;
 --> statement-breakpoint
-GRANT EXECUTE ON FUNCTION read_kug200b_batch_export, record_kug200b_batch_export, update_project
-  TO transfer_app;
+GRANT EXECUTE ON FUNCTION read_kug200b_batch_export, record_kug200b_batch_export,
+  export_link_batch, kug200b_batch_print_sources, update_project TO transfer_app;

@@ -14,6 +14,7 @@ import {
   kug200bBatchMax,
   Kug200bBatchStatus,
 } from "./batches";
+import { Kug200aChecklistItem } from "./kug200a";
 
 // The project tab "Agentur" (ADR-0010; process-and-lifecycle.md, Kug 200b batches): the PL's view
 // of the placement Agenturen, their ready scans and the batches. Names, codes, dates and instants;
@@ -61,10 +62,19 @@ export const Kug200bBatchView = z
     members: z.array(Kug200bBatchMember),
     /** An open batch's recheck as read now: any row refuses its export and submission. */
     staleRows: z.array(BatchStaleRow),
+    /**
+     * An open, current batch's handwriting checklist, shown before its artifact is printed (Q197
+     * (8), Q205): codes, keys and the members concerned, never a value; null otherwise.
+     */
+    checklist: z.array(Kug200aChecklistItem).nullable(),
     capabilities: z.strictObject({
       submit: z.boolean(),
       discard: z.boolean(),
       exportIndex: z.boolean(),
+      /** The official artifact: the Kug 200a, or the accepted alternative list. */
+      exportArtifact: z.boolean(),
+      /** The members' scans as one PDF: the channels `scan_email` and `upload` only. */
+      exportScans: z.boolean(),
     }),
   })
   .meta({ id: "Kug200bBatch" });

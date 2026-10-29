@@ -261,6 +261,9 @@ export function checkKug200a(
   return { copies, checklist: checklistOf(issues, map, source.members) };
 }
 
+const tr = (cells: string[], tag: "td" | "th") =>
+  `<tr>${cells.map((text) => `<${tag}>${escapeHtml(text)}</${tag}>`).join("")}</tr>`;
+
 /** The alternative list's template (regional-variation.md, the accepted alternative). */
 export const kug200aListTemplate = "sammelliste-kug200b:v1";
 
@@ -307,8 +310,6 @@ export function kug200aList(
   const subtitle = `Sammelmeldung Kug 200b vom ${formatFormDate(meta.createdOn)}, ${rows.length} ${
     rows.length === 1 ? "Teilnehmende/r" : "Teilnehmende"
   }`;
-  const tr = (cells: string[], tag: "td" | "th") =>
-    `<tr>${cells.map((text) => `<${tag}>${escapeHtml(text)}</${tag}>`).join("")}</tr>`;
   const headerHtml = `<table class="header"><tbody>${headerRows
     .map(
       ([label, value]) => `<tr><th>${escapeHtml(label!)}</th><td>${escapeHtml(value!)}</td></tr>`,

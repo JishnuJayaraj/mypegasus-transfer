@@ -236,6 +236,8 @@ const statusFunctions = [
   // Slice 6: the official artifacts of a batch (ba-forms.md, the Kug 200a as built; Q203 (6))
   "read_kug200b_batch_export",
   "record_kug200b_batch_export",
+  "export_link_batch",
+  "kug200b_batch_print_sources",
 ];
 const helpers = [
   "assert_context",

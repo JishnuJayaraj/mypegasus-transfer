@@ -221,7 +221,13 @@ describe("GET /projects/{id}/kug200b-batches (the tab Agentur)", () => {
     expect(stale.staleRows).toEqual([
       { participationId: null, documentId: null, reason: "settings_changed" },
     ]);
-    expect(stale.capabilities).toEqual({ submit: false, discard: true, exportIndex: false });
+    expect(stale.capabilities).toEqual({
+      submit: false,
+      discard: true,
+      exportIndex: false,
+      exportArtifact: false,
+      exportScans: false,
+    });
     expect(await staleOf(await submitBatch(batchId))).toEqual(stale.staleRows);
   });
 });
