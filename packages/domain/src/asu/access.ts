@@ -76,3 +76,17 @@ export function maySetKnowledgeDate(actor: Actor, target: PermissionTarget): Per
   if (actor.kind !== "staff") return denied;
   return staffPermission(actor, target, (role) => role === "project_lead");
 }
+
+/**
+ * The Kug 200b of one participation (data-protection.md, generated forms; Q179): generating it,
+ * recording a decline, a withdrawal and "BA informiert am": the PL or the assigned consultant.
+ */
+export function mayWorkKug200b(actor: Actor, target: PermissionTarget): Permission {
+  return mayRecordAsu(actor, target);
+}
+
+/** The Kug 200b for 1–100 participations at once, one print file (Q179): the PL. */
+export function mayGenerateKug200bBulk(actor: Actor, target: PermissionTarget): Permission {
+  if (actor.kind !== "staff") return denied;
+  return staffPermission(actor, target, (role) => role === "project_lead");
+}

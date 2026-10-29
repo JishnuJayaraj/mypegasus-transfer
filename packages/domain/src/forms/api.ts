@@ -166,3 +166,43 @@ export const Tl407SignedDeclarations = Tl407Declarations.extend({
   signedOn: isoDate,
   acceptedAt: instant,
 }).meta({ id: "Tl407SignedDeclarations" });
+
+/**
+ * The Kug 200b's handwriting and clarification checklist (Q197 (8)): the blank `*` fields and every
+ * text that doesn't fit, by key and label, shown before printing; never a value.
+ */
+export const Kug200bChecklistItem = z
+  .strictObject({ code: z.enum(["required_blank", "text_not_fitting"]), key: z.string(), label })
+  .meta({ id: "Kug200bChecklistItem" });
+
+/** A generated Kug 200b: the document (opened through the logged opening) and its checklist. */
+export const Kug200bGeneration = z
+  .strictObject({
+    participationId: z.uuid(),
+    documentId: z.uuid(),
+    formVersion: FormVersion,
+    checklist: z.array(Kug200bChecklistItem),
+  })
+  .meta({ id: "Kug200bGeneration" });
+export type Kug200bGeneration = z.infer<typeof Kug200bGeneration>;
+
+/** The most forms one bulk generation makes (data-protection.md, exports: a print file ≤ 100). */
+export const kug200bBulkMax = 100;
+
+/** `POST /projects/{projectId}/forms/kug200b` (the PL): 1–100 participations, each once. */
+export const Kug200bBulkInput = z
+  .strictObject({
+    participationIds: z
+      .array(z.uuid())
+      .min(1)
+      .max(kug200bBulkMax)
+      .refine((ids) => new Set(ids).size === ids.length, { params: { code: "duplicate_value" } }),
+  })
+  .meta({ id: "Kug200bBulkInput" });
+export type Kug200bBulkInput = z.infer<typeof Kug200bBulkInput>;
+
+/** All generated or none: one per participation, in the order asked. */
+export const Kug200bBulkGeneration = z
+  .strictObject({ generations: z.array(Kug200bGeneration) })
+  .meta({ id: "Kug200bBulkGeneration" });
+export type Kug200bBulkGeneration = z.infer<typeof Kug200bBulkGeneration>;

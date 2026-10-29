@@ -216,6 +216,14 @@ const statusFunctions = [
   "record_asu_registration",
   "link_asu_proof",
   "set_knowledge_date",
+  // Slice 6: the Kug 200b and exports (data-protection.md, generated forms and exports)
+  "lock_bulk_form_generation",
+  "read_kug200b_values",
+  "decline_kug200b_offer",
+  "record_declaration_withdrawal",
+  "record_withdrawal_ba_notice",
+  "create_export_link",
+  "export_link_content",
 ];
 const helpers = [
   "assert_context",
@@ -332,6 +340,10 @@ const helpers = [
   "scan_declarations_valid",
   "tl407_evidence",
   "lock_asu_actor",
+  "lock_kug200b_actor",
+  "form_checklist_valid",
+  "export_document_allowed",
+  "export_document_visible",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -927,9 +939,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 to 5 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 6 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 39 },
+      { n: 50 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });
@@ -956,6 +968,29 @@ describe("transfer_app and the document tables", () => {
     ["select a content hash", "select content_sha256 from document"],
     ["select everything of a document", "select * from document"],
     ["select a link", "select token_hash from document_link"],
+    // Export links (data-protection.md, exports): no privilege at all, written and read by their
+    // functions only.
+    ...writes(
+      "export_link",
+      "expires_at",
+      `insert into export_link (token_hash, project_id, kind, document_ids, staff_user_id, session_hash, expires_at)
+       values ('${"a".repeat(64)}', '${seedProjectIds.werkNord}', 'kug200b_print', array[gen_random_uuid()], gen_random_uuid(), '${"b".repeat(64)}', now() + interval '1 minute')`,
+    ),
+    ["select an export link", "select token_hash from export_link"],
+    // The offer's tables are selected, written only by their functions.
+    ...writes(
+      "kug200b_decline",
+      "declined_on",
+      `insert into kug200b_decline (participation_id, project_id, declined_on, declined_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', current_date, gen_random_uuid())`,
+    ),
+    ...writes(
+      "kug200b_withdrawal",
+      "received_on",
+      `insert into kug200b_withdrawal (id, project_id, participation_id, consent_id, received_on, recorded_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), current_date, gen_random_uuid())`,
+    ),
+    ["read the Kug 200b actor directly", "select lock_kug200b_actor(null, null, false)"],
     ["find the actor directly", "select lock_document_actor(null, null, null, false)"],
     ["read roles directly", "select document_staff_roles(null, null)"],
     // Reminders (data-protection.md, reminders): selected, never written but by the functions.

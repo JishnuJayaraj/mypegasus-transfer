@@ -40,6 +40,7 @@ import type { FieldKey } from "../field-encryption";
 import { loadSelfService } from "../participations/self-service";
 import type { Release } from "../projects/template-pins";
 import { textArray } from "../routes/self-service";
+import { formPersonOf, organisationFingerprint, sha256, type FormPerson } from "./person";
 import type { FormRegistry } from "./registry";
 
 // The TL 407 of one participation (data-protection.md, generated forms and the readiness
@@ -58,28 +59,7 @@ export type Tl407Sources = {
   unemployment: number;
 };
 
-/**
- * The values without a revision of their own that the form prints, as `form_person` reads them:
- * compared again when the generation is recorded.
- */
-type Person = {
-  firstName: string;
-  lastName: string;
-  birthDate: IsoDate | null;
-  street: string | null;
-  postalCode: string | null;
-  city: string | null;
-  country: string | null;
-  phone: string | null;
-  mobile: string | null;
-  privateEmail: string | null;
-  tgStart: IsoDate | null;
-  tgEnd: IsoDate | null;
-};
-
-type Read = { source: Tl407Source; sources: Tl407Sources; person: Person };
-
-const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+type Read = { source: Tl407Source; sources: Tl407Sources; person: FormPerson };
 
 /** What the service needs beyond the database. */
 export type Tl407Deps = {
@@ -107,15 +87,7 @@ export function tl407Service(deps: Tl407Deps) {
   const organisation = loadOrganisation(configDirs(deps.configDir).organisation);
   const company = organisation.transfergesellschaft;
   /** The Träger the form prints, as a fingerprint (its version is the deployment's file). */
-  const organisationSha256 = sha256(
-    JSON.stringify([
-      company.name,
-      company.street,
-      company.houseNumber,
-      company.postalCode,
-      company.city,
-    ]),
-  );
+  const organisationSha256 = organisationFingerprint(company);
 
   /**
    * What a check was made of (data-protection.md, generated forms): the version, the date (the
@@ -208,21 +180,7 @@ export function tl407Service(deps: Tl407Deps) {
         const wave = found!.wave;
         const tgStart = effectiveTgStart(found!, wave);
         const tgEnd = effectiveTgEnd(found!, wave);
-        const address = record.values.address;
-        const person: Person = {
-          firstName: record.identity.firstName,
-          lastName: record.identity.lastName,
-          birthDate: record.identity.birthDate,
-          street: address?.street ?? null,
-          postalCode: address?.postalCode ?? null,
-          city: address?.city ?? null,
-          country: address?.country ?? null,
-          phone: record.values.phone,
-          mobile: record.values.mobile,
-          privateEmail: record.values.privateEmail,
-          tgStart,
-          tgEnd,
-        };
+        const person = formPersonOf(record, tgStart, tgEnd);
         const source: Tl407Source = {
           projectType: found!.projectType,
           today,

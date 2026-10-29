@@ -19,6 +19,7 @@ import {
 } from "@transfer/db";
 import {
   applicableAsuDueDate,
+  mayGenerateKug200bBulk,
   mayListField,
   mayPerformOperation,
   mayRemind,
@@ -36,7 +37,9 @@ import {
 import { projectAccess, projectTarget } from "../access";
 import { itemBookingsOf, itemNoticesOf } from "../appointments/items";
 import type { Release } from "../projects/template-pins";
+import { asuStatesOf } from "./asu";
 import type { GuardFactsProvider } from "./guard-facts";
+import { kug200bStatesOf } from "./kug200b";
 import { consultantsOf, listStatesOf } from "./list-states";
 import { loadSelfServiceRecords } from "./self-service";
 import { exceptionOf } from "./status-service";
@@ -143,6 +146,13 @@ export async function loadWorklist(
         await itemBookingsOf(tx, projectId, ids, resolvesHosts),
         await itemNoticesOf(tx, ids),
       ];
+      // The Kug 200b offer's items (process-and-lifecycle.md, the Kug 200b offer).
+      const [asuStates, offers] = [await asuStatesOf(tx, ids), await kug200bStatesOf(tx, ids)];
+      const generatesKug200b = mayGenerateKug200bBulk(subject, {
+        projectId,
+        regionId,
+        participationId: null,
+      }).ok;
       // Every participation's dated facts in one read where the provider can (the TL 407's).
       const inputs = rows.map(({ p }) => ({
         participationId: p.id,
@@ -190,6 +200,13 @@ export async function loadWorklist(
                 endDate,
                 knowledgeDate,
               }),
+              kug200b: {
+                channel: asuStates.get(p.id)!.channel,
+                offeredOn: offers.get(p.id)!.offeredOn,
+                signed: offers.get(p.id)!.signed,
+                declinedOn: offers.get(p.id)!.declinedOn,
+                withdrawals: offers.get(p.id)!.withdrawals,
+              },
               appointments: {
                 bookings: bookings.get(p.id) ?? [],
                 notices: notices.get(p.id) ?? [],
@@ -222,6 +239,7 @@ export async function loadWorklist(
               knows,
               may: (kind) => mayPerformOperation(subject, { kind }, target).ok,
               remind: found!.status === "active" && mayRemind(subject, target).ok,
+              generatesKug200b,
             },
           ),
         );

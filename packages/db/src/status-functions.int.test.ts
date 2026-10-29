@@ -1082,12 +1082,12 @@ describe("record_audit_event", () => {
     await call(app, "record_audit_event", {
       projectId: seedProjectIds.werkNord,
       participationId: null,
-      eventType: "export_created",
+      eventType: "warning_confirmed",
       context: nightly,
       reasonCode: "monthly_report",
     });
     const { rows } = await owner.query(
-      "select event_type, participation_id, details from audit_event where event_type in ('sensitive_read', 'export_created') order by seq",
+      "select event_type, participation_id, details from audit_event where event_type in ('sensitive_read', 'warning_confirmed') order by seq",
     );
     expect(rows).toEqual([
       {
@@ -1095,7 +1095,7 @@ describe("record_audit_event", () => {
         participation_id: id,
         details: { key: "healthRestrictions" },
       },
-      { event_type: "export_created", participation_id: null, details: {} },
+      { event_type: "warning_confirmed", participation_id: null, details: {} },
     ]);
   });
 

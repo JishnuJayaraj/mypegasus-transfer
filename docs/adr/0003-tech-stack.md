@@ -197,9 +197,14 @@ Approved by the owner as a test-infrastructure change, without a slice plan.
   commits don't wait for the WAL flush, which the per-test truncate makes expensive. What a test
   observes is the same; only a server crash could lose the last commits of a clone.
 - **Worker count.** Every project and the root share `maxWorkers` from `vitest.workers.ts`
-  (Vitest requires one value across projects that run together): 1.5 × the available cores, since
-  the integration tests wait on PostgreSQL much of the time. The run's projects are no longer
-  ordered by `sequence.groupOrder`; `fileParallelism` is the default again.
+  (Vitest requires one value across projects that run together): the available cores. *(Changed
+  in PR 6-4b, 2026-10-29: it was 1.5 × the cores, since the integration tests wait on PostgreSQL
+  much of the time, but the CPU-bound projects share the count, and on 4 cores their tests then
+  timed out at 5 s at random, a different set each run, in CI and locally; with one worker per
+  core the full run passes.)* The run's projects are no longer ordered by `sequence.groupOrder`;
+  `fileParallelism` is the default again. The work list's 2,000-row timing test has its own 30 s
+  timeout: its budget and hard ceiling judge the time, and seeding plus three runs exceed 5 s
+  under coverage.
 - **Unchanged.** The overlap check of `sequential-queries.ts` (ADR-0002), the truncate before each
   test, the coverage thresholds and the timing budgets (soft by default, `PERF_BUDGET=strict`).
   A test file still runs alone on its database, so files only meet through what lies outside it

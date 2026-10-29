@@ -744,7 +744,9 @@
       "tgStart": "TG-Beginn",
       "tgEnd": "TG-Ende",
       "jobboerseChoice": "Veröffentlichung in der Jobbörse",
-      "baContactConsent": "Kontaktaufnahme durch die BA"
+      "baContactConsent": "Kontaktaufnahme durch die BA",
+      "kug200bJobSeeking": "Erklärung 16 (Arbeitsuchendmeldung)",
+      "kug200bProfileAccess": "Erklärung 17 (Profilzugriff)"
     },
     "chooseWave": "Welle zuordnen",
     "changeWave": "Andere Welle zuordnen",
@@ -1338,7 +1340,25 @@
     "appointmentItem": "{{kind}} vom {{date}}",
     "appointmentNext": "{{kind}} am {{date}}, {{time}} Uhr",
     "appointmentMore": "+{{count}} weitere",
-    "knowledgeDateMissing": "Orientierung {{date}} – Kenntnisdatum klären"
+    "knowledgeDateMissing": "Orientierung {{date}} – Kenntnisdatum klären",
+    "caseItems": {
+      "kug200b_offer_open": "Kug 200b offen (angeboten am {{date}})",
+      "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren (eingegangen am {{date}})"
+    },
+    "kug200b": {
+      "generate": "Kug 200b erzeugen",
+      "hint": "Für die ausgewählten Teilnehmenden (höchstens 100) – alle oder keiner.",
+      "tooMany": "Höchstens 100 auf einmal.",
+      "notAllowed": "Für {{count}} der Ausgewählten kann kein Kug 200b erzeugt werden.",
+      "done_one": "{{count}} Kug 200b erzeugt.",
+      "done_other": "{{count}} Kug 200b erzeugt.",
+      "checklist": "Vor dem Druck von Hand zu ergänzen:",
+      "noChecklist": "Alle Pflichtangaben sind vorbefüllt.",
+      "print": "Druckdatei öffnen",
+      "close": "Schließen",
+      "failed": "Die Kug 200b konnten nicht erzeugt werden; es wurde keiner erzeugt.",
+      "row": "{{name}}: {{items}}"
+    }
   },
   "dashboard": {
     "title": "Übersicht",
@@ -1585,7 +1605,10 @@
       "asu_route_set": "Weg der Arbeitsuchendmeldung festgelegt",
       "asu_registration_recorded": "Arbeitsuchendmeldung erfasst",
       "asu_proof_linked": "BA-Bestätigung als Nachweis verknüpft",
-      "knowledge_date_set": "Kenntnisdatum geändert"
+      "knowledge_date_set": "Kenntnisdatum geändert",
+      "kug200b_offer_declined": "Kug 200b abgelehnt",
+      "declaration_withdrawal_recorded": "Widerruf der Erklärung zum Profilzugriff erfasst",
+      "declaration_withdrawal_ba_notified": "BA über den Widerruf informiert"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1676,6 +1699,11 @@
       "set": "erfasst",
       "changed": "geändert",
       "cleared": "gelöscht"
+    },
+    "dated": "am {{date}}",
+    "consentSources": {
+      "portal": "im Portal",
+      "paper_form": "auf Papier"
     }
   },
   "appointments": {
@@ -2491,10 +2519,141 @@
         "document_quarantined": "Die BA-Bestätigung steht unter Quarantäne.",
         "document_invalidated": "Die BA-Bestätigung ist ungültig.",
         "knowledge_date_in_future": "Das Kenntnisdatum liegt in der Zukunft.",
-        "document_not_quarantined": "Die BA-Bestätigung steht nicht unter Quarantäne."
+        "document_not_quarantined": "Die BA-Bestätigung steht nicht unter Quarantäne.",
+        "kug200b_signed": "Der Kug 200b ist schon unterschrieben; ein Widerruf wird als Widerruf erfasst.",
+        "kug200b_declined": "Die Ablehnung ist schon erfasst.",
+        "declined_on_in_future": "Das Datum der Ablehnung liegt in der Zukunft.",
+        "consent_not_found": "Die Erklärung gibt es nicht.",
+        "consent_ended": "Die Erklärung ist nicht mehr in Kraft.",
+        "received_on_in_future": "Das Eingangsdatum liegt in der Zukunft.",
+        "received_before_consent": "Der Widerruf kann nicht vor der Erklärung eingegangen sein.",
+        "withdrawal_not_found": "Den Widerruf gibt es nicht.",
+        "ba_notice_recorded": "„BA informiert am“ ist schon erfasst.",
+        "notified_on_in_future": "Das Datum liegt in der Zukunft.",
+        "notified_before_receipt": "Die BA kann nicht vor dem Eingang des Widerrufs informiert worden sein.",
+        "form_version_unavailable": "Es ist keine gültige Version des Kug 200b hinterlegt.",
+        "character_unsupported": "Ein Name enthält Zeichen, die das Formular nicht drucken kann; bitte den Kug 200b von Hand ausfüllen und als „außerhalb der Anwendung ausgefüllt“ hochladen.",
+        "identifier_too_long": "Die RV-Nummer passt nicht in das Formular; bitte klären.",
+        "signature_in_future": "Das Datum liegt in der Zukunft.",
+        "signature_before_generation": "Das Datum liegt vor dem Druck des Bogens.",
+        "confirmation_required": "Bitte alle drei Punkte auf dem Papier prüfen und bestätigen.",
+        "document_reviewed": "Der Scan ist schon geprüft.",
+        "storage_unavailable": "Die Ablage ist gerade nicht erreichbar; bitte später erneut versuchen.",
+        "source_changed": "Die Angaben haben sich inzwischen geändert; bitte erneut erzeugen."
       },
       "quarantined": "Die BA-Bestätigung steht jetzt unter Quarantäne.",
       "lifted": "Die Quarantäne wurde aufgehoben."
+    },
+    "kug200b": {
+      "title": "Kug 200b",
+      "generate": "Kug 200b erzeugen",
+      "open": "Öffnen",
+      "cancel": "Abbrechen",
+      "outcome": {
+        "none": "Noch kein Kug 200b angeboten.",
+        "open": "Angeboten am {{date}} – offen, bis der Kug 200b unterschrieben oder abgelehnt ist.",
+        "signed": "Unterschrieben (angenommen).",
+        "declined": "Abgelehnt am {{date}}."
+      },
+      "checklist": {
+        "none": "Alle Pflichtangaben sind vorbefüllt. Die Felder 13–19, die Erklärungen 16 und 17 und die Unterschrift trägt die Person von Hand ein.",
+        "intro": "Vor dem Druck: Diese Angaben sind nicht vorbefüllt und müssen von Hand ergänzt oder geklärt werden:",
+        "codes": {
+          "required_blank": "{{label}}: fehlt – von Hand eintragen",
+          "text_not_fitting": "{{label}}: passt nicht in das Feld – von Hand eintragen"
+        },
+        "review": "Bei der Prüfung des unterschriebenen Bogens wird kontrolliert, dass die Pflichtangaben ausgefüllt sind."
+      },
+      "forms": {
+        "title": "Erzeugte Kug 200b",
+        "empty": "Noch kein Kug 200b erzeugt.",
+        "outdated": "Version nicht mehr gültig – neu erzeugen",
+        "superseded": "ersetzt",
+        "columns": {
+          "generatedAt": "Erzeugt am",
+          "version": "Version",
+          "checklist": "Von Hand zu ergänzen",
+          "actions": "Aktionen"
+        }
+      },
+      "scans": {
+        "title": "Unterschriebene Kug 200b",
+        "empty": "Noch kein unterschriebener Kug 200b hochgeladen.",
+        "upload": "Unterschriebenen Kug 200b hochladen",
+        "origin": "Gedruckt aus",
+        "fromForm": "Aus der Anwendung gedruckt",
+        "fromFormAt": "Erzeugt am {{at}}",
+        "external": "Außerhalb der Anwendung ausgefüllt",
+        "file": "Scan auswählen",
+        "quarantined": "Unter Quarantäne: {{reason}}",
+        "states": {
+          "unreviewed": "Nicht geprüft",
+          "accepted": "Angenommen",
+          "rejected": "Abgelehnt"
+        },
+        "columns": {
+          "addedAt": "Hochgeladen am",
+          "origin": "Herkunft",
+          "version": "Version",
+          "signedOn": "Datum (Feld 19)",
+          "state": "Stand",
+          "actions": "Aktionen"
+        }
+      },
+      "review": {
+        "action": "Prüfen",
+        "title": "Unterschriebenen Kug 200b prüfen",
+        "intro": "Bitte auf dem Papier prüfen. Nichts ist vorausgewählt.",
+        "signedOn": "Datum in Feld 19 (TT.MM.JJJJ)",
+        "accept": "Annehmen",
+        "version": "Version laut Formular",
+        "confirmations": {
+          "declarations_ticked": "16 und 17 angekreuzt",
+          "mandatory_completed": "Pflichtangaben ausgefüllt",
+          "signature_present": "unterschrieben"
+        }
+      },
+      "reasons": {
+        "reject": "Ablehnen",
+        "quarantine": "Unter Quarantäne stellen",
+        "delete": "Löschen",
+        "label": "Grund",
+        "choose": "Grund wählen",
+        "codes": {
+          "unreadable": "Nicht lesbar",
+          "wrong_document": "Falsches Dokument",
+          "incomplete": "Unvollständig",
+          "suspected_wrong_person": "Verdacht: andere Person",
+          "suspected_wrong_acceptance": "Verdacht: irrtümlich angenommen",
+          "wrong_person": "Andere Person",
+          "wrong_file": "Falsche Datei"
+        }
+      },
+      "decline": {
+        "title": "Abgelehnt",
+        "date": "Abgelehnt am (TT.MM.JJJJ)",
+        "save": "Ablehnung erfassen"
+      },
+      "profileAccess": {
+        "title": "Erklärung zum Profilzugriff (Erklärung 17)",
+        "since": "Erklärt seit {{date}} (wie unterschrieben).",
+        "none": "Keine Erklärung in Kraft.",
+        "withdrawal": "Widerruf erfassen",
+        "receivedOn": "Widerruf eingegangen am (TT.MM.JJJJ)",
+        "saveWithdrawal": "Widerruf erfassen",
+        "withdrawn": "Widerruf eingegangen am {{date}}",
+        "notified": "BA informiert am {{date}}",
+        "notNotified": "BA noch nicht informiert",
+        "baNotice": "BA informiert",
+        "notifiedOn": "BA informiert am (TT.MM.JJJJ)",
+        "saveNotice": "BA informiert am erfassen",
+        "hint": "Erfasst wird, wann die BA über den Widerruf informiert wurde – nicht, ob sie den Zugriff gesperrt hat. Eine gültige Arbeitsuchendmeldung bleibt bestehen."
+      },
+      "messages": {
+        "generated": "Der Kug 200b wurde erzeugt.",
+        "uploaded": "Der Scan wurde hochgeladen.",
+        "accepted": "Der Kug 200b wurde angenommen."
+      }
     }
   }
 }

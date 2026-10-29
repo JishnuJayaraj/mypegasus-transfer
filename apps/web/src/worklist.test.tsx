@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { funnelFilters, projectFunnel } from "@transfer/domain";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { documentNavigation } from "./components/documents-tab";
 import {
   json,
   mockApi,
@@ -331,5 +332,100 @@ describe("Teilnehmende", () => {
         }),
     });
     expect(await screen.findByText(/mehr Teilnehmende, als diese Liste/)).toBeInTheDocument();
+  });
+});
+
+describe("Kug 200b erzeugen (data-protection.md, generated forms and exports)", () => {
+  const kugItems = [
+    worklistItem({
+      id: id(4),
+      personnelNumber: "BSP-0004",
+      lastName: "Neumann",
+      firstName: "Lea",
+      caseItems: [{ kind: "kug200b_offer_open", date: "2026-11-02" }],
+      capabilities: { ...capable, generateKug200b: true },
+    }),
+    worklistItem({
+      id: id(5),
+      personnelNumber: "BSP-0005",
+      lastName: "Arslan",
+      firstName: "Deniz",
+      capabilities: { ...capable, generateKug200b: true },
+    }),
+  ];
+  const generation = (n: number, checklist: object[]) => ({
+    participationId: id(n),
+    documentId: id(n + 40),
+    formVersion: "09-2021",
+    checklist,
+  });
+
+  it("generates for the selection, shows each checklist before printing and opens one print file", async () => {
+    const assign = vi.spyOn(documentNavigation, "assign").mockImplementation(() => {});
+    const { calls } = setup({
+      [`GET ${path}/worklist`]: () => json(worklist(kugItems)),
+      [`POST ${path}/forms/kug200b`]: () =>
+        json(
+          {
+            generations: [
+              generation(4, [
+                {
+                  code: "required_blank",
+                  key: "pensionInsuranceNumber",
+                  label: "11 Rentenversicherungsnummer",
+                },
+              ]),
+              generation(5, []),
+            ],
+          },
+          201,
+        ),
+      "POST /api/v1/exports/kug200b_print": () =>
+        json(
+          {
+            url: `/api/v1/export-content/${"a".repeat(43)}`,
+            expiresAt: "2026-11-02T09:01:00.000Z",
+          },
+          201,
+        ),
+    });
+    const section = await ready();
+    expect(await section.findByText("Kug 200b offen (angeboten am 02.11.2026)")).toBeVisible();
+    await userEvent.click(section.getByRole("button", { name: "Alle Treffer auswählen" }));
+    await userEvent.click(section.getByRole("button", { name: "Kug 200b erzeugen" }));
+    const result = await screen.findByTestId("kug200b-bulk-result");
+    expect(result).toHaveTextContent("2 Kug 200b erzeugt.");
+    expect(result).toHaveTextContent("Neumann, Lea: 11 Rentenversicherungsnummer");
+    expect(calls).toContainEqual({
+      key: `POST ${path}/forms/kug200b`,
+      body: { participationIds: [id(4), id(5)] },
+    });
+    await userEvent.click(within(result).getByRole("button", { name: "Druckdatei öffnen" }));
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(`/api/v1/export-content/${"a".repeat(43)}`),
+    );
+    expect(calls).toContainEqual({
+      key: "POST /api/v1/exports/kug200b_print",
+      body: { documentIds: [id(44), id(45)] },
+    });
+    assign.mockRestore();
+  });
+
+  it("says that nothing was generated on a refusal", async () => {
+    setup({
+      [`GET ${path}/worklist`]: () => json(worklist(kugItems)),
+      [`POST ${path}/forms/kug200b`]: () =>
+        problem(422, "domain-error", {
+          errors: [{ pointer: "/participationIds/1", code: "participation_closed", detail: "x" }],
+        }),
+    });
+    const section = await ready();
+    await userEvent.click(await section.findByRole("button", { name: "Alle Treffer auswählen" }));
+    await userEvent.click(section.getByRole("button", { name: "Kug 200b erzeugen" }));
+    expect(
+      await screen.findByText(
+        "Die Kug 200b konnten nicht erzeugt werden; es wurde keiner erzeugt.",
+      ),
+    ).toBeVisible();
   });
 });

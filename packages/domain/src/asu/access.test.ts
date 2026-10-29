@@ -4,11 +4,13 @@ import type { Actor, PermissionTarget } from "../access/permissions";
 import { sample } from "../access/profiles";
 import {
   mayAttestAsu,
+  mayGenerateKug200bBulk,
   mayLinkAsuProof,
   mayReadKnowledgeDate,
   mayRecordAsu,
   maySetKnowledgeDate,
   mayViewAsu,
+  mayWorkKug200b,
 } from "./access";
 
 const target: PermissionTarget = {
@@ -57,6 +59,8 @@ describe("the ASU record's permissions (data-protection.md, the ASU record; Q201
     ["the attestation", mayAttestAsu, [pl]],
     ["the proof's link", mayLinkAsuProof, [consultant]],
     ["the knowledge date", maySetKnowledgeDate, [pl]],
+    ["the Kug 200b of one participation (Q179)", mayWorkKug200b, [pl, consultant]],
+    ["the Kug 200b for 1–100 at once (Q179)", mayGenerateKug200bBulk, [pl]],
   ] as const)("%s", (_, may, allowed) => {
     for (const actor of [pl, consultant, unassigned, backOffice, admin, participant]) {
       expect(may(actor, target).ok).toBe((allowed as readonly unknown[]).includes(actor));

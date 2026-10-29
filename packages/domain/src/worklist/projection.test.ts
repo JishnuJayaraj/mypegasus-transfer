@@ -27,6 +27,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   channels: [],
   lastReminder: null,
   asuDueDate: null,
+  kug200b: { channel: null, offeredOn: null, signed: false, declinedOn: null, withdrawals: [] },
   appointments: { bookings: [], notices: [], closedAt: null },
   ...overrides,
 });
@@ -36,6 +37,7 @@ const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({
   knows: () => true,
   may: () => true,
   remind: true,
+  generatesKug200b: false,
   ...overrides,
 });
 const project = {
@@ -49,6 +51,33 @@ const at = (v: WorklistViewer, s = snapshot()) =>
   worklistProjection(facts(), s, project, "2027-03-10", now, v).capabilities.assignEntryWave;
 
 describe("worklistProjection", () => {
+  it("lists the Kug 200b items and offers the PL its bulk generation (process-and-lifecycle.md, the Kug 200b offer)", () => {
+    const s = snapshot({ wave: null });
+    const kug200b = {
+      channel: "online_self" as const,
+      offeredOn: "2027-03-01",
+      signed: false,
+      declinedOn: null,
+      withdrawals: [{ receivedOn: "2027-03-05", baNotifiedOn: null }],
+    };
+    const row = worklistProjection(
+      facts({ kug200b }),
+      s,
+      project,
+      "2027-03-10",
+      now,
+      viewer({ generatesKug200b: true }),
+    );
+    expect(row.caseItems).toEqual([
+      { kind: "kug200b_offer_open", date: "2027-03-01" },
+      { kind: "kug200b_withdrawal_ba_notice", date: "2027-03-05" },
+    ]);
+    expect(row.capabilities.generateKug200b).toBe(true);
+    const taOnly = { ...project, type: "ta_only" as const };
+    const other = worklistProjection(facts({ kug200b }), s, taOnly, "2027-03-10", now, viewer());
+    expect([other.caseItems, other.capabilities.generateKug200b]).toEqual([[], false]);
+  });
+
   it("lists a statutory ASU due date as `asu_due`, an orientation as `knowledge_date_missing` (process-and-lifecycle.md, dates)", () => {
     const s = snapshot({ wave: null });
     const row = (asuDueDate: WorklistFacts["asuDueDate"]) =>
@@ -94,6 +123,7 @@ describe("worklistProjection", () => {
         providePrivacyNotice: true,
         remind: { allowed: false, code: "no_channel", channel: null },
         invite: { allowed: true, channel: null },
+        generateKug200b: false,
       },
     });
   });

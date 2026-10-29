@@ -22,7 +22,7 @@ import { accessModes, accessProfiles, sample } from "./profiles";
 //   unass = not_assigned, imm = immutable. A generated form comes only from its generation.
 const add = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
-kug200b_signed_scan          actor actor und  unass und  role role role role
+kug200b_signed_scan          actor actor yes  unass yes  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
 asu_proof                    actor actor yes  unass yes  role role role role
@@ -30,11 +30,12 @@ profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
 qualification_certificate    yes   yes   yes  unass yes  role role role role
-tl407_form                   actor actor actor actor actor actor actor actor actor`;
+tl407_form                   actor actor actor actor actor actor actor actor actor
+kug200b_form                 actor actor actor actor actor actor actor actor actor`;
 
 const review = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
-kug200b_signed_scan          actor actor und  unass und  role role role role
+kug200b_signed_scan          actor actor yes  unass yes  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
 asu_proof                    actor actor yes  unass role role role role role
@@ -42,11 +43,12 @@ profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           actor actor yes  unass yes  role role role role
 participant_upload           actor actor yes  unass yes  role role role role
 qualification_certificate    actor actor yes  unass yes  role role role role
-tl407_form                   actor actor actor actor actor actor actor actor actor`;
+tl407_form                   actor actor actor actor actor actor actor actor actor
+kug200b_form                 actor actor actor actor actor actor actor actor actor`;
 
 const remove = `
 tl407_signed_scan            actor actor role role  yes  role role role role
-kug200b_signed_scan          imm   imm   imm  imm   imm  imm  imm  imm  imm
+kug200b_signed_scan          actor actor role role  yes  role role role role
 dsv_signed_scan              imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
 asu_proof                    actor actor role role  yes  role role role role
@@ -54,7 +56,8 @@ profiling_exception_evidence actor actor und  unass und  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
 qualification_certificate    yes   yes   yes  unass yes  role role role role
-tl407_form                   imm   imm   imm  imm   imm  imm  imm  imm  imm`;
+tl407_form                   imm   imm   imm  imm   imm  imm  imm  imm  imm
+kug200b_form                 imm   imm   imm  imm   imm  imm  imm  imm  imm`;
 
 const codes: Record<string, string> = {
   yes: "ok",
@@ -130,8 +133,9 @@ describe("document operations by mode", () => {
       expect(result(checks.add!(subject, "cv", other))).toBe("mode_not_allowed");
     }
     expect(result(checks.add!(backOffice, "cv", accessModes.assisted))).toBe("role_not_allowed");
+    expect(result(checks.add!(pl, "dsv_signed_scan", accessModes.assisted))).toBe("undecided Q65");
     expect(result(checks.add!(pl, "kug200b_signed_scan", accessModes.assisted))).toBe(
-      "undecided Q65",
+      "mode_not_allowed",
     );
     // Signed paper and the ASU proof are added in normal mode only (Q184, Q186).
     expect(result(checks.add!(pl, "asu_proof", accessModes.assisted))).toBe("mode_not_allowed");

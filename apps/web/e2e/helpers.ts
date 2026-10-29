@@ -36,8 +36,20 @@ export const test = base.extend<{ cspViolations: string[] }>({
 
 export { expect };
 
-/** AC-23: no serious or critical accessibility violations. */
+/**
+ * AC-23: no serious or critical accessibility violations. The page's finite transitions finish
+ * first: axe measures colour contrast through opacity, so a Carbon modal still fading in (240 ms)
+ * would fail on its own text.
+ */
 export async function expectAccessible(page: Page) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
   const { violations } = await new AxeBuilder({ page }).analyze();
   const blocking = violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   expect(

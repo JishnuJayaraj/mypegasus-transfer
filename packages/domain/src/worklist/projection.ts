@@ -36,6 +36,7 @@ import {
 } from "./appointments";
 import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
 import type { AsuDueDate } from "../dates";
+import { kug200bItems, type Kug200bOfferFacts } from "../asu/kug200b";
 import { isoDate } from "../iso-date";
 
 // The work list (data-protection.md, the work list and the dashboard): one projection of a
@@ -58,15 +59,24 @@ export const WorklistCapabilities = z.strictObject({
    * at the request.
    */
   invite: z.strictObject({ allowed: z.boolean(), channel: ActivationDeliveryKind.nullable() }),
+  /**
+   * "Kug 200b erzeugen" (data-protection.md, generated forms; Q179): the PL, for an open
+   * participation of a `ta_tg` project; the generation's own checks follow.
+   */
+  generateKug200b: z.boolean(),
 });
 
 /**
  * Staff work on a row that isn't a dated deadline (process-and-lifecycle.md, deadline warnings):
  * `knowledge_date_missing` with the ASU reference date as a labelled orientation, never overdue
- * ("Kenntnisdatum klären").
+ * ("Kenntnisdatum klären"); `kug200b_offer_open` with the offer's date and
+ * `kug200b_withdrawal_ba_notice` with the withdrawal's date of receipt (`kug200bItems`).
  */
 export const WorklistCaseItem = z
-  .strictObject({ kind: z.enum(["knowledge_date_missing"]), date: isoDate })
+  .strictObject({
+    kind: z.enum(["knowledge_date_missing", "kug200b_offer_open", "kug200b_withdrawal_ba_notice"]),
+    date: isoDate,
+  })
   .meta({ id: "WorklistCaseItem" });
 export type WorklistCaseItem = z.infer<typeof WorklistCaseItem>;
 
@@ -126,6 +136,8 @@ export type WorklistFacts = Pick<
   lastReminder: { requestedOn: IsoDate; status: ReminderStatus } | null;
   /** The applicable ASU due date (`applicableAsuDueDate`), or null. */
   asuDueDate: AsuDueDate | null;
+  /** The Kug 200b offer's facts (`kug200bItems`), beside the project type and status. */
+  kug200b: Omit<Kug200bOfferFacts, "projectType" | "status">;
   appointments: {
     bookings: readonly AppointmentItemBooking[];
     notices: readonly AppointmentItemNotice[];
@@ -144,9 +156,13 @@ export type WorklistViewer = {
   /** Whether a self-service field may be named (the "Selbstauskunft" tab's rule). */
   knows: (key: string) => boolean;
   /** The operation's permission; the domain's preconditions follow. */
-  may: (operation: Exclude<keyof WorklistItem["capabilities"], "remind" | "invite">) => boolean;
+  may: (
+    operation: Exclude<keyof WorklistItem["capabilities"], "remind" | "invite" | "generateKug200b">,
+  ) => boolean;
   /** `mayRemind` in an active project; the reminder rules follow. */
   remind: boolean;
+  /** `mayGenerateKug200bBulk`: the PL. */
+  generatesKug200b: boolean;
 };
 
 /**
@@ -214,10 +230,12 @@ export function worklistProjection(
       { snapshot, project, privacyNotice: facts.privacyNoticeState, asuDueDate: facts.asuDueDate },
       today,
     ),
-    caseItems:
-      facts.asuDueDate?.kind === "orientation"
-        ? [{ kind: "knowledge_date_missing", date: facts.asuDueDate.date }]
-        : [],
+    caseItems: [
+      ...(facts.asuDueDate?.kind === "orientation"
+        ? [{ kind: "knowledge_date_missing" as const, date: facts.asuDueDate.date }]
+        : []),
+      ...kug200bItems({ ...facts.kug200b, projectType: project.type, status: current.status }),
+    ],
     flags: remainingFlags(lifecycleFlags(snapshot, project, today)),
     portal,
     reminder: facts.lastReminder
@@ -242,6 +260,7 @@ export function worklistProjection(
         allowed: viewer.remind && !closed,
         channel: viewer.remind ? (chooseChannel(facts.channels)?.kind ?? null) : null,
       },
+      generateKug200b: viewer.generatesKug200b && project.type === "ta_tg" && !closed,
     },
   };
 }

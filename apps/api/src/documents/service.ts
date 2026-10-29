@@ -7,7 +7,7 @@ import {
   documentFileName,
   documentLimits,
   documentTypeEntry,
-  isScanType,
+  kug200bScanReviewProblems,
   mayAddDocument,
   mayDeleteDocument,
   mayLiftDocumentQuarantine,
@@ -406,26 +406,35 @@ export function documentService(deps: Deps) {
     if (!permission.ok) return denied(c, permission);
     if (row.reviewState !== "unreviewed") return domainProblem(c, ["document_reviewed"]);
     if (row.quarantinedBy !== null) return domainProblem(c, ["document_quarantined"]);
-    const { scan } = input;
-    // A signed scan's acceptance takes its record (data-protection.md, signed scans); no other.
-    const needsScan = isScanType(row.type) && input.decision === "accepted";
-    if (needsScan !== (scan !== undefined)) {
-      const code = needsScan ? "scan_required" : "scan_not_allowed";
+    const { scan, kug200bScan } = input;
+    // A signed scan's acceptance takes its form's record (data-protection.md, signed scans): the
+    // TL 407's `scan`, the Kug 200b's `kug200bScan`; nothing else does.
+    const accepted = input.decision === "accepted";
+    const tl407 = row.type === "tl407_signed_scan" && accepted;
+    const kug200b = row.type === "kug200b_signed_scan" && accepted;
+    if (tl407 !== (scan !== undefined)) {
+      const code = tl407 ? "scan_required" : "scan_not_allowed";
       return domainProblem(c, [{ code, field: "scan" }]);
     }
-    if (scan) {
+    if (kug200b !== (kug200bScan !== undefined)) {
+      const code = kug200b ? "scan_required" : "scan_not_allowed";
+      return domainProblem(c, [{ code, field: "kug200bScan" }]);
+    }
+    if (scan || kug200bScan) {
       const generatedOn = await generationDateOf(row.generationDocumentId);
       const form = scanForms[row.type]!;
-      const issues = scanReviewProblems(
-        scan,
-        { origin: row.scanOrigin!, generatedOn },
-        clock.today(),
-        (version) => registry.versions(form).includes(version),
-      );
+      const versionKnown = (version: string) => registry.versions(form).includes(version);
+      const origin = { origin: row.scanOrigin!, generatedOn };
+      const [issues, base] = scan
+        ? [scanReviewProblems(scan, origin, clock.today(), versionKnown), "scan"]
+        : [
+            kug200bScanReviewProblems(kug200bScan!, origin, clock.today(), versionKnown),
+            "kug200bScan",
+          ];
       if (issues.length > 0) {
         return domainProblem(
           c,
-          issues.map(({ code, field }) => ({ code, field: `scan/${field}` })),
+          issues.map(({ code, field }) => ({ code, field: `${base}/${field}` })),
         );
       }
     }
@@ -434,10 +443,10 @@ export function documentService(deps: Deps) {
         p_context => ${actor.context}, p_document_id => ${documentId}::uuid,
         p_decision => ${input.decision}::document_review_state,
         p_reason => ${input.reasonCode ?? null}::document_review_reason,
-        p_signed_on => ${scan?.participantSignedOn ?? null}::date,
+        p_signed_on => ${scan?.participantSignedOn ?? kug200bScan?.signedOn ?? null}::date,
         p_countersigned_on => ${scan?.profilerSignedOn ?? null}::date,
-        p_confirmations => ${scan ? `{${scan.confirmations.join(",")}}` : null}::text[],
-        p_form_version => ${scan?.formVersion ?? null}::text,
+        p_confirmations => ${scan || kug200bScan ? `{${(scan ?? kug200bScan)!.confirmations.join(",")}}` : null}::text[],
+        p_form_version => ${scan?.formVersion ?? kug200bScan?.formVersion ?? null}::text,
         p_declarations => ${scan ? JSON.stringify(scan.declarations) : null}::jsonb) as result`);
     } catch (error) {
       return refused(c, error);

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { Tl407GenerationInput, Tl407Readiness, Tl407ReadinessSummary } from "./api";
+import {
+  Kug200bBulkInput,
+  kug200bBulkMax,
+  Tl407GenerationInput,
+  Tl407Readiness,
+  Tl407ReadinessSummary,
+} from "./api";
 
 describe("the TL 407 generation API (ADR-0010)", () => {
   it("takes the readiness's source token and each confirmation by its code, once", () => {
@@ -27,5 +33,17 @@ describe("the TL 407 generation API (ADR-0010)", () => {
       expect(Tl407ReadinessSummary.safeParse({ ...summary, ...extra }).success).toBe(false);
       expect(Tl407Readiness.safeParse({ ...summary, ...extra }).success).toBe(false);
     }
+  });
+});
+
+const id = (n: number) => `00000000-0000-4000-a000-${String(n).padStart(12, "0")}`;
+
+describe("Kug200bBulkInput (Q179)", () => {
+  it("takes 1–100 participations, each once", () => {
+    expect(Kug200bBulkInput.safeParse({ participationIds: [id(1), id(2)] }).success).toBe(true);
+    expect(Kug200bBulkInput.safeParse({ participationIds: [] }).success).toBe(false);
+    expect(Kug200bBulkInput.safeParse({ participationIds: [id(1), id(1)] }).success).toBe(false);
+    const many = Array.from({ length: kug200bBulkMax + 1 }, (_, n) => id(n));
+    expect(Kug200bBulkInput.safeParse({ participationIds: many }).success).toBe(false);
   });
 });

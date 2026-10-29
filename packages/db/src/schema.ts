@@ -87,6 +87,11 @@ import {
   AsuChannel,
   AsuProofKind,
   AttestationSource,
+  ExportKind,
+  exportLimits,
+  Kug200bScanConfirmation,
+  kug200bDeclarations,
+  scanForms,
 } from "@transfer/domain";
 import { sql, type SQL } from "drizzle-orm";
 import {
@@ -112,6 +117,11 @@ import {
 } from "drizzle-orm/pg-core";
 
 // Every table here needs an entry in data-catalog.ts (CLAUDE.md rule 10); a test enforces it.
+
+/** Codes as an SQL list: `'a', 'b'`. */
+const quoted = (codes: readonly string[]) => codes.map((code) => `'${code}'`).join(", ");
+/** The signed types whose scan names an origin (`scanForms`). */
+const scanTypes = quoted(Object.keys(scanForms));
 
 // The Postgres enums take their values from the domain's Zod enums.
 const values = <T extends string>(e: { options: T[] }) => e.options as [T, ...T[]];
@@ -444,6 +454,7 @@ export const scanOrigin = pgEnum("scan_origin", values(ScanOrigin));
 export const asuChannel = pgEnum("asu_channel", values(AsuChannel));
 export const asuProofKind = pgEnum("asu_proof_kind", values(AsuProofKind));
 export const asuAttestationSource = pgEnum("asu_attestation_source", values(AttestationSource));
+export const exportKind = pgEnum("export_kind", values(ExportKind));
 export const documentQuarantineReason = pgEnum(
   "document_quarantine_reason",
   values(QuarantineReason),
@@ -1403,6 +1414,10 @@ export const consentRecord = pgTable(
     actorType: actorType("actor_type").notNull(),
     actorStaffUserId: uuid("actor_staff_user_id").references(() => staffUser.id),
     givenAt: instant("given_at").notNull().defaultNow(),
+    /** A paper form's date as written on it (Q185); the recording instant is `given_at`. */
+    givenOn: dateColumn("given_on"),
+    /** The signed paper it was recorded from (a Kug 200b scan, Q185). */
+    documentId: uuid("document_id").references((): AnyPgColumn => document.id),
     endedAt: instant("ended_at"),
     endReason: consentEndReason("end_reason"),
   },
@@ -1418,6 +1433,11 @@ export const consentRecord = pgTable(
       sql`${t.textVersion} ~ '^[a-z][a-z0-9-]{0,40}:v[1-9][0-9]*$'`,
     ),
     check("consent_record_ended", sql`(${t.endedAt} is null) = (${t.endReason} is null)`),
+    // A paper form's consent keeps the date written on it (Q185).
+    check(
+      "consent_record_paper",
+      sql`(${t.source} = 'paper_form') = (${t.givenOn} is not null) and (${t.documentId} is null or ${t.source} = 'paper_form')`,
+    ),
     check(
       "consent_record_actor",
       sql`${t.actorType} in ('participant', 'user') and (${t.actorType} = 'user') = (${t.actorStaffUserId} is not null)`,
@@ -1803,12 +1823,12 @@ export const document = pgTable(
     check("document_purged", sql`${t.purgedAt} is null or ${t.deletedAt} is not null`),
     check(
       "document_scan",
-      sql`(${t.type} = 'tl407_signed_scan') = (${t.scanOrigin} is not null) and coalesce(${t.scanOrigin} = 'generated', false) = (${t.generationDocumentId} is not null) and (${t.formCode} is null) = (${t.formVersion} is null) and (${t.formVersion} is null or ${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$') and (${t.scanOrigin} is null or ${t.formCode} is not null or ${t.scanOrigin} = 'external_paper' and ${t.reviewState} <> 'accepted')`,
+      sql`(${t.type} in (${sql.raw(scanTypes)})) = (${t.scanOrigin} is not null) and coalesce(${t.scanOrigin} = 'generated', false) = (${t.generationDocumentId} is not null) and (${t.formCode} is null) = (${t.formVersion} is null) and (${t.formVersion} is null or ${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$') and (${t.scanOrigin} is null or ${t.formCode} is not null or ${t.scanOrigin} = 'external_paper' and ${t.reviewState} <> 'accepted')`,
     ),
     check(
       "document_scan_review",
       sql.raw(
-        `("document"."signed_on" is null) = ("document"."countersigned_on" is null) and ("document"."signed_on" is null) = ("document"."review_confirmations" is null) and ("document"."signed_on" is not null) = ("document"."scan_origin" is not null and "document"."review_state" = 'accepted') and ("document"."review_confirmations" is null or "document"."review_confirmations" @> array[${ScanConfirmation.options.map((code) => `'${code}'`).join(", ")}]::text[])`,
+        `("document"."signed_on" is null) = ("document"."review_confirmations" is null) and ("document"."signed_on" is not null) = ("document"."scan_origin" is not null and "document"."review_state" = 'accepted') and ("document"."countersigned_on" is not null) = ("document"."signed_on" is not null and "document"."type" = 'tl407_signed_scan') and ("document"."review_confirmations" is null or "document"."type" = 'tl407_signed_scan' and "document"."review_confirmations" @> array[${quoted(ScanConfirmation.options)}]::text[] or "document"."type" = 'kug200b_signed_scan' and "document"."review_confirmations" @> array[${quoted(Kug200bScanConfirmation.options)}]::text[])`,
       ),
     ),
     check(
@@ -1887,6 +1907,8 @@ export const formGeneration = pgTable(
     baContactConsent: boolean("ba_contact_consent"),
     confirmedWarnings: text("confirmed_warnings").array().notNull(),
     anlage: boolean("anlage").notNull(),
+    /** A Kug 200b's handwriting checklist, `[{code, key}]` (Q197 (8)); null for the TL 407. */
+    checklist: jsonb("checklist"),
     generatedBy: uuid("generated_by")
       .notNull()
       .references(() => staffUser.id),
@@ -1906,6 +1928,12 @@ export const formGeneration = pgTable(
     ),
     check("form_generation_source_token", sql`${t.sourceToken} ~ '^[0-9a-f]{64}$'`),
     check("form_generation_organisation_sha256", sql`${t.organisationSha256} ~ '^[0-9a-f]{64}$'`),
+    // A Kug 200b prints no declaration to the BA, confirms nothing and has no Anlage; it keeps its
+    // checklist (data-protection.md, generated forms).
+    check(
+      "form_generation_kug200b",
+      sql`(${t.formCode} = 'kug200b') = (${t.checklist} is not null) and (${t.formCode} <> 'kug200b' or ${t.jobboerseChoice} is null and ${t.baContactConsent} is null and cardinality(${t.confirmedWarnings}) = 0 and not ${t.anlage})`,
+    ),
     // The target of a scan's composite FK (data-protection.md, signed scans).
     unique("form_generation_scan_target").on(t.documentId, t.participationId, t.formCode),
     check(
@@ -1959,7 +1987,7 @@ export const signedDeclaration = pgTable(
     check(
       "signed_declaration_value",
       sql.raw(
-        `"signed_declaration"."declaration" = 'jobboerseChoice' and ("signed_declaration"."value" is null or "signed_declaration"."value" in (${JobboerseChoice.options.map((code) => `'${code}'`).join(", ")})) or "signed_declaration"."declaration" = 'baContactConsent' and ("signed_declaration"."value" is null or "signed_declaration"."value" in ('yes', 'no'))`,
+        `"signed_declaration"."declaration" = 'jobboerseChoice' and ("signed_declaration"."value" is null or "signed_declaration"."value" in (${JobboerseChoice.options.map((code) => `'${code}'`).join(", ")})) or "signed_declaration"."declaration" = 'baContactConsent' and ("signed_declaration"."value" is null or "signed_declaration"."value" in ('yes', 'no')) or "signed_declaration"."declaration" in (${quoted(kug200bDeclarations)}) and "signed_declaration"."value" = 'yes'`,
       ),
     ),
   ],
@@ -2037,6 +2065,107 @@ export const asuRegistration = pgTable(
       sql`coalesce(${t.proofKind} = 'ba_confirmation', false) = (${t.proofDocumentId} is not null) and coalesce(${t.proofKind} = 'ba_customer_number', false) = (${t.attestationSource} is not null) and (${t.proofKind} is null or (${t.proofKind} = 'kug200b_submission') = (${t.channel} = 'kug_200b'))`,
     ),
     check("asu_registration_linked_after", sql`${t.proofLinkedAt} >= ${t.recordedAt}`),
+  ],
+);
+
+/**
+ * A declined Kug 200b offer (process-and-lifecycle.md, the Kug 200b offer; Q185): the date the
+ * participant declined, who recorded it and when; once per participation, never changed. A later
+ * signed form still makes the outcome `signed`. Codes and dates only, `case_internal`
+ * (`kug200bOffer`). Written only by `decline_kug200b_offer`.
+ */
+export const kug200bDecline = pgTable(
+  "kug200b_decline",
+  {
+    ...personKeys(),
+    declinedOn: dateColumn("declined_on").notNull(),
+    declinedBy: uuid("declined_by")
+      .notNull()
+      .references(() => staffUser.id),
+    declinedAt: instant("declined_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "kug200b_decline_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+  ],
+);
+
+/**
+ * A written withdrawal of Kug 200b declaration 17 that reached the TG (Q185): the consent record
+ * it ended, the date received, who recorded it and when, and the follow-up "BA informiert am"
+ * with who and when; the platform never claims BA access was disabled. Neither touches a
+ * registration. Codes and dates only, `case_internal` (`kug200bOffer`). Written only by
+ * `record_declaration_withdrawal` and `record_withdrawal_ba_notice`.
+ */
+export const kug200bWithdrawal = pgTable(
+  "kug200b_withdrawal",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    consentId: uuid("consent_id")
+      .notNull()
+      .unique("kug200b_withdrawal_consent_unique")
+      .references(() => consentRecord.id),
+    receivedOn: dateColumn("received_on").notNull(),
+    recordedBy: uuid("recorded_by")
+      .notNull()
+      .references(() => staffUser.id),
+    recordedAt: instant("recorded_at").notNull().defaultNow(),
+    baNotifiedOn: dateColumn("ba_notified_on"),
+    baNotifiedBy: uuid("ba_notified_by").references(() => staffUser.id),
+    baNotifiedAt: instant("ba_notified_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "kug200b_withdrawal_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("kug200b_withdrawal_participation_idx").on(t.participationId),
+    check(
+      "kug200b_withdrawal_notice",
+      sql`(${t.baNotifiedOn} is null) = (${t.baNotifiedBy} is null) and (${t.baNotifiedBy} is null) = (${t.baNotifiedAt} is null) and (${t.baNotifiedOn} is null or ${t.baNotifiedOn} >= ${t.receivedOn})`,
+    ),
+  ],
+);
+
+/**
+ * An export's link (data-protection.md, exports; ADR-0010): the SHA-256 of 32 random bytes, never
+ * the token; the project, the kind and the documents it covers (fixed at the request), the staff
+ * user and session it is bound to, valid 60 s. No file is stored: the download renders it. The
+ * runtime role has no privilege on it: written only by `create_export_link`, read only by
+ * `export_link_content`. Internal, class `access_credential`.
+ */
+export const exportLink = pgTable(
+  "export_link",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    kind: exportKind("kind").notNull(),
+    documentIds: uuid("document_ids").array().notNull(),
+    staffUserId: uuid("staff_user_id")
+      .notNull()
+      .references(() => staffUser.id),
+    sessionHash: text("session_hash").notNull(),
+    expiresAt: instant("expires_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("export_link_token_hash", sql`${t.tokenHash} ~ '^[0-9a-f]{64}$'`),
+    check("export_link_session_hash", sql`${t.sessionHash} ~ '^[0-9a-f]{64}$'`),
+    check("export_link_expires", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "export_link_documents",
+      sql`cardinality(${t.documentIds}) between 1 and ${sql.raw(String(exportLimits.kug200b_print))}`,
+    ),
   ],
 );
 
@@ -2875,6 +3004,9 @@ export const tables = [
   signedDeclaration,
   asuRecord,
   asuRegistration,
+  kug200bDecline,
+  kug200bWithdrawal,
+  exportLink,
   participantReminder,
   appointment,
   appointmentBooking,

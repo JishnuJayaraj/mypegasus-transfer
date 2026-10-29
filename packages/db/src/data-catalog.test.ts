@@ -106,6 +106,9 @@ describe("data catalog", () => {
       // Slice 6 (Q186): the ASU route and registration, codes and dates.
       asu_record: entry("participation_record", "internal", true),
       asu_registration: entry("participation_record", "internal", true),
+      kug200b_decline: entry("participation_record", "internal", true),
+      kug200b_withdrawal: entry("participation_record", "internal", true),
+      export_link: entry("access_credential", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
       // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.
       appointment: entry("project_master", "internal"),

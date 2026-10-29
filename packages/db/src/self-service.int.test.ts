@@ -492,8 +492,9 @@ const insert = (
 ) =>
   owner.query(
     `insert into consent_record (project_id, participation_id, purpose, source, channel_id,
-       text_version, language, actor_type, actor_staff_user_id)
-     values ($1, $2, $3, $4, $5, 'kug200b:v1', 'de', 'user', $6)`,
+       text_version, language, actor_type, actor_staff_user_id, given_on)
+     values ($1, $2, $3, $4::consent_source, $5, 'kug200b:v1', 'de', 'user', $6,
+       case when $4::text = 'paper_form' then date '2026-10-20' end)`,
     [
       seedProjectIds.werkNord,
       participationId,
@@ -516,6 +517,15 @@ describe("consent_record (Q138)", () => {
       ]),
     ).toEqual({ source: "portal" });
     await insert(p.participationId, "kug200b_profile_access", null, "paper_form");
+    // A paper form keeps the date written on it (Q185).
+    await expect(
+      owner.query(
+        `insert into consent_record (project_id, participation_id, purpose, source, text_version,
+           language, actor_type, actor_staff_user_id)
+         values ($1, $2, 'kug200b_profile_access', 'paper_form', 'kug200b:v1', 'de', 'user', $3)`,
+        [seedProjectIds.werkNord, p.participationId, seedStaffUserIds.projectLead],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
     for (const [purpose, ch, source] of [
       ["kug200b_profile_access", channel.channel_id, "paper_form"],
       ["portal_contact", null, "portal"],

@@ -21,8 +21,13 @@ const target = sample;
 const own = ["cv", "participant_upload", "qualification_certificate"];
 
 describe("uploadableDocumentTypes (Q142, Q184, Q186)", () => {
-  it("are the participant's own types, the signed TL 407 and the ASU proof, those with decided operations", () => {
-    expect(uploadableDocumentTypes).toEqual(["tl407_signed_scan", "asu_proof", ...own]);
+  it("are the participant's own types, the signed TL 407 and Kug 200b and the ASU proof, those with decided operations", () => {
+    expect(uploadableDocumentTypes).toEqual([
+      "tl407_signed_scan",
+      "kug200b_signed_scan",
+      "asu_proof",
+      ...own,
+    ]);
   });
 });
 
@@ -36,6 +41,7 @@ describe("readableDocumentTypes", () => {
       "profiling_exception_evidence",
       ...own,
       "tl407_form",
+      "kug200b_form",
     ]);
     expect(readableDocumentTypes(subject("back_office"), target, accessModes.normal)).toEqual([
       "dsv_signed_scan",

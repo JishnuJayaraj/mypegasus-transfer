@@ -186,7 +186,8 @@
                         "cv",
                         "participant_upload",
                         "qualification_certificate",
-                        "tl407_form"
+                        "tl407_form",
+                        "kug200b_form"
                       ]
                     },
                     "accepted": {
@@ -539,7 +540,8 @@
                         "cv",
                         "participant_upload",
                         "qualification_certificate",
-                        "tl407_form"
+                        "tl407_form",
+                        "kug200b_form"
                       ]
                     },
                     "accepted": {
@@ -1027,7 +1029,8 @@
                         "cv",
                         "participant_upload",
                         "qualification_certificate",
-                        "tl407_form"
+                        "tl407_form",
+                        "kug200b_form"
                       ]
                     },
                     "accepted": {

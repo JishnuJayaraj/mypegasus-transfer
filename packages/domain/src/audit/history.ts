@@ -96,14 +96,14 @@ export const auditProjection: {
   activation_code_revoked: shown("case", { reason: true }),
   privacy_notice_provided: shown("case", { details: ["method"] }),
   participant_activated: shown("case"),
-  consent_given: shown("case", { details: ["purpose", "textVersion"] }),
+  consent_given: shown("case", { details: ["purpose", "textVersion", "source"] }),
   contact_channel_added: shown("case", { details: ["kind"] }),
   activation_code_locked: security,
   one_time_code_exhausted: security,
   participant_logout: security,
   participant_login: security,
   contact_channel_removed: shown("case", { reason: true, details: ["kind"] }),
-  consent_ended: shown("case", { reason: true, details: ["purpose"] }),
+  consent_ended: shown("case", { reason: true, details: ["purpose", "source"] }),
   contact_channels_suspended: security,
   placement_agentur_set: shown("case", { details: ["agenturKey", "previousAgenturKey"] }),
   self_service_notice_acknowledged: shown("case", { details: ["noticeVersion"] }),
@@ -188,6 +188,11 @@ export const auditProjection: {
   }),
   asu_proof_linked: shown("case", { details: ["documentId"] }),
   knowledge_date_set: shown("case", { details: ["change"] }),
+  // The Kug 200b offer (Q185): the decline, a withdrawal and its BA notice by their dates.
+  kug200b_offer_declined: shown("case", { details: ["declinedOn"] }),
+  declaration_withdrawal_recorded: shown("case", { details: ["receivedOn"] }),
+  declaration_withdrawal_ba_notified: shown("case", { details: ["notifiedOn"] }),
+  export_downloaded: security,
 };
 
 /** One event type's projection; `status_changed` needs its field. */

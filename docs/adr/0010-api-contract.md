@@ -463,6 +463,51 @@ generator then. No action now.
   org roles; back office reads only; the attestation and the knowledge date the PL's, the link the
   assigned consultant's) → state.
 
+## Note 2026-10-28 (Slice 6, PR 6-4b): the Kug 200b and exports
+
+- Generation: `POST /participations/{id}/forms/kug200b` (the PL or the assigned consultant; no
+  body) → `201 Kug200bGeneration` `{ participationId, documentId, formVersion, checklist }` with
+  `checklist` `[{ code: "required_blank" | "text_not_fitting", key, label }]`; `POST
+  /projects/{id}/forms/kug200b` (the PL; `Kug200bBulkInput` `{ participationIds }`, 1–100, each
+  once) → `201 { generations }` in the order asked, all or nothing. `422` with form-level codes
+  (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …),
+  `participation_closed`, `asu_not_applicable`; in a bulk at `/participationIds/<index>`, and
+  `participation_not_found` there for a participation of another project. `409 source_changed`
+  (also when the project's customer, which the form prints, changed before the record),
+  `503 storage_unavailable`. Both `no-store`.
+- The tab: `AsuView.kug200b` (`Kug200bOffer`): `offeredOn`, `outcome` (`signed`, `declined`,
+  null), `declinedOn`, `profileAccess` (`{ consentId, givenOn }` while declaration 17's record is
+  in force and its paper usable), `withdrawals` (`{ id, receivedOn, recordedAt, baNotifiedOn }`), for the readers of the
+  Kug 200b types `forms` (`Kug200bGeneratedForm`, with its checklist and `capabilities.open`),
+  `scans` (`Kug200bScan`, `DocumentCapabilities`) and `versions` (absent for back office), and
+  `capabilities` (`generate`, `addScan`, `decline`, `recordWithdrawal`, `recordBaNotice`).
+  Writes answering the `AsuView`: `POST …/asu/kug200b-decline` (`{ declinedOn }`), `POST
+  …/asu/withdrawal` (`{ consentId, receivedOn }`), `POST …/asu/withdrawal-ba-notice` (`{
+  withdrawalId, notifiedOn }`); `422` codes `declined_on_in_future` (`/declinedOn`),
+  `received_on_in_future` (`/receivedOn`), `notified_on_in_future` (`/notifiedOn`),
+  `kug200b_signed`, `kug200b_declined`, `asu_route_kug200b`, `consent_not_found`,
+  `consent_ended`, `received_before_consent`, `withdrawal_not_found`, `ba_notice_recorded`,
+  `notified_before_receipt`.
+- The review: `DocumentReviewInput.kug200bScan` (`Kug200bScanReview` `{ signedOn, confirmations,
+  formVersion? }`) is required exactly for accepting a `kug200b_signed_scan` (`scan_required`,
+  `scan_not_allowed` at `/kug200bScan`); its problems at `/kug200bScan/<field>`
+  (`confirmation_required`, `signature_in_future`, `signature_before_generation`,
+  `form_version_required`, `form_version_not_allowed`, `form_version_unknown`).
+- **Exports** (the shape for every later export): `POST /exports/{kind}` (`ExportKind`
+  `kug200b_print`; `ExportInput` `{ documentIds }`, 1–100) → `201 ExportLink` `{ url, expiresAt }`,
+  same origin, bound to the asking staff session, valid 60 s (`404` for a form that isn't live, a
+  generated Kug 200b or the viewer's to open, whatever its state; `403` in assisted mode; only for
+  forms the viewer sees `422 document_quarantined`, `document_invalidated`, `invalid_argument` for
+  more than one project); `GET /export-content/{token}` (staff session) → the PDF as an
+  `attachment`, `no-store`, `nosniff`, with the download policy `default-src 'none'; sandbox` (as
+  `/document-content/`), rendered at the download and stored nowhere; `404` for another session, user or an expired link, `422 export_stale` when a
+  document is no longer live, unquarantined and the viewer's.
+- The work list: `WorklistCaseItem.kind` adds `kug200b_offer_open` and
+  `kug200b_withdrawal_ba_notice` (`date`: the offer's, the withdrawal's receipt);
+  `WorklistCapabilities.generateKug200b` (the PL, an open `ta_tg` participation).
+- Order: schema (400) → visibility (404, also for an unassigned consultant) → permission (403:
+  back office and the org roles; the bulk the PL's) → state.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

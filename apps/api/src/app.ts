@@ -42,6 +42,7 @@ import { documentFiles } from "./documents/files";
 import { documentRoutes } from "./routes/documents";
 import { profilingRoutes } from "./routes/profiling";
 import { asuRoutes } from "./routes/asu";
+import { exportRoutes } from "./routes/exports";
 import { formRoutes } from "./routes/forms";
 import { formRegistry } from "./forms/registry";
 import { mountSpas } from "./static";
@@ -63,8 +64,11 @@ const bodyLimits = {
 const IMPORT_PATH = /^\/api\/v1\/projects\/[^/]+\/imports(\/preview)?$/;
 const UPLOAD_PATH =
   /^\/api\/v1\/(portal\/documents|participations\/[^/]+\/(assisted\/)?documents)$/;
-/** A document download (Q147): its own, strictest headers. */
-const DOCUMENT_CONTENT_PATH = /^\/api\/v1\/document-content\//;
+/**
+ * A download, of a document (Q147) or an export (data-protection.md, exports): its own, strictest
+ * headers.
+ */
+const DOWNLOAD_PATH = /^\/api\/v1\/(document|export)-content\//;
 
 const JSON_CONTENT_TYPE = /^application\/json\s*(;|$)/i;
 
@@ -122,9 +126,7 @@ export function createApp(deps: Deps) {
   app.use(requestLogger(logger));
   const pageHeaders = secureHeaders({ contentSecurityPolicy });
   const downloadHeaders = secureHeaders({ contentSecurityPolicy: downloadSecurityPolicy });
-  app.use((c, next) =>
-    (DOCUMENT_CONTENT_PATH.test(c.req.path) ? downloadHeaders : pageHeaders)(c, next),
-  );
+  app.use((c, next) => (DOWNLOAD_PATH.test(c.req.path) ? downloadHeaders : pageHeaders)(c, next));
   app.use("/api/*", originCheck(env.appOrigins));
   const limits = Object.fromEntries(
     Object.entries(bodyLimits).map(([name, maxSize]) => [
@@ -179,6 +181,7 @@ export function createApp(deps: Deps) {
   api.route("/", profilingRoutes(runtimeDeps));
   api.route("/", asuRoutes(runtimeDeps));
   api.route("/", formRoutes(runtimeDeps));
+  api.route("/", exportRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 

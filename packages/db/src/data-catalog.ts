@@ -260,6 +260,25 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // The Kug 200b offer (process-and-lifecycle.md, the Kug 200b offer; Q185): a decline's date and
+  // a withdrawal's receipt and BA notice, the consent record it ended, staff ids and times.
+  kug200b_decline: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  kug200b_withdrawal: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  // Export links (data-protection.md, exports): a token's SHA-256, the project, the kind, the
+  // document ids, the staff user and session hash, expiry; no file.
+  export_link: {
+    retentionClass: "access_credential",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Opening links (Q147): a token's SHA-256, the document, the session's kind and hash, expiry.
   document_link: {
     retentionClass: "access_credential",
@@ -558,6 +577,25 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     proof_linked_by: null,
     proof_linked_at: "asuRegistration",
   },
+  kug200b_decline: {
+    participation_id: null,
+    project_id: null,
+    declined_on: "kug200bOffer",
+    declined_by: null,
+    declined_at: "kug200bOffer",
+  },
+  kug200b_withdrawal: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    consent_id: null,
+    received_on: "kug200bOffer",
+    recorded_by: null,
+    recorded_at: "kug200bOffer",
+    ba_notified_on: "kug200bOffer",
+    ba_notified_by: null,
+    ba_notified_at: "kug200bOffer",
+  },
   participant_residence_social_data: {
     ...encryptedKeys,
     nationality: "nationality",
@@ -762,6 +800,7 @@ const withoutFields = new Set([
   // Documents aren't fields: their files and metadata are classified by the document type catalog.
   "document",
   "document_link",
+  "export_link",
   // A generated form's provenance: the declarations it holds are those the form printed, part of
   // the generated document (data-protection.md, generated forms), not the pending fields.
   "form_generation",

@@ -54,7 +54,10 @@ export function documentFileName(name: string): string | null {
 }
 
 /** A generated form is saved under its form code (data-protection.md, generated forms). */
-const downloadStems: Partial<Record<DocumentType, string>> = { tl407_form: "tl407" };
+const downloadStems: Partial<Record<DocumentType, string>> = {
+  tl407_form: "tl407",
+  kug200b_form: "kug200b",
+};
 
 /**
  * The download name of a document that keeps no file name (Q148): `<type>-<date>.<ext>`, a

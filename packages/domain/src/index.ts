@@ -23,6 +23,30 @@ export {
   type AsuRegistrationProblem,
 } from "./asu/model";
 export {
+  checkKug200b,
+  kug200bBaNoticeProblem,
+  kug200bDeclineProblem,
+  kug200bItems,
+  kug200bOfferOutcome,
+  kug200bWithdrawalProblem,
+  type Kug200bCheck,
+  type Kug200bChecklistItem,
+  type Kug200bDateProblem,
+  type Kug200bItem,
+  type Kug200bOfferFacts,
+  type Kug200bOfferOutcome,
+} from "./asu/kug200b";
+export {
+  ExportContentParams,
+  ExportInput,
+  ExportKind,
+  exportLimits,
+  ExportLink,
+  ExportParams,
+} from "./exports/api";
+export {
+  mayGenerateKug200bBulk,
+  mayWorkKug200b,
   mayAttestAsu,
   mayLinkAsuProof,
   mayReadKnowledgeDate,
@@ -41,6 +65,12 @@ export {
   AsuView,
   isDirectAsuChannel,
   KnowledgeDateInput,
+  Kug200bBaNoticeInput,
+  Kug200bDeclineInput,
+  Kug200bGeneratedForm,
+  Kug200bOfferView,
+  Kug200bScanView,
+  Kug200bWithdrawalInput,
 } from "./asu/api";
 export {
   checkProjectUpdate,
@@ -363,6 +393,10 @@ export {
 } from "./documents/state";
 export {
   isScanType,
+  Kug200bScanConfirmation,
+  kug200bDeclarations,
+  Kug200bScanReview,
+  kug200bScanReviewProblems,
   profilingDoneOnProblem,
   ScanConfirmation,
   scanForms,
@@ -982,6 +1016,10 @@ export {
   Tl407SignedDeclarations,
   Tl407Generation,
   Tl407GenerationInput,
+  Kug200bBulkGeneration,
+  Kug200bBulkInput,
+  kug200bBulkMax,
+  Kug200bGeneration,
   Tl407ProfilerReadiness,
   Tl407Readiness,
   Tl407ReadinessSummary,

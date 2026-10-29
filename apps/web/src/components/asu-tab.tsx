@@ -26,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { participationAsuQuery, useApi } from "../api";
 import { documentNavigation } from "./documents-tab";
 import { ReloadNotice, useDraft } from "./draft";
+import { Kug200bSection } from "./kug200b-section";
 
 // The tab "Arbeitsuche" (process-and-lifecycle.md, Arbeitsuchendmeldung and dates;
 // data-protection.md, the ASU record): the route, the knowledge date with the due date or its
@@ -103,6 +104,22 @@ export function AsuTab({ detail }: { detail: Detail }) {
     }
   }
 
+  /** Opens a document through the logged opening (a link valid 60 s). */
+  async function open(documentId: string) {
+    setMessage(undefined);
+    try {
+      const data = ok(
+        await api.POST("/api/v1/participations/{participationId}/documents/{documentId}/opening", {
+          params: { path: { ...path, documentId } },
+          headers: { "Content-Type": "application/json" },
+        }),
+      );
+      documentNavigation.assign(data.url);
+    } catch (error) {
+      setMessage({ kind: "error", text: failure(error) });
+    }
+  }
+
   return (
     <Stack gap={6}>
       {message && (
@@ -157,6 +174,7 @@ export function AsuTab({ detail }: { detail: Detail }) {
           )
         }
       />
+      <Kug200bSection view={view} busy={busy} act={act} onOpen={open} />
       <ProofSection
         view={view}
         busy={busy}
@@ -171,23 +189,7 @@ export function AsuTab({ detail }: { detail: Detail }) {
             );
           }, t("asu.messages.uploaded"));
         }}
-        onOpen={async (documentId) => {
-          setMessage(undefined);
-          try {
-            const data = ok(
-              await api.POST(
-                "/api/v1/participations/{participationId}/documents/{documentId}/opening",
-                {
-                  params: { path: { ...path, documentId } },
-                  headers: { "Content-Type": "application/json" },
-                },
-              ),
-            );
-            documentNavigation.assign(data.url);
-          } catch (error) {
-            setMessage({ kind: "error", text: failure(error) });
-          }
-        }}
+        onOpen={open}
         onReview={(documentId, reasonCode) =>
           act(async () =>
             ok(

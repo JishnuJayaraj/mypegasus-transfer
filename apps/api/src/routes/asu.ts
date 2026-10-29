@@ -2,8 +2,10 @@ import { createRoute, z } from "@hono/zod-openapi";
 import {
   and,
   asc,
+  desc,
   document,
   eq,
+  formGeneration,
   isNull,
   participation,
   participantDetails,
@@ -21,6 +23,11 @@ import {
   evaluateCompleteness,
   isDirectAsuChannel,
   KnowledgeDateInput,
+  Kug200bBaNoticeInput,
+  kug200bDeclineProblem,
+  Kug200bDeclineInput,
+  kug200bOfferOutcome,
+  Kug200bWithdrawalInput,
   mayAddDocument,
   mayAttestAsu,
   mayLinkAsuProof,
@@ -28,7 +35,9 @@ import {
   mayRecordAsu,
   maySetKnowledgeDate,
   mayViewAsu,
+  mayWorkKug200b,
   readableDocumentTypes,
+  tl407Label,
   staffSelfServiceAccess,
   type PermissionTarget,
 } from "@transfer/domain";
@@ -38,7 +47,9 @@ import { projectAccess } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
 import { fieldEncryptionKey } from "../field-encryption";
+import { formRegistry } from "../forms/registry";
 import { asuStatesOf, registrationFacts } from "../participations/asu";
+import { kug200bStatesOf } from "../participations/kug200b";
 import { loadSelfService } from "../participations/self-service";
 import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -86,7 +97,18 @@ function refused(c: Context<AppEnv>, error: unknown) {
     code === "document_not_accepted" ||
     code === "document_quarantined" ||
     code === "document_invalidated" ||
-    code === "knowledge_date_in_future"
+    code === "knowledge_date_in_future" ||
+    code === "kug200b_signed" ||
+    code === "kug200b_declined" ||
+    code === "declined_on_in_future" ||
+    code === "consent_not_found" ||
+    code === "consent_ended" ||
+    code === "received_on_in_future" ||
+    code === "received_before_consent" ||
+    code === "withdrawal_not_found" ||
+    code === "ba_notice_recorded" ||
+    code === "notified_on_in_future" ||
+    code === "notified_before_receipt"
   ) {
     return domainProblem(c, [code]);
   }
@@ -99,6 +121,7 @@ export function asuRoutes(deps: Deps) {
   const middleware = [requireSession(deps)];
   const release = loadRelease(deps.env.configDir);
   const fieldKey = fieldEncryptionKey(deps.env.fieldEncryptionKey!);
+  const registry = deps.formRegistry ?? formRegistry(deps.env.configDir);
 
   /**
    * The participation and the viewer's access to the tab: a 404 for no participation, a project
@@ -169,6 +192,59 @@ export function asuRoutes(deps: Deps) {
                 ),
               )
               .orderBy(asc(document.addedAt), asc(document.id));
+        // The Kug 200b's forms and scans for their readers (the PL, the assigned consultant).
+        const readsKug200b = readableDocumentTypes(subject, target, normal).includes(
+          "kug200b_form",
+        );
+        const kug200bForms = !readsKug200b
+          ? []
+          : await tx
+              .select({
+                documentId: formGeneration.documentId,
+                formVersion: formGeneration.formVersion,
+                generatedAt: utc(formGeneration.generatedAt),
+                checklist: formGeneration.checklist,
+                reviewState: document.reviewState,
+              })
+              .from(formGeneration)
+              .innerJoin(document, eq(document.id, formGeneration.documentId))
+              .where(
+                and(
+                  eq(formGeneration.participationId, participationId),
+                  eq(formGeneration.formCode, "kug200b"),
+                  isNull(document.deletedAt),
+                ),
+              )
+              .orderBy(desc(formGeneration.generatedAt), desc(formGeneration.id));
+        const kug200bScans = !readsKug200b
+          ? []
+          : await tx
+              .select({
+                documentId: document.id,
+                origin: document.scanOrigin,
+                generationDocumentId: document.generationDocumentId,
+                formVersion: document.formVersion,
+                addedAt: utc(document.addedAt),
+                reviewState: document.reviewState,
+                reviewReason: document.reviewReason,
+                reviewedAt: sql<string | null>`case when ${document.reviewedAt} is not null
+              then ${utc(document.reviewedAt)} end`,
+                signedOn: document.signedOn,
+                quarantineReason: document.quarantineReason,
+                quarantinedBy: document.quarantinedBy,
+                quarantinedAt: sql<string | null>`case when ${document.quarantinedAt} is not null
+              then ${utc(document.quarantinedAt)} end`,
+              })
+              .from(document)
+              .where(
+                and(
+                  eq(document.participationId, participationId),
+                  eq(document.type, "kug200b_signed_scan"),
+                  isNull(document.deletedAt),
+                ),
+              )
+              .orderBy(asc(document.addedAt), asc(document.id));
+        const offer = (await kug200bStatesOf(tx, [participationId])).get(participationId)!;
         const record = (await loadSelfService(tx, release, participationId))!;
         const { projectType } = record.wizard;
         const applies = projectType === "ta_tg";
@@ -188,6 +264,11 @@ export function asuRoutes(deps: Deps) {
         const readsDates = mayReadKnowledgeDate(subject, target);
         const records = mayRecordAsu(subject, target).ok;
         const unregistered = open && registration === null;
+        const worksKug200b = applies && mayWorkKug200b(subject, target).ok;
+        const outcome = kug200bOfferOutcome(offer);
+        const today = clock.today();
+        const label = (version: string, key: string) =>
+          tl407Label(registry.version("kug200b", version)?.fieldMap ?? null, key);
         return {
           participationId,
           applies,
@@ -247,6 +328,75 @@ export function asuRoutes(deps: Deps) {
             })),
           }),
           missing,
+          kug200b: {
+            offeredOn: offer.offeredOn,
+            outcome,
+            declinedOn: offer.declinedOn,
+            profileAccess: offer.profileAccess,
+            withdrawals: offer.withdrawals,
+            ...(readsKug200b && {
+              forms: kug200bForms.map((form, index) => ({
+                documentId: form.documentId,
+                formVersion: form.formVersion,
+                generatedAt: form.generatedAt,
+                latest: index === 0,
+                versionInUse: registry.versionInUse("kug200b", form.formVersion, today),
+                checklist: (
+                  (form.checklist ?? []) as {
+                    code: "required_blank" | "text_not_fitting";
+                    key: string;
+                  }[]
+                ).map((item) => ({ ...item, label: label(form.formVersion, item.key) })),
+                capabilities: {
+                  open: documentCapabilities(subject, target, normal, {
+                    type: "kug200b_form",
+                    addedByParticipant: false,
+                    reviewState: form.reviewState,
+                    quarantinedBy: null,
+                  }).open,
+                },
+              })),
+              scans: kug200bScans.map((scan) => {
+                const capabilities = documentCapabilities(subject, target, normal, {
+                  type: "kug200b_signed_scan",
+                  addedByParticipant: false,
+                  reviewState: scan.reviewState,
+                  quarantinedBy: scan.quarantinedBy,
+                });
+                return {
+                  documentId: scan.documentId,
+                  origin: scan.origin!,
+                  generationDocumentId: scan.generationDocumentId,
+                  formVersion: scan.formVersion,
+                  addedAt: scan.addedAt,
+                  review: {
+                    state: scan.reviewState,
+                    reasonCode: scan.reviewReason,
+                    reviewedAt: scan.reviewedAt,
+                  },
+                  signedOn: scan.signedOn,
+                  quarantine:
+                    scan.quarantineReason === null
+                      ? null
+                      : { reasonCode: scan.quarantineReason, quarantinedAt: scan.quarantinedAt! },
+                  // A scan is reviewed only while the participation is open.
+                  capabilities: { ...capabilities, review: capabilities.review && open },
+                };
+              }),
+              versions: registry.versions("kug200b"),
+            }),
+            capabilities: {
+              generate: open && worksKug200b,
+              addScan:
+                open &&
+                applies &&
+                mayAddDocument(subject, "kug200b_signed_scan", target, normal).ok,
+              decline: open && worksKug200b && outcome === null && asu.channel !== "kug_200b",
+              recordWithdrawal: worksKug200b && offer.profileAccess !== null,
+              recordBaNotice:
+                worksKug200b && offer.withdrawals.some((w) => w.baNotifiedOn === null),
+            },
+          },
           capabilities: {
             setRoute: unregistered && records,
             recordRegistration: unregistered && records && isDirectAsuChannel(asu.channel),
@@ -446,6 +596,113 @@ export function asuRoutes(deps: Deps) {
         await db.execute(sql`select set_knowledge_date(p_context => ${context(c)},
           p_participation_id => ${participationId}::uuid,
           p_knowledge_date => ${input.knowledgeDate}::date, p_previous => ${input.previous}::date)`);
+      } catch (error) {
+        return refused(c, error);
+      }
+      return answer(c, result.access);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/asu/kug200b-decline",
+      tags: ["participations"],
+      summary:
+        "Record that the participant declined the Kug 200b (the PL or the assigned consultant) with the date; once, not once signed, not on the route kug_200b (change the route first); the registration stays as it is",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: Kug200bDeclineInput } } },
+      },
+      responses: writeResponses,
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const { declinedOn } = c.req.valid("json");
+      const result = await access(c, participationId);
+      if (!result.ok) return result.response as never;
+      const { subject, target } = result.access;
+      if (!mayWorkKug200b(subject, target).ok) return problem(c, "forbidden");
+      const dateProblem = kug200bDeclineProblem(declinedOn, clock.today());
+      if (dateProblem) return domainProblem(c, [{ code: dateProblem, field: "declinedOn" }]);
+      try {
+        await db.execute(sql`select decline_kug200b_offer(p_context => ${context(c)},
+          p_participation_id => ${participationId}::uuid, p_declined_on => ${declinedOn}::date)`);
+      } catch (error) {
+        return refused(c, error);
+      }
+      return answer(c, result.access);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/asu/withdrawal",
+      tags: ["participations"],
+      summary:
+        'Record a written withdrawal of Kug 200b declaration 17 that reached the TG (the PL or the assigned consultant, also after the end), with the date received: ends its record (consent_ended, revoked) and opens "BA informiert am"; the registration stays as it is',
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: Kug200bWithdrawalInput } },
+        },
+      },
+      responses: writeResponses,
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const result = await access(c, participationId);
+      if (!result.ok) return result.response as never;
+      const { subject, target } = result.access;
+      if (!mayWorkKug200b(subject, target).ok) return problem(c, "forbidden");
+      if (input.receivedOn > clock.today()) {
+        return domainProblem(c, [{ code: "received_on_in_future", field: "receivedOn" }]);
+      }
+      try {
+        await db.execute(sql`select record_declaration_withdrawal(p_context => ${context(c)},
+          p_participation_id => ${participationId}::uuid, p_id => ${randomUUID()}::uuid,
+          p_consent_id => ${input.consentId}::uuid, p_received_on => ${input.receivedOn}::date)`);
+      } catch (error) {
+        return refused(c, error);
+      }
+      return answer(c, result.access);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/asu/withdrawal-ba-notice",
+      tags: ["participations"],
+      summary:
+        'Record "BA informiert am" for a withdrawal (the PL or the assigned consultant, also after the end): once, not before the receipt; it records that the BA was told, never that its access was disabled',
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: Kug200bBaNoticeInput } } },
+      },
+      responses: writeResponses,
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const result = await access(c, participationId);
+      if (!result.ok) return result.response as never;
+      const { subject, target } = result.access;
+      if (!mayWorkKug200b(subject, target).ok) return problem(c, "forbidden");
+      if (input.notifiedOn > clock.today()) {
+        return domainProblem(c, [{ code: "notified_on_in_future", field: "notifiedOn" }]);
+      }
+      try {
+        await db.execute(sql`select record_withdrawal_ba_notice(p_context => ${context(c)},
+          p_participation_id => ${participationId}::uuid,
+          p_withdrawal_id => ${input.withdrawalId}::uuid,
+          p_notified_on => ${input.notifiedOn}::date)`);
       } catch (error) {
         return refused(c, error);
       }

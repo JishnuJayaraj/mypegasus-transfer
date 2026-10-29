@@ -20,7 +20,8 @@ import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
 import { AssistedModeEndReason, AssistedModeHow } from "../self-service/assisted";
 import { DocumentSource } from "../documents/api";
-import { ScanOrigin } from "../documents/scans";
+import { ExportKind } from "../exports/api";
+import { kug200bDeclarations, ScanOrigin } from "../documents/scans";
 import { DocumentDeleteReason, DocumentReviewReason, QuarantineReason } from "../documents/state";
 import {
   ActivationChannel,
@@ -32,6 +33,7 @@ import {
   ActivationPurpose,
   ChannelVerification,
   ConsentPurpose,
+  ConsentSource,
   type ConsentPurpose as ConsentPurposeValue,
   OneTimeCodePurpose,
   ChannelRemovalReason,
@@ -200,6 +202,13 @@ export const AuditEventType = z.enum([
   "asu_registration_recorded",
   "asu_proof_linked",
   "knowledge_date_set",
+  // Slice 6, the Kug 200b offer (process-and-lifecycle.md, the Kug 200b offer), written only by
+  // its functions
+  "kug200b_offer_declined",
+  "declaration_withdrawal_recorded",
+  "declaration_withdrawal_ba_notified",
+  // Slice 6, exports (data-protection.md, exports): the download, written only by its function
+  "export_downloaded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -303,6 +312,11 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "asu_registration_recorded",
   "asu_proof_linked",
   "knowledge_date_set",
+  "kug200b_offer_declined",
+  "declaration_withdrawal_recorded",
+  "declaration_withdrawal_ba_notified",
+  "export_created",
+  "export_downloaded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -551,6 +565,8 @@ const BreakGlassTarget = z.discriminatedUnion("kind", [
 
 /** Every document event names its row and type, never its name or content. */
 const ofDocument = { documentId: z.uuid(), documentType: DocumentType };
+/** An export's kind (data-protection.md, exports) and the count of what it covers. */
+const exportOf = z.strictObject({ exportKind: ExportKind, count: z.int().min(1).max(200) });
 
 /** A review; a signed scan's also names its origin and, once accepted, its form version. */
 const documentReviewed = event("document_reviewed", {
@@ -823,7 +839,13 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject({ documentType: DocumentType, documentId: z.uuid() }),
   }),
   event("warning_confirmed", { ...ofProjectOrParticipation, reasonCode: code, details: noDetails }),
-  event("export_created", { ...ofProjectOrParticipation, reasonCode: code, details: noDetails }),
+  /**
+   * An export issued (data-protection.md, exports): its kind and how many items it covers; a link
+   * valid 60 s for the asking session. Never an id list, a value or the token.
+   */
+  event("export_created", { ...ofProject, actor: staffActor, details: exportOf }),
+  /** An export's download, re-authorized and rendered at that moment (data-protection.md, exports). */
+  event("export_downloaded", { ...ofProject, actor: staffActor, details: exportOf }),
   configOverrideChanged,
   /** Reviews and clarification requests are new events pointing at the reviewed one (ADR-0002). */
   event("review_recorded", { ...ofProjectOrParticipation, reasonCode: code, details: reviewOf }),
@@ -1012,6 +1034,8 @@ export const AuditEvent = z.discriminatedUnion("type", [
         purpose: ConsentPurpose,
         textVersion,
         language: NoticeLanguage,
+        /** Where it was given: a signed paper form names itself (Q138, Q185). */
+        source: ConsentSource.optional(),
       })
       .superRefine(channelOfPurpose),
   }),
@@ -1052,6 +1076,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
         consentId: z.uuid(),
         channelId: z.uuid().optional(),
         purpose: ConsentPurpose,
+        source: ConsentSource.optional(),
       })
       .superRefine(channelOfPurpose),
   }),
@@ -1276,7 +1301,9 @@ export const AuditEvent = z.discriminatedUnion("type", [
       documentId: z.uuid(),
       formCode: FormCode,
       formVersion: FormVersion,
-      declarations: z.array(z.enum(["jobboerseChoice", "baContactConsent"])).min(1),
+      declarations: z
+        .array(z.enum(["jobboerseChoice", "baContactConsent", ...kug200bDeclarations]))
+        .min(1),
     }),
   }),
   /** The ASU route set or changed (process-and-lifecycle.md, Arbeitsuchendmeldung): the new route and the one it replaced. */
@@ -1311,6 +1338,27 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ change: z.enum(["set", "changed", "cleared"]) }),
+  }),
+  /** The Kug 200b offer declined (process-and-lifecycle.md, the Kug 200b offer): its date. */
+  event("kug200b_offer_declined", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ declinedOn: isoDate }),
+  }),
+  /**
+   * A written withdrawal of Kug 200b declaration 17 that reached the TG (Q185): the date received
+   * and the consent record it ended (`consent_ended`, `revoked`, in the same transaction).
+   */
+  event("declaration_withdrawal_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ withdrawalId: z.uuid(), consentId: z.uuid(), receivedOn: isoDate }),
+  }),
+  /** "BA informiert am" for a withdrawal: never a claim that BA access was disabled (Q185). */
+  event("declaration_withdrawal_ba_notified", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ withdrawalId: z.uuid(), notifiedOn: isoDate }),
   }),
   /** The pending declarations to the BA changed: the keys, never the values (Q193). */
   event("profiling_declarations_recorded", {
