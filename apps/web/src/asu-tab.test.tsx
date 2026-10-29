@@ -77,6 +77,7 @@ const capabilities = {
   linkProof: false,
   setKnowledgeDate: false,
   addProof: false,
+  recordConfirmation: false,
 };
 
 const kugCapabilities = {
@@ -163,6 +164,7 @@ function setup(first: ReturnType<typeof view>, afterWrite = first, viewAsu = tru
     [`POST ${detailPath}/asu/kug200b-decline`]: answer,
     [`POST ${detailPath}/asu/withdrawal`]: answer,
     [`POST ${detailPath}/asu/withdrawal-ba-notice`]: answer,
+    [`POST ${detailPath}/asu/confirmation`]: answer,
   });
   renderApp(`/projects/${project.id}/participations/${participationId}?tab=asu`, mock.api);
   return mock;
@@ -664,5 +666,44 @@ describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
     expect(kug.getByText("Unterschrieben (angenommen).")).toBeVisible();
     expect(kug.queryByRole("table")).toBeNull();
     expect(kug.queryAllByRole("button").map((b) => b.textContent)).toEqual([]);
+  });
+
+  it('records "Bestätigung der Agentur am" for a batch\'s registration, then shows it', async () => {
+    const user = userEvent.setup();
+    const submitted = {
+      id: registrationId,
+      channel: "kug_200b",
+      registeredOn: "2026-11-24",
+      recordedAt: "2026-11-24T09:00:00.000000Z",
+      proof: {
+        kind: "kug200b_submission",
+        attestationSource: null,
+        linkedAt: "2026-11-24T09:00:00.000000Z",
+      },
+      withProofSince: "2026-11-24T09:00:00.000000Z",
+      confirmedOn: null,
+    };
+    const { calls } = setup(
+      view({
+        route: { channel: "kug_200b", version: 1, defaultChannel: null },
+        registration: submitted,
+        capabilities: { recordConfirmation: true },
+      }),
+      view({
+        route: { channel: "kug_200b", version: 1, defaultChannel: null },
+        registration: { ...submitted, confirmedOn: "2026-12-01" },
+      }),
+    );
+    const registration = await section("Meldung");
+    expect(registration.getByText("Nachweis: Kug 200b-Sammelmeldung")).toBeVisible();
+    await user.type(registration.getByLabelText("Bestätigung der Agentur am"), "01.12.2026");
+    await user.click(registration.getByRole("button", { name: "Bestätigung erfassen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/asu/confirmation`)[0]?.body).toEqual({
+        registrationId,
+        confirmedOn: "2026-12-01",
+      }),
+    );
+    expect(await screen.findByText("Bestätigung der Agentur am 01.12.2026")).toBeVisible();
   });
 });

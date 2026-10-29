@@ -95,11 +95,15 @@ export const fieldCatalog: readonly FieldEntry[] = [
   field("placementAgenturKey", "internal", "case_internal", false, { listable: true, ...record }),
   // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung; Q186): the route and the
   // registrations with their proof, codes and dates only, listable
-  // and the Kug 200b offer's decline, withdrawals and their BA notice (Q185)
-  ...fields(["asuChannel", "asuRegistration", "kug200bOffer"], "internal", "case_internal", false, {
-    listable: true,
-    ...record,
-  }),
+  // and the Kug 200b offer's decline, withdrawals and their BA notice (Q185); the submissions to an
+  // Agentur and the batch memberships (process-and-lifecycle.md, Kug 200b batches)
+  ...fields(
+    ["asuChannel", "asuRegistration", "kug200bOffer", "agenturSubmissions"],
+    "internal",
+    "case_internal",
+    false,
+    { listable: true, ...record },
+  ),
   // identity and case data (confidential); identity fields come from the import, on
   // `participant_identity` (participation record) and `participant_details` (personnel file,
   // Q105); `address` is street, postal code, city and country as one unit (round 32)

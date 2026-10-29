@@ -5,6 +5,7 @@ import {
   SetAgenturSettingInput,
   settingKeys,
 } from "./agentur-settings";
+import { SettingKey } from "./migration";
 
 // Slice 2 plan 5.9 (PR 2d-1): an Agentur-scoped setting (round 8, Q93, R14).
 const input = {
@@ -57,6 +58,13 @@ describe("checkAgenturSetting (R14)", () => {
         agentur_submission: { leadTimeDays: 0 },
       }),
     ).toEqual(["agentur_submission.leadTimeDays"]);
+  });
+
+  it("names the accepted alternative to the Kug 200a as a key the audit takes (Q187)", () => {
+    const keys = settingKeys({ asu_registration: { kug200aAlternativeAccepted: true } });
+    expect(keys).toEqual(["asu_registration.kug200aAlternativeAccepted"]);
+    expect(keys.every((key) => SettingKey.safeParse(key).success)).toBe(true);
+    expect(SettingKey.safeParse("asu_registration.200a").success).toBe(false);
   });
 
   it("accepts a setting confirmed today or earlier", () => {

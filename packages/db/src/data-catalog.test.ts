@@ -108,6 +108,11 @@ describe("data catalog", () => {
       asu_registration: entry("participation_record", "internal", true),
       kug200b_decline: entry("participation_record", "internal", true),
       kug200b_withdrawal: entry("participation_record", "internal", true),
+      // Kug 200b batches (Q203): the batch is project data, its members and submissions the
+      // participation's proof of submission.
+      kug200b_batch: entry("project_master", "internal"),
+      kug200b_batch_member: entry("participation_record", "internal", true),
+      agentur_submission: entry("participation_record", "internal", true),
       export_link: entry("access_credential", "internal", true),
       participant_reminder: entry("personnel_file", "internal", true),
       // Slice 5b (Q58, Q166): appointments are project data, bookings personnel file.

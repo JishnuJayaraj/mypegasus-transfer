@@ -691,6 +691,10 @@
                     "scan_email",
                     "upload"
                   ]
+                },
+                "kug200aAlternativeAccepted": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "additionalProperties": false
@@ -1156,6 +1160,10 @@
                           "scan_email",
                           "upload"
                         ]
+                      },
+                      "kug200aAlternativeAccepted": {
+                        "type": "boolean",
+                        "const": true
                       }
                     },
                     "additionalProperties": false

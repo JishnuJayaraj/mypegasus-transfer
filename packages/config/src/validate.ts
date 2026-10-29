@@ -10,6 +10,7 @@ export type ConfigIssueCode =
   | "nationwide_setting"
   | "project_wide_setting"
   | "template_id_mismatch"
+  | "agentur_scoped_setting"
   | "field_redefined"
   // merging the layers (resolve.ts) and loading a pinned template (load.ts)
   | "wrong_layer_kind"
@@ -80,6 +81,17 @@ export function parseLayer(
   const issues: ConfigIssue[] = [];
   if (layer.kind === "regional_template" && layer.id !== layer.agenturKey) {
     issues.push({ code: "template_id_mismatch", path: ["id"] });
+  }
+  // The Agentur's acceptance of an alternative to the Kug 200a needs its source, confirmer and
+  // date: an Agentur-scoped setting only (regional-variation.md, the accepted alternative; Q187).
+  if (
+    layer.kind === "regional_template" &&
+    layer.settings?.asu_registration?.kug200aAlternativeAccepted !== undefined
+  ) {
+    issues.push({
+      code: "agentur_scoped_setting",
+      path: ["settings", "asu_registration", "kug200aAlternativeAccepted"],
+    });
   }
   const own = layer.kind === "base_defaults" ? [] : Object.keys(layer.fields ?? {});
   for (const key of own) {

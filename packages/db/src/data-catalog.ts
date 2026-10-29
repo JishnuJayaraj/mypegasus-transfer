@@ -272,8 +272,26 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // Kug 200b batches (process-and-lifecycle.md, Kug 200b batches): the batch is project data
+  // (Agentur, channel, artifact, status, dates, staff ids); its members and the submissions are the
+  // participation's proof of submission (Q88).
+  kug200b_batch: {
+    retentionClass: "project_master",
+    dataClass: "internal",
+    holdsParticipantData: false,
+  },
+  kug200b_batch_member: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  agentur_submission: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   // Export links (data-protection.md, exports): a token's SHA-256, the project, the kind, the
-  // document ids, the staff user and session hash, expiry; no file.
+  // document ids or the batch, the staff user and session hash, expiry; no file.
   export_link: {
     retentionClass: "access_credential",
     dataClass: "internal",
@@ -576,6 +594,34 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     attestation_source: "asuRegistration",
     proof_linked_by: null,
     proof_linked_at: "asuRegistration",
+    agentur_submission_id: null,
+    confirmed_on: "asuRegistration",
+    confirmed_by: null,
+    confirmed_at: "asuRegistration",
+  },
+  kug200b_batch_member: {
+    batch_id: "agenturSubmissions",
+    project_id: null,
+    participation_id: null,
+    document_id: null,
+    form_version: "agenturSubmissions",
+    asu_channel: "agenturSubmissions",
+    placement_agentur_key: "agenturSubmissions",
+    active: "agenturSubmissions",
+  },
+  agentur_submission: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    document_id: null,
+    form_code: "agenturSubmissions",
+    form_version: "agenturSubmissions",
+    agentur_key: "agenturSubmissions",
+    channel: "agenturSubmissions",
+    batch_id: "agenturSubmissions",
+    submitted_on: "agenturSubmissions",
+    recorded_by: null,
+    recorded_at: "agenturSubmissions",
   },
   kug200b_decline: {
     participation_id: null,

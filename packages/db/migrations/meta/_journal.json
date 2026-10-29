@@ -540,6 +540,20 @@
       "when": 1793228095000,
       "tag": "0076_kug200b_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1793274793090,
+      "tag": "0077_kug200b_batches",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1793274802015,
+      "tag": "0078_kug200b_batch_functions",
+      "breakpoints": true
     }
   ]
 }

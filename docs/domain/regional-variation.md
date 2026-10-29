@@ -110,9 +110,10 @@ Participation
   `agentur_submission_blocked` is **step-scoped** and never blocks activation or other work:
   `agentur_submission` needs `submissionChannel`, `originalRequired`, `leadTimeDays` and
   `rejectsOutdatedFormVersions` (Q92: the app never guesses whether an Agentur accepts an older
-  form); `asu_registration` blocks only the Kug 200b batch submission, needs the
-  `batchSubmissionChannel` in `ta_tg` projects only, and is a configuration warning until Slice 6
-  (Q91). The ASU `defaultChannel` never blocks (round 14). Project
+  form); `asu_registration` blocks only the Kug 200b batch, needs the
+  `batchSubmissionChannel` in `ta_tg` projects only, and from Slice 6 (PR 6-5a-1) refuses building a
+  batch for that Agentur (`batch_settings_missing`, "Einstellungen fehlen" on the tab "Agentur";
+  Q91). The ASU `defaultChannel` never blocks (round 14). Project
   activation additionally needs, for `ta_tg`, an entry wave with a `latestEntryDate` (Q77,
   `projectActivationBlockers` in the domain).
 - **Samples**: `packages/config/templates/beispielstadt-nord/1.json`, `2.json` and `3.json`
@@ -210,6 +211,14 @@ Participation
   it supplies. They are never a project-wide value that silently applies to every placement
   Agentur. When a project migrates to another template version, Slice 2 surfaces them for
   review.
+- **The accepted alternative to the Kug 200a** (Q187; Slice 6, PR 6-5a-1; Q203):
+  `asu_registration.kug200aAlternativeAccepted` (`true` or absent) records that the Agentur
+  accepts an alternative cover list instead of the official Kug 200a for its Kug 200b batches.
+  It is valid **only as an Agentur-scoped setting**, whose source, confirmer and date are the
+  acceptance's ("Alternative anerkannt am … von …"); a template that sets it is invalid
+  (`agentur_scoped_setting`), and the resolver's value counts only with that provenance
+  (`batchSettings` in the domain). Without it the Kug 200a is the artifact. Removing it makes an
+  open batch built with the alternative stale (`settings_changed`).
 - **Overrides apply project-wide** (round 15): Slice 2 validates an override against every
   pinned Agentur template and rejects a relaxation that matches none of them. Agentur-specific
   fields and rules belong in that Agentur's template.

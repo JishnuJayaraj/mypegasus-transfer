@@ -211,6 +211,17 @@ export function HistoryTab({
         return t("history.dated", { date: formatDate(text(details.receivedOn)) });
       case "declaration_withdrawal_ba_notified":
         return t("history.dated", { date: formatDate(text(details.notifiedOn)) });
+      // A submission to the Agentur by its form, channel and date (process-and-lifecycle.md,
+      // Kug 200b batches); the Agentur's confirmation by its date.
+      case "agentur_submission_recorded":
+        return t("history.submission", {
+          form: text(details.formCode) === "kug200b" ? "Kug 200b" : "TL 407",
+          version: (text(details.formVersion) ?? "").replace("-", "/"),
+          channel: coded("overrides.values", text(details.channel) ?? ""),
+          date: formatDate(text(details.submittedOn)),
+        });
+      case "asu_confirmation_recorded":
+        return t("history.dated", { date: formatDate(text(details.confirmedOn)) });
       case "consent_given":
       case "consent_ended": {
         const source = text(details.source);

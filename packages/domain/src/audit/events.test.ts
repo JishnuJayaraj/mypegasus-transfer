@@ -130,6 +130,11 @@ describe("audit event types (ADR-0002)", () => {
       "declaration_withdrawal_recorded",
       "declaration_withdrawal_ba_notified",
       "export_downloaded",
+      "kug200b_batch_created",
+      "kug200b_batch_submitted",
+      "kug200b_batch_discarded",
+      "agentur_submission_recorded",
+      "asu_confirmation_recorded",
     ]);
   });
 
@@ -228,6 +233,11 @@ describe("audit event types (ADR-0002)", () => {
       "declaration_withdrawal_ba_notified",
       "export_created",
       "export_downloaded",
+      "kug200b_batch_created",
+      "kug200b_batch_submitted",
+      "kug200b_batch_discarded",
+      "agentur_submission_recorded",
+      "asu_confirmation_recorded",
     ]);
   });
 
@@ -486,6 +496,45 @@ describe("the other event types", () => {
       { participationId: null, details: { exportKind: "kug200b_print", count: 35 } },
     ],
     ["kug200b_offer_declined", { details: { declinedOn: "2026-11-02" } }],
+    [
+      "kug200b_batch_created",
+      {
+        participationId: null,
+        details: {
+          batchId: otherId,
+          agenturKey: "beispielstadt-nord",
+          channel: "scan_email",
+          artifact: "kug200a",
+          count: 33,
+        },
+      },
+    ],
+    [
+      "kug200b_batch_submitted",
+      {
+        participationId: null,
+        details: { batchId: otherId, submittedOn: "2026-11-24", count: 33, registrations: 33 },
+      },
+    ],
+    ["kug200b_batch_discarded", { participationId: null, details: { batchId: otherId, count: 1 } }],
+    [
+      "agentur_submission_recorded",
+      {
+        details: {
+          submissionId: otherId,
+          documentId: otherId,
+          formCode: "kug200b",
+          formVersion: "09-2021",
+          channel: "scan_email",
+          submittedOn: "2026-11-24",
+          batchId: otherId,
+        },
+      },
+    ],
+    [
+      "asu_confirmation_recorded",
+      { details: { registrationId: otherId, confirmedOn: "2026-12-01" } },
+    ],
     [
       "declaration_withdrawal_recorded",
       { details: { withdrawalId: otherId, consentId: otherId, receivedOn: "2026-11-02" } },

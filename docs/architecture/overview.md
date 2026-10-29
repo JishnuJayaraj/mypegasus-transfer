@@ -245,6 +245,12 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   `capabilities.invite` ("per E-Mail", "per SMS", "nicht zustellbar, im Portal sichtbar"), shows
   the fixed text and then the result with the skips; "Nachrichten" names the new kinds, the
   system as the sender of a notice, and offers "Nachverfolgung erfassen" on an undelivered one.
+- **The project tab "Agentur"** (`ta_tg` only, the PL's; Slice 6, PR 6-5a-1;
+  `apps/web/src/components/agentur-tab.tsx`, `GET /projects/{id}/kug200b-batches`): per placement
+  Agentur the batch channel or "Einstellungen fehlen", the artifact and the ready Kug 200b scans,
+  "Sammelmeldung bilden"; the batches with "Arbeitsliste (CSV)" (an export link), "Übermittelt am",
+  "Verwerfen" and a stale batch's rows. It is the last tab, so the others keep their place;
+  "Bestätigung der Agentur am" is on the participant's tab "Arbeitsuche".
 - **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende", "mit
   offenen Angaben oder Unterlagen", "Frist in 14 Tagen", "Frist überschritten", "Hinweise", "nicht
   erreichbar") and tables per status, track, wave, activation and notice state, deadline kind and

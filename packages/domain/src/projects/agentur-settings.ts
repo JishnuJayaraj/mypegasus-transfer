@@ -24,6 +24,12 @@ export const RegionalSettings = z.strictObject({
     .strictObject({
       defaultChannel: AsuChannel.optional(),
       batchSubmissionChannel: Kug200bBatchChannel.optional(),
+      /**
+       * The Agentur accepted an alternative cover list instead of the official Kug 200a (Q187):
+       * only as an Agentur-scoped setting, which keeps its source, confirmer and date; a template
+       * that sets it is invalid (`agentur_scoped_setting`).
+       */
+      kug200aAlternativeAccepted: z.literal(true).optional(),
     })
     .optional(),
   agentur_submission: z

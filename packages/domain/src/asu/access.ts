@@ -90,3 +90,17 @@ export function mayGenerateKug200bBulk(actor: Actor, target: PermissionTarget): 
   if (actor.kind !== "staff") return denied;
   return staffPermission(actor, target, (role) => role === "project_lead");
 }
+
+/**
+ * Kug 200b batches of a project (process-and-lifecycle.md, Kug 200b batches; D25): the PL only,
+ * who may open the signed Kug 200b (Q49); back office never opens a signed scan.
+ */
+export function mayWorkKug200bBatches(actor: Actor, target: PermissionTarget): Permission {
+  if (actor.kind !== "staff") return denied;
+  return staffPermission(actor, target, (role) => role === "project_lead");
+}
+
+/** "Bestätigung der Agentur am" for a batch's registration (D19): the PL, who submitted it. */
+export function mayRecordAsuConfirmation(actor: Actor, target: PermissionTarget): Permission {
+  return mayWorkKug200bBatches(actor, target);
+}

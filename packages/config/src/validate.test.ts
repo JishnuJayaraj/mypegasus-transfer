@@ -224,6 +224,27 @@ describe("Agentur-scoped temporary settings (AC-33)", () => {
     ]);
   });
 
+  it("alone carry the Agentur's acceptance of an alternative to the Kug 200a (Q187)", () => {
+    const settings = { asu_registration: { kug200aAlternativeAccepted: true } };
+    expect(
+      issues({ ...override, agenturSettings: { "beispielstadt-ost": { ...temporary, settings } } }),
+    ).toEqual([]);
+    expect(issues({ ...template, settings })).toEqual([
+      {
+        code: "agentur_scoped_setting",
+        path: "settings/asu_registration/kug200aAlternativeAccepted",
+        key: undefined,
+      },
+    ]);
+    const declined = { asu_registration: { kug200aAlternativeAccepted: false } };
+    expect(
+      issues({
+        ...override,
+        agenturSettings: { "beispielstadt-ost": { ...temporary, settings: declined } },
+      }).map(({ code }) => code),
+    ).toEqual(["invalid"]);
+  });
+
   it("a relaxation names the rule, a reason code and its approval", () => {
     const relax = [{ ruleId: "", reasonCode: "Weil es so ist", approvedBy: staffId }];
     expect(issues({ ...override, relax }).map(({ path }) => path)).toEqual([

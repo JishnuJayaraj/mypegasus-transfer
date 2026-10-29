@@ -37,10 +37,14 @@ export {
   type Kug200bOfferOutcome,
 } from "./asu/kug200b";
 export {
+  BatchExportInput,
+  batchExportKinds,
+  DocumentExportInput,
   ExportContentParams,
   ExportInput,
   ExportKind,
   exportLimits,
+  isBatchExportKind,
   ExportLink,
   ExportParams,
 } from "./exports/api";
@@ -53,6 +57,8 @@ export {
   mayRecordAsu,
   maySetKnowledgeDate,
   mayViewAsu,
+  mayRecordAsuConfirmation,
+  mayWorkKug200bBatches,
 } from "./asu/access";
 export {
   AsuDueDateView,
@@ -1074,3 +1080,31 @@ export {
   ProfilingWriteResult,
   UnemploymentPeriodView,
 } from "./profiling/api";
+export {
+  batchEligibility,
+  batchRecheck,
+  batchSettings,
+  BatchMemberProblem,
+  BatchStaleRow,
+  confirmationProblem,
+  Kug200bArtifactView,
+  Kug200bBatchArtifact,
+  kug200bBatchMax,
+  Kug200bBatchStatus,
+  submissionProblem,
+  type BatchMemberFacts,
+} from "./asu/batches";
+export {
+  AgenturSubmissionChannel,
+  AsuConfirmationInput,
+  CreateKug200bBatchInput,
+  Kug200bAgenturView,
+  Kug200bBatchCandidate,
+  Kug200bBatchCreated,
+  Kug200bBatchesView,
+  Kug200bBatchMember,
+  Kug200bBatchParams,
+  Kug200bBatchSubmissionInput,
+  Kug200bBatchSubmitted,
+  Kug200bBatchView,
+} from "./asu/batches-api";
