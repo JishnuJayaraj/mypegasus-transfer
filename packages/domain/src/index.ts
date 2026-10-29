@@ -1113,6 +1113,7 @@ export {
   AgenturSubmissionChannel,
   AsuConfirmationInput,
   CreateKug200bBatchInput,
+  DiscardKug200bBatchInput,
   Kug200bAgenturView,
   Kug200bBatchCandidate,
   Kug200bBatchCreated,

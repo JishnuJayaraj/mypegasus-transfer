@@ -4,6 +4,7 @@ import { eq, kug200bBatch, sql, type Database } from "@transfer/db";
 import {
   BatchStaleRow,
   CreateKug200bBatchInput,
+  DiscardKug200bBatchInput,
   Kug200bBatchCreated,
   Kug200bBatchesView,
   Kug200bBatchParams,
@@ -308,7 +309,13 @@ export function kug200bBatchRoutes(deps: Deps) {
       summary:
         "Discard an open batch (its PL): its members are free for a new batch; the batch stays as history",
       middleware,
-      request: { params: Kug200bBatchParams },
+      request: {
+        params: Kug200bBatchParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: DiscardKug200bBatchInput } },
+        },
+      },
       responses: {
         204: { description: "Discarded" },
         ...problemResponses(
@@ -316,6 +323,7 @@ export function kug200bBatchRoutes(deps: Deps) {
           "unauthenticated",
           "forbidden",
           "not-found",
+          "unsupported-media-type",
           "domain-error",
         ),
       },

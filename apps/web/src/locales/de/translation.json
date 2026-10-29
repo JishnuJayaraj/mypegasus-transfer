@@ -2754,7 +2754,32 @@
       "asu_route_unset": "Der Weg der Arbeitsuchendmeldung ist nicht festgelegt."
     },
     "index": "Arbeitsliste (CSV)",
-    "downloaded": "Die Arbeitsliste wird heruntergeladen.",
+    "downloaded": {
+      "kug200b_batch_index": "Die Arbeitsliste wird heruntergeladen.",
+      "kug200b_batch_artifact": "Das Vorblatt wird heruntergeladen.",
+      "kug200b_batch_scans": "Die Scans werden heruntergeladen."
+    },
+    "artifactPdf": {
+      "kug200a": "Kug 200a (PDF)",
+      "accepted_alternative": "Sammelliste (PDF)"
+    },
+    "scansPdf": "Scans (PDF)",
+    "checklist": {
+      "title": {
+        "kug200a": "Vor dem Druck der Kug 200a von Hand ergänzen",
+        "accepted_alternative": "Vor dem Druck der Sammelliste von Hand ergänzen"
+      },
+      "none": "Nichts von Hand zu ergänzen.",
+      "codes": {
+        "not_recorded": "{{label}}: nicht erfasst",
+        "not_decided": "{{label}}: aus den Daten nicht eindeutig",
+        "text_not_fitting": "{{label}}: passt nicht ins Feld",
+        "character_unsupported": "{{label}}: enthält ein nicht druckbares Zeichen",
+        "identifier_too_long": "{{label}}: zu lang für das Feld"
+      },
+      "everyone": "bei allen {{count}} Personen",
+      "members": "bei {{names}}"
+    },
     "discard": "Verwerfen",
     "discarded": "Sammelmeldung verworfen.",
     "submittedOnLabel": "Übermittelt am",
@@ -2768,7 +2793,8 @@
       "batch_not_open": "Die Sammelmeldung ist nicht mehr offen.",
       "submitted_on_in_future": "Das Versanddatum darf nicht in der Zukunft liegen.",
       "submitted_before_batch": "Das Versanddatum kann nicht vor der Sammelmeldung liegen.",
-      "export_stale": "Die Arbeitsliste ist veraltet. Bitte neu laden."
+      "export_stale": "Die Arbeitsliste ist veraltet. Bitte neu laden.",
+      "export_not_applicable": "Scans gehen nur auf einem digitalen Weg als PDF an die Agentur; auf dem Postweg liegt die Kug 200a den Originalen bei."
     },
     "routeMissing_one": "{{count}} angenommener Kug 200b wartet auf den Weg der Arbeitsuchendmeldung.",
     "routeMissing_other": "{{count}} angenommene Kug 200b warten auf den Weg der Arbeitsuchendmeldung.",

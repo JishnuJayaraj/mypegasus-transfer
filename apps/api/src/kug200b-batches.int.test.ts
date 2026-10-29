@@ -11,7 +11,7 @@ import {
 } from "@transfer/domain";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { dbGuardFacts } from "./participations/guard-facts";
-import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
+import { expectProblem, jsonRequest, login, origin, readJson, testApp } from "./testing";
 
 // The project tab "Agentur" and the Agentur's confirmation (process-and-lifecycle.md, Kug 200b
 // batches; regional-variation.md, the accepted alternative; data-protection.md, exports; D24,
@@ -253,7 +253,7 @@ describe("a batch from building to the Agentur's confirmation (D19, D25)", () =>
     // Hidden from everyone but its PL, whatever its state.
     await expectProblem(await submitBatch(batchId, consultant), 404, "not-found");
     await expectProblem(
-      await request("POST", `/kug200b-batches/${batchId}/discard`, consultant),
+      await request("POST", `/kug200b-batches/${batchId}/discard`, consultant, {}),
       404,
       "not-found",
     );
@@ -344,7 +344,15 @@ describe("a batch from building to the Agentur's confirmation (D19, D25)", () =>
     expect(await staleOf(await submitBatch(batchId))).toEqual(rows);
     expect((await sql("select count(*)::int as n from asu_registration")).rows[0].n).toBe(0);
     // Discard and rebuild with the one who stays.
-    expect((await request("POST", `/kug200b-batches/${batchId}/discard`)).status).toBe(204);
+    // A write carries JSON like every write: without it 415, as the browser once sent it.
+    const bare = await app.request(`/api/v1/kug200b-batches/${batchId}/discard`, {
+      method: "POST",
+      headers: { ...staff[projectLead]!, Origin: origin },
+    });
+    expect(bare.status).toBe(415);
+    expect(
+      (await request("POST", `/kug200b-batches/${batchId}/discard`, projectLead, {})).status,
+    ).toBe(204);
     expect((await tab()).agenturen[0]!.candidates.map((c) => c.participationId)).toEqual([
       stays.id,
     ]);

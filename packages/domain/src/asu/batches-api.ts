@@ -139,6 +139,9 @@ export const Kug200bBatchSubmitted = z
 
 export const Kug200bBatchParams = z.object({ batchId: z.uuid() });
 
+/** `POST /kug200b-batches/{id}/discard` carries nothing (a JSON body like every write); strict. */
+export const DiscardKug200bBatchInput = z.strictObject({}).meta({ id: "DiscardKug200bBatchInput" });
+
 /** `POST /participations/{id}/asu/confirmation`: "Bestätigung der Agentur am". */
 export const AsuConfirmationInput = z
   .strictObject({ registrationId: z.uuid(), confirmedOn: isoDate })

@@ -12437,7 +12437,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DiscardKug200bBatchInput"];
+                };
+            };
             responses: {
                 /** @description Discarded */
                 204: {
@@ -12475,6 +12479,15 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -16462,6 +16475,7 @@ export interface components {
              */
             submittedOn: string;
         };
+        DiscardKug200bBatchInput: Record<string, never>;
         DevStaffUser: {
             /** Format: uuid */
             id: string;
