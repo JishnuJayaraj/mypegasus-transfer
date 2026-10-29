@@ -261,6 +261,18 @@ export const staffAccountsQuery = (api: ApiClient) =>
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 
+/** The project tab "Agentur" (process-and-lifecycle.md, Kug 200b batches): the PL's only (403 else). */
+export const kug200bBatchesQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "kug200b-batches"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/projects/{projectId}/kug200b-batches", {
+          params: { path: { projectId } },
+        }),
+      ),
+  });
+
 /** The project's members, their roles and what the viewer may do with the team (Q126). */
 export const projectTeamQuery = (api: ApiClient, projectId: string) =>
   queryOptions({

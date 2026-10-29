@@ -25,6 +25,7 @@ import {
 } from "../../api";
 import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
+import { AgenturTab } from "../../components/agentur-tab";
 import { ImportSection } from "../../components/import-section";
 import { Participants } from "../../components/participants";
 import { ProjectDashboard } from "../../components/project-dashboard";
@@ -34,8 +35,11 @@ import { ProjectSetup } from "../../components/project-setup";
 import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
 
-/** The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Termine", "Einrichtung", "Team". */
-const tabs = [undefined, "participants", "appointments", "setup", "team"] as const;
+/**
+ * The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Termine", "Einrichtung", "Team" and, in a
+ * `ta_tg` project, "Agentur" (the Kug 200b batches, last so the others keep their place).
+ */
+const tabs = [undefined, "participants", "appointments", "setup", "team", "agentur"] as const;
 type ProjectTab = Exclude<(typeof tabs)[number], undefined>;
 export type ProjectSearch = WorklistFilter & { tab?: ProjectTab };
 
@@ -100,6 +104,7 @@ function ProjectPage() {
           <Tab>{t("projectDetail.appointments")}</Tab>
           <Tab>{t("projectDetail.setup")}</Tab>
           <Tab>{t("team.title")}</Tab>
+          {taTg && <Tab>{t("projectDetail.agentur")}</Tab>}
         </TabList>
         {/* Each tab loads its data only when shown. */}
         <TabPanels>
@@ -136,6 +141,7 @@ function ProjectPage() {
             )}
           </TabPanel>
           <TabPanel>{tab === "team" && <ProjectTeam projectId={projectId} />}</TabPanel>
+          {taTg && <TabPanel>{tab === "agentur" && <AgenturTab projectId={projectId} />}</TabPanel>}
         </TabPanels>
       </Tabs>
     </>

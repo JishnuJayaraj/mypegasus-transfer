@@ -8,7 +8,7 @@ import { AgenturKey, ExpectedOverrideVersion } from "./agentur-settings";
 // version changes and asks keep or remove for every key of that Agentur's scoped setting.
 
 /** A key of an Agentur-scoped setting, `step.key` as `settingKeys` writes it. */
-export const SettingKey = z.string().regex(/^[a-z_]+\.[A-Za-z]+$/);
+export const SettingKey = z.string().regex(/^[a-z_]+\.[A-Za-z][A-Za-z0-9]*$/);
 
 /** The target version of a migration preview (`POST …/pins/{agenturKey}/migration-preview`). */
 export const MigrationPreviewInput = z

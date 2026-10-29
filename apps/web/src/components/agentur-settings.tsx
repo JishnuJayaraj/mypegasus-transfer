@@ -35,6 +35,8 @@ type Field = "agenturKey" | "settings" | "source" | "confirmedOn";
 const choices = {
   "asu_registration.defaultChannel": AsuChannel.options,
   "asu_registration.batchSubmissionChannel": Kug200bBatchChannel.options,
+  // Only as an Agentur-scoped setting, with its source and date (Q187): set or not set.
+  "asu_registration.kug200aAlternativeAccepted": ["true"],
   "agentur_submission.submissionChannel": Tl407SubmissionChannel.options,
   "agentur_submission.originalRequired": ["true", "false"],
   "agentur_submission.leadTimeDays": "number",

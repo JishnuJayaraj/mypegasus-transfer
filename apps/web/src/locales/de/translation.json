@@ -93,7 +93,8 @@
     "overview": "Übersicht",
     "participants": "Teilnehmende",
     "setup": "Einrichtung",
-    "appointments": "Termine"
+    "appointments": "Termine",
+    "agentur": "Agentur"
   },
   "waveForm": {
     "createTitle": "Neue Eintrittswelle",
@@ -260,7 +261,8 @@
     "settings": {
       "asu_registration": {
         "defaultChannel": "Standardweg Arbeitsuchendmeldung",
-        "batchSubmissionChannel": "Übermittlungsweg Kug 200b"
+        "batchSubmissionChannel": "Übermittlungsweg Kug 200b",
+        "kug200aAlternativeAccepted": "Alternative zum Kug 200a anerkannt"
       },
       "agentur_submission": {
         "submissionChannel": "Übermittlungsweg TL 407",
@@ -1608,7 +1610,9 @@
       "knowledge_date_set": "Kenntnisdatum geändert",
       "kug200b_offer_declined": "Kug 200b abgelehnt",
       "declaration_withdrawal_recorded": "Widerruf der Erklärung zum Profilzugriff erfasst",
-      "declaration_withdrawal_ba_notified": "BA über den Widerruf informiert"
+      "declaration_withdrawal_ba_notified": "BA über den Widerruf informiert",
+      "agentur_submission_recorded": "An die Agentur übermittelt",
+      "asu_confirmation_recorded": "Bestätigung der Agentur erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1704,7 +1708,8 @@
     "consentSources": {
       "portal": "im Portal",
       "paper_form": "auf Papier"
-    }
+    },
+    "submission": "{{form}} {{version}}, {{channel}}, übermittelt am {{date}}"
   },
   "appointments": {
     "title": "Termine",
@@ -2539,7 +2544,11 @@
         "confirmation_required": "Bitte alle drei Punkte auf dem Papier prüfen und bestätigen.",
         "document_reviewed": "Der Scan ist schon geprüft.",
         "storage_unavailable": "Die Ablage ist gerade nicht erreichbar; bitte später erneut versuchen.",
-        "source_changed": "Die Angaben haben sich inzwischen geändert; bitte erneut erzeugen."
+        "source_changed": "Die Angaben haben sich inzwischen geändert; bitte erneut erzeugen.",
+        "asu_confirmed": "Die Bestätigung der Agentur ist bereits erfasst.",
+        "confirmed_on_in_future": "Das Datum der Bestätigung darf nicht in der Zukunft liegen.",
+        "confirmed_before_submission": "Die Bestätigung kann nicht vor der Übermittlung liegen.",
+        "asu_not_kug200b": "Eine Bestätigung der Agentur gibt es nur für den Weg Kug 200b."
       },
       "quarantined": "Die BA-Bestätigung steht jetzt unter Quarantäne.",
       "lifted": "Die Quarantäne wurde aufgehoben."
@@ -2654,6 +2663,85 @@
         "uploaded": "Der Scan wurde hochgeladen.",
         "accepted": "Der Kug 200b wurde angenommen."
       }
+    },
+    "confirmation": {
+      "label": "Bestätigung der Agentur am",
+      "value": "Bestätigung der Agentur am {{date}}",
+      "missing": "Bestätigung der Agentur: noch nicht erfasst",
+      "invalid": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
+      "save": "Bestätigung erfassen"
+    }
+  },
+  "agentur": {
+    "loading": "Agentur wird geladen …",
+    "failed": "Die Sammelmeldungen konnten nicht geladen werden.",
+    "failedWrite": "Die Aktion konnte nicht ausgeführt werden.",
+    "forbidden": "Sammelmeldungen der Kug 200b sind nur für die Projektleitung sichtbar.",
+    "otherStaff": "anderes Teammitglied",
+    "withoutPlacement_one": "{{count}} angenommener Kug 200b ohne Vermittlungs-Agentur: erst die Agentur festlegen.",
+    "withoutPlacement_other": "{{count}} angenommene Kug 200b ohne Vermittlungs-Agentur: erst die Agentur festlegen.",
+    "empty": "Noch keine Teilnehmenden mit Vermittlungs-Agentur.",
+    "channel": "Übermittlungsweg Kug 200b: {{channel}}",
+    "settingsMissing": "Einstellungen fehlen: Übermittlungsweg Kug 200b nicht festgelegt. Sammelmeldungen sind gesperrt, bis die Agentur ihn bestätigt hat.",
+    "artifactKug200a": "Vorblatt: Kug 200a (amtlicher Vordruck)",
+    "artifactAlternative": "Vorblatt: Alternative anerkannt am {{date}} von {{name}}",
+    "artifacts": {
+      "kug200a": "Kug 200a",
+      "accepted_alternative": "anerkannte Alternative"
+    },
+    "candidates_one": "Bereit für eine Sammelmeldung ({{count}})",
+    "candidates_other": "Bereit für eine Sammelmeldung ({{count}})",
+    "noCandidates": "Keine angenommenen Kug 200b bereit.",
+    "noRoute": "Weg nicht festgelegt",
+    "tooMany": "Eine Sammelmeldung umfasst höchstens {{max}} Personen; die übrigen folgen in der nächsten.",
+    "build": "Sammelmeldung bilden",
+    "built": "Sammelmeldung gebildet.",
+    "batches": "Sammelmeldungen",
+    "batchTitle": "{{agentur}} – gebildet {{at}}",
+    "batchFacts_one": "{{channel}} · Vorblatt {{artifact}} · {{count}} Person",
+    "batchFacts_other": "{{channel}} · Vorblatt {{artifact}} · {{count}} Personen",
+    "status": {
+      "open": "Offen",
+      "submitted": "Übermittelt",
+      "discarded": "Verworfen"
+    },
+    "submittedOn": "Übermittelt am {{date}}",
+    "members": "Enthaltene Personen",
+    "columns": {
+      "name": "Name",
+      "formVersion": "Formularversion",
+      "route": "Weg der Arbeitsuchendmeldung"
+    },
+    "staleTitle": "Sammelmeldung veraltet",
+    "staleHint": "Verwerfen Sie sie und bilden Sie eine neue.",
+    "stale": {
+      "row": "{{name}}: {{reason}}",
+      "settings_changed": "Die Einstellungen der Agentur haben sich geändert.",
+      "scan_unusable": "Der Kug 200b ist nicht mehr gültig (gelöscht, unter Quarantäne oder ungültig).",
+      "participation_closed": "Die Teilnahme ist beendet.",
+      "placement_agentur_changed": "Die Vermittlungs-Agentur hat sich geändert.",
+      "in_open_batch": "Bereits in einer offenen Sammelmeldung.",
+      "already_submitted": "Bereits übermittelt.",
+      "asu_registered": "Die Arbeitsuchendmeldung ist bereits erfasst.",
+      "asu_route_changed": "Der Weg der Arbeitsuchendmeldung hat sich geändert.",
+      "form_version_outdated": "Die Agentur lehnt diese Formularversion ab."
+    },
+    "index": "Arbeitsliste (CSV)",
+    "downloaded": "Die Arbeitsliste wird heruntergeladen.",
+    "discard": "Verwerfen",
+    "discarded": "Sammelmeldung verworfen.",
+    "submittedOnLabel": "Übermittelt am",
+    "submitHint": "Das tatsächliche Versanddatum. Auf dem Weg Kug 200b gilt es als Datum der Arbeitsuchendmeldung.",
+    "submit": "Übermittlung erfassen",
+    "submitted": "Übermittlung erfasst.",
+    "invalidDate": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
+    "codes": {
+      "batch_stale": "Sammelmeldung veraltet: Verwerfen Sie sie und bilden Sie eine neue.",
+      "batch_settings_missing": "Einstellungen fehlen: der Übermittlungsweg Kug 200b ist nicht festgelegt.",
+      "batch_not_open": "Die Sammelmeldung ist nicht mehr offen.",
+      "submitted_on_in_future": "Das Versanddatum darf nicht in der Zukunft liegen.",
+      "submitted_before_batch": "Das Versanddatum kann nicht vor der Sammelmeldung liegen.",
+      "export_stale": "Die Arbeitsliste ist veraltet. Bitte neu laden."
     }
   }
 }

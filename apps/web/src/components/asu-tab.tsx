@@ -173,6 +173,16 @@ export function AsuTab({ detail }: { detail: Detail }) {
             ),
           )
         }
+        onConfirm={(confirmedOn) =>
+          act(async () =>
+            ok(
+              await api.POST("/api/v1/participations/{participationId}/asu/confirmation", {
+                params: { path },
+                body: { registrationId: view.registration!.id, confirmedOn },
+              }),
+            ),
+          )
+        }
       />
       <Kug200bSection view={view} busy={busy} act={act} onOpen={open} />
       <ProofSection
@@ -305,6 +315,50 @@ function RouteSection(props: {
   );
 }
 
+/**
+ * "Bestätigung der Agentur am" for a batch's registration (process-and-lifecycle.md, Kug 200b
+ * batches): follow-up work the PL records once; it never conditions the registration.
+ */
+function Confirmation(props: {
+  confirmedOn: string | null;
+  may: boolean;
+  busy: boolean;
+  onConfirm: (confirmedOn: string) => Promise<boolean>;
+}) {
+  const { t } = useTranslation();
+  const [date, setDate] = useState("");
+  const [invalid, setInvalid] = useState(false);
+  if (props.confirmedOn) {
+    return <p>{t("asu.confirmation.value", { date: formatDate(props.confirmedOn) })}</p>;
+  }
+  if (!props.may) return <p>{t("asu.confirmation.missing")}</p>;
+  const submit = () => {
+    const parsed = parseDisplayDate(date);
+    if (!parsed.ok || parsed.value === undefined) {
+      setInvalid(true);
+      return;
+    }
+    setInvalid(false);
+    void props.onConfirm(parsed.value);
+  };
+  return (
+    <>
+      <DateField
+        id="asu-confirmed-on"
+        labelText={t("asu.confirmation.label")}
+        defaultValue={date}
+        onChange={setDate}
+        invalidText={invalid ? t("asu.confirmation.invalid") : undefined}
+      />
+      <div>
+        <Button size="md" disabled={props.busy} onClick={submit}>
+          {t("asu.confirmation.save")}
+        </Button>
+      </div>
+    </>
+  );
+}
+
 /** A typed date as the ISO date it names, else the text itself (so "1.1.2026" equals "01.01.2026"). */
 const dateKey = (text: string) => {
   const parsed = parseDisplayDate(text);
@@ -398,6 +452,7 @@ function RegistrationSection(props: {
   view: View;
   busy: boolean;
   onRecord: (body: RegistrationBody) => Promise<boolean>;
+  onConfirm: (confirmedOn: string) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
   const { view } = props;
@@ -439,6 +494,14 @@ function RegistrationSection(props: {
           </p>
         ) : (
           proof && <p>{t("asu.registration.proofUnusable")}</p>
+        )}
+        {registration.channel === "kug_200b" && (
+          <Confirmation
+            confirmedOn={registration.confirmedOn}
+            may={capabilities.recordConfirmation}
+            busy={props.busy}
+            onConfirm={props.onConfirm}
+          />
         )}
       </Section>
     );
