@@ -121,7 +121,7 @@ describe("project setup", () => {
         return json(pinnedConfig);
       },
     });
-    const agentur = await screen.findByLabelText("Agentur");
+    const agentur = await screen.findByRole("combobox", { name: "Agentur" });
     expect(agentur).toHaveValue("beispielstadt-nord");
     expect(screen.getByLabelText("Version")).toHaveValue("2");
     await userEvent.click(screen.getByRole("button", { name: "Als Projekt-Agentur festlegen" }));
@@ -137,7 +137,10 @@ describe("project setup", () => {
   it("pins a further Agentur or an older version the PL chooses", async () => {
     const calls = setup({ [`POST ${path}/config/pins`]: () => json(pinnedConfig) });
     await userEvent.selectOptions(await screen.findByLabelText("Version"), "1");
-    await userEvent.selectOptions(screen.getByLabelText("Agentur"), "beispielstadt-sued");
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: "Agentur" }),
+      "beispielstadt-sued",
+    );
     expect(screen.getByLabelText("Version")).toHaveValue("1");
     await userEvent.click(screen.getByRole("button", { name: "Als weitere Agentur pinnen" }));
     await screen.findByText("Vorlage gepinnt");
@@ -174,7 +177,7 @@ describe("project setup", () => {
       };
       const calls = setup({}, readOnly);
       expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
-      expect(screen.queryByLabelText("Agentur")).toBeNull();
+      expect(screen.queryByRole("combobox", { name: "Agentur" })).toBeNull();
       expect(screen.queryByRole("button", { name: /pinnen|festlegen/ })).toBeNull();
       expect(calls.some((c) => c.key === "GET /api/v1/config/templates")).toBe(false);
     },
