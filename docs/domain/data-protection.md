@@ -906,8 +906,23 @@ and highly confidential data only; ordinary person-data writes are `participant_
   PDF, `attachment`, `no-store`, `nosniff`, and the download policy `default-src 'none'; sandbox`
   as a document's download), streamed and stored nowhere. Every download is audited
   `export_downloaded` (kind and count).
+- **A batch's work list** (`kug200b_batch_index`, Slice 6, PR 6-5a-1): `POST /exports/kug200b_batch_index`
+  with `{ batchId }` (`create_kug200b_batch_export_link`): an open batch the requester leads as the
+  project's PL (anyone else `404` whatever its state), rechecked under the project's exclusive lock
+  (`422 batch_stale` with its rows); the link stores the batch, no document ids. The download
+  (`kug200b_batch_export_content`) re-authorizes the PL, the open batch and every member, reads the
+  names in the same locked call and streams a CSV (`;`, BOM, the formula guard) with the download
+  policy; nothing is stored. Last name, first name and form version only: the PL's working list,
+  never sent to the Agentur.
+- **Batches and submissions** (process-and-lifecycle.md, Kug 200b batches): `kug200b_batch`
+  (project data: Agentur, channel, artifact, status, dates, counts, staff ids; `internal`,
+  `project_master`), `kug200b_batch_member` and `agentur_submission` (`internal`, `case_internal`
+  as `agenturSubmissions`; `participation_record`, the proof of submission). The runtime role
+  selects them and writes none; the functions write them under the project's exclusive lock. The
+  member's history shows its submission (form, version, channel, date, batch) in the `profiling`
+  stream and the Agentur's confirmation in `case`; the batch's own events are project-level.
 - Logs carry ids, codes and counts, never a token, a value or a file's content. The bound: a print
-  file ≤ 100 forms; a batch (6-5a) ≤ 200 members.
+  file ≤ 100 forms; a batch ≤ 200 members.
 
 ### The ASU record *(accepted, Q49, Q184, Q186, Q201; as built in Slice 6, PR 6-4a)*
 

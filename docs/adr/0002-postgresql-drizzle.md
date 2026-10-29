@@ -956,6 +956,58 @@ Q202 the readings.
   the consultant and the PL; delete: the PL, before its review; quarantine: both) and the
   generated `kug200b_form` (the signed type's open roles, `form_working_copy`, `generated`).
 
+## Amendment 2026-10-29: Kug 200b batches (Slice 6, PR 6-5a-1)
+
+Migrations `0077_kug200b_batches.sql` (generated) and `0078_kug200b_batch_functions.sql`
+(hand-written, the 0076 hardening); process-and-lifecycle.md (Kug 200b batches) and
+data-protection.md (exports, batches and submissions) hold the rules, Q203 the readings.
+- **Tables:** `kug200b_batch` (Agentur key, `kug200b_batch_channel`, `kug200b_batch_artifact`,
+  `kug200b_batch_status`, 1–200 members, created, submitted and discarded with who and when;
+  `kug200b_batch_status` keeps them whole; the sent date not before the Berlin day it was built),
+  `kug200b_batch_member` (batch, participation, scan, version, the route and placement Agentur as
+  read; `active` until a discard, one live membership per participation by a partial unique
+  index), `agentur_submission` (one row per attempt: participation, scan, `form_code`, version,
+  Agentur, `agentur_submission_channel`, batch for a Kug 200b, sent date, who and when; one per
+  batch member). `asu_registration` gains `agentur_submission_id` (exactly for the proof
+  `kug200b_submission`) and the confirmation (`confirmed_on/by/at`, whole, `kug_200b` only, not
+  before the registration). `export_link` gains `batch_id`: a batch kind stores the batch and no
+  document ids (`export_link_batch`, `export_link_documents`). `transfer_app` selects the three
+  tables and writes none. `field_access_category` gains `agenturSubmissions`.
+- **What the API resolves:** the batch channel, the artifact and the outdated versions come from
+  the configuration layers, which only the API reads. It takes `lock_project_setup` (the project's
+  exclusive lock, which every configuration write takes), resolves them, and passes them to the
+  function, which takes the lock again (re-entrant) and compares them with the batch
+  (`settings_changed`).
+- **The lock order** (the project's advisory lock exclusive, taken first):
+
+  | Operation | Then |
+  |---|---|
+  | `create_kug200b_batch` | the participations in UUID order (`FOR UPDATE`) → their scans in id order (`FOR SHARE`) → the new batch and members |
+  | `submit_kug200b_batch`, `create_kug200b_batch_export_link` (through `kug200b_batch_recheck`) | the members' participations in UUID order → their scans in id order → the batch `FOR UPDATE` → the new submissions → the new ASU registrations (or the link) |
+  | `discard_kug200b_batch` | the batch `FOR UPDATE` → its members |
+  | `kug200b_batch_export_content` | reads the batch, members, participations and identities |
+  | `record_asu_confirmation` | shared, through `lock_participation`: the participation → `asu_registration` `FOR UPDATE` |
+
+- **Functions:** visibility before permission before state (`lock_kug200b_batch_project`, after
+  the lock: a non-member `project_not_found`, a batch the user doesn't lead `batch_not_found`;
+  then `actor_not_allowed`, `asu_not_applicable`). `create_kug200b_batch` (`batch_settings_missing`
+  without a channel, `document_not_found` for a scan of another project, `invalid_argument` for two
+  scans of one participation, `batch_stale` with the rows in the refusal's `DETAIL`; audited
+  `kug200b_batch_created`). `discard_kug200b_batch` (`batch_not_open`; `kug200b_batch_discarded`).
+  `submit_kug200b_batch` (`batch_not_open`, `submitted_on_in_future`, `submitted_before_batch`,
+  `batch_stale`; per member `agentur_submission_recorded` and, on `kug_200b`,
+  `asu_registration_recorded`; `kug200b_batch_submitted`; returns the counts).
+  `record_asu_confirmation` (`asu_registration_not_found`, `asu_not_kug200b`, `asu_confirmed`,
+  `confirmed_on_in_future`, `confirmed_before_submission`; `asu_confirmation_recorded`).
+  `create_kug200b_batch_export_link` (`session_invalid`, `batch_not_found`, `actor_not_allowed`,
+  `batch_not_open`, `batch_stale`; `export_created`), `export_link_kind` (a live link's kind, not
+  audited) and `kug200b_batch_export_content` (`export_link_invalid`, `export_stale`;
+  `export_downloaded`). `export_link_content` is replaced (signature unchanged) to serve the print
+  kind only, through the shared helper `live_export_link`. `kug200b_member_problem` and
+  `kug200b_batch_recheck` mirror the domain's `batchEligibility` and `batchRecheck`.
+  `record_audit_event` refuses the five new types; `audit_event_batch_of_project` keeps the batch's
+  events project-level.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:
