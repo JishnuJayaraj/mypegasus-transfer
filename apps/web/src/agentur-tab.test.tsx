@@ -67,6 +67,9 @@ const tab = (overrides: object = {}) => ({
   ...overrides,
 });
 
+const exportLink = (name: string) => () =>
+  json({ url: `/api/v1/export-content/${name}`, expiresAt: "2026-11-20T09:01:00.000000Z" }, 201);
+
 function setup(first: object | Response, routes: Record<string, () => Response> = {}) {
   const ta = { ...project, type: "ta_tg" };
   const mock = mockApi({
@@ -190,11 +193,6 @@ describe("the project tab Agentur", () => {
     const assigned: string[] = [];
     const original = documentNavigation.assign;
     documentNavigation.assign = (url: string) => void assigned.push(url);
-    const link = (name: string) => () =>
-      json(
-        { url: `/api/v1/export-content/${name}`, expiresAt: "2026-11-20T09:01:00.000000Z" },
-        201,
-      );
     try {
       const { calls } = setup(
         tab({
@@ -225,8 +223,8 @@ describe("the project tab Agentur", () => {
           ],
         }),
         {
-          "POST /api/v1/exports/kug200b_batch_artifact": link("a"),
-          "POST /api/v1/exports/kug200b_batch_scans": link("s"),
+          "POST /api/v1/exports/kug200b_batch_artifact": exportLink("a"),
+          "POST /api/v1/exports/kug200b_batch_scans": exportLink("s"),
         },
       );
       const checklist = await screen.findByTestId("kug200a-checklist");
