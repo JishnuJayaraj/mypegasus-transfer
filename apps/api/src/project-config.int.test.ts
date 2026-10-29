@@ -88,6 +88,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         importParticipations: true,
         // Q126: the PL changes the region while draft.
         setProjectRegion: true,
+        editKug200aHeader: true,
       },
     });
   });
@@ -108,6 +109,8 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
         importParticipations: false,
         // Q126: only the global admin changes the region besides the PL.
         setProjectRegion: user === "admin",
+        // The Kug 200a's header is the PL's (ba-forms.md, the Kug 200a as built).
+        editKug200aHeader: false,
       });
     },
   );
@@ -128,6 +131,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       migrateTemplate: true,
       importParticipations: true,
       setProjectRegion: true,
+      editKug200aHeader: true,
     });
     const elsewhere = await readJson(await get(lagerSued, "consultant"), ProjectConfig);
     expect(elsewhere.capabilities).toEqual({
@@ -139,6 +143,7 @@ describe("GET /api/v1/projects/{projectId}/config", () => {
       migrateTemplate: false,
       importParticipations: false,
       setProjectRegion: false,
+      editKug200aHeader: false,
     });
     await expectProblem(
       await pin(lagerSued, { agenturKey: "beispielstadt-sued" }, "consultant"),
@@ -271,8 +276,9 @@ describe("POST /api/v1/projects/{projectId}/config/pins (R12)", () => {
       activateProject: false,
       migrateTemplate: true,
       importParticipations: true,
-      // Active: the PL no longer changes the region (Q126).
+      // Active: the PL no longer changes the region (Q126), still the Kug 200a's header.
       setProjectRegion: false,
+      editKug200aHeader: true,
     });
     expect(
       await codes(await pin(lagerSued, { agenturKey: "beispielstadt-sued", projectAgentur: true })),
