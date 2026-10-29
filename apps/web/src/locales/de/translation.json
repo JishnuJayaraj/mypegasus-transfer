@@ -1120,6 +1120,31 @@
       "value_invalid": "Ungültiger Wert; bitte korrigieren oder leer lassen"
     }
   },
+  "kug200aHeader": {
+    "title": "Kopf der Kug 200a",
+    "intro": "Diese Angaben druckt die Kug 200a (Liste der Teilnehmenden) jeder Sammelmeldung. Ein leeres Feld bleibt auf dem Formular frei und steht auf der Liste zum Ausfüllen von Hand.",
+    "fields": {
+      "tKugNumber": "T-Kug-Nummer",
+      "employerBetriebsnummer": "Betriebsnummer des personalabgebenden Betriebes",
+      "employerEconomicClass": "Branche/Wirtschaftsklasse des personalabgebenden Betriebes"
+    },
+    "help": {
+      "tKugNumber": "Ohne „TK-“: das Formular druckt es vor dem Feld. Falls noch nicht bekannt, leer lassen.",
+      "employerBetriebsnummer": "Acht Ziffern.",
+      "employerEconomicClass": "Zum Beispiel „C 28.22 Herstellung von Hebezeugen“, höchstens 100 Zeichen."
+    },
+    "errors": {
+      "t_kug_prefix": "Ohne „TK-“ eingeben: das Formular druckt es schon.",
+      "tKugNumber": "Bis zu 30 Buchstaben, Ziffern, Punkte, Schrägstriche oder Bindestriche.",
+      "employerBetriebsnummer": "Die Betriebsnummer hat acht Ziffern.",
+      "employerEconomicClass": "Höchstens 100 Zeichen, ohne Steuerzeichen."
+    },
+    "unset": "nicht erfasst",
+    "save": "Kopf speichern",
+    "saved": "Gespeichert.",
+    "unchanged": "Nichts geändert.",
+    "failed": "Die Angaben konnten nicht gespeichert werden."
+  },
   "projectRegion": {
     "current": "Region: {{region}}",
     "none": "Keine Region: nur die Administration sieht dieses Projekt.",

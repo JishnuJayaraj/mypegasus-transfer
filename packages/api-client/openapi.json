@@ -240,6 +240,29 @@
             ],
             "format": "uuid",
             "description": "The region (Niederlassung); null for a project from before regions, which only global roles see"
+          },
+          "tKugNumber": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9A-Za-z][0-9A-Za-z./-]{0,29}$"
+          },
+          "employerBetriebsnummer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]{8}$"
+          },
+          "employerEconomicClass": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[^\\p{Cc}]*$/u"
           }
         },
         "required": [
@@ -252,7 +275,10 @@
           "activatedAt",
           "createdAt",
           "createdBy",
-          "regionId"
+          "regionId",
+          "tKugNumber",
+          "employerBetriebsnummer",
+          "employerEconomicClass"
         ]
       },
       "ProjectType": {
@@ -318,6 +344,29 @@
           "regionId": {
             "type": "string",
             "format": "uuid"
+          },
+          "tKugNumber": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9A-Za-z][0-9A-Za-z./-]{0,29}$"
+          },
+          "employerBetriebsnummer": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]{8}$"
+          },
+          "employerEconomicClass": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[^\\p{Cc}]*$/u"
           }
         },
         "additionalProperties": false
@@ -1002,6 +1051,9 @@
               },
               "setProjectRegion": {
                 "type": "boolean"
+              },
+              "editKug200aHeader": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -1012,7 +1064,8 @@
               "activateProject",
               "migrateTemplate",
               "importParticipations",
-              "setProjectRegion"
+              "setProjectRegion",
+              "editKug200aHeader"
             ],
             "additionalProperties": false
           }
@@ -14036,7 +14089,9 @@
         "type": "string",
         "enum": [
           "kug200b_print",
-          "kug200b_batch_index"
+          "kug200b_batch_index",
+          "kug200b_batch_artifact",
+          "kug200b_batch_scans"
         ]
       },
       "ExportInput": {
@@ -14935,7 +14990,7 @@
         "tags": [
           "projects"
         ],
-        "summary": "Change name, customer, type (only while draft and unused, Q98) or region (the PL while draft, the global admin at any time, Q126)",
+        "summary": "Change name, customer, type (only while draft and unused, Q98), region (the PL while draft, the global admin at any time, Q126) or the Kug 200a's header (T-Kug-Nummer, the employer's Betriebsnummer and Branche/WK; null clears)",
         "parameters": [
           {
             "schema": {

@@ -250,6 +250,47 @@ describe("PATCH /api/v1/projects/{projectId} (AC-4)", () => {
     ]);
   });
 
+  it("sets and clears the Kug 200a's header in an active project, by the PL only", async () => {
+    const header = {
+      tKugNumber: "123-456-7890",
+      employerBetriebsnummer: "87654321",
+      employerEconomicClass: "C 28.22",
+    };
+    const res = await patch(seedProjectIds.werkNord, header);
+    expect(await readJson(res, Project)).toMatchObject(header);
+    const cleared = await patch(seedProjectIds.werkNord, { tKugNumber: null });
+    expect(await readJson(cleared, Project)).toMatchObject({
+      tKugNumber: null,
+      employerBetriebsnummer: "87654321",
+    });
+    const events = await owner
+      .select({ details: auditEvent.details })
+      .from(auditEvent)
+      .where(
+        and(
+          eq(auditEvent.projectId, seedProjectIds.werkNord),
+          eq(auditEvent.eventType, "project_changed"),
+        ),
+      )
+      .orderBy(auditEvent.seq);
+    expect(events).toEqual([
+      { details: { fields: ["tKugNumber", "employerBetriebsnummer", "employerEconomicClass"] } },
+      { details: { fields: ["tKugNumber"] } },
+    ]);
+    const body = await expectProblem(
+      await patch(seedProjectIds.werkNord, { tKugNumber: "TK-1" }),
+      400,
+      "validation-error",
+    );
+    expect(body.errors?.map((e) => e.code)).toEqual(["t_kug_prefix"]);
+    const consultant = await login(app, seedStaffUserIds.consultant);
+    await expectProblem(
+      await patch(seedProjectIds.werkNord, { tKugNumber: null }, consultant),
+      403,
+      "forbidden",
+    );
+  });
+
   it("changes the type of an unused draft project", async () => {
     const created = await readJson(await create(valid), Project);
     expect(await readJson(await patch(created.id, { type: "ta_only" }), Project)).toMatchObject({

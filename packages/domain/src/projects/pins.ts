@@ -149,6 +149,8 @@ export const ProjectConfig = z
       importParticipations: z.boolean(),
       /** Change the project's region (the PL while draft, the global admin at any time, Q126). */
       setProjectRegion: z.boolean(),
+      /** The Kug 200a's header on the project (the PL of a `ta_tg` project, any status). */
+      editKug200aHeader: z.boolean(),
     }),
   })
   .meta({ id: "ProjectConfig" });

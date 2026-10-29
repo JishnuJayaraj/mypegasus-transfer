@@ -127,6 +127,37 @@ describe("UpdateProjectInput", () => {
     expect(UpdateProjectInput.safeParse({ name: "  " }).success).toBe(false);
     expect(UpdateProjectInput.safeParse({ type: "tg_only" }).success).toBe(false);
   });
+
+  it("takes the Kug 200a's header, null clearing a key (ba-forms.md, the Kug 200a as built)", () => {
+    expect(
+      UpdateProjectInput.parse({
+        tKugNumber: " 123-456/7.8 ",
+        employerBetriebsnummer: "87654321",
+        employerEconomicClass: " C 28.22 Herstellung von Hebezeugen ",
+      }),
+    ).toEqual({
+      tKugNumber: "123-456/7.8",
+      employerBetriebsnummer: "87654321",
+      employerEconomicClass: "C 28.22 Herstellung von Hebezeugen",
+    });
+    expect(UpdateProjectInput.parse({ tKugNumber: null })).toEqual({ tKugNumber: null });
+    // The form prints `TK-` before the box: the number never repeats it.
+    const prefixed = UpdateProjectInput.safeParse({ tKugNumber: "tk-123" });
+    expect(prefixed.error?.issues.map((i) => (i as { params?: object }).params)).toEqual([
+      { code: "t_kug_prefix" },
+    ]);
+    for (const bad of [
+      { tKugNumber: "-123" },
+      { tKugNumber: "1".repeat(31) },
+      { employerBetriebsnummer: "8765432" },
+      { employerBetriebsnummer: "8765432a" },
+      { employerEconomicClass: "" },
+      { employerEconomicClass: "x".repeat(101) },
+      { employerEconomicClass: "C 28\u0007" },
+    ]) {
+      expect(UpdateProjectInput.safeParse(bad).success).toBe(false);
+    }
+  });
 });
 
 describe("checkProjectUpdate (Q98, round 22)", () => {

@@ -389,7 +389,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change name, customer, type (only while draft and unused, Q98) or region (the PL while draft, the global admin at any time, Q126) */
+        /** Change name, customer, type (only while draft and unused, Q98), region (the PL while draft, the global admin at any time, Q126) or the Kug 200a's header (T-Kug-Nummer, the employer's Betriebsnummer and Branche/WK; null clears) */
         patch: {
             parameters: {
                 query?: never;
@@ -12777,6 +12777,9 @@ export interface components {
              * @description The region (Niederlassung); null for a project from before regions, which only global roles see
              */
             regionId: string | null;
+            tKugNumber: string | null;
+            employerBetriebsnummer: string | null;
+            employerEconomicClass: string | null;
         };
         /**
          * @description ta_only: Transferagentur only. ta_tg: Transferagentur and Transfergesellschaft.
@@ -12801,6 +12804,9 @@ export interface components {
             type?: components["schemas"]["ProjectType"];
             /** Format: uuid */
             regionId?: string;
+            tKugNumber?: string | null;
+            employerBetriebsnummer?: string | null;
+            employerEconomicClass?: string | null;
         };
         EntryWavePage: {
             items: components["schemas"]["EntryWave"][];
@@ -13034,6 +13040,7 @@ export interface components {
                 migrateTemplate: boolean;
                 importParticipations: boolean;
                 setProjectRegion: boolean;
+                editKug200aHeader: boolean;
             };
         };
         ConfigBlocker: {
@@ -16299,7 +16306,7 @@ export interface components {
             expiresAt: string;
         };
         /** @enum {string} */
-        ExportKind: "kug200b_print" | "kug200b_batch_index";
+        ExportKind: "kug200b_print" | "kug200b_batch_index" | "kug200b_batch_artifact" | "kug200b_batch_scans";
         ExportInput: components["schemas"]["DocumentExportInput"] | components["schemas"]["BatchExportInput"];
         DocumentExportInput: {
             documentIds: string[];

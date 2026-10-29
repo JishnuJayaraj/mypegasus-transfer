@@ -48,6 +48,9 @@ const columns = {
   createdAt: utc(project.createdAt),
   createdBy: project.createdBy,
   regionId: project.regionId,
+  tKugNumber: project.tKugNumber,
+  employerBetriebsnummer: project.employerBetriebsnummer,
+  employerEconomicClass: project.employerEconomicClass,
 };
 
 /** The refusals of `update_project` (and `checkProjectUpdate`) that are a 422; others propagate. */
@@ -200,7 +203,7 @@ export function projectRoutes(deps: Deps) {
       path: "/projects/{projectId}",
       tags: ["projects"],
       summary:
-        "Change name, customer, type (only while draft and unused, Q98) or region (the PL while draft, the global admin at any time, Q126)",
+        "Change name, customer, type (only while draft and unused, Q98), region (the PL while draft, the global admin at any time, Q126) or the Kug 200a's header (T-Kug-Nummer, the employer's Betriebsnummer and Branche/WK; null clears)",
       middleware,
       request: {
         params: ProjectParams,
@@ -224,9 +227,18 @@ export function projectRoutes(deps: Deps) {
       const user = sessionUser(c);
       const { subject, found } = await visibleProject(deps, user, projectId);
       if (!found) return problem(c, "not-found");
-      const { regionId, ...fields } = input;
+      const { regionId, tKugNumber, employerBetriebsnummer, employerEconomicClass, ...fields } =
+        input;
+      // The Kug 200a's header (ba-forms.md, the Kug 200a as built): the keys sent, null clears.
+      const kug200a = Object.fromEntries(
+        Object.entries({ tKugNumber, employerBetriebsnummer, employerEconomicClass }).filter(
+          ([, value]) => value !== undefined,
+        ),
+      );
       const target = projectTarget(projectId, found.regionId);
-      const editsFields = Object.values(fields).some((value) => value !== undefined);
+      const editsFields =
+        Object.values(fields).some((value) => value !== undefined) ||
+        Object.keys(kug200a).length > 0;
       if (editsFields && !mayPerformOperation(subject, { kind: "editProject" }, target).ok) {
         return problem(c, "forbidden");
       }
@@ -260,7 +272,8 @@ export function projectRoutes(deps: Deps) {
               p_name => ${input.name ?? null}::text,
               p_customer_name => ${input.customerName ?? null}::text,
               p_type => ${input.type ?? null}::project_type,
-              p_region_id => ${regionId ?? null}::uuid)`,
+              p_region_id => ${regionId ?? null}::uuid,
+              p_kug200a => ${Object.keys(kug200a).length > 0 ? JSON.stringify(kug200a) : null}::jsonb)`,
           );
           return [];
         })
