@@ -73,9 +73,20 @@ const sources = { profile: 0, profiling: 0, assessment: 0, unemployment: 0 };
 const personOf = async (id: string) =>
   (await one("select form_person($1) as p", [id])).p as typeof person;
 
+/** The employer the form prints: the SHA-256 of the project's customer name, as the API sends it. */
+const employerOf = async (id: string) =>
+  (
+    await one(
+      `select encode(sha256(convert_to(p.customer_name, 'UTF8')), 'hex') as h
+       from participation x join project p on p.id = x.project_id where x.id = $1`,
+      [id],
+    )
+  ).h as string;
+
 type Generation = {
   context?: string;
   checklist?: string | null;
+  employerSha256?: string | null;
   declarations?: string | null;
   formCode?: string;
   anlage?: boolean;
@@ -107,6 +118,12 @@ async function generate(id: string, overrides: Generation = {}) {
       overrides.checklist === undefined
         ? JSON.stringify([{ code: "required_blank", key: "pensionInsuranceNumber" }])
         : overrides.checklist,
+    employerSha256:
+      overrides.employerSha256 === undefined
+        ? (overrides.formCode ?? "kug200b") === "kug200b"
+          ? await employerOf(id)
+          : null
+        : overrides.employerSha256,
   });
   return documentId;
 }
@@ -249,28 +266,36 @@ describe("record_form_generation for the Kug 200b (Q179, Q197)", () => {
     await expect(generate(id)).rejects.toMatchObject(failsWith("participation_closed"));
   });
 
-  it("refuses a declaration snapshot, an Anlage, a malformed checklist and a changed person", async () => {
+  it("refuses a declaration snapshot, an Anlage, a malformed checklist and a changed person or employer", async () => {
     const id = await participation();
     for (const bad of [
       { declarations: JSON.stringify({ jobboerseChoice: null, baContactConsent: null }) },
       { anlage: true },
       { checklist: null },
+      { employerSha256: null },
+      { employerSha256: "x" },
       { checklist: JSON.stringify([{ code: "required_blank", key: "x", value: "y" }]) },
       { checklist: JSON.stringify([{ code: "other", key: "x" }]) },
     ]) {
       await expect(generate(id, bad)).rejects.toMatchObject(failsWith("invalid_argument"));
     }
-    // The TL 407 takes no checklist.
+    // The TL 407 takes neither the checklist nor the employer.
+    const tl407 = {
+      formCode: "tl407",
+      context: asConsultant,
+      declarations: JSON.stringify({ jobboerseChoice: null, baContactConsent: null }),
+    };
+    await expect(generate(id, tl407)).rejects.toMatchObject(failsWith("invalid_argument"));
     await expect(
-      generate(id, {
-        formCode: "tl407",
-        context: asConsultant,
-        declarations: JSON.stringify({ jobboerseChoice: null, baContactConsent: null }),
-      }),
+      generate(id, { ...tl407, checklist: null, employerSha256: hex() }),
     ).rejects.toMatchObject(failsWith("invalid_argument"));
     await expect(
       generate(id, { person: { ...(await personOf(id)), lastName: "Anders" } }),
     ).rejects.toMatchObject(failsWith("source_changed"));
+    // The employer printed is the project's customer as it is at the record, not at the render.
+    await expect(generate(id, { employerSha256: hex() })).rejects.toMatchObject(
+      failsWith("source_changed"),
+    );
   });
 });
 
@@ -496,6 +521,54 @@ describe("review_document for the signed Kug 200b (Q184, Q185)", () => {
     expect((await consentsOf(id)).map((c) => [c.document_id === second, c.end_reason])).toEqual([
       [false, "superseded"],
       [true, null],
+    ]);
+  });
+
+  it("follows the dates on the papers and the withdrawals, never the order of acceptance", async () => {
+    const id = await participation();
+    const paper = async (signedOn: string) => {
+      const documentId = await scan(id, "external_paper");
+      await accept(documentId, { signedOn, formVersion: "09-2021" });
+      return documentId;
+    };
+    const [monday, wednesday, thursday] = [await daysAgo(5), await daysAgo(3), await daysAgo(2)];
+    const first = await paper(monday);
+    await withdraw(id, wednesday);
+    // Another scan of Monday's paper accepted afterwards: kept as history, never in force again.
+    const again = await paper(monday);
+    const state = async () =>
+      (await consentsOf(id)).map((c) => [c.document_id, c.given_on, c.end_reason]);
+    expect(await state()).toEqual([
+      [first, monday, "revoked"],
+      [again, monday, "superseded"],
+    ]);
+    const ended = await events(id, ["consent_given", "consent_ended"]);
+    expect(ended.at(-1)).toMatchObject({ type: "consent_ended", reason: "superseded" });
+    // A renewed declaration needs a later paper.
+    const renewed = await paper(thursday);
+    expect((await state()).at(-1)).toEqual([renewed, thursday, null]);
+    // A paper older than the one in force is history too; the one in force stays.
+    const older = await paper(await daysAgo(4));
+    expect((await state()).filter(([, , reason]) => reason === null)).toEqual([
+      [renewed, thursday, null],
+    ]);
+    expect((await state()).at(-1)).toEqual([older, await daysAgo(4), "superseded"]);
+  });
+
+  it("lets an older paper replace a record in force whose paper is no longer usable", async () => {
+    const id = await participation();
+    const wrong = await scan(id, "external_paper");
+    await accept(wrong, { signedOn: await daysAgo(2), formVersion: "09-2021" });
+    await owner.query(
+      `update document set quarantine_reason = 'suspected_wrong_person', quarantined_by = $2,
+         quarantined_at = now() where id = $1`,
+      [wrong, projectLead],
+    );
+    const right = await scan(id, "external_paper");
+    await accept(right, { signedOn: await daysAgo(5), formVersion: "09-2021" });
+    expect((await consentsOf(id)).map((c) => [c.document_id, c.end_reason])).toEqual([
+      [wrong, "superseded"],
+      [right, null],
     ]);
   });
 
@@ -791,6 +864,19 @@ describe("the export link (data-protection.md, exports)", () => {
     await expect(content(asConsultant, linkHash, hash)).rejects.toMatchObject(
       failsWith("export_stale"),
     );
+    // A new request sees nothing: not found, and still not found once the form is quarantined,
+    // so its state never shows through.
+    await expect(create(asConsultant, [form], hash)).rejects.toMatchObject(
+      failsWith("document_not_found"),
+    );
+    await owner.query(
+      `update document set quarantine_reason = 'suspected_wrong_person', quarantined_by = $2,
+         quarantined_at = now() where id = $1`,
+      [form, projectLead],
+    );
+    await expect(create(asConsultant, [form], hash)).rejects.toMatchObject(
+      failsWith("document_not_found"),
+    );
   });
 
   it("takes only live generated Kug 200b forms of one project the user may open", async () => {
@@ -798,9 +884,10 @@ describe("the export link (data-protection.md, exports)", () => {
     const hash = await session(projectLead);
     const scanId = await scan(id, "external_paper");
     await expect(create(pl, [scanId], hash)).rejects.toMatchObject(failsWith("document_not_found"));
+    // Back office never sees a generated form: not found, not forbidden.
     await expect(
       create(asBackOffice, [await generate(id)], await session(backOffice)),
-    ).rejects.toMatchObject(failsWith("actor_not_allowed"));
+    ).rejects.toMatchObject(failsWith("document_not_found"));
     await expect(create(pl, [await generate(id)], hex())).rejects.toMatchObject(
       failsWith("session_invalid"),
     );

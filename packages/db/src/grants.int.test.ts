@@ -343,6 +343,7 @@ const helpers = [
   "lock_kug200b_actor",
   "form_checklist_valid",
   "export_document_allowed",
+  "export_document_visible",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

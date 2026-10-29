@@ -301,9 +301,11 @@ $$;
 -- TL 407, and the Kug 200b's: the PL or the assigned consultant (`lock_kug200b_actor`: a `ta_tg`
 -- project, an open participation), no declaration snapshot (`p_declarations` null), no confirmed
 -- warning, no Anlage, and its handwriting checklist (`p_checklist`, `form_checklist_valid`); its
--- sources (the profile's revision, which the sensitive answers' writes move too, and the person
--- printed) are compared again under the lock (`source_changed`). The TL 407 takes none of the
--- checklist (`invalid_argument`). Audited `form_generated` and, for the TL 407, one
+-- sources (the profile's revision, which the sensitive answers' writes move too, the person
+-- printed and the employer printed, `p_employer_sha256` of the project's customer name, which a
+-- project change writes under the exclusive project lock) are compared again under the lock
+-- (`source_changed`). The TL 407 takes neither the checklist nor the employer
+-- (`invalid_argument`). Audited `form_generated` and, for the TL 407, one
 -- `warning_confirmed` per confirmed code. Returns the generation's id.
 DROP FUNCTION "public"."record_form_generation"("public"."audit_context", uuid, uuid, uuid, "public"."form_code", text, jsonb, jsonb, text, text, jsonb, text[], boolean, integer, text, text, bytea);
 --> statement-breakpoint
@@ -312,7 +314,8 @@ CREATE FUNCTION record_form_generation(
   p_form_code form_code, p_form_version text, p_sources jsonb, p_person jsonb,
   p_source_token text, p_organisation_sha256 text, p_declarations jsonb,
   p_confirmed_warnings text[], p_anlage boolean, p_size_bytes integer, p_content_sha256 text,
-  p_key_id text, p_wrapped_key bytea, p_checklist jsonb DEFAULT NULL
+  p_key_id text, p_wrapped_key bytea, p_checklist jsonb DEFAULT NULL,
+  p_employer_sha256 text DEFAULT NULL
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   v_kug boolean := p_form_code = 'kug200b';
@@ -344,8 +347,9 @@ BEGIN
     RAISE EXCEPTION 'form_not_supported';
   END IF;
   IF v_kug AND (p_declarations IS NOT NULL OR pg_catalog.cardinality(p_confirmed_warnings) > 0
-       OR p_anlage OR NOT public.form_checklist_valid(p_checklist))
-     OR NOT v_kug AND (p_checklist IS NOT NULL
+       OR p_anlage OR NOT public.form_checklist_valid(p_checklist)
+       OR p_employer_sha256 IS NULL OR p_employer_sha256 !~ '^[0-9a-f]{64}$')
+     OR NOT v_kug AND (p_checklist IS NOT NULL OR p_employer_sha256 IS NOT NULL
        OR NOT public.form_declarations_valid(p_declarations)) THEN
     RAISE EXCEPTION 'invalid_argument';
   END IF;
@@ -364,6 +368,9 @@ BEGIN
   WHERE participation_id = r.id;
   IF coalesce(v_profile, 0) <> (p_sources ->> 'profile')::integer
      OR public.form_person(r.id) IS DISTINCT FROM p_person
+     OR v_kug AND (SELECT pg_catalog.encode(pg_catalog.sha256(
+         pg_catalog.convert_to(p.customer_name, 'UTF8')), 'hex')
+       FROM public.project p WHERE p.id = r.project_id) IS DISTINCT FROM p_employer_sha256
      OR NOT v_kug AND (coalesce(pr.revision, 0) <> (p_sources ->> 'profiling')::integer
        OR coalesce(v_assessment, 0) <> (p_sources ->> 'assessment')::integer
        OR coalesce(v_unemployment, 0) <> (p_sources ->> 'unemployment')::integer
@@ -479,8 +486,12 @@ END $$;
 -- signed declarations 16 and 17 (`yes`, audited `signed_declaration_recorded`) and declaration 17
 -- as written as one consent record (purpose `kug200b_profile_access`, source `paper_form`, text
 -- `kug200b-<version>:v1`, `de`, given on the field-19 date, the scan, recorded by the reviewer;
--- audited `consent_given`); an earlier record of the purpose still in force ends `superseded`
--- (`consent_ended`), so one is in force. The TL 407 as 0072 wrote it.
+-- audited `consent_given`). Which record is in force follows the dates, not the order of
+-- acceptance: the new one only if its date is after every withdrawal received and not before a
+-- record in force whose paper is usable (live, not quarantined or invalidated); the earlier
+-- records still in force then end `superseded` (`consent_ended`), so one is in force. Otherwise the
+-- older paper is kept as history: its record is ended `superseded` at once (`consent_ended`), and a
+-- renewed declaration needs a later paper. The TL 407 as 0072 wrote it.
 CREATE OR REPLACE FUNCTION review_document(
   p_context audit_context, p_document_id uuid, p_decision document_review_state,
   p_reason document_review_reason, p_signed_on date DEFAULT NULL,
@@ -505,6 +516,7 @@ DECLARE
   v_contact text;
   v_signed_on date;
   v_consent uuid;
+  v_in_force boolean;
   v_text text;
 BEGIN
   IF p_document_id IS NULL OR p_decision IS NULL OR p_decision = 'unreviewed'
@@ -602,26 +614,48 @@ BEGIN
         pg_catalog.jsonb_build_object('documentId', d.id, 'formCode', 'kug200b',
           'formVersion', v_version,
           'declarations', '["kug200bJobSeeking","kug200bProfileAccess"]'::jsonb), false);
-      -- Declaration 17 as written, one record in force (Q185).
-      FOR c IN SELECT * FROM public.consent_record
-        WHERE participation_id = d.participation_id AND purpose = 'kug200b_profile_access'
-          AND ended_at IS NULL ORDER BY id FOR UPDATE LOOP
-        UPDATE public.consent_record SET ended_at = now(), end_reason = 'superseded'
-        WHERE id = c.id;
-        PERFORM public.write_audit_event(d.project_id, d.participation_id, 'consent_ended',
-          p_context, NULL, NULL, NULL, 'superseded', NULL, pg_catalog.jsonb_build_object(
-            'consentId', c.id, 'purpose', c.purpose, 'source', c.source), false);
-      END LOOP;
+      -- Declaration 17 as written, one record in force (Q185), by the dates on the papers and of
+      -- the withdrawals, never by the order of acceptance: the paper is in force only if signed
+      -- after every withdrawal received and not before a usable paper in force.
+      v_in_force := p_signed_on > coalesce((SELECT pg_catalog.max(w.received_on)
+          FROM public.kug200b_withdrawal w WHERE w.participation_id = d.participation_id),
+        '-infinity'::date)
+        AND NOT EXISTS (SELECT FROM public.consent_record x
+          JOIN public.document s ON s.id = x.document_id
+          WHERE x.participation_id = d.participation_id AND x.purpose = 'kug200b_profile_access'
+            AND x.ended_at IS NULL AND x.given_on > p_signed_on AND s.deleted_at IS NULL
+            AND s.quarantined_at IS NULL AND s.invalidated_by_correction IS NULL);
+      IF v_in_force THEN
+        FOR c IN SELECT * FROM public.consent_record
+          WHERE participation_id = d.participation_id AND purpose = 'kug200b_profile_access'
+            AND ended_at IS NULL ORDER BY id FOR UPDATE LOOP
+          UPDATE public.consent_record SET ended_at = now(), end_reason = 'superseded'
+          WHERE id = c.id;
+          PERFORM public.write_audit_event(d.project_id, d.participation_id, 'consent_ended',
+            p_context, NULL, NULL, NULL, 'superseded', NULL, pg_catalog.jsonb_build_object(
+              'consentId', c.id, 'purpose', c.purpose, 'source', c.source), false);
+        END LOOP;
+      END IF;
       v_consent := pg_catalog.gen_random_uuid();
       v_text := 'kug200b-' || v_version || ':v1';
       INSERT INTO public.consent_record (id, project_id, participation_id, purpose, source,
-        text_version, language, actor_type, actor_staff_user_id, given_on, document_id)
+        text_version, language, actor_type, actor_staff_user_id, given_on, document_id, ended_at,
+        end_reason)
       VALUES (v_consent, d.project_id, d.participation_id, 'kug200b_profile_access', 'paper_form',
-        v_text, 'de', 'user', (p_context).staff_user_id, p_signed_on, d.id);
+        v_text, 'de', 'user', (p_context).staff_user_id, p_signed_on, d.id,
+        CASE WHEN NOT v_in_force THEN now() END,
+        CASE WHEN NOT v_in_force THEN 'superseded'::public.consent_end_reason END);
       PERFORM public.write_audit_event(d.project_id, d.participation_id, 'consent_given',
         p_context, NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object(
           'consentId', v_consent, 'purpose', 'kug200b_profile_access', 'textVersion', v_text,
           'language', 'de', 'source', 'paper_form'), false);
+      -- An older paper is kept as history only, ended at once.
+      IF NOT v_in_force THEN
+        PERFORM public.write_audit_event(d.project_id, d.participation_id, 'consent_ended',
+          p_context, NULL, NULL, NULL, 'superseded', NULL, pg_catalog.jsonb_build_object(
+            'consentId', v_consent, 'purpose', 'kug200b_profile_access', 'source', 'paper_form'),
+          false);
+      END IF;
     ELSE
       IF p_declarations ->> 'kind' = 'as_printed' THEN
         v_choice := g.jobboerse_choice::text;
@@ -786,13 +820,13 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- Whether a staff user may export one document now (data-protection.md, exports): a live
--- generated Kug 200b, not quarantined or invalidated, of a participation the user may open it on
--- (the policy's open roles, a consultant only while assigned, `document_staff_roles`).
-CREATE FUNCTION export_document_allowed(p_document document, p_staff_user_id uuid)
+-- Whether a staff user sees one document for an export (data-protection.md, exports): a live
+-- generated Kug 200b of a participation the user may open it on (the policy's open roles, a
+-- consultant only while assigned, `document_staff_roles`). What isn't visible is never told apart
+-- by its state.
+CREATE FUNCTION export_document_visible(p_document document, p_staff_user_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
   SELECT coalesce(p_document.type::text = 'kug200b_form' AND p_document.deleted_at IS NULL
-    AND p_document.quarantined_at IS NULL AND p_document.invalidated_by_correction IS NULL
     AND public.document_staff_roles(p_document.participation_id, p_staff_user_id)
       && (SELECT t.open_roles FROM public.document_type_policy t
           WHERE t.type = p_document.type AND t.catalog_version = p_document.catalog_version),
@@ -800,12 +834,22 @@ RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_tem
 $$;
 --> statement-breakpoint
 
+-- Whether a staff user may export one document now: visible, and neither quarantined nor
+-- invalidated.
+CREATE FUNCTION export_document_allowed(p_document document, p_staff_user_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  SELECT public.export_document_visible(p_document, p_staff_user_id)
+    AND p_document.quarantined_at IS NULL AND p_document.invalidated_by_correction IS NULL
+$$;
+--> statement-breakpoint
+
 -- An export issued (data-protection.md, exports; ADR-0010): staff as themselves through their
--- live session (`session_invalid`), the kind `kug200b_print` over 1–100 distinct generated Kug 200b
--- forms of one project (`invalid_argument`; one not found, deleted or of another type
--- `document_not_found`; quarantined `document_quarantined`; not the user's to open
--- `actor_not_allowed`). Stores the link's hash bound to the session, valid 60 s, the documents
--- fixed; no file. Audited `export_created` (kind and count, project-level, never the ids).
+-- live session (`session_invalid`; in assisted mode `actor_not_allowed`), the kind `kug200b_print`
+-- over 1–100 distinct generated Kug 200b forms. Visibility comes before any state: a form that
+-- doesn't exist, is deleted, of another type or not the user's to open is `document_not_found`,
+-- whatever its state; only then forms of more than one project (`invalid_argument`), quarantined
+-- (`document_quarantined`) or invalidated (`document_invalidated`). Stores the link's hash bound
+-- to the session, valid 60 s, the documents fixed; no file. Audited `export_created` (kind and count, project-level, never the ids).
 -- Returns the expiry.
 CREATE FUNCTION create_export_link(
   p_context audit_context, p_kind export_kind, p_document_ids uuid[], p_session_hash text,
@@ -836,8 +880,9 @@ BEGIN
   IF NOT FOUND THEN
     RAISE EXCEPTION 'session_invalid';
   END IF;
-  IF (SELECT pg_catalog.count(*) FROM public.document
-      WHERE id = ANY (p_document_ids) AND type::text = 'kug200b_form' AND deleted_at IS NULL)
+  IF (SELECT pg_catalog.count(*) FROM public.document x
+      WHERE x.id = ANY (p_document_ids)
+        AND public.export_document_visible(x, (p_context).staff_user_id))
      <> pg_catalog.cardinality(p_document_ids) THEN
     RAISE EXCEPTION 'document_not_found';
   END IF;
@@ -850,8 +895,8 @@ BEGIN
     IF d.quarantined_at IS NOT NULL THEN
       RAISE EXCEPTION 'document_quarantined';
     END IF;
-    IF NOT public.export_document_allowed(d, (p_context).staff_user_id) THEN
-      RAISE EXCEPTION 'actor_not_allowed';
+    IF d.invalidated_by_correction IS NOT NULL THEN
+      RAISE EXCEPTION 'document_invalidated';
     END IF;
   END LOOP;
   INSERT INTO public.export_link (token_hash, project_id, kind, document_ids, staff_user_id,
@@ -978,7 +1023,8 @@ REVOKE ALL ON FUNCTION current_document_policy, scan_form, add_document,
   record_document_upload_rejected, document_link_content, lock_kug200b_actor,
   form_checklist_valid, record_form_generation, lock_bulk_form_generation, read_kug200b_values,
   decline_kug200b_offer, record_declaration_withdrawal, record_withdrawal_ba_notice,
-  export_document_allowed, create_export_link, export_link_content FROM PUBLIC;
+  export_document_visible, export_document_allowed, create_export_link, export_link_content
+  FROM PUBLIC;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION add_document, record_document_upload_rejected, document_link_content,
   record_form_generation, lock_bulk_form_generation, read_kug200b_values, decline_kug200b_offer,

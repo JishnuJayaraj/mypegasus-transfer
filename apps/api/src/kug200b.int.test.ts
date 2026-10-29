@@ -190,6 +190,30 @@ describe("the Kug 200b's generation (Q179, Q197 (8))", () => {
     );
   });
 
+  it("is 409 source_changed when the project's customer changes between the render and the record", async () => {
+    const id = await participant();
+    const objects = storage.keys().length;
+    // The customer changes while the rendered form is being stored, before its record.
+    const put = storage.put.bind(storage);
+    storage.put = async (key, content) => {
+      await sql("update project set customer_name = 'Andere Kundin GmbH' where id = $1", [
+        werkNord,
+      ]);
+      return put(key, content);
+    };
+    try {
+      const res = await generate(id);
+      await expectProblem(res.clone(), 409, "conflict");
+      expect(await codesOf(res)).toEqual([":source_changed"]);
+    } finally {
+      storage.put = put;
+    }
+    expect((await sql("select count(*)::int as n from form_generation")).rows).toEqual([{ n: 0 }]);
+    expect(storage.keys().length).toBe(objects);
+    // Generated again, it prints the customer as it is now.
+    expect((await generate(id)).status).toBe(201);
+  });
+
   it("is refused for back office, an unassigned consultant and a ta_only project", async () => {
     const id = await participant();
     await expectProblem(await generate(id, backOffice), 403, "forbidden");
@@ -228,6 +252,9 @@ describe("the bulk generation and its print file (data-protection.md, exports)",
     expect(file.headers.get("content-disposition")).toMatch(
       /^attachment; filename="kug200b-druck-/,
     );
+    // Never rendered from our origin: the download's own policy, not the SPA's.
+    expect(file.headers.get("content-security-policy")).toBe("default-src 'none'; sandbox");
+    expect(file.headers.get("x-content-type-options")).toBe("nosniff");
     expect(await pageCount(new Uint8Array(await file.arrayBuffer()))).toBe(2);
     expect(storage.keys().length).toBe(objects);
     // Bound to the session that asked.
@@ -258,6 +285,18 @@ describe("the bulk generation and its print file (data-protection.md, exports)",
     expect(await codesOf(await app.request(own.url, { headers: staff[consultant]! }))).toEqual([
       ":export_stale",
     ]);
+    // A new request sees nothing: 404, and still 404 once the form is quarantined.
+    const again = () =>
+      request("POST", "/exports/kug200b_print", consultant, {
+        documentIds: [generations[0]!.documentId],
+      });
+    await expectProblem(await again(), 404, "not-found");
+    await sql(
+      `update document set quarantine_reason = 'suspected_wrong_person', quarantined_by = $2,
+         quarantined_at = now() where id = $1`,
+      [generations[0]!.documentId, projectLead],
+    );
+    await expectProblem(await again(), 404, "not-found");
     // A quarantined form isn't exported (data-protection.md, quarantine).
     await sql(
       `update document set quarantine_reason = 'suspected_wrong_person', quarantined_by = $2,
@@ -382,6 +421,40 @@ describe("the signed Kug 200b's review (Q184, Q185)", () => {
       recordWithdrawal: false,
       recordBaNotice: false,
     });
+  });
+
+  it("drops the signed outcome and declaration 17 when the accepted scan is quarantined; withdrawals stay", async () => {
+    const id = await participant();
+    const accepted = async (signedOn: string) => {
+      const scan = await scanOf(id, null);
+      await review(id, scan, {
+        decision: "accepted",
+        kug200bScan: { signedOn, confirmations: three, formVersion: "09-2021" },
+      });
+      return scan;
+    };
+    await accepted(await berlinDay(-5));
+    const receivedOn = await berlinDay(-4);
+    await request("POST", `/participations/${id}/asu/withdrawal`, consultant, {
+      consentId: (await view(id)).kug200b.profileAccess!.consentId,
+      receivedOn,
+    });
+    const wrongPerson = await accepted(await berlinDay(-2));
+    expect((await view(id)).kug200b).toMatchObject({
+      outcome: "signed",
+      profileAccess: { givenOn: await berlinDay(-2) },
+    });
+    await sql(
+      `update document set quarantine_reason = 'suspected_wrong_person', quarantined_by = $2,
+         quarantined_at = now() where id = $1`,
+      [wrongPerson, projectLead],
+    );
+    const tab = (await view(id)).kug200b;
+    // The other accepted paper was withdrawn: no declaration in force, the follow-up still open.
+    expect(tab.profileAccess).toBeNull();
+    expect(tab.capabilities.recordWithdrawal).toBe(false);
+    expect(tab.withdrawals).toEqual([expect.objectContaining({ receivedOn, baNotifiedOn: null })]);
+    expect(tab.capabilities.recordBaNotice).toBe(true);
   });
 
   it("takes a withdrawal and its BA notice, the registration intact; the work list shows the notice item", async () => {

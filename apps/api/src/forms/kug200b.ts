@@ -62,6 +62,8 @@ type Prepared = Kug200bGeneration & {
   content: Uint8Array;
   sources: { profile: number; profiling: number; assessment: number; unemployment: number };
   person: FormPerson;
+  /** The employer printed (the project's customer name), compared again at the record. */
+  employerSha256: string;
   token: string;
 };
 
@@ -179,6 +181,7 @@ export function kug200bService(deps: Kug200bDeps) {
         content,
         sources: read.sources,
         person: read.person,
+        employerSha256: sha256(read.source.customerName),
         token,
       },
     };
@@ -225,8 +228,8 @@ export function kug200bService(deps: Kug200bDeps) {
       p_size_bytes => ${form.content.length}::integer,
       p_content_sha256 => ${createHash("sha256").update(form.content).digest("hex")},
       p_key_id => ${keyId}, p_wrapped_key => ${Buffer.from(wrapped)}::bytea,
-      p_checklist => ${JSON.stringify(form.checklist.map(({ code, key }) => ({ code, key })))}::jsonb)
-      as result`);
+      p_checklist => ${JSON.stringify(form.checklist.map(({ code, key }) => ({ code, key })))}::jsonb,
+      p_employer_sha256 => ${form.employerSha256}) as result`);
 
   /**
    * Generates the forms of the participations, in their order: each prepared, then each stored

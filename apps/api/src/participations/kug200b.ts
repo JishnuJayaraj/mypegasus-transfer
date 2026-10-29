@@ -21,7 +21,10 @@ export type Kug200bState = {
     recordedAt: string;
     baNotifiedOn: IsoDate | null;
   }[];
-  /** Declaration 17 while its record is in force. */
+  /**
+   * Declaration 17 while its record is in force and its signed paper usable (live, not quarantined
+   * or invalidated); the withdrawals and their BA notice stay either way.
+   */
   profileAccess: { consentId: string; givenOn: IsoDate } | null;
 };
 
@@ -79,9 +82,11 @@ export async function kug200bStatesOf(
     id: string;
     given_on: string;
   }>(
-    sql`select participation_id, id, given_on::text from consent_record
-      where purpose = 'kug200b_profile_access' and ended_at is null
-        and participation_id = any (${ids})`,
+    sql`select c.participation_id, c.id, c.given_on::text from consent_record c
+      join document d on d.id = c.document_id
+      where c.purpose = 'kug200b_profile_access' and c.ended_at is null
+        and d.deleted_at is null and d.quarantined_at is null
+        and d.invalidated_by_correction is null and c.participation_id = any (${ids})`,
   );
   for (const row of offers) states.get(row.participation_id)!.offeredOn = row.offered_on;
   for (const row of signed) states.get(row.participation_id)!.signed = true;

@@ -11906,8 +11906,9 @@ export interface paths {
         /**
          * Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored
          * @description Refusals:
-         *     - `404` for a form that doesn't exist, is deleted or isn't a generated Kug 200b (each form must be the viewer's to open, else `403`).
-         *     - `422 document_quarantined`; `422 invalid_argument` for forms of more than one project.
+         *     - `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, whatever its state.
+         *     - `403` in assisted mode.
+         *     - Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project.
          */
         post: {
             parameters: {
