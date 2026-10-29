@@ -290,7 +290,9 @@ describe("GET /projects/{id}/worklist", () => {
       ceiling: 5000,
       causes: "a query per participation (see the statement count test), a missing index",
     });
-  });
+    // Seeding and three runs: the budget and the ceiling above judge the time, not the test's
+    // default 5 s timeout, which coverage's instrumentation alone exceeds.
+  }, 30_000);
 });
 
 describe("GET /projects/{id}/dashboard", () => {
