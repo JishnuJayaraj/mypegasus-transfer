@@ -121,9 +121,11 @@ END $$;
 -- order): the scan live, accepted, neither quarantined nor invalidated, of the participation, with
 -- its version (`scan_unusable`); the participation open (`participation_closed`) and placed with
 -- the Agentur (`placement_agentur_changed`); for a new batch (`p_member` null) in no open batch
--- (`in_open_batch`) and never submitted (`already_submitted`), for a member its route unchanged
--- (`asu_route_changed`); on `kug_200b` no registration yet (`asu_registered`); its version not one
--- the Agentur rejects as outdated (`form_version_outdated`). Null when none.
+-- (`in_open_batch`), never submitted (`already_submitted`) and on an explicitly chosen route
+-- (`asu_route_unset`, Q203: the route decides whether the submission is the registration), for a
+-- member its route unchanged (`asu_route_changed`); on `kug_200b` no registration yet
+-- (`asu_registered`); its version not one the Agentur rejects as outdated
+-- (`form_version_outdated`). Null when none.
 CREATE FUNCTION kug200b_member_problem(
   p_participation participation, p_document document, p_agentur_key text,
   p_outdated_versions text[], p_member kug200b_batch_member
@@ -154,6 +156,9 @@ BEGIN
     IF EXISTS (SELECT FROM public.agentur_submission s
                WHERE s.participation_id = p_participation.id AND s.form_code = 'kug200b') THEN
       RETURN 'already_submitted';
+    END IF;
+    IF v_channel IS NULL THEN
+      RETURN 'asu_route_unset';
     END IF;
   ELSIF v_channel IS DISTINCT FROM p_member.asu_channel THEN
     RETURN 'asu_route_changed';
@@ -496,6 +501,47 @@ BEGIN
   PERFORM public.write_audit_event(r.project_id, r.id, 'asu_confirmation_recorded', p_context,
     NULL, NULL, NULL, NULL, NULL, pg_catalog.jsonb_build_object('registrationId', g.id,
       'confirmedOn', pg_catalog.to_char(p_confirmed_on, 'YYYY-MM-DD')), false);
+END $$;
+--> statement-breakpoint
+
+-- The route (process-and-lifecycle.md, Arbeitsuchendmeldung), as 0074 wrote it, and once the
+-- participation's Kug 200b was submitted in a batch on another route, never `kug_200b`
+-- (`asu_kug200b_submitted`, Q203): that submission recorded no registration and can't be
+-- repeated, so the person registers on the route they are on.
+CREATE OR REPLACE FUNCTION set_asu_route(
+  p_context audit_context, p_participation_id uuid, p_channel asu_channel, p_version integer
+) RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  r public.participation;
+  a public.asu_record;
+BEGIN
+  IF p_participation_id IS NULL OR p_channel IS NULL OR p_version IS NULL OR p_version < 0 THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  r := public.lock_asu_actor(p_participation_id, p_context, '{project_lead,consultant}');
+  SELECT * INTO a FROM public.asu_record WHERE participation_id = r.id FOR UPDATE;
+  IF coalesce(a.version, 0) <> p_version THEN
+    RAISE EXCEPTION 'stale_revision';
+  END IF;
+  IF EXISTS (SELECT FROM public.asu_registration WHERE participation_id = r.id) THEN
+    RAISE EXCEPTION 'asu_registered';
+  END IF;
+  IF a.channel IS NOT DISTINCT FROM p_channel THEN
+    RETURN p_version;
+  END IF;
+  IF p_channel = 'kug_200b' AND EXISTS (
+       SELECT FROM public.agentur_submission
+       WHERE participation_id = r.id AND form_code = 'kug200b') THEN
+    RAISE EXCEPTION 'asu_kug200b_submitted';
+  END IF;
+  INSERT INTO public.asu_record (participation_id, project_id, channel, version, set_by)
+  VALUES (r.id, r.project_id, p_channel, 1, (p_context).staff_user_id)
+  ON CONFLICT (participation_id) DO UPDATE SET channel = EXCLUDED.channel,
+    version = public.asu_record.version + 1, set_by = EXCLUDED.set_by, set_at = now();
+  PERFORM public.write_audit_event(r.project_id, r.id, 'asu_route_set', p_context, NULL, NULL,
+    NULL, NULL, NULL, pg_catalog.jsonb_strip_nulls(pg_catalog.jsonb_build_object(
+      'channel', p_channel, 'previousChannel', a.channel)), false);
+  RETURN p_version + 1;
 END $$;
 --> statement-breakpoint
 

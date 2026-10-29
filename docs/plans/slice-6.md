@@ -791,6 +791,9 @@ a file name, a form's content or a token.
   alternative list is the artifact.
 - The Kug 200a's 6 pt minimum is assessed on representative filled PDFs before it is used
   (Q197).
+- The official artifacts (the Kug 200a, the alternative list, the scans PDF) take the full
+  relevant recheck at the download, the settings included, not only at the link's issuance (the
+  review of PR #98, Q203 (6)).
 
 **6-5b**
 - Submission refused with the blocker, and for an expired version only where the Agentur rejects

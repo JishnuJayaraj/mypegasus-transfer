@@ -913,7 +913,9 @@ and highly confidential data only; ordinary person-data writes are `participant_
   (`kug200b_batch_export_content`) re-authorizes the PL, the open batch and every member, reads the
   names in the same locked call and streams a CSV (`;`, BOM, the formula guard) with the download
   policy; nothing is stored. Last name, first name and form version only: the PL's working list,
-  never sent to the Agentur.
+  never sent to the Agentur. The settings are checked at the issuance only, accepted for this
+  internal list (Q203 (6)); the official artifacts of 6-5a-2 take the full recheck at the
+  download.
 - **Batches and submissions** (process-and-lifecycle.md, Kug 200b batches): `kug200b_batch`
   (project data: Agentur, channel, artifact, status, dates, counts, staff ids; `internal`,
   `project_master`), `kug200b_batch_member` and `agentur_submission` (`internal`, `case_internal`

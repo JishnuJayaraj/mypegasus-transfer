@@ -2548,7 +2548,8 @@
         "asu_confirmed": "Die Bestätigung der Agentur ist bereits erfasst.",
         "confirmed_on_in_future": "Das Datum der Bestätigung darf nicht in der Zukunft liegen.",
         "confirmed_before_submission": "Die Bestätigung kann nicht vor der Übermittlung liegen.",
-        "asu_not_kug200b": "Eine Bestätigung der Agentur gibt es nur für den Weg Kug 200b."
+        "asu_not_kug200b": "Eine Bestätigung der Agentur gibt es nur für den Weg Kug 200b.",
+        "asu_kug200b_submitted": "Der Kug 200b wurde bereits auf einem anderen Weg übermittelt; die Meldung wird auf diesem Weg erfasst."
       },
       "quarantined": "Die BA-Bestätigung steht jetzt unter Quarantäne.",
       "lifted": "Die Quarantäne wurde aufgehoben."
@@ -2724,7 +2725,8 @@
       "already_submitted": "Bereits übermittelt.",
       "asu_registered": "Die Arbeitsuchendmeldung ist bereits erfasst.",
       "asu_route_changed": "Der Weg der Arbeitsuchendmeldung hat sich geändert.",
-      "form_version_outdated": "Die Agentur lehnt diese Formularversion ab."
+      "form_version_outdated": "Die Agentur lehnt diese Formularversion ab.",
+      "asu_route_unset": "Der Weg der Arbeitsuchendmeldung ist nicht festgelegt."
     },
     "index": "Arbeitsliste (CSV)",
     "downloaded": "Die Arbeitsliste wird heruntergeladen.",
@@ -2742,6 +2744,9 @@
       "submitted_on_in_future": "Das Versanddatum darf nicht in der Zukunft liegen.",
       "submitted_before_batch": "Das Versanddatum kann nicht vor der Sammelmeldung liegen.",
       "export_stale": "Die Arbeitsliste ist veraltet. Bitte neu laden."
-    }
+    },
+    "routeMissing_one": "{{count}} angenommener Kug 200b wartet auf den Weg der Arbeitsuchendmeldung.",
+    "routeMissing_other": "{{count}} angenommene Kug 200b warten auf den Weg der Arbeitsuchendmeldung.",
+    "routeMissingHint": "Legen Sie den Weg auf dem Tab „Arbeitsuche“ fest: Er entscheidet, ob die Übermittlung als Arbeitsuchendmeldung zählt."
   }
 }

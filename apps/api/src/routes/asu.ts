@@ -90,6 +90,7 @@ function refused(c: Context<AppEnv>, error: unknown) {
     code === "participation_closed" ||
     code === "asu_not_applicable" ||
     code === "asu_registered" ||
+    code === "asu_kug200b_submitted" ||
     code === "asu_route_unset" ||
     code === "asu_route_kug200b" ||
     code === "registered_on_in_future" ||

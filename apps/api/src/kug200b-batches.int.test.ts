@@ -68,7 +68,7 @@ async function agenturSetting(alternative = false, channel = "scan_email") {
 }
 
 /** An informed participant placed with `ost`, on `route`, with an accepted Kug 200b scan. */
-async function ready({ lastName = "Beispiel", route = "kug_200b" } = {}) {
+async function ready({ lastName = "Beispiel", route = "kug_200b" as string | null } = {}) {
   const id = await call(owner.$client, "create_participation", {
     projectId: werkNord,
     context: pl,
@@ -91,12 +91,14 @@ async function ready({ lastName = "Beispiel", route = "kug_200b" } = {}) {
      where id = $1`,
     [id, ost],
   );
-  await call(owner.$client, "set_asu_route", {
-    context: pl,
-    participationId: id,
-    channel: route,
-    version: 0,
-  });
+  if (route) {
+    await call(owner.$client, "set_asu_route", {
+      context: pl,
+      participationId: id,
+      channel: route,
+      version: 0,
+    });
+  }
   const documentId = await call(owner.$client, "add_document", {
     context: pl,
     participationId: id,
@@ -164,6 +166,7 @@ describe("GET /projects/{id}/kug200b-batches (the tab Agentur)", () => {
             asuChannel: "kug_200b",
           },
         ],
+        routeMissing: [],
         capabilities: { createBatch: true },
       },
     ]);
@@ -435,5 +438,72 @@ describe("the batch's work list (data-protection.md, exports; D24)", () => {
         await request("POST", "/exports/kug200b_batch_index", projectLead, { batchId }),
       ),
     ).toEqual([{ participationId: id, documentId, reason: "scan_unusable" }]);
+  });
+});
+
+describe("from the review of PR #98", () => {
+  it("keeps the tab when the last participant of an Agentur closes before any batch", async () => {
+    const { id } = await ready();
+    await changeStatus(owner.$client, id, {
+      field: "status",
+      from: "informed",
+      to: "withdrawn",
+      endReason: "other",
+      effectiveDate: await today(),
+    });
+    const view = await tab();
+    expect(view.agenturen).toEqual([]);
+    expect(view.withoutPlacementAgentur).toBe(0);
+  });
+
+  it("names the participants without a route and refuses them in a batch (Q203)", async () => {
+    await agenturSetting();
+    const { id, documentId } = await ready({ route: null });
+    const agentur = (await tab()).agenturen[0]!;
+    expect(agentur.candidates).toEqual([]);
+    expect(agentur.routeMissing).toEqual([
+      { participationId: id, lastName: "Beispiel", firstName: "Erika" },
+    ]);
+    expect(agentur.capabilities.createBatch).toBe(false);
+    expect(await staleOf(await build([documentId]))).toEqual([
+      { participationId: id, documentId, reason: "asu_route_unset" },
+    ]);
+  });
+
+  it("withholds the guard fact while the submitted scan is quarantined, from the lift on again", async () => {
+    await agenturSetting();
+    const { id, documentId } = await ready();
+    await submitBatch(await built([documentId]));
+    const factsOf = () =>
+      db.transaction((tx) => dbGuardFacts.facts(tx, { participationId: id, currentRequest: null }));
+    const submitted = (await factsOf()).asuRegisteredWithProof!;
+    expect(submitted.validOn).toBe(await today());
+    await call(owner.$client, "quarantine_document", {
+      context: pl,
+      documentId,
+      reason: "suspected_wrong_person",
+    });
+    expect((await factsOf()).asuRegisteredWithProof).toBeUndefined();
+    // The registration stays as history; the tab says its proof is unusable.
+    const asu = await readJson(await request("GET", `/participations/${id}/asu`), AsuView);
+    expect(asu.registration).toMatchObject({
+      channel: "kug_200b",
+      proof: { kind: "kug200b_submission" },
+      withProofSince: null,
+    });
+    await call(owner.$client, "lift_document_quarantine", { context: pl, documentId });
+    const { rows } = await sql(
+      `select to_char(quarantine_lifted_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as at
+       from document where id = $1`,
+      [documentId],
+    );
+    const lifted = (await factsOf()).asuRegisteredWithProof!;
+    expect(lifted.validOn).toBe(submitted.validOn);
+    expect(lifted.recordedAt.toISOString()).toBe(new Date(rows[0].at).toISOString());
+    expect(lifted.recordedAt.getTime()).toBeGreaterThan(submitted.recordedAt.getTime());
+    // No lifecycle status moved with either.
+    expect(
+      (await sql("select status::text from participation where id = $1", [id])).rows[0].status,
+    ).toBe("informed");
   });
 });

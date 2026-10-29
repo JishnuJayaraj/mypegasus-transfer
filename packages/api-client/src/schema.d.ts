@@ -12723,7 +12723,7 @@ export interface components {
             /** Format: uuid */
             documentId: string | null;
             /** @enum {string} */
-            reason: "scan_unusable" | "participation_closed" | "placement_agentur_changed" | "in_open_batch" | "already_submitted" | "asu_registered" | "asu_route_changed" | "form_version_outdated" | "settings_changed";
+            reason: "scan_unusable" | "participation_closed" | "placement_agentur_changed" | "in_open_batch" | "already_submitted" | "asu_route_unset" | "asu_registered" | "asu_route_changed" | "form_version_outdated" | "settings_changed";
         };
         CurrentStaffUser: {
             /** Format: uuid */
@@ -16319,6 +16319,12 @@ export interface components {
             channel: "paper_courier" | "paper_post" | "scan_email" | "upload" | null;
             artifact: components["schemas"]["Kug200bArtifact"];
             candidates: components["schemas"]["Kug200bBatchCandidate"][];
+            routeMissing: {
+                /** Format: uuid */
+                participationId: string;
+                lastName: string;
+                firstName: string;
+            }[];
             capabilities: {
                 createBatch: boolean;
             };

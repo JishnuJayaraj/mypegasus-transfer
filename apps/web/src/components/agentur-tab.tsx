@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createLink } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { kug200bBatchMax } from "@transfer/domain";
 import {
@@ -7,6 +8,7 @@ import {
   formatDate,
   formatTimestamp,
   InlineNotification,
+  Link,
   parseDisplayDate,
   SimpleTable,
   Stack,
@@ -28,6 +30,8 @@ type View = components["schemas"]["Kug200bBatches"];
 type Agentur = View["agenturen"][number];
 type Batch = View["batches"][number];
 type StaleRow = components["schemas"]["Kug200bBatchStaleRow"];
+const RouterLink = createLink(Link);
+
 type Message = { kind: "success" | "error"; text: string; rows?: StaleRow[] };
 
 const ok = <T,>(result: { data?: T; error?: unknown }) => {
@@ -129,6 +133,7 @@ export function AgenturTab({ projectId }: { projectId: string }) {
       {view.agenturen.map((agentur) => (
         <AgenturSection
           key={agentur.agenturKey}
+          projectId={projectId}
           agentur={agentur}
           label={labelOf(agentur.agenturKey)}
           confirmer={
@@ -229,6 +234,7 @@ function People({ title, people }: { title: string; people: Agentur["candidates"
 
 /** One placement Agentur: its channel or "Einstellungen fehlen", the artifact, the ready scans. */
 function AgenturSection(props: {
+  projectId: string;
   agentur: Agentur;
   label: string;
   confirmer: string;
@@ -257,6 +263,25 @@ function AgenturSection(props: {
         title={t("agentur.candidates", { count: agentur.candidates.length })}
         people={agentur.candidates}
       />
+      {agentur.routeMissing.length > 0 && (
+        <div data-testid="route-missing">
+          <p>{t("agentur.routeMissing", { count: agentur.routeMissing.length })}</p>
+          <p className="tp-hint">{t("agentur.routeMissingHint")}</p>
+          <ul className="tp-list">
+            {agentur.routeMissing.map((p) => (
+              <li key={p.participationId}>
+                <RouterLink
+                  to="/projects/$projectId/participations/$participationId"
+                  params={{ projectId: props.projectId, participationId: p.participationId }}
+                  search={{ tab: "asu" }}
+                >
+                  {[p.lastName, p.firstName].filter(Boolean).join(", ")}
+                </RouterLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {agentur.candidates.length > kug200bBatchMax && (
         <p className="tp-hint">{t("agentur.tooMany", { max: kug200bBatchMax })}</p>
       )}

@@ -515,7 +515,8 @@ generator then. No action now.
   `Kug200bBatches` `{ withoutPlacementAgentur, agenturen, batches }`: per Agentur
   (`Kug200bAgentur`) `channel` (null: the blocker), `artifact` (`Kug200bArtifact`: `{ kind:
   "kug200a" }` or `{ kind: "accepted_alternative", source, confirmedBy, confirmedOn }`),
-  `candidates` and `capabilities.createBatch`; per batch (`Kug200bBatch`) its Agentur, channel,
+  `candidates`, `routeMissing` (`{ participationId, lastName, firstName }`: ready but for the ASU
+  route) and `capabilities.createBatch`; per batch (`Kug200bBatch`) its Agentur, channel,
   artifact, status, `createdAt`, `createdOn` (Berlin), `submittedOn`, `members`, `staleRows` (an
   open batch's recheck as read now) and `capabilities` (`submit`, `discard`, `exportIndex`).
   `no-store`.
@@ -524,13 +525,15 @@ generator then. No action now.
   }`) → `200 { submissions, registrations }`; `POST /kug200b-batches/{id}/discard` → `204`. A
   batch is visible to its PL only: anyone else gets `404` whatever its state. `422` codes
   `batch_settings_missing`, `batch_not_open`, `document_not_found`, `invalid_argument`,
+  `asu_route_unset` (a `staleRows` reason),
   `submitted_on_in_future` and `submitted_before_batch` (at `/submittedOn`), and `batch_stale`
   with the extension **`staleRows`** on `ProblemDetails`: `[{ participationId, documentId, reason
   }]` (null ids for the batch-level `settings_changed`); ids and codes only.
 - `POST /participations/{id}/asu/confirmation` (`{ registrationId, confirmedOn }`; the PL) →
   `AsuView`, which gains `registration.confirmedOn` and `capabilities.recordConfirmation`; `422`
   `confirmed_on_in_future` (at `/confirmedOn`), `asu_confirmed`, `asu_not_kug200b`,
-  `confirmed_before_submission`, `asu_registration_not_found`.
+  `confirmed_before_submission`, `asu_registration_not_found`. `PUT …/asu/route` adds `422
+  asu_kug200b_submitted`.
 - Exports: `ExportKind` adds `kug200b_batch_index`; `ExportInput` is `DocumentExportInput` `{
   documentIds }` or `BatchExportInput` `{ batchId }` (the other kind's body: `422
   invalid_argument`). `GET /export-content/{token}` reads the link's kind first

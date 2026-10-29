@@ -26,7 +26,6 @@ const scope = { agenturKey: "beispielstadt-nord", outdatedVersions: [] as string
 describe("batchEligibility", () => {
   it("takes a usable scan of an open participation of the Agentur", () => {
     expect(batchEligibility(facts(), scope)).toBeNull();
-    expect(batchEligibility(facts({ asuChannel: null }), scope)).toBeNull();
     expect(batchEligibility(facts({ asuChannel: "online_self", asuRegistered: true }), scope)).toBe(
       null,
     );
@@ -45,6 +44,7 @@ describe("batchEligibility", () => {
     );
     expect(batchEligibility(facts({ inOpenBatch: true }), scope)).toBe("in_open_batch");
     expect(batchEligibility(facts({ submitted: true }), scope)).toBe("already_submitted");
+    expect(batchEligibility(facts({ asuChannel: null }), scope)).toBe("asu_route_unset");
     expect(batchEligibility(facts({ asuRegistered: true }), scope)).toBe("asu_registered");
   });
 

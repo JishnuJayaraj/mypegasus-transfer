@@ -526,7 +526,7 @@ touches a registration.
   `kug200b_withdrawal_ba_notice` with the earliest unnotified withdrawal's date of receipt, also
   after the end. Filters and counts follow with 6-5b.
 
-#### Kug 200b batches *(accepted, Q45, Q91, Q187; as built in Slice 6, PR 6-5a-1; readings Q203)*
+#### Kug 200b batches *(accepted, Q45, Q91, Q187, Q203; as built in Slice 6, PR 6-5a-1)*
 
 `ta_tg` only. The PL alone builds and sends them (the project tab "Agentur"); back office never
 opens a signed Kug 200b (Q49).
@@ -542,9 +542,12 @@ opens a signed Kug 200b (Q49).
   unquarantined, uninvalidated Kug 200b scan, while the participation is in no open batch, its
   Kug 200b was never submitted, it has no registration on the route `kug_200b`, and its version
   isn't one the Agentur rejects as outdated (only where its resolved `rejectsOutdatedFormVersions`
-  is `true`, D26). Any ASU route: on `kug_200b` the submission is the registration, on another
-  route the member gets its submission only. Scans without a placement Agentur are counted, not
-  batched.
+  is `true`, D26). The participation needs an **explicitly chosen ASU route** (Q203): without one
+  its scan is listed as waiting for the route, linked to "Arbeitsuche", never batched
+  (`asu_route_unset`). On `kug_200b` the submission is the registration; on another route the
+  member gets its submission only, and the route can then never become `kug_200b`
+  (`asu_kug200b_submitted`): the person registers on the route they are on. Scans without a
+  placement Agentur are counted, not batched; a closed participation's scan is neither.
 - **Building** ("Sammelmeldung bilden", `create_kug200b_batch`): 1–200 ready scans, one per
   participation, all or nothing under the project's exclusive lock; any scan that can't join
   refuses the batch with its rows (`batch_stale`), so two batches racing for one scan give one.
@@ -561,6 +564,12 @@ opens a signed Kug 200b (Q49).
   (form, version, Agentur, channel, batch, date; the proof of submission) and, on `kug_200b`, its
   ASU registration: `registeredOn` the sent date, the proof `kug200b_submission`, the complete
   fact recorded at the submission's commit, so it counts for a scheduled entry only from then.
+  The submitted scan is the fact's supporting evidence: while it is quarantined, invalidated or
+  deleted the registration stays as history but supplies no `asuRegisteredWithProof`; after a
+  lifted quarantine the fact counts from the lift. No lifecycle status reverses on its own.
+- **No duplicate initial submission:** a participation whose Kug 200b was submitted doesn't join
+  another batch. Retransmitting a rejected, returned or unreceived packet is open (Q204, before
+  the pilot).
 - **"Bestätigung der Agentur am"** (`record_asu_confirmation`, tab "Arbeitsuche"): the PL records
   the Agentur's confirmation of a batch's registration once, from the submission to today, also
   after the end; follow-up work, never a condition. The item `kug200b_confirmation_missing` (none

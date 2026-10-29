@@ -38,6 +38,7 @@ export const BatchMemberProblem = z.enum([
   "placement_agentur_changed",
   "in_open_batch",
   "already_submitted",
+  "asu_route_unset",
   "asu_registered",
   "asu_route_changed",
   "form_version_outdated",
@@ -91,13 +92,17 @@ const outdated = (facts: BatchMemberFacts, { outdatedVersions }: Scope) =>
 
 /**
  * Whether a scan may join a new batch of the Agentur (D25): a usable Kug 200b scan of an open
- * participation placed with that Agentur, in no open batch and not submitted before.
+ * participation placed with that Agentur, in no open batch, not submitted before and on an
+ * explicitly chosen ASU route (`asu_route_unset` otherwise: the route is set on "Arbeitsuche"
+ * first, Q203).
  */
 export function batchEligibility(facts: BatchMemberFacts, scope: Scope): BatchMemberProblem | null {
   const problem = memberProblem(facts, scope);
   if (problem) return problem;
   if (facts.inOpenBatch) return "in_open_batch";
   if (facts.submitted) return "already_submitted";
+  // The route decides whether the submission is the registration: chosen first, never assumed.
+  if (facts.asuChannel === null) return "asu_route_unset";
   if (registered(facts)) return "asu_registered";
   if (outdated(facts, scope)) return "form_version_outdated";
   return null;

@@ -222,18 +222,24 @@ export async function batchesView(
     [...keys].map((key) => [key, settingsOf(snapshot, registry, key, today)]),
   );
 
-  // Each participation's newest usable scan, if it may join a batch of its Agentur now.
+  // Each open participation's newest usable scan, if it may join a batch of its Agentur now
+  // (`ready`), or would but for the ASU route (`routeMissing`). A closed participation is never a
+  // candidate, so its Agentur, which may have no settings read, is never looked up.
   const ready = new Map<string, ScanRow>();
+  const routeMissing = new Map<string, ScanRow>();
   for (const scan of scans) {
     if (!scan.usable || ready.has(scan.participationId)) continue;
+    if (routeMissing.has(scan.participationId)) continue;
     const person = people.get(scan.participationId)!;
-    if (person.placementAgenturKey === null) continue;
+    if (person.placementAgenturKey === null || closedStatuses.has(person.status)) continue;
     const fact = facts(scan.participationId, scan.documentId)!;
     const scope = {
       agenturKey: person.placementAgenturKey,
       outdatedVersions: settings.get(person.placementAgenturKey)!.outdatedVersions,
     };
-    if (batchEligibility(fact, scope) === null) ready.set(scan.participationId, scan);
+    const problem = batchEligibility(fact, scope);
+    if (problem === null) ready.set(scan.participationId, scan);
+    if (problem === "asu_route_unset") routeMissing.set(scan.participationId, scan);
   }
   // Usable scans no batch takes for want of a placement Agentur, once per participation.
   const withoutPlacementAgentur = new Set(
@@ -262,11 +268,19 @@ export async function batchesView(
         .filter((scan) => people.get(scan.participationId)!.placementAgenturKey === agenturKey)
         .map((scan) => person(scan, scan.formVersion!))
         .toSorted(byName);
+      const unrouted = [...routeMissing.values()]
+        .filter((scan) => people.get(scan.participationId)!.placementAgenturKey === agenturKey)
+        .map((scan) => ({
+          participationId: scan.participationId,
+          ...nameOf(people.get(scan.participationId)),
+        }))
+        .toSorted(byName);
       return {
         agenturKey,
         channel: own.channel,
         artifact: own.artifact,
         candidates,
+        routeMissing: unrouted,
         capabilities: { createBatch: own.channel !== null && candidates.length > 0 },
       };
     }),

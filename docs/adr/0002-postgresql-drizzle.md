@@ -1007,6 +1007,12 @@ data-protection.md (exports, batches and submissions) hold the rules, Q203 the r
   `kug200b_batch_recheck` mirror the domain's `batchEligibility` and `batchRecheck`.
   `record_audit_event` refuses the five new types; `audit_event_batch_of_project` keeps the batch's
   events project-level.
+- **From the review of PR #98:** `kug200b_member_problem` refuses a participation without a route
+  (`asu_route_unset`, Q203); `set_asu_route` is replaced (signature unchanged) to refuse
+  `kug_200b` once a Kug 200b was submitted (`asu_kug200b_submitted`). The ASU fact's reader
+  (`asuStatesOf`) takes a batch registration's submitted scan as its supporting document
+  (`agentur_submission.document_id`), so a quarantined, invalidated or deleted scan withholds
+  the fact and a lift dates it.
 
 ## Conventions as built (Slices 0–2)
 

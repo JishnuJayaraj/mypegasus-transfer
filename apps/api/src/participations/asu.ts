@@ -1,4 +1,5 @@
 import {
+  agenturSubmission,
   asuRecord,
   asuRegistration,
   document,
@@ -33,7 +34,12 @@ export type AsuRegistrationRow = {
   attestationSource: AttestationSource | null;
   proofDocumentId: string | null;
   proofLinkedAt: string | null;
-  /** The proving document may supply a fact: accepted, live, not quarantined or invalidated. */
+  /**
+   * The document the fact rests on: the linked BA confirmation, or for a batch's registration
+   * the member's submitted Kug 200b scan; null for the attestation.
+   */
+  supportingDocumentId: string | null;
+  /** The supporting document may supply a fact: accepted, live, not quarantined or invalidated. */
   documentUsable: boolean | null;
   documentQuarantineLiftedAt: string | null;
   /** "Bestätigung der Agentur am" (the route `kug_200b`). */
@@ -59,7 +65,7 @@ export function registrationFacts(row: AsuRegistrationRow): AsuRegistrationFacts
         : {
             kind: row.proofKind,
             linkedAt: row.proofLinkedAt!,
-            ...(row.proofDocumentId !== null && {
+            ...(row.supportingDocumentId !== null && {
               document: {
                 usable: row.documentUsable === true,
                 quarantineLiftedAt: row.documentQuarantineLiftedAt,
@@ -112,6 +118,7 @@ export async function asuStatesOf(
       proofDocumentId: asuRegistration.proofDocumentId,
       proofLinkedAt: sql<string | null>`case when ${asuRegistration.proofLinkedAt} is not null
         then ${utc(asuRegistration.proofLinkedAt)} end`,
+      supportingDocumentId: document.id,
       documentUsable: sql<boolean | null>`${document.reviewState} = 'accepted'
         and ${document.deletedAt} is null and ${document.quarantinedAt} is null
         and ${document.invalidatedByCorrection} is null`,
@@ -120,7 +127,16 @@ export async function asuStatesOf(
       confirmedOn: asuRegistration.confirmedOn,
     })
     .from(asuRegistration)
-    .leftJoin(document, eq(document.id, asuRegistration.proofDocumentId))
+    .leftJoin(agenturSubmission, eq(agenturSubmission.id, asuRegistration.agenturSubmissionId))
+    // A batch's registration rests on the submitted scan (process-and-lifecycle.md, Kug 200b
+    // batches): while it is unusable the registration stays, but supplies no fact.
+    .leftJoin(
+      document,
+      eq(
+        document.id,
+        sql`coalesce(${asuRegistration.proofDocumentId}, ${agenturSubmission.documentId})`,
+      ),
+    )
     .where(inArray(asuRegistration.participationId, [...participationIds]));
   for (const { participationId, ...route } of routes) {
     states.set(participationId, { ...states.get(participationId)!, ...route });

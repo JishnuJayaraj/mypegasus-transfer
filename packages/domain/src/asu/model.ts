@@ -56,7 +56,11 @@ export type AsuRegistrationFacts = {
     kind: AsuProofKind;
     /** When the proof was linked: the attestation's with the registration, a document's later. */
     linkedAt: string;
-    /** The proving `asu_proof` document: usable while accepted, live, not quarantined or invalidated. */
+    /**
+     * The document the proof rests on (the linked `asu_proof`, or for `kug200b_submission` the
+     * member's submitted Kug 200b scan): usable while accepted, live, not quarantined or
+     * invalidated; a lifted quarantine counts from its lift.
+     */
     document?: { usable: boolean; quarantineLiftedAt: string | null };
   };
 };

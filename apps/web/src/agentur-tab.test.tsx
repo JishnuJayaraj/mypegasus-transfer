@@ -33,6 +33,7 @@ const agentur = (overrides: object = {}) => ({
   channel: "scan_email",
   artifact: { kind: "kug200a" },
   candidates: [person(a, "Albers"), person(b, "Zander")],
+  routeMissing: [],
   capabilities: { createBatch: true },
   ...overrides,
 });
@@ -198,6 +199,30 @@ describe("the project tab Agentur", () => {
     expect(screen.queryByRole("button", { name: "Übermittlung erfassen" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Arbeitsliste (CSV)" })).toBeNull();
     expect(screen.getByRole("button", { name: "Verwerfen" })).toBeVisible();
+  });
+
+  it("names who waits for an ASU route and links to their tab Arbeitsuche (Q203)", async () => {
+    setup(
+      tab({
+        agenturen: [
+          agentur({
+            candidates: [],
+            routeMissing: [{ participationId: a, lastName: "Albers", firstName: "Erika" }],
+            capabilities: { createBatch: false },
+          }),
+        ],
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "1 angenommener Kug 200b wartet auf den Weg der Arbeitsuchendmeldung.",
+      ),
+    ).toBeVisible();
+    const link = within(screen.getByTestId("route-missing")).getByRole("link", {
+      name: "Albers, Erika",
+    });
+    expect(link).toHaveAttribute("href", `/projects/${project.id}/participations/${a}?tab=asu`);
+    expect(screen.queryByRole("button", { name: "Sammelmeldung bilden" })).toBeNull();
   });
 
   it("tells others that only the PL sees the batches", async () => {

@@ -92,6 +92,7 @@
               "placement_agentur_changed",
               "in_open_batch",
               "already_submitted",
+              "asu_route_unset",
               "asu_registered",
               "asu_route_changed",
               "form_version_outdated",
@@ -14135,6 +14136,30 @@
               "$ref": "#/components/schemas/Kug200bBatchCandidate"
             }
           },
+          "routeMissing": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "participationId",
+                "lastName",
+                "firstName"
+              ],
+              "additionalProperties": false
+            }
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -14153,6 +14178,7 @@
           "channel",
           "artifact",
           "candidates",
+          "routeMissing",
           "capabilities"
         ],
         "additionalProperties": false

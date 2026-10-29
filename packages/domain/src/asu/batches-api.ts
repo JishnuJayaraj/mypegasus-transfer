@@ -79,6 +79,13 @@ export const Kug200bAgenturView = z
     artifact: Kug200bArtifactView,
     /** The scans ready for a new batch. */
     candidates: z.array(Kug200bBatchCandidate),
+    /**
+     * Ready but for the ASU route: it is chosen on "Arbeitsuche" first, since it decides whether
+     * the submission is the registration (Q203).
+     */
+    routeMissing: z.array(
+      z.strictObject({ participationId: z.uuid(), lastName: z.string(), firstName: z.string() }),
+    ),
     capabilities: z.strictObject({ createBatch: z.boolean() }),
   })
   .meta({ id: "Kug200bAgentur" });

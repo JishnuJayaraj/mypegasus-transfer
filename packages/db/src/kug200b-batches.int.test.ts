@@ -298,6 +298,43 @@ describe("create_kug200b_batch (D25)", () => {
       { participationId: id, documentId: scan, reason: "already_submitted" },
     ]);
   });
+
+  it("needs an explicitly chosen route (Q203)", async () => {
+    const id = await participation({ route: null });
+    const scan = await acceptedScan(id);
+    expect((await refusal(create([scan]))).rows).toEqual([
+      { participationId: id, documentId: scan, reason: "asu_route_unset" },
+    ]);
+    await call(app, "set_asu_route", {
+      context: pl,
+      participationId: id,
+      channel: "kug_200b",
+      version: 0,
+    });
+    expect(await create([scan])).toEqual(expect.any(String));
+  });
+
+  it("never turns a submission on another route into kug_200b afterwards (Q203)", async () => {
+    const id = await participation({ route: "online_self" });
+    await submit(await create([await acceptedScan(id)]));
+    await expect(
+      call(app, "set_asu_route", {
+        context: pl,
+        participationId: id,
+        channel: "kug_200b",
+        version: 1,
+      }),
+    ).rejects.toMatchObject(failsWith("asu_kug200b_submitted"));
+    // Another direct route stays open: the person registers on the route they are on.
+    expect(
+      await call(app, "set_asu_route", {
+        context: pl,
+        participationId: id,
+        channel: "in_person",
+        version: 1,
+      }),
+    ).toBe(2);
+  });
 });
 
 describe("submit_kug200b_batch (D19, D25)", () => {
