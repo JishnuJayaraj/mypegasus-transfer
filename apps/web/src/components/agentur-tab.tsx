@@ -332,7 +332,7 @@ function BatchSection(props: {
         </InlineNotification>
       )}
       <People title={t("agentur.members")} people={batch.members} />
-      <div className="tp-inline-actions">
+      <div className="tp-bulk-actions">
         {batch.capabilities.exportIndex && (
           <Button
             kind="tertiary"
