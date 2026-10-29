@@ -30,6 +30,15 @@ export const TransferCompany = z.strictObject({
   houseNumber: z.string().min(1),
   postalCode: z.string().regex(/^[0-9]{5}$/),
   city: z.string().min(1),
+  /**
+   * The Kug 200a's header (ba-forms.md, the Kug 200a as built): the TG's Betriebsnummer (eight
+   * digits) and Branche/Wirtschaftsklasse; unset, each is left for handwriting and listed.
+   */
+  betriebsnummer: z
+    .string()
+    .regex(/^[0-9]{8}$/)
+    .optional(),
+  economicClass: z.string().trim().min(1).max(100).optional(),
 });
 export type TransferCompany = z.infer<typeof TransferCompany>;
 

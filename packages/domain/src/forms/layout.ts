@@ -48,7 +48,10 @@ export type FormLayout = {
   anlage: AnlageDocument | null;
   /** By key in the map's order, each once (a text column of a table by `table.column`). */
   overflow: FormOverflow[];
-  /** On a form without an Anlage: texts too long even at the minimum size, left for handwriting. */
+  /**
+   * On a form without an Anlage: texts too long even at the minimum size, left for handwriting; a
+   * table cell's with its row.
+   */
   notFitting: FormIssue<"text_not_fitting">[];
 };
 
@@ -174,6 +177,7 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
     text: string,
     heading: string,
     key: string,
+    row: number | undefined,
   ) => {
     const size = fittingSize(text, entry, map, measure);
     if (size !== null) {
@@ -187,7 +191,7 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
       sections.push({ kind: "text", heading, text: rest });
       overflows("text", key);
     } else {
-      notFitting.push({ code: "text_not_fitting", key });
+      notFitting.push({ code: "text_not_fitting", key, ...(row !== undefined && { row }) });
     }
   };
 
@@ -198,10 +202,11 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
     value: FormValue,
     heading: string,
     key: string,
+    row?: number,
   ) => {
     switch (entry.kind) {
       case "text":
-        placeText(name, entry, value as string, heading, key);
+        placeText(name, entry, value as string, heading, key, row);
         break;
       case "radio":
       case "checkbox_choice":
@@ -226,7 +231,7 @@ export function layoutForm(input: FormInput, map: FieldMap, measure: TextMeasure
         const value = row[column.key];
         if (!filled(value)) continue;
         const heading = `${table.label}, Zeile ${index + 1}: ${column.label}`;
-        place(column.fields[index]!, column, value, heading, `${table.key}.${column.key}`);
+        place(column.fields[index]!, column, value, heading, `${table.key}.${column.key}`, index);
       }
     });
     if (!spills) return;

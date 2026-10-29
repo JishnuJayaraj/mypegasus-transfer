@@ -37,6 +37,18 @@ export {
   type Kug200bOfferOutcome,
 } from "./asu/kug200b";
 export {
+  checkKug200a,
+  Kug200aChecklistCode,
+  Kug200aChecklistItem,
+  kug200aList,
+  kug200aListTemplate,
+  kug200aRowsPerCopy,
+  type Kug200aCheck,
+  type Kug200aHeaderSource,
+  type Kug200aMemberSource,
+  type Kug200aSource,
+} from "./asu/kug200a";
+export {
   BatchExportInput,
   batchExportKinds,
   DocumentExportInput,

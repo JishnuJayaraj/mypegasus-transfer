@@ -3,6 +3,7 @@ import {
   addDays,
   addMonths,
   checkFilledFields,
+  checkKug200a,
   kug200bInput,
   layoutForm,
   layoutTl407,
@@ -14,7 +15,7 @@ import {
   type FormInput,
   type TextMeasure,
 } from "@transfer/domain";
-import { syntheticKug200b, syntheticTl407 } from "@transfer/domain/testing/forms";
+import { syntheticKug200a, syntheticKug200b, syntheticTl407 } from "@transfer/domain/testing/forms";
 import { loadFont, loadFormVersion, loadOwnTemplate } from "@transfer/forms/load";
 import { PDFArray, PDFDict, PDFDocument, PDFRef, PDFStream } from "pdf-lib";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -264,6 +265,65 @@ describe("PdfRenderer contract: Kug 200b 09/2021", () => {
     ]);
     const names = layoutForm(input, kug200b.fieldMap, measure).fields.map(({ name }) => name);
     expect(names).not.toContain("11_txtf_Rentenversicherungsnummer");
+  });
+});
+
+describe("PdfRenderer contract: Kug 200a 07/2025", () => {
+  const kug200a = loadFormVersion("kug200a", "07-2025");
+
+  // The representative batch of the 6 pt assessment (Q197): seven members, two copies.
+  it("fills each copy of six, the header on every copy, reads them back; flattened two pages each", async () => {
+    const { copies, checklist } = checkKug200a(syntheticKug200a, kug200a.fieldMap, today, measure);
+    expect(copies).toHaveLength(2);
+    expect(checklist.map(({ code, key }) => [code, key])).toEqual([
+      ["not_decided", "participants.lastActivity"],
+      ["not_decided", "participants.lastActivityPeriod"],
+    ]);
+    const parts: Uint8Array[] = [];
+    for (const fields of copies) {
+      const fill = (flatten: boolean) =>
+        fillAcroForm(font, {
+          template: kug200a.blank,
+          fieldMap: kug200a.fieldMap,
+          fields,
+          flatten,
+        });
+      const values = await readAcroFormValues(await fill(false));
+      expect(values).toEqual(expected(kug200a.fieldMap, fields, Object.keys(values)));
+      expect(values).toMatchObject({
+        txtfTGKugNr: "123-456-7890",
+        txtfPABBezeichnung: "Fußball Bund Beispiel Maschinenbau GmbH & Co. KG",
+        dateTNVeranstaltung: "20.11.2026",
+      });
+      // Nothing below the map's floor: what didn't fit at 6 pt would be on the checklist.
+      for (const field of fields)
+        if (field.kind === "text") expect(field.fontSize).toBeGreaterThanOrEqual(6);
+      parts.push(await fill(true));
+    }
+    const first = await readAcroFormValues(
+      await fillAcroForm(font, {
+        template: kug200a.blank,
+        fieldMap: kug200a.fieldMap,
+        fields: copies[0]!,
+        flatten: false,
+      }),
+    );
+    expect(first).toMatchObject({
+      txtareaTNPersDatenZ1: "Doğan-Großmann, Łucja Ayşe\nHauptstraße 12a\n10115 Berlin",
+      txtfTNVsNrZ1: "12290751D121",
+      txtareaTNZeitBeschaeftigtZ1: "01.01.2027 – 31.12.2027",
+      chbxTNEinverstaendnisZ3: "liegt nicht vor",
+      chbxTNTeilnahmeZ5: null,
+      txtareaTNTaetigkeitZ1: null,
+      txtareaTNZeitTaetigZ1: null,
+    });
+    // The longest name and address takes the 6 pt floor and still fits its box.
+    expect(copies[0]!.find((f) => f.name === "txtareaTNPersDatenZ2")).toMatchObject({
+      fontSize: 6,
+    });
+    const packet = await mergePdfs(parts);
+    expect(await pageCount(packet)).toBe(4);
+    expect(await danglingReferences(packet)).toBe(0);
   });
 });
 
