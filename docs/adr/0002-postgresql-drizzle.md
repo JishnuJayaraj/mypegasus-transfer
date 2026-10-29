@@ -909,11 +909,13 @@ Q202 the readings.
   document ids, the staff user, the session's hash, expiry). `transfer_app` selects the two offer
   tables, has **no privilege on `export_link`**, and writes none. `field_access_category` gains
   `kug200bOffer`.
-- **Changed signature:** `record_form_generation` gains `p_checklist` (dropped by its old
-  signature, created again, granted again): for `kug200b` the actor is `lock_kug200b_actor`'s (the
-  PL or the assigned consultant, `ta_tg`, open), `p_declarations` null, no confirmation, no Anlage,
-  a valid checklist; it compares the profile's revision and `form_person` (`source_changed`); the
-  TL 407 takes no checklist and is otherwise unchanged.
+- **Changed signature:** `record_form_generation` gains `p_checklist` and `p_employer_sha256`
+  (dropped by its old signature, created again, granted again): for `kug200b` the actor is
+  `lock_kug200b_actor`'s (the PL or the assigned consultant, `ta_tg`, open), `p_declarations` null,
+  no confirmation, no Anlage, a valid checklist and the employer printed (the SHA-256 of the
+  project's customer name); it compares the profile's revision, `form_person` and the customer name
+  (`source_changed`; `update_project` writes it under the exclusive project lock, so the shared
+  lock makes the comparison atomic); the TL 407 takes neither and is otherwise unchanged.
 - **The lock order** (the project's advisory lock first: shared through `lock_participation`,
   exclusive for a bulk generation):
 
@@ -921,7 +923,7 @@ Q202 the readings.
   |---|---|
   | `record_form_generation`, `read_kug200b_values` | the participation → the new document and generation |
   | `lock_bulk_form_generation`, then `record_form_generation` per member in the same transaction | the project's exclusive lock → the participations in UUID order (`FOR UPDATE`) → each new document and generation |
-  | `review_document` (Kug 200b) | the participation → the documents in id order (the generation `FOR SHARE`, the scan `FOR UPDATE`) → `consent_record` of the purpose in force (id order, `FOR UPDATE`) → the new consent record |
+  | `review_document` (Kug 200b) | the participation → the documents in id order (the generation `FOR SHARE`, the scan `FOR UPDATE`) → `consent_record` of the purpose in force (id order, `FOR UPDATE`, only when the new paper is in force) → the new consent record |
   | `decline_kug200b_offer` | the participation → `asu_record` `FOR SHARE` → the new `kug200b_decline` |
   | `record_declaration_withdrawal` | the participation → the consent record `FOR UPDATE` → the new `kug200b_withdrawal` |
   | `record_withdrawal_ba_notice` | the participation → `kug200b_withdrawal` `FOR UPDATE` |
@@ -934,15 +936,20 @@ Q202 the readings.
   `review_document` (replaced, signature unchanged): the Kug 200b's acceptance with `p_signed_on`
   and the three confirmations, no `p_countersigned_on` or declarations (`invalid_argument`),
   `signature_in_future`, `signature_before_generation`; the signed declarations, the consent record
-  (an earlier one in force ended `superseded`), audited `signed_declaration_recorded`,
-  `consent_given`, `consent_ended`. `decline_kug200b_offer` (`kug200b_signed`, `asu_route_kug200b`,
+  by the dates, never the order of acceptance (in force only if its date is after every withdrawal
+  received and not before a record in force whose paper is usable, the earlier ones then ended
+  `superseded`; otherwise written ended `superseded` at once, as history), audited
+  `signed_declaration_recorded`, `consent_given`, `consent_ended`. `decline_kug200b_offer` (`kug200b_signed`, `asu_route_kug200b`,
   `kug200b_declined`, `declined_on_in_future`). `record_declaration_withdrawal`
   (`consent_not_found`, `consent_ended`, `received_on_in_future`, `received_before_consent`).
   `record_withdrawal_ba_notice` (`withdrawal_not_found`, `ba_notice_recorded`,
   `notified_on_in_future`, `notified_before_receipt`). `create_export_link` (`session_invalid`,
-  `document_not_found`, `document_quarantined`, `actor_not_allowed` through
-  `export_document_allowed`; audited `export_created`, project-level) and `export_link_content`
-  (`export_link_invalid`, `export_stale`; audited `export_downloaded`; `VOLATILE`, since it
+  `actor_not_allowed` in assisted mode; then visibility before any state: `document_not_found`
+  for a form that isn't live, a Kug 200b or the user's to open (`export_document_visible`), then
+  `invalid_argument` for more than one project, `document_quarantined`, `document_invalidated`;
+  audited `export_created`, project-level) and `export_link_content`
+  (`export_link_invalid`, `export_stale` through `export_document_allowed`, which is visible and
+  neither quarantined nor invalidated; audited `export_downloaded`; `VOLATILE`, since it
   writes the event). `record_audit_event` refuses the four new types and `export_created`; the
   constraint `audit_event_export_of_project` keeps both export events project-level.
 - **Catalog version 6:** the signed Kug 200b with the signed TL 407's operations (add and review:

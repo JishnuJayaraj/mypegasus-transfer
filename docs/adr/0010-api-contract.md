@@ -472,11 +472,12 @@ generator then. No action now.
   once) → `201 { generations }` in the order asked, all or nothing. `422` with form-level codes
   (`form_version_unavailable`, `character_unsupported`, `identifier_too_long`, …),
   `participation_closed`, `asu_not_applicable`; in a bulk at `/participationIds/<index>`, and
-  `participation_not_found` there for a participation of another project. `409 source_changed`,
+  `participation_not_found` there for a participation of another project. `409 source_changed`
+  (also when the project's customer, which the form prints, changed before the record),
   `503 storage_unavailable`. Both `no-store`.
 - The tab: `AsuView.kug200b` (`Kug200bOffer`): `offeredOn`, `outcome` (`signed`, `declined`,
   null), `declinedOn`, `profileAccess` (`{ consentId, givenOn }` while declaration 17's record is
-  in force), `withdrawals` (`{ id, receivedOn, recordedAt, baNotifiedOn }`), for the readers of the
+  in force and its paper usable), `withdrawals` (`{ id, receivedOn, recordedAt, baNotifiedOn }`), for the readers of the
   Kug 200b types `forms` (`Kug200bGeneratedForm`, with its checklist and `capabilities.open`),
   `scans` (`Kug200bScan`, `DocumentCapabilities`) and `versions` (absent for back office), and
   `capabilities` (`generate`, `addScan`, `decline`, `recordWithdrawal`, `recordBaNotice`).
@@ -494,10 +495,12 @@ generator then. No action now.
   `form_version_required`, `form_version_not_allowed`, `form_version_unknown`).
 - **Exports** (the shape for every later export): `POST /exports/{kind}` (`ExportKind`
   `kug200b_print`; `ExportInput` `{ documentIds }`, 1–100) → `201 ExportLink` `{ url, expiresAt }`,
-  same origin, bound to the asking staff session, valid 60 s (`404` for a form not found, `403` for
-  one the viewer can't open, `422 document_quarantined`); `GET /export-content/{token}` (staff
-  session) → the PDF as an `attachment`, `no-store`, `nosniff`, rendered at the download and
-  stored nowhere; `404` for another session, user or an expired link, `422 export_stale` when a
+  same origin, bound to the asking staff session, valid 60 s (`404` for a form that isn't live, a
+  generated Kug 200b or the viewer's to open, whatever its state; `403` in assisted mode; only for
+  forms the viewer sees `422 document_quarantined`, `document_invalidated`, `invalid_argument` for
+  more than one project); `GET /export-content/{token}` (staff session) → the PDF as an
+  `attachment`, `no-store`, `nosniff`, with the download policy `default-src 'none'; sandbox` (as
+  `/document-content/`), rendered at the download and stored nowhere; `404` for another session, user or an expired link, `422 export_stale` when a
   document is no longer live, unquarantined and the viewer's.
 - The work list: `WorklistCaseItem.kind` adds `kug200b_offer_open` and
   `kug200b_withdrawal_ba_notice` (`date`: the offer's, the withdrawal's receipt);

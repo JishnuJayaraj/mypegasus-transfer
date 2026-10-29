@@ -504,8 +504,12 @@ touches a registration.
   information completed, signed**; nothing is preselected. It records the signed declarations 16
   and 17 and declaration 17 as written as one consent record (purpose `kug200b_profile_access`,
   source `paper_form`, given on the field-19 date, the scan; data-protection.md, signed
-  declarations). A later accepted paper supersedes the earlier record (`consent_ended`,
-  `superseded`), so one is in force.
+  declarations). One record is in force, by the dates and never the order of acceptance: an
+  accepted paper is in force only if signed after every withdrawal received and not before a
+  record in force whose paper is usable, and then supersedes the earlier (`consent_ended`,
+  `superseded`); an older paper is kept as history, its record ended `superseded` at once, so a
+  renewed declaration needs a later paper. A quarantined, deleted or invalidated paper's record
+  isn't shown as in force; its withdrawals and their BA notice stay.
 - **Outcome `declined`:** recorded with its date by the PL or the assigned consultant, once, while
   nothing is signed and the route isn't `kug_200b` (`asu_route_kug200b`: the route changes first,
   so a declined offer is never a missing scan). A later signed paper still makes the outcome

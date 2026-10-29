@@ -799,8 +799,10 @@ and highly confidential data only; ordinary person-data writes are `participant_
   the TL 407's, without a declaration snapshot, confirmations or Anlage; with the **handwriting
   checklist** (`[{code, key}]`: `required_blank`, `text_not_fitting`; keys, never values), which the
   generation answers and the tab lists before printing (Q197 (8)). `record_form_generation`
-  compares the profile's revision (which the sensitive answers' writes move too) and the person
-  printed under the lock (`409 source_changed`). Audited `form_generated` per form.
+  compares the profile's revision (which the sensitive answers' writes move too), the person
+  printed and the employer printed (the SHA-256 of the project's customer name, which a project
+  change writes under the exclusive project lock) under the lock (`409 source_changed`). Audited
+  `form_generated` per form.
 
 ### Signed scans, signed declarations and quarantine *(accepted, Q49, Q183–Q185, Q191, Q193; as built in Slice 6, PR 6-3b; readings Q200)*
 
@@ -867,8 +869,14 @@ and highly confidential data only; ordinary person-data writes are `participant_
   also writes one `consent_record` (purpose `kug200b_profile_access`, source `paper_form`, text
   version `kug200b-<form version>:v1`, `de`, `given_on` the date on the paper, the scan's id, the
   reviewer as actor; `consent_given` with its source). Whether it is a GDPR consent and what a
-  withdrawal effects stay the DPO's and legal's check. One record is in force: a later accepted
-  paper ends the earlier `superseded`. A written **withdrawal** that reaches the TG ends it
+  withdrawal effects stay the DPO's and legal's check. One record is in force, decided by the
+  dates and never by the order of acceptance (Q202 (4)): an accepted paper is in force only if
+  its date is after every withdrawal received and not before a record in force whose paper is
+  usable; it then ends the earlier records `superseded`. An older paper is kept as history: its
+  record is written and ended `superseded` at once (`consent_given`, `consent_ended`), so a
+  renewed declaration needs a later paper. The tab shows declaration 17 in force only while its
+  paper is usable (not quarantined, deleted or invalidated); the withdrawals and their BA notice
+  stay either way. A written **withdrawal** that reaches the TG ends it
   `revoked` (`consent_ended`) with the date received (`kug200b_withdrawal`, `internal`,
   `case_internal` as `kug200bOffer`, `participation_record`), recorded by the PL or the assigned
   consultant, also after the end; "BA informiert am" is recorded with its date, never a claim that
@@ -881,9 +889,12 @@ and highly confidential data only; ordinary person-data writes are `participant_
 ### Exports *(accepted, Q159; as built in Slice 6, PR 6-4b)*
 
 - **An export is issued by a logged request** (`POST /exports/{kind}`; `create_export_link`):
-  staff as themselves through a live session; the kind `kug200b_print` covers 1–100 live,
-  unquarantined generated Kug 200b forms of one project, each the requester's to open now (the
-  type's open roles, a consultant only while assigned). It stores a link: the SHA-256 of 32 random
+  staff as themselves through a live session (in assisted mode `403`); the kind `kug200b_print`
+  covers 1–100 live, unquarantined generated Kug 200b forms of one project, each the requester's
+  to open now (the type's open roles, a consultant only while assigned). **Visibility comes
+  first:** a form that doesn't exist, is deleted, is of another type or isn't the requester's to
+  open is `404` whatever its state (`export_document_visible`); only for forms they see do forms
+  of more than one project, quarantine and invalidation answer `422`. It stores a link: the SHA-256 of 32 random
   bytes (never the token), the kind, the document ids fixed at the request, the staff user and the
   session's hash, valid 60 seconds (`export_link`, `internal`, class `access_credential`; the
   runtime role has no privilege on it). Audited `export_created` (the kind and count; security,
@@ -892,7 +903,8 @@ and highly confidential data only; ordinary person-data writes are `participant_
   user and session that asked, within the 60 seconds (else `404`); every document again: still
   live, not quarantined or invalidated, still the user's to open (else `422 export_stale`, nothing
   served). The output is rendered at that moment from the immutable generated forms (one merged
-  PDF, `attachment`, `no-store`), streamed and stored nowhere. Every download is audited
+  PDF, `attachment`, `no-store`, `nosniff`, and the download policy `default-src 'none'; sandbox`
+  as a document's download), streamed and stored nowhere. Every download is audited
   `export_downloaded` (kind and count).
 - Logs carry ids, codes and counts, never a token, a value or a file's content. The bound: a print
   file ≤ 100 forms; a batch (6-5a) ≤ 200 members.
