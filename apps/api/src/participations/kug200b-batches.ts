@@ -158,6 +158,10 @@ async function factsOf(db: Db, projectId: string) {
   return { people: byId, scans, facts };
 }
 
+/** The tab's order: last name, then first name. */
+const byName = (a: { lastName: string; firstName: string }, b: typeof a) =>
+  a.lastName.localeCompare(b.lastName, "de") || a.firstName.localeCompare(b.firstName, "de");
+
 /** A name as the tab lists it. */
 const nameOf = (person: { lastName: string | null; firstName: string | null } | undefined) => ({
   lastName: person?.lastName ?? "",
@@ -249,8 +253,6 @@ export async function batchesView(
     formVersion,
     asuChannel: people.get(scan.participationId)?.asuChannel ?? null,
   });
-  const byName = (a: { lastName: string; firstName: string }, b: typeof a) =>
-    a.lastName.localeCompare(b.lastName, "de") || a.firstName.localeCompare(b.firstName, "de");
 
   return {
     withoutPlacementAgentur,

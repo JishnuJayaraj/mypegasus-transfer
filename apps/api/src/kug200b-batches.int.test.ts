@@ -125,16 +125,16 @@ async function ready({ lastName = "Beispiel", route = "kug_200b" } = {}) {
   return { id, documentId };
 }
 
-const tab = async (as = projectLead) =>
+const tab = async (as: string = projectLead) =>
   readJson(await request("GET", `/projects/${werkNord}/kug200b-batches`, as), Kug200bBatchesView);
-const build = (documentIds: string[], as = projectLead) =>
+const build = (documentIds: string[], as: string = projectLead) =>
   request("POST", `/projects/${werkNord}/kug200b-batches`, as, { agenturKey: ost, documentIds });
 async function built(documentIds: string[]) {
   const res = await build(documentIds);
   expect(res.status).toBe(201);
   return (await readJson(res, Kug200bBatchCreated)).batchId;
 }
-const submitBatch = async (batchId: string, as = projectLead, submittedOn?: string) =>
+const submitBatch = async (batchId: string, as: string = projectLead, submittedOn?: string) =>
   request("POST", `/kug200b-batches/${batchId}/submission`, as, {
     submittedOn: submittedOn ?? (await today()),
   });

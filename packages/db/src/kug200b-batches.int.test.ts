@@ -428,21 +428,21 @@ describe("submit_kug200b_batch (D19, D25)", () => {
   });
 });
 
-describe("record_asu_confirmation (D19)", () => {
-  async function submitted() {
-    const id = await participation();
-    await submit(await create([await acceptedScan(id)]));
-    const { id: registrationId } = await one("select id from asu_registration");
-    return { id, registrationId };
-  }
-  const confirm = (id: string, registrationId: string, confirmedOn: string, context = pl) =>
-    call(app, "record_asu_confirmation", {
-      context,
-      participationId: id,
-      registrationId,
-      confirmedOn,
-    });
+async function submitted() {
+  const id = await participation();
+  await submit(await create([await acceptedScan(id)]));
+  const { id: registrationId } = await one("select id from asu_registration");
+  return { id, registrationId };
+}
+const confirm = (id: string, registrationId: string, confirmedOn: string, context = pl) =>
+  call(app, "record_asu_confirmation", {
+    context,
+    participationId: id,
+    registrationId,
+    confirmedOn,
+  });
 
+describe("record_asu_confirmation (D19)", () => {
   it("records the Agentur's date once, by the PL, from the submission to today", async () => {
     const { id, registrationId } = await submitted();
     await expect(confirm(id, registrationId, await today(), asConsultant)).rejects.toMatchObject(
