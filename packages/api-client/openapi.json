@@ -1338,7 +1338,7 @@
               "properties": {
                 "key": {
                   "type": "string",
-                  "pattern": "^[a-z_]+\\.[A-Za-z]+$"
+                  "pattern": "^[a-z_]+\\.[A-Za-z][A-Za-z0-9]*$"
                 },
                 "from": {
                   "anyOf": [
@@ -1539,7 +1539,7 @@
               "properties": {
                 "key": {
                   "type": "string",
-                  "pattern": "^[a-z_]+\\.[A-Za-z]+$"
+                  "pattern": "^[a-z_]+\\.[A-Za-z][A-Za-z0-9]*$"
                 },
                 "value": {
                   "anyOf": [
