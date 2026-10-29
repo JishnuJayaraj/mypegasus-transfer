@@ -43,7 +43,7 @@ describe("the Kug 200a's header", () => {
     await userEvent.clear(
       section.getByLabelText("Betriebsnummer des personalabgebenden Betriebes"),
     );
-    await userEvent.click(section.getByRole("button", { name: "Kopf speichern" }));
+    await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
     await waitFor(() =>
       expect(calls).toContainEqual({
         key: `PATCH ${path}`,
@@ -62,10 +62,10 @@ describe("the Kug 200a's header", () => {
     });
     renderApp(`/projects/${project.id}?tab=setup`, api);
     const section = await openSection();
-    await userEvent.click(section.getByRole("button", { name: "Kopf speichern" }));
+    await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
     expect(await section.findByText("Nichts geändert.")).toBeInTheDocument();
     await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "TK-1");
-    await userEvent.click(section.getByRole("button", { name: "Kopf speichern" }));
+    await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
     expect(
       await section.findByText("Ohne „TK-“ eingeben: das Formular druckt es schon."),
     ).toBeInTheDocument();
@@ -76,7 +76,7 @@ describe("the Kug 200a's header", () => {
     renderApp(`/projects/${project.id}?tab=setup`, api);
     const section = await openSection();
     await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "1");
-    await userEvent.click(section.getByRole("button", { name: "Kopf speichern" }));
+    await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
     expect(
       await section.findByText("Die Angaben konnten nicht gespeichert werden."),
     ).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe("the Kug 200a's header", () => {
     const { api } = setup({}, readOnly);
     renderApp(`/projects/${project.id}?tab=setup`, api);
     const section = await openSection();
-    expect(section.queryByRole("button", { name: "Kopf speichern" })).toBeNull();
+    expect(section.queryByRole("button", { name: "Angaben übernehmen" })).toBeNull();
     expect(section.getByText("87654321")).toBeInTheDocument();
     expect(section.getAllByText("nicht erfasst")).toHaveLength(2);
   });

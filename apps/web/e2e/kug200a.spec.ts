@@ -124,22 +124,34 @@ async function acceptedScan(api: APIRequestContext, baseURL: string, participati
   );
 }
 
-/** The Agentur's confirmed batch channel, as the PL records it (an Agentur-scoped setting). */
+/**
+ * The Agentur's confirmed batch channel, as the PL records it (an Agentur-scoped setting). Other
+ * specs write the project's override in parallel: a stale version (409) reads it again.
+ */
 async function agenturSetting(api: APIRequestContext, baseURL: string) {
-  const config = (await (await ok(api.get(`/api/v1/projects/${projectId}/config`))).json()) as {
-    override: { version: number };
-  };
-  // A retry or another spec finds the setting already recorded (`override_unchanged`).
-  const res = await api.put(`/api/v1/projects/${projectId}/config/agentur-settings/${agenturKey}`, {
-    headers: { Origin: baseURL },
-    data: {
-      expectedVersion: config.override.version,
-      settings: { asu_registration: { batchSubmissionChannel: "scan_email" } },
-      source: "email_agentur",
-      confirmedOn: berlin().iso,
-    },
-  });
-  expect([200, 422]).toContain(res.status());
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const config = (await (await ok(api.get(`/api/v1/projects/${projectId}/config`))).json()) as {
+      override: { version: number };
+    };
+    // A retry finds the setting already recorded (`override_unchanged`).
+    const res = await api.put(
+      `/api/v1/projects/${projectId}/config/agentur-settings/${agenturKey}`,
+      {
+        headers: { Origin: baseURL },
+        data: {
+          expectedVersion: config.override.version,
+          settings: { asu_registration: { batchSubmissionChannel: "scan_email" } },
+          source: "email_agentur",
+          confirmedOn: berlin().iso,
+        },
+      },
+    );
+    if (res.status() !== 409) {
+      expect([200, 422]).toContain(res.status());
+      return;
+    }
+  }
+  throw new Error("The project's override kept changing");
 }
 
 test("slice 6-5a-2: a batch's Kug 200a and scans, with the checklist before printing", async ({
@@ -163,10 +175,10 @@ test("slice 6-5a-2: a batch's Kug 200a and scans, with the checklist before prin
   await page.goto(`/projects/${projectId}?tab=setup`);
   const header = page.getByRole("region", { name: "Kopf der Kug 200a" });
   await header.getByLabel("T-Kug-Nummer").fill("TK-123");
-  await header.getByRole("button", { name: "Kopf speichern" }).click();
+  await header.getByRole("button", { name: "Angaben übernehmen" }).click();
   await expect(header).toContainText("Ohne „TK-“ eingeben: das Formular druckt es schon.");
   await header.getByLabel("T-Kug-Nummer").fill("123-456-7890");
-  await header.getByRole("button", { name: "Kopf speichern" }).click();
+  await header.getByRole("button", { name: "Angaben übernehmen" }).click();
   await expect(header).toContainText("Gespeichert.");
   await expectAccessible(page);
   await header.screenshot({ path: test.info().outputPath("1-header.png") });

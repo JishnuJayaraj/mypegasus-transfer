@@ -111,22 +111,34 @@ async function readyParticipation(lastName: string) {
   return participationId;
 }
 
-/** The Agentur's confirmed batch channel, as the PL records it (an Agentur-scoped setting). */
+/**
+ * The Agentur's confirmed batch channel, as the PL records it (an Agentur-scoped setting). Other
+ * specs write the project's override in parallel: a stale version (409) reads it again.
+ */
 async function agenturSetting(api: APIRequestContext, baseURL: string) {
-  const config = (await (await ok(api.get(`/api/v1/projects/${projectId}/config`))).json()) as {
-    override: { version: number };
-  };
-  // A retry finds the setting already recorded (`override_unchanged`).
-  const res = await api.put(`/api/v1/projects/${projectId}/config/agentur-settings/${agenturKey}`, {
-    headers: { Origin: baseURL },
-    data: {
-      expectedVersion: config.override.version,
-      settings: { asu_registration: { batchSubmissionChannel: "scan_email" } },
-      source: "email_agentur",
-      confirmedOn: berlin().iso,
-    },
-  });
-  expect([200, 422]).toContain(res.status());
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const config = (await (await ok(api.get(`/api/v1/projects/${projectId}/config`))).json()) as {
+      override: { version: number };
+    };
+    // A retry finds the setting already recorded (`override_unchanged`).
+    const res = await api.put(
+      `/api/v1/projects/${projectId}/config/agentur-settings/${agenturKey}`,
+      {
+        headers: { Origin: baseURL },
+        data: {
+          expectedVersion: config.override.version,
+          settings: { asu_registration: { batchSubmissionChannel: "scan_email" } },
+          source: "email_agentur",
+          confirmedOn: berlin().iso,
+        },
+      },
+    );
+    if (res.status() !== 409) {
+      expect([200, 422]).toContain(res.status());
+      return;
+    }
+  }
+  throw new Error("The project's override kept changing");
 }
 
 test("slice 6-5a-1: a Kug 200b batch from building to the Agentur's confirmation", async ({
