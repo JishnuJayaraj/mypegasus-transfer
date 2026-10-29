@@ -526,7 +526,7 @@ touches a registration.
   `kug200b_withdrawal_ba_notice` with the earliest unnotified withdrawal's date of receipt, also
   after the end. Filters and counts follow with 6-5b.
 
-#### Kug 200b batches *(accepted, Q45, Q91, Q187, Q203; as built in Slice 6, PR 6-5a-1)*
+#### Kug 200b batches *(accepted, Q45, Q91, Q187, Q203; as built in Slice 6, PRs 6-5a-1 and 6-5a-2; readings Q205)*
 
 `ta_tg` only. The PL alone builds and sends them (the project tab "Agentur"); back office never
 opens a signed Kug 200b (Q49).
@@ -536,8 +536,7 @@ opens a signed Kug 200b (Q49).
   **artifact**: the official Kug 200a, or the alternative list when the Agentur's acceptance is
   recorded as an Agentur-scoped setting (regional-variation.md, the accepted alternative). The
   batch records both when it is built. The **operational index** (last name, first name, form
-  version; "Arbeitsliste (CSV)") is the PL's work list, never the artifact. Filling the Kug 200a,
-  the alternative list and the scans PDF come with PR 6-5a-2.
+  version; "Arbeitsliste (CSV)") is the PL's work list, never the artifact.
 - **Ready scans:** per open participation placed with the Agentur its newest accepted, live,
   unquarantined, uninvalidated Kug 200b scan, while the participation is in no open batch, its
   Kug 200b was never submitted, it has no registration on the route `kug_200b`, and its version
@@ -567,6 +566,17 @@ opens a signed Kug 200b (Q49).
   The submitted scan is the fact's supporting evidence: while it is quarantined, invalidated or
   deleted the registration stays as history but supplies no `asuRegisteredWithProof`; after a
   lifted quarantine the fact counts from the lift. No lifecycle status reverses on its own.
+- **The official artifact** (PR 6-5a-2; ba-forms.md, the Kug 200a as built): an open, current
+  batch offers "Kug 200a (PDF)" (or "Sammelliste (PDF)", the accepted alternative with the same
+  contents) and, on the channels `scan_email` and `upload`, "Scans (PDF)": the members' accepted
+  scans in one PDF in the list's order (a PDF as it is, an image as an A4 page). On a paper
+  channel the Kug 200a goes with the originals, so no scans PDF (`export_not_applicable`). The tab
+  shows the handwriting checklist beside the download, before printing: the header keys not set,
+  the members' missing values (address, RV-Nummer, TG dates), what the data doesn't decide (the
+  last activity at the employer and its period, the info event's date over several dates; Q205)
+  and what doesn't fit at 6 pt, by member. Both downloads are exports (data-protection.md,
+  exports): the PL alone, rechecked **in full at the download**, settings included, and compared
+  by what they print (`409 source_changed`); nothing stored.
 - **No duplicate initial submission:** a participation whose Kug 200b was submitted doesn't join
   another batch. Retransmitting a rejected, returned or unreceived packet is open (Q204, before
   the pilot).

@@ -92,7 +92,10 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   `manifest.json`. It also owns `organisation.json`, the validated controller and DPO details
   interpolated into immutable Article 14 notice templates and, from Slice 6, the delivering legal
   entity `transfergesellschaft` (name and address: the TL 407's Maßnahmeträger and the Kug 200b's
-  TG; synthetic values in the repository).
+  TG; from PR 6-5a-2 the optional `betriebsnummer`, eight digits, and `economicClass`, the
+  Branche/Wirtschaftsklasse, which the Kug 200a's header prints or, unset, lists for handwriting;
+  synthetic values in the repository). Its schema is `Organisation` in
+  `packages/config/src/organisation.ts` with `TransferCompany` from `packages/domain`.
 - `packages/adapters`: interfaces + implementations behind them (ADR-0006). `Clock` (system,
   manual, Berlin dates and run times); `Mailer` and `SmsSender` contracts and their idempotent
   last-100 development outbox; `FileStorage` (memory for tests, filesystem under `STORAGE_DIR`
@@ -249,8 +252,11 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   `apps/web/src/components/agentur-tab.tsx`, `GET /projects/{id}/kug200b-batches`): per placement
   Agentur the batch channel or "Einstellungen fehlen", the artifact and the ready Kug 200b scans,
   "Sammelmeldung bilden"; the batches with "Arbeitsliste (CSV)" (an export link), "Übermittelt am",
-  "Verwerfen" and a stale batch's rows. It is the last tab, so the others keep their place;
-  "Bestätigung der Agentur am" is on the participant's tab "Arbeitsuche".
+  "Verwerfen" and a stale batch's rows; from PR 6-5a-2 an open batch's handwriting checklist,
+  "Kug 200a (PDF)" or "Sammelliste (PDF)" and, on a digital channel, "Scans (PDF)". It is the last
+  tab, so the others keep their place; "Bestätigung der Agentur am" is on the participant's tab
+  "Arbeitsuche". The Kug 200a's header on the project (T-Kug-Nummer, the employer's
+  Betriebsnummer and Branche/WK) is edited on "Einrichtung" (`kug200a-header.tsx`).
 - **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende", "mit
   offenen Angaben oder Unterlagen", "Frist in 14 Tagen", "Frist überschritten", "Hinweise", "nicht
   erreichbar") and tables per status, track, wave, activation and notice state, deadline kind and
