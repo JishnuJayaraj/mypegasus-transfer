@@ -17,8 +17,10 @@ as Q200 (accepted with amendments in the review of PR #91). 6-4 is estimated at 
 and splits into 6-4a (the ASU record) and 6-4b (the Kug 200b) (the owner's choice, 2026-10-28,
 with the ASU proof's operations); 6-4a recorded its readings as Q201 (accepted with amendments in
 the review of PR #95); 6-4b stays one PR (the owner's choice, 2026-10-28) and records its readings
-as Q202. Q1 stays `verify`. This is not an external DPO, legal, works-council or
-Agentur confirmation.
+as Q202. 6-5a is estimated at about 4,200 lines and splits into 6-5a-1 (the batches) and 6-5a-2
+(the batch artifact) (the owner's choice, 2026-10-29, with new configuration and project keys for
+the Kug 200a's header); 6-5a-1 records its readings as Q203. Q1 stays `verify`. This is not an
+external DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
 `packages/forms` with TL 407 and Kug 200b (ADR-0009), the PDF adapter (pdf-lib + Gotenberg behind
 `PdfRenderer`, ADR-0006), the overflow attachment, scan upload, Agentur submission status; from
@@ -419,13 +421,13 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
     as a retention-plan test while periods are `unset`);
   - an old proof linked today gives a fact recorded today, not before (6-4a); the Kug 200b route
     proven by the batch submission and the `online_self` route by the attestation with its date,
-    each passing `asu_registered_with_proof` on the TG start (6-4a, 6-5a); a declined offer or a
+    each passing `asu_registered_with_proof` on the TG start (6-4a, 6-5a-1); a declined offer or a
     withdrawal leaves the registration intact (6-4b);
   - a missing knowledge date is no overdue finding, and the branch boundary (knowledge on, one day
     before and one day after the reference date) exposes the old maximum's defect (6-4a);
-  - a required Kug 200a is generated and checked, or an accepted alternative is used (6-5a); two
+  - a required Kug 200a is generated and checked, or an accepted alternative is used (6-5a-2); two
     batches racing for one scan give one; a stale batch refuses submission; a terminal member gets
-    no registration (6-5a);
+    no registration (6-5a-1);
   - a missed exception deadline escalates the same day; a rejected submission reopens its work
     (6-5b);
   - a wrong-person scan accepted by mistake is quarantined at once and corrected without losing the
@@ -442,7 +444,7 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
 ## PRs
 
 One planned PR = one branch, each based on `main` after the PRs it needs merged (none stacked).
-The approved seven PRs become eleven: the official Kug 200a takes 6-5 past the limit, so it splits
+The approved seven PRs become twelve: the official Kug 200a takes 6-5 past the limit, so it splits
 into 6-5a (Kug 200b batches with the Kug 200a) and 6-5b (TL 407 submission and escalation), as the
 review allowed; the approved corrections of wrong evidence are a concern of their own (6-8, after
 its three targets exist). 6-3 came to about 4,200 lines and splits along its two halves, the
@@ -451,7 +453,12 @@ last PR to merge archives this plan. 6-4 is estimated at about 5,000 lines (its 
 redo the generation, upload and review functions for a second form, as 6-3a and 6-3b did for the
 first) and splits the same way (the owner's choice, 2026-10-28): the ASU record that proves the
 registration (6-4a) and the Kug 200b offer on paper (6-4b), which needs the tab and the record of
-6-4a.
+6-4a. 6-5a is estimated at about 4,200 lines (6-4b came to about 4,400 against its 2,600) and splits
+(the owner's choice, 2026-10-29) into the batches with their submission and the work list
+(6-5a-1) and the batch's official artifact (6-5a-2), which needs the batches. The Kug 200a's header
+asks for the TG's Betriebsnummer, T-Kug-Nummer and Branche/WK and the employer's Betriebsnummer
+and Branche/WK, which exist nowhere yet: 6-5a-2 adds organisation-configuration keys for the TG
+and project fields for the rest, filled when set, a blank one on the handwriting checklist.
 
 | PR | Scope | Needs | Est. lines |
 |---|---|---|---|
@@ -461,7 +468,8 @@ registration (6-4a) and the Kug 200b offer on paper (6-4b), which needs the tab 
 | 6-3b | Signed TL 407 (D14, D15, D17, D18, D23): scans `generated` and `external_paper`, signed declarations, the review, the PL's deletion before review, quarantine, `tl407Signed`/`profilingDone`, `profiling_done`; e2e to `profiling_done` | 6-3a | ~2,300 |
 | 6-4a | ASU record and due date (D19, D21, D22, D23's `asuRegisteredWithProof`): `asu_registration` with the route and registrations, the attestation with its date and the write-only BA-Kundennummer, `asu_proof` upload, review and link, the complete fact's instant, the corrected formula, `knowledgeDate`, `asu_due` and `knowledge_date_missing`, rule `when`, `asuChannel` and base defaults 3, `asuProofState` from the record; tab "Arbeitsuche"; e2e to a registration with proof | 6-3b | ~2,400 |
 | 6-4b | Kug 200b (D8's `kug200b_form`, D17's Kug 200b review, D20, D24's export link and print file): generation single and bulk (1–100, all or nothing), the handwriting checklist, `export_link`, scans and review with 16 and 17, signed declarations and `consent_given`, decline, withdrawal and "BA informiert am", `kug200b_offer_open` and `kug200b_withdrawal_ba_notice`; work-list bulk "Kug 200b erzeugen"; e2e generation to acceptance | 6-4a | ~2,600 |
-| 6-5a | Kug 200b batches (D24, D25): the Kug 200a field map and fill (Q195), the accepted-alternative setting, the operational index, rechecks, submission, Agentur confirmation; project tab "Agentur" | 6-4b | ~1,300 |
+| 6-5a-1 | Kug 200b batches (D24, D25): `kug200b_batch` with its members, `agentur_submission`, the accepted-alternative setting, the operational index (CSV through the export link), rechecks, submission with the members' submissions and ASU registrations, discard, Agentur confirmation; project tab "Agentur", "Bestätigung der Agentur am"; e2e batch to confirmation | 6-4b | ~2,300 |
+| 6-5a-2 | The batch artifact (D25, Q195, Q197): the Kug 200a field map's fill over copies of six rows and its 6 pt assessment, `kug200aInput`, the header's configuration and project keys, the alternative list, the Kug 200a and scans PDF exports; their buttons; e2e downloads | 6-5a-1 | ~1,900 |
 | 6-5b | TL 407 submission and escalation (D26, D27): attempts, originals, rejections, `tl407_submission`, `tl407_escalated`, compliance escalation, `GET /escalations`, work-list items and filter | 6-3b | ~1,100 |
 | 6-6 | BA reporting tasks (D28) | — | ~400 |
 | 6-7 | Profiling exceptions (D30): evidence records of both sources, evidence review, fingerprints, request, decision, revocation, the queue "Freigaben" | — | ~1,300 |
@@ -498,7 +506,8 @@ Each PR that changes the document-type catalog takes its next version when it me
   `tg_start`; the `asu_proof` operations in the document catalog's next version.
 - 6-4b: `kug200bOfferOutcome`, the handwriting checklist from the field map; `kug200b_form`
   (operations `generated`) and the `kug200b_signed_scan` operations in the catalog's next version.
-- 6-5a: `batchEligibility`, `batchRecheck` (D25), `kug200aInput`.
+- 6-5a-1: `batchEligibility`, `batchRecheck` (D25), the batch's artifact from the resolved setting.
+  6-5a-2: `kug200aInput`.
 - 6-5b: `tl407SubmissionProblem`, `agenturItems(...)` with `AgenturItemKind`; `AgenturFilter`, the
   tile "Agentur offen" and the group "Agentur" in `funnelFilters`; `DeadlineKind` adds
   `tl407_submission`; `escalationRows(...)` (counts only).
@@ -522,10 +531,11 @@ Each PR that changes the document-type catalog takes its next version when it me
 | `signed_declaration` | 6-3b (+6-4b) | the scan, form code and version, the declaration codes and values as marked, the signature date, recorded by/at; immutable | confidential / `confidential` | `participation_record` (part of the signed form's evidence) |
 | `participant_identifier_data` | 6-4a | adds the BA-Kundennummer's ciphertext and presence | highly confidential / `identifiers` | `participation_record` (Q88) |
 | `participant_details` | 6-4a | adds `knowledge_date` | confidential / `confidential` | `personnel_file` |
-| `asu_registration` | 6-4a (+6-5a, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; `confirmed_on` | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
+| `asu_registration` | 6-4a (+6-5a-1, 6-8) | per participation the route and its version; per registration (append-only rows) channel, `registered_on`, proof kind and document, attestation source, attested by/at, `recorded_at` of the complete fact, `superseded_by`, `invalidated_by`; `confirmed_on` | internal / `case_internal` (`asuRegistration`, listable as codes and dates) | `participation_record` |
 | `kug200b_decline`, `kug200b_withdrawal` | 6-4b | the offer's decline date; a withdrawal's receipt, the consent record it ended and its BA notice date (own tables: an offer exists without a route or registration, Q202) | internal / `case_internal` (`kug200bOffer`) | `participation_record` |
-| `kug200b_batch` | 6-5a | project, Agentur key, channel, artifact (`kug200a` or `accepted_alternative`), status (`open`, `submitted`, `discarded`), created by/at, `submitted_on`, submitted by/at | internal / project data | `project_master` |
-| `agentur_submission` | 6-5a, 6-5b | participation, document, form code and version, Agentur key, channel, batch, `submitted_on`, recorded by/at, `original_sent_on`, rejection (date, reason); one row per attempt | internal / `case_internal` (`agenturSubmissions`) | `participation_record` (proof of submission) |
+| `kug200b_batch` | 6-5a-1 | project, Agentur key, channel, artifact (`kug200a` or `accepted_alternative`), status (`open`, `submitted`, `discarded`), created by/at, `submitted_on`, submitted by/at | internal / project data | `project_master` |
+| `kug200b_batch_member` | 6-5a-1 | the batch, participation, the scan, its form version, the member's ASU route and placement Agentur when the batch was built; `active` until a discard (one live membership per participation) | internal / `case_internal` (`agenturSubmissions`) | `participation_record` |
+| `agentur_submission` | 6-5a-1, 6-5b | participation, document, form code and version, Agentur key, channel, batch, `submitted_on`, recorded by/at, `original_sent_on`, rejection (date, reason); one row per attempt | internal / `case_internal` (`agenturSubmissions`) | `participation_record` (proof of submission) |
 | `export_link` | 6-4b | a link's token SHA-256, the export (kind and the ids it covers), the session's kind and hash, `expires_at` (60 s); no privilege for `transfer_app` | internal | `access_credential` |
 | `ba_reporting_task` | 6-6 (+6-8) | adds `outcome`, `reported_on`, `not_required_reason`, decided by/at, `superseded_by`, `replaces_task_id` | as before | as before |
 | `profiling_exception_evidence_record` | 6-7 | kind; the accepted document ids or the normalised BA confirmation (Agentur key, contact or reference, date) | confidential / `confidential`; its documents `health` | `participation_record` (Q81) |
@@ -553,8 +563,9 @@ Enum values are added in their PR's generated migration (`audit_event_type`, `do
   `add_document` and `review_document` for the Kug 200b; `record_form_generation` for the Kug 200b
   and 1–100 participations; `create_export_link` / `export_link_content` (re-authorizes,
   `export_downloaded`).
-- 6-5a: `create_kug200b_batch`, `discard_kug200b_batch`, `submit_kug200b_batch` (rechecks, the
-  members' submissions and ASU registrations), `record_asu_confirmation`.
+- 6-5a-1: `create_kug200b_batch`, `discard_kug200b_batch`, `submit_kug200b_batch` (rechecks, the
+  members' submissions and ASU registrations), `record_asu_confirmation`; the export link and
+  content for a batch. 6-5a-2: the Kug 200a's purpose-bound read.
 - 6-5b: `submit_tl407`, `record_original_sent`, `record_agentur_rejection`.
 - 6-6: `record_ba_report`.
 - 6-7: `create_exception_evidence_record` (from accepted documents or a BA confirmation; the
@@ -574,7 +585,7 @@ Enum values are added in their PR's generated migration (`audit_event_type`, `do
 | 6-4a | `GET /participations/{id}/asu`; `PUT …/asu/route`; `POST …/asu/registration`; `POST …/asu/proof-link`; `PUT …/knowledge-date` | the tab "Arbeitsuche" and its actions |
 | 6-4b | `POST …/asu/kug200b-decline`; `POST …/asu/withdrawal`; `POST …/asu/withdrawal-ba-notice` | the offer's decline, the withdrawal and its BA notice |
 | 6-4b | `POST /participations/{id}/forms/kug200b`; `POST /projects/{id}/forms/kug200b` (1–100); `POST /exports/{kind}` → link; `GET /export-content/{token}` | generation, bulk, exports (`attachment`, `no-store`) |
-| 6-5a | `GET /projects/{id}/kug200b-batches`; `POST /projects/{id}/kug200b-batches`; `POST /kug200b-batches/{id}/submission`; `…/discard`; `POST /participations/{id}/asu/confirmation` | candidates and batches; create; "Übermittelt am" (`422 batch_stale` with rows); discard; the Agentur's confirmation |
+| 6-5a-1 | `GET /projects/{id}/kug200b-batches`; `POST /projects/{id}/kug200b-batches`; `POST /kug200b-batches/{id}/submission`; `…/discard`; `POST /participations/{id}/asu/confirmation` | candidates and batches; create; "Übermittelt am" (`422 batch_stale` with rows); discard; the Agentur's confirmation |
 | 6-5b | `POST /participations/{id}/tl407-submissions`; `POST /agentur-submissions/{id}/original`; `…/rejection`; `GET /escalations`; `GET /projects/{id}/worklist`, `/dashboard` | submission, original, rejection; the regional admin's counts; the new deadlines, items, filter and counts |
 | 6-6 | `POST /ba-reporting-tasks/{id}/outcome` | `{ outcome: "reported", reportedOn } \| { outcome: "not_required", reason }` |
 | 6-7 | `POST /participations/{id}/exception-evidence`; `POST /participations/{id}/profiling-exception-requests`; `POST /profiling-exception-requests/{id}/decision`; `…/revocation`; `GET /reviews` | evidence record; request; decide; revoke; the queue "Freigaben" |
@@ -627,10 +638,11 @@ a file name, a form's content or a token.
   "Prüfen" with "16 und 17 angekreuzt, Pflichtangaben ausgefüllt, unterschrieben", "Abgelehnt"),
   "Erklärung zum Profilzugriff" (since, "Widerruf erfasst", "BA informiert am"). Work list bulk
   "Kug 200b erzeugen".
-- 6-5a: project tab "Agentur": per placement Agentur the channel or "Einstellungen fehlen", the
+- 6-5a-1: project tab "Agentur": per placement Agentur the channel or "Einstellungen fehlen", the
   artifact ("Kug 200a" or "Alternative anerkannt am … von …"), the ready scans, "Sammelmeldung
-  bilden", batches with "Kug 200a (PDF)", "Scans (PDF)", "Arbeitsliste (CSV)", "Übermittelt am",
-  "Verwerfen", the refused rows of a stale batch; on "Arbeitsuche" "Bestätigung der Agentur am".
+  bilden", batches with "Arbeitsliste (CSV)", "Übermittelt am", "Verwerfen", the refused rows of a
+  stale batch; on "Arbeitsuche" "Bestätigung der Agentur am". 6-5a-2: "Kug 200a (PDF)" or the
+  alternative list, "Scans (PDF)".
 - 6-5b: on "Profiling" "An Agentur übermittelt am", "Original versandt am", "Von der Agentur
   abgelehnt" and the attempts; work list deadlines `asu_due` "Arbeitsuche fällig",
   `tl407_submission` "TL 407 einreichen", the column "Agentur", filter "Agentur", tile "Agentur
@@ -768,10 +780,15 @@ a file name, a form's content or a token.
   and every `text_not_fitting` field (Q197); nothing disappears silently.
 - e2e: Kug 200b generation, checklist, scan, acceptance.
 
-**6-5a**
-- The Kug 200a fills from its field map and reads back; with a recorded accepted alternative the
-  batch uses the alternative list as its artifact and says so; the index is never the artifact.
+**6-5a-1**
+- With a recorded accepted alternative the batch records the alternative list as its artifact and
+  says so; the index is never the artifact.
 - Rechecks refuse a stale batch with its rows; races and the terminal member as D33.
+- e2e: batch, work list, "Übermittelt am", the Agentur's confirmation.
+
+**6-5a-2**
+- The Kug 200a fills from its field map and reads back; with a recorded accepted alternative the
+  alternative list is the artifact.
 - The Kug 200a's 6 pt minimum is assessed on representative filled PDFs before it is used
   (Q197).
 
@@ -820,9 +837,11 @@ a file name, a form's content or a token.
   attestation, `knowledgeDate`), ADR-0002, ADR-0010.
 - 6-4b: process-and-lifecycle.md (the offer and withdrawals), data-protection.md (declaration 17 as
   written, exports), ADR-0002, ADR-0010.
-- 6-5a: process-and-lifecycle.md (batches, the Kug 200a), regional-variation.md (the accepted
-  alternative; the batch blocker no longer a warning only, Q91), data-protection.md (the Kug 200a's
-  values), architecture/overview.md (tab "Agentur").
+- 6-5a-1: process-and-lifecycle.md (batches), regional-variation.md (the accepted alternative; the
+  batch blocker no longer a warning only, Q91), architecture/overview.md (tab "Agentur"), ADR-0002,
+  ADR-0010.
+- 6-5a-2: process-and-lifecycle.md and ba-forms.md (the Kug 200a), data-protection.md (the Kug
+  200a's values), organisation configuration.
 - 6-5b: process-and-lifecycle.md (submissions, escalations), data-protection.md (the regional view).
 - 6-6: process-and-lifecycle.md (BA reporting as built).
 - 6-7: process-and-lifecycle.md and data-protection.md (exception evidence records as built).
