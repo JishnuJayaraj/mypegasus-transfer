@@ -50,6 +50,8 @@ export const AsuRegistrationView = z
      * quarantined or invalidated proving document supplies none.
      */
     withProofSince: instant.nullable(),
+    /** "Bestätigung der Agentur am" (the route `kug_200b` only; follow-up, never a condition). */
+    confirmedOn: isoDate.nullable(),
   })
   .meta({ id: "AsuRegistration" });
 export type AsuRegistrationView = z.infer<typeof AsuRegistrationView>;
@@ -187,6 +189,8 @@ export const AsuView = z
       linkProof: z.boolean(),
       setKnowledgeDate: z.boolean(),
       addProof: z.boolean(),
+      /** The PL records the Agentur's confirmation of a batch's registration. */
+      recordConfirmation: z.boolean(),
     }),
   })
   .meta({ id: "AsuView" });

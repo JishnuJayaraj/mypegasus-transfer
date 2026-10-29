@@ -89,6 +89,11 @@ import {
   AttestationSource,
   ExportKind,
   exportLimits,
+  AgenturSubmissionChannel,
+  Kug200bBatchArtifact,
+  Kug200bBatchChannel,
+  kug200bBatchMax,
+  Kug200bBatchStatus,
   Kug200bScanConfirmation,
   kug200bDeclarations,
   scanForms,
@@ -455,6 +460,13 @@ export const asuChannel = pgEnum("asu_channel", values(AsuChannel));
 export const asuProofKind = pgEnum("asu_proof_kind", values(AsuProofKind));
 export const asuAttestationSource = pgEnum("asu_attestation_source", values(AttestationSource));
 export const exportKind = pgEnum("export_kind", values(ExportKind));
+export const kug200bBatchChannel = pgEnum("kug200b_batch_channel", values(Kug200bBatchChannel));
+export const kug200bBatchArtifact = pgEnum("kug200b_batch_artifact", values(Kug200bBatchArtifact));
+export const kug200bBatchStatus = pgEnum("kug200b_batch_status", values(Kug200bBatchStatus));
+export const agenturSubmissionChannel = pgEnum(
+  "agentur_submission_channel",
+  values(AgenturSubmissionChannel),
+);
 export const documentQuarantineReason = pgEnum(
   "document_quarantine_reason",
   values(QuarantineReason),
@@ -2047,6 +2059,14 @@ export const asuRegistration = pgTable(
     attestationSource: asuAttestationSource("attestation_source"),
     proofLinkedBy: uuid("proof_linked_by").references(() => staffUser.id),
     proofLinkedAt: instant("proof_linked_at"),
+    /** On `kug_200b`: the batch member's submission that is the registration (D19). */
+    agenturSubmissionId: uuid("agentur_submission_id").references(
+      (): AnyPgColumn => agenturSubmission.id,
+    ),
+    /** "Bestätigung der Agentur am" (`kug_200b` only): follow-up, never a condition. */
+    confirmedOn: dateColumn("confirmed_on"),
+    confirmedBy: uuid("confirmed_by").references(() => staffUser.id),
+    confirmedAt: instant("confirmed_at"),
   },
   (t) => [
     foreignKey({
@@ -2065,6 +2085,15 @@ export const asuRegistration = pgTable(
       sql`coalesce(${t.proofKind} = 'ba_confirmation', false) = (${t.proofDocumentId} is not null) and coalesce(${t.proofKind} = 'ba_customer_number', false) = (${t.attestationSource} is not null) and (${t.proofKind} is null or (${t.proofKind} = 'kug200b_submission') = (${t.channel} = 'kug_200b'))`,
     ),
     check("asu_registration_linked_after", sql`${t.proofLinkedAt} >= ${t.recordedAt}`),
+    unique("asu_registration_submission_unique").on(t.agenturSubmissionId),
+    check(
+      "asu_registration_submission",
+      sql`coalesce(${t.proofKind} = 'kug200b_submission', false) = (${t.agenturSubmissionId} is not null)`,
+    ),
+    check(
+      "asu_registration_confirmation",
+      sql`(${t.confirmedOn} is null) = (${t.confirmedBy} is null) and (${t.confirmedBy} is null) = (${t.confirmedAt} is null) and (${t.confirmedOn} is null or ${t.channel} = 'kug_200b' and ${t.confirmedOn} >= ${t.registeredOn})`,
+    ),
   ],
 );
 
@@ -2151,6 +2180,8 @@ export const exportLink = pgTable(
       .references(() => project.id),
     kind: exportKind("kind").notNull(),
     documentIds: uuid("document_ids").array().notNull(),
+    /** The batch a batch kind covers; its documents are the batch's members (`document_ids` empty). */
+    batchId: uuid("batch_id").references(() => kug200bBatch.id),
     staffUserId: uuid("staff_user_id")
       .notNull()
       .references(() => staffUser.id),
@@ -2164,7 +2195,150 @@ export const exportLink = pgTable(
     check("export_link_expires", sql`${t.expiresAt} > ${t.createdAt}`),
     check(
       "export_link_documents",
-      sql`cardinality(${t.documentIds}) between 1 and ${sql.raw(String(exportLimits.kug200b_print))}`,
+      sql`${t.batchId} is null and cardinality(${t.documentIds}) between 1 and ${sql.raw(String(exportLimits.kug200b_print))} or ${t.batchId} is not null and cardinality(${t.documentIds}) = 0`,
+    ),
+    check("export_link_batch", sql`(${t.batchId} is null) = (${t.kind} = 'kug200b_print')`),
+  ],
+);
+
+/**
+ * A Kug 200b batch (process-and-lifecycle.md, Kug 200b batches; D25, Q187): one placement
+ * Agentur's accepted scans, built by the PL with the channel and the artifact resolved then (the
+ * Kug 200a, or the alternative the Agentur accepted), its membership fixed; `open` until
+ * "Übermittelt am" (`submitted`, the actual sent date and the recording instant) or a discard.
+ * Project data (`project_master`): ids, codes, dates and counts. Written only by its functions.
+ */
+export const kug200bBatch = pgTable(
+  "kug200b_batch",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    agenturKey: text("agentur_key").notNull(),
+    channel: kug200bBatchChannel("channel").notNull(),
+    artifact: kug200bBatchArtifact("artifact").notNull(),
+    status: kug200bBatchStatus("status").notNull().default("open"),
+    memberCount: integer("member_count").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => staffUser.id),
+    createdAt: createdAt(),
+    submittedOn: dateColumn("submitted_on"),
+    submittedBy: uuid("submitted_by").references(() => staffUser.id),
+    submittedAt: instant("submitted_at"),
+    discardedBy: uuid("discarded_by").references(() => staffUser.id),
+    discardedAt: instant("discarded_at"),
+  },
+  (t) => [
+    unique("kug200b_batch_project_unique").on(t.id, t.projectId),
+    index("kug200b_batch_project_idx").on(t.projectId),
+    check("kug200b_batch_agentur_key", sql`${t.agenturKey} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
+    check(
+      "kug200b_batch_members",
+      sql`${t.memberCount} between 1 and ${sql.raw(String(kug200bBatchMax))}`,
+    ),
+    check(
+      "kug200b_batch_status",
+      sql`(${t.status} = 'submitted') = (${t.submittedOn} is not null) and (${t.submittedOn} is null) = (${t.submittedBy} is null) and (${t.submittedBy} is null) = (${t.submittedAt} is null) and (${t.status} = 'discarded') = (${t.discardedAt} is not null) and (${t.discardedAt} is null) = (${t.discardedBy} is null)`,
+    ),
+    check(
+      "kug200b_batch_submitted_on",
+      sql`${t.submittedOn} >= (${t.createdAt} at time zone 'Europe/Berlin')::date`,
+    ),
+  ],
+);
+
+/**
+ * A batch's member (D25): the participation, its accepted Kug 200b scan and form version, and its
+ * ASU route and placement Agentur when the batch was built, which the recheck compares; `active`
+ * until the batch is discarded, one live membership per participation. `case_internal`
+ * (`agenturSubmissions`), `participation_record`. Written only by the batch functions.
+ */
+export const kug200bBatchMember = pgTable(
+  "kug200b_batch_member",
+  {
+    batchId: uuid("batch_id").notNull(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => document.id),
+    formVersion: text("form_version").notNull(),
+    asuChannel: asuChannel("asu_channel"),
+    placementAgenturKey: text("placement_agentur_key").notNull(),
+    active: boolean("active").notNull().default(true),
+  },
+  (t) => [
+    primaryKey({ name: "kug200b_batch_member_pkey", columns: [t.batchId, t.participationId] }),
+    foreignKey({
+      name: "kug200b_batch_member_batch_fk",
+      columns: [t.batchId, t.projectId],
+      foreignColumns: [kug200bBatch.id, kug200bBatch.projectId],
+    }),
+    foreignKey({
+      name: "kug200b_batch_member_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    uniqueIndex("kug200b_batch_member_live_unique")
+      .on(t.participationId)
+      .where(sql`${t.active}`),
+    check(
+      "kug200b_batch_member_form_version",
+      sql`${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$'`,
+    ),
+  ],
+);
+
+/**
+ * A form submitted to an Agentur (process-and-lifecycle.md, Kug 200b batches; D25, D26): one row
+ * per attempt, the participation, the signed scan, its form code and version, the Agentur, the
+ * channel, the batch it went with, the actual sent date and who recorded it when (the proof of
+ * submission). `case_internal` (`agenturSubmissions`), `participation_record`. Written only by
+ * `submit_kug200b_batch` (PR 6-5b adds the TL 407's).
+ */
+export const agenturSubmission = pgTable(
+  "agentur_submission",
+  {
+    id: uuid("id").primaryKey(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => document.id),
+    formCode: formCode("form_code").notNull(),
+    formVersion: text("form_version").notNull(),
+    agenturKey: text("agentur_key").notNull(),
+    channel: agenturSubmissionChannel("channel").notNull(),
+    batchId: uuid("batch_id"),
+    submittedOn: dateColumn("submitted_on").notNull(),
+    recordedBy: uuid("recorded_by")
+      .notNull()
+      .references(() => staffUser.id),
+    recordedAt: instant("recorded_at").notNull().defaultNow(),
+  },
+  (t) => [
+    foreignKey({
+      name: "agentur_submission_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "agentur_submission_batch_fk",
+      columns: [t.batchId, t.projectId],
+      foreignColumns: [kug200bBatch.id, kug200bBatch.projectId],
+    }),
+    unique("agentur_submission_batch_member_unique").on(t.batchId, t.participationId),
+    index("agentur_submission_participation_idx").on(t.participationId),
+    check("agentur_submission_form_version", sql`${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$'`),
+    check(
+      "agentur_submission_batch",
+      sql`(${t.formCode} = 'kug200b') = (${t.batchId} is not null)`,
     ),
   ],
 );
@@ -3007,6 +3181,9 @@ export const tables = [
   kug200bDecline,
   kug200bWithdrawal,
   exportLink,
+  kug200bBatch,
+  kug200bBatchMember,
+  agenturSubmission,
   participantReminder,
   appointment,
   appointmentBooking,

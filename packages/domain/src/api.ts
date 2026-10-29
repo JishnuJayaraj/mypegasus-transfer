@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BatchStaleRow } from "./asu/batches";
 import { OrgRole, ProjectRole } from "./enums";
 import { OrgRoleGrant } from "./staff/accounts";
 
@@ -60,6 +61,8 @@ export const ProblemDetails = z
      * existing Personalnummer, R32); an id, never a value.
      */
     participationId: z.uuid().optional(),
+    /** A stale Kug 200b batch's rows (`batch_stale`): ids and codes, never a value. */
+    staleRows: z.array(BatchStaleRow).optional(),
     errors: z
       .array(
         z.object({

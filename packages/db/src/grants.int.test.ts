@@ -224,6 +224,15 @@ const statusFunctions = [
   "record_withdrawal_ba_notice",
   "create_export_link",
   "export_link_content",
+  // Slice 6: Kug 200b batches (process-and-lifecycle.md, Kug 200b batches; data-protection.md,
+  // exports)
+  "create_kug200b_batch",
+  "discard_kug200b_batch",
+  "submit_kug200b_batch",
+  "record_asu_confirmation",
+  "create_kug200b_batch_export_link",
+  "export_link_kind",
+  "kug200b_batch_export_content",
 ];
 const helpers = [
   "assert_context",
@@ -344,6 +353,12 @@ const helpers = [
   "form_checklist_valid",
   "export_document_allowed",
   "export_document_visible",
+  "kug200b_batch_lead",
+  "lock_kug200b_batch_project",
+  "kug200b_member_problem",
+  "kug200b_batch_recheck",
+  "lock_kug200b_batch",
+  "live_export_link",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
@@ -991,6 +1006,28 @@ describe("transfer_app and the document tables", () => {
        values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), current_date, gen_random_uuid())`,
     ),
     ["read the Kug 200b actor directly", "select lock_kug200b_actor(null, null, false)"],
+    // The batches, their members and the submissions are selected, written only by their
+    // functions (process-and-lifecycle.md, Kug 200b batches).
+    ...writes(
+      "kug200b_batch",
+      "status",
+      `insert into kug200b_batch (id, project_id, agentur_key, channel, artifact, member_count, created_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', 'beispielstadt-nord', 'upload', 'kug200a', 1, gen_random_uuid())`,
+    ),
+    ...writes(
+      "kug200b_batch_member",
+      "active",
+      `insert into kug200b_batch_member (batch_id, project_id, participation_id, document_id, form_version, placement_agentur_key)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), '09-2021', 'beispielstadt-nord')`,
+    ),
+    ...writes(
+      "agentur_submission",
+      "submitted_on",
+      `insert into agentur_submission (id, project_id, participation_id, document_id, form_code, form_version, agentur_key, channel, batch_id, submitted_on, recorded_by)
+       values (gen_random_uuid(), '${seedProjectIds.werkNord}', gen_random_uuid(), gen_random_uuid(), 'kug200b', '09-2021', 'beispielstadt-nord', 'upload', gen_random_uuid(), current_date, gen_random_uuid())`,
+    ),
+    ["recheck a batch directly", "select kug200b_member_problem(null, null, null, null, null)"],
+    ["read a link directly", "select live_export_link(null, null, null)"],
     ["find the actor directly", "select lock_document_actor(null, null, null, false)"],
     ["read roles directly", "select document_staff_roles(null, null)"],
     // Reminders (data-protection.md, reminders): selected, never written but by the functions.

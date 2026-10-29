@@ -100,6 +100,9 @@ describe("auditProjection (data-protection.md, audit metadata; Q157)", () => {
         "appointment_created",
         "appointment_changed",
         "appointment_cancelled",
+        "kug200b_batch_created",
+        "kug200b_batch_submitted",
+        "kug200b_batch_discarded",
       ].toSorted(),
     );
     for (const type of projectLevel) {

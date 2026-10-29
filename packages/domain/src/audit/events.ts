@@ -12,6 +12,7 @@ import {
   AgenturKey as agenturKey,
   AgenturSettingSource,
   AsuChannel,
+  Kug200bBatchChannel,
   OverrideChange,
 } from "../projects/agentur-settings";
 import { BaReportingKind } from "../projects/participation-dates";
@@ -21,6 +22,8 @@ import { waveDateFields } from "../projects/waves";
 import { AssistedModeEndReason, AssistedModeHow } from "../self-service/assisted";
 import { DocumentSource } from "../documents/api";
 import { ExportKind } from "../exports/api";
+import { Kug200bBatchArtifact, kug200bBatchMax } from "../asu/batches";
+import { AgenturSubmissionChannel } from "../asu/batches-api";
 import { kug200bDeclarations, ScanOrigin } from "../documents/scans";
 import { DocumentDeleteReason, DocumentReviewReason, QuarantineReason } from "../documents/state";
 import {
@@ -209,6 +212,13 @@ export const AuditEventType = z.enum([
   "declaration_withdrawal_ba_notified",
   // Slice 6, exports (data-protection.md, exports): the download, written only by its function
   "export_downloaded",
+  // Slice 6, Kug 200b batches (process-and-lifecycle.md, Kug 200b batches), written only by their
+  // functions
+  "kug200b_batch_created",
+  "kug200b_batch_submitted",
+  "kug200b_batch_discarded",
+  "agentur_submission_recorded",
+  "asu_confirmation_recorded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -317,6 +327,11 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "declaration_withdrawal_ba_notified",
   "export_created",
   "export_downloaded",
+  "kug200b_batch_created",
+  "kug200b_batch_submitted",
+  "kug200b_batch_discarded",
+  "agentur_submission_recorded",
+  "asu_confirmation_recorded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1359,6 +1374,58 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ withdrawalId: z.uuid(), notifiedOn: isoDate }),
+  }),
+  /**
+   * A Kug 200b batch built by the PL (process-and-lifecycle.md, Kug 200b batches): its Agentur,
+   * channel, artifact and size; project-level, never a member's id.
+   */
+  event("kug200b_batch_created", {
+    ...ofProject,
+    actor: staffActor,
+    details: z.strictObject({
+      batchId: z.uuid(),
+      agenturKey,
+      channel: Kug200bBatchChannel,
+      artifact: Kug200bBatchArtifact,
+      count: z.int().min(1).max(kug200bBatchMax),
+    }),
+  }),
+  /** "Übermittelt am": the sent date, the submissions and the ASU registrations it recorded. */
+  event("kug200b_batch_submitted", {
+    ...ofProject,
+    actor: staffActor,
+    details: z.strictObject({
+      batchId: z.uuid(),
+      submittedOn: isoDate,
+      count: z.int().min(1).max(kug200bBatchMax),
+      registrations: z.int().min(0).max(kug200bBatchMax),
+    }),
+  }),
+  /** An open batch discarded, its members free again. */
+  event("kug200b_batch_discarded", {
+    ...ofProject,
+    actor: staffActor,
+    details: z.strictObject({ batchId: z.uuid(), count: z.int().min(1).max(kug200bBatchMax) }),
+  }),
+  /** A form submitted to the Agentur (a batch member's Kug 200b): its form, channel and date. */
+  event("agentur_submission_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      submissionId: z.uuid(),
+      documentId: z.uuid(),
+      formCode: FormCode,
+      formVersion: FormVersion,
+      channel: AgenturSubmissionChannel,
+      submittedOn: isoDate,
+      batchId: z.uuid().optional(),
+    }),
+  }),
+  /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
+  event("asu_confirmation_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ registrationId: z.uuid(), confirmedOn: isoDate }),
   }),
   /** The pending declarations to the BA changed: the keys, never the values (Q193). */
   event("profiling_declarations_recorded", {

@@ -193,6 +193,16 @@ export const auditProjection: {
   declaration_withdrawal_recorded: shown("case", { details: ["receivedOn"] }),
   declaration_withdrawal_ba_notified: shown("case", { details: ["notifiedOn"] }),
   export_downloaded: security,
+  // Kug 200b batches (process-and-lifecycle.md, Kug 200b batches): the batch's events are
+  // project-level; a member's submission by its form, channel and date, the Agentur's confirmation
+  // by its date.
+  kug200b_batch_created: projectLevel,
+  kug200b_batch_submitted: projectLevel,
+  kug200b_batch_discarded: projectLevel,
+  agentur_submission_recorded: shown("profiling", {
+    details: ["formCode", "formVersion", "channel", "submittedOn", "batchId"],
+  }),
+  asu_confirmation_recorded: shown("case", { details: ["confirmedOn"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */
