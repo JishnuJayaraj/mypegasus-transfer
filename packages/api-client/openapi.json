@@ -28,6 +28,12 @@
             "type": "string",
             "format": "uuid"
           },
+          "staleRows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bBatchStaleRow"
+            }
+          },
           "errors": {
             "type": "array",
             "items": {
@@ -60,6 +66,45 @@
           "title",
           "status"
         ]
+      },
+      "Kug200bBatchStaleRow": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "scan_unusable",
+              "participation_closed",
+              "placement_agentur_changed",
+              "in_open_batch",
+              "already_submitted",
+              "asu_registered",
+              "asu_route_changed",
+              "form_version_outdated",
+              "settings_changed"
+            ]
+          }
+        },
+        "required": [
+          "participationId",
+          "documentId",
+          "reason"
+        ],
+        "additionalProperties": false
       },
       "CurrentStaffUser": {
         "type": "object",
@@ -718,6 +763,12 @@
                                 "scan_email",
                                 "upload"
                               ]
+                            },
+                            "kug200aAlternativeAccepted": {
+                              "type": "boolean",
+                              "enum": [
+                                true
+                              ]
                             }
                           },
                           "additionalProperties": false
@@ -1097,6 +1148,12 @@
                       "paper_post",
                       "scan_email",
                       "upload"
+                    ]
+                  },
+                  "kug200aAlternativeAccepted": {
+                    "type": "boolean",
+                    "enum": [
+                      true
                     ]
                   }
                 },
@@ -5984,7 +6041,9 @@
           "knowledge_date_set",
           "kug200b_offer_declined",
           "declaration_withdrawal_recorded",
-          "declaration_withdrawal_ba_notified"
+          "declaration_withdrawal_ba_notified",
+          "agentur_submission_recorded",
+          "asu_confirmation_recorded"
         ]
       },
       "HistoryActor": {
@@ -12762,6 +12821,9 @@
               },
               "addProof": {
                 "type": "boolean"
+              },
+              "recordConfirmation": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -12770,7 +12832,8 @@
               "attest",
               "linkProof",
               "setKnowledgeDate",
-              "addProof"
+              "addProof",
+              "recordConfirmation"
             ],
             "additionalProperties": false
           }
@@ -12929,6 +12992,17 @@
             ],
             "format": "date-time",
             "description": "UTC timestamp (ISO 8601)"
+          },
+          "confirmedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
           }
         },
         "required": [
@@ -12937,7 +13011,8 @@
           "registeredOn",
           "recordedAt",
           "proof",
-          "withProofSince"
+          "withProofSince",
+          "confirmedOn"
         ],
         "additionalProperties": false
       },
@@ -13607,6 +13682,28 @@
         ],
         "additionalProperties": false
       },
+      "AsuConfirmationInput": {
+        "type": "object",
+        "properties": {
+          "registrationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "confirmedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "registrationId",
+          "confirmedOn"
+        ],
+        "additionalProperties": false
+      },
       "Tl407Readiness": {
         "oneOf": [
           {
@@ -13937,10 +14034,21 @@
       "ExportKind": {
         "type": "string",
         "enum": [
-          "kug200b_print"
+          "kug200b_print",
+          "kug200b_batch_index"
         ]
       },
       "ExportInput": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/DocumentExportInput"
+          },
+          {
+            "$ref": "#/components/schemas/BatchExportInput"
+          }
+        ]
+      },
+      "DocumentExportInput": {
         "type": "object",
         "properties": {
           "documentIds": {
@@ -13955,6 +14063,445 @@
         },
         "required": [
           "documentIds"
+        ],
+        "additionalProperties": false
+      },
+      "BatchExportInput": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "batchId"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBatches": {
+        "type": "object",
+        "properties": {
+          "withoutPlacementAgentur": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "agenturen": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bAgentur"
+            }
+          },
+          "batches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bBatch"
+            }
+          }
+        },
+        "required": [
+          "withoutPlacementAgentur",
+          "agenturen",
+          "batches"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bAgentur": {
+        "type": "object",
+        "properties": {
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "paper_courier",
+              "paper_post",
+              "scan_email",
+              "upload",
+              null
+            ]
+          },
+          "artifact": {
+            "$ref": "#/components/schemas/Kug200bArtifact"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bBatchCandidate"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "createBatch": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "createBatch"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "agenturKey",
+          "channel",
+          "artifact",
+          "candidates",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bArtifact": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "kug200a"
+                ]
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "accepted_alternative"
+                ]
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "phone_call_agentur",
+                  "email_agentur",
+                  "letter_agentur",
+                  "meeting_agentur"
+                ]
+              },
+              "confirmedBy": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "confirmedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "source",
+              "confirmedBy",
+              "confirmedOn"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Kug200bBatchCandidate": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "asuChannel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "kug_200b",
+              "online_self",
+              "in_person",
+              null
+            ]
+          }
+        },
+        "required": [
+          "participationId",
+          "documentId",
+          "lastName",
+          "firstName",
+          "formVersion",
+          "asuChannel"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBatch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "paper_courier",
+              "paper_post",
+              "scan_email",
+              "upload"
+            ]
+          },
+          "artifact": {
+            "$ref": "#/components/schemas/Kug200bBatchArtifact"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Kug200bBatchStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "createdOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "submittedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "submittedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "discardedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bBatchMember"
+            }
+          },
+          "staleRows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Kug200bBatchStaleRow"
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "submit": {
+                "type": "boolean"
+              },
+              "discard": {
+                "type": "boolean"
+              },
+              "exportIndex": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "submit",
+              "discard",
+              "exportIndex"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "agenturKey",
+          "channel",
+          "artifact",
+          "status",
+          "createdAt",
+          "createdOn",
+          "submittedOn",
+          "submittedAt",
+          "discardedAt",
+          "members",
+          "staleRows",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBatchArtifact": {
+        "type": "string",
+        "enum": [
+          "kug200a",
+          "accepted_alternative"
+        ]
+      },
+      "Kug200bBatchStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "submitted",
+          "discarded"
+        ]
+      },
+      "Kug200bBatchMember": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "asuChannel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "kug_200b",
+              "online_self",
+              "in_person",
+              null
+            ]
+          }
+        },
+        "required": [
+          "participationId",
+          "documentId",
+          "lastName",
+          "firstName",
+          "formVersion",
+          "asuChannel"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBatchCreated": {
+        "type": "object",
+        "properties": {
+          "batchId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "batchId"
+        ],
+        "additionalProperties": false
+      },
+      "CreateKug200bBatchInput": {
+        "type": "object",
+        "properties": {
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "documentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "agenturKey",
+          "documentIds"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBatchSubmitted": {
+        "type": "object",
+        "properties": {
+          "submissions": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "registrations": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "submissions",
+          "registrations"
+        ],
+        "additionalProperties": false
+      },
+      "Kug200bBatchSubmissionInput": {
+        "type": "object",
+        "properties": {
+          "submittedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "submittedOn"
         ],
         "additionalProperties": false
       },
@@ -26139,6 +26686,107 @@
         }
       }
     },
+    "/api/v1/participations/{participationId}/asu/confirmation": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"Bestätigung der Agentur am\" for a Kug 200b batch's registration (the PL, also after the end): once, from the submission to today; follow-up work, never a condition of the registration",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsuConfirmationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Saved: the tab as it is now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsuView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/participations/{participationId}/forms/tl407/readiness": {
       "get": {
         "tags": [
@@ -26541,8 +27189,8 @@
         "tags": [
           "documents"
         ],
-        "summary": "Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored",
-        "description": "Refusals:\n- `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, whatever its state.\n- `403` in assisted mode.\n- Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project.",
+        "summary": "Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open; kug200b_batch_index: an open Kug 200b batch's work list, its PL only), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored",
+        "description": "Refusals:\n- `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, and for a batch the viewer doesn't lead, whatever its state.\n- `403` in assisted mode.\n- Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project or a body of another kind.\n- Only for a batch the viewer leads: `422 batch_not_open`; `422 batch_stale` with `staleRows`.",
         "parameters": [
           {
             "schema": {
@@ -26632,7 +27280,7 @@
         "tags": [
           "documents"
         ],
-        "summary": "The export of a link as an attachment (no-store, nosniff): only with the staff session that asked and within 60 s, else 404; every form re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined); rendered at the download, stored nowhere, audited export_downloaded",
+        "summary": "The export of a link as an attachment (no-store, nosniff, the download policy): only with the staff session that asked and within 60 s, else 404; every form or batch member re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined, or a member moved); rendered at the download, stored nowhere, audited export_downloaded",
         "parameters": [
           {
             "schema": {
@@ -26646,9 +27294,15 @@
         ],
         "responses": {
           "200": {
-            "description": "The print file",
+            "description": "The print file, or a batch's work list",
             "content": {
               "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "text/csv": {
                 "schema": {
                   "type": "string",
                   "format": "binary"
@@ -26698,6 +27352,341 @@
           },
           "503": {
             "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/kug200b-batches": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Agenturen and batches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kug200bBatches"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Build a Kug 200b batch (the PL) of one placement Agentur's accepted scans, 1–200, all or nothing, its membership fixed: refused without the Agentur's batch channel (batch_settings_missing) and with the rows of every scan that can't join (batch_stale)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateKug200bBatchInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The batch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kug200bBatchCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kug200b-batches/{batchId}/submission": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "\"Übermittelt am\" for an open batch (its PL): the actual sent date from the batch's day to today, after the recheck (batch_stale with the rows, nothing written); records each member's submission and, on the route kug_200b, its ASU registration on that date",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "batchId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Kug200bBatchSubmissionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kug200bBatchSubmitted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/kug200b-batches/{batchId}/discard": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Discard an open batch (its PL): its members are free for a new batch; the batch stays as history",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "batchId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Discarded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

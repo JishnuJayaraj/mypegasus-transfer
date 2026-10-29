@@ -11490,6 +11490,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/asu/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Bestätigung der Agentur am" for a Kug 200b batch's registration (the PL, also after the end): once, from the submission to today; follow-up work, never a condition of the registration */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AsuConfirmationInput"];
+                };
+            };
+            responses: {
+                /** @description Saved: the tab as it is now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AsuView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/forms/tl407/readiness": {
         parameters: {
             query?: never;
@@ -11904,11 +12000,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored
+         * Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open; kug200b_batch_index: an open Kug 200b batch's work list, its PL only), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored
          * @description Refusals:
-         *     - `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, whatever its state.
+         *     - `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, and for a batch the viewer doesn't lead, whatever its state.
          *     - `403` in assisted mode.
-         *     - Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project.
+         *     - Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project or a body of another kind.
+         *     - Only for a batch the viewer leads: `422 batch_not_open`; `422 batch_stale` with `staleRows`.
          */
         post: {
             parameters: {
@@ -11994,7 +12091,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The export of a link as an attachment (no-store, nosniff): only with the staff session that asked and within 60 s, else 404; every form re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined); rendered at the download, stored nowhere, audited export_downloaded */
+        /** The export of a link as an attachment (no-store, nosniff, the download policy): only with the staff session that asked and within 60 s, else 404; every form or batch member re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined, or a member moved); rendered at the download, stored nowhere, audited export_downloaded */
         get: {
             parameters: {
                 query?: never;
@@ -12006,13 +12103,14 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description The print file */
+                /** @description The print file, or a batch's work list */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/pdf": string;
+                        "text/csv": string;
                     };
                 };
                 /** @description Validation failed */
@@ -12064,6 +12162,328 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/kug200b-batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The Agenturen and batches */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Kug200bBatches"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Build a Kug 200b batch (the PL) of one placement Agentur's accepted scans, 1–200, all or nothing, its membership fixed: refused without the Agentur's batch channel (batch_settings_missing) and with the rows of every scan that can't join (batch_stale) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateKug200bBatchInput"];
+                };
+            };
+            responses: {
+                /** @description The batch */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Kug200bBatchCreated"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kug200b-batches/{batchId}/submission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Übermittelt am" for an open batch (its PL): the actual sent date from the batch's day to today, after the recheck (batch_stale with the rows, nothing written); records each member's submission and, on the route kug_200b, its ASU registration on that date */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    batchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Kug200bBatchSubmissionInput"];
+                };
+            };
+            responses: {
+                /** @description Submitted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Kug200bBatchSubmitted"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kug200b-batches/{batchId}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard an open batch (its PL): its members are free for a new batch; the batch stays as history */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    batchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Discarded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -12287,6 +12707,7 @@ export interface components {
             instance?: string;
             /** Format: uuid */
             participationId?: string;
+            staleRows?: components["schemas"]["Kug200bBatchStaleRow"][];
             errors?: {
                 /** @description JSON pointer into the body */
                 pointer?: string;
@@ -12295,6 +12716,14 @@ export interface components {
                 code: string;
                 detail: string;
             }[];
+        };
+        Kug200bBatchStaleRow: {
+            /** Format: uuid */
+            participationId: string | null;
+            /** Format: uuid */
+            documentId: string | null;
+            /** @enum {string} */
+            reason: "scan_unusable" | "participation_closed" | "placement_agentur_changed" | "in_open_batch" | "already_submitted" | "asu_registered" | "asu_route_changed" | "form_version_outdated" | "settings_changed";
         };
         CurrentStaffUser: {
             /** Format: uuid */
@@ -12529,6 +12958,8 @@ export interface components {
                             defaultChannel?: "kug_200b" | "online_self" | "in_person";
                             /** @enum {string} */
                             batchSubmissionChannel?: "paper_courier" | "paper_post" | "scan_email" | "upload";
+                            /** @enum {boolean} */
+                            kug200aAlternativeAccepted?: true;
                         };
                         agentur_submission?: {
                             /** @enum {string} */
@@ -12632,6 +13063,8 @@ export interface components {
                     defaultChannel?: "kug_200b" | "online_self" | "in_person";
                     /** @enum {string} */
                     batchSubmissionChannel?: "paper_courier" | "paper_post" | "scan_email" | "upload";
+                    /** @enum {boolean} */
+                    kug200aAlternativeAccepted?: true;
                 };
                 agentur_submission?: {
                     /** @enum {string} */
@@ -13848,7 +14281,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -15481,6 +15914,7 @@ export interface components {
                 linkProof: boolean;
                 setKnowledgeDate: boolean;
                 addProof: boolean;
+                recordConfirmation: boolean;
             };
         };
         AsuDueDate: {
@@ -15537,6 +15971,12 @@ export interface components {
              * @description UTC timestamp (ISO 8601)
              */
             withProofSince: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            confirmedOn: string | null;
         } | null;
         /** @enum {string} */
         AsuProofKind: "kug200b_submission" | "ba_confirmation" | "ba_customer_number";
@@ -15766,6 +16206,16 @@ export interface components {
              */
             notifiedOn: string;
         };
+        AsuConfirmationInput: {
+            /** Format: uuid */
+            registrationId: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            confirmedOn: string;
+        };
         Tl407Readiness: components["schemas"]["Tl407ProfilerReadiness"] | components["schemas"]["Tl407ReadinessSummary"];
         Tl407ProfilerReadiness: {
             /**
@@ -15849,9 +16299,135 @@ export interface components {
             expiresAt: string;
         };
         /** @enum {string} */
-        ExportKind: "kug200b_print";
-        ExportInput: {
+        ExportKind: "kug200b_print" | "kug200b_batch_index";
+        ExportInput: components["schemas"]["DocumentExportInput"] | components["schemas"]["BatchExportInput"];
+        DocumentExportInput: {
             documentIds: string[];
+        };
+        BatchExportInput: {
+            /** Format: uuid */
+            batchId: string;
+        };
+        Kug200bBatches: {
+            withoutPlacementAgentur: number;
+            agenturen: components["schemas"]["Kug200bAgentur"][];
+            batches: components["schemas"]["Kug200bBatch"][];
+        };
+        Kug200bAgentur: {
+            agenturKey: string;
+            /** @enum {string|null} */
+            channel: "paper_courier" | "paper_post" | "scan_email" | "upload" | null;
+            artifact: components["schemas"]["Kug200bArtifact"];
+            candidates: components["schemas"]["Kug200bBatchCandidate"][];
+            capabilities: {
+                createBatch: boolean;
+            };
+        };
+        Kug200bArtifact: {
+            /** @enum {string} */
+            kind: "kug200a";
+        } | {
+            /** @enum {string} */
+            kind: "accepted_alternative";
+            /** @enum {string} */
+            source: "phone_call_agentur" | "email_agentur" | "letter_agentur" | "meeting_agentur";
+            /** Format: uuid */
+            confirmedBy: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            confirmedOn: string;
+        };
+        Kug200bBatchCandidate: {
+            /** Format: uuid */
+            participationId: string;
+            /** Format: uuid */
+            documentId: string;
+            lastName: string;
+            firstName: string;
+            formVersion: string;
+            /** @enum {string|null} */
+            asuChannel: "kug_200b" | "online_self" | "in_person" | null;
+        };
+        Kug200bBatch: {
+            /** Format: uuid */
+            id: string;
+            agenturKey: string;
+            /** @enum {string} */
+            channel: "paper_courier" | "paper_post" | "scan_email" | "upload";
+            artifact: components["schemas"]["Kug200bBatchArtifact"];
+            status: components["schemas"]["Kug200bBatchStatus"];
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            createdAt: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            createdOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            submittedOn: string | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            submittedAt: string | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            discardedAt: string | null;
+            members: components["schemas"]["Kug200bBatchMember"][];
+            staleRows: components["schemas"]["Kug200bBatchStaleRow"][];
+            capabilities: {
+                submit: boolean;
+                discard: boolean;
+                exportIndex: boolean;
+            };
+        };
+        /** @enum {string} */
+        Kug200bBatchArtifact: "kug200a" | "accepted_alternative";
+        /** @enum {string} */
+        Kug200bBatchStatus: "open" | "submitted" | "discarded";
+        Kug200bBatchMember: {
+            /** Format: uuid */
+            participationId: string;
+            /** Format: uuid */
+            documentId: string;
+            lastName: string;
+            firstName: string;
+            formVersion: string;
+            /** @enum {string|null} */
+            asuChannel: "kug_200b" | "online_self" | "in_person" | null;
+        };
+        Kug200bBatchCreated: {
+            /** Format: uuid */
+            batchId: string;
+        };
+        CreateKug200bBatchInput: {
+            agenturKey: string;
+            documentIds: string[];
+        };
+        Kug200bBatchSubmitted: {
+            submissions: number;
+            registrations: number;
+        };
+        Kug200bBatchSubmissionInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            submittedOn: string;
         };
         DevStaffUser: {
             /** Format: uuid */

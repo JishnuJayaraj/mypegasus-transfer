@@ -57,6 +57,8 @@ export {
   mayRecordAsu,
   maySetKnowledgeDate,
   mayViewAsu,
+  mayRecordAsuConfirmation,
+  mayWorkKug200bBatches,
 } from "./asu/access";
 export {
   AsuDueDateView,

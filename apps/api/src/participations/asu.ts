@@ -36,6 +36,8 @@ export type AsuRegistrationRow = {
   /** The proving document may supply a fact: accepted, live, not quarantined or invalidated. */
   documentUsable: boolean | null;
   documentQuarantineLiftedAt: string | null;
+  /** "Bestätigung der Agentur am" (the route `kug_200b`). */
+  confirmedOn: string | null;
 };
 
 export type AsuState = {
@@ -115,6 +117,7 @@ export async function asuStatesOf(
         and ${document.invalidatedByCorrection} is null`,
       documentQuarantineLiftedAt: sql<string | null>`case when ${document.quarantineLiftedAt}
         is not null then ${utc(document.quarantineLiftedAt)} end`,
+      confirmedOn: asuRegistration.confirmedOn,
     })
     .from(asuRegistration)
     .leftJoin(document, eq(document.id, asuRegistration.proofDocumentId))

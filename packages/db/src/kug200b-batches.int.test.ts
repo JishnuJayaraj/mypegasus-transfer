@@ -47,7 +47,7 @@ const daysFrom = async (n: number) =>
  * (written as the owner: a fixture, set_placement_agentur has its own tests) and on `route`.
  */
 async function participation({
-  projectId = werkNord,
+  projectId = werkNord as string,
   agentur = nord,
   route = "kug_200b" as string | null,
 } = {}) {

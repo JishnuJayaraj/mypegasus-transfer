@@ -15,6 +15,7 @@ import {
   applicableAsuDueDate,
   asuRegisteredSince,
   asuRegistrationProblem,
+  AsuConfirmationInput,
   AsuProofLinkInput,
   AsuRegistrationInput,
   AsuRouteInput,
@@ -33,6 +34,7 @@ import {
   mayLinkAsuProof,
   mayReadKnowledgeDate,
   mayRecordAsu,
+  mayRecordAsuConfirmation,
   maySetKnowledgeDate,
   mayViewAsu,
   mayWorkKug200b,
@@ -108,7 +110,11 @@ function refused(c: Context<AppEnv>, error: unknown) {
     code === "withdrawal_not_found" ||
     code === "ba_notice_recorded" ||
     code === "notified_on_in_future" ||
-    code === "notified_before_receipt"
+    code === "notified_before_receipt" ||
+    code === "asu_not_kug200b" ||
+    code === "asu_confirmed" ||
+    code === "confirmed_on_in_future" ||
+    code === "confirmed_before_submission"
   ) {
     return domainProblem(c, [code]);
   }
@@ -304,6 +310,7 @@ export function asuRoutes(deps: Deps) {
                     linkedAt: registration.proofLinkedAt!,
                   },
             withProofSince: asuRegisteredSince(registrationFacts(registration)),
+            confirmedOn: registration.confirmedOn,
           },
           ...(readsProofs && {
             proofDocuments: proofs.map((proof) => ({
@@ -413,6 +420,12 @@ export function asuRoutes(deps: Deps) {
               open &&
               !registration?.proofKind &&
               mayAddDocument(subject, "asu_proof", target, normal).ok,
+            // Follow-up of a batch's submission, also after the end (D19).
+            recordConfirmation:
+              applies &&
+              registration?.channel === "kug_200b" &&
+              registration.confirmedOn === null &&
+              mayRecordAsuConfirmation(subject, target).ok,
           },
         };
       },
@@ -703,6 +716,42 @@ export function asuRoutes(deps: Deps) {
           p_participation_id => ${participationId}::uuid,
           p_withdrawal_id => ${input.withdrawalId}::uuid,
           p_notified_on => ${input.notifiedOn}::date)`);
+      } catch (error) {
+        return refused(c, error);
+      }
+      return answer(c, result.access);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/asu/confirmation",
+      tags: ["participations"],
+      summary:
+        '"Bestätigung der Agentur am" for a Kug 200b batch\'s registration (the PL, also after the end): once, from the submission to today; follow-up work, never a condition of the registration',
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: AsuConfirmationInput } } },
+      },
+      responses: writeResponses,
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const result = await access(c, participationId);
+      if (!result.ok) return result.response as never;
+      const { subject, target } = result.access;
+      if (!mayRecordAsuConfirmation(subject, target).ok) return problem(c, "forbidden");
+      if (input.confirmedOn > clock.today()) {
+        return domainProblem(c, [{ code: "confirmed_on_in_future", field: "confirmedOn" }]);
+      }
+      try {
+        await db.execute(sql`select record_asu_confirmation(p_context => ${context(c)},
+          p_participation_id => ${participationId}::uuid,
+          p_registration_id => ${input.registrationId}::uuid,
+          p_confirmed_on => ${input.confirmedOn}::date)`);
       } catch (error) {
         return refused(c, error);
       }
