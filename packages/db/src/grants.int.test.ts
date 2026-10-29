@@ -233,6 +233,9 @@ const statusFunctions = [
   "create_kug200b_batch_export_link",
   "export_link_kind",
   "kug200b_batch_export_content",
+  // Slice 6: the official artifacts of a batch (ba-forms.md, the Kug 200a as built; Q203 (6))
+  "read_kug200b_batch_export",
+  "record_kug200b_batch_export",
 ];
 const helpers = [
   "assert_context",
@@ -359,6 +362,9 @@ const helpers = [
   "kug200b_batch_recheck",
   "lock_kug200b_batch",
   "live_export_link",
+  "lock_kug200b_official_export",
+  "kug200b_batch_export_sources",
+  "kug200b_batch_export_fingerprint",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */

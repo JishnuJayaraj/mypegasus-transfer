@@ -297,8 +297,26 @@ export const project = pgTable(
      * any time. Null only for projects created before regions; only global roles see those.
      */
     regionId: uuid("region_id").references(() => region.id),
+    /**
+     * The Kug 200a's header (ba-forms.md, the Kug 200a as built): the T-Kug-Nummer without the
+     * form's printed `TK-`, and the personalabgebender Betrieb's Betriebsnummer and Branche/WK;
+     * the PL sets them on "Einrichtung" (`update_project`, audited `project_changed`). Unset, each
+     * is left for handwriting and listed on the checklist.
+     */
+    tKugNumber: text("t_kug_number"),
+    employerBetriebsnummer: text("employer_betriebsnummer"),
+    employerEconomicClass: text("employer_economic_class"),
   },
   (t) => [
+    check(
+      "project_t_kug_number",
+      sql`${t.tKugNumber} ~ '^[0-9A-Za-z][0-9A-Za-z./-]{0,29}$' and ${t.tKugNumber} !~* '^TK-'`,
+    ),
+    check("project_employer_betriebsnummer", sql`${t.employerBetriebsnummer} ~ '^[0-9]{8}$'`),
+    check(
+      "project_employer_economic_class",
+      sql`char_length(${t.employerEconomicClass}) between 1 and 100 and ${t.employerEconomicClass} = btrim(${t.employerEconomicClass}) and ${t.employerEconomicClass} !~ '[[:cntrl:]]'`,
+    ),
     check(
       "project_activated",
       sql`(${t.status} = 'active') = (${t.activatedAt} is not null) and (${t.activatedAt} is null) = (${t.activatedBy} is null)`,

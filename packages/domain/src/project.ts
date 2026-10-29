@@ -46,6 +46,33 @@ export function projectCreationRefusals(input: CreateProjectInput): "region_requ
   return input.regionId === undefined ? ["region_required"] : [];
 }
 
+/**
+ * The Kug 200a's header (ba-forms.md, the Kug 200a as built): the T-Kug-Nummer as it follows the
+ * form's printed `TK-` (never repeating it), the personalabgebender Betrieb's Betriebsnummer
+ * (eight digits) and its Branche/Wirtschaftsklasse. Optional; null clears.
+ */
+export const TKugNumber = z
+  .string()
+  .trim()
+  .regex(/^[0-9A-Za-z][0-9A-Za-z./-]{0,29}$/)
+  .refine((value) => !/^TK-/i.test(value), { params: { code: "t_kug_prefix" } });
+export const Betriebsnummer = z
+  .string()
+  .trim()
+  .regex(/^[0-9]{8}$/);
+export const EconomicClass = z
+  .string()
+  .trim()
+  .min(1)
+  .max(100)
+  .regex(/^[^\p{Cc}]*$/u);
+
+const kug200aHeader = {
+  tKugNumber: TKugNumber.nullable(),
+  employerBetriebsnummer: Betriebsnummer.nullable(),
+  employerEconomicClass: EconomicClass.nullable(),
+};
+
 /** The fields a PL may change; at least one; strict. Type changes follow `checkProjectUpdate`. */
 export const UpdateProjectInput = z
   .strictObject({
@@ -54,6 +81,9 @@ export const UpdateProjectInput = z
     type: ProjectType.optional(),
     /** The PL only while draft, the global admin at any time (Q126, `regionChangeRefusal`). */
     regionId: z.uuid().optional(),
+    tKugNumber: kug200aHeader.tKugNumber.optional(),
+    employerBetriebsnummer: kug200aHeader.employerBetriebsnummer.optional(),
+    employerEconomicClass: kug200aHeader.employerEconomicClass.optional(),
   })
   .refine((input) => Object.values(input).some((value) => value !== undefined), {
     message: "Change at least one field",
@@ -82,6 +112,7 @@ export const Project = z
       description:
         "The region (Niederlassung); null for a project from before regions, which only global roles see",
     }),
+    ...kug200aHeader,
   })
   .meta({ id: "Project" });
 

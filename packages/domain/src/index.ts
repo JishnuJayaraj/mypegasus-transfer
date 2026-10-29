@@ -57,6 +57,9 @@ export {
   ExportKind,
   exportLimits,
   isBatchExportKind,
+  isOfficialExportKind,
+  officialExportKinds,
+  type OfficialExportKind,
   ExportLink,
   ExportParams,
 } from "./exports/api";
