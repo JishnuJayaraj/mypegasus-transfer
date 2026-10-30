@@ -122,7 +122,7 @@ const member = (n: number, overrides: Partial<Kug200aMemberSource> = {}): Kug200
   insuranceNumber: "65170839J003",
   tgStart: "2027-01-01",
   tgEnd: "2027-12-31",
-  profileAccess: true,
+  declaration17: "in_packet",
   infoEventDates: ["2026-11-20"],
   ...overrides,
 });
@@ -270,8 +270,32 @@ describe("checkKug200a", () => {
     expect(none.checklist.map((item) => item.key)).not.toContain("infoEventDate");
   });
 
+  it("marks the consent as the packet carries it, else leaves it to decide (Q205 (4))", () => {
+    const { copies, checklist } = check(
+      source([member(1), member(2, { declaration17: "other_paper" })]),
+    );
+    expect(copies[0]).toContainEqual({
+      name: "chbxEinverstaendnisZ1",
+      kind: "checkbox_choice",
+      value: "ist beigefuegt",
+    });
+    expect(copies[0]!.some((field) => field.name === "chbxEinverstaendnisZ2")).toBe(false);
+    expect(checklist).toContainEqual({
+      code: "not_in_packet",
+      key: "participants.consentDeclaration",
+      label: "Liste der Teilnehmenden: Einverständniserklärung",
+      participationIds: [id(2)],
+    });
+    // The alternative list leaves the same box empty and lists it.
+    const list = kug200aList(source([member(1, { declaration17: "other_paper" })]), map, template, {
+      createdOn: "2026-11-24",
+    });
+    expect((list.document.text.blocks[1] as { rows: string[][] }).rows[0]![7]).toBe("");
+    expect(list.checklist.map((item) => item.code)).toContain("not_in_packet");
+  });
+
   it("marks the consent 'liegt nicht vor' without declaration 17 in force", () => {
-    const { copies } = check(source([member(1, { profileAccess: false })]));
+    const { copies } = check(source([member(1, { declaration17: "none" })]));
     expect(copies[0]).toContainEqual({
       name: "chbxEinverstaendnisZ1",
       kind: "checkbox_choice",
@@ -443,7 +467,7 @@ describe("kug200aList", () => {
 
   it("names one participant in the singular and leaves unticked boxes empty", () => {
     const { document } = kug200aList(
-      source([member(1, { infoEventDates: [], profileAccess: false })]),
+      source([member(1, { infoEventDates: [], declaration17: "none" })]),
       map,
       template,
       { createdOn: "2026-11-24" },

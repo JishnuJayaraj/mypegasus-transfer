@@ -14566,6 +14566,7 @@
         "enum": [
           "not_recorded",
           "not_decided",
+          "not_in_packet",
           "text_not_fitting",
           "character_unsupported",
           "identifier_too_long"

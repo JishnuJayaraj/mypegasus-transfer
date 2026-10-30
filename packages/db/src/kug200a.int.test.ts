@@ -38,6 +38,8 @@ beforeEach(() => resetTestDatabase({ seed: true, active: true }));
 const one = async (sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rows[0];
 const all = async (sql: string, params: unknown[] = []) => (await owner.query(sql, params)).rows;
 const today = async () => (await one("select berlin_today()::text as d")).d as string;
+const daysAgo = async (n: number) =>
+  (await one("select (berlin_today() - $1::int)::text as d", [n])).d as string;
 
 async function refusal(promise: Promise<unknown>) {
   try {
@@ -145,7 +147,7 @@ async function participation(lastName: string, rv: string | null = "12290751D121
   return id;
 }
 
-async function acceptedScan(id: string) {
+async function acceptedScan(id: string, signedOn?: string) {
   const documentId = await call(app, "add_document", {
     context: asConsultant,
     participationId: id,
@@ -165,7 +167,7 @@ async function acceptedScan(id: string) {
     documentId,
     decision: "accepted",
     reason: null,
-    signedOn: await today(),
+    signedOn: signedOn ?? (await today()),
     countersignedOn: null,
     confirmations: three,
     formVersion: "09-2021",
@@ -262,7 +264,7 @@ describe("the official artifacts of a batch (Q203 (6))", () => {
       participationId: zimmer,
       documentId: scans[0],
       address: { street: "Beispielweg 1", postalCode: "10115", city: "Berlin", country: "DE" },
-      profileAccess: true,
+      declaration17: "in_packet",
       infoEventDates: [],
     });
     expect(found.sources.members[0]).toMatchObject({ address: null, insuranceNumberSha256: null });
@@ -284,6 +286,34 @@ describe("the official artifacts of a batch (Q203 (6))", () => {
     await expect(
       app.query("select * from kug200b_batch_export_content($1, $2, $3)", [pl, linkHash, session]),
     ).rejects.toMatchObject(failsWith("export_link_invalid"));
+  });
+
+  it("says whether declaration 17 in force is on the scan in the packet (Q205 (4))", async () => {
+    const id = await participation("Zimmer");
+    const scanA = await acceptedScan(id, await daysAgo(2));
+    const batchId = await batch([scanA]);
+    const linkHash = await link(batchId, "kug200b_batch_artifact");
+    const declaration = async () =>
+      (await read(linkHash)).sources.members[0]!.declaration17 as string;
+    // Scan A carries the declaration in force: it is attached.
+    expect(await declaration()).toBe("in_packet");
+    // Withdrawn: no declaration is in force.
+    const { id: consentId } = await one(
+      `select id from consent_record where participation_id = $1
+         and purpose::text = 'kug200b_profile_access' and ended_at is null`,
+      [id],
+    );
+    await call(app, "record_declaration_withdrawal", {
+      context: pl,
+      participationId: id,
+      id: randomUUID(),
+      consentId,
+      receivedOn: await daysAgo(1),
+    });
+    expect(await declaration()).toBe("none");
+    // Renewed on paper B, which isn't in the batch: the packet doesn't carry it.
+    await acceptedScan(id);
+    expect(await declaration()).toBe("other_paper");
   });
 
   it("refuses the record when anything printed moved after the read", async () => {

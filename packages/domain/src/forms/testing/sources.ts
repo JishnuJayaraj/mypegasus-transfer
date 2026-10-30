@@ -146,7 +146,7 @@ const kug200aMember = (
   insuranceNumber: `1229075${n % 10}D12${n % 10}`,
   tgStart: "2027-01-01",
   tgEnd: "2027-12-31",
-  profileAccess: n !== 3,
+  declaration17: n === 3 ? "none" : "in_packet",
   infoEventDates: n === 5 ? [] : ["2026-11-20"],
 });
 

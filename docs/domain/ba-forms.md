@@ -115,7 +115,8 @@ written and kept as the record `kug200b_profile_access`; whether it is a consent
   the planned period in the TG, "Erklärung zur schriftlichen Arbeitsuchendmeldung ist beigefügt",
   the consent declaration "ist beigefügt" / "liegt nicht vor" (one checkbox with two on-states),
   "Teilnahme an der Info-Veranstaltung".
-- The "Lfd. Nr." column is printed (1–6 on every copy), not a field.
+- The "Lfd. Nr." column is printed (1–6 on every copy), not a field. Identifying a copy within
+  its batch is an open follow-up (`docs/issues/kug200a-copy-identification.md`).
 
 ### The Kug 200a as built (Slice 6, PR 6-5a-2; readings Q205)
 
@@ -136,17 +137,22 @@ are in data-protection.md, exports.
 - **Rows:** "Nachname, Vorname", street, "PLZ Ort" in the one box; the Versicherungsnummer (the
   RV-Nummer, through the purpose-bound read); the planned period in the TG as the effective
   contractual TG dates, `TT.MM.JJJJ – TT.MM.JJJJ`; "Erklärung … ist beigefügt" for every member
-  (their accepted Kug 200b goes with the list); the consent "ist beigefügt" while declaration 17's
-  record is in force on usable paper, else "liegt nicht vor"; "Teilnahme" ticked when the member
+  (their accepted Kug 200b goes with the list); the consent as the packet carries it (Q205 (4)):
+  "ist beigefügt" only when declaration 17's record in force is on the member's scan in the batch,
+  "liegt nicht vor" when none is in force, and when it is on another paper the packet doesn't
+  carry (a renewed declaration after a withdrawal) left blank with the checklist entry
+  `not_in_packet`: rebuild the batch, which takes the newest scan, or write the box by hand; the
+  alternative list the same; "Teilnahme" ticked when the member
   attended an info event (on the header's date when there is one). The last activity at the
   employer and its period are never filled: no record says which work row was at the old employer
   (Q205).
 - **Nothing is guessed or refused as a whole:** what the platform doesn't hold, what the data
   doesn't decide, a text too long at the 6 pt floor and a value the form can't take
   (`character_unsupported`, `identifier_too_long`) stay blank and go on the **handwriting
-  checklist** (codes `not_recorded`, `not_decided`, `text_not_fitting`, …, by key and member, never
-  a value), shown on the tab "Agentur" before printing (Q197 (8)).
-- **The 6 pt floor (Q197 (1)), assessed 2026-10-29** on a representative synthetic batch of seven
+  checklist** (codes `not_recorded`, `not_decided`, `not_in_packet`, `text_not_fitting`, …, by key
+  and member, never a value), shown on the tab "Agentur" before printing (Q197 (8)).
+- **The 6 pt floor (Q197 (1)), assessed 2026-10-29, accepted 2026-10-30** (the review of PR #99,
+  which also rendered the alternative list through CI's Gotenberg image) on a representative synthetic batch of seven
   (`syntheticKug200a`: long double names and addresses, `Ł`, `ğ`, `ş`, `ß`; the contract test
   fills the real blank and reads it back): the name-and-address box takes five lines at 6 pt, and
   at print resolution (300 dpi) 6 pt Noto Sans stays legible with every special character

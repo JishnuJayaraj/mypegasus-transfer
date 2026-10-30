@@ -16454,7 +16454,7 @@ export interface components {
             participationIds: string[];
         };
         /** @enum {string} */
-        Kug200aChecklistCode: "not_recorded" | "not_decided" | "text_not_fitting" | "character_unsupported" | "identifier_too_long";
+        Kug200aChecklistCode: "not_recorded" | "not_decided" | "not_in_packet" | "text_not_fitting" | "character_unsupported" | "identifier_too_long";
         Kug200bBatchCreated: {
             /** Format: uuid */
             batchId: string;

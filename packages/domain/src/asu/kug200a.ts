@@ -45,8 +45,12 @@ export type Kug200aMemberSource = {
   /** The effective contractual TG dates (the planned period in the TG). */
   tgStart: IsoDate | null;
   tgEnd: IsoDate | null;
-  /** Declaration 17 in force on usable paper: the consent "ist beigefügt", else "liegt nicht vor". */
-  profileAccess: boolean;
+  /**
+   * Where declaration 17 in force is (Q205 (4)): on the member's scan in the batch (`in_packet`,
+   * the consent "ist beigefügt"), on another usable paper the packet doesn't carry
+   * (`other_paper`: left blank and listed), or none in force (`none`, "liegt nicht vor").
+   */
+  declaration17: "in_packet" | "other_paper" | "none";
   /** The Berlin dates of the project's info events the member attended. */
   infoEventDates: readonly IsoDate[];
 };
@@ -59,14 +63,16 @@ export type Kug200aSource = {
 /**
  * Why a value is on the checklist (codes and keys, never values): `not_recorded` (the platform
  * holds no value), `not_decided` (the data doesn't decide it: the last activity, its period, the
- * info event's date over several dates; Q205), `text_not_fitting` (too long at 6 pt) and a value
- * the form can't take (`character_unsupported`, `identifier_too_long`): each left blank for
- * handwriting.
+ * info event's date over several dates; Q205), `not_in_packet` (declaration 17 in force is on a
+ * paper the batch doesn't carry: rebuild the batch with it or write the box by hand; Q205 (4)),
+ * `text_not_fitting` (too long at 6 pt) and a value the form can't take (`character_unsupported`,
+ * `identifier_too_long`): each left blank for handwriting.
  */
 export const Kug200aChecklistCode = z
   .enum([
     "not_recorded",
     "not_decided",
+    "not_in_packet",
     "text_not_fitting",
     "character_unsupported",
     "identifier_too_long",
@@ -90,6 +96,8 @@ type Values = {
   header: Record<string, FormValue | null>;
   rows: FormRow[];
   undecided: { key: string; rows: number[] }[];
+  /** The members whose declaration 17 in force isn't on their scan in the batch. */
+  notInPacket: number[];
 };
 
 const present = (value: string | null): value is string => value !== null && value !== "";
@@ -108,7 +116,9 @@ function personalData(member: Kug200aMemberSource): string | null {
  * falls on one Berlin date (several dates: blank, `not_decided`), a member ticked when they
  * attended an info event (on that date when there is one); the last activity at the employer
  * and its period never filled (`not_decided`); "Erklärung … beigefügt" for every member, whose
- * accepted Kug 200b goes with the list; the consent by declaration 17's record in force.
+ * accepted Kug 200b goes with the list; the consent as the packet carries it: "ist beigefügt" only
+ * when declaration 17 in force is on the member's scan in the batch, "liegt nicht vor" when none
+ * is in force, else blank and listed (`not_in_packet`, Q205 (4)).
  */
 function valuesOf(source: Kug200aSource): Values {
   const { header, members } = source;
@@ -124,7 +134,7 @@ function valuesOf(source: Kug200aSource): Values {
         ? `${formatFormDate(member.tgStart)} – ${formatFormDate(member.tgEnd)}`
         : null,
     declarationAttached: true,
-    consentDeclaration: member.profileAccess ? "attached" : "not_available",
+    consentDeclaration: consentOf[member.declaration17],
     infoEventAttended:
       common === null ? member.infoEventDates.length > 0 : member.infoEventDates.includes(common),
   }));
@@ -146,7 +156,29 @@ function valuesOf(source: Kug200aSource): Values {
       { key: `${table}.lastActivity`, rows: every },
       { key: `${table}.lastActivityPeriod`, rows: every },
     ],
+    notInPacket: members.flatMap((member, index) =>
+      member.declaration17 === "other_paper" ? [index] : [],
+    ),
   };
+}
+
+const consentOf = { in_packet: "attached", none: "not_available", other_paper: null } as const;
+
+/** What the data leaves blank, the same for both list formats. */
+function blanksOf(source: Kug200aSource, values: Values): Issue[] {
+  return [
+    ...unrecorded(source, values).map((entry) => ({ code: "not_recorded" as const, ...entry })),
+    ...values.undecided.map((entry) => ({ code: "not_decided" as const, ...entry })),
+    ...(values.notInPacket.length > 0
+      ? [
+          {
+            code: "not_in_packet" as const,
+            key: `${table}.consentDeclaration`,
+            rows: values.notInPacket,
+          },
+        ]
+      : []),
+  ];
 }
 
 /** The keys a member's missing data leaves blank (the address with the name, the RV-Nummer, the TG dates). */
@@ -223,10 +255,7 @@ export function checkKug200a(
     values: values.header,
     tables: { [table]: values.rows },
   };
-  const issues: Issue[] = [
-    ...unrecorded(source, values).map((entry) => ({ code: "not_recorded" as const, ...entry })),
-    ...values.undecided.map((entry) => ({ code: "not_decided" as const, ...entry })),
-  ];
+  const issues = blanksOf(source, values);
   const header = { ...values.header };
   const rows: Record<string, FormValue | null>[] = values.rows.map((row) => ({ ...row }));
   for (const error of validateFormInput(whole, map, today).errors) {
@@ -281,10 +310,7 @@ export function kug200aList(
   const entry = assertMap(map);
   if (source.members.length === 0) throw new RangeError("A batch has at least one member");
   const values = valuesOf(source);
-  const issues: Issue[] = [
-    ...unrecorded(source, values).map((e) => ({ code: "not_recorded" as const, ...e })),
-    ...values.undecided.map((e) => ({ code: "not_decided" as const, ...e })),
-  ];
+  const issues = blanksOf(source, values);
   const shown = (key: string, value: FormValue | null | undefined): string => {
     if (value === null || value === undefined || value === "" || value === false) return "";
     const field = map.entries.find((candidate) => candidate.key === key);

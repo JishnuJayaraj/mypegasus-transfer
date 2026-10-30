@@ -2773,6 +2773,7 @@
       "codes": {
         "not_recorded": "{{label}}: nicht erfasst",
         "not_decided": "{{label}}: aus den Daten nicht eindeutig",
+        "not_in_packet": "{{label}}: Die geltende Erklärung steht auf einem neueren Kug 200b, der nicht in dieser Sammelmeldung liegt. Sammelmeldung verwerfen und neu bilden oder von Hand ausfüllen",
         "text_not_fitting": "{{label}}: passt nicht ins Feld",
         "character_unsupported": "{{label}}: enthält ein nicht druckbares Zeichen",
         "identifier_too_long": "{{label}}: zu lang für das Feld"

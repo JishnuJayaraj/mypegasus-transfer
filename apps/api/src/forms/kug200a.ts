@@ -37,7 +37,7 @@ export type BatchPrintSources = {
     insuranceNumberSha256: string | null;
     tgStart: IsoDate | null;
     tgEnd: IsoDate | null;
-    profileAccess: boolean;
+    declaration17: "in_packet" | "other_paper" | "none";
     infoEventDates: IsoDate[];
   }[];
 };
@@ -75,7 +75,7 @@ export function kug200aSourceOf(
       insuranceNumber: insuranceNumber(member),
       tgStart: member.tgStart,
       tgEnd: member.tgEnd,
-      profileAccess: member.profileAccess,
+      declaration17: member.declaration17,
       infoEventDates: member.infoEventDates,
     })),
   };

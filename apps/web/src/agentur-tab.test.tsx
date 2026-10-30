@@ -213,6 +213,13 @@ describe("the project tab Agentur", () => {
                   participationIds: [b],
                 },
                 {
+                  code: "not_in_packet",
+                  key: "participants.consentDeclaration",
+                  label:
+                    "Liste der Teilnehmenden: Einverständniserklärung zur Einschaltung eines Dritten",
+                  participationIds: [a],
+                },
+                {
                   code: "not_decided",
                   key: "participants.lastActivity",
                   label: "Liste der Teilnehmenden: Zuletzt ausgeübte Tätigkeit beim Arbeitgeber",
@@ -242,6 +249,11 @@ describe("the project tab Agentur", () => {
       expect(
         within(checklist).getByText(
           "Liste der Teilnehmenden: Zuletzt ausgeübte Tätigkeit beim Arbeitgeber: aus den Daten nicht eindeutig – bei allen 2 Personen",
+        ),
+      ).toBeVisible();
+      expect(
+        within(checklist).getByText(
+          /^Liste der Teilnehmenden: Einverständniserklärung zur Einschaltung eines Dritten: Die geltende Erklärung steht auf einem neueren Kug 200b, .* – bei Albers, Erika$/,
         ),
       ).toBeVisible();
       await user.click(screen.getByRole("button", { name: "Kug 200a (PDF)" }));

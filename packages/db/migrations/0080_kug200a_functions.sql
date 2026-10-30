@@ -278,8 +278,10 @@ END $$;
 -- RV-Nummer as its ciphertext's SHA-256), in the list's order (last name, first name), so a
 -- fingerprint over it changes with anything printed. The Kug 200a: the project's customer and
 -- header fields, the batch's Berlin day, per member the name, the address, the RV-Nummer's
--- digest, the effective TG dates, whether declaration 17 is in force on usable paper and the
--- Berlin dates of the project's scheduled info events attended. The scans: per member the scan,
+-- digest, the effective TG dates, where declaration 17 in force is (`in_packet`: on the member's
+-- scan in the batch; `other_paper`: on another usable paper, which the packet doesn't carry;
+-- `none`: none in force; Q205 (4)) and the Berlin dates of the project's scheduled info events
+-- attended. The scans: per member the scan,
 -- its media type and content digest. Enum values are compared as text: a SQL function's body is
 -- checked when created, in the same migration run that may have added them.
 CREATE FUNCTION kug200b_batch_export_sources(p_batch kug200b_batch, p_kind text)
@@ -311,13 +313,16 @@ RETURNS jsonb LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp 
               pg_catalog.sha256(x.pension_insurance_number), 'hex'),
             'tgStart', pg_catalog.to_char(coalesce(r.tg_start, w.default_tg_start), 'YYYY-MM-DD'),
             'tgEnd', pg_catalog.to_char(coalesce(r.tg_end, w.default_tg_end), 'YYYY-MM-DD'),
-            'profileAccess', EXISTS (
-              SELECT FROM public.consent_record c
+            'declaration17', coalesce((
+              SELECT CASE WHEN c.document_id = m.document_id THEN 'in_packet'
+                ELSE 'other_paper' END
+              FROM public.consent_record c
               JOIN public.document cd ON cd.id = c.document_id
               WHERE c.participation_id = m.participation_id
                 AND c.purpose::text = 'kug200b_profile_access' AND c.ended_at IS NULL
                 AND cd.deleted_at IS NULL AND cd.quarantined_at IS NULL
-                AND cd.invalidated_by_correction IS NULL),
+                AND cd.invalidated_by_correction IS NULL
+              ORDER BY c.document_id = m.document_id DESC LIMIT 1), 'none'),
             'infoEventDates', coalesce((
               SELECT pg_catalog.jsonb_agg(DISTINCT pg_catalog.to_char(
                   a.starts_at AT TIME ZONE 'Europe/Berlin', 'YYYY-MM-DD'))

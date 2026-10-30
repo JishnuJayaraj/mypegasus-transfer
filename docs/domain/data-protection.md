@@ -928,12 +928,12 @@ and highly confidential data only; ordinary person-data writes are `participant_
   fingerprint; the API renders; `record_kug200b_batch_export` rechecks again and compares the
   fingerprint of everything printed (the project's customer and header fields, the
   organisation's, the names, addresses, RV-Nummern as their ciphertexts' digests, TG dates,
-  declaration 17 in force, info-event attendance; for the scans each scan and its content digest)
+  where declaration 17 in force is, info-event attendance; for the scans each scan and its content digest)
   before it writes `export_downloaded` (`409 source_changed` otherwise, nothing served). A
   quarantined, invalidated or deleted scan makes the batch stale, so it never goes into a scans
   PDF. Streamed with the download policy, stored nowhere.
 - **The Kug 200a's values** (ba-forms.md, the Kug 200a as built): name, address, the effective
-  TG dates, declaration 17's state and info-event attendance as the PL reads them for the batch;
+  TG dates, where declaration 17 in force is and info-event attendance as the PL reads them for the batch;
   the **RV-Nummer** (highly confidential) only through `read_kug200b_batch_export`, a read bound to
   this purpose, decrypted per member at each download and each read audited `sensitive_read` (key
   `pensionInsuranceNumber`), the values going only into the file. The tab's handwriting checklist
