@@ -27,6 +27,7 @@ import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
 import { AgenturTab } from "../../components/agentur-tab";
 import { ImportSection } from "../../components/import-section";
+import { Kug200aHeader } from "../../components/kug200a-header";
 import { Participants } from "../../components/participants";
 import { ProjectDashboard } from "../../components/project-dashboard";
 import { AppointmentsTab } from "../../components/appointments";
@@ -132,7 +133,10 @@ function ProjectPage() {
                 <ProjectSetup projectId={projectId} />
                 <AgenturSettings projectId={projectId} />
                 {taTg ? (
-                  <EntryWaves projectId={projectId} />
+                  <>
+                    <EntryWaves projectId={projectId} />
+                    <Kug200aHeader projectId={projectId} />
+                  </>
                 ) : (
                   <p>{t("waveForm.errors.not_ta_tg")}</p>
                 )}

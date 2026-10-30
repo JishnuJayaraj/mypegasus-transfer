@@ -23,13 +23,17 @@ import { documentNavigation } from "./documents-tab";
 // Agentur its batch channel or "Einstellungen fehlen", the artifact (the Kug 200a, or the
 // alternative the Agentur accepted with its date and confirmer) and the ready scans; "Sammelmeldung
 // bilden" takes them all (up to 200); each batch with its work list (an export link, logged and
-// re-authorized), "Übermittelt am", "Verwerfen" and, when stale, its refused rows. The PL only;
-// every button by its capability, the API checks each again. German only.
+// re-authorized), its official artifact ("Kug 200a (PDF)" or the accepted alternative list) with
+// the handwriting checklist shown before printing, "Scans (PDF)" on a digital channel, "Übermittelt
+// am", "Verwerfen" and, when stale, its refused rows. The PL only; every button by its capability,
+// the API checks each again (the official artifacts in full at the download). German only.
 
 type View = components["schemas"]["Kug200bBatches"];
 type Agentur = View["agenturen"][number];
 type Batch = View["batches"][number];
 type StaleRow = components["schemas"]["Kug200bBatchStaleRow"];
+type ChecklistItem = components["schemas"]["Kug200aChecklistItem"];
+type ExportKind = components["schemas"]["ExportKind"];
 const RouterLink = createLink(Link);
 
 type Message = { kind: "success" | "error"; text: string; rows?: StaleRow[] };
@@ -167,16 +171,19 @@ export function AgenturTab({ projectId }: { projectId: string }) {
           label={labelOf(batch.agenturKey)}
           rowText={rowText}
           busy={busy}
-          onIndex={() =>
-            act(async () => {
-              const data = ok(
-                await api.POST("/api/v1/exports/{kind}", {
-                  params: { path: { kind: "kug200b_batch_index" } },
-                  body: { batchId: batch.id },
-                }),
-              );
-              if (data) documentNavigation.assign(data.url);
-            }, t("agentur.downloaded"))
+          onExport={(kind) =>
+            act(
+              async () => {
+                const data = ok(
+                  await api.POST("/api/v1/exports/{kind}", {
+                    params: { path: { kind } },
+                    body: { batchId: batch.id },
+                  }),
+                );
+                if (data) documentNavigation.assign(data.url);
+              },
+              t(`agentur.downloaded.${kind}` as never),
+            )
           }
           onSubmit={(submittedOn) =>
             act(async () => {
@@ -193,6 +200,7 @@ export function AgenturTab({ projectId }: { projectId: string }) {
               ok(
                 await api.POST("/api/v1/kug200b-batches/{batchId}/discard", {
                   params: { path: { batchId: batch.id } },
+                  body: {},
                 }),
               );
             }, t("agentur.discarded"))
@@ -302,7 +310,7 @@ function BatchSection(props: {
   label: string;
   rowText: (row: StaleRow) => string;
   busy: boolean;
-  onIndex: () => Promise<void>;
+  onExport: (kind: ExportKind) => Promise<void>;
   onSubmit: (submittedOn: string) => Promise<void>;
   onDiscard: () => Promise<void>;
 }) {
@@ -357,13 +365,36 @@ function BatchSection(props: {
         </InlineNotification>
       )}
       <People title={t("agentur.members")} people={batch.members} />
+      {batch.capabilities.exportArtifact && batch.checklist && (
+        <BatchChecklist batch={batch} checklist={batch.checklist} />
+      )}
       <div className="tp-bulk-actions">
+        {batch.capabilities.exportArtifact && (
+          <Button
+            kind="secondary"
+            size="md"
+            disabled={props.busy}
+            onClick={() => void props.onExport("kug200b_batch_artifact")}
+          >
+            {t(`agentur.artifactPdf.${batch.artifact}`)}
+          </Button>
+        )}
+        {batch.capabilities.exportScans && (
+          <Button
+            kind="secondary"
+            size="md"
+            disabled={props.busy}
+            onClick={() => void props.onExport("kug200b_batch_scans")}
+          >
+            {t("agentur.scansPdf")}
+          </Button>
+        )}
         {batch.capabilities.exportIndex && (
           <Button
             kind="tertiary"
             size="md"
             disabled={props.busy}
-            onClick={() => void props.onIndex()}
+            onClick={() => void props.onExport("kug200b_batch_index")}
           >
             {t("agentur.index")}
           </Button>
@@ -397,5 +428,46 @@ function BatchSection(props: {
         </>
       )}
     </Section>
+  );
+}
+
+/**
+ * What to write by hand before the artifact goes out (Q197 (8), Q205): each header key or column
+ * left blank, why, and whom it concerns; never a value. Shown beside the download, so it is read
+ * before printing.
+ */
+function BatchChecklist({ batch, checklist }: { batch: Batch; checklist: ChecklistItem[] }) {
+  const { t } = useTranslation();
+  const names = new Map(
+    batch.members.map((m) => [
+      m.participationId,
+      [m.lastName, m.firstName].filter(Boolean).join(", "),
+    ]),
+  );
+  const whom = (item: ChecklistItem) => {
+    if (item.participationIds.length === 0) return "";
+    if (item.participationIds.length === batch.members.length && batch.members.length > 1) {
+      return t("agentur.checklist.everyone", { count: batch.members.length });
+    }
+    return t("agentur.checklist.members", {
+      names: item.participationIds.map((id) => names.get(id) ?? "").join("; "),
+    });
+  };
+  return (
+    <div aria-live="polite" className="tp-fieldset" data-testid="kug200a-checklist">
+      <h4>{t(`agentur.checklist.title.${batch.artifact}`)}</h4>
+      {checklist.length === 0 ? (
+        <p>{t("agentur.checklist.none")}</p>
+      ) : (
+        <ul className="tp-list">
+          {checklist.map((item) => (
+            <li key={`${item.code}-${item.key}`}>
+              {t(`agentur.checklist.codes.${item.code}`, { label: item.label })}
+              {whom(item) && ` – ${whom(item)}`}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

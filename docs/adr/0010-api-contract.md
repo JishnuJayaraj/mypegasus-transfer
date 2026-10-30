@@ -540,6 +540,28 @@ generator then. No action now.
   (`export_link_kind`) and answers the batch's work list as `text/csv; charset=utf-8`, with the
   same download policy, `no-store`, `nosniff`, `attachment`.
 
+## Note 2026-10-29 (Slice 6, PR 6-5a-2): a batch's official artifacts
+
+- Exports: `ExportKind` adds `kug200b_batch_artifact` (the Kug 200a, or the alternative list the
+  Agentur accepted) and `kug200b_batch_scans` (`422 export_not_applicable` on a paper channel),
+  issued with `BatchExportInput` like the index. `GET /export-content/{token}` answers them as
+  `application/pdf` (`kug200a-<date>.pdf`, `sammelliste-kug200b-<date>.pdf`,
+  `kug200b-scans-<date>.pdf`) with the download policy, after the full recheck: `404` for a link
+  that isn't the user's and session's, `422 export_stale` (the settings included),
+  `409 source_changed` when something printed changed between the read and the record,
+  `422 form_version_unavailable` without a Kug 200a in use and `503 pdf_unavailable` for the list
+  without an HTML renderer.
+- `Kug200bBatch` gains `checklist` (`Kug200aChecklistItem[]` `{ code, key, label,
+  participationIds }`, codes `not_recorded`, `not_decided`, `text_not_fitting`,
+  `character_unsupported`, `identifier_too_long`; null unless open and current) and
+  `capabilities.exportArtifact` and `exportScans`.
+- `POST /kug200b-batches/{id}/discard` takes the empty strict body `DiscardKug200bBatchInput` (a
+  JSON body like every write; without one the request was `415` from a browser).
+- `PATCH /projects/{id}` (`UpdateProjectInput`) takes `tKugNumber` (`400 t_kug_prefix` for a
+  number starting with `TK-`), `employerBetriebsnummer` and
+  `employerEconomicClass`, each nullable (null clears); `Project` returns them, and
+  `ProjectConfig.capabilities.editKug200aHeader` offers them to the PL of a `ta_tg` project.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

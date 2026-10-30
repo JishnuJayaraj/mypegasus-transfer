@@ -39,6 +39,14 @@
         "header.html": "1d0146e0eb6270bfe8a1c5525fc23432f0f968213a28fa42500c1770bf3158b3",
         "footer.html": "3d3b34e57b7be9669ff66a8811c32877cb908b03797bf7154ede135a9e5a4a22"
       }
+    },
+    {
+      "ref": "sammelliste-kug200b:v1",
+      "files": {
+        "index.html": "ecf4e0da5f3321e6337166a8cc7d7dc207873cd6bee6f75e291e52df735bf287",
+        "header.html": "fb65297073c4309b417919583331f93a30000d9f5007bd5f60539f07decb4d31",
+        "footer.html": "3d3b34e57b7be9669ff66a8811c32877cb908b03797bf7154ede135a9e5a4a22"
+      }
     }
   ]
 }

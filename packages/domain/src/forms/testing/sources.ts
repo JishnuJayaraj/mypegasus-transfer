@@ -1,3 +1,4 @@
+import type { Kug200aMemberSource, Kug200aSource } from "../../asu/kug200a";
 import type { Kug200bSource, Tl407Assessment, Tl407Source } from "../input";
 
 // Synthetic people only (CLAUDE.md, rule 1): fictional names, addresses and numbers, with the
@@ -129,4 +130,73 @@ export const syntheticKug200b: Kug200bSource = {
     pensionInsuranceNumber: "12290751D123",
     severeDisability: false,
   },
+};
+
+const kug200aMember = (
+  n: number,
+  lastName: string,
+  firstName: string,
+  street: string,
+  postalCode: string,
+  city: string,
+): Kug200aMemberSource => ({
+  participationId: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
+  identity: { firstName, lastName },
+  address: { street, postalCode, city, country: "DE" },
+  insuranceNumber: `1229075${n % 10}D12${n % 10}`,
+  tgStart: "2027-01-01",
+  tgEnd: "2027-12-31",
+  declaration17: n === 3 ? "none" : "in_packet",
+  infoEventDates: n === 5 ? [] : ["2026-11-20"],
+});
+
+/**
+ * A Kug 200a batch of seven (two copies) representative of the 6 pt assessment (Q197): long
+ * names and addresses, `Ł`, `ğ`, `ş`, `ß`, a consent not in force and a member without the info
+ * event.
+ */
+export const syntheticKug200a: Kug200aSource = {
+  header: {
+    transferCompany: {
+      name: syntheticTl407.transferCompany.name,
+      betriebsnummer: "12345678",
+      economicClass: "N 78.30 Befristete Überlassung von Arbeitskräften",
+    },
+    tKugNumber: "123-456-7890",
+    employer: {
+      name: "Fußball Bund Beispiel Maschinenbau GmbH & Co. KG",
+      betriebsnummer: "87654321",
+      economicClass: "C 28.22 Herstellung von Hebezeugen und Fördermitteln",
+    },
+  },
+  members: [
+    kug200aMember(1, "Doğan-Großmann", "Łucja Ayşe", "Hauptstraße 12a", "10115", "Berlin"),
+    kug200aMember(
+      2,
+      "Wolfenschießen-Brandenburger",
+      "Maximiliane Josephine Gülşen",
+      "Friedrich-Wilhelm-von-Steuben-Straße 147-149",
+      "71409",
+      "Schwaikheim-Oberdorf",
+    ),
+    kug200aMember(
+      3,
+      "Schmidt-Pötzsch-Leutheusser",
+      "Anna-Lena Charlotte",
+      "Am Großen Wannsee, Uferpromenade 3/4b",
+      "86971",
+      "Peiting-Herzogsägmühle",
+    ),
+    kug200aMember(4, "Öz", "Ali", "Weg 1", "01067", "Dresden"),
+    kug200aMember(5, "Kowalczyk-Żurawska", "Bożena", "Straße des 17. Juni 135", "10623", "Berlin"),
+    kug200aMember(6, "Ağaoğlu", "Şükrü", "Lindenallee 7", "50667", "Köln"),
+    kug200aMember(
+      7,
+      "von Hohenzollern-Sigmaringen",
+      "Friederike Wilhelmine Auguste",
+      "Ludwig-Ganghofer-Weg 23",
+      "82515",
+      "Wolfratshausen",
+    ),
+  ],
 };

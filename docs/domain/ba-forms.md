@@ -21,7 +21,7 @@ names, checked against the copies we received on 2026-10-15 and the blanks commi
   acknowledges that the TG gets selective access to their applicant profile at the Agentur.
   This is the form behind the "batch" registration at info events. The batch goes to the Agentur
   with the official **Kug 200a** (07/2025; BA guidance of 4 May 2026, section 2.13(12)) unless the
-  Agentur's acceptance of an alternative is recorded (Q187, Q195).
+  Agentur's acceptance of an alternative is recorded (Q187, Q195); as built below.
 - Only for §111 (TG) cases. In TA-only projects participants register themselves.
 - Signature: handwritten (field 20, no AcroForm field).
 
@@ -108,15 +108,62 @@ written and kept as the record `kug200b_profile_access`; whether it is a consent
   Dritten"*; "Nur durch Transfergesellschaft auszufüllen". No field is marked `*`.
 - Version: `Kug200a - 07/2025`, 2 pages, 56 fields (Q195).
 - Header (on both pages, one field each): the TG's name, Betriebsnummer, T-Kug-Nummer
-  (`TK-…`, if known), Branche/Wirtschaftsklasse; the personalabgebender Betrieb's name,
-  Betriebsnummer and Branche/WK; the date of the info event.
+  (if known; the form prints `TK-` before the box), Branche/Wirtschaftsklasse; the
+  personalabgebender Betrieb's name, Betriebsnummer and Branche/WK; the date of the info event.
 - Six participant rows (two on p. 1, four on p. 2): name and address in one box, the
   Versicherungsnummer (VSNR, an identifier), the last activity at the employer and its period,
   the planned period in the TG, "Erklärung zur schriftlichen Arbeitsuchendmeldung ist beigefügt",
   the consent declaration "ist beigefügt" / "liegt nicht vor" (one checkbox with two on-states),
   "Teilnahme an der Info-Veranstaltung".
-- The registry holds its blank, manifest and field map; what fills it and how a batch of more
-  than six is split come with the batches (the Slice 6 plan, PR 6-5a).
+- The "Lfd. Nr." column is printed (1–6 on every copy), not a field. Identifying a copy within
+  its batch is an open follow-up (`docs/issues/kug200a-copy-identification.md`).
+
+### The Kug 200a as built (Slice 6, PR 6-5a-2; readings Q205)
+
+`checkKug200a` in `packages/domain/src/asu/kug200a.ts` (pure, no system time) builds the cover list
+of a Kug 200b batch from what the API reads under the project's exclusive lock; the export rules
+are in data-protection.md, exports.
+
+- **Copies of six:** the members in the list's order (last name, first name) fill copies of six
+  rows each (two on p. 1, four on p. 2), each a complete form with the header, merged into one PDF
+  (`mergePdfs`); each copy numbers its rows 1–6 as printed.
+- **Header:** the TG's name, Betriebsnummer and Branche/WK from the organisation configuration
+  (`transfergesellschaft.betriebsnummer`, `.economicClass`; architecture/overview.md); the
+  personalabgebender Betrieb's name (the project's customer), its Betriebsnummer and Branche/WK
+  and the T-Kug-Nummer from the project (set by the PL on "Einrichtung"; the number without the
+  printed `TK-`, which the form would otherwise repeat); the info event's date only when every
+  attendance (`attended`) of the batch's members at the project's scheduled info events falls on
+  one Berlin date.
+- **Rows:** "Nachname, Vorname", street, "PLZ Ort" in the one box; the Versicherungsnummer (the
+  RV-Nummer, through the purpose-bound read); the planned period in the TG as the effective
+  contractual TG dates, `TT.MM.JJJJ – TT.MM.JJJJ`; "Erklärung … ist beigefügt" for every member
+  (their accepted Kug 200b goes with the list); the consent as the packet carries it (Q205 (4)):
+  "ist beigefügt" only when declaration 17's record in force is on the member's scan in the batch,
+  "liegt nicht vor" when none is in force, and when it is on another paper the packet doesn't
+  carry (a renewed declaration after a withdrawal) left blank with the checklist entry
+  `not_in_packet`: rebuild the batch, which takes the newest scan, or write the box by hand; the
+  alternative list the same; "Teilnahme" ticked when the member
+  attended an info event (on the header's date when there is one). The last activity at the
+  employer and its period are never filled: no record says which work row was at the old employer
+  (Q205).
+- **Nothing is guessed or refused as a whole:** what the platform doesn't hold, what the data
+  doesn't decide, a text too long at the 6 pt floor and a value the form can't take
+  (`character_unsupported`, `identifier_too_long`) stay blank and go on the **handwriting
+  checklist** (codes `not_recorded`, `not_decided`, `not_in_packet`, `text_not_fitting`, …, by key
+  and member, never a value), shown on the tab "Agentur" before printing (Q197 (8)).
+- **The 6 pt floor (Q197 (1)), assessed 2026-10-29, accepted 2026-10-30** (the review of PR #99,
+  which also rendered the alternative list through CI's Gotenberg image) on a representative synthetic batch of seven
+  (`syntheticKug200a`: long double names and addresses, `Ł`, `ğ`, `ş`, `ß`; the contract test
+  fills the real blank and reads it back): the name-and-address box takes five lines at 6 pt, and
+  at print resolution (300 dpi) 6 pt Noto Sans stays legible with every special character
+  distinct, so 6 pt holds; beyond it the box is left blank and listed. Long job titles don't
+  arise, since the last activity isn't filled.
+- **The accepted alternative** (regional-variation.md): our own template
+  `sammelliste-kug200b:v1` (`packages/forms/templates/own/`, hash-checked, rendered through
+  `PdfRenderer.renderHtml`) with the Kug 200a's contents: the header as labels and values, then
+  one numbered table of all members with the Kug 200a's columns (no copies of six), the batch's
+  date and count on every page, "Seite n von m"; every value escaped. Its checklist is the Kug
+  200a's but for what only the form's boxes refuse.
 
 ## The registry as built (Slice 6, PR 6-1)
 

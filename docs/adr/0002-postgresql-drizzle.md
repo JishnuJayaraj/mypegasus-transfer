@@ -1014,6 +1014,45 @@ data-protection.md (exports, batches and submissions) hold the rules, Q203 the r
   (`agentur_submission.document_id`), so a quarantined, invalidated or deleted scan withholds
   the fact and a lift dates it.
 
+## Amendment 2026-10-29: a batch's official artifacts (Slice 6, PR 6-5a-2)
+
+Migrations `0079_kug200a_header.sql` (generated) and `0080_kug200a_functions.sql` (hand-written,
+the 0076 hardening); ba-forms.md (the Kug 200a as built) and data-protection.md (exports) hold the
+rules, Q205 the readings.
+- **Tables:** `project` gains `t_kug_number`, `employer_betriebsnummer` and
+  `employer_economic_class` (each nullable, with its `CHECK`: the T-Kug-Nummer without `TK-`,
+  eight digits, 1–100 trimmed characters). `export_kind` gains `kug200b_batch_artifact` and
+  `kug200b_batch_scans`, both batch kinds of `export_link`.
+- **`update_project`** gains `p_kug200a jsonb` (DROP of the old signature, CREATE, the grants
+  again): an object whose keys present are set or cleared (null); any other shape is
+  `invalid_argument`; audited by field name in `project_changed`.
+- **`create_kug200b_batch_export_link`** and **`kug200b_batch_export_content`** are replaced
+  (signatures unchanged): the link takes the three batch kinds, the scans only on `scan_email` or
+  `upload` (`export_not_applicable`); the index content serves an index link only.
+- **The official download, in two steps** (Q203 (6)), each under the project's exclusive lock that
+  the API takes first (`lock_project_setup`) before resolving the Agentur's settings:
+  `read_kug200b_batch_export` (through `lock_kug200b_official_export`: the live link of an official
+  kind, else `export_link_invalid`; the PL and the open batch, else `export_stale`; the recheck
+  `kug200b_batch_recheck` with the settings passed in, `export_stale` with the rows in `DETAIL`)
+  returns the sources (`kug200b_batch_export_sources`), the fingerprint
+  (`kug200b_batch_export_fingerprint`: SHA-256 over the kind, the batch's channel and artifact,
+  the organisation's digest and the sources, the RV-Nummer as its ciphertext's digest) and, for the
+  Kug 200a, each RV-Nummer decrypted with the field key (`key_unknown` for another key id), each
+  read audited `sensitive_read`; for the scans each scan's key material. `record_kug200b_batch_export`
+  rechecks again, recomputes the fingerprint (`source_changed`) and writes `export_downloaded`.
+  `export_link_batch` names a live official link's batch (not audited), so the API knows which
+  project to lock; `kug200b_batch_print_sources` gives the PL the sources for the tab's checklist
+  (the RV-Nummer's digest only, nothing decrypted, not audited; `batch_not_found` for anyone else).
+- **Which writer takes which lock:** everything the artifact prints is written under the
+  project's lock: configuration and project fields (`update_project`, the Agentur-scoped setting)
+  and attendance and appointments through `lock_project_setup` (exclusive), every participation
+  write (identity, address, the RV-Nummer, the route, document reviews and quarantines,
+  declaration 17's records) through `lock_participation` (shared). Under the exclusive lock the
+  read and the record therefore each see one consistent state; the fingerprint catches what
+  changed between them. Enum values in the SQL function `kug200b_batch_export_sources` are
+  compared as text (a SQL function's body is checked when it is created, in the same migration run
+  that may add them).
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

@@ -12,6 +12,9 @@ const project = {
   createdAt: "2026-10-15T20:05:23.123456Z",
   createdBy: "00000000-0000-4000-8000-000000000003",
   regionId: "00000000-0000-4000-a000-000000000001",
+  tKugNumber: null,
+  employerBetriebsnummer: "87654321",
+  employerEconomicClass: null,
 };
 
 describe("Project", () => {

@@ -218,7 +218,11 @@ Participation
   acceptance's ("Alternative anerkannt am … von …"); a template that sets it is invalid
   (`agentur_scoped_setting`), and the resolver's value counts only with that provenance
   (`batchSettings` in the domain). Without it the Kug 200a is the artifact. Removing it makes an
-  open batch built with the alternative stale (`settings_changed`).
+  open batch built with the alternative stale (`settings_changed`), as recording it makes a batch
+  built for the Kug 200a stale. The alternative list itself (PR 6-5a-2) is our own versioned
+  template `sammelliste-kug200b:v1` with the Kug 200a's contents in one table (ba-forms.md, the
+  Kug 200a as built); what an Agentur actually agreed to receive stays its confirmation's, so an
+  Agentur that wants other contents needs a new template version (Q205).
 - **Overrides apply project-wide** (round 15): Slice 2 validates an override against every
   pinned Agentur template and rejects a relaxation that matches none of them. Agentur-specific
   fields and rules belong in that Agentur's template.

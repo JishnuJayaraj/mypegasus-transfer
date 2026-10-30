@@ -168,6 +168,7 @@ describe("ProjectConfig", () => {
         migrateTemplate: true,
         importParticipations: true,
         setProjectRegion: false,
+        editKug200aHeader: false,
       },
     };
     expect(ProjectConfig.parse(config)).toEqual(config);

@@ -310,10 +310,18 @@ export async function batchesView(
           }))
           .toSorted(byName),
         staleRows,
+        // Set by the route for an open, current batch (`artifactChecklist`).
+        checklist: null,
         capabilities: {
           submit: open && staleRows.length === 0,
           discard: open,
           exportIndex: open && staleRows.length === 0,
+          exportArtifact: open && staleRows.length === 0,
+          // The Kug 200a goes with the originals on a paper channel (D25).
+          exportScans:
+            open &&
+            staleRows.length === 0 &&
+            (batch.channel === "scan_email" || batch.channel === "upload"),
         },
       };
     }),

@@ -886,7 +886,7 @@ and highly confidential data only; ordinary person-data writes are `participant_
   `declaration_withdrawal_recorded`, `declaration_withdrawal_ba_notified` (dates), `consent_given`
   and `consent_ended` with their source.
 
-### Exports *(accepted, Q159; as built in Slice 6, PR 6-4b)*
+### Exports *(accepted, Q159; as built in Slice 6, PRs 6-4b, 6-5a-1 and 6-5a-2)*
 
 - **An export is issued by a logged request** (`POST /exports/{kind}`; `create_export_link`):
   staff as themselves through a live session (in assisted mode `403`); the kind `kug200b_print`
@@ -914,8 +914,34 @@ and highly confidential data only; ordinary person-data writes are `participant_
   names in the same locked call and streams a CSV (`;`, BOM, the formula guard) with the download
   policy; nothing is stored. Last name, first name and form version only: the PL's working list,
   never sent to the Agentur. The settings are checked at the issuance only, accepted for this
-  internal list (Q203 (6)); the official artifacts of 6-5a-2 take the full recheck at the
-  download.
+  internal list (Q203 (6)); the official artifacts take the full recheck at the download.
+- **A batch's official artifacts** (Slice 6, PR 6-5a-2; Q203 (6), Q205): `kug200b_batch_artifact`
+  (the Kug 200a, or the alternative list the Agentur accepted) and `kug200b_batch_scans` (the
+  members' accepted scans, only on the channels `scan_email` and `upload`, else
+  `422 export_not_applicable`), issued like the work list. **The download rechecks everything, the
+  settings included**, in two steps, each under the project's exclusive lock (which every writer
+  of what they print takes or conflicts with: configuration and project writes and attendance
+  through `lock_project_setup`, every participation write, the participant's own and document
+  reviews and quarantines through `lock_participation`): the API resolves the Agentur's channel,
+  artifact and outdated versions under the lock, `read_kug200b_batch_export` rechecks the PL, the
+  open batch, the settings and every member (`422 export_stale`) and reads what is printed and its
+  fingerprint; the API renders; `record_kug200b_batch_export` rechecks again and compares the
+  fingerprint of everything printed (the project's customer and header fields, the
+  organisation's, the names, addresses, RV-Nummern as their ciphertexts' digests, TG dates,
+  where declaration 17 in force is, info-event attendance; for the scans each scan and its content digest)
+  before it writes `export_downloaded` (`409 source_changed` otherwise, nothing served). A
+  quarantined, invalidated or deleted scan makes the batch stale, so it never goes into a scans
+  PDF. Streamed with the download policy, stored nowhere.
+- **The Kug 200a's values** (ba-forms.md, the Kug 200a as built): name, address, the effective
+  TG dates, where declaration 17 in force is and info-event attendance as the PL reads them for the batch;
+  the **RV-Nummer** (highly confidential) only through `read_kug200b_batch_export`, a read bound to
+  this purpose, decrypted per member at each download and each read audited `sensitive_read` (key
+  `pensionInsuranceNumber`), the values going only into the file. The tab's handwriting checklist
+  uses the RV-Nummer's presence only (`kug200b_batch_print_sources`, nothing decrypted or
+  audited) and carries codes, keys and members, never a value. The header's project fields (the
+  T-Kug-Nummer, the employer's Betriebsnummer and Branche/WK) are project data (`project`,
+  `internal`, `project_master`), no personal data, set by the PL and audited by field name in
+  `project_changed`.
 - **Batches and submissions** (process-and-lifecycle.md, Kug 200b batches): `kug200b_batch`
   (project data: Agentur, channel, artifact, status, dates, counts, staff ids; `internal`,
   `project_master`), `kug200b_batch_member` and `agentur_submission` (`internal`, `case_internal`

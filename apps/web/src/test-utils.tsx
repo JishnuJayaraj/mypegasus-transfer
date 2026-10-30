@@ -129,6 +129,9 @@ export const project = {
   createdAt: "2026-10-15T08:30:00.123456Z",
   createdBy: staffUsers[1]!.id,
   regionId: regions[0]!.id,
+  tKugNumber: null,
+  employerBetriebsnummer: null,
+  employerEconomicClass: null,
 };
 
 /** A project's configuration without pins (Slice 2 plan 5.12). */
@@ -151,6 +154,7 @@ export const unpinnedConfig = {
     migrateTemplate: true,
     importParticipations: true,
     setProjectRegion: true,
+    editKug200aHeader: true,
   },
 };
 

@@ -10,6 +10,8 @@
     "street": "Musterstraße",
     "houseNumber": "10",
     "postalCode": "10115",
-    "city": "Berlin"
+    "city": "Berlin",
+    "betriebsnummer": "12345678",
+    "economicClass": "N 78.30 Befristete Überlassung von Arbeitskräften"
   }
 }

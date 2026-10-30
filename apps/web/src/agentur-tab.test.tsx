@@ -50,7 +50,14 @@ const batch = (overrides: object = {}) => ({
   discardedAt: null,
   members: [person(a, "Albers"), person(b, "Zander")],
   staleRows: [],
-  capabilities: { submit: true, discard: true, exportIndex: true },
+  checklist: [],
+  capabilities: {
+    submit: true,
+    discard: true,
+    exportIndex: true,
+    exportArtifact: true,
+    exportScans: true,
+  },
   ...overrides,
 });
 const tab = (overrides: object = {}) => ({
@@ -59,6 +66,9 @@ const tab = (overrides: object = {}) => ({
   batches: [],
   ...overrides,
 });
+
+const exportLink = (name: string) => () =>
+  json({ url: `/api/v1/export-content/${name}`, expiresAt: "2026-11-20T09:01:00.000000Z" }, 201);
 
 function setup(first: object | Response, routes: Record<string, () => Response> = {}) {
   const ta = { ...project, type: "ta_tg" };
@@ -169,9 +179,134 @@ describe("the project tab Agentur", () => {
       );
       await user.click(screen.getByRole("button", { name: "Verwerfen" }));
       expect(await screen.findByText("Sammelmeldung verworfen.")).toBeVisible();
+      // A JSON body like every write (the API answers 415 without one).
+      expect(
+        calls.find((c) => c.key === `POST /api/v1/kug200b-batches/${batchId}/discard`)?.body,
+      ).toEqual({});
     } finally {
       documentNavigation.assign = original;
     }
+  });
+
+  it("shows the handwriting checklist before the Kug 200a and downloads it and the scans", async () => {
+    const user = userEvent.setup();
+    const assigned: string[] = [];
+    const original = documentNavigation.assign;
+    documentNavigation.assign = (url: string) => void assigned.push(url);
+    try {
+      const { calls } = setup(
+        tab({
+          agenturen: [],
+          batches: [
+            batch({
+              checklist: [
+                {
+                  code: "not_recorded",
+                  key: "tgKugNumber",
+                  label: "T-Kug-Nummer",
+                  participationIds: [],
+                },
+                {
+                  code: "not_recorded",
+                  key: "participants.insuranceNumber",
+                  label: "Liste der Teilnehmenden: Versicherungsnummer (VSNR)",
+                  participationIds: [b],
+                },
+                {
+                  code: "not_in_packet",
+                  key: "participants.consentDeclaration",
+                  label:
+                    "Liste der Teilnehmenden: Einverständniserklärung zur Einschaltung eines Dritten",
+                  participationIds: [a],
+                },
+                {
+                  code: "not_decided",
+                  key: "participants.lastActivity",
+                  label: "Liste der Teilnehmenden: Zuletzt ausgeübte Tätigkeit beim Arbeitgeber",
+                  participationIds: [a, b],
+                },
+              ],
+            }),
+          ],
+        }),
+        {
+          "POST /api/v1/exports/kug200b_batch_artifact": exportLink("a"),
+          "POST /api/v1/exports/kug200b_batch_scans": exportLink("s"),
+        },
+      );
+      const checklist = await screen.findByTestId("kug200a-checklist");
+      expect(
+        within(checklist).getByRole("heading", {
+          name: "Vor dem Druck der Kug 200a von Hand ergänzen",
+        }),
+      ).toBeVisible();
+      expect(within(checklist).getByText("T-Kug-Nummer: nicht erfasst")).toBeVisible();
+      expect(
+        within(checklist).getByText(
+          "Liste der Teilnehmenden: Versicherungsnummer (VSNR): nicht erfasst – bei Zander, Erika",
+        ),
+      ).toBeVisible();
+      expect(
+        within(checklist).getByText(
+          "Liste der Teilnehmenden: Zuletzt ausgeübte Tätigkeit beim Arbeitgeber: aus den Daten nicht eindeutig – bei allen 2 Personen",
+        ),
+      ).toBeVisible();
+      expect(
+        within(checklist).getByText(
+          /^Liste der Teilnehmenden: Einverständniserklärung zur Einschaltung eines Dritten: Die geltende Erklärung steht auf einem neueren Kug 200b, .* – bei Albers, Erika$/,
+        ),
+      ).toBeVisible();
+      await user.click(screen.getByRole("button", { name: "Kug 200a (PDF)" }));
+      await waitFor(() => expect(assigned).toEqual(["/api/v1/export-content/a"]));
+      expect(await screen.findByText("Das Vorblatt wird heruntergeladen.")).toBeVisible();
+      await user.click(screen.getByRole("button", { name: "Scans (PDF)" }));
+      await waitFor(() => expect(assigned).toHaveLength(2));
+      expect(calls.find((c) => c.key === "POST /api/v1/exports/kug200b_batch_scans")?.body).toEqual(
+        {
+          batchId,
+        },
+      );
+    } finally {
+      documentNavigation.assign = original;
+    }
+  });
+
+  it("names the accepted alternative's list, says when nothing is left for handwriting and explains a refusal", async () => {
+    const user = userEvent.setup();
+    setup(
+      tab({
+        agenturen: [],
+        batches: [
+          batch({
+            artifact: "accepted_alternative",
+            channel: "paper_post",
+            capabilities: {
+              submit: true,
+              discard: true,
+              exportIndex: true,
+              exportArtifact: true,
+              exportScans: false,
+            },
+          }),
+        ],
+      }),
+      {
+        "POST /api/v1/exports/kug200b_batch_artifact": () =>
+          problem(422, "domain-error", {
+            errors: [{ pointer: "", code: "batch_stale", detail: "x" }],
+            staleRows: [],
+          }),
+      },
+    );
+    const checklist = await screen.findByTestId("kug200a-checklist");
+    expect(within(checklist).getByText("Nichts von Hand zu ergänzen.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Scans (PDF)" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Sammelliste (PDF)" }));
+    expect(
+      await screen.findByText(
+        "Sammelmeldung veraltet: Verwerfen Sie sie und bilden Sie eine neue.",
+      ),
+    ).toBeVisible();
   });
 
   it("shows a stale batch's rows and offers only the discard", async () => {
@@ -187,7 +322,14 @@ describe("the project tab Agentur", () => {
                 reason: "asu_route_changed",
               },
             ],
-            capabilities: { submit: false, discard: true, exportIndex: false },
+            checklist: null,
+            capabilities: {
+              submit: false,
+              discard: true,
+              exportIndex: false,
+              exportArtifact: false,
+              exportScans: false,
+            },
           }),
         ],
       }),
@@ -198,6 +340,9 @@ describe("the project tab Agentur", () => {
     ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Übermittlung erfassen" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Arbeitsliste (CSV)" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Kug 200a (PDF)" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Scans (PDF)" })).toBeNull();
+    expect(screen.queryByTestId("kug200a-checklist")).toBeNull();
     expect(screen.getByRole("button", { name: "Verwerfen" })).toBeVisible();
   });
 

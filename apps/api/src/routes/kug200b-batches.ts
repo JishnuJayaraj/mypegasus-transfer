@@ -1,8 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import { configDirs, loadOrganisation } from "@transfer/config/load";
 import { eq, kug200bBatch, sql, type Database } from "@transfer/db";
 import {
   BatchStaleRow,
   CreateKug200bBatchInput,
+  DiscardKug200bBatchInput,
   Kug200bBatchCreated,
   Kug200bBatchesView,
   Kug200bBatchParams,
@@ -15,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { projectAccess } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
+import { artifactChecklist, type BatchPrintSources } from "../forms/kug200a";
 import { formRegistry } from "../forms/registry";
 import { agenturBatchSettings, batchesView, settingsArgs } from "../participations/kug200b-batches";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -61,6 +64,7 @@ export function batchRefused(c: Context<AppEnv>, error: unknown, hidden: "projec
     code === "asu_not_applicable" ||
     code === "batch_settings_missing" ||
     code === "batch_not_open" ||
+    code === "export_not_applicable" ||
     code === "document_not_found" ||
     code === "invalid_argument"
   ) {
@@ -75,6 +79,9 @@ export function kug200bBatchRoutes(deps: Deps) {
   const middleware = [requireSession(deps)];
   const release = loadRelease(deps.env.configDir);
   const registry = deps.formRegistry ?? formRegistry(deps.env.configDir);
+  const company = loadOrganisation(
+    configDirs(deps.env.configDir).organisation,
+  ).transfergesellschaft;
 
   /** The project as the PL's: 404 when it isn't visible, 403 for anyone but its PL. */
   async function projectLead(c: Context<AppEnv>, projectId: string) {
@@ -124,7 +131,7 @@ export function kug200bBatchRoutes(deps: Deps) {
       path: "/projects/{projectId}/kug200b-batches",
       tags: ["projects"],
       summary:
-        "The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck",
+        "The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck and, when current, its artifact's handwriting checklist (codes, keys and members, never a value)",
       middleware,
       request: { params: z.object({ projectId: z.uuid() }) },
       responses: {
@@ -150,7 +157,24 @@ export function kug200bBatchRoutes(deps: Deps) {
             )
             .then((r) => r.rows);
           if (project?.type !== "ta_tg") return null;
-          return batchesView(tx, release, registry, projectId, clock.today());
+          const found = await batchesView(tx, release, registry, projectId, clock.today());
+          // Each open, current batch's handwriting checklist before printing (Q197 (8), Q205):
+          // from the sources the artifact prints, the RV-Nummer by its presence only.
+          for (const batch of found.batches) {
+            if (!batch.capabilities.exportArtifact) continue;
+            const { rows } = await tx.execute<{ result: BatchPrintSources }>(
+              sql`select kug200b_batch_print_sources(p_context => ${context(c)},
+                p_batch_id => ${batch.id}::uuid) as result`,
+            );
+            batch.checklist = await artifactChecklist(
+              registry,
+              rows[0]!.result,
+              company,
+              batch.artifact,
+              clock.today(),
+            );
+          }
+          return found;
         },
         { isolationLevel: "repeatable read", accessMode: "read only" },
       );
@@ -285,7 +309,13 @@ export function kug200bBatchRoutes(deps: Deps) {
       summary:
         "Discard an open batch (its PL): its members are free for a new batch; the batch stays as history",
       middleware,
-      request: { params: Kug200bBatchParams },
+      request: {
+        params: Kug200bBatchParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: DiscardKug200bBatchInput } },
+        },
+      },
       responses: {
         204: { description: "Discarded" },
         ...problemResponses(
@@ -293,6 +323,7 @@ export function kug200bBatchRoutes(deps: Deps) {
           "unauthenticated",
           "forbidden",
           "not-found",
+          "unsupported-media-type",
           "domain-error",
         ),
       },

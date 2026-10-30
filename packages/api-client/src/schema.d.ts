@@ -389,7 +389,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change name, customer, type (only while draft and unused, Q98) or region (the PL while draft, the global admin at any time, Q126) */
+        /** Change name, customer, type (only while draft and unused, Q98), region (the PL while draft, the global admin at any time, Q126) or the Kug 200a's header (T-Kug-Nummer, the employer's Betriebsnummer and Branche/WK; null clears) */
         patch: {
             parameters: {
                 query?: never;
@@ -12000,12 +12000,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open; kug200b_batch_index: an open Kug 200b batch's work list, its PL only), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored
+         * Issue an export (kug200b_print: one print file of 1–100 generated Kug 200b forms of one project the viewer may open; of an open Kug 200b batch, its PL only: kug200b_batch_index its work list, kug200b_batch_artifact the Kug 200a or the accepted alternative list, kug200b_batch_scans the members' scans for the channels scan_email and upload), audited export_created; a same-origin link bound to this staff session, valid 60 s; no file is stored
          * @description Refusals:
          *     - `404` for a form that doesn't exist, is deleted, isn't a generated Kug 200b or isn't the viewer's to open, and for a batch the viewer doesn't lead, whatever its state.
          *     - `403` in assisted mode.
          *     - Only for forms the viewer sees: `422 document_quarantined`, `422 document_invalidated`; `422 invalid_argument` for forms of more than one project or a body of another kind.
-         *     - Only for a batch the viewer leads: `422 batch_not_open`; `422 batch_stale` with `staleRows`.
+         *     - Only for a batch the viewer leads: `422 batch_not_open`; `422 batch_stale` with `staleRows`; `422 export_not_applicable` for the scans of a paper channel (the Kug 200a goes with the originals).
          */
         post: {
             parameters: {
@@ -12091,7 +12091,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The export of a link as an attachment (no-store, nosniff, the download policy): only with the staff session that asked and within 60 s, else 404; every form or batch member re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined, or a member moved); rendered at the download, stored nowhere, audited export_downloaded */
+        /** The export of a link as an attachment (no-store, nosniff, the download policy): only with the staff session that asked and within 60 s, else 404; every form or batch member re-authorized now (422 export_stale when one is no longer the viewer's, deleted or quarantined, or a member moved; an official artifact also when the Agentur's settings changed); an official artifact's sources compared again after rendering (409 source_changed); 422 form_version_unavailable without a Kug 200a in use; 503 pdf_unavailable for the alternative list without an HTML renderer; rendered at the download, stored nowhere, audited export_downloaded */
         get: {
             parameters: {
                 query?: never;
@@ -12103,7 +12103,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description The print file, or a batch's work list */
+                /** @description The print file, a batch's work list, its Kug 200a or alternative list, or its scans */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -12133,6 +12133,15 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -12175,7 +12184,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck */
+        /** The tab Agentur (the PL of a ta_tg project): per placement Agentur its batch channel or the missing settings, the artifact (the Kug 200a or the accepted alternative with its confirmation) and the ready scans; the batches, an open one with its recheck and, when current, its artifact's handwriting checklist (codes, keys and members, never a value) */
         get: {
             parameters: {
                 query?: never;
@@ -12428,7 +12437,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DiscardKug200bBatchInput"];
+                };
+            };
             responses: {
                 /** @description Discarded */
                 204: {
@@ -12466,6 +12479,15 @@ export interface paths {
                 };
                 /** @description Not found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -12777,6 +12799,9 @@ export interface components {
              * @description The region (Niederlassung); null for a project from before regions, which only global roles see
              */
             regionId: string | null;
+            tKugNumber: string | null;
+            employerBetriebsnummer: string | null;
+            employerEconomicClass: string | null;
         };
         /**
          * @description ta_only: Transferagentur only. ta_tg: Transferagentur and Transfergesellschaft.
@@ -12801,6 +12826,9 @@ export interface components {
             type?: components["schemas"]["ProjectType"];
             /** Format: uuid */
             regionId?: string;
+            tKugNumber?: string | null;
+            employerBetriebsnummer?: string | null;
+            employerEconomicClass?: string | null;
         };
         EntryWavePage: {
             items: components["schemas"]["EntryWave"][];
@@ -13034,6 +13062,7 @@ export interface components {
                 migrateTemplate: boolean;
                 importParticipations: boolean;
                 setProjectRegion: boolean;
+                editKug200aHeader: boolean;
             };
         };
         ConfigBlocker: {
@@ -16299,7 +16328,7 @@ export interface components {
             expiresAt: string;
         };
         /** @enum {string} */
-        ExportKind: "kug200b_print" | "kug200b_batch_index";
+        ExportKind: "kug200b_print" | "kug200b_batch_index" | "kug200b_batch_artifact" | "kug200b_batch_scans";
         ExportInput: components["schemas"]["DocumentExportInput"] | components["schemas"]["BatchExportInput"];
         DocumentExportInput: {
             documentIds: string[];
@@ -16394,10 +16423,13 @@ export interface components {
             discardedAt: string | null;
             members: components["schemas"]["Kug200bBatchMember"][];
             staleRows: components["schemas"]["Kug200bBatchStaleRow"][];
+            checklist: components["schemas"]["Kug200aChecklistItem"][] | null;
             capabilities: {
                 submit: boolean;
                 discard: boolean;
                 exportIndex: boolean;
+                exportArtifact: boolean;
+                exportScans: boolean;
             };
         };
         /** @enum {string} */
@@ -16415,6 +16447,14 @@ export interface components {
             /** @enum {string|null} */
             asuChannel: "kug_200b" | "online_self" | "in_person" | null;
         };
+        Kug200aChecklistItem: {
+            code: components["schemas"]["Kug200aChecklistCode"];
+            key: string;
+            label: string;
+            participationIds: string[];
+        };
+        /** @enum {string} */
+        Kug200aChecklistCode: "not_recorded" | "not_decided" | "not_in_packet" | "text_not_fitting" | "character_unsupported" | "identifier_too_long";
         Kug200bBatchCreated: {
             /** Format: uuid */
             batchId: string;
@@ -16435,6 +16475,7 @@ export interface components {
              */
             submittedOn: string;
         };
+        DiscardKug200bBatchInput: Record<string, never>;
         DevStaffUser: {
             /** Format: uuid */
             id: string;

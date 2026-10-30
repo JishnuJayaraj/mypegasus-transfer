@@ -37,6 +37,18 @@ export {
   type Kug200bOfferOutcome,
 } from "./asu/kug200b";
 export {
+  checkKug200a,
+  Kug200aChecklistCode,
+  Kug200aChecklistItem,
+  kug200aList,
+  kug200aListTemplate,
+  kug200aRowsPerCopy,
+  type Kug200aCheck,
+  type Kug200aHeaderSource,
+  type Kug200aMemberSource,
+  type Kug200aSource,
+} from "./asu/kug200a";
+export {
   BatchExportInput,
   batchExportKinds,
   DocumentExportInput,
@@ -45,6 +57,9 @@ export {
   ExportKind,
   exportLimits,
   isBatchExportKind,
+  isOfficialExportKind,
+  officialExportKinds,
+  type OfficialExportKind,
   ExportLink,
   ExportParams,
 } from "./exports/api";
@@ -1098,6 +1113,7 @@ export {
   AgenturSubmissionChannel,
   AsuConfirmationInput,
   CreateKug200bBatchInput,
+  DiscardKug200bBatchInput,
   Kug200bAgenturView,
   Kug200bBatchCandidate,
   Kug200bBatchCreated,

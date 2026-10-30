@@ -311,6 +311,8 @@ export async function projectConfig(
       // The PL while draft, the global admin at any time (Q126, `regionChangeRefusal`).
       setProjectRegion:
         may({ kind: "setProjectRegion" }) && (found.status === "draft" || may.globalAdmin),
+      // The Kug 200a's header (ba-forms.md, the Kug 200a as built): the PL, any status, ta_tg.
+      editKug200aHeader: may({ kind: "editProject" }) && found.type === "ta_tg",
     },
   };
 }
