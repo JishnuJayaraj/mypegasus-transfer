@@ -53,6 +53,29 @@ describe("the Kug 200a's header", () => {
     expect(await section.findByText("Gespeichert.")).toBeInTheDocument();
   });
 
+  it("never sends an untouched field that a background refresh changed (another PL's save)", async () => {
+    let betriebsnummer = "87654321";
+    const { api, calls } = setup({
+      [`GET ${path}`]: () => json({ ...project, employerBetriebsnummer: betriebsnummer }),
+      [`PATCH ${path}`]: () => json(project),
+    });
+    const { queryClient } = renderApp(`/projects/${project.id}?tab=setup`, api);
+    const section = await openSection();
+    await userEvent.type(section.getByLabelText("T-Kug-Nummer"), "123-456");
+    // PL B saves another Betriebsnummer; this page's project is refreshed in the background.
+    betriebsnummer = "11112222";
+    await queryClient.invalidateQueries({ queryKey: ["projects", project.id] });
+    const field = section.getByLabelText("Betriebsnummer des personalabgebenden Betriebes");
+    await waitFor(() => expect(field).toHaveValue("11112222"));
+    expect(section.getByLabelText("T-Kug-Nummer")).toHaveValue("123-456");
+    await userEvent.click(section.getByRole("button", { name: "Angaben übernehmen" }));
+    await waitFor(() =>
+      expect(calls.filter((c) => c.key === `PATCH ${path}`).map((c) => c.body)).toEqual([
+        { tKugNumber: "123-456" },
+      ]),
+    );
+  });
+
   it("explains a refused value at its field and says when nothing changed", async () => {
     const { api } = setup({
       [`PATCH ${path}`]: () =>

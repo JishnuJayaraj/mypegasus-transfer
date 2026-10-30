@@ -12,7 +12,8 @@ type Key = (typeof keys)[number];
  * The Kug 200a's header on the project (ba-forms.md, the Kug 200a as built): the T-Kug-Nummer
  * (after the form's printed `TK-`) and the personalabgebender Betrieb's Betriebsnummer and
  * Branche/WK. The PL edits them (`capabilities.editKug200aHeader`), others read them; an empty
- * field clears its value, which the Kug 200a then leaves for handwriting on its checklist.
+ * field clears its value, which the Kug 200a then leaves for handwriting on its checklist. A save
+ * sends only the fields edited here that differ from where the edit started.
  */
 export function Kug200aHeader({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -21,11 +22,16 @@ export function Kug200aHeader({ projectId }: { projectId: string }) {
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
   const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
   const stored = (key: Key) => project[key] ?? "";
-  const [text, setText] = useState<Record<Key, string>>(() => ({
-    tKugNumber: stored("tKugNumber"),
-    employerBetriebsnummer: stored("employerBetriebsnummer"),
-    employerEconomicClass: stored("employerEconomicClass"),
-  }));
+  // The draft holds only the fields the user edited, each with the server value it started from;
+  // an untouched field shows the project as refreshed and is never sent, so another PL's change
+  // to it in the meantime stays.
+  const [edits, setEdits] = useState<Partial<Record<Key, string>>>({});
+  const [baseline, setBaseline] = useState<Partial<Record<Key, string>>>({});
+  const shown = (key: Key) => edits[key] ?? stored(key);
+  const edit = (key: Key, value: string) => {
+    setBaseline((current) => (key in current ? current : { ...current, [key]: stored(key) }));
+    setEdits((current) => ({ ...current, [key]: value }));
+  };
   const [invalid, setInvalid] = useState<Partial<Record<Key, string>>>({});
   const [outcome, setOutcome] = useState<"saved" | "unchanged" | "failed">();
 
@@ -35,6 +41,8 @@ export function Kug200aHeader({ projectId }: { projectId: string }) {
     },
     onSuccess: async () => {
       setInvalid({});
+      setEdits({});
+      setBaseline({});
       setOutcome("saved");
       await queryClient.invalidateQueries({ queryKey: projectQuery(api, projectId).queryKey });
     },
@@ -55,8 +63,9 @@ export function Kug200aHeader({ projectId }: { projectId: string }) {
     event.preventDefault();
     const body = Object.fromEntries(
       keys.flatMap((key) => {
-        const value = text[key].trim();
-        return value === stored(key) ? [] : [[key, value === "" ? null : value]];
+        const value = edits[key]?.trim();
+        if (value === undefined || value === baseline[key]) return [];
+        return [[key, value === "" ? null : value]];
       }),
     );
     if (Object.keys(body).length === 0) setOutcome("unchanged");
@@ -84,8 +93,8 @@ export function Kug200aHeader({ projectId }: { projectId: string }) {
                 id={`kug200a-${key}`}
                 labelText={t(`kug200aHeader.fields.${key}`)}
                 helperText={t(`kug200aHeader.help.${key}`)}
-                value={text[key]}
-                onChange={(event) => setText({ ...text, [key]: event.target.value })}
+                value={shown(key)}
+                onChange={(event) => edit(key, event.target.value)}
                 {...(invalid[key] && {
                   invalid: true,
                   invalidText: t(`kug200aHeader.errors.${invalid[key]}`, {
