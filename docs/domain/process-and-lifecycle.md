@@ -187,6 +187,7 @@ with profiling** (round 4). So a participation has:
   | `offer_deadline` | `dsv_offered` | the effective offer deadline | — |
   | `tg_start` | `informed` | the effective TG start | `tg_start_missed` |
   | `asu_due` | `ta_tg`, before `active_in_tg`, not terminal, no registration with proof, a knowledge date and the end of the old employment known (Slice 6) | the statutory ASU due date (Dates) | — |
+  | `tl407_submission` | `ta_tg`, `informed` or `active_in_tg`, no TL 407 submission standing (Slice 6, PR 6-5b) | the effective TG start minus the placement Agentur's `leadTimeDays`; under an approved exception the day profiling was done (TL 407 submission) | — |
   | `latest_entry_cutoff` | the cutoff would withdraw or flag it, as it will be at the cutoff (`latestEntryCutoff`, the warning's condition) | the applicable latest entry date (the wave's, else the project's final one, Q84) | `cutoff_warning`, `cutoff_final_reminder` |
   | `privacy_notice` | the Article 14 notice isn't provided (Q124; any status, *assumed*, Q160) | its due date | — |
   | `profiling_exception` | `active_in_tg` under an approved exception, profiling neither done nor declined | entry + 1 month (Q74) | `profiling_exception_deadline_missed` |
@@ -320,16 +321,51 @@ stateDiagram-v2
   Agentur's and the override's, `regional-variation.md`, "Self-service wizard"), shown as codes in
   "what's missing", and pre-fills TL 407. It is not a state: there is no "submitted"; each page is
   saved on "Weiter" and the participant may leave one incomplete.
-- The TL 407 **submission to the Agentur** is tracked on the document (date, channel). It is a
-  **"what's missing" item, not a TG entry guard** (Q54): §111(4) Nr. 4 requires taking part in
-  profiling before the transfer, not submitting the form.
-  - Not submitted by the TG start date → warning on the PL dashboard.
-  - Still not submitted 14 days after TG start → escalation to the PL and the regional admin
-    (the regional admin sees project, responsible PL, overdue count per type and days overdue
-    for the oldest item; no participant names — Q57).
-  - With the profiling exception, submission follows once profiling is caught up within the
-    1-month deadline.
-  - Also checked against the placement Agentur's `leadTimeDays`.
+- The TL 407 **submission to the Agentur** is a **"what's missing" item, not a TG entry guard**
+  (Q54): §111(4) Nr. 4 requires taking part in profiling before the transfer, not submitting the
+  form. *(accepted, Q188, Q189; as built in Slice 6, PR 6-5b; readings Q206)*
+  - **"An Agentur übermittelt am"** (the PL, `submit_tl407`): an accepted signed TL 407 that is
+    live, neither quarantined nor invalidated, sent to the participation's placement Agentur by
+    its resolved `submissionChannel`, on the actual sent date (not in the future, not before the
+    later signature, not before the last rejection), while the participation is open. Refused
+    without a placement Agentur, with the `agentur_submission` blocker (all four settings, Q92),
+    while a submission stands, and for a version expired in the registry only where the
+    Agentur's resolved `rejectsOutdatedFormVersions` is `true` (Q188). The PL submits the settings
+    shown; changed meanwhile, `409 source_changed`. Every attempt is its own `agentur_submission`
+    row, which keeps whether the Agentur needed the original when it was sent.
+  - **"Original versandt am"**, once, where the Agentur needs the paper original apart from the
+    submission (`originalRequired`, not `paper_original`): until then the item
+    `tl407_original_missing`.
+  - **"Von der Agentur abgelehnt"** (`outdated_form_version`, `incomplete`, `other`, with its
+    date), once per attempt: it reopens the work (`tl407_resubmission_open`) until a new
+    submission, and never invalidates the signatures, the scan or the completed profiling. A
+    version rejection asks the form owners to check the registry version (ADR-0009). A batch's
+    Kug 200b has no rejection or retransmission yet (Q204).
+  - **Deadline `tl407_submission`** ("TL 407 einreichen", in `ta_tg`, while `informed` or
+    `active_in_tg` and no submission stands): the effective TG start minus the placement
+    Agentur's `leadTimeDays` (the TG start while it is unresolved); under an approved exception
+    the day profiling was done (none before: the exception's own deadline applies), so the
+    submission follows promptly after the catch-up.
+  - **Escalation:** still not submitted from TG start + `tl407EscalationDaysAfterTgStart` (14) →
+    the item `tl407_escalated` for the PL and the type `tl407_not_submitted` in the regional
+    admin's view, whatever the exception: no baseline moves, so a late catch-up escalates at once
+    when that day has passed. A rejection counts as not submitted.
+  - **Compliance escalation at once:** a refusal after entry (`profiling_declined_after_entry`)
+    or a missed one-month deadline under an exception (`profiling_exception_deadline_missed`, the
+    day after the deadline) is the type `profiling_compliance` the day it happens, with no grace
+    period.
+  - **The regional view** (`GET /escalations`, "Eskalationen"; Q57): per `ta_tg` project of the
+    regional admin's regions (the admin: every project) its active PLs and, per type, the number
+    of escalated participations and the days since the oldest escalated (0 on its day). No
+    participant; details come from the PL (data-protection.md, the regional view).
+- **Agentur items** (`agenturItems`, the work list's column "Agentur", the filter "Agentur", the
+  tile "Agentur offen" and the group "Agentur"), in urgency order: `tl407_escalated` (from its
+  day), `tl407_resubmission_open` (the rejection's date), `tl407_original_missing` (the
+  submission's date) and `kug200b_confirmation_missing` (a batch's registration without the
+  Agentur's confirmation from `kug200bConfirmationFollowUpDays` (14) after it, with its sent
+  date; Q203 (9)). A terminal participation keeps the original and the confirmation (what was
+  sent), never the submission work. Each count is the number of distinct participations its
+  filter matches in the same snapshot.
 - **After TG entry with the profiling exception** *(verify, Q74)*: forward profiling
   transitions continue, and a later refusal (`→ profiling_declined`) can be recorded, because
   the system must not hide what happened. A refusal or a missed one-month deadline is an

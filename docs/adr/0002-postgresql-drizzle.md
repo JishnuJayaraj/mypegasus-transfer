@@ -1053,6 +1053,41 @@ rules, Q205 the readings.
   compared as text (a SQL function's body is checked when it is created, in the same migration run
   that may add them).
 
+## Amendment 2026-11-04: the TL 407's submission and the regional view (Slice 6, PR 6-5b)
+
+Migrations `0081_tl407_submissions.sql` (generated) and `0082_tl407_submission_functions.sql`
+(hand-written, the 0078 hardening); process-and-lifecycle.md (TL 407 submission) and
+data-protection.md (the regional view) hold the rules, Q206 the readings.
+- **Table:** `agentur_submission` gains, for a TL 407, `original_required` (the resolved setting
+  when it was submitted; exactly for `tl407`), "Original versandt am" (`original_sent_on/
+  recorded_by/recorded_at`, whole, only where required and not `paper_original`, not before the
+  submission) and the Agentur's rejection (`rejected_on`, `rejection_reason`
+  `agentur_rejection_reason`, `rejection_recorded_by/at`, whole, `tl407` only, not before the
+  submission). A partial unique index keeps one standing (unrejected) TL 407 submission per
+  participation (`agentur_submission_tl407_live_unique`). `transfer_app` still writes none.
+- **What the API resolves:** the placement Agentur's channel, `originalRequired` and the TL 407
+  versions it rejects as outdated (only where `rejectsOutdatedFormVersions` is `true`), after
+  taking `lock_project_setup`, which every configuration write and `set_placement_agentur` take;
+  it passes them with the Agentur key, and `submit_tl407` compares the key with the participation's
+  under the lock (`settings_changed`). Null settings are the `agentur_submission` blocker.
+- **The lock order:** `submit_tl407`: the project's lock exclusive (the API), then shared through
+  `lock_participation` → the scan `FOR SHARE` → the participation's submissions `FOR UPDATE` in id
+  order → the new row. `record_original_sent`, `record_agentur_rejection`: shared, through
+  `lock_agentur_submission` → the participation → the submission `FOR UPDATE`.
+- **Functions:** `submit_tl407` (the PL, as themselves: `actor_not_allowed`; `document_not_found`,
+  `participation_closed`, `placement_agentur_missing`, `settings_changed`,
+  `submission_settings_missing`, `scan_unusable` (deleted, unreviewed, rejected, quarantined,
+  invalidated or without a version), `already_submitted`, `form_version_outdated`,
+  `submitted_on_in_future`, `submitted_before_signature`, `submitted_before_rejection`; audited
+  `agentur_submission_recorded`). `record_original_sent` (`submission_not_found`,
+  `original_not_required`, `original_recorded`, `date_in_future`, `date_before_submission`;
+  `agentur_submission_original_sent`). `record_agentur_rejection` (`rejection_not_applicable` for a
+  batch's Kug 200b, Q204; `already_rejected`, the two dates; `agentur_submission_rejected`); neither
+  touches the scan or a status. `profiling_declined_dates(uuid[])` reads the effective date of each
+  participation's latest change to `profiling_declined` for the regional view (dates only;
+  `transfer_app` selects no `audit_event`). `record_audit_event` refuses the two new types; both are
+  participation events (`audit_event_lifecycle_has_participation`).
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

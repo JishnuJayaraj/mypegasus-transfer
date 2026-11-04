@@ -123,6 +123,15 @@
   only: project, responsible PL, number of overdue items per type (e.g. "3 × TL 407 not
   submitted"), and days overdue for the oldest item. **No participant names.** For details the
   regional admin contacts the PL (Q57).
+  - **The regional view as built** (Slice 6, PR 6-5b; readings Q206): `GET /escalations`,
+    "Eskalationen" (`/admin/escalations`), for a regional admin the `ta_tg` projects of their
+    regions and for the global admin every one; anyone else `403`, the PL and the regional
+    operations manager included. Per project: its name, its active PLs' display names and, per
+    type (`tl407_not_submitted`, `profiling_compliance`), the number of escalated participations
+    and the days since the oldest escalated. Projects without one aren't listed. The response's
+    schema has no participant id, name or date of a person; the API reads only the open
+    participations a rule applies to, and a refusal's date through `profiling_declined_dates`
+    (dates only, no audit row leaves the database). Not cached (`no-store`).
 - **Regions and org roles** *(Q126 and Q131 confirmed)*: a project belongs to a
   region (Niederlassung, Q35); org roles are `staff_org_role` rows: `admin` global,
   `regional_admin` and `regional_operations_manager` per region. A regional role sees and acts only
@@ -949,6 +958,14 @@ and highly confidential data only; ordinary person-data writes are `participant_
   selects them and writes none; the functions write them under the project's exclusive lock. The
   member's history shows its submission (form, version, channel, date, batch) in the `profiling`
   stream and the Agentur's confirmation in `case`; the batch's own events are project-level.
+- **The TL 407's submissions** (process-and-lifecycle.md, TL 407 submission; Slice 6, PR 6-5b):
+  `agentur_submission` rows of the TL 407 also keep whether the original was required, "Original
+  versandt am" and the Agentur's rejection (date, reason), each with who recorded it when; the
+  same classification and `participation_record` (no new personal data beyond dates and codes).
+  The PL records them (`submit_tl407`, `record_original_sent`, `record_agentur_rejection`, under
+  the participation's lock); the PL and the assigned consultant read them on "Profiling"; the
+  `profiling` stream shows `agentur_submission_original_sent` (date) and
+  `agentur_submission_rejected` (date, reason).
 - Logs carry ids, codes and counts, never a token, a value or a file's content. The bound: a print
   file ≤ 100 forms; a batch ≤ 200 members.
 

@@ -562,6 +562,37 @@ generator then. No action now.
   `employerEconomicClass`, each nullable (null clears); `Project` returns them, and
   `ProjectConfig.capabilities.editKug200aHeader` offers them to the PL of a `ta_tg` project.
 
+## Note 2026-11-04 (Slice 6, PR 6-5b): the TL 407's submission and the regional view
+
+- `POST /participations/{id}/tl407-submissions` (`Tl407SubmissionInput` `{ documentId, channel,
+  originalRequired, submittedOn }`: the scan and the settings the PL saw; the PL) → `201
+  Tl407SubmissionCreated { submissionId }`. Visibility is the tab's (`404` also for an unassigned
+  consultant), then `403` for anyone but the PL. The route takes the project's lock, resolves the
+  placement Agentur's settings under it and answers `409 source_changed` when they differ from the
+  body (also for the function's `settings_changed`). `422` codes `participation_closed`,
+  `placement_agentur_missing`, `submission_settings_missing`, `already_submitted`,
+  `document_not_found`, `scan_unusable` and `form_version_outdated` (at `/documentId`),
+  `submitted_on_in_future`, `submitted_before_signature`, `submitted_before_rejection` (at
+  `/submittedOn`).
+- `POST /agentur-submissions/{id}/original` (`{ originalSentOn }`) and `…/rejection` (`{
+  rejectedOn, reason }`, `AgenturRejectionReason`) → `204`; a submission the viewer can't see on the
+  tab `404`; `422` `original_not_required`, `original_recorded`, `already_rejected`,
+  `rejection_not_applicable`, `date_in_future` and `date_before_submission` (at the date).
+- `Profiling` gains `tl407Submission` (`Tl407SubmissionState`): `attempts` newest first
+  (`Tl407Submission`: scan, version, Agentur, channel, `submittedOn`, `originalRequired`,
+  `originalSentOn`, `rejection`, `recordedAt`, `capabilities.recordOriginal/recordRejection`) and,
+  for the PL, `next` (the usable scan, the placement Agentur, the resolved channel and original
+  rule, and `problem`: `Tl407SubmissionProblem` or null); null for anyone else.
+- The work list: `DeadlineKind` adds `tl407_submission` (after `asu_due`); `WorklistItem` gains
+  `agenturItems` (`AgenturItem { kind: AgenturItemKind, date }`); `WorklistFilter` gains `agentur`
+  (`open` or a kind); `ProjectDashboard.counts` gains the tile `agentur_open` and the group
+  `agentur`, each a count of the same items.
+- `GET /escalations` (a regional admin or a global admin; `403` for everyone else) → `Escalations
+  { generatedAt, rows }`: per `ta_tg` project the viewer's role covers `EscalationRow { projectId,
+  projectName, leads, counts }`, each `EscalationCount { type: EscalationType, count,
+  oldestDaysOverdue }`. Projects without an escalation are left out. No participant id or name, by
+  schema. `no-store`.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):
