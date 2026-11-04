@@ -510,7 +510,7 @@ export function profilingRoutes(deps: Deps) {
     const scan = record.signed
       ? { formVersion: record.signed.formVersion, signedOn: record.signed.signedOn }
       : null;
-    const problem = tl407SubmissionProblem(
+    const refusal = tl407SubmissionProblem(
       {
         status: record.status as Tl407SubmissionFacts["status"],
         placementAgenturKey: key,
@@ -530,7 +530,7 @@ export function profilingRoutes(deps: Deps) {
         agenturKey: key,
         channel: resolved?.channel ?? null,
         originalRequired: resolved?.originalRequired ?? null,
-        problem,
+        problem: refusal,
       },
     };
   }

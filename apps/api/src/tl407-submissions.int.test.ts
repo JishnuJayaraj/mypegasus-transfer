@@ -342,19 +342,18 @@ describe("the work list's deadline, items and counts (D27)", () => {
   });
 });
 
-describe("GET /escalations (data-protection.md, the regional view; Q57)", () => {
-  const view = async (as: string) =>
-    readJson(await request("GET", "/escalations", as), Escalations);
+const view = async (as: string) => readJson(await request("GET", "/escalations", as), Escalations);
+const countOf = (rows: Escalations["rows"], type: string) =>
+  rows.find((r) => r.projectId === werkNord)?.counts.find((c) => c.type === type);
+const tl407Count = (rows: Escalations["rows"]) => countOf(rows, "tl407_not_submitted")?.count ?? 0;
+const complianceOf = (rows: Escalations["rows"]) => countOf(rows, "profiling_compliance");
 
+describe("GET /escalations (data-protection.md, the regional view; Q57)", () => {
   it("counts a TL 407 unsubmitted 14 days after TG start for the regional admin, no participant", async () => {
     const before = await view(regionalAdmin);
-    const count = (rows: Escalations["rows"]) =>
-      rows
-        .find((r) => r.projectId === werkNord)
-        ?.counts.find((c) => c.type === "tl407_not_submitted")?.count ?? 0;
     const { id } = await ready({ tgStartIn: -14, scan: false });
     const after = await view(regionalAdmin);
-    expect(count(after.rows)).toBe(count(before.rows) + 1);
+    expect(tl407Count(after.rows)).toBe(tl407Count(before.rows) + 1);
     const nord = after.rows.find((r) => r.projectId === werkNord)!;
     expect(nord.leads.length).toBeGreaterThan(0);
     const text = JSON.stringify(after);
@@ -363,7 +362,7 @@ describe("GET /escalations (data-protection.md, the regional view; Q57)", () => 
     // Lager Süd is outside the regional admin's region; the admin sees every project.
     expect(after.rows.some((r) => r.projectId === lagerSued)).toBe(false);
     const adminView = await view(admin);
-    expect(count(adminView.rows)).toBe(count(after.rows));
+    expect(tl407Count(adminView.rows)).toBe(tl407Count(after.rows));
   });
 
   it("is nobody else's: the PL, a consultant, back office and the operations manager get 403", async () => {
@@ -373,11 +372,7 @@ describe("GET /escalations (data-protection.md, the regional view; Q57)", () => 
   });
 
   it("escalates a refusal after entry the same day (profiling_compliance)", async () => {
-    const count = (rows: Escalations["rows"]) =>
-      rows
-        .find((r) => r.projectId === werkNord)
-        ?.counts.find((c) => c.type === "profiling_compliance");
-    const before = count((await view(admin)).rows)?.count ?? 0;
+    const before = complianceOf((await view(admin)).rows)?.count ?? 0;
     const { id } = await ready({ tgStartIn: -5, scan: false });
     await sql(
       `update participation set status = 'active_in_tg', tg_entry_date = berlin_today() - 5,
@@ -385,7 +380,7 @@ describe("GET /escalations (data-protection.md, the regional view; Q57)", () => 
          dsv_status = 'dsv_signed', profiling_status = 'profiling_declined' where id = $1`,
       [id, werkNord],
     );
-    const after = count((await view(admin)).rows)!;
+    const after = complianceOf((await view(admin)).rows)!;
     expect(after.count).toBe(before + 1);
     expect(after.oldestDaysOverdue).toBeGreaterThanOrEqual(0);
   });

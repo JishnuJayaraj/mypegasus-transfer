@@ -106,11 +106,12 @@ describe("mayRecordTl407Submission (process-and-lifecycle.md, TL 407 submission)
   });
 });
 
+const regional = (regionIds: "all" | ReadonlySet<string>) => ({
+  ...staff([]),
+  orgRoles: new Map([["regional_admin" as const, { regionIds }]]),
+});
+
 describe("maySeeEscalations (data-protection.md, the regional view; Q57)", () => {
-  const regional = (regionIds: "all" | ReadonlySet<string>) => ({
-    ...staff([]),
-    orgRoles: new Map([["regional_admin" as const, { regionIds }]]),
-  });
   const north = regional(new Set(["region-north"]));
   it("is the regional admin's of the project's region and the global admin's", () => {
     expect(maySeeEscalations(north, { regionId: "region-north" })).toBe(true);
