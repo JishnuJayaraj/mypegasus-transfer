@@ -547,7 +547,8 @@
       "deadline": "Frist",
       "portal": "Portal",
       "reminded": "Erinnert",
-      "appointment": "Termin"
+      "appointment": "Termin",
+      "agentur": "Agentur"
     },
     "statuses": {
       "imported": "Importiert",
@@ -1282,7 +1283,8 @@
       "noWave": "Ohne Welle",
       "noConsultant": "Nicht zugewiesen",
       "anyFlag": "Mit Hinweis",
-      "appointment": "Termine"
+      "appointment": "Termine",
+      "agentur": "Agentur"
     },
     "actionsFilter": {
       "any": "Mit offenen Angaben oder Unterlagen",
@@ -1304,7 +1306,8 @@
       "latest_entry_cutoff": "Letzter Eintritt",
       "privacy_notice": "Datenschutzhinweis",
       "profiling_exception": "Profiling nach Ausnahme",
-      "asu_due": "Arbeitsuche fällig"
+      "asu_due": "Arbeitsuche fällig",
+      "tl407_submission": "TL 407 einreichen"
     },
     "deadlineStates": {
       "upcoming": "In 14 Tagen",
@@ -1385,6 +1388,19 @@
       "close": "Schließen",
       "failed": "Die Kug 200b konnten nicht erzeugt werden; es wurde keiner erzeugt.",
       "row": "{{name}}: {{items}}"
+    },
+    "agenturFilter": {
+      "open": "Offen",
+      "tl407_escalated": "TL 407 eskaliert",
+      "tl407_resubmission_open": "TL 407 erneut einreichen",
+      "tl407_original_missing": "Original fehlt",
+      "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt"
+    },
+    "agenturItems": {
+      "tl407_escalated": "TL 407 eskaliert (seit {{date}})",
+      "tl407_resubmission_open": "TL 407 erneut einreichen (abgelehnt am {{date}})",
+      "tl407_original_missing": "Original fehlt (übermittelt am {{date}})",
+      "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt (übermittelt am {{date}})"
     }
   },
   "dashboard": {
@@ -1402,7 +1418,8 @@
       "flags": "Hinweise",
       "not_reachable": "nicht erreichbar",
       "appointments_overdue": "Termine überfällig",
-      "appointments_to_resolve": "Termine zu klären"
+      "appointments_to_resolve": "Termine zu klären",
+      "agentur_open": "Agentur offen"
     },
     "groups": {
       "statuses": "Status",
@@ -1414,7 +1431,8 @@
       "deadlines": "Fristen",
       "flags": "Hinweise",
       "portal": "Portal",
-      "appointments": "Termine"
+      "appointments": "Termine",
+      "agentur": "Agentur"
     },
     "columns": {
       "label": "Bezeichnung",
@@ -1637,7 +1655,9 @@
       "declaration_withdrawal_recorded": "Widerruf der Erklärung zum Profilzugriff erfasst",
       "declaration_withdrawal_ba_notified": "BA über den Widerruf informiert",
       "agentur_submission_recorded": "An die Agentur übermittelt",
-      "asu_confirmation_recorded": "Bestätigung der Agentur erfasst"
+      "asu_confirmation_recorded": "Bestätigung der Agentur erfasst",
+      "agentur_submission_original_sent": "Original an die Agentur versandt",
+      "agentur_submission_rejected": "Von der Agentur abgelehnt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1734,7 +1754,13 @@
       "portal": "im Portal",
       "paper_form": "auf Papier"
     },
-    "submission": "{{form}} {{version}}, {{channel}}, übermittelt am {{date}}"
+    "submission": "{{form}} {{version}}, {{channel}}, übermittelt am {{date}}",
+    "rejection": "{{date}}: {{reason}}",
+    "rejectionReasons": {
+      "outdated_form_version": "veraltete Formularversion",
+      "incomplete": "unvollständig",
+      "other": "sonstiger Grund"
+    }
   },
   "appointments": {
     "title": "Termine",
@@ -2430,6 +2456,75 @@
           "file_unscannable": "Die Datei konnte nicht geprüft werden."
         }
       }
+    },
+    "submission": {
+      "title": "Übermittlung an die Agentur",
+      "next": "TL 407 {{version}} an {{agentur}}, Weg: {{channel}}.",
+      "originalRequired": "Die Agentur braucht zusätzlich das Original.",
+      "originalNotNeeded": "Ein Original ist nicht erforderlich.",
+      "submittedOn": "An Agentur übermittelt am",
+      "submit": "Übermittlung an die Agentur erfassen",
+      "invalidDate": "Bitte ein Datum im Format TT.MM.JJJJ eingeben.",
+      "attempts": "Übermittlungen",
+      "columns": {
+        "submittedOn": "Übermittelt am",
+        "channel": "Agentur und Weg",
+        "version": "Version",
+        "original": "Original versandt am",
+        "rejection": "Von der Agentur abgelehnt",
+        "actions": "Aktionen"
+      },
+      "originalNotRequired": "nicht erforderlich",
+      "originalWithSubmission": "mit der Übermittlung",
+      "originalMissing": "fehlt",
+      "rejected": "am {{date}} ({{reason}})",
+      "reasons": {
+        "outdated_form_version": "veraltete Formularversion",
+        "incomplete": "unvollständig",
+        "other": "sonstiger Grund"
+      },
+      "recordOriginal": "Original versandt",
+      "recordRejection": "Agentur-Ablehnung eintragen",
+      "originalTitle": "Original versandt am",
+      "originalOn": "Original versandt am",
+      "rejectionTitle": "Von der Agentur abgelehnt",
+      "rejectionText": "Die Ablehnung öffnet die Übermittlung erneut. Unterschriften und Profiling bleiben gültig.",
+      "rejectionOn": "Abgelehnt am",
+      "reason": "Grund",
+      "chooseReason": "Grund wählen",
+      "confirm": "Erfassen",
+      "cancel": "Abbrechen",
+      "versionCheck": "Die Agentur hat die Formularversion {{version}} abgelehnt. Bitte die Formularverantwortlichen informieren, damit sie die Version im Formularregister prüfen.",
+      "problems": {
+        "participation_closed": "Die Teilnahme ist abgeschlossen; eine Übermittlung ist nicht mehr möglich.",
+        "placement_agentur_missing": "Keine Vermittlungs-Agentur gesetzt.",
+        "submission_settings_missing": "Einstellungen der Agentur fehlen (Weg, Original, Vorlauf, veraltete Versionen).",
+        "scan_unusable": "Noch kein angenommener, nutzbarer unterschriebener TL 407.",
+        "already_submitted": "Übermittelt. Eine neue Übermittlung ist erst nach einer Ablehnung möglich.",
+        "form_version_outdated": "Die Agentur nimmt diese Formularversion nicht mehr an."
+      },
+      "messages": {
+        "saved": "Gespeichert.",
+        "conflict": "Die Einstellungen der Agentur haben sich geändert. Bitte die Angaben prüfen und erneut erfassen.",
+        "forbidden": "Nur die Projektleitung erfasst die Übermittlung.",
+        "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+        "codes": {
+          "submitted_on_in_future": "Das Datum liegt in der Zukunft.",
+          "submitted_before_signature": "Das Datum liegt vor der Unterschrift.",
+          "submitted_before_rejection": "Das Datum liegt vor der letzten Ablehnung.",
+          "date_in_future": "Das Datum liegt in der Zukunft.",
+          "date_before_submission": "Das Datum liegt vor der Übermittlung.",
+          "already_submitted": "Bereits übermittelt.",
+          "already_rejected": "Die Ablehnung ist bereits erfasst.",
+          "original_recorded": "Das Original ist bereits erfasst.",
+          "original_not_required": "Für diese Übermittlung ist kein Original zu erfassen.",
+          "scan_unusable": "Der Bogen ist nicht mehr nutzbar (z. B. unter Quarantäne).",
+          "form_version_outdated": "Die Agentur nimmt diese Formularversion nicht mehr an.",
+          "submission_settings_missing": "Einstellungen der Agentur fehlen.",
+          "placement_agentur_missing": "Keine Vermittlungs-Agentur gesetzt.",
+          "participation_closed": "Die Teilnahme ist abgeschlossen."
+        }
+      }
     }
   },
   "asu": {
@@ -2800,5 +2895,23 @@
     "routeMissing_one": "{{count}} angenommener Kug 200b wartet auf den Weg der Arbeitsuchendmeldung.",
     "routeMissing_other": "{{count}} angenommene Kug 200b warten auf den Weg der Arbeitsuchendmeldung.",
     "routeMissingHint": "Legen Sie den Weg auf dem Tab „Arbeitsuche“ fest: Er entscheidet, ob die Übermittlung als Arbeitsuchendmeldung zählt."
+  },
+  "escalations": {
+    "title": "Eskalationen",
+    "intro": "Überfällige Punkte je Projekt, ohne Namen von Teilnehmenden. Einzelheiten bei der Projektleitung erfragen.",
+    "loading": "Eskalationen werden geladen …",
+    "failed": "Die Eskalationen konnten nicht geladen werden.",
+    "forbidden": "Die Eskalationen sehen nur Regional-Admins und Admins.",
+    "empty": "Keine Eskalationen.",
+    "columns": {
+      "project": "Projekt",
+      "leads": "Projektleitung"
+    },
+    "types": {
+      "tl407_not_submitted": "TL 407 nicht eingereicht",
+      "profiling_compliance": "Profiling-Compliance"
+    },
+    "count_one": "{{count}} × (älteste seit {{days}} Tagen)",
+    "count_other": "{{count}} × (älteste seit {{days}} Tagen)"
   }
 }

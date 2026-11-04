@@ -84,6 +84,7 @@ export function ProjectDashboard({ projectId, taTg }: { projectId: string; taTg:
       <CountTable projectId={projectId} group="notice" counts={counts.notice} />
       <CountTable projectId={projectId} group="portal" counts={counts.portal} />
       <CountTable projectId={projectId} group="appointments" counts={counts.appointments} />
+      <CountTable projectId={projectId} group="agentur" counts={counts.agentur} />
     </section>
   );
 }

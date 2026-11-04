@@ -181,6 +181,7 @@ export const worklistItem = (
   actions: [],
   deadlines: [],
   caseItems: [],
+  agenturItems: [],
   flags: [],
   portal: "not_reachable",
   reminder: null,

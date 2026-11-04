@@ -173,3 +173,50 @@ describe("/admin/regions", () => {
     );
   });
 });
+
+// The regional view of escalations (data-protection.md, the regional view; Q57): counts and PLs
+// per project, never a participant.
+describe("/admin/escalations", () => {
+  const regionalAdmin = {
+    id: "00000000-0000-4000-8000-000000000002",
+    displayName: "Rita Region",
+    role: "regional_admin",
+    mayCreateProjects: false,
+    orgRoles: [{ role: "regional_admin", regionId: regions[0]!.id }],
+  };
+  const escalations = {
+    generatedAt: "2026-11-04T08:00:00.000Z",
+    rows: [
+      {
+        projectId: "00000000-0000-4000-9000-000000000001",
+        projectName: "Werk Nord",
+        leads: ["Petra Projektleitung"],
+        counts: [
+          { type: "tl407_not_submitted", count: 3, oldestDaysOverdue: 5 },
+          { type: "profiling_compliance", count: 1, oldestDaysOverdue: 0 },
+        ],
+      },
+    ],
+  };
+
+  it("shows the regional admin the counts per project and type, with the PLs", async () => {
+    const { api } = setup({ "GET /api/v1/escalations": () => json(escalations) }, regionalAdmin);
+    renderApp("/projects", api);
+    await userEvent.click(await screen.findByRole("link", { name: "Eskalationen" }));
+    const table = await screen.findByRole("table", { name: "Eskalationen" });
+    const row = within(table).getByRole("row", { name: /Werk Nord/ });
+    expect(row).toHaveTextContent("Petra Projektleitung");
+    expect(row).toHaveTextContent("3 × (älteste seit 5 Tagen)");
+    expect(row).toHaveTextContent("1 × (älteste seit 0 Tagen)");
+    expect(screen.queryByRole("link", { name: "Mitarbeitende" })).toBeNull();
+  });
+
+  it("is not in a PL's navigation and says so when refused", async () => {
+    const { api } = setup({ "GET /api/v1/escalations": () => problem(403, "forbidden") }, lead);
+    renderApp("/admin/escalations", api);
+    expect(
+      await screen.findByText("Die Eskalationen sehen nur Regional-Admins und Admins."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Eskalationen" })).toBeNull();
+  });
+});

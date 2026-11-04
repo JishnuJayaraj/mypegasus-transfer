@@ -95,6 +95,7 @@ const view = (
     tl407Scans?: ReturnType<typeof scanOf>[];
     tl407SignedOn?: string | null;
     done?: "allowed" | "refused";
+    submission?: { attempts: unknown[]; next: unknown };
   } = {},
 ) => ({
   participationId,
@@ -122,6 +123,7 @@ const view = (
   tl407SignedOn: options.tl407SignedOn ?? null,
   profilingDoneSupported: null as boolean | null,
   ...(profiler && { signedDeclarations: null }),
+  tl407Submission: options.submission ?? { attempts: [], next: null },
   tl407Versions: ["08-2025"],
   transitions: options.closed
     ? [{ to: "profiling_in_progress", allowed: false, refusal: "track_inactive" }]
@@ -220,6 +222,7 @@ function setup(options: {
   tl407SignedOn?: string;
   done?: "allowed" | "refused";
   routes?: Routes;
+  submission?: { attempts: unknown[]; next: unknown };
 }) {
   const mock = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
@@ -238,6 +241,7 @@ function setup(options: {
           tl407Scans: options.tl407Scans,
           tl407SignedOn: options.tl407SignedOn,
           done: options.done,
+          submission: options.submission,
         }),
       ),
     [`POST ${detailPath}/profiling-status`]: () =>
@@ -868,5 +872,129 @@ describe("the signed TL 407 (data-protection.md, signed scans)", () => {
       within(section).getByText(/sobald ein unterschriebener Bogen angenommen ist/),
     ).toBeVisible();
     expect(within(section).queryByRole("button", { name: "Profiling abschließen" })).toBeNull();
+  });
+});
+
+// The TL 407's submission (process-and-lifecycle.md, TL 407 submission; D26, Q189).
+const submissionId = "00000000-0000-4000-a000-0000000000e9";
+const submittedScanId = "00000000-0000-4000-a000-0000000000d7";
+const attempt = (overrides: object = {}) => ({
+  id: submissionId,
+  documentId: submittedScanId,
+  formVersion: "08-2025",
+  agenturKey: "beispielstadt-nord",
+  channel: "email",
+  submittedOn: "2026-10-21",
+  originalRequired: true,
+  originalSentOn: null,
+  rejection: null,
+  recordedAt: "2026-10-21T09:00:00.000000Z",
+  capabilities: { recordOriginal: true, recordRejection: true },
+  ...overrides,
+});
+const next = (refusal: string | null = null) => ({
+  documentId: submittedScanId,
+  formVersion: "08-2025",
+  agenturKey: "beispielstadt-nord",
+  channel: "email",
+  originalRequired: true,
+  problem: refusal,
+});
+
+/** The section's actions, by name (a closed dialog's buttons stay in jsdom's tree). */
+const submissionActions =
+  /Übermittlung an die Agentur erfassen|Original versandt|Agentur-Ablehnung eintragen/;
+
+describe("Übermittlung an die Agentur", () => {
+  it("records the PL's submission with the channel and original rule the PL saw", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: false,
+      submission: { attempts: [], next: next() },
+      routes: {
+        [`POST ${detailPath}/tl407-submissions`]: () => json({ submissionId }, 201),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    expect(
+      within(section).getByText(/TL 407 08\/2025 an beispielstadt-nord, Weg: E-Mail/),
+    ).toBeVisible();
+    await user.type(within(section).getByLabelText("An Agentur übermittelt am"), "21.10.2026");
+    await user.click(
+      within(section).getByRole("button", { name: "Übermittlung an die Agentur erfassen" }),
+    );
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/tl407-submissions`)[0]?.body).toEqual({
+        documentId: submittedScanId,
+        channel: "email",
+        originalRequired: true,
+        submittedOn: "2026-10-21",
+      }),
+    );
+    expect(await within(section).findByText("Gespeichert.")).toBeVisible();
+  });
+
+  it("says why there is no submission, and that the settings changed (409)", async () => {
+    setup({
+      profiler: false,
+      submission: { attempts: [], next: next("submission_settings_missing") },
+    });
+    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    expect(within(section).getByText(/Einstellungen der Agentur fehlen/)).toBeVisible();
+    expect(within(section).queryByRole("button", { name: submissionActions })).toBeNull();
+  });
+
+  it("records the Agentur's rejection with its date and reason, and the original", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      profiler: false,
+      submission: { attempts: [attempt()], next: next("already_submitted") },
+      routes: {
+        [`POST /api/v1/agentur-submissions/${submissionId}/rejection`]: () =>
+          new Response(null, { status: 204 }),
+        [`POST /api/v1/agentur-submissions/${submissionId}/original`]: () =>
+          problem(422, "domain-error", {
+            errors: [{ pointer: "/originalSentOn", code: "date_before_submission", detail: "x" }],
+          }),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    await user.click(within(section).getByRole("button", { name: "Agentur-Ablehnung eintragen" }));
+    const dialog = await screen.findByRole("dialog", { name: "Von der Agentur abgelehnt" });
+    await user.type(within(dialog).getByLabelText("Abgelehnt am"), "23.10.2026");
+    await user.selectOptions(within(dialog).getByLabelText("Grund"), "incomplete");
+    await user.click(within(dialog).getByRole("button", { name: "Erfassen" }));
+    await waitFor(() =>
+      expect(
+        callTo(calls, `POST /api/v1/agentur-submissions/${submissionId}/rejection`)[0]?.body,
+      ).toEqual({ rejectedOn: "2026-10-23", reason: "incomplete" }),
+    );
+    await user.click(within(section).getByRole("button", { name: "Original versandt" }));
+    const original = await screen.findByRole("dialog", { name: "Original versandt am" });
+    await user.type(within(original).getByLabelText("Original versandt am"), "20.10.2026");
+    await user.click(within(original).getByRole("button", { name: "Erfassen" }));
+    expect(await within(section).findByText("Das Datum liegt vor der Übermittlung.")).toBeVisible();
+    expect(
+      callTo(calls, `POST /api/v1/agentur-submissions/${submissionId}/original`)[0]?.body,
+    ).toEqual({ originalSentOn: "2026-10-20" });
+  });
+
+  it("lists a rejected attempt and asks for the form owners' check of a rejected version", async () => {
+    setup({
+      profiler: true,
+      submission: {
+        attempts: [
+          attempt({
+            rejection: { rejectedOn: "2026-10-23", reason: "outdated_form_version" },
+            capabilities: { recordOriginal: false, recordRejection: false },
+          }),
+        ],
+        next: null,
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    expect(within(section).getByText("am 23.10.2026 (veraltete Formularversion)")).toBeVisible();
+    expect(within(section).getByText(/Formularverantwortlichen informieren/)).toBeVisible();
+    expect(within(section).queryByRole("button", { name: submissionActions })).toBeNull();
   });
 });
