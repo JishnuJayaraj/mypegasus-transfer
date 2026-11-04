@@ -238,6 +238,12 @@ const statusFunctions = [
   "record_kug200b_batch_export",
   "export_link_batch",
   "kug200b_batch_print_sources",
+  // Slice 6: the TL 407's submission and the regional view (process-and-lifecycle.md, TL 407
+  // submission; data-protection.md, the regional view)
+  "submit_tl407",
+  "record_original_sent",
+  "record_agentur_rejection",
+  "profiling_declined_dates",
 ];
 const helpers = [
   "assert_context",
@@ -367,6 +373,7 @@ const helpers = [
   "lock_kug200b_official_export",
   "kug200b_batch_export_sources",
   "kug200b_batch_export_fingerprint",
+  "lock_agentur_submission",
 ];
 
 /** Every direct write to a table; `column` is set to itself. */
