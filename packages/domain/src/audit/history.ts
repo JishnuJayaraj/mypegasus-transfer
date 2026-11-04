@@ -203,6 +203,10 @@ export const auditProjection: {
     details: ["formCode", "formVersion", "channel", "submittedOn", "batchId"],
   }),
   asu_confirmation_recorded: shown("case", { details: ["confirmedOn"] }),
+  // The TL 407's submission (process-and-lifecycle.md, TL 407 submission): the original and the
+  // Agentur's rejection by their dates and reason.
+  agentur_submission_original_sent: shown("profiling", { details: ["originalSentOn"] }),
+  agentur_submission_rejected: shown("profiling", { details: ["rejectedOn", "reason"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

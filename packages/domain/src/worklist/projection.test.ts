@@ -29,6 +29,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   asuDueDate: null,
   kug200b: { channel: null, offeredOn: null, signed: false, declinedOn: null, withdrawals: [] },
   appointments: { bookings: [], notices: [], closedAt: null },
+  agentur: { attempts: [], leadTimeDays: null, kug200bRegistration: null },
   ...overrides,
 });
 const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({
@@ -111,6 +112,7 @@ describe("worklistProjection", () => {
       actions: [{ kind: "field", key: "mobile", state: "missing" }],
       deadlines: [{ kind: "privacy_notice", date: "2027-03-20", state: "upcoming" }],
       caseItems: [],
+      agenturItems: [],
       flags: [],
       portal: "not_reachable",
       reminder: null,
@@ -155,6 +157,7 @@ describe("worklistProjection", () => {
     expect(item.flags).toEqual(["conflict_dsv_signed_profiling_declined"]);
     expect(item.deadlines.map((d) => [d.kind, d.state])).toEqual([
       ["tg_start", "overdue"],
+      ["tl407_submission", "overdue"],
       ["latest_entry_cutoff", "overdue"],
       ["privacy_notice", "overdue"],
     ]);

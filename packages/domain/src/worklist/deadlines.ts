@@ -12,6 +12,7 @@ import {
 } from "../lifecycle/planner";
 import { effectiveOfferDeadline, effectiveTgStart } from "../lifecycle/waves";
 import type { PrivacyNoticeState } from "../privacy/notice-state";
+import { tl407SubmissionDeadline, type Tl407WorkFacts } from "../profiling/submissions";
 
 // The deadlines of the work list (process-and-lifecycle.md, deadline warnings): informational,
 // never a guard. Each kind applies while its condition holds; a deadline further away than the
@@ -23,6 +24,7 @@ export const DeadlineKind = z
     "offer_deadline",
     "tg_start",
     "asu_due",
+    "tl407_submission",
     "latest_entry_cutoff",
     "privacy_notice",
     "profiling_exception",
@@ -64,6 +66,8 @@ export type DeadlineFacts = {
    * orientation is the item `knowledge_date_missing` (process-and-lifecycle.md, dates).
    */
   asuDueDate?: AsuDueDate | null;
+  /** The TL 407's attempts and the placement Agentur's lead time (`tl407SubmissionDeadline`). */
+  tl407?: Tl407WorkFacts | null;
 };
 
 /**
@@ -80,6 +84,10 @@ export function deadlinesOf(facts: DeadlineFacts, today: IsoDate): Deadline[] {
     ],
     ["tg_start", status === "informed" ? effectiveTgStart(s.participation, s.wave) : null],
     ["asu_due", facts.asuDueDate?.kind === "statutory" ? facts.asuDueDate.date : null],
+    [
+      "tl407_submission",
+      facts.tl407 ? tl407SubmissionDeadline(s, project.type, facts.tl407, today) : null,
+    ],
     ["latest_entry_cutoff", latestEntryCutoff(s, project)],
     ["privacy_notice", privacyNotice.state === "provided" ? null : privacyNotice.dueOn],
     ["profiling_exception", profilingExceptionDeadline(s, today)],

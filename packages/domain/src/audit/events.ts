@@ -24,6 +24,7 @@ import { DocumentSource } from "../documents/api";
 import { ExportKind } from "../exports/api";
 import { Kug200bBatchArtifact, kug200bBatchMax } from "../asu/batches";
 import { AgenturSubmissionChannel } from "../asu/batches-api";
+import { AgenturRejectionReason } from "../profiling/submissions";
 import { kug200bDeclarations, ScanOrigin } from "../documents/scans";
 import { DocumentDeleteReason, DocumentReviewReason, QuarantineReason } from "../documents/state";
 import {
@@ -219,6 +220,8 @@ export const AuditEventType = z.enum([
   "kug200b_batch_discarded",
   "agentur_submission_recorded",
   "asu_confirmation_recorded",
+  "agentur_submission_original_sent",
+  "agentur_submission_rejected",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -332,6 +335,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "kug200b_batch_discarded",
   "agentur_submission_recorded",
   "asu_confirmation_recorded",
+  "agentur_submission_original_sent",
+  "agentur_submission_rejected",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1407,7 +1412,7 @@ export const AuditEvent = z.discriminatedUnion("type", [
     actor: staffActor,
     details: z.strictObject({ batchId: z.uuid(), count: z.int().min(1).max(kug200bBatchMax) }),
   }),
-  /** A form submitted to the Agentur (a batch member's Kug 200b): its form, channel and date. */
+  /** A form submitted to the Agentur (a batch member's Kug 200b, a TL 407): form, channel, date. */
   event("agentur_submission_recorded", {
     ...ofParticipation,
     actor: staffActor,
@@ -1419,6 +1424,22 @@ export const AuditEvent = z.discriminatedUnion("type", [
       channel: AgenturSubmissionChannel,
       submittedOn: isoDate,
       batchId: z.uuid().optional(),
+    }),
+  }),
+  /** "Original versandt am" for a TL 407 submission whose Agentur needs the paper original. */
+  event("agentur_submission_original_sent", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ submissionId: z.uuid(), originalSentOn: isoDate }),
+  }),
+  /** "Von der Agentur abgelehnt" (Q189): the date and reason; the signatures stay as they are. */
+  event("agentur_submission_rejected", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      submissionId: z.uuid(),
+      rejectedOn: isoDate,
+      reason: AgenturRejectionReason,
     }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
