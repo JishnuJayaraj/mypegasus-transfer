@@ -51,6 +51,14 @@ describe("participationEscalations (Q57, Q189)", () => {
   });
 });
 
+/** A project named "Werk" with one escalation. */
+const one = (id: string) => ({
+  projectId: id,
+  projectName: "Werk",
+  leads: [],
+  participations: [[{ type: "tl407_not_submitted" as const, since: "2027-04-21" }]],
+});
+
 describe("escalationRows: counts only (data-protection.md, the regional view)", () => {
   it("counts distinct participations per type, the oldest's days overdue, sorted by project", () => {
     const rows = escalationRows(
@@ -110,12 +118,6 @@ describe("escalationRows: counts only (data-protection.md, the regional view)", 
   });
 
   it("orders projects of the same name by id", () => {
-    const one = (id: string) => ({
-      projectId: id,
-      projectName: "Werk",
-      leads: [],
-      participations: [[{ type: "tl407_not_submitted" as const, since: "2027-04-21" }]],
-    });
     const b = "00000000-0000-4000-8000-00000000000b";
     const a = "00000000-0000-4000-8000-00000000000a";
     expect(escalationRows([one(b), one(a)], "2027-04-21").map((r) => r.projectId)).toEqual([a, b]);
