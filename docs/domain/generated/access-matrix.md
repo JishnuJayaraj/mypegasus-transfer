@@ -883,6 +883,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `kug200b_batch_discarded` | project-level | no | no | — |
 | `agentur_submission_recorded` | `profiling` | no | no | `formCode`, `formVersion`, `channel`, `submittedOn`, `batchId` |
 | `asu_confirmation_recorded` | `case` | no | no | `confirmedOn` |
+| `agentur_submission_original_sent` | `profiling` | no | no | `originalSentOn` |
+| `agentur_submission_rejected` | `profiling` | no | no | `rejectedOn`, `reason` |
 
 ## Aggregates
 

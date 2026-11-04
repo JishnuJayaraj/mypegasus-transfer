@@ -6,7 +6,10 @@ import {
   mayReadUnemploymentPeriod,
   mayRecordProfiling,
   mayUseProfilingAssessment,
+  mayRecordTl407Submission,
+  maySeeEscalations,
   mayViewProfiling,
+  seesEscalations,
   tl407ReadinessViewer,
 } from "./access";
 
@@ -91,5 +94,41 @@ describe("the profiling record's permissions (data-protection.md, the profiling 
     for (const other of [unassigned, backOffice, admin, participant]) {
       expect(tl407ReadinessViewer(other, target)).toBeNull();
     }
+  });
+});
+
+describe("mayRecordTl407Submission (process-and-lifecycle.md, TL 407 submission)", () => {
+  it("is the PL's; the consultant, back office, an admin and a participant may not", () => {
+    expect(mayRecordTl407Submission(pl, target).ok).toBe(true);
+    for (const actor of [consultant, backOffice, admin, participant]) {
+      expect(mayRecordTl407Submission(actor, target).ok).toBe(false);
+    }
+  });
+});
+
+describe("maySeeEscalations (data-protection.md, the regional view; Q57)", () => {
+  const regional = (regionIds: "all" | ReadonlySet<string>) => ({
+    ...staff([]),
+    orgRoles: new Map([["regional_admin" as const, { regionIds }]]),
+  });
+  const north = regional(new Set(["region-north"]));
+  it("is the regional admin's of the project's region and the global admin's", () => {
+    expect(maySeeEscalations(north, { regionId: "region-north" })).toBe(true);
+    expect(maySeeEscalations(north, { regionId: "region-south" })).toBe(false);
+    expect(maySeeEscalations(north, { regionId: null })).toBe(false);
+    expect(maySeeEscalations(regional("all"), { regionId: null })).toBe(true);
+    expect(maySeeEscalations(admin, { regionId: null })).toBe(true);
+    expect(maySeeEscalations(pl, { regionId: "region-north" })).toBe(false);
+    expect(maySeeEscalations(participant as never, { regionId: null })).toBe(false);
+  });
+
+  it("opens the view for those roles only", () => {
+    expect([north, admin].map(seesEscalations)).toEqual([true, true]);
+    const operations = {
+      ...staff([]),
+      orgRoles: new Map([["regional_operations_manager" as const, { regionIds: "all" as const }]]),
+    };
+    expect([pl, consultant, operations].map(seesEscalations)).toEqual([false, false, false]);
+    expect(seesEscalations(participant as never)).toBe(false);
   });
 });

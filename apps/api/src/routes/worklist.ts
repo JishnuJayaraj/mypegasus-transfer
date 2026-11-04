@@ -10,6 +10,7 @@ import {
 import type { Context } from "hono";
 import { projectAccess, projectTarget } from "../access";
 import { createRouter, json, type Deps } from "../context";
+import { formRegistry } from "../forms/registry";
 import { dbGuardFacts } from "../participations/guard-facts";
 import {
   BulkRefusal,
@@ -39,10 +40,11 @@ export function worklistRoutes(deps: Deps) {
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const release = loadRelease(deps.env.configDir);
+  const registry = deps.formRegistry ?? formRegistry(deps.env.configDir);
   const facts = deps.facts ?? dbGuardFacts;
   const statusService = createStatusService({ db, clock, facts });
   const snapshot = (c: Context, projectId: string) =>
-    loadWorklist({ db, clock, release, facts }, sessionUser(c), projectId);
+    loadWorklist({ db, clock, release, facts, registry }, sessionUser(c), projectId);
 
   router.openapi(
     createRoute({

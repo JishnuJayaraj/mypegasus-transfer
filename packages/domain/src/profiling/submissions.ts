@@ -332,6 +332,11 @@ export const Tl407SubmissionInput = z
   .meta({ id: "Tl407SubmissionInput" });
 export type Tl407SubmissionInput = z.infer<typeof Tl407SubmissionInput>;
 
+/** The answer to a recorded submission: the attempt's id. */
+export const Tl407SubmissionCreated = z
+  .strictObject({ submissionId: z.uuid() })
+  .meta({ id: "Tl407SubmissionCreated" });
+
 /** `POST /agentur-submissions/{id}/original`: "Original versandt am". */
 export const OriginalSentInput = z
   .strictObject({ originalSentOn: isoDate })

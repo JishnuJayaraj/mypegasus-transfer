@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Tl407GeneratedForm, Tl407ScanView, Tl407SignedDeclarations } from "../forms/api";
 import { FormVersion } from "../forms/field-map";
+import { Tl407SubmissionState } from "./submissions";
 import { JobboerseChoice } from "../forms/input";
 import { isoDate } from "../iso-date";
 import { edges, type Edge } from "../lifecycle/edges";
@@ -110,6 +111,11 @@ export const ProfilingView = z
      * later signature date), with that paper; the profiler only; null without one.
      */
     signedDeclarations: Tl407SignedDeclarations.nullable().optional(),
+    /**
+     * The TL 407's submission to the placement Agentur (process-and-lifecycle.md, TL 407
+     * submission): the attempts and, for the PL, the next one or why there is none.
+     */
+    tl407Submission: Tl407SubmissionState,
     /** The registry's TL 407 versions, expired ones included: external paper names one. */
     tl407Versions: z.array(FormVersion),
     /** The track's next steps from the current status. */

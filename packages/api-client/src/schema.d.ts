@@ -12512,6 +12512,353 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/tl407-submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "An Agentur übermittelt am" (the PL): an accepted, unquarantined signed TL 407 to the placement Agentur by its resolved channel, the actual sent date from the signature to today; refused without a placement Agentur, with the agentur_submission blocker, while a submission stands and, only where the Agentur rejects outdated forms, for an expired version; 409 source_changed when the settings the PL saw changed */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Tl407SubmissionInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded: the attempt's id */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Tl407SubmissionCreated"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agentur-submissions/{submissionId}/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Original versandt am" (the PL): once, for a TL 407 submission whose Agentur needed the paper original apart from it, from the submission to today */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    submissionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OriginalSentInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agentur-submissions/{submissionId}/rejection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Von der Agentur abgelehnt" (the PL): once per TL 407 attempt, the date from the submission to today and the reason; reopens the submission work, leaves the signatures and the profiling track alone */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    submissionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AgenturRejectionInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/escalations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The regional admin's escalations: per visible TG project its PLs and, per type (tl407_not_submitted, profiling_compliance), how many participations and the days overdue of the oldest; never a participant */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Escalations"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/outbox": {
         parameters: {
             query?: never;
@@ -13699,6 +14046,7 @@ export interface components {
                 flags: components["schemas"]["DashboardCount"][];
                 portal: components["schemas"]["DashboardCount"][];
                 appointments: components["schemas"]["DashboardCount"][];
+                agentur: components["schemas"]["DashboardCount"][];
             };
         };
         DashboardCount: {
@@ -13726,9 +14074,11 @@ export interface components {
             flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any";
             portal?: components["schemas"]["PortalReach"];
             appointment?: components["schemas"]["AppointmentFilter"];
+            /** @enum {string} */
+            agentur?: "open" | "tl407_escalated" | "tl407_resubmission_open" | "tl407_original_missing" | "kug200b_confirmation_missing";
         };
         /** @enum {string} */
-        DeadlineKind: "offer_deadline" | "tg_start" | "asu_due" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
+        DeadlineKind: "offer_deadline" | "tg_start" | "asu_due" | "tl407_submission" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
         /** @enum {string} */
         DeadlineState: "upcoming" | "overdue";
         /** @enum {string} */
@@ -13764,6 +14114,7 @@ export interface components {
             actions: components["schemas"]["ParticipantAction"][];
             deadlines: components["schemas"]["Deadline"][];
             caseItems: components["schemas"]["WorklistCaseItem"][];
+            agenturItems: components["schemas"]["AgenturItem"][];
             flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
             portal: components["schemas"]["PortalReach"];
             reminder: components["schemas"]["WorklistReminder"];
@@ -13811,6 +14162,17 @@ export interface components {
              */
             date: string;
         };
+        AgenturItem: {
+            kind: components["schemas"]["AgenturItemKind"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            date: string;
+        };
+        /** @enum {string} */
+        AgenturItemKind: "tl407_escalated" | "tl407_resubmission_open" | "tl407_original_missing" | "kug200b_confirmation_missing";
         WorklistReminder: {
             /**
              * Format: date
@@ -14310,7 +14672,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -15633,6 +15995,7 @@ export interface components {
             tl407SignedOn: string | null;
             profilingDoneSupported: boolean | null;
             signedDeclarations?: components["schemas"]["Tl407SignedDeclarations"];
+            tl407Submission: components["schemas"]["Tl407SubmissionState"];
             tl407Versions: string[];
             transitions: components["schemas"]["ProfilingTransition"][];
             capabilities: {
@@ -15744,6 +16107,64 @@ export interface components {
              */
             acceptedAt: string;
         } | null;
+        Tl407SubmissionState: {
+            attempts: components["schemas"]["Tl407Submission"][];
+            next: {
+                /** Format: uuid */
+                documentId: string | null;
+                formVersion: string | null;
+                agenturKey: string | null;
+                channel: components["schemas"]["AgenturSubmissionChannel"] & (string | null);
+                originalRequired: boolean | null;
+                problem: components["schemas"]["Tl407SubmissionProblem"];
+            } | null;
+        };
+        Tl407Submission: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            documentId: string;
+            formVersion: string;
+            agenturKey: string;
+            channel: components["schemas"]["AgenturSubmissionChannel"];
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            submittedOn: string;
+            originalRequired: boolean;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            originalSentOn: string | null;
+            rejection: {
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                rejectedOn: string;
+                reason: components["schemas"]["AgenturRejectionReason"];
+            } | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            recordedAt: string;
+            capabilities: {
+                recordOriginal: boolean;
+                recordRejection: boolean;
+            };
+        };
+        /** @enum {string} */
+        AgenturSubmissionChannel: "paper_courier" | "paper_post" | "scan_email" | "upload" | "email" | "paper_original";
+        /** @enum {string} */
+        AgenturRejectionReason: "outdated_form_version" | "incomplete" | "other";
+        /** @enum {string|null} */
+        Tl407SubmissionProblem: "participation_closed" | "placement_agentur_missing" | "submission_settings_missing" | "scan_unusable" | "already_submitted" | "form_version_outdated" | "submitted_on_in_future" | "submitted_before_signature" | "submitted_before_rejection" | null;
         ProfilingTransition: {
             /** @enum {string} */
             to: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
@@ -16476,6 +16897,61 @@ export interface components {
             submittedOn: string;
         };
         DiscardKug200bBatchInput: Record<string, never>;
+        Tl407SubmissionCreated: {
+            /** Format: uuid */
+            submissionId: string;
+        };
+        Tl407SubmissionInput: {
+            /** Format: uuid */
+            documentId: string;
+            channel: components["schemas"]["AgenturSubmissionChannel"];
+            originalRequired: boolean;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            submittedOn: string;
+        };
+        OriginalSentInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            originalSentOn: string;
+        };
+        AgenturRejectionInput: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            rejectedOn: string;
+            reason: components["schemas"]["AgenturRejectionReason"];
+        };
+        Escalations: {
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            generatedAt: string;
+            rows: components["schemas"]["EscalationRow"][];
+        };
+        EscalationRow: {
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            leads: string[];
+            counts: components["schemas"]["EscalationCount"][];
+        };
+        EscalationCount: {
+            type: components["schemas"]["EscalationType"];
+            count: number;
+            oldestDaysOverdue: number;
+        };
+        /** @enum {string} */
+        EscalationType: "tl407_not_submitted" | "profiling_compliance";
         DevStaffUser: {
             /** Format: uuid */
             id: string;

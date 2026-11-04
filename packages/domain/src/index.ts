@@ -832,6 +832,7 @@ export {
   originalOutstanding,
   originalSentProblem,
   rejectionProblem,
+  Tl407SubmissionCreated,
   Tl407SubmissionInput,
   tl407EscalationDate,
   tl407EscalationDaysAfterTgStart,
@@ -1119,6 +1120,9 @@ export {
   mayRecordProfiling,
   mayUseProfilingAssessment,
   mayViewProfiling,
+  mayRecordTl407Submission,
+  maySeeEscalations,
+  seesEscalations,
 } from "./profiling/access";
 export {
   AssessmentFieldKey,

@@ -44,6 +44,8 @@ import { profilingRoutes } from "./routes/profiling";
 import { asuRoutes } from "./routes/asu";
 import { exportRoutes } from "./routes/exports";
 import { kug200bBatchRoutes } from "./routes/kug200b-batches";
+import { tl407SubmissionRoutes } from "./routes/tl407-submissions";
+import { escalationRoutes } from "./routes/escalations";
 import { formRoutes } from "./routes/forms";
 import { formRegistry } from "./forms/registry";
 import { mountSpas } from "./static";
@@ -184,6 +186,8 @@ export function createApp(deps: Deps) {
   api.route("/", formRoutes(runtimeDeps));
   api.route("/", exportRoutes(runtimeDeps));
   api.route("/", kug200bBatchRoutes(runtimeDeps));
+  api.route("/", tl407SubmissionRoutes(runtimeDeps));
+  api.route("/", escalationRoutes(runtimeDeps));
   if (env.authMode === "dev") api.route("/", devRoutes(runtimeDeps));
   app.route("/api/v1", api);
 

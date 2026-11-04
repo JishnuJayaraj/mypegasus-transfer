@@ -94,3 +94,36 @@ export function tl407ReadinessViewer(
     ? "project_lead"
     : null;
 }
+
+/**
+ * The TL 407's submission to the Agentur, its original and the Agentur's rejection
+ * (process-and-lifecycle.md, TL 407 submission; D26, Q54): the PL of the project; the assigned
+ * consultant reads the attempts on the tab.
+ */
+export function mayRecordTl407Submission(actor: Actor, target: PermissionTarget): Permission {
+  if (actor.kind !== "staff") return denied;
+  return staffPermission(actor, target, (role) => role === "project_lead");
+}
+
+/**
+ * The regional view of escalations (data-protection.md, the regional view; Q57): a regional admin
+ * of the project's region or a global admin; counts only, never a participant.
+ */
+export function maySeeEscalations(subject: Subject, project: { regionId: string | null }): boolean {
+  if (subject.kind !== "staff") return false;
+  const admin = subject.orgRoles.get("admin")?.regionIds === "all";
+  const regional = subject.orgRoles.get("regional_admin")?.regionIds;
+  return (
+    admin ||
+    regional === "all" ||
+    (regional !== undefined && project.regionId !== null && regional.has(project.regionId))
+  );
+}
+
+/** Whether the staff user holds a role that sees any escalation (the route's 403 otherwise). */
+export function seesEscalations(subject: Subject): boolean {
+  return (
+    subject.kind === "staff" &&
+    (subject.orgRoles.has("regional_admin") || subject.orgRoles.get("admin")?.regionIds === "all")
+  );
+}

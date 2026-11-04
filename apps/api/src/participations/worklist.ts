@@ -36,10 +36,12 @@ import {
 } from "@transfer/domain";
 import { projectAccess, projectTarget } from "../access";
 import { itemBookingsOf, itemNoticesOf } from "../appointments/items";
+import type { FormRegistry } from "../forms/registry";
 import type { Release } from "../projects/template-pins";
-import { asuStatesOf } from "./asu";
+import { asuStatesOf, type AsuState } from "./asu";
 import type { GuardFactsProvider } from "./guard-facts";
 import { kug200bStatesOf } from "./kug200b";
+import { attemptsOf, submissionSettingsOf } from "./tl407-submissions";
 import { consultantsOf, listStatesOf } from "./list-states";
 import { loadSelfServiceRecords } from "./self-service";
 import { exceptionOf } from "./status-service";
@@ -54,6 +56,7 @@ export type WorklistDeps = {
   clock: Clock;
   release: Release;
   facts: GuardFactsProvider;
+  registry: FormRegistry;
 };
 
 export type WorklistResult =
@@ -81,7 +84,7 @@ const waveColumns = {
  * of this request.
  */
 export async function loadWorklist(
-  { db, clock, release, facts }: WorklistDeps,
+  { db, clock, release, facts, registry }: WorklistDeps,
   user: StaffUser,
   projectId: string,
 ): Promise<WorklistResult> {
@@ -148,6 +151,24 @@ export async function loadWorklist(
       ];
       // The Kug 200b offer's items (process-and-lifecycle.md, the Kug 200b offer).
       const [asuStates, offers] = [await asuStatesOf(tx, ids), await kug200bStatesOf(tx, ids)];
+      // The TL 407's attempts and, for the deadline, the lead time of the placement Agenturen of
+      // the open participations it applies to (D27); no other Agentur's settings are looked up.
+      const attempts = await attemptsOf(tx, ids);
+      const leadTimes = await submissionSettingsOf(
+        tx,
+        release,
+        registry,
+        projectId,
+        found!.type === "ta_tg"
+          ? rows.flatMap(({ p }) =>
+              (p.status === "informed" || p.status === "active_in_tg") &&
+              p.placementAgenturKey !== null
+                ? [p.placementAgenturKey]
+                : [],
+            )
+          : [],
+        today,
+      );
       const generatesKug200b = mayGenerateKug200bBulk(subject, {
         projectId,
         regionId,
@@ -207,6 +228,14 @@ export async function loadWorklist(
                 declinedOn: offers.get(p.id)!.declinedOn,
                 withdrawals: offers.get(p.id)!.withdrawals,
               },
+              agentur: {
+                attempts: attempts.get(p.id)!,
+                leadTimeDays:
+                  p.placementAgenturKey === null
+                    ? null
+                    : (leadTimes.get(p.placementAgenturKey)?.leadTimeDays ?? null),
+                kug200bRegistration: kug200bRegistrationOf(asuStates.get(p.id)!),
+              },
               appointments: {
                 bookings: bookings.get(p.id) ?? [],
                 notices: notices.get(p.id) ?? [],
@@ -256,8 +285,16 @@ export async function loadWorklist(
   );
 }
 
+/** A batch's ASU registration (the Kug 200b's submission is its proof) and its confirmation. */
+function kug200bRegistrationOf(state: AsuState) {
+  const registration = state.registration;
+  return registration?.proofKind === "kug200b_submission"
+    ? { registeredOn: registration.registeredOn, confirmedOn: registration.confirmedOn }
+    : null;
+}
+
 /** A provider's facts one participation after another, in one transaction. */
-async function eachOf(
+export async function eachOf(
   tx: Parameters<GuardFactsProvider["facts"]>[0],
   facts: GuardFactsProvider,
   inputs: readonly Parameters<GuardFactsProvider["facts"]>[1][],
