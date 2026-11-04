@@ -2911,7 +2911,9 @@
       "tl407_not_submitted": "TL 407 nicht eingereicht",
       "profiling_compliance": "Profiling-Compliance"
     },
-    "count_one": "{{count}} × (älteste seit {{days}} Tagen)",
-    "count_other": "{{count}} × (älteste seit {{days}} Tagen)"
+    "count": "{{count}} × ({{oldest}})",
+    "oldest_one": "älteste seit {{count}} Tag",
+    "oldest_other": "älteste seit {{count}} Tagen",
+    "oldestToday": "älteste seit heute"
   }
 }

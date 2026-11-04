@@ -495,7 +495,8 @@ export function profilingRoutes(deps: Deps) {
         a.rejectedOn === null ? null : { rejectedOn: a.rejectedOn, reason: a.rejectionReason! },
       recordedAt: a.recordedAt,
       capabilities: {
-        recordOriginal: lead && originalOutstanding(a),
+        // The original is asked for while the attempt stands (the item `tl407_original_missing`).
+        recordOriginal: lead && a.rejectedOn === null && originalOutstanding(a),
         recordRejection: lead && a.rejectedOn === null,
       },
     }));

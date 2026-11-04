@@ -291,6 +291,11 @@ describe("the rejection, the resubmission and the original (Q189)", () => {
       reason: "incomplete",
     });
     expect(rejected.tl407Submission.next?.problem).toBeNull();
+    // A rejected attempt asks for nothing more.
+    expect(rejected.tl407Submission.attempts[0]!.capabilities).toEqual({
+      recordOriginal: false,
+      recordRejection: false,
+    });
     expect((await row(id)).agenturItems).toEqual([
       { kind: "tl407_resubmission_open", date: await day(-2) },
     ]);

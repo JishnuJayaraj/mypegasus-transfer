@@ -207,7 +207,7 @@ describe("/admin/escalations", () => {
     const row = within(table).getByRole("row", { name: /Werk Nord/ });
     expect(row).toHaveTextContent("Petra Projektleitung");
     expect(row).toHaveTextContent("3 × (älteste seit 5 Tagen)");
-    expect(row).toHaveTextContent("1 × (älteste seit 0 Tagen)");
+    expect(row).toHaveTextContent("1 × (älteste seit heute)");
     expect(screen.queryByRole("link", { name: "Mitarbeitende" })).toBeNull();
   });
 

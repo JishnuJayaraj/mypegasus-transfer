@@ -28,9 +28,11 @@ function EscalationsPage() {
   if (!query.data) return <p aria-live="polite">{t("escalations.loading")}</p>;
   const cell = (row: (typeof query.data.rows)[number], type: (typeof types)[number]) => {
     const found = row.counts.find((c) => c.type === type);
-    return found
-      ? t("escalations.count", { count: found.count, days: found.oldestDaysOverdue })
-      : "–";
+    if (!found) return "–";
+    const days = found.oldestDaysOverdue;
+    const oldest =
+      days === 0 ? t("escalations.oldestToday") : t("escalations.oldest", { count: days });
+    return t("escalations.count", { count: found.count, oldest });
   };
   return (
     <>

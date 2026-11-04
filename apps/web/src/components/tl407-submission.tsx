@@ -102,6 +102,8 @@ export function Tl407Submission({ view }: { view: View }) {
         )}
         {next && (
           <NextSubmission
+            // A new attempt starts empty, never with the previous attempt's date.
+            key={attempts.length}
             next={next}
             channel={channel}
             busy={busy}
@@ -138,11 +140,13 @@ export function Tl407Submission({ view }: { view: View }) {
               version: attempt.formVersion.replace("-", "/"),
               original: attempt.originalSentOn
                 ? formatDate(attempt.originalSentOn)
-                : !attempt.originalRequired
-                  ? t("profiling.submission.originalNotRequired")
-                  : attempt.channel === "paper_original"
-                    ? t("profiling.submission.originalWithSubmission")
-                    : t("profiling.submission.originalMissing"),
+                : attempt.rejection
+                  ? "–"
+                  : !attempt.originalRequired
+                    ? t("profiling.submission.originalNotRequired")
+                    : attempt.channel === "paper_original"
+                      ? t("profiling.submission.originalWithSubmission")
+                      : t("profiling.submission.originalMissing"),
               rejection: attempt.rejection
                 ? t("profiling.submission.rejected", {
                     date: formatDate(attempt.rejection.rejectedOn),
