@@ -257,6 +257,13 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   tab, so the others keep their place; "Bestätigung der Agentur am" is on the participant's tab
   "Arbeitsuche". The Kug 200a's header on the project (T-Kug-Nummer, the employer's
   Betriebsnummer and Branche/WK) is edited on "Einrichtung" (`kug200a-header.tsx`).
+- **The TL 407's submission** (Slice 6, PR 6-5b; `apps/web/src/components/tl407-submission.tsx`):
+  on "Profiling", "Übermittlung an die Agentur" with the next submission (or why there is none),
+  "An Agentur übermittelt am", the attempts with "Original versandt" and "Agentur-Ablehnung
+  eintragen". The work list has the column and filter "Agentur", the dashboard the tile "Agentur
+  offen" and the group "Agentur". **"Eskalationen"** (`/admin/escalations`, in the navigation of
+  regional admins and the global admin; `GET /escalations`) lists counts per project and type with
+  the PLs, never a participant.
 - **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende", "mit
   offenen Angaben oder Unterlagen", "Frist in 14 Tagen", "Frist überschritten", "Hinweise", "nicht
   erreichbar") and tables per status, track, wave, activation and notice state, deadline kind and

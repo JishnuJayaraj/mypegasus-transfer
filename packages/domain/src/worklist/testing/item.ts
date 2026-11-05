@@ -22,6 +22,7 @@ export function item(overrides: Partial<WorklistItem> = {}): WorklistItem {
     actions: [],
     deadlines: [],
     caseItems: [],
+    agenturItems: [],
     flags: [],
     portal: "not_reachable",
     reminder: null,

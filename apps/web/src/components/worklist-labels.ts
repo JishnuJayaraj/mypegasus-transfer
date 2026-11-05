@@ -1,5 +1,6 @@
 import type {
   ActivationFilter,
+  AgenturFilter,
   AppointmentFilter,
   LifecycleFlag,
   MainStatus,
@@ -21,7 +22,8 @@ export type LabelledGroup =
   | "notice"
   | "flags"
   | "portal"
-  | "appointments";
+  | "appointments"
+  | "agentur";
 
 /** The label of a code, as the work list's columns and filters show it. */
 export function useCountLabel() {
@@ -48,6 +50,8 @@ export function useCountLabel() {
         return t(`worklist.portal.${key as PortalReach}`);
       case "appointments":
         return t(`worklist.appointmentFilter.${key as AppointmentFilter}`);
+      case "agentur":
+        return t(`worklist.agenturFilter.${key as AgenturFilter}`);
     }
   };
 }

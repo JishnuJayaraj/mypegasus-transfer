@@ -59,6 +59,12 @@ const items = [
     firstName: "Anna",
     deadlines: [{ kind: "privacy_notice", date: "2026-10-01", state: "overdue" }],
     portal: "consent_required",
+    // An escalated TL 407 and a missing original (process-and-lifecycle.md, TL 407 submission).
+    placementAgenturKey: "beispielstadt-nord",
+    agenturItems: [
+      { kind: "tl407_escalated", date: "2026-10-15" },
+      { kind: "tl407_original_missing", date: "2026-10-10" },
+    ],
     // A missed consultation and an undelivered notice (process-and-lifecycle.md, appointments).
     appointments: {
       next: null,
@@ -169,6 +175,25 @@ describe("Übersicht", () => {
       expect(router.state.location.search).toEqual({ tab: "participants", appointment: "overdue" }),
     );
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
+  });
+
+  it("has the tile Agentur offen and the group Agentur, each opening the work list's filter", async () => {
+    const { router } = setup({}, "");
+    const tile = await screen.findByRole("link", { name: "1 Agentur offen" });
+    const group = screen.getByRole("table", { name: "Agentur" });
+    expect(within(group).getByRole("row", { name: /TL 407 eskaliert/ })).toHaveTextContent("1");
+    expect(
+      within(group).getByRole("row", { name: /Bestätigung Kug 200b fehlt/ }),
+    ).toHaveTextContent("0");
+    await userEvent.click(tile);
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: "participants", agentur: "open" }),
+    );
+    await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
+    const row = screen.getByRole("link", { name: "BSP-0002" }).closest("tr")!;
+    expect(within(row).getByText("TL 407 eskaliert (seit 15.10.2026)")).toBeInTheDocument();
+    expect(within(row).getByText(/beispielstadt-nord/)).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Agentur" })).toHaveValue("open");
   });
 
   it("says when the viewer may not see it", async () => {

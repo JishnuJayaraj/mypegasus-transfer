@@ -111,8 +111,14 @@ const assign = (participationIds: string[]) =>
 async function booked(count: number) {
   await owner.$client.query(
     `with created as (
-       insert into participation (project_id, status, profiling_status, dsv_status)
-       select $1, 'contacted', 'not_started', 'not_offered' from generate_series(1, $2)
+       insert into participation (project_id, status, profiling_status, dsv_status,
+         placement_agentur_key, placement_agentur_set_at, tg_start, tg_end)
+       select $1, case when n % 2 = 0 then 'informed' else 'contacted' end::main_status,
+         'not_started', 'not_offered',
+         -- Half informed and placed: the TL 407's deadline and items are computed for them.
+         case when n % 2 = 0 then 'beispielstadt-nord' end, case when n % 2 = 0 then now() end,
+         berlin_today() + 5, berlin_today() + 365
+       from generate_series(1, $2) n
        returning id
      )
      insert into participant_identity (participation_id, project_id, personnel_number, first_name, last_name)

@@ -3653,6 +3653,12 @@
                 "items": {
                   "$ref": "#/components/schemas/DashboardCount"
                 }
+              },
+              "agentur": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/DashboardCount"
+                }
               }
             },
             "required": [
@@ -3666,7 +3672,8 @@
               "deadlines",
               "flags",
               "portal",
-              "appointments"
+              "appointments",
+              "agentur"
             ],
             "additionalProperties": false
           }
@@ -3829,6 +3836,16 @@
           },
           "appointment": {
             "$ref": "#/components/schemas/AppointmentFilter"
+          },
+          "agentur": {
+            "type": "string",
+            "enum": [
+              "open",
+              "tl407_escalated",
+              "tl407_resubmission_open",
+              "tl407_original_missing",
+              "kug200b_confirmation_missing"
+            ]
           }
         },
         "additionalProperties": false
@@ -3839,6 +3856,7 @@
           "offer_deadline",
           "tg_start",
           "asu_due",
+          "tl407_submission",
           "latest_entry_cutoff",
           "privacy_notice",
           "profiling_exception"
@@ -3986,6 +4004,12 @@
               "$ref": "#/components/schemas/WorklistCaseItem"
             }
           },
+          "agenturItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgenturItem"
+            }
+          },
           "flags": {
             "type": "array",
             "items": {
@@ -4086,6 +4110,7 @@
           "actions",
           "deadlines",
           "caseItems",
+          "agenturItems",
           "flags",
           "portal",
           "reminder",
@@ -4175,6 +4200,36 @@
           "date"
         ],
         "additionalProperties": false
+      },
+      "AgenturItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AgenturItemKind"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "date"
+        ],
+        "additionalProperties": false
+      },
+      "AgenturItemKind": {
+        "type": "string",
+        "enum": [
+          "tl407_escalated",
+          "tl407_resubmission_open",
+          "tl407_original_missing",
+          "kug200b_confirmation_missing"
+        ]
       },
       "WorklistReminder": {
         "type": [
@@ -6097,7 +6152,10 @@
           "declaration_withdrawal_recorded",
           "declaration_withdrawal_ba_notified",
           "agentur_submission_recorded",
-          "asu_confirmation_recorded"
+          "asu_confirmation_recorded",
+          "agentur_submission_original_sent",
+          "agentur_submission_rejected",
+          "agentur_submission_original_retained"
         ]
       },
       "HistoryActor": {
@@ -11625,6 +11683,9 @@
           "signedDeclarations": {
             "$ref": "#/components/schemas/Tl407SignedDeclarations"
           },
+          "tl407Submission": {
+            "$ref": "#/components/schemas/Tl407SubmissionState"
+          },
           "tl407Versions": {
             "type": "array",
             "items": {
@@ -11687,6 +11748,7 @@
           "tl407Scans",
           "tl407SignedOn",
           "profilingDoneSupported",
+          "tl407Submission",
           "tl407Versions",
           "transitions",
           "capabilities"
@@ -11984,6 +12046,256 @@
           "acceptedAt"
         ],
         "additionalProperties": false
+      },
+      "Tl407SubmissionState": {
+        "type": "object",
+        "properties": {
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tl407Submission"
+            }
+          },
+          "next": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "documentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "formVersion": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+              },
+              "agenturKey": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "channel": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/AgenturSubmissionChannel"
+                  },
+                  {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                ]
+              },
+              "originalRequired": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "problem": {
+                "$ref": "#/components/schemas/Tl407SubmissionProblem"
+              }
+            },
+            "required": [
+              "documentId",
+              "formVersion",
+              "agenturKey",
+              "channel",
+              "originalRequired",
+              "problem"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "attempts",
+          "next"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407Submission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "formVersion": {
+            "type": "string",
+            "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
+          },
+          "agenturKey": {
+            "type": "string"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AgenturSubmissionChannel"
+          },
+          "submittedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "originalRequired": {
+            "type": "boolean"
+          },
+          "originalSentOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "originalRetainedFrom": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "retainableOriginal": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "submissionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "originalSentOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "submissionId",
+              "originalSentOn"
+            ],
+            "additionalProperties": false
+          },
+          "rejection": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "rejectedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/AgenturRejectionReason"
+              }
+            },
+            "required": [
+              "rejectedOn",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "recordOriginal": {
+                "type": "boolean"
+              },
+              "recordRejection": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "recordOriginal",
+              "recordRejection"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "documentId",
+          "formVersion",
+          "agenturKey",
+          "channel",
+          "submittedOn",
+          "originalRequired",
+          "originalSentOn",
+          "originalRetainedFrom",
+          "retainableOriginal",
+          "rejection",
+          "recordedAt",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "AgenturSubmissionChannel": {
+        "type": "string",
+        "enum": [
+          "paper_courier",
+          "paper_post",
+          "scan_email",
+          "upload",
+          "email",
+          "paper_original"
+        ]
+      },
+      "AgenturRejectionReason": {
+        "type": "string",
+        "enum": [
+          "outdated_form_version",
+          "incomplete",
+          "other"
+        ]
+      },
+      "Tl407SubmissionProblem": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "participation_closed",
+          "placement_agentur_missing",
+          "submission_settings_missing",
+          "scan_unusable",
+          "already_submitted",
+          "form_version_outdated",
+          "submitted_on_in_future",
+          "submitted_before_signature",
+          "submitted_before_rejection",
+          null
+        ]
       },
       "ProfilingTransition": {
         "type": "object",
@@ -14647,6 +14959,186 @@
         "type": "object",
         "properties": {},
         "additionalProperties": false
+      },
+      "Tl407SubmissionCreated": {
+        "type": "object",
+        "properties": {
+          "submissionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "submissionId"
+        ],
+        "additionalProperties": false
+      },
+      "Tl407SubmissionInput": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/AgenturSubmissionChannel"
+          },
+          "originalRequired": {
+            "type": "boolean"
+          },
+          "submittedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "documentId",
+          "agenturKey",
+          "channel",
+          "originalRequired",
+          "submittedOn"
+        ],
+        "additionalProperties": false
+      },
+      "OriginalSentInput": {
+        "type": "object",
+        "properties": {
+          "originalSentOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "originalSentOn"
+        ],
+        "additionalProperties": false
+      },
+      "OriginalRetainedInput": {
+        "type": "object",
+        "properties": {
+          "retainedFrom": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "retainedFrom"
+        ],
+        "additionalProperties": false
+      },
+      "AgenturRejectionInput": {
+        "type": "object",
+        "properties": {
+          "rejectedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "reason": {
+            "$ref": "#/components/schemas/AgenturRejectionReason"
+          }
+        },
+        "required": [
+          "rejectedOn",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "Escalations": {
+        "type": "object",
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscalationRow"
+            }
+          }
+        },
+        "required": [
+          "generatedAt",
+          "rows"
+        ],
+        "additionalProperties": false
+      },
+      "EscalationRow": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectName": {
+            "type": "string"
+          },
+          "leads": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "counts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EscalationCount"
+            }
+          }
+        },
+        "required": [
+          "projectId",
+          "projectName",
+          "leads",
+          "counts"
+        ],
+        "additionalProperties": false
+      },
+      "EscalationCount": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "$ref": "#/components/schemas/EscalationType"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "oldestDaysOverdue": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "type",
+          "count",
+          "oldestDaysOverdue"
+        ],
+        "additionalProperties": false
+      },
+      "EscalationType": {
+        "type": "string",
+        "enum": [
+          "tl407_not_submitted",
+          "profiling_compliance"
+        ]
       },
       "DevStaffUser": {
         "type": "object",
@@ -27860,6 +28352,439 @@
           },
           "422": {
             "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/tl407-submissions": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"An Agentur übermittelt am\" (the PL): an accepted, unquarantined signed TL 407 to the placement Agentur by its resolved channel, the actual sent date from the signature to today; refused without a placement Agentur, with the agentur_submission blocker, while a submission stands and, only where the Agentur rejects outdated forms, for an expired version; 409 source_changed when the settings the PL saw changed",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tl407SubmissionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded: the attempt's id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tl407SubmissionCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agentur-submissions/{submissionId}/original": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"Original versandt am\" (the PL): once, for a TL 407 submission whose Agentur needed the paper original apart from it, from the submission to today",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "submissionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OriginalSentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agentur-submissions/{submissionId}/original-retained": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"Original liegt der Agentur vor\" (the PL): after a rejection and a new submission of the same scan, the same Agentur still holds the original an earlier attempt dispatched; links that attempt and keeps its date; never assumed",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "submissionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OriginalRetainedInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agentur-submissions/{submissionId}/rejection": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"Von der Agentur abgelehnt\" (the PL): once per TL 407 attempt, the date from the submission to today and the reason; reopens the submission work, leaves the signatures and the profiling track alone",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "submissionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgenturRejectionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/escalations": {
+      "get": {
+        "tags": [
+          "worklist"
+        ],
+        "summary": "The regional admin's escalations: per visible TG project its PLs and, per type (tl407_not_submitted, profiling_compliance), how many participations and the days overdue of the oldest; never a participant",
+        "responses": {
+          "200": {
+            "description": "The counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Escalations"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AdminEscalationsRouteImport } from './routes/admin/escalations'
 import { Route as AdminRegionsRouteImport } from './routes/admin/regions'
 import { Route as AdminStaffRouteImport } from './routes/admin/staff'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
@@ -28,6 +29,11 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminEscalationsRoute = AdminEscalationsRouteImport.update({
+  id: '/admin/escalations',
+  path: '/admin/escalations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRegionsRoute = AdminRegionsRouteImport.update({
@@ -77,6 +83,7 @@ const ProjectsProjectIdParticipationsParticipationIdAssistedRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/escalations': typeof AdminEscalationsRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/escalations': typeof AdminEscalationsRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/escalations': typeof AdminEscalationsRoute
   '/admin/regions': typeof AdminRegionsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/projects/$projectId': typeof ProjectsProjectIdRoute
@@ -116,6 +125,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/admin/escalations'
     | '/admin/regions'
     | '/admin/staff'
     | '/projects/$projectId'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/admin/escalations'
     | '/admin/regions'
     | '/admin/staff'
     | '/projects/$projectId'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/admin/escalations'
     | '/admin/regions'
     | '/admin/staff'
     | '/projects/$projectId'
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  AdminEscalationsRoute: typeof AdminEscalationsRoute
   AdminRegionsRoute: typeof AdminRegionsRoute
   AdminStaffRoute: typeof AdminStaffRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
@@ -177,6 +190,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/escalations': {
+      id: '/admin/escalations'
+      path: '/admin/escalations'
+      fullPath: '/admin/escalations'
+      preLoaderRoute: typeof AdminEscalationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/regions': {
@@ -241,6 +261,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  AdminEscalationsRoute: AdminEscalationsRoute,
   AdminRegionsRoute: AdminRegionsRoute,
   AdminStaffRoute: AdminStaffRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRoute,

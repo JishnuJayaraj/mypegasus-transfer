@@ -6,6 +6,11 @@ import { AppointmentFilter, matchesAppointmentFilter } from "./appointments";
 import { DeadlineKind, DeadlineState } from "./deadlines";
 import { PortalReach } from "../reminders/model";
 import type { WorklistItem } from "./projection";
+import { AgenturItemKind } from "../profiling/submissions";
+
+/** Work with the Agentur: `open` for any item, else one kind. */
+export const AgenturFilter = z.enum(["open", ...AgenturItemKind.options]);
+export type AgenturFilter = z.infer<typeof AgenturFilter>;
 
 /** An activated account, else the state of the latest code (like the paged list's filter). */
 export const ActivationFilter = z.enum(["activated", ...ActivationCodeState.options]);
@@ -36,6 +41,7 @@ export const WorklistFilter = z
     flag: z.union([LifecycleFlag, z.literal("any")]).optional(),
     portal: PortalReach.optional(),
     appointment: AppointmentFilter.optional(),
+    agentur: AgenturFilter.optional(),
   })
   .meta({ id: "WorklistFilter" });
 export type WorklistFilter = z.infer<typeof WorklistFilter>;
@@ -89,6 +95,10 @@ export function matchesWorklistFilter(item: WorklistItem, filter: WorklistFilter
     (flag === undefined || (flag === "any" ? item.flags.length > 0 : item.flags.includes(flag))) &&
     (filter.portal === undefined || item.portal === filter.portal) &&
     (filter.appointment === undefined ||
-      matchesAppointmentFilter(item.appointments, filter.appointment))
+      matchesAppointmentFilter(item.appointments, filter.appointment)) &&
+    (filter.agentur === undefined ||
+      (filter.agentur === "open"
+        ? item.agenturItems.length > 0
+        : item.agenturItems.some((i) => i.kind === filter.agentur)))
   );
 }

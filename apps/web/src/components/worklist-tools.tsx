@@ -3,6 +3,7 @@ import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   ActionsFilter,
   ActivationFilter,
+  AgenturFilter,
   AppointmentFilter,
   DeadlineKind,
   DeadlineState,
@@ -113,6 +114,10 @@ export const WorklistFilters = memo(function WorklistFilters({
         {field(
           "appointment",
           codes(AppointmentFilter.options, (v) => label("appointments", v)),
+        )}
+        {field(
+          "agentur",
+          codes(AgenturFilter.options, (v) => label("agentur", v)),
         )}
         {field(
           "activation",

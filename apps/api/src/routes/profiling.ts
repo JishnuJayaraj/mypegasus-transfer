@@ -24,8 +24,11 @@ import {
   mayReadUnemploymentPeriod,
   mayRecordProfiling,
   mayUseProfilingAssessment,
+  mayRecordTl407Submission,
   mayViewProfiling,
+  originalOutstanding,
   parseProfilingAssessment,
+  retainableOriginal,
   ProfilingAssessmentInput,
   ProfilingAssessmentView,
   ProfilingDeclarationsInput,
@@ -39,6 +42,9 @@ import {
   UnemploymentPeriodView,
   tl407ReadinessViewer,
   tl407SignedOn,
+  tl407SubmissionProblem,
+  Tl407SubmissionState,
+  type Tl407SubmissionFacts,
   type AssessmentFieldKey,
   type DocumentReviewState,
   type JobboerseChoice,
@@ -52,6 +58,8 @@ import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
 import { fieldEncryptionKey } from "../field-encryption";
 import { formRegistry } from "../forms/registry";
+import { attemptsOf, submissionSettingsOf } from "../participations/tl407-submissions";
+import { loadRelease } from "../projects/template-pins";
 import { createStatusService, StatusServiceError } from "../participations/status-service";
 import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -151,9 +159,13 @@ export async function readProfilingRecord(db: Database, participationId: string)
           profilingStatus: participation.profilingStatus,
           statusVersion: participation.statusVersion,
           profilingDoneOn: participation.profilingDoneOn,
+          projectId: participation.projectId,
+          placementAgenturKey: participation.placementAgenturKey,
         })
         .from(participation)
         .where(eq(participation.id, participationId));
+      // The TL 407's submissions, newest first (process-and-lifecycle.md, TL 407 submission).
+      const attempts = (await attemptsOf(tx, [participationId])).get(participationId)!;
       const [assessment] = await tx
         .select({
           ...presenceColumns,
@@ -250,7 +262,11 @@ export async function readProfilingRecord(db: Database, participationId: string)
         profilingStatus: current!.profilingStatus,
         statusVersion: current!.statusVersion,
         profilingDoneOn: current!.profilingDoneOn,
+        status: current!.status,
         closed: closedStatuses.has(current!.status),
+        projectId: current!.projectId,
+        placementAgenturKey: current!.placementAgenturKey,
+        attempts,
         revision: record?.revision ?? 0,
         sessions,
         declarations: {
@@ -354,6 +370,7 @@ export function profilingRoutes(deps: Deps) {
   const statusService = createStatusService({ db, clock });
   const fieldKey = fieldEncryptionKey(deps.env.fieldEncryptionKey!);
   const registry = deps.formRegistry ?? formRegistry(deps.env.configDir);
+  const release = loadRelease(deps.env.configDir);
   const access = (c: Context<AppEnv>, participationId: string) =>
     profilingAccess(db, c, participationId);
 
@@ -438,6 +455,7 @@ export function profilingRoutes(deps: Deps) {
       tl407SignedOn: record.tl407SignedOn,
       profilingDoneSupported: record.profilingDoneSupported,
       ...(records && { signedDeclarations: record.signed ?? null }),
+      tl407Submission: await submissionStateOf(subject, target, record, today),
       tl407Versions: registry.versions("tl407"),
       transitions,
       capabilities: {
@@ -449,6 +467,75 @@ export function profilingRoutes(deps: Deps) {
         readTl407Readiness: tl407ReadinessViewer(subject, target) !== null,
         addTl407Scan:
           open && mayAddDocument(subject, "tl407_signed_scan", documentTarget, normal).ok,
+      },
+    };
+  }
+
+  /**
+   * The TL 407's submission on the tab (D26): the attempts for every viewer of the tab, with what
+   * the PL may record on each; for the PL the next submission as it would be recorded now, its
+   * placement Agentur's settings resolved only while the participation is open.
+   */
+  async function submissionStateOf(
+    subject: Access["subject"],
+    target: PermissionTarget,
+    record: Awaited<ReturnType<typeof readProfilingRecord>>,
+    today: string,
+  ): Promise<z.infer<typeof Tl407SubmissionState>> {
+    const lead = mayRecordTl407Submission(subject, target).ok;
+    const attempts = record.attempts.map((a) => ({
+      id: a.id,
+      documentId: a.documentId,
+      formVersion: a.formVersion,
+      agenturKey: a.agenturKey,
+      channel: a.channel,
+      submittedOn: a.submittedOn,
+      originalRequired: a.originalRequired,
+      originalSentOn: a.originalSentOn,
+      originalRetainedFrom: a.originalRetainedFrom,
+      // Offered to the PL on the standing attempt, never assumed (Q206 (4)).
+      retainableOriginal: lead ? retainableOriginal(a, record.attempts) : null,
+      rejection:
+        a.rejectedOn === null ? null : { rejectedOn: a.rejectedOn, reason: a.rejectionReason! },
+      recordedAt: a.recordedAt,
+      capabilities: {
+        // The original is asked for while the attempt stands (the item `tl407_original_missing`).
+        recordOriginal: lead && a.rejectedOn === null && originalOutstanding(a),
+        recordRejection: lead && a.rejectedOn === null,
+      },
+    }));
+    if (!lead) return { attempts, next: null };
+    const key = record.placementAgenturKey;
+    const resolved =
+      key !== null && !record.closed
+        ? (await submissionSettingsOf(db, release, registry, record.projectId, [key], today)).get(
+            key,
+          )!.settings
+        : null;
+    const scan = record.signed
+      ? { formVersion: record.signed.formVersion, signedOn: record.signed.signedOn }
+      : null;
+    const refusal = tl407SubmissionProblem(
+      {
+        status: record.status as Tl407SubmissionFacts["status"],
+        placementAgenturKey: key,
+        settings: resolved,
+        scan,
+        versionExpired: scan !== null && !registry.versionInUse("tl407", scan.formVersion, today),
+        attempts: record.attempts,
+      },
+      null,
+      today,
+    );
+    return {
+      attempts,
+      next: {
+        documentId: record.signed?.documentId ?? null,
+        formVersion: scan?.formVersion ?? null,
+        agenturKey: key,
+        channel: resolved?.channel ?? null,
+        originalRequired: resolved?.originalRequired ?? null,
+        problem: refusal,
       },
     };
   }

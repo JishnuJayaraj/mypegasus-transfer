@@ -51,6 +51,12 @@ function RootLayout() {
                   <NavLink to="/admin/regions">{t("adminRegions.title")}</NavLink>
                 </>
               )}
+              {/* The regional view (Q57): the regional admins and the admin; counts only. */}
+              {user.orgRoles.some(
+                (grant) =>
+                  grant.role === "regional_admin" ||
+                  (grant.role === "admin" && grant.regionId === null),
+              ) && <NavLink to="/admin/escalations">{t("escalations.title")}</NavLink>}
             </>
           )
         }

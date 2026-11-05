@@ -6,6 +6,7 @@ import { lifecycleFlags, type ParticipationSnapshot } from "../lifecycle/planner
 import { wave } from "../lifecycle/testing/context";
 import { project, snapshot, state } from "../lifecycle/testing/planner";
 import type { PrivacyNoticeState } from "../privacy/notice-state";
+import type { Tl407WorkFacts } from "../profiling/submissions";
 import {
   deadlinesOf,
   deadlineWarningDays,
@@ -27,7 +28,13 @@ const approved = { validOn: "2027-03-20", recordedAt: new Date("2027-03-20T09:00
 /** One participation whose only applicable deadline is `kind`, on its date. */
 const only: Record<
   DeadlineKind,
-  { date: IsoDate; s: ParticipationSnapshot; notice?: IsoDate; asu?: AsuDueDate }
+  {
+    date: IsoDate;
+    s: ParticipationSnapshot;
+    notice?: IsoDate;
+    asu?: AsuDueDate;
+    tl407?: Tl407WorkFacts;
+  }
 > = {
   offer_deadline: {
     date: "2027-03-15",
@@ -52,6 +59,12 @@ const only: Record<
     }),
     asu: { kind: "statutory", date: "2027-03-30", branch: "reference_date" },
   },
+  tl407_submission: {
+    // The wave's TG start 2027-04-01 minus the placement Agentur's 10 days' lead time.
+    date: "2027-03-22",
+    s: snapshot({ current: state("active_in_tg", "profiling_done", "dsv_signed") }),
+    tl407: { attempts: [], leadTimeDays: 10, kug200bRegistration: null },
+  },
   latest_entry_cutoff: {
     date: "2027-04-30",
     s: snapshot({ current: state("contacted"), wave: { ...wave, defaultTgStart: null } }),
@@ -75,12 +88,13 @@ const notice = (dueOn: IsoDate | undefined): PrivacyNoticeState =>
   dueOn ? { state: "due", dueOn, providedAt: null } : provided;
 
 const at = (kind: DeadlineKind, daysBefore: number) => {
-  const { date, s, notice: dueOn, asu } = only[kind];
+  const { date, s, notice: dueOn, asu, tl407 } = only[kind];
   const facts = {
     snapshot: s,
     project: { ...project, waves: [s.wave ?? wave] },
     privacyNotice: notice(dueOn),
     asuDueDate: asu ?? null,
+    tl407: tl407 ?? null,
   };
   return deadlinesOf(facts, addDays(date, -daysBefore));
 };

@@ -82,6 +82,7 @@ import {
   FormCode,
   tl407WarningCodes,
   QuarantineReason,
+  AgenturRejectionReason,
   ScanConfirmation,
   ScanOrigin,
   AsuChannel,
@@ -484,6 +485,10 @@ export const kug200bBatchStatus = pgEnum("kug200b_batch_status", values(Kug200bB
 export const agenturSubmissionChannel = pgEnum(
   "agentur_submission_channel",
   values(AgenturSubmissionChannel),
+);
+export const agenturRejectionReason = pgEnum(
+  "agentur_rejection_reason",
+  values(AgenturRejectionReason),
 );
 export const documentQuarantineReason = pgEnum(
   "document_quarantine_reason",
@@ -2312,11 +2317,14 @@ export const kug200bBatchMember = pgTable(
 );
 
 /**
- * A form submitted to an Agentur (process-and-lifecycle.md, Kug 200b batches; D25, D26): one row
- * per attempt, the participation, the signed scan, its form code and version, the Agentur, the
- * channel, the batch it went with, the actual sent date and who recorded it when (the proof of
- * submission). `case_internal` (`agenturSubmissions`), `participation_record`. Written only by
- * `submit_kug200b_batch` (PR 6-5b adds the TL 407's).
+ * A form submitted to an Agentur (process-and-lifecycle.md, Kug 200b batches and TL 407
+ * submission; D25, D26): one row per attempt, the participation, the signed scan, its form code
+ * and version, the Agentur, the channel, the batch it went with, the actual sent date and who
+ * recorded it when (the proof of submission). A TL 407's also keeps whether the Agentur needed the
+ * paper original when it was submitted, "Original versandt am" and the Agentur's rejection (date,
+ * reason), each with who recorded it when; one standing (unrejected) TL 407 submission per
+ * participation. `case_internal` (`agenturSubmissions`), `participation_record`. Written only by
+ * `submit_kug200b_batch`, `submit_tl407`, `record_original_sent` and `record_agentur_rejection`.
  */
 export const agenturSubmission = pgTable(
   "agentur_submission",
@@ -2339,6 +2347,16 @@ export const agenturSubmission = pgTable(
       .notNull()
       .references(() => staffUser.id),
     recordedAt: instant("recorded_at").notNull().defaultNow(),
+    originalRequired: boolean("original_required"),
+    originalSentOn: dateColumn("original_sent_on"),
+    originalRecordedBy: uuid("original_recorded_by").references(() => staffUser.id),
+    originalRecordedAt: instant("original_recorded_at"),
+    /** The earlier attempt whose dispatched original the same Agentur still holds (Q206 (4)). */
+    originalRetainedFrom: uuid("original_retained_from"),
+    rejectedOn: dateColumn("rejected_on"),
+    rejectionReason: agenturRejectionReason("rejection_reason"),
+    rejectionRecordedBy: uuid("rejection_recorded_by").references(() => staffUser.id),
+    rejectionRecordedAt: instant("rejection_recorded_at"),
   },
   (t) => [
     foreignKey({
@@ -2357,6 +2375,27 @@ export const agenturSubmission = pgTable(
     check(
       "agentur_submission_batch",
       sql`(${t.formCode} = 'kug200b') = (${t.batchId} is not null)`,
+    ),
+    uniqueIndex("agentur_submission_tl407_live_unique")
+      .on(t.participationId)
+      .where(sql`${t.formCode} = 'tl407' and ${t.rejectedOn} is null`),
+    check(
+      "agentur_submission_original_required",
+      sql`(${t.formCode} = 'tl407') = (${t.originalRequired} is not null)`,
+    ),
+    foreignKey({
+      name: "agentur_submission_original_retained_from_fk",
+      columns: [t.originalRetainedFrom],
+      foreignColumns: [t.id],
+    }),
+    // A retained original keeps its earlier dispatch's actual date, before this submission.
+    check(
+      "agentur_submission_original",
+      sql`(${t.originalSentOn} is null) = (${t.originalRecordedBy} is null) and (${t.originalRecordedBy} is null) = (${t.originalRecordedAt} is null) and (${t.originalRetainedFrom} is null or (${t.originalSentOn} is not null and ${t.originalRetainedFrom} <> ${t.id})) and (${t.originalSentOn} is null or (${t.originalRequired} and ${t.channel} <> 'paper_original' and (${t.originalSentOn} >= ${t.submittedOn} or ${t.originalRetainedFrom} is not null)))`,
+    ),
+    check(
+      "agentur_submission_rejection",
+      sql`(${t.rejectedOn} is null) = (${t.rejectionReason} is null) and (${t.rejectionReason} is null) = (${t.rejectionRecordedBy} is null) and (${t.rejectionRecordedBy} is null) = (${t.rejectionRecordedAt} is null) and (${t.rejectedOn} is null or (${t.formCode} = 'tl407' and ${t.rejectedOn} >= ${t.submittedOn}))`,
     ),
   ],
 );

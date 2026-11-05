@@ -25,6 +25,7 @@ import { participationProfilingQuery, participationQuery, useApi } from "../api"
 import { ReloadNotice, useDraft } from "./draft";
 import { SelfServiceTab } from "./self-service-tab";
 import { Tl407Section } from "./tl407-section";
+import { Tl407Submission } from "./tl407-submission";
 
 // The tab "Profiling" (process-and-lifecycle.md and data-protection.md, the profiling record):
 // the track and its steps, the sessions, section B as the tab "Selbstauskunft" shows it with
@@ -81,6 +82,7 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
       {(view.capabilities.readTl407Readiness ||
         view.tl407Forms.length > 0 ||
         view.tl407Scans.length > 0) && <Tl407Section view={view} />}
+      <Tl407Submission view={view} />
     </Stack>
   );
 }

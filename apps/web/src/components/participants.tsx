@@ -53,6 +53,7 @@ const columns = [
   "open",
   "deadline",
   "appointment",
+  "agentur",
   "portal",
   "reminded",
   "activationStatus",
@@ -478,6 +479,26 @@ const WorklistTable = memo(function WorklistTable({
       </>
     );
   };
+  // "Agentur" (process-and-lifecycle.md, TL 407 submission): the placement Agentur and its most
+  // urgent item; an escalation in red.
+  const agentur = ({ placementAgenturKey, agenturItems }: ListItem) => {
+    const [first] = agenturItems;
+    return (
+      <>
+        {placementAgenturKey ?? ""}
+        {first && (
+          <>
+            {" "}
+            <Tag type={first.kind === "tl407_escalated" ? "red" : "purple"} size="sm">
+              {t(`worklist.agenturItems.${first.kind}`, { date: formatDate(first.date) })}
+            </Tag>
+            {agenturItems.length > 1 &&
+              ` ${t("worklist.appointmentMore", { count: agenturItems.length - 1 })}`}
+          </>
+        )}
+      </>
+    );
+  };
   const rows = items.map((item) => ({
     id: item.id,
     select: (
@@ -536,6 +557,7 @@ const WorklistTable = memo(function WorklistTable({
       </>
     ),
     appointment: appointment(item),
+    agentur: agentur(item),
     portal: t(`worklist.portal.${item.portal}`),
     reminded: item.reminder
       ? `${formatDate(item.reminder.lastRequestedOn)} (${t(`reminders.status.${item.reminder.status}`)})`

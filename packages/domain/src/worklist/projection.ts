@@ -38,6 +38,7 @@ import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
 import type { AsuDueDate } from "../dates";
 import { kug200bItems, type Kug200bOfferFacts } from "../asu/kug200b";
 import { isoDate } from "../iso-date";
+import { AgenturItem, agenturItems, type Tl407WorkFacts } from "../profiling/submissions";
 
 // The work list (data-protection.md, the work list and the dashboard): one projection of a
 // participation's facts for the list and the dashboard alike.
@@ -102,6 +103,8 @@ export const WorklistItem = z
     actions: z.array(ParticipantAction),
     deadlines: z.array(Deadline),
     caseItems: z.array(WorklistCaseItem),
+    /** Work with the Agentur: the TL 407's submission and the Kug 200b's confirmation. */
+    agenturItems: z.array(AgenturItem),
     flags: z.array(LifecycleFlag),
     portal: PortalReach,
     /** The latest reminder requested for the participation, whatever its outcome. */
@@ -138,6 +141,8 @@ export type WorklistFacts = Pick<
   asuDueDate: AsuDueDate | null;
   /** The Kug 200b offer's facts (`kug200bItems`), beside the project type and status. */
   kug200b: Omit<Kug200bOfferFacts, "projectType" | "status">;
+  /** The TL 407's attempts, the lead time and a batch's registration (`agenturItems`). */
+  agentur: Tl407WorkFacts;
   appointments: {
     bookings: readonly AppointmentItemBooking[];
     notices: readonly AppointmentItemNotice[];
@@ -227,7 +232,13 @@ export function worklistProjection(
     privacyNoticeState: facts.privacyNoticeState,
     actions,
     deadlines: deadlinesOf(
-      { snapshot, project, privacyNotice: facts.privacyNoticeState, asuDueDate: facts.asuDueDate },
+      {
+        snapshot,
+        project,
+        privacyNotice: facts.privacyNoticeState,
+        asuDueDate: facts.asuDueDate,
+        tl407: facts.agentur,
+      },
       today,
     ),
     caseItems: [
@@ -236,6 +247,7 @@ export function worklistProjection(
         : []),
       ...kug200bItems({ ...facts.kug200b, projectType: project.type, status: current.status }),
     ],
+    agenturItems: agenturItems(snapshot, project.type, facts.agentur, today),
     flags: remainingFlags(lifecycleFlags(snapshot, project, today)),
     portal,
     reminder: facts.lastReminder

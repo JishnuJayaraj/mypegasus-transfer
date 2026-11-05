@@ -247,6 +247,13 @@ export const regionsQuery = (api: ApiClient) =>
     queryFn: () => unwrap(api.GET("/api/v1/regions")),
   });
 
+/** The regional view of escalations (Q57): counts per project, never a participant (403 else). */
+export const escalationsQuery = (api: ApiClient) =>
+  queryOptions({
+    queryKey: ["escalations"],
+    queryFn: () => unwrap(api.GET("/api/v1/escalations")),
+  });
+
 /** The staff accounts with their org roles (the global admin), page by page. */
 export const staffAccountsQuery = (api: ApiClient) =>
   infiniteQueryOptions({

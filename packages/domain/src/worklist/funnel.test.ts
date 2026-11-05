@@ -37,6 +37,11 @@ const items: WorklistItem[] = [
       { kind: "privacy_notice", date: "2027-03-01", state: "overdue" },
     ],
     flags: ["dsv_never_offered", "informed_without_wave_at_cutoff"],
+    // Two Agentur items: one participation each time.
+    agenturItems: [
+      { kind: "tl407_escalated", date: "2027-04-15" },
+      { kind: "tl407_resubmission_open", date: "2027-04-10" },
+    ],
     portal: "consent_required",
     // Two items of one kind and a next booking: one participation each time.
     appointments: {
@@ -71,6 +76,7 @@ const items: WorklistItem[] = [
       expiresAt: "2027-04-01T09:00:00.000Z",
     },
     appointments: { next: null, items: [appointmentItem("attendance_missing", 5)] },
+    agenturItems: [{ kind: "tl407_original_missing", date: "2027-03-10" }],
   }),
 ];
 
@@ -166,6 +172,7 @@ describe("projectFunnel", () => {
       not_reachable: 2,
       appointments_overdue: 2,
       appointments_to_resolve: 2,
+      agentur_open: 2,
     });
   });
 
@@ -173,7 +180,7 @@ describe("projectFunnel", () => {
     const filters = funnelFilters(project);
     expect(filters.waves.map((w) => w.key)).toEqual([waveId, "none"]);
     expect(filters.dsvStatuses).toHaveLength(5);
-    expect(filters.deadlines).toHaveLength(12);
+    expect(filters.deadlines).toHaveLength(14);
     expect(filters.flags.map((f) => f.key)).toEqual([
       "conflict_dsv_signed_profiling_declined",
       "dsv_never_offered",
@@ -194,6 +201,19 @@ describe("projectFunnel", () => {
       ["needs_resolution", 0],
       ["attendance_conflict", 1],
     ]);
+  });
+
+  it("has the group Agentur: any item and one count per kind, each a distinct participation", () => {
+    const agentur = projectFunnel(items, project).agentur;
+    expect(agentur.map((a) => [a.key, a.count])).toEqual([
+      ["open", 2],
+      ["tl407_escalated", 1],
+      ["tl407_resubmission_open", 1],
+      ["tl407_original_missing", 1],
+      ["kug200b_confirmation_missing", 0],
+    ]);
+    expect(ids({ agentur: "tl407_original_missing" })).toEqual([id(4)]);
+    for (const { count, filter } of agentur) expect(count).toBe(ids(filter).length);
   });
 
   it("has no waves and no DSV track in ta_only", () => {
