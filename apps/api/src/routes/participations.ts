@@ -20,6 +20,7 @@ import {
   ParticipationDatesInput,
   mayListField,
   mayPerformOperation,
+  mayRecordBaReport,
   mayViewAsu,
   mayViewProfiling,
   ParticipationListQuery,
@@ -172,18 +173,27 @@ export function participationRoutes(deps: Deps) {
       .from(participationDsvAmendment)
       .where(eq(participationDsvAmendment.participationId, participationId))
       .orderBy(asc(participationDsvAmendment.confirmedAt));
-    const baReportingTasks = await db
-      .select({
-        id: baReportingTask.id,
-        reportingKind: baReportingTask.reportingKind,
-        subjectDate: baReportingTask.subjectDate,
-        status: baReportingTask.status,
-        createdAt: utc(baReportingTask.createdAt),
-        reportedOn: baReportingTask.reportedOn,
-      })
-      .from(baReportingTask)
-      .where(eq(baReportingTask.participationId, participationId))
-      .orderBy(asc(baReportingTask.createdAt), asc(baReportingTask.reportingKind));
+    // A pending task is closed by the PL or back office (D28); whatever the participation's status.
+    const recordsBaReports = mayRecordBaReport(subject, target).ok;
+    const baReportingTasks = (
+      await db
+        .select({
+          id: baReportingTask.id,
+          reportingKind: baReportingTask.reportingKind,
+          subjectDate: baReportingTask.subjectDate,
+          status: baReportingTask.status,
+          createdAt: utc(baReportingTask.createdAt),
+          reportedOn: baReportingTask.reportedOn,
+          notRequiredReason: baReportingTask.notRequiredReason,
+          decidedAt: utc(baReportingTask.decidedAt),
+        })
+        .from(baReportingTask)
+        .where(eq(baReportingTask.participationId, participationId))
+        .orderBy(asc(baReportingTask.createdAt), asc(baReportingTask.reportingKind))
+    ).map((task) => ({
+      ...task,
+      capabilities: { recordOutcome: recordsBaReports && task.status === "pending" },
+    }));
     const assignments = (await consultantsOf(db, [participationId])).get(participationId) ?? [];
     const states = (
       await listStatesOf(db, clock, [participationId], new Map([[participationId, row.receivedOn]]))

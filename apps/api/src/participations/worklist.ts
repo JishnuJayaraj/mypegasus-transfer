@@ -2,6 +2,7 @@ import type { Clock } from "@transfer/adapters";
 import {
   and,
   asc,
+  baReportingTask,
   consentRecord,
   desc,
   eq,
@@ -22,6 +23,7 @@ import {
   mayGenerateKug200bBulk,
   mayListField,
   mayPerformOperation,
+  mayReadBaReportingTasks,
   mayRemind,
   participationListScope,
   staffSelfServiceAccess,
@@ -154,6 +156,11 @@ export async function loadWorklist(
       // The TL 407's attempts and, for the deadline, the lead time of the placement Agenturen of
       // the open participations it applies to (D27); no other Agentur's settings are looked up.
       const attempts = await attemptsOf(tx, ids);
+      // Pending BA reports (D28), only of the participations whose tasks the viewer reads.
+      const pendingReports = await pendingReportsOf(
+        tx,
+        ids.filter((id) => mayReadBaReportingTasks(subject, projectId, id)),
+      );
       const leadTimes = await submissionSettingsOf(
         tx,
         release,
@@ -235,6 +242,7 @@ export async function loadWorklist(
                     ? null
                     : (leadTimes.get(p.placementAgenturKey)?.leadTimeDays ?? null),
                 kug200bRegistration: kug200bRegistrationOf(asuStates.get(p.id)!),
+                baReportPendingSince: pendingReports.get(p.id) ?? null,
               },
               appointments: {
                 bookings: bookings.get(p.id) ?? [],
@@ -291,6 +299,25 @@ function kug200bRegistrationOf(state: AsuState) {
   return registration?.proofKind === "kug200b_submission"
     ? { registeredOn: registration.registeredOn, confirmedOn: registration.confirmedOn }
     : null;
+}
+
+/** Per participation the Berlin day its oldest pending BA reporting task was created. */
+async function pendingReportsOf(db: Pick<Database, "select">, ids: readonly string[]) {
+  if (ids.length === 0) return new Map<string, string>();
+  const rows = await db
+    .select({
+      participationId: baReportingTask.participationId,
+      since: sql<string>`to_char(min(${baReportingTask.createdAt}) at time zone 'Europe/Berlin', 'YYYY-MM-DD')`,
+    })
+    .from(baReportingTask)
+    .where(
+      and(
+        inArray(baReportingTask.participationId, [...ids]),
+        eq(baReportingTask.status, "pending"),
+      ),
+    )
+    .groupBy(baReportingTask.participationId);
+  return new Map(rows.map((row) => [row.participationId, row.since]));
 }
 
 /** A provider's facts one participation after another, in one transaction. */
