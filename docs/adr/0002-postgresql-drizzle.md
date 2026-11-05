@@ -1207,11 +1207,16 @@ data-protection.md (evidence corrections) holds the rules, Q209 the readings.
   `invalid_argument`; `lock_participation`, then the target `FOR UPDATE`, then the insert.
   `decide_evidence_correction(p_context, p_correction_id, p_approve)` → the document to purge or
   null: the project's **exclusive** advisory lock first (D31), the participation row, the target,
-  then the correction `FOR UPDATE`; the regional operations manager of the project's region
+  then the correction `FOR UPDATE`; a supersession carries the PL's attestation, not a BA
+  confirmation (the consultant links it again); the regional operations manager of the project's region
   (`actor_not_allowed`), never the requester (`same_person_approval`), `correction_not_pending`,
   `target_corrected`. Both audited (`evidence_correction_requested`, `evidence_correction_decided`:
   participation events, `case` stream, codes only; `record_audit_event` refuses them). Helpers
   `normalise_correction_source` and the trigger function stay internal.
+- **The reporting obligation's day** (the review of PR #103): `ba_reporting_obligation_day(task)`
+  (internal) follows `replaces_task_id` to the chain's first task and gives its Berlin creation
+  day; `record_ba_report` (redefined, same signature) checks `date_before_task` against it, so a
+  replacement keeps its own `created_at` and still records a report sent before the correction.
 - **Lock order** (unchanged from D31 for every Slice 6 function): the project's advisory lock
   first, shared through `lock_participation` for one participation, exclusive for a batch, a bulk
   generation and a correction's or exception's decision; then the participation rows (UUID order)

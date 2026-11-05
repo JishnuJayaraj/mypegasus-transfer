@@ -572,13 +572,16 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
 - **Corrections** (data-protection.md, evidence corrections; Slice 6, PR 6-8; Q186, Q209): an
   entry error is never fixed by a new route or a duplicate registration. On the PL's request and the
   regional operations manager's approval a registration is **superseded** with the corrected
-  actual date (a new current registration, same route and proof, whose complete fact is recorded at
-  the approval instant: the fact `asuRegisteredWithProof` is `validOn` the corrected date,
-  `recordedAt` the approval) or **invalidated** (no current registration: the due date applies again
+  actual date where its proof supports it (a new current registration on the same route, recorded
+  at the approval instant; the PL's attestation carries over, so the fact `asuRegisteredWithProof`
+  is `validOn` the corrected date and `recordedAt` the approval; a BA confirmation is linked again
+  by the assigned consultant, confirming it supports the corrected date, and the fact is recorded
+  at that link) or **invalidated** (no current registration: the due date applies again
   and the PL records a new one, the route changeable again). The original stays, linked, in the
   history. On `kug_200b` the date is the batch's, so the registration is only invalidated. A status
   that rested on the registration stays; the work list shows `evidence_invalidated` until a new
-  current registration is recorded.
+  current registration gives the fact again (a registration with its linked proof, valid by the TG
+  entry date).
 - **Completeness** (regional-variation.md, the base rules): the engine's state for `asu_proof`
   comes from the record: accepted once a registration with proof exists, on any route, without a
   file; else the live BA confirmations', an accepted but unlinked one still awaiting its link. The
@@ -956,7 +959,9 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
     regional operations manager approves, a **linked replacement task** is created `pending`
     (same kind, date and amendment; "Ersetzt eine korrigierte Meldung") and the original keeps its
     outcome, marked "Durch Korrektur ersetzt". The original is never reopened, so a dialog still
-    open for it records nothing (`already_recorded`); the replacement is closed as any task.
+    open for it records nothing (`already_recorded`); the replacement is closed as any task, its
+    "Gemeldet am" not before the day the original obligation's first task was created (a report
+    actually sent before the correction keeps its true date), through repeated corrections too.
   - **The work list** shows a pending task as the Agentur item `ba_report_pending` ("BA-Meldung
     offen", from the oldest pending task's day; also for a closed participation) to whoever reads
     the tasks. It has no due date and doesn't escalate.

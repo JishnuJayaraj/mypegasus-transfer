@@ -548,20 +548,24 @@ who may open a document; requesting grants no read access.
   eyes; corrected sensitive values encrypted; audit events with IDs, field key, actor and
   timestamps, never the values; the approver sees category, basis and references, no value they
   couldn't otherwise read.
-- **As built (Slice 6, PR 6-8; readings Q209 *assumed*)** for three targets; field corrections
+- **As built (Slice 6, PR 6-8; readings Q209, accepted with amendments in the review of PR #103)** for three targets; field corrections
   stay with a later slice:
   - **Targets and effects.** An accepted **document**: invalidated (`invalidated_by_correction`);
     the request states explicitly whether it is a **wrong person's file**, which on approval
     becomes a tombstone (`wrong_person`, the file name erased) whose object `documents.purge-object`
     purges; the row and the history stay. A current **ASU registration**: **superseded** with the
-    corrected actual registration date (a new current registration with the same route and proof,
-    recorded and proven at the approval instant, `correction_id`; the original keeps its row,
+    corrected actual registration date where its proof supports it (a new current registration
+    with the same route, recorded at the approval instant, `correction_id`; the PL's attestation
+    carries over and is proven then, while a BA confirmation is linked again by the assigned
+    consultant, confirming it supports the corrected date; the original keeps its row,
     `superseded_by`) or **invalidated** (`invalidated_by`; the PL then records a registration again,
     on the same or another route). On `kug_200b` the date is the batch's, so a registration there is
     only invalidated (`asu_route_kug200b`). A closed **BA reporting outcome**: superseded by a linked
     replacement task (`pending`, `replaces_task_id`), the original's outcome and history unchanged
     (`superseded_by`); a confirmation dialog still open for the original is refused
-    (`already_recorded`), since it names the original (Q207 (6)).
+    (`already_recorded`), since it names the original (Q207 (6)). The replacement reports the same
+    obligation: its sent date is not before the day the chain's first task was created, through
+    repeated corrections too, while it keeps its own creation instant.
   - **The request:** the correction-authority table's roles (the PL; for the DSV and its
     cancellation also back office; nobody for a working copy), as themselves, in normal mode; a
     reason code (`ba_legal_reference`, `data_subject_rectification`, `corrected_source_document`,
@@ -587,11 +591,17 @@ who may open a document; requesting grants no read access.
     quarantined again, and no quarantine is lifted while a correction of the document is pending.
     A superseded or invalidated registration supplies nothing; the facts and the ASU record read the
     current one. Past snapshots and the history stay. Nothing restores an invalidation.
-  - **"Nachweis ungültig"** (`evidence_invalidated`, a case item on the work list): from the
-    approval of an invalidation that nothing has replaced yet: evidence (a catalog type marked
-    `signed`) without a valid document of its type accepted after the approval, or an ASU
-    registration without a current one recorded after it. The status that rested on it stays for
-    the PL to resolve (a new signed form, a new registration, or the reconciliation rules).
+  - **"Nachweis ungültig"** (`evidence_invalidated`, a case item on the work list; the domain's
+    `evidenceInvalidatedSince`): from the approval of an invalidation of evidence (an ASU
+    registration or a catalog type marked `signed`) until replacement evidence supports the fact the
+    invalidated evidence supported, its linkage and its effective date: an invalidated registration,
+    or a BA confirmation or batch scan that proved one, until the current registration gives
+    `asuRegisteredWithProof` recorded after the approval and valid by the TG entry date (a
+    registration without proof, or an accepted but unlinked proof, doesn't count); a TL 407 until
+    a valid one accepted after the approval is signed by the retained `profilingDoneOn`; exception
+    evidence while the open request rests on evidence that doesn't count; other evidence until a
+    valid document of its type is accepted after the approval. The status that rested on it stays
+    for the PL to resolve (new evidence, or the reconciliation rules); no date is invented.
 - A correction alone never bypasses lifecycle guards or changes Transfer-KuG eligibility,
   contractual dates or payments: that takes a reconciliation, contractual amendment or recorded
   BA/legal determination.
