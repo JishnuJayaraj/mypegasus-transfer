@@ -1218,3 +1218,9 @@ export {
   normaliseCorrectionSource,
   type EvidenceCorrectionKind,
 } from "./corrections/model";
+export {
+  evidenceInvalidatedSince,
+  invalidationResolved,
+  type ApprovedInvalidation,
+  type RecoveryFacts,
+} from "./corrections/recovery";

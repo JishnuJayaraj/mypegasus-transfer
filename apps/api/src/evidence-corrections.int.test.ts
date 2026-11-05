@@ -141,6 +141,37 @@ const row = async (id: string) =>
 const codes = async (res: Response) =>
   (await expectProblem(res, 422, "domain-error")).errors?.map((e) => e.code);
 
+const kinds = async (id: string) => (await row(id)).caseItems.map((item) => item.kind);
+const asuTab = async (id: string) =>
+  readJson(await request("GET", `/participations/${id}/asu`, projectLead), AsuView);
+
+/** Sets the route and records a registration: attested by the PL, or bare by the consultant. */
+async function registered(id: string, registeredOn: string, attest: boolean) {
+  const { route } = await asuTab(id);
+  if (route.channel === null || route.channel === "kug_200b") {
+    const set = await request("PUT", `/participations/${id}/asu/route`, projectLead, {
+      channel: attest ? "online_self" : "in_person",
+      version: route.version,
+    });
+    if (set.status !== 200) throw new Error(`route not set: ${set.status}`);
+  }
+  const res = await request(
+    "POST",
+    `/participations/${id}/asu/registration`,
+    attest ? projectLead : consultant,
+    {
+      routeVersion: (await asuTab(id)).route.version,
+      registeredOn,
+      ...(attest && {
+        attestation: { customerNumber: "123A456789", source: "ba_online_account_inspected" },
+      }),
+    },
+  );
+  expect(res.status).toBe(200);
+  return (await asuTab(id)).registration!.id;
+}
+const attested = (id: string, registeredOn: string) => registered(id, registeredOn, true);
+
 describe("POST /participations/{id}/evidence-corrections (D29)", () => {
   it("answers 404 for what the viewer can't see, 403 without the authority, 422 for the state", async () => {
     const id = await participation();
@@ -295,8 +326,11 @@ describe("a document invalidated (Q183)", () => {
     const item = await row(id);
     expect(item.status).toBe("informed");
     expect(item.caseItems).toContainEqual({ kind: "evidence_invalidated", date: await day() });
-    // A new valid BA confirmation accepted after the approval replaces it.
+    // An accepted replacement that proves no registration doesn't resolve it (the review of
+    // PR #103); a registration resting on proof does.
     await acceptedProof(id);
+    expect((await row(id)).caseItems.map((i) => i.kind)).toContain("evidence_invalidated");
+    await attested(id, await day(-3));
     expect((await row(id)).caseItems.map((i) => i.kind)).not.toContain("evidence_invalidated");
   });
 
@@ -398,5 +432,95 @@ describe("an ASU registration superseded (Q186)", () => {
         }),
       ),
     ).toEqual(["target_corrected"]);
+  });
+});
+
+describe("Nachweis ungültig until the evidence is replaced (Q209 (7), the review of PR #103)", () => {
+  it("stays after an invalidated registration until a new one rests on a linked proof", async () => {
+    const id = await participation();
+    const registrationId = await attested(id, await day(-10));
+    await decide(
+      await requested(id, { correction: "invalidate_asu_registration", registrationId }),
+      "approve",
+    );
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    // A new registration without its proof gives no fact.
+    const again = await registered(id, await day(-2), false);
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    // An accepted BA confirmation that isn't linked yet supports nothing.
+    const proof = await acceptedProof(id);
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    const linked = await request("POST", `/participations/${id}/asu/proof-link`, consultant, {
+      registrationId: again,
+      documentId: proof,
+    });
+    expect(linked.status).toBe(200);
+    expect(await kinds(id)).not.toContain("evidence_invalidated");
+  });
+
+  it("stays after an invalidated TL 407 until one signed by the retained profilingDoneOn is accepted", async () => {
+    const id = await participation();
+    for (const [from, to] of [
+      ["not_started", "profiling_accepted"],
+      ["profiling_accepted", "profiling_in_progress"],
+    ] as const) {
+      await changeStatus(owner.$client, id, { field: "profiling_status", from, to });
+    }
+    const signedOn = await day(-5);
+    const scan = async (signed: string) => {
+      const res = await request("POST", `/participations/${id}/documents`, consultant, {
+        type: "tl407_signed_scan",
+        fileName: "scan.pdf",
+        content: Buffer.from(
+          `%PDF-1.7\n1 0 obj\n<< /Title (synthetic scan ${randomUUID()}) >>\nendobj\n%%EOF\n`,
+        ).toString("base64"),
+        origin: "external_paper",
+      });
+      expect(res.status).toBe(201);
+      const { id: documentId } = (await res.json()) as { id: string };
+      const reviewed = await request(
+        "POST",
+        `/participations/${id}/documents/${documentId}/review`,
+        consultant,
+        {
+          decision: "accepted",
+          scan: {
+            participantSignedOn: signed,
+            profilerSignedOn: signed,
+            confirmations: ["signatures_present", "all_pages_present"],
+            formVersion: "08-2025",
+            declarations: { kind: "as_marked", jobboerseChoice: "full", baContactConsent: true },
+          },
+        },
+      );
+      expect(reviewed.status).toBe(200);
+      return documentId;
+    };
+    const first = await scan(signedOn);
+    const profilingView = (await (
+      await request("GET", `/participations/${id}/profiling`, consultant)
+    ).json()) as { statusVersion: number };
+    const done = await request("POST", `/participations/${id}/profiling-status`, consultant, {
+      to: "profiling_done",
+      effectiveDate: signedOn,
+      statusVersion: profilingView.statusVersion,
+    });
+    expect(done.status).toBe(200);
+    await decide(
+      await requested(id, {
+        correction: "invalidate_document",
+        documentId: first,
+        wrongPerson: false,
+      }),
+      "approve",
+    );
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    // Signed after the retained completion: it can't support it.
+    await scan(await day(-1));
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    await scan(signedOn);
+    expect(await kinds(id)).not.toContain("evidence_invalidated");
+    // The status stayed as it was throughout.
+    expect((await row(id)).profilingStatus).toBe("profiling_done");
   });
 });
