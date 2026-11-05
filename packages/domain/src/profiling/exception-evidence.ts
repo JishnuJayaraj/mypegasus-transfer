@@ -11,8 +11,11 @@ import { AgenturKey } from "../projects/agentur-settings";
 // (`exception_evidence_fingerprint`) over the payload `canonicalEvidence` builds; a test keeps the
 // two equal. The fingerprint never leaves the database: not in a response, a log or the history.
 
-/** Which source an evidence record rests on. */
-export const ExceptionEvidenceKind = z.enum(["documents", "ba_confirmation"]);
+/**
+ * Which source an evidence record rests on. `legacy_unverified` marks a request recorded before
+ * evidence records existed (migration 0086): kept for its history, never counting as evidence.
+ */
+export const ExceptionEvidenceKind = z.enum(["documents", "ba_confirmation", "legacy_unverified"]);
 export type ExceptionEvidenceKind = z.infer<typeof ExceptionEvidenceKind>;
 
 /** The canonicalisation version: a later one is `v2`, never a changed `v1` (round 17). */
@@ -135,6 +138,13 @@ export const ExceptionEvidenceDocument = z.object({
   reviewState: z.enum(["unreviewed", "accepted", "rejected"]),
   /** Accepted, not quarantined, invalidated or deleted: it can be part of a record. */
   usable: z.boolean(),
+  quarantined: z.boolean(),
+  /** The safety actions without any opening (the review of PR #102). */
+  capabilities: z.object({
+    delete: z.boolean(),
+    quarantine: z.boolean(),
+    liftQuarantine: z.boolean(),
+  }),
 });
 
 /** The participation's current request on the tab "Profiling" (the PL and the consultant). */

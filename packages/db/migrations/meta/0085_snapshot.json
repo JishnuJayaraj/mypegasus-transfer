@@ -1,5 +1,5 @@
 {
-  "id": "34919c50-5099-48f2-9deb-7761aaae1283",
+  "id": "db10beab-e31f-4e03-b1e6-4ae39bd011e6",
   "prevId": "139a15ee-d603-45f1-8409-1ee027981209",
   "version": "7",
   "dialect": "postgresql",
@@ -7446,7 +7446,7 @@
         },
         "profiling_exception_evidence_record_source": {
           "name": "profiling_exception_evidence_record_source",
-          "value": "case \"profiling_exception_evidence_record\".\"kind\"::text\n        when 'documents' then \"profiling_exception_evidence_record\".\"document_ids\" is not null\n          and cardinality(\"profiling_exception_evidence_record\".\"document_ids\") between 1 and 20\n          and \"profiling_exception_evidence_record\".\"agentur_key\" is null and \"profiling_exception_evidence_record\".\"reference\" is null and \"profiling_exception_evidence_record\".\"confirmed_on\" is null\n        else \"profiling_exception_evidence_record\".\"document_ids\" is null and \"profiling_exception_evidence_record\".\"agentur_key\" is not null\n          and \"profiling_exception_evidence_record\".\"reference\" is not null and \"profiling_exception_evidence_record\".\"confirmed_on\" is not null end"
+          "value": "case \"profiling_exception_evidence_record\".\"kind\"::text\n        when 'documents' then \"profiling_exception_evidence_record\".\"document_ids\" is not null\n          and cardinality(\"profiling_exception_evidence_record\".\"document_ids\") between 1 and 20\n          and \"profiling_exception_evidence_record\".\"agentur_key\" is null and \"profiling_exception_evidence_record\".\"reference\" is null and \"profiling_exception_evidence_record\".\"confirmed_on\" is null\n        when 'ba_confirmation' then \"profiling_exception_evidence_record\".\"document_ids\" is null and \"profiling_exception_evidence_record\".\"agentur_key\" is not null\n          and \"profiling_exception_evidence_record\".\"reference\" is not null and \"profiling_exception_evidence_record\".\"confirmed_on\" is not null\n        else \"profiling_exception_evidence_record\".\"document_ids\" is null and \"profiling_exception_evidence_record\".\"agentur_key\" is null and \"profiling_exception_evidence_record\".\"reference\" is null\n          and \"profiling_exception_evidence_record\".\"confirmed_on\" is null end"
         },
         "profiling_exception_evidence_record_agentur_key": {
           "name": "profiling_exception_evidence_record_agentur_key",
@@ -9567,7 +9567,7 @@
     "public.exception_evidence_kind": {
       "name": "exception_evidence_kind",
       "schema": "public",
-      "values": ["documents", "ba_confirmation"]
+      "values": ["documents", "ba_confirmation", "legacy_unverified"]
     },
     "public.export_kind": {
       "name": "export_kind",

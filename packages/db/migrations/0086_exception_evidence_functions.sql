@@ -13,6 +13,38 @@
 -- in id order; a decision takes the project's exclusive lock first, then the participation. No
 -- setting is read: nothing to resolve.
 
+-- The upgrade of an existing database (the review of PR #102): a request recorded before this
+-- migration names an evidence record id that never existed (Slice 1 refused every real request; only
+-- the synthetic seed and tests wrote them). Each such id becomes a `legacy_unverified` record of its
+-- request's participation, carrying the request's own fingerprint, by the requester on the request
+-- date: the request and its history stay, and nothing treats it as verified evidence
+-- (`exception_evidence_usable` is false for it, so it supports no request, approval or guard fact).
+-- An id named by requests of two participations can't be one record: the migration stops
+-- (`legacy_evidence_conflict`) and the database stays as it was. Then the request's composite FK.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM public.profiling_exception_request r
+    WHERE NOT EXISTS (SELECT FROM public.profiling_exception_evidence_record e
+      WHERE e.id = r.evidence_record_id)
+    GROUP BY r.evidence_record_id HAVING count(DISTINCT r.participation_id) > 1
+  ) THEN
+    RAISE EXCEPTION 'legacy_evidence_conflict';
+  END IF;
+END $$;
+--> statement-breakpoint
+INSERT INTO profiling_exception_evidence_record (id, project_id, participation_id, kind,
+  fingerprint, created_by, created_on, created_at)
+SELECT DISTINCT ON (r.evidence_record_id) r.evidence_record_id, r.project_id, r.participation_id,
+  'legacy_unverified', r.evidence_fingerprint, r.requested_by, r.requested_on, r.requested_at
+FROM profiling_exception_request r
+WHERE NOT EXISTS (SELECT FROM profiling_exception_evidence_record e
+  WHERE e.id = r.evidence_record_id)
+ORDER BY r.evidence_record_id, r.requested_at, r.id;
+--> statement-breakpoint
+ALTER TABLE "profiling_exception_request" ADD CONSTRAINT "profiling_exception_request_evidence_fk" FOREIGN KEY ("evidence_record_id","participation_id") REFERENCES "public"."profiling_exception_evidence_record"("id","participation_id") ON DELETE no action ON UPDATE no action;
+--> statement-breakpoint
+
 ALTER TABLE audit_event DROP CONSTRAINT audit_event_lifecycle_has_participation;
 --> statement-breakpoint
 ALTER TABLE audit_event ADD CONSTRAINT audit_event_lifecycle_has_participation CHECK (
@@ -124,11 +156,13 @@ $$;
 --> statement-breakpoint
 
 -- Whether a record's evidence still counts: a BA confirmation always; documents while each is
--- live, accepted, not quarantined and not invalidated. False for an unknown record.
+-- live, accepted, not quarantined and not invalidated; a legacy record never. False for an unknown
+-- record.
 CREATE FUNCTION exception_evidence_usable(p_record_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
   SELECT coalesce((
-    SELECT CASE r.kind::text WHEN 'ba_confirmation' THEN true ELSE NOT EXISTS (
+    SELECT CASE r.kind::text WHEN 'ba_confirmation' THEN true
+      WHEN 'legacy_unverified' THEN false ELSE NOT EXISTS (
       SELECT FROM pg_catalog.unnest(r.document_ids) i
       LEFT JOIN public.document d ON d.id = i AND d.participation_id = r.participation_id
       WHERE d.id IS NULL OR d.deleted_at IS NOT NULL OR d.review_state::text <> 'accepted'

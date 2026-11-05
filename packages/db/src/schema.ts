@@ -684,7 +684,8 @@ const requestStatusIn = (...list: string[]) =>
  * One immutable evidence record of a profiling exception (data-protection.md, exception evidence;
  * Q194, round 17): the accepted `profiling_exception_evidence` document versions (their ids, in
  * id order; the files stay in `document`), or a structured BA confirmation, normalised (the
- * Agentur's key, the confirming contact or reference, the date). Its fingerprint is computed by
+ * Agentur's key, the confirming contact or reference, the date); `legacy_unverified` for a request
+ * recorded before records existed (no source, never counting). Its fingerprint is computed by
  * `create_exception_evidence_record`; confidential evidence metadata, never in audit details,
  * logs or client responses. Written only by that function, never updated or deleted;
  * `transfer_app` may only select.
@@ -735,8 +736,10 @@ export const profilingExceptionEvidenceRecord = pgTable(
         when 'documents' then ${t.documentIds} is not null
           and cardinality(${t.documentIds}) between 1 and 20
           and ${t.agenturKey} is null and ${t.reference} is null and ${t.confirmedOn} is null
-        else ${t.documentIds} is null and ${t.agenturKey} is not null
-          and ${t.reference} is not null and ${t.confirmedOn} is not null end`,
+        when 'ba_confirmation' then ${t.documentIds} is null and ${t.agenturKey} is not null
+          and ${t.reference} is not null and ${t.confirmedOn} is not null
+        else ${t.documentIds} is null and ${t.agenturKey} is null and ${t.reference} is null
+          and ${t.confirmedOn} is null end`,
     ),
     check(
       "profiling_exception_evidence_record_agentur_key",

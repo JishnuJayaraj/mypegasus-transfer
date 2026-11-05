@@ -1,4 +1,4 @@
-CREATE TYPE "public"."exception_evidence_kind" AS ENUM('documents', 'ba_confirmation');--> statement-breakpoint
+CREATE TYPE "public"."exception_evidence_kind" AS ENUM('documents', 'ba_confirmation', 'legacy_unverified');--> statement-breakpoint
 ALTER TYPE "public"."audit_event_type" ADD VALUE 'exception_evidence_recorded';--> statement-breakpoint
 CREATE TABLE "profiling_exception_evidence_record" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -19,8 +19,10 @@ CREATE TABLE "profiling_exception_evidence_record" (
         when 'documents' then "profiling_exception_evidence_record"."document_ids" is not null
           and cardinality("profiling_exception_evidence_record"."document_ids") between 1 and 20
           and "profiling_exception_evidence_record"."agentur_key" is null and "profiling_exception_evidence_record"."reference" is null and "profiling_exception_evidence_record"."confirmed_on" is null
-        else "profiling_exception_evidence_record"."document_ids" is null and "profiling_exception_evidence_record"."agentur_key" is not null
-          and "profiling_exception_evidence_record"."reference" is not null and "profiling_exception_evidence_record"."confirmed_on" is not null end),
+        when 'ba_confirmation' then "profiling_exception_evidence_record"."document_ids" is null and "profiling_exception_evidence_record"."agentur_key" is not null
+          and "profiling_exception_evidence_record"."reference" is not null and "profiling_exception_evidence_record"."confirmed_on" is not null
+        else "profiling_exception_evidence_record"."document_ids" is null and "profiling_exception_evidence_record"."agentur_key" is null and "profiling_exception_evidence_record"."reference" is null
+          and "profiling_exception_evidence_record"."confirmed_on" is null end),
 	CONSTRAINT "profiling_exception_evidence_record_agentur_key" CHECK ("profiling_exception_evidence_record"."agentur_key" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
 	CONSTRAINT "profiling_exception_evidence_record_reference" CHECK (char_length("profiling_exception_evidence_record"."reference") between 1 and 100)
 );
@@ -28,5 +30,5 @@ CREATE TABLE "profiling_exception_evidence_record" (
 ALTER TABLE "profiling_exception_evidence_record" ADD CONSTRAINT "profiling_exception_evidence_record_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."project"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "profiling_exception_evidence_record" ADD CONSTRAINT "profiling_exception_evidence_record_created_by_staff_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "profiling_exception_evidence_record" ADD CONSTRAINT "profiling_exception_evidence_record_participation_fk" FOREIGN KEY ("participation_id","project_id") REFERENCES "public"."participation"("id","project_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "profiling_exception_evidence_record_participation_idx" ON "profiling_exception_evidence_record" USING btree ("participation_id");--> statement-breakpoint
-ALTER TABLE "profiling_exception_request" ADD CONSTRAINT "profiling_exception_request_evidence_fk" FOREIGN KEY ("evidence_record_id","participation_id") REFERENCES "public"."profiling_exception_evidence_record"("id","participation_id") ON DELETE no action ON UPDATE no action;
+CREATE INDEX "profiling_exception_evidence_record_participation_idx" ON "profiling_exception_evidence_record" USING btree ("participation_id");
+-- The request's evidence FK follows in 0086, after the legacy requests have their records.
