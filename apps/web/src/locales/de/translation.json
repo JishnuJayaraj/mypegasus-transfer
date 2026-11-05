@@ -882,7 +882,9 @@
       }
     },
     "tasks": {
-      "title": "Meldungen an die Agentur",
+      "title": "BA-Meldungen",
+      "intro": "Jede Änderung der Vertragsdaten und jeder vorzeitige Austritt wird der Agentur gemeldet. Erfassen Sie, wann die Meldung gesendet wurde oder warum sie nicht erforderlich ist. Ein Fälligkeitsdatum gibt es nicht.",
+      "listTitle": "Meldungen an die Agentur",
       "empty": "Keine Meldungen.",
       "kinds": {
         "later_entry": "Späterer Eintritt",
@@ -898,7 +900,42 @@
         "reportingKind": "Meldung",
         "subjectDate": "Datum",
         "createdAt": "Angelegt",
-        "status": "Status"
+        "status": "Status",
+        "outcome": "Ergebnis",
+        "actions": "Aktionen"
+      },
+      "reportedOn": "Gemeldet am {{date}}",
+      "notRequired": "Nicht erforderlich: {{reason}}",
+      "reasons": {
+        "agentur_confirmed_not_required": "Agentur hat bestätigt, dass keine Meldung nötig ist",
+        "no_claim_month_affected": "Kein Abrechnungsmonat betroffen",
+        "created_in_error": "Irrtümlich angelegt"
+      },
+      "recordReported": "Gemeldet am …",
+      "recordNotRequired": "Nicht erforderlich …",
+      "dialog": {
+        "reportedTitle": "Meldung als gesendet festhalten",
+        "not_requiredTitle": "Meldung als nicht erforderlich festhalten",
+        "task": "Meldung: {{kind}} zum {{date}}",
+        "reportedOnHelp": "Tragen Sie das Datum ein, an dem die Meldung tatsächlich an die Agentur ging – nicht in der Zukunft und nicht vor dem Tag, an dem die Aufgabe angelegt wurde.",
+        "reportedOn": "Gemeldet am",
+        "invalidDate": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
+        "reason": "Grund",
+        "chooseReason": "Grund auswählen",
+        "final": "Das Ergebnis wird mit Ihrem Namen in der Historie festgehalten und lässt sich danach nur über eine genehmigte Korrektur ändern.",
+        "confirm": "Ergebnis übernehmen",
+        "cancel": "Abbrechen"
+      },
+      "messages": {
+        "saved": "Ergebnis der Meldung festgehalten.",
+        "failed": "Das Ergebnis konnte nicht gespeichert werden.",
+        "forbidden": "Sie dürfen das Ergebnis dieser Meldung nicht erfassen.",
+        "notFound": "Diese Meldung ist nicht verfügbar.",
+        "codes": {
+          "already_recorded": "Für diese Meldung ist bereits ein Ergebnis erfasst.",
+          "date_in_future": "Das Datum liegt in der Zukunft.",
+          "date_before_task": "Das Datum liegt vor dem Tag, an dem die Aufgabe angelegt wurde."
+        }
       }
     },
     "assignments": {
@@ -1394,13 +1431,15 @@
       "tl407_escalated": "TL 407 eskaliert",
       "tl407_resubmission_open": "TL 407 erneut einreichen",
       "tl407_original_missing": "Original fehlt",
-      "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt"
+      "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt",
+      "ba_report_pending": "BA-Meldung offen"
     },
     "agenturItems": {
       "tl407_escalated": "TL 407 eskaliert (seit {{date}})",
       "tl407_resubmission_open": "TL 407 erneut einreichen (abgelehnt am {{date}})",
       "tl407_original_missing": "Original fehlt (übermittelt am {{date}})",
-      "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt (übermittelt am {{date}})"
+      "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt (übermittelt am {{date}})",
+      "ba_report_pending": "BA-Meldung offen (seit {{date}})"
     }
   },
   "dashboard": {
@@ -1658,7 +1697,8 @@
       "asu_confirmation_recorded": "Bestätigung der Agentur erfasst",
       "agentur_submission_original_sent": "Original an die Agentur versandt",
       "agentur_submission_rejected": "Von der Agentur abgelehnt",
-      "agentur_submission_original_retained": "Original liegt der Agentur weiter vor"
+      "agentur_submission_original_retained": "Original liegt der Agentur weiter vor",
+      "ba_report_recorded": "BA-Meldung erledigt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1761,7 +1801,9 @@
       "outdated_form_version": "veraltete Formularversion",
       "incomplete": "unvollständig",
       "other": "sonstiger Grund"
-    }
+    },
+    "baReported": "{{kind}}: gemeldet am {{date}}",
+    "baNotRequired": "{{kind}}: nicht erforderlich ({{reason}})"
   },
   "appointments": {
     "title": "Termine",

@@ -76,6 +76,9 @@ const task = {
   status: "pending",
   createdAt: "2026-10-20T08:00:00.000000Z",
   reportedOn: null,
+  notRequiredReason: null,
+  decidedAt: null,
+  capabilities: { recordOutcome: false },
 };
 
 function setup(shown: object, put?: Parameters<typeof mockApi>[0][string]) {
@@ -111,7 +114,7 @@ describe("changing the contractual dates", () => {
     expect(screen.queryByText("DSV-Nachtrag")).toBeNull();
     await type("TG-Ende (TT.MM.JJJJ)", "31.01.2092");
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    const tasks = await screen.findByRole("region", { name: "Meldungen an die Agentur" });
+    const tasks = await screen.findByRole("region", { name: "BA-Meldungen" });
     expect(within(tasks).getByText("Geplantes Ende geändert")).toBeInTheDocument();
     expect(within(tasks).getByText("Ausstehend")).toBeInTheDocument();
     expect(sent(calls)).toEqual([{ tgStart: null, tgEnd: "2092-01-31", expectedVersion: 4 }]);

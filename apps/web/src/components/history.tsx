@@ -231,6 +231,17 @@ export function HistoryTab({
           date: formatDate(text(details.rejectedOn)),
           reason: coded("history.rejectionReasons", text(details.reason) ?? ""),
         });
+      // A BA reporting task's outcome (D28): what it reports, the sent date or the reason.
+      case "ba_report_recorded": {
+        const kind = coded("participant.tasks.kinds", text(details.kind) ?? "");
+        const reason = text(details.reason);
+        return reason
+          ? t("history.baNotRequired", {
+              kind,
+              reason: coded("participant.tasks.reasons", reason),
+            })
+          : t("history.baReported", { kind, date: formatDate(text(details.reportedOn)) });
+      }
       case "consent_given":
       case "consent_ended": {
         const source = text(details.source);
