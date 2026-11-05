@@ -47,8 +47,9 @@ export const retentionPeriods = {
 } as const;
 
 /**
- * The class of a table whose rows carry their own (ADR-0008, per item): `document`, each row its
- * type's class from the document type catalog, in its `retention_class` column.
+ * The class of a table whose rows carry their own (ADR-0008, per item), in its `retention_class`
+ * column: `document`, each row its type's class from the document type catalog;
+ * `evidence_correction`, each row its target's class.
  */
 export const perRowRetention = "by_document_type";
 
@@ -426,6 +427,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // Evidence corrections (data-protection.md, evidence corrections; Q209): the target's class per
+  // row (a document's type's, else `participation_record`), codes, dates and the source reference.
+  evidence_correction: {
+    retentionClass: perRowRetention,
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
 };
 
 /** Returns one message per problem; empty when every table is catalogued and scoped. */
@@ -619,6 +627,9 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     confirmed_on: "asuRegistration",
     confirmed_by: null,
     confirmed_at: "asuRegistration",
+    superseded_by: null,
+    invalidated_by: null,
+    correction_id: null,
   },
   kug200b_batch_member: {
     batch_id: "agenturSubmissions",
@@ -798,6 +809,29 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     not_required_reason: "baReportingTask",
     decided_by: null,
     decided_at: null,
+    superseded_by: null,
+    replaces_task_id: null,
+    correction_id: null,
+  },
+  evidence_correction: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    target_kind: "evidenceCorrection",
+    action: "evidenceCorrection",
+    document_id: null,
+    asu_registration_id: null,
+    ba_reporting_task_id: null,
+    wrong_person: "evidenceCorrection",
+    corrected_registered_on: "evidenceCorrection",
+    reason: "evidenceCorrection",
+    source: "evidenceCorrection",
+    retention_class: null,
+    status: "evidenceCorrection",
+    requested_by: null,
+    requested_at: "evidenceCorrection",
+    decided_by: null,
+    decided_at: "evidenceCorrection",
   },
   participant_reminder: {
     id: null,
@@ -952,7 +986,12 @@ export function checkFieldColumns(
         problems.push(`${at}: a ciphertext column for a plain field`);
       } else if (dataClassRank[field.dataClass] > dataClassRank[entry.dataClass]) {
         problems.push(`${at}: data class above the table's`);
-      } else if (field.retentionClass !== entry.retentionClass) {
+      } else if (
+        // A table with a class per row (its target's, `evidence_correction`) stores the field
+        // under each row's class.
+        entry.retentionClass !== perRowRetention &&
+        field.retentionClass !== entry.retentionClass
+      ) {
         problems.push(`${at}: retention class differs`);
       } else stored.add(field.key);
     }

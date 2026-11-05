@@ -7,6 +7,7 @@ import {
   notYetStored,
   dataCatalog,
   fieldColumns,
+  perRowRetention,
   retentionPeriods,
   type CatalogEntry,
 } from "./data-catalog";
@@ -72,6 +73,7 @@ describe("data catalog", () => {
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),
       profiling_exception_evidence_record: entry("participation_record", "confidential", true),
+      evidence_correction: entry(perRowRetention, "internal", true),
       profiling_exception_request: entry("participation_record", "confidential", true),
       participant_identity: entry("participation_record", "confidential", true),
       participant_details: entry("personnel_file", "confidential", true),

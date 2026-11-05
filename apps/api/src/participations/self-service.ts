@@ -131,14 +131,15 @@ async function liveDocuments(db: Db, participationIds: readonly string[]) {
       type: document.type,
       reviewState: document.reviewState,
       quarantined: sql<boolean>`${document.quarantinedAt} is not null`,
+      invalidated: sql<boolean>`${document.invalidatedByCorrection} is not null`,
     })
     .from(document)
     .where(
       and(inArray(document.participationId, [...participationIds]), isNull(document.deletedAt)),
     );
   const byParticipation = new Map<string, Documents>();
-  for (const { participationId, type, reviewState, quarantined } of live) {
-    const state = documentState({ reviewState, deletedAt: null, quarantined });
+  for (const { participationId, type, reviewState, quarantined, invalidated } of live) {
+    const state = documentState({ reviewState, deletedAt: null, quarantined, invalidated });
     if (state === null) continue;
     const documents = byParticipation.get(participationId) ?? {};
     (documents[type] ??= []).push(state);

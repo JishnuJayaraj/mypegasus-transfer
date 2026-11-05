@@ -584,10 +584,17 @@ describe("quarantine, the TL 407 facts and profiling_done (Q183, Q191)", () => {
   it("excludes invalidated evidence (data-protection.md, evidence corrections)", async () => {
     const id = await participation();
     const documentId = await signed(id);
-    await owner.query("update document set invalidated_by_correction = $2 where id = $1", [
-      documentId,
-      randomUUID(),
-    ]);
+    // A fixture as the owner: the approved correction's own test is evidence-corrections.int.test.ts.
+    await owner.query(
+      `with c as (
+         insert into evidence_correction (project_id, participation_id, target_kind, action,
+           document_id, wrong_person, reason, source, retention_class, requested_by)
+         select project_id, participation_id, 'document', 'invalidate', id, false,
+           'documented_internal_error', 'Vermerk', retention_class, $2
+         from document where id = $1 returning id)
+       update document set invalidated_by_correction = (select id from c) where id = $1`,
+      [documentId, seedStaffUserIds.projectLead],
+    );
     expect(await facts(id)).toBeNull();
   });
 });
