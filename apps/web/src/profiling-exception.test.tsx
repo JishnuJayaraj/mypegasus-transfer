@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -83,6 +83,8 @@ const accepted = {
   addedAt: "2026-10-23T08:00:00.000Z",
   reviewState: "accepted",
   usable: true,
+  quarantined: false,
+  capabilities: { delete: false, quarantine: true, liftQuarantine: false },
 };
 const approved = {
   requestId,
@@ -135,7 +137,11 @@ const selfService = {
   missing: [],
 };
 
-function setup(exception: Exception, routes: Parameters<typeof mockApi>[0] = {}) {
+function setup(
+  exception: Exception | (() => Exception),
+  routes: Parameters<typeof mockApi>[0] = {},
+) {
+  const shown = typeof exception === "function" ? exception : () => exception;
   const mock = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
@@ -144,16 +150,92 @@ function setup(exception: Exception, routes: Parameters<typeof mockApi>[0] = {})
     [`GET ${projectPath}/entry-waves`]: () => json({ items: [], nextCursor: null }),
     [`GET ${detailPath}`]: () => json(detail),
     [`GET ${detailPath}/self-service`]: () => json(selfService),
-    [`GET ${detailPath}/profiling`]: () => json(view(exception)),
+    [`GET ${detailPath}/profiling`]: () => json(view(shown())),
     ...routes,
   });
-  renderApp(`/projects/${project.id}/participations/${participationId}?tab=profiling`, mock.api);
-  return mock;
+  const { queryClient } = renderApp(
+    `/projects/${project.id}/participations/${participationId}?tab=profiling`,
+    mock.api,
+  );
+  return { ...mock, queryClient };
 }
 const callsTo = (calls: { key: string; body: unknown }[], key: string) =>
   calls.filter((call) => call.key === key).map((call) => call.body);
 
 describe("Ausnahme vom Profiling", () => {
+  it("revokes the request the dialog opened for, even after a refresh shows another", async () => {
+    const user = userEvent.setup();
+    const replacement = {
+      ...approved,
+      requestId: "00000000-0000-4000-a000-0000000000f9",
+      status: "requested",
+    };
+    let current: Record<string, unknown> = approved;
+    const { calls, queryClient } = setup(
+      () => ({
+        current,
+        evidenceDocuments: [],
+        capabilities: { addEvidence: true, request: false, revoke: true },
+      }),
+      {
+        [`POST /api/v1/profiling-exception-requests/${requestId}/revocation`]: () =>
+          problem(409, "conflict", {
+            errors: [{ pointer: "", code: "request_not_current", detail: "x" }],
+          }),
+      },
+    );
+    await user.click(await screen.findByRole("button", { name: "Widerrufen" }));
+    const dialog = await screen.findByRole("dialog", { name: "Ausnahme widerrufen" });
+    current = replacement;
+    await act(() => queryClient.invalidateQueries());
+    await screen.findByText("Beantragt", { selector: "dd" });
+    expect(dialog).toHaveTextContent("Genehmigt");
+    await user.click(within(dialog).getByRole("button", { name: "Ausnahme widerrufen" }));
+    expect(await screen.findByText(/nicht mehr der aktuelle Antrag/)).toBeInTheDocument();
+    expect(calls.filter((c) => c.key.endsWith("/revocation"))).toEqual([
+      {
+        key: `POST /api/v1/profiling-exception-requests/${requestId}/revocation`,
+        body: { status: "approved" },
+      },
+    ]);
+  });
+
+  it("lets the PL quarantine or delete an upload with a reason, never open it", async () => {
+    const user = userEvent.setup();
+    const unreviewed = {
+      ...accepted,
+      reviewState: "unreviewed",
+      usable: false,
+      capabilities: { delete: true, quarantine: true, liftQuarantine: false },
+    };
+    const documentPath = `${detailPath}/documents/${documentId}`;
+    const { calls } = setup(
+      { ...none, evidenceDocuments: [unreviewed] },
+      {
+        [`POST ${documentPath}/quarantine`]: () => json({}),
+        [`DELETE ${documentPath}`]: () => new Response(null, { status: 204 }),
+      },
+    );
+    await user.click(await screen.findByRole("button", { name: /^Unter Quarantäne stellen: / }));
+    let dialog = await screen.findByRole("dialog", { name: "Nachweis unter Quarantäne stellen" });
+    const confirm = within(dialog).getByRole("button", { name: "Unter Quarantäne stellen" });
+    expect(confirm).toBeDisabled();
+    await user.selectOptions(within(dialog).getByLabelText("Grund"), "suspected_wrong_person");
+    await user.click(confirm);
+    await waitFor(() =>
+      expect(callsTo(calls, `POST ${documentPath}/quarantine`)).toEqual([
+        { reasonCode: "suspected_wrong_person" },
+      ]),
+    );
+    await user.click(screen.getByRole("button", { name: /^Löschen: / }));
+    dialog = await screen.findByRole("dialog", { name: "Nachweis löschen" });
+    expect(within(dialog).getByLabelText("Grund")).toHaveValue("");
+    await user.selectOptions(within(dialog).getByLabelText("Grund"), "wrong_file");
+    await user.click(within(dialog).getByRole("button", { name: "Nachweis löschen" }));
+    await waitFor(() => expect(calls.some((c) => c.key === `DELETE ${documentPath}`)).toBe(true));
+    expect(screen.queryByRole("button", { name: /Öffnen/ })).not.toBeInTheDocument();
+  });
+
   it("offers the actions by capability and lists the evidence by date and state only", async () => {
     setup({
       current: approved,
@@ -164,6 +246,7 @@ describe("Ausnahme vom Profiling", () => {
           documentId: "00000000-0000-4000-a000-0000000000d2",
           reviewState: "unreviewed",
           usable: false,
+          capabilities: { delete: true, quarantine: true, liftQuarantine: false },
         },
       ],
       capabilities: { addEvidence: true, request: false, revoke: true },
@@ -174,9 +257,11 @@ describe("Ausnahme vom Profiling", () => {
       within(section).getByText("Bestätigung der Agentur", { selector: "dd" }),
     ).toBeInTheDocument();
     expect(
-      within(section).getByText(/geprüft und angenommen/, { selector: "li" }),
+      within(section).getByText(/geprüft und angenommen/, { selector: "li > span" }),
     ).toBeInTheDocument();
-    expect(within(section).getByText(/noch nicht geprüft/, { selector: "li" })).toBeInTheDocument();
+    expect(
+      within(section).getByText(/noch nicht geprüft/, { selector: "li > span" }),
+    ).toBeInTheDocument();
     // No opening for the evidence: the PL can't open it (data-protection.md, exception evidence).
     expect(within(section).queryByRole("button", { name: /Öffnen/ })).not.toBeInTheDocument();
     expect(

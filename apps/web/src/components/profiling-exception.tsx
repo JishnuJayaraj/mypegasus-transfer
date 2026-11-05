@@ -35,6 +35,22 @@ type View = components["schemas"]["Profiling"];
 type Exception = View["exception"];
 type Reason = components["schemas"]["ProfilingExceptionRequestInput"]["reason"];
 type Evidence = components["schemas"]["ExceptionEvidenceInput"];
+type EvidenceDocument = Exception["evidenceDocuments"][number];
+type QuarantineReason = "suspected_wrong_person" | "suspected_wrong_acceptance";
+type DeleteReason = "wrong_person" | "wrong_file";
+/**
+ * The open dialog and what it acts on, captured when it opened (the review of PR #102): a refresh
+ * that brings a replacement request or a newly decided status never changes what it posts.
+ */
+type Dialog =
+  | { kind: "request" }
+  | {
+      kind: "revoke";
+      requestId: string;
+      status: "requested" | "approved";
+      requestedOn: string;
+    }
+  | { kind: "quarantine" | "delete"; document: EvidenceDocument };
 
 const reasons = [
   "participant_prevented_documented",
@@ -56,7 +72,7 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
-  const [dialog, setDialog] = useState<"request" | "revoke" | null>(null);
+  const [dialog, setDialog] = useState<Dialog | null>(null);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string }>();
   const [busy, setBusy] = useState(false);
   const exception = view.exception;
@@ -116,19 +132,50 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
       if (error) throw error;
     }, "requested");
 
-  const revoke = () =>
+  /** The request and status the dialog opened for: another one is refused (409), never adopted. */
+  const revoke = (requestId: string, status: "requested" | "approved") =>
     act(async () => {
-      if (!current || (current.status !== "requested" && current.status !== "approved")) return;
       const { error } = await api.POST(
         "/api/v1/profiling-exception-requests/{requestId}/revocation",
-        {
-          params: { path: { requestId: current.requestId } },
-          // The status shown here: one decided meanwhile is refused (409), never revoked unseen.
-          body: { status: current.status },
-        },
+        { params: { path: { requestId } }, body: { status } },
       );
       if (error) throw error;
     }, "revoked");
+
+  /** The safety actions on an upload, without opening it (data-protection.md, exception evidence). */
+  const quarantine = (documentId: string, reasonCode: QuarantineReason) =>
+    act(async () => {
+      const { error } = await api.POST(
+        "/api/v1/participations/{participationId}/documents/{documentId}/quarantine",
+        { params: { path: { ...path, documentId } }, body: { reasonCode } },
+      );
+      if (error) throw error;
+    }, "quarantined");
+  const lift = (documentId: string) =>
+    act(async () => {
+      const { error } = await api.POST(
+        "/api/v1/participations/{participationId}/documents/{documentId}/quarantine-lift",
+        {
+          params: { path: { ...path, documentId } },
+          // No body, but the API takes JSON only (ADR-0010).
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+      if (error) throw error;
+    }, "lifted");
+  const remove = (documentId: string, reasonCode: DeleteReason) =>
+    act(async () => {
+      const { error } = await api.DELETE(
+        "/api/v1/participations/{participationId}/documents/{documentId}",
+        { params: { path: { ...path, documentId }, query: { reasonCode } } },
+      );
+      if (error) throw error;
+    }, "deleted");
+
+  const revokable =
+    current && (current.status === "requested" || current.status === "approved")
+      ? { requestId: current.requestId, status: current.status, requestedOn: current.requestedOn }
+      : null;
 
   const shown = current !== null || exception.evidenceDocuments.length > 0 || capabilities.request;
   if (!shown && !capabilities.addEvidence) return null;
@@ -147,7 +194,13 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
           />
         )}
         <CurrentRequest current={current} />
-        <EvidenceDocuments exception={exception} />
+        <EvidenceDocuments
+          exception={exception}
+          busy={busy}
+          onQuarantine={(document) => setDialog({ kind: "quarantine", document })}
+          onLift={(document) => void lift(document.documentId)}
+          onDelete={(document) => setDialog({ kind: "delete", document })}
+        />
         <div className="tp-actions">
           {capabilities.addEvidence && (
             <FileUploaderButton
@@ -166,16 +219,21 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
             />
           )}
           {capabilities.request && (
-            <Button kind="primary" size="md" disabled={busy} onClick={() => setDialog("request")}>
+            <Button
+              kind="primary"
+              size="md"
+              disabled={busy}
+              onClick={() => setDialog({ kind: "request" })}
+            >
               {t("profiling.exception.request")}
             </Button>
           )}
-          {capabilities.revoke && (
+          {capabilities.revoke && revokable && (
             <Button
               kind="danger--tertiary"
               size="md"
               disabled={busy}
-              onClick={() => setDialog("revoke")}
+              onClick={() => setDialog({ kind: "revoke", ...revokable })}
             >
               {t("profiling.exception.revoke")}
             </Button>
@@ -184,8 +242,8 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
       </Stack>
       <RequestDialog
         // A new dialog starts empty, and again after each request: nothing carried over.
-        key={`request-${dialog === "request"}-${current?.requestId ?? "none"}`}
-        open={dialog === "request"}
+        key={`request-${dialog?.kind === "request"}-${current?.requestId ?? "none"}`}
+        open={dialog?.kind === "request"}
         busy={busy}
         exception={exception}
         choices={detail.placementAgenturChoices}
@@ -193,7 +251,7 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
         onSubmit={request}
       />
       <Modal
-        open={dialog === "revoke"}
+        open={dialog?.kind === "revoke"}
         size="sm"
         danger
         modalHeading={t("profiling.exception.revokeDialog.title")}
@@ -201,17 +259,32 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
         secondaryButtonText={t("profiling.exception.dialog.cancel")}
         primaryButtonDisabled={busy}
         onRequestClose={() => setDialog(null)}
-        onRequestSubmit={() => void revoke()}
+        onRequestSubmit={() =>
+          dialog?.kind === "revoke" && void revoke(dialog.requestId, dialog.status)
+        }
       >
-        {current && (
+        {dialog?.kind === "revoke" && (
           <p>
             {t("profiling.exception.revokeDialog.text", {
-              status: t(`profiling.exception.statuses.${current.status}`),
-              date: formatDate(current.requestedOn),
+              status: t(`profiling.exception.statuses.${dialog.status}`),
+              date: formatDate(dialog.requestedOn),
             })}
           </p>
         )}
       </Modal>
+      <SafetyDialog
+        // Keyed by the document: a reason chosen for one is never carried to another.
+        key={
+          dialog?.kind === "quarantine" || dialog?.kind === "delete"
+            ? `${dialog.kind}-${dialog.document.documentId}`
+            : "none"
+        }
+        dialog={dialog?.kind === "quarantine" || dialog?.kind === "delete" ? dialog : null}
+        busy={busy}
+        onClose={() => setDialog(null)}
+        onQuarantine={(documentId, reason) => void quarantine(documentId, reason)}
+        onDelete={(documentId, reason) => void remove(documentId, reason)}
+      />
     </section>
   );
 }
@@ -239,24 +312,78 @@ function CurrentRequest({ current }: { current: Exception["current"] }) {
   );
 }
 
-/** The evidence documents by upload instant and review state; never a file or a name. */
-function EvidenceDocuments({ exception }: { exception: Exception }) {
+/**
+ * The evidence documents by upload instant and review state, with the safety actions their
+ * capabilities allow ("Unter Quarantäne stellen", "Quarantäne aufheben", "Löschen" before the
+ * review); never a file, a name or an opening.
+ */
+function EvidenceDocuments(props: {
+  exception: Exception;
+  busy: boolean;
+  onQuarantine: (document: EvidenceDocument) => void;
+  onLift: (document: EvidenceDocument) => void;
+  onDelete: (document: EvidenceDocument) => void;
+}) {
   const { t } = useTranslation();
+  const { exception } = props;
   if (exception.evidenceDocuments.length === 0) return null;
   return (
     <Stack gap={3}>
       <h3>{t("profiling.exception.documents")}</h3>
       <ul>
-        {exception.evidenceDocuments.map((document) => (
-          <li key={document.documentId}>
-            {t("profiling.exception.document", {
-              at: formatTimestamp(document.addedAt),
-              state: t(
-                `profiling.exception.documentStates.${document.usable ? "usable" : document.reviewState}`,
-              ),
-            })}
-          </li>
-        ))}
+        {exception.evidenceDocuments.map((document) => {
+          const label = t("profiling.exception.document", {
+            at: formatTimestamp(document.addedAt),
+            state: t(
+              `profiling.exception.documentStates.${
+                document.quarantined
+                  ? "quarantined"
+                  : document.usable
+                    ? "usable"
+                    : document.reviewState
+              }`,
+            ),
+          });
+          const named = (action: string) => `${action}: ${label}`;
+          return (
+            <li key={document.documentId}>
+              <span>{label}</span>{" "}
+              {document.capabilities.quarantine && (
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  disabled={props.busy}
+                  aria-label={named(t("profiling.exception.quarantine"))}
+                  onClick={() => props.onQuarantine(document)}
+                >
+                  {t("profiling.exception.quarantine")}
+                </Button>
+              )}
+              {document.capabilities.liftQuarantine && (
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  disabled={props.busy}
+                  aria-label={named(t("profiling.exception.lift"))}
+                  onClick={() => props.onLift(document)}
+                >
+                  {t("profiling.exception.lift")}
+                </Button>
+              )}
+              {document.capabilities.delete && (
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  disabled={props.busy}
+                  aria-label={named(t("profiling.exception.delete"))}
+                  onClick={() => props.onDelete(document)}
+                >
+                  {t("profiling.exception.delete")}
+                </Button>
+              )}
+            </li>
+          );
+        })}
       </ul>
       <p className="tp-hint">{t("profiling.exception.reviewHint")}</p>
     </Stack>
@@ -411,6 +538,71 @@ function RequestDialog(props: {
         )}
         <p>{t("profiling.exception.dialog.final")}</p>
       </Stack>
+    </Modal>
+  );
+}
+
+/** Quarantine or deletion of one upload: the reason chosen explicitly, then confirmed. */
+function SafetyDialog(props: {
+  dialog: { kind: "quarantine" | "delete"; document: EvidenceDocument } | null;
+  busy: boolean;
+  onClose: () => void;
+  onQuarantine: (documentId: string, reason: QuarantineReason) => void;
+  onDelete: (documentId: string, reason: DeleteReason) => void;
+}) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState("");
+  const { dialog } = props;
+  const options =
+    dialog?.kind === "delete"
+      ? (["wrong_person", "wrong_file"] as const)
+      : (["suspected_wrong_person", "suspected_wrong_acceptance"] as const);
+  const kind = dialog?.kind ?? "quarantine";
+  return (
+    <Modal
+      open={dialog !== null}
+      size="sm"
+      danger
+      modalHeading={t(`profiling.exception.${kind}Dialog.title`)}
+      primaryButtonText={t(`profiling.exception.${kind}Dialog.confirm`)}
+      secondaryButtonText={t("profiling.exception.dialog.cancel")}
+      primaryButtonDisabled={props.busy || reason === ""}
+      onRequestClose={props.onClose}
+      onRequestSubmit={() => {
+        if (!dialog || reason === "") return;
+        if (dialog.kind === "delete")
+          props.onDelete(dialog.document.documentId, reason as DeleteReason);
+        else props.onQuarantine(dialog.document.documentId, reason as QuarantineReason);
+      }}
+    >
+      {dialog && (
+        <Stack gap={5}>
+          <p>
+            {t("profiling.exception.document", {
+              at: formatTimestamp(dialog.document.addedAt),
+              state: t(
+                `profiling.exception.documentStates.${dialog.document.usable ? "usable" : dialog.document.reviewState}`,
+              ),
+            })}
+          </p>
+          <Select
+            id={`profiling-exception-${kind}-reason`}
+            labelText={t("profiling.exception.dialog.reason")}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          >
+            <SelectItem value="" text={t("profiling.exception.dialog.chooseReason")} />
+            {options.map((option) => (
+              <SelectItem
+                key={option}
+                value={option}
+                text={t(`profiling.exception.${kind}Reasons.${option}` as never)}
+              />
+            ))}
+          </Select>
+          <p>{t(`profiling.exception.${kind}Dialog.text`)}</p>
+        </Stack>
+      )}
     </Modal>
   );
 }

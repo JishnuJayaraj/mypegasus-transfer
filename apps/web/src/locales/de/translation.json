@@ -2595,7 +2595,8 @@
       },
       "kinds": {
         "documents": "Geprüfte Unterlagen",
-        "ba_confirmation": "Bestätigung der Agentur"
+        "ba_confirmation": "Bestätigung der Agentur",
+        "legacy_unverified": "Nachweis aus der Zeit vor der Prüfung (zählt nicht)"
       },
       "documents": "Hochgeladene Nachweise",
       "document": "Hochgeladen am {{at}}: {{state}}",
@@ -2603,7 +2604,8 @@
         "usable": "geprüft und angenommen",
         "unreviewed": "noch nicht geprüft",
         "accepted": "nicht mehr verwendbar",
-        "rejected": "abgelehnt"
+        "rejected": "abgelehnt",
+        "quarantined": "unter Quarantäne"
       },
       "reviewHint": "Die zugeordnete Beratung prüft die Nachweise im Tab „Unterlagen“. Die Projektleitung kann sie nicht öffnen.",
       "upload": "Nachweis hochladen",
@@ -2654,8 +2656,33 @@
           "not_revocable": "Dieser Antrag kann nicht mehr widerrufen werden.",
           "no_longer_applicable": "Dieser Antrag ist gegenstandslos.",
           "source_changed": "Der Antrag hat sich inzwischen geändert. Bitte die Seite neu laden.",
-          "request_not_current": "Das ist nicht mehr der aktuelle Antrag. Bitte die Seite neu laden."
-        }
+          "request_not_current": "Das ist nicht mehr der aktuelle Antrag. Bitte die Seite neu laden.",
+          "agentur_unknown": "Diese Agentur ist für die Teilnahme nicht hinterlegt."
+        },
+        "quarantined": "Nachweis unter Quarantäne gestellt.",
+        "lifted": "Quarantäne aufgehoben.",
+        "deleted": "Nachweis gelöscht."
+      },
+      "quarantine": "Unter Quarantäne stellen",
+      "lift": "Quarantäne aufheben",
+      "delete": "Löschen",
+      "quarantineDialog": {
+        "title": "Nachweis unter Quarantäne stellen",
+        "confirm": "Unter Quarantäne stellen",
+        "text": "Der Nachweis zählt sofort nicht mehr; eine darauf gestützte Ausnahme gilt erst wieder, wenn die Quarantäne aufgehoben ist."
+      },
+      "deleteDialog": {
+        "title": "Nachweis löschen",
+        "confirm": "Nachweis löschen",
+        "text": "Nur vor der Prüfung möglich. Die Datei wird gelöscht; dass es sie gab, bleibt im Verlauf."
+      },
+      "quarantineReasons": {
+        "suspected_wrong_person": "Vermutlich Unterlage einer anderen Person",
+        "suspected_wrong_acceptance": "Vermutlich zu Unrecht angenommen"
+      },
+      "deleteReasons": {
+        "wrong_person": "Unterlage einer anderen Person",
+        "wrong_file": "Falsche Datei"
       }
     }
   },
@@ -3089,7 +3116,7 @@
         "source_changed": "Der Antrag stützt sich inzwischen auf einen anderen Nachweis. Die Liste wurde neu geladen.",
         "evidence_missing": "Der Nachweis zählt nicht mehr. Genehmigen ist nicht möglich.",
         "not_requested": "Der Antrag ist schon entschieden.",
-        "request_not_current": "Das ist nicht mehr der aktuelle Antrag.",
+        "request_not_current": "Das ist nicht mehr der aktuelle Antrag. Die Liste wurde neu geladen.",
         "not_informed": "Die Teilnahme ist nicht mehr vor dem Beginn in der Transfergesellschaft.",
         "profiling_closed": "Das Profiling ist schon abgeschlossen.",
         "no_future_start": "Der Beginn in der Transfergesellschaft liegt nicht mehr in der Zukunft.",
