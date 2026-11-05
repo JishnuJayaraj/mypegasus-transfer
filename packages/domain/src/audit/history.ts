@@ -208,6 +208,8 @@ export const auditProjection: {
   agentur_submission_original_sent: shown("profiling", { details: ["originalSentOn"] }),
   agentur_submission_rejected: shown("profiling", { details: ["rejectedOn", "reason"] }),
   agentur_submission_original_retained: shown("profiling", { details: ["originalSentOn"] }),
+  // A BA reporting task's outcome (D28), beside the contractual date change that created it.
+  ba_report_recorded: shown("dsv", { details: ["kind", "outcome", "reportedOn", "reason"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

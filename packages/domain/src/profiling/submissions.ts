@@ -252,6 +252,11 @@ export type Tl407WorkFacts = {
   leadTimeDays: number | null;
   /** A batch's ASU registration (`kug200b_submission`): its date and the Agentur's confirmation. */
   kug200bRegistration: { registeredOn: IsoDate; confirmedOn: IsoDate | null } | null;
+  /**
+   * The Berlin day the oldest pending BA reporting task was created (process-and-lifecycle.md, BA
+   * reporting); null without one, or for a viewer who doesn't read the tasks.
+   */
+  baReportPendingSince: IsoDate | null;
 };
 
 export const AgenturItemKind = z
@@ -260,6 +265,7 @@ export const AgenturItemKind = z
     "tl407_resubmission_open",
     "tl407_original_missing",
     "kug200b_confirmation_missing",
+    "ba_report_pending",
   ])
   .meta({ id: "AgenturItemKind" });
 export type AgenturItemKind = z.infer<typeof AgenturItemKind>;
@@ -268,7 +274,8 @@ export type AgenturItemKind = z.infer<typeof AgenturItemKind>;
  * Staff work with the Agentur (process-and-lifecycle.md, TL 407 submission), in urgency order:
  * `tl407_escalated` from its escalation date; `tl407_resubmission_open` from the rejection;
  * `tl407_original_missing` from the submission; `kug200b_confirmation_missing` with the batch's
- * sent date, from `kug200bConfirmationFollowUpDays` after it.
+ * sent date, from `kug200bConfirmationFollowUpDays` after it; `ba_report_pending` from the oldest
+ * pending reporting task's day, with no due date (D28).
  */
 export const AgenturItem = z
   .strictObject({ kind: AgenturItemKind, date: isoDate })
@@ -277,7 +284,8 @@ export type AgenturItem = z.infer<typeof AgenturItem>;
 
 /**
  * A participation's Agentur items. A terminal participation keeps the follow-ups of what was sent
- * (the original, the confirmation), never the submission work.
+ * (the original, the confirmation) and its pending BA reports (an early exit's is created at the
+ * exit), never the submission work.
  */
 export function agenturItems(
   s: ParticipationSnapshot,
@@ -305,6 +313,9 @@ export function agenturItems(
     daysBetween(registration.registeredOn, today) >= kug200bConfirmationFollowUpDays
   ) {
     items.push({ kind: "kug200b_confirmation_missing", date: registration.registeredOn });
+  }
+  if (facts.baReportPendingSince !== null) {
+    items.push({ kind: "ba_report_pending", date: facts.baReportPendingSince });
   }
   return items;
 }

@@ -774,6 +774,9 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     reported_on: "baReportingTask",
     channel: "baReportingTask",
     reference: "baReportingTask",
+    not_required_reason: "baReportingTask",
+    decided_by: null,
+    decided_at: null,
   },
   participant_reminder: {
     id: null,

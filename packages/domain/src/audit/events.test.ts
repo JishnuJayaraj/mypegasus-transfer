@@ -138,6 +138,7 @@ describe("audit event types (ADR-0002)", () => {
       "agentur_submission_original_sent",
       "agentur_submission_rejected",
       "agentur_submission_original_retained",
+      "ba_report_recorded",
     ]);
   });
 
@@ -244,6 +245,7 @@ describe("audit event types (ADR-0002)", () => {
       "agentur_submission_original_sent",
       "agentur_submission_rejected",
       "agentur_submission_original_retained",
+      "ba_report_recorded",
     ]);
   });
 
@@ -552,6 +554,28 @@ describe("the other event types", () => {
     [
       "agentur_submission_rejected",
       { details: { submissionId: otherId, rejectedOn: "2026-12-01", reason: "incomplete" } },
+    ],
+    [
+      "ba_report_recorded",
+      {
+        details: {
+          taskId: otherId,
+          kind: "early_exit",
+          outcome: "reported",
+          reportedOn: "2026-12-01",
+        },
+      },
+    ],
+    [
+      "ba_report_recorded",
+      {
+        details: {
+          taskId: otherId,
+          kind: "later_entry",
+          outcome: "not_required",
+          reason: "created_in_error",
+        },
+      },
     ],
     [
       "declaration_withdrawal_recorded",
@@ -1117,6 +1141,27 @@ describe("the other event types", () => {
     ["participant_data_changed", { details: { fields: [] } }],
     // A date change names its tasks, its dates as dates and no free text.
     ["participation_dates_changed", { details: { reportingKinds: [] } }],
+    // A task's outcome: its date or its closed reason, never both, never free text (D28).
+    [
+      "ba_report_recorded",
+      { details: { taskId: otherId, kind: "early_exit", outcome: "reported" } },
+    ],
+    [
+      "ba_report_recorded",
+      {
+        details: {
+          taskId: otherId,
+          kind: "early_exit",
+          outcome: "not_required",
+          reason: "created_in_error",
+          reportedOn: "2026-12-01",
+        },
+      },
+    ],
+    [
+      "ba_report_recorded",
+      { details: { taskId: otherId, kind: "early_exit", outcome: "not_required", reason: "x" } },
+    ],
     [
       "participation_dates_changed",
       { details: { newTgEnd: "29.02.2028", reportingKinds: ["planned_end_changed"] } },

@@ -63,7 +63,12 @@ const only: Record<
     // The wave's TG start 2027-04-01 minus the placement Agentur's 10 days' lead time.
     date: "2027-03-22",
     s: snapshot({ current: state("active_in_tg", "profiling_done", "dsv_signed") }),
-    tl407: { attempts: [], leadTimeDays: 10, kug200bRegistration: null },
+    tl407: {
+      attempts: [],
+      leadTimeDays: 10,
+      kug200bRegistration: null,
+      baReportPendingSince: null,
+    },
   },
   latest_entry_cutoff: {
     date: "2027-04-30",

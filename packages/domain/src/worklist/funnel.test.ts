@@ -76,7 +76,10 @@ const items: WorklistItem[] = [
       expiresAt: "2027-04-01T09:00:00.000Z",
     },
     appointments: { next: null, items: [appointmentItem("attendance_missing", 5)] },
-    agenturItems: [{ kind: "tl407_original_missing", date: "2027-03-10" }],
+    agenturItems: [
+      { kind: "tl407_original_missing", date: "2027-03-10" },
+      { kind: "ba_report_pending", date: "2027-02-01" },
+    ],
   }),
 ];
 
@@ -211,8 +214,10 @@ describe("projectFunnel", () => {
       ["tl407_resubmission_open", 1],
       ["tl407_original_missing", 1],
       ["kug200b_confirmation_missing", 0],
+      ["ba_report_pending", 1],
     ]);
     expect(ids({ agentur: "tl407_original_missing" })).toEqual([id(4)]);
+    expect(ids({ agentur: "ba_report_pending" })).toEqual([id(4)]);
     for (const { count, filter } of agentur) expect(count).toBe(ids(filter).length);
   });
 

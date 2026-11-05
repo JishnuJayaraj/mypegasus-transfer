@@ -245,6 +245,7 @@ const statusFunctions = [
   "record_original_retained",
   "record_agentur_rejection",
   "profiling_declined_dates",
+  "record_ba_report",
 ];
 const helpers = [
   "assert_context",

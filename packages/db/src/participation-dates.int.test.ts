@@ -256,7 +256,9 @@ describe("immutability (R41, R42)", () => {
       owner.query("update ba_reporting_task set subject_date = '2027-03-11'"),
     ).rejects.toMatchObject(failsWith("task_immutable"));
     await owner.query(
-      "update ba_reporting_task set status = 'reported', reported_on = '2027-03-12', channel = 'x'",
+      `update ba_reporting_task set status = 'reported', reported_on = '2027-03-12', channel = 'x',
+         decided_by = $1, decided_at = now()`,
+      [seedStaffUserIds.projectLead],
     );
     await expect(
       owner.query(
