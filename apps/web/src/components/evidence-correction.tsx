@@ -58,28 +58,30 @@ function messageOf(error: unknown): string {
   return error.status === 422 && code ? `codes.${code}` : "failed";
 }
 
-/** The button and its dialog for one target; the dialog keeps the target it opened for. */
-export function CorrectionRequest(props: {
-  participationId: string;
-  projectId: string;
-  target: CorrectionTarget;
-}) {
+/**
+ * "Korrektur beantragen" for a section: `button(target)` beside each target, `element` once at the
+ * section's root (never inside a table cell), holding the dialog and its message. The dialog keeps
+ * the target it opened for.
+ */
+export function useCorrectionRequest(scope: { participationId: string; projectId: string }) {
   const { t } = useTranslation();
   const [opened, setOpened] = useState<CorrectionTarget>();
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string }>();
-  return (
+  const button = (target: CorrectionTarget) => (
+    <Button
+      kind="ghost"
+      size="sm"
+      aria-label={`${t("corrections.request")}: ${target.label}`}
+      onClick={() => {
+        setMessage(undefined);
+        setOpened(target);
+      }}
+    >
+      {t("corrections.request")}
+    </Button>
+  );
+  const element = (
     <>
-      <Button
-        kind="ghost"
-        size="sm"
-        aria-label={`${t("corrections.request")}: ${props.target.label}`}
-        onClick={() => {
-          setMessage(undefined);
-          setOpened(props.target);
-        }}
-      >
-        {t("corrections.request")}
-      </Button>
       {message && (
         <InlineNotification
           kind={message.kind}
@@ -93,8 +95,8 @@ export function CorrectionRequest(props: {
         <CorrectionDialog
           // A new dialog starts empty: never another target's values.
           key={`${opened.kind}-${opened.id}`}
-          participationId={props.participationId}
-          projectId={props.projectId}
+          participationId={scope.participationId}
+          projectId={scope.projectId}
           target={opened}
           onClose={(result) => {
             setOpened(undefined);
@@ -104,6 +106,7 @@ export function CorrectionRequest(props: {
       )}
     </>
   );
+  return { button, element };
 }
 
 function CorrectionDialog(props: {

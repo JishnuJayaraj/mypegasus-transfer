@@ -21,7 +21,7 @@ import {
 import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, participationQuery, useApi } from "../api";
-import { CorrectionRequest } from "./evidence-correction";
+import { useCorrectionRequest } from "./evidence-correction";
 
 // "Ausnahme vom Profiling" on the tab "Profiling" (process-and-lifecycle.md, profiling exceptions;
 // data-protection.md, exception evidence; D30, Q194): the current request, the evidence documents
@@ -331,10 +331,12 @@ function EvidenceDocuments(props: {
 }) {
   const { t } = useTranslation();
   const { exception } = props;
+  const correction = useCorrectionRequest(props);
   if (exception.evidenceDocuments.length === 0) return null;
   return (
     <Stack gap={3}>
       <h3>{t("profiling.exception.documents")}</h3>
+      {correction.element}
       <ul>
         {exception.evidenceDocuments.map((document) => {
           const label = t("profiling.exception.document", {
@@ -386,13 +388,8 @@ function EvidenceDocuments(props: {
                   {t("profiling.exception.delete")}
                 </Button>
               )}
-              {document.capabilities.requestCorrection && (
-                <CorrectionRequest
-                  participationId={props.participationId}
-                  projectId={props.projectId}
-                  target={{ kind: "document", id: document.documentId, label }}
-                />
-              )}
+              {document.capabilities.requestCorrection &&
+                correction.button({ kind: "document", id: document.documentId, label })}
             </li>
           );
         })}

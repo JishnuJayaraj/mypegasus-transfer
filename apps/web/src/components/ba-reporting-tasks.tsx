@@ -16,7 +16,7 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { participationQuery, useApi, worklistQuery } from "../api";
-import { CorrectionRequest } from "./evidence-correction";
+import { useCorrectionRequest } from "./evidence-correction";
 
 // "BA-Meldungen" on the overview (process-and-lifecycle.md, BA reporting; D28): every reporting
 // task with its outcome; for a pending one, the PL or back office records "Gemeldet am" with the
@@ -56,6 +56,10 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
   const [dialog, setDialog] = useState<Dialog>({ kind: "none" });
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string }>();
   const [busy, setBusy] = useState(false);
+  const correction = useCorrectionRequest({
+    participationId: detail.id,
+    projectId: detail.projectId,
+  });
   if (detail.baReportingTasks === undefined) return null;
   const tasks = detail.baReportingTasks;
 
@@ -117,6 +121,7 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
     <section className="tp-section" aria-labelledby="ba-reporting-tasks">
       <Stack gap={5}>
         <h2 id="ba-reporting-tasks">{t("participant.tasks.title")}</h2>
+        {correction.element}
         <p>{t("participant.tasks.intro")}</p>
         {message && (
           <InlineNotification
@@ -157,18 +162,14 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
                 </Button>
               </>
             ) : task.correction.mayRequest ? (
-              <CorrectionRequest
-                participationId={detail.id}
-                projectId={detail.projectId}
-                target={{
-                  kind: "ba_reporting_task",
-                  id: task.id,
-                  label: t("participant.tasks.dialog.task", {
-                    kind: t(`participant.tasks.kinds.${task.reportingKind}`),
-                    date: formatDate(task.subjectDate),
-                  }),
-                }}
-              />
+              correction.button({
+                kind: "ba_reporting_task",
+                id: task.id,
+                label: t("participant.tasks.dialog.task", {
+                  kind: t(`participant.tasks.kinds.${task.reportingKind}`),
+                  date: formatDate(task.subjectDate),
+                }),
+              })
             ) : null,
           }))}
           emptyState={t("participant.tasks.empty")}
