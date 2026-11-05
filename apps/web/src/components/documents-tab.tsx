@@ -29,6 +29,7 @@ import {
 import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { participationDocumentsQuery, useApi } from "../api";
+import { CorrectionRequest } from "./evidence-correction";
 
 // The tab "Unterlagen" (data-protection.md, documents and the access matrix): the documents of the
 // types the viewer may read in normal mode, with "Öffnen" (a logged opening, then a download from
@@ -182,13 +183,17 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
           `participant.documents.addedBy.${document.addedBy === "participant" ? "participant" : document.onBehalf ? "assisted" : "staff"}`,
         ),
       }),
-      state: document.quarantine
-        ? t("participant.documents.quarantined")
-        : state.state === "rejected" && state.reasonCode
-          ? ts("documents.states.rejectedBecause", {
-              reason: ts(`documents.reasons.${state.reasonCode}`),
-            })
-          : ts(`documents.states.${state.state}`),
+      state: document.correction.invalidated
+        ? t("corrections.invalidated")
+        : document.correction.pending
+          ? t("corrections.pending")
+          : document.quarantine
+            ? t("participant.documents.quarantined")
+            : state.state === "rejected" && state.reasonCode
+              ? ts("documents.states.rejectedBecause", {
+                  reason: ts(`documents.reasons.${state.reasonCode}`),
+                })
+              : ts(`documents.states.${state.state}`),
       actions: (
         <span className="tp-inline-actions">
           {capabilities.open && (
@@ -223,6 +228,13 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
                 {t("participant.documents.reject")}
               </Button>
             </>
+          )}
+          {capabilities.requestCorrection && (
+            <CorrectionRequest
+              participationId={detail.id}
+              projectId={detail.projectId}
+              target={{ kind: "document", id: document.id, label: name }}
+            />
           )}
           {capabilities.delete && (
             <Button

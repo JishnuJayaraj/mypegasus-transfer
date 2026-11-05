@@ -245,6 +245,20 @@ export function HistoryTab({
             })
           : t("history.baReported", { kind, date: formatDate(text(details.reportedOn)) });
       }
+      // An evidence correction (data-protection.md, evidence corrections): the target's kind, the
+      // action, the reason and the decision; never the source or a corrected value.
+      case "evidence_correction_requested":
+      case "evidence_correction_decided": {
+        const correction = t("history.correction", {
+          target: coded("corrections.targets", text(details.targetKind) ?? ""),
+          action: coded("corrections.actions", text(details.action) ?? ""),
+          reason: coded("corrections.reasons", text(details.reason) ?? ""),
+        });
+        const decision = text(details.decision);
+        return decision
+          ? `${correction} – ${coded("corrections.decisions", decision)}`
+          : correction;
+      }
       case "consent_given":
       case "consent_ended": {
         const source = text(details.source);

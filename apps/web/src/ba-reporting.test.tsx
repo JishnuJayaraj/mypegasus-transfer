@@ -26,6 +26,9 @@ const pending = {
   reportedOn: null,
   notRequiredReason: null,
   decidedAt: null,
+  supersededBy: null,
+  replacesTaskId: null,
+  correction: { pending: false, mayRequest: false },
   capabilities: { recordOutcome: true },
 };
 const reported = {

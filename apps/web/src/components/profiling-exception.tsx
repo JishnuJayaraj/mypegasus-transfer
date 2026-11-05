@@ -21,6 +21,7 @@ import {
 import { useState, type ChangeEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, participationQuery, useApi } from "../api";
+import { CorrectionRequest } from "./evidence-correction";
 
 // "Ausnahme vom Profiling" on the tab "Profiling" (process-and-lifecycle.md, profiling exceptions;
 // data-protection.md, exception evidence; D30, Q194): the current request, the evidence documents
@@ -195,6 +196,8 @@ export function ProfilingException({ view, detail }: { view: View; detail: Detai
         )}
         <CurrentRequest current={current} />
         <EvidenceDocuments
+          participationId={view.participationId}
+          projectId={detail.projectId}
           exception={exception}
           busy={busy}
           onQuarantine={(document) => setDialog({ kind: "quarantine", document })}
@@ -315,9 +318,11 @@ function CurrentRequest({ current }: { current: Exception["current"] }) {
 /**
  * The evidence documents by upload instant and review state, with the safety actions their
  * capabilities allow ("Unter Quarantäne stellen", "Quarantäne aufheben", "Löschen" before the
- * review); never a file, a name or an opening.
+ * review, "Korrektur beantragen" once accepted); never a file, a name or an opening.
  */
 function EvidenceDocuments(props: {
+  participationId: string;
+  projectId: string;
   exception: Exception;
   busy: boolean;
   onQuarantine: (document: EvidenceDocument) => void;
@@ -380,6 +385,13 @@ function EvidenceDocuments(props: {
                 >
                   {t("profiling.exception.delete")}
                 </Button>
+              )}
+              {document.capabilities.requestCorrection && (
+                <CorrectionRequest
+                  participationId={props.participationId}
+                  projectId={props.projectId}
+                  target={{ kind: "document", id: document.documentId, label }}
+                />
               )}
             </li>
           );

@@ -191,6 +191,7 @@ const plProof = (quarantined: boolean) => ({
     delete: false,
     quarantine: !quarantined,
     liftQuarantine: quarantined,
+    requestCorrection: false,
   },
 });
 
@@ -422,6 +423,8 @@ describe("the tab Arbeitsuche", () => {
         linkedAt: "2026-11-02T09:00:00.000000Z",
       },
       withProofSince: "2026-11-02T09:00:00.000000Z",
+      corrected: false,
+      correction: { pending: false, mayRequest: false },
     };
     const { proofDocuments: _, ...summary } = view({ registration, missing: [] });
     setup(summary as ReturnType<typeof view>);
@@ -447,6 +450,8 @@ describe("the tab Arbeitsuche", () => {
           linkedAt: "2026-11-03T09:00:00.000000Z",
         },
         withProofSince: "2026-11-03T09:00:00.000000Z",
+        corrected: false,
+        correction: { pending: false, mayRequest: false },
       },
     });
     const { calls } = setup(
@@ -493,6 +498,7 @@ describe("the tab Arbeitsuche", () => {
         delete: false,
         quarantine: true,
         liftQuarantine: false,
+        requestCorrection: false,
       },
     };
     const registration = {
@@ -502,6 +508,8 @@ describe("the tab Arbeitsuche", () => {
       recordedAt: "2026-11-01T09:00:00.000000Z",
       proof: null,
       withProofSince: null,
+      corrected: false,
+      correction: { pending: false, mayRequest: false },
     };
     const { calls } = setup(
       view({ registration, proofDocuments: [proof], capabilities: { linkProof: true } }),
@@ -557,7 +565,15 @@ const unreviewedScan = {
   review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
   signedOn: null,
   quarantine: null,
-  capabilities: { open: true, review: true, delete: true, quarantine: true, liftQuarantine: false },
+  correction: { invalidated: false, pending: false },
+  capabilities: {
+    open: true,
+    review: true,
+    delete: true,
+    quarantine: true,
+    liftQuarantine: false,
+    requestCorrection: false,
+  },
 };
 
 describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
@@ -681,6 +697,8 @@ describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
         linkedAt: "2026-11-24T09:00:00.000000Z",
       },
       withProofSince: "2026-11-24T09:00:00.000000Z",
+      corrected: false,
+      correction: { pending: false, mayRequest: false },
       confirmedOn: null,
     };
     const { calls } = setup(

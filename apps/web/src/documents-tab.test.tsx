@@ -83,6 +83,7 @@ const cv = (capabilities = all) => ({
   addedBy: "participant",
   onBehalf: false,
   review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
+  correction: { invalidated: false, pending: false },
   capabilities,
 });
 
@@ -97,12 +98,14 @@ const certificate = {
   onBehalf: true,
   review: { state: "rejected", reasonCode: "unreadable", reviewedAt: "2026-10-22T09:30:00.000Z" },
   quarantine: null,
+  correction: { invalidated: false, pending: false },
   capabilities: {
     open: true,
     review: false,
     delete: true,
     quarantine: false,
     liftQuarantine: false,
+    requestCorrection: false,
   },
 };
 

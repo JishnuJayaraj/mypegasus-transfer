@@ -16,13 +16,17 @@ import {
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { participationQuery, useApi, worklistQuery } from "../api";
+import { CorrectionRequest } from "./evidence-correction";
 
 // "BA-Meldungen" on the overview (process-and-lifecycle.md, BA reporting; D28): every reporting
 // task with its outcome; for a pending one, the PL or back office records "Gemeldet am" with the
 // actual sent date or "Nicht erforderlich" with its reason, each confirmed in a dialog that names
 // the task. Nothing is filled in on the user's behalf: no default date, no default reason. The
-// buttons follow the API's capability; an outcome is never edited here (a correction supersedes
-// it). Every write sends a JSON body; the detail and the work list are read again afterwards.
+// buttons follow the API's capability; an outcome is never edited here: "Korrektur beantragen"
+// asks for an approved correction that supersedes it by a linked replacement task (Q190,
+// Q207 (6)). The dialog captures the task it opened for, so a dialog still open for a superseded
+// task never closes its replacement. Every write sends a JSON body; the detail and the work list
+// are read again afterwards.
 
 type Detail = components["schemas"]["ParticipationDetail"];
 type Task = components["schemas"]["BaReportingTask"];
@@ -91,7 +95,16 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
             reason: t(`participant.tasks.reasons.${task.notRequiredReason}`),
           })
         : "—";
-  const anyAction = tasks.some((task) => task.capabilities.recordOutcome);
+  const anyAction = tasks.some(
+    (task) => task.capabilities.recordOutcome || task.correction.mayRequest,
+  );
+  const statusOf = (task: Task) =>
+    [
+      t(`participant.tasks.statuses.${task.status}`),
+      ...(task.supersededBy !== null ? [t("participant.tasks.superseded")] : []),
+      ...(task.replacesTaskId !== null ? [t("participant.tasks.replacement")] : []),
+      ...(task.correction.pending ? [t("corrections.pending")] : []),
+    ].join(" · ");
   const columns = [
     "reportingKind",
     "subjectDate",
@@ -122,7 +135,7 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
             reportingKind: t(`participant.tasks.kinds.${task.reportingKind}`),
             subjectDate: formatDate(task.subjectDate),
             createdAt: formatTimestamp(task.createdAt),
-            status: t(`participant.tasks.statuses.${task.status}`),
+            status: statusOf(task),
             outcome: outcomeOf(task),
             actions: task.capabilities.recordOutcome ? (
               <>
@@ -143,6 +156,19 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
                   {t("participant.tasks.recordNotRequired")}
                 </Button>
               </>
+            ) : task.correction.mayRequest ? (
+              <CorrectionRequest
+                participationId={detail.id}
+                projectId={detail.projectId}
+                target={{
+                  kind: "ba_reporting_task",
+                  id: task.id,
+                  label: t("participant.tasks.dialog.task", {
+                    kind: t(`participant.tasks.kinds.${task.reportingKind}`),
+                    date: formatDate(task.subjectDate),
+                  }),
+                }}
+              />
             ) : null,
           }))}
           emptyState={t("participant.tasks.empty")}
