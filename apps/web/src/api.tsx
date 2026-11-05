@@ -254,6 +254,16 @@ export const escalationsQuery = (api: ApiClient) =>
     queryFn: () => unwrap(api.GET("/api/v1/escalations")),
   });
 
+/**
+ * The queue "Freigaben" (Q80): the pending profiling exceptions of the manager's regions; no
+ * name, case data or evidence (403 for everyone else).
+ */
+export const reviewsQuery = (api: ApiClient) =>
+  queryOptions({
+    queryKey: ["reviews"],
+    queryFn: () => unwrap(api.GET("/api/v1/reviews")),
+  });
+
 /** The staff accounts with their org roles (the global admin), page by page. */
 export const staffAccountsQuery = (api: ApiClient) =>
   infiniteQueryOptions({

@@ -96,6 +96,7 @@ const view = (
     tl407SignedOn?: string | null;
     done?: "allowed" | "refused";
     submission?: { attempts: unknown[]; next: unknown };
+    exception?: unknown;
   } = {},
 ) => ({
   participationId,
@@ -125,6 +126,11 @@ const view = (
   ...(profiler && { signedDeclarations: null }),
   tl407Submission: options.submission ?? { attempts: [], next: null },
   tl407Versions: ["08-2025"],
+  exception: options.exception ?? {
+    current: null,
+    evidenceDocuments: [],
+    capabilities: { addEvidence: false, request: false, revoke: false },
+  },
   transitions: options.closed
     ? [{ to: "profiling_in_progress", allowed: false, refusal: "track_inactive" }]
     : options.done
