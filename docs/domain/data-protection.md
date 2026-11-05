@@ -1025,7 +1025,10 @@ The evidence a profiling exception rests on (process-and-lifecycle.md, profiling
   presence is no verification), both quarantine it at once, the PL deletes it before its review
   only. The tab "Profiling" gives the PL only its id, upload instant and review state (and whether
   it still counts), never a file, a name, a media type or a size; the regional operations manager
-  never more than "Nachweis vorhanden".
+  never more than "Nachweis vorhanden". The PL's safety actions (quarantine, its lift, deletion
+  before the review) are authorised by the operation alone, without a read right (the review of
+  PR #102): the document service finds the document for them by the types the actor reads or may
+  perform the operation on, never for an opening or a review.
 - **The evidence record** (`profiling_exception_evidence_record`, confidential,
   `participation_record`, part of the evidence of a request, Q81): one immutable row per attempt,
   written only by `create_exception_evidence_record` (the PL, as themselves, while `informed`),
@@ -1034,7 +1037,9 @@ The evidence a profiling exception rests on (process-and-lifecycle.md, profiling
   any other id is `document_not_found`, a 404; an unreviewed one `evidence_missing`), or a
   **structured BA confirmation**: the Agentur's key, the confirming contact or reference and the
   confirmation date (the field `profilingExceptionEvidence`, confidential, never in lists), never a
-  clinical file. The reference is normalised: NFC, inner spaces as one, trimmed, lower case
+  clinical file; the Agentur one of the participation's choices (the catalog's and the project's),
+  checked by the API (`agentur_unknown`). A request from before evidence records rests on a
+  `legacy_unverified` record without any source, which never counts (the upgrade, ADR-0002). The reference is normalised: NFC, inner spaces as one, trimmed, lower case
   (Unicode's default mapping, the database's ICU `lower`), no control character, at most 100
   characters (`reference_invalid`); the date is an ISO date not after today (`confirmation_in_future`).
   The PL is told on the form not to enter health details.

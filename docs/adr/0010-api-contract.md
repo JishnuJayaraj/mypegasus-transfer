@@ -619,7 +619,8 @@ generator then. No action now.
   `201 { evidenceRecordId }`. A hidden participation (an unassigned consultant too) or a document
   that isn't one of its evidence documents is `404`; the consultant `403`; `422`
   `evidence_missing`, `not_informed`, `reference_invalid` (at `/reference`),
-  `confirmation_in_future` (at `/confirmedOn`).
+  `confirmation_in_future` (at `/confirmedOn`), `agentur_unknown` (at `/agenturKey`, after the
+  permission check).
 - `POST /participations/{id}/profiling-exception-requests` (`{ reason, evidenceRecordId }`) →
   `201 { requestId }`; `422` with the domain's codes (`evidence_missing` at `/evidenceRecordId`,
   `evidence_unchanged`, `ba_confirmation_missing`, `exception_open`, `no_future_start`, …).
@@ -635,8 +636,13 @@ generator then. No action now.
   evidenceRecordId, evidenceKind, evidencePresent, capabilities.decide }`. No participant id or
   name, no evidence content, by schema; `no-store`.
 - `Profiling` (the tab) gains `exception: ProfilingExceptionView { current, evidenceDocuments
-  ({ documentId, addedAt, reviewState, usable }), capabilities { addEvidence, request, revoke } }`.
-  The fingerprint is in no response.
+  ({ documentId, addedAt, reviewState, usable, quarantined, capabilities { delete, quarantine,
+  liftQuarantine } }), capabilities { addEvidence, request, revoke } }`. The fingerprint is in no
+  response.
+- `DELETE …/documents/{documentId}`, `POST …/quarantine` and `…/quarantine-lift` find a document of
+  a type the actor reads **or** may perform that operation on (the PL's write-only exception
+  evidence; the review of PR #102): `404` only when neither applies; the opening and the review
+  keep the read check.
 
 ## Conventions as built (Slices 0–2)
 

@@ -1125,8 +1125,15 @@ Migrations `0085_exception_evidence.sql` (generated) and `0086_exception_evidenc
 (hand-written, the 0084 hardening); process-and-lifecycle.md (profiling exceptions) and
 data-protection.md (exception evidence) hold the rules, Q208 the readings.
 
-- **Table:** `profiling_exception_evidence_record` (`exception_evidence_kind`: `documents` or
-  `ba_confirmation`; `document_ids uuid[]` or `agentur_key`, `reference`, `confirmed_on`; the
+- **Upgrade of an existing database** (the review of PR #102): 0085 creates the table; 0086 first
+  gives every request recorded before it a `legacy_unverified` record (its id, participation and
+  fingerprint, the requester and request date; no source), stops with `legacy_evidence_conflict`
+  if one id is named by requests of two participations (the transaction leaves the database
+  unchanged), and only then adds the request's FK. `exception_evidence_usable` is false for a
+  legacy record, so it supports no request, approval or fact. Tested from a database at 0084
+  (`exception-evidence-migration.int.test.ts`).
+- **Table:** `profiling_exception_evidence_record` (`exception_evidence_kind`: `documents`,
+  `ba_confirmation` or `legacy_unverified`; `document_ids uuid[]` or `agentur_key`, `reference`, `confirmed_on`; the
   `fingerprint`; `created_by`, `created_on`, `created_at`), composite FK to the participation, a
   CHECK for one complete source, the fingerprint's format; immutable by trigger for every role
   (`record_immutable`); `transfer_app` selects it. `profiling_exception_request` gains the
@@ -1154,7 +1161,9 @@ data-protection.md (exception evidence) hold the rules, Q208 the readings.
 - **Status service:** `createExceptionEvidence`; the decision takes `lock_project_setup` before it
   loads the request and compares the record shown; the revocation compares the status shown. The
   evidence functions' state refusals map to `domain`, `document_not_found` to `not_found`,
-  `source_changed` to `stale`. `dbGuardFacts.evidence` reads the record.
+  `source_changed` to `stale`. `dbGuardFacts.evidence` reads the record; `dbGuardFacts` withholds
+  `profilingExceptionApproved` while the approved request's evidence doesn't count and dates it
+  from a later quarantine lift.
 
 ## Conventions as built (Slices 0–2)
 

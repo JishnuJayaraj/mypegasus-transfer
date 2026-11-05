@@ -395,12 +395,16 @@ stateDiagram-v2
   review state only. The PL (and the assigned consultant) uploads `profiling_exception_evidence`
   there ("Nachweis hochladen"); the PL never opens it (data-protection.md, exception evidence),
   the assigned consultant reviews it on "Unterlagen", and a file's presence is no verification.
+  The PL's safety actions sit on the same list ("Unter Quarantäne stellen", "Quarantäne
+  aufheben", "Löschen" before the review, each with a reason chosen in a dialog), authorised
+  without any read right (the review of PR #102).
   "Ausnahme beantragen" (the PL, while `informed`, profiling open, no open request): a reason code
   and the evidence, each chosen explicitly (no default): **reviewed documents** (the accepted,
   usable ones the PL ticks) or the **Agentur's confirmation** (the Agentur from the
   participation's choices, the confirming contact or reference, the confirmation date, not in
   the future). The app first records the immutable **evidence record**
-  (`POST /participations/{id}/exception-evidence`), then the request on it
+  (`POST /participations/{id}/exception-evidence`; an Agentur outside the choices is refused
+  server-side, `agentur_unknown`), then the request on it
   (`POST /participations/{id}/profiling-exception-requests`); `ba_confirmed_other` needs a BA
   confirmation (`ba_confirmation_missing`). The request function reads the record under the
   participation lock: another participation's record or one whose documents no longer count
@@ -414,8 +418,15 @@ stateDiagram-v2
   (`409 source_changed` if the request rests on another); never on one's own request (four eyes,
   403); an approval needs the evidence still usable (`evidence_missing`), a rejection doesn't. The
   decision takes the project's exclusive lock first (ADR-0002, D31). "Widerrufen" (the PL, before
-  entry) sends the status shown (`409 source_changed` if it was decided meanwhile); after entry the
-  exception is closed by completing profiling, and the compliance escalation applies. The
+  entry) captures the request and the status shown when its dialog opens and sends them
+  (`409 source_changed` if it was decided meanwhile, `request_not_current` if another request
+  replaced it; never adopted silently); after entry the exception is closed by completing
+  profiling, and the compliance escalation applies. **An approval counts only while its evidence
+  does** (the review of PR #102): while a document of its record is quarantined, invalidated or
+  deleted, the fact `profilingExceptionApproved` is withheld from every later evaluation; after a
+  quarantine's lift it is valid and recorded no earlier than the lift. The request, its decision,
+  the history and past snapshots stay as they were. A request from before evidence records rests on
+  a `legacy_unverified` record (the upgrade, ADR-0002), which never counts. The
   exception's events keep round 17's details; recording evidence is audited
   `exception_evidence_recorded` (its id and kind; for documents how many) in the `profiling`
   history.
