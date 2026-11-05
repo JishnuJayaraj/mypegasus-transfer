@@ -598,6 +598,20 @@ generator then. No action now.
   oldestDaysOverdue }`. Projects without an escalation are left out. No participant id or name, by
   schema. `no-store`.
 
+## Note 2026-11-05 (Slice 6, PR 6-6): closing a BA reporting task
+
+- `POST /ba-reporting-tasks/{id}/outcome` (`BaReportInput`: `{ outcome: "reported", reportedOn }`
+  or `{ outcome: "not_required", reason }`, the reason one of `agentur_confirmed_not_required`,
+  `no_claim_month_affected`, `created_in_error`) → `204`. A task of a project the viewer can't see,
+  or one whose tasks they don't read (an unassigned consultant), is `404` whatever its state; the
+  assigned consultant `403`; `422` `already_recorded`, `date_in_future` and `date_before_task` (at
+  `/reportedOn`).
+- `BaReportingTask` (the detail's `baReportingTasks`) gains `notRequiredReason`, `decidedAt` and
+  `capabilities.recordOutcome` (the PL or back office, while pending).
+- The work list: `AgenturItemKind` adds `ba_report_pending` (from the oldest pending task's Berlin
+  day, also for a closed participation, only for a viewer who reads the tasks); the filter
+  `agentur` and the dashboard's group `agentur` gain it, the tile `agentur_open` counts it.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

@@ -23,7 +23,8 @@ the Kug 200a's header); 6-5a-1 records its readings as Q203; 6-5a-2, estimated a
 lines, stays one PR (the owner's choice, 2026-10-29) and records its readings as Q205 (accepted with
 amendments in the review of PR #99). 6-5b, estimated at about 2,150 lines, stays one PR (the
 owner's choice, 2026-11-04) and records its readings as Q206 (accepted with amendments in the
-review of PR #100). Q1 stays
+review of PR #100). 6-6, estimated at about 650 lines, stays one PR and records its readings as
+Q207. Q1 stays
 `verify`. This is not an
 external DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
