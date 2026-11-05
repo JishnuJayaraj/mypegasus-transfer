@@ -82,25 +82,113 @@ async function tl407Facts(tx: Transaction, participationIds: readonly string[]) 
 }
 
 /**
+ * The evidence record a request names (data-protection.md, exception evidence; Q94, Q194): of
+ * this participation and still usable (`exception_evidence_usable`), valid from the BA's
+ * confirmation date or, for documents, the day it was recorded; a BA confirmation also gives
+ * the `ba_confirmed_other` fact. Undefined otherwise (`evidence_missing`). Read after the
+ * participation is locked; the request function reads it again.
+ */
+async function recordedEvidence(
+  tx: Transaction,
+  { participationId, evidenceRecordId }: { participationId: string; evidenceRecordId: string },
+): Promise<RequestEvidence | undefined> {
+  const { rows } = await tx.execute<{
+    kind: "documents" | "ba_confirmation";
+    fingerprint: string;
+    valid_on: string;
+    recorded_at: string;
+    usable: boolean;
+  }>(sql`select kind, fingerprint, coalesce(confirmed_on, created_on)::text as valid_on,
+      ${utcText("created_at")} as recorded_at, exception_evidence_usable(id) as usable
+    from profiling_exception_evidence_record
+    where id = ${evidenceRecordId}::uuid and participation_id = ${participationId}::uuid`);
+  const row = rows[0];
+  if (!row?.usable) return undefined;
+  const fact = { validOn: row.valid_on, recordedAt: new Date(row.recorded_at) };
+  return {
+    evidence: { ...fact, recordId: evidenceRecordId, fingerprint: row.fingerprint },
+    ...(row.kind === "ba_confirmation" && { baConfirmation: fact }),
+  };
+}
+
+/**
+ * The approvals' evidence as it stands now (process-and-lifecycle.md, profiling exceptions; the
+ * review of PR #102): per evidence record whether it still counts and the latest quarantine lift
+ * of its documents. Read once for all approved requests.
+ */
+async function approvalEvidence(tx: Transaction, recordIds: readonly string[]) {
+  const byId = new Map<
+    string,
+    { usable: boolean; liftedAt: string | null; liftedOn: string | null }
+  >();
+  if (recordIds.length === 0) return byId;
+  const { rows } = await tx.execute<{
+    id: string;
+    usable: boolean;
+    lifted_at: string | null;
+    lifted_on: string | null;
+  }>(sql`select e.id, exception_evidence_usable(e.id) as usable,
+      ${utcText("l.lifted")} as lifted_at,
+      (l.lifted at time zone 'Europe/Berlin')::date::text as lifted_on
+    from profiling_exception_evidence_record e
+    left join lateral (select max(d.quarantine_lifted_at) as lifted from document d
+      where d.id = any(e.document_ids)) l on true
+    where e.id = any(${`{${recordIds.join(",")}}`}::uuid[])`);
+  for (const row of rows) {
+    byId.set(row.id, { usable: row.usable, liftedAt: row.lifted_at, liftedOn: row.lifted_on });
+  }
+  return byId;
+}
+
+/**
+ * The approved exception as a fact (the review of PR #102): withheld while its evidence doesn't
+ * count (a document quarantined, invalidated or deleted, or a record from before the evidence
+ * existed), and after a quarantine's lift valid and recorded no earlier than the lift. The request,
+ * its decision and the history stay as they are; nothing here changes a past snapshot.
+ */
+function approvalFact(
+  approved: DatedFact | undefined,
+  evidence: { usable: boolean; liftedAt: string | null; liftedOn: string | null } | undefined,
+): DatedFact | undefined {
+  if (!approved || !evidence?.usable) return undefined;
+  const liftedAt = evidence.liftedAt === null ? null : new Date(evidence.liftedAt);
+  if (liftedAt === null || liftedAt.getTime() <= approved.recordedAt.getTime()) return approved;
+  return {
+    validOn: evidence.liftedOn! > approved.validOn ? evidence.liftedOn! : approved.validOn,
+    recordedAt: liftedAt,
+  };
+}
+
+/**
  * The facts recorded in the database (process-and-lifecycle.md, guards and the snapshot rule):
  * `tl407Signed` and `profilingDone` from `tl407_facts`, which counts only accepted TL 407 scans
  * that are neither quarantined nor invalidated, and `asuRegisteredWithProof` from the ASU record
  * (`asuRegisteredSince`: a usable proof, recorded when the complete registration-with-proof was),
- * each with the database instant its complete fact was recorded at. Everything else stays fail
- * closed until its slice records it (the DSV in Slice 7, the exception evidence in PR 6-7).
+ * each with the database instant its complete fact was recorded at, a request's evidence record,
+ * and the approved exception while its evidence counts (`approvalFact`). Everything else stays fail closed until its slice records it (the DSV in Slice 7).
  */
 export const dbGuardFacts: GuardFactsProvider = {
   facts: async (tx, input) => (await dbGuardFacts.many!(tx, [input]))[0]!,
-  evidence: failClosedFacts.evidence,
+  evidence: recordedEvidence,
   many: async (tx, inputs) => {
     const ids = inputs.map((input) => input.participationId);
     const recorded = await tl407Facts(tx, ids);
     const asu = await asuStatesOf(tx, ids);
+    const evidence = await approvalEvidence(
+      tx,
+      inputs
+        .filter((input) => input.currentRequest?.status === "approved")
+        .map((input) => input.currentRequest!.evidenceRecordId),
+    );
     const all: GuardFacts[] = [];
     for (const input of inputs) {
       const registered = asu.get(input.participationId)?.fact;
+      const approved = approvalFact(
+        approvedExceptionFact(input.currentRequest),
+        input.currentRequest ? evidence.get(input.currentRequest.evidenceRecordId) : undefined,
+      );
       all.push({
-        ...(await failClosedFacts.facts(tx, input)),
+        ...(approved && { profilingExceptionApproved: approved }),
         ...recorded.get(input.participationId),
         ...(registered && { asuRegisteredWithProof: registered }),
       });

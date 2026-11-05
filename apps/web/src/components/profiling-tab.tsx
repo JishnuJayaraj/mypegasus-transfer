@@ -23,6 +23,7 @@ import { useState, type FormEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationProfilingQuery, participationQuery, useApi } from "../api";
 import { ReloadNotice, useDraft } from "./draft";
+import { ProfilingException } from "./profiling-exception";
 import { SelfServiceTab } from "./self-service-tab";
 import { Tl407Section } from "./tl407-section";
 import { Tl407Submission } from "./tl407-submission";
@@ -83,6 +84,7 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
         view.tl407Forms.length > 0 ||
         view.tl407Scans.length > 0) && <Tl407Section view={view} />}
       <Tl407Submission view={view} />
+      <ProfilingException view={view} detail={detail} />
     </Stack>
   );
 }

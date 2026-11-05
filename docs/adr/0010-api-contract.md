@@ -612,6 +612,38 @@ generator then. No action now.
   day, also for a closed participation, only for a viewer who reads the tasks); the filter
   `agentur` and the dashboard's group `agentur` gain it, the tile `agentur_open` counts it.
 
+## Note 2026-11-05 (Slice 6, PR 6-7): profiling exceptions with evidence
+
+- `POST /participations/{id}/exception-evidence` (`ExceptionEvidenceInput`: `{ kind: "documents",
+  documentIds }` (1–20) or `{ kind: "ba_confirmation", agenturKey, reference, confirmedOn }`) →
+  `201 { evidenceRecordId }`. A hidden participation (an unassigned consultant too) or a document
+  that isn't one of its evidence documents is `404`; the consultant `403`; `422`
+  `evidence_missing`, `not_informed`, `reference_invalid` (at `/reference`),
+  `confirmation_in_future` (at `/confirmedOn`), `agentur_unknown` (at `/agenturKey`, after the
+  permission check).
+- `POST /participations/{id}/profiling-exception-requests` (`{ reason, evidenceRecordId }`) →
+  `201 { requestId }`; `422` with the domain's codes (`evidence_missing` at `/evidenceRecordId`,
+  `evidence_unchanged`, `ba_confirmation_missing`, `exception_open`, `no_future_start`, …).
+- `POST /profiling-exception-requests/{id}/decision` (`{ decision: "approve" | "reject",
+  evidenceRecordId }`) and `…/revocation` (`{ status: "requested" | "approved" }`, the status
+  shown) → `204`. A request is visible to the regional operations manager of its project's region
+  and to whoever sees the participation's profiling; to anyone else it is `404`, whatever its
+  state. `403` for a viewer without the operation (the requester deciding: `four_eyes`); `409`
+  `source_changed` for another record or status than the request has, `request_not_current`;
+  `422` for the state.
+- `GET /reviews` (a regional operations manager; `403` else) → `ReviewQueue { items }`, each
+  `ReviewItem { requestId, projectId, projectName, reason, requestedOn, tgStart,
+  evidenceRecordId, evidenceKind, evidencePresent, capabilities.decide }`. No participant id or
+  name, no evidence content, by schema; `no-store`.
+- `Profiling` (the tab) gains `exception: ProfilingExceptionView { current, evidenceDocuments
+  ({ documentId, addedAt, reviewState, usable, quarantined, capabilities { delete, quarantine,
+  liftQuarantine } }), capabilities { addEvidence, request, revoke } }`. The fingerprint is in no
+  response.
+- `DELETE …/documents/{documentId}`, `POST …/quarantine` and `…/quarantine-lift` find a document of
+  a type the actor reads **or** may perform that operation on (the PL's write-only exception
+  evidence; the review of PR #102): `404` only when neither applies; the opening and the review
+  keep the read check.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

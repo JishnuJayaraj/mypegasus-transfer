@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Tl407GeneratedForm, Tl407ScanView, Tl407SignedDeclarations } from "../forms/api";
 import { FormVersion } from "../forms/field-map";
+import { ProfilingExceptionView } from "./exception-evidence";
 import { Tl407SubmissionState } from "./submissions";
 import { JobboerseChoice } from "../forms/input";
 import { isoDate } from "../iso-date";
@@ -118,6 +119,11 @@ export const ProfilingView = z
     tl407Submission: Tl407SubmissionState,
     /** The registry's TL 407 versions, expired ones included: external paper names one. */
     tl407Versions: z.array(FormVersion),
+    /**
+     * The profiling exception (process-and-lifecycle.md, profiling exceptions): the current
+     * request, the evidence documents as ids and states only, and what the viewer may do.
+     */
+    exception: ProfilingExceptionView,
     /** The track's next steps from the current status. */
     transitions: z.array(ProfilingTransition),
     capabilities: z.strictObject({

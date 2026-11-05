@@ -263,7 +263,7 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Consultant/profiler (assigned) | `dsv_cancellation` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Consultant/profiler (assigned) | `asu_proof` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
-| Consultant/profiler (assigned) | `profiling_exception_evidence` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: via_domain_operation |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | Consultant/profiler (assigned) | `cv` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | Consultant/profiler (assigned) | `participant_upload` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | Consultant/profiler (assigned) | `qualification_certificate` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
@@ -285,7 +285,7 @@ Only the staff cells that differ from normal mode.
 | PL | `dsv_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | PL | `dsv_cancellation` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | PL | `asu_proof` | metadata_only | no: not_in_list_payloads | no: needs_break_glass | no: immutable |
-| PL | `profiling_exception_evidence` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode | no: via_domain_operation |
+| PL | `profiling_exception_evidence` | no: needs_assisted_mode | no: not_in_list_payloads | no: needs_assisted_mode | no: immutable |
 | PL | `cv` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | PL | `participant_upload` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | PL | `qualification_certificate` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
@@ -386,7 +386,7 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
 | Consultant/profiler (assigned) | `dsv_cancellation` | no: never | no: never | no: never | no: never |
 | Consultant/profiler (assigned) | `asu_proof` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
-| Consultant/profiler (assigned) | `profiling_exception_evidence` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | Consultant/profiler (assigned) | `cv` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | Consultant/profiler (assigned) | `participant_upload` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | Consultant/profiler (assigned) | `qualification_certificate` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
@@ -408,7 +408,7 @@ Only the staff cells that differ from normal mode.
 | PL | `dsv_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | PL | `dsv_cancellation` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | PL | `asu_proof` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
-| PL | `profiling_exception_evidence` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
+| PL | `profiling_exception_evidence` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | PL | `cv` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | PL | `participant_upload` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | PL | `qualification_certificate` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
@@ -560,7 +560,7 @@ open it.
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Consultant/profiler (assigned) | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Consultant/profiler (assigned) | `asu_proof` | yes | yes | no: role_not_allowed |
-| Consultant/profiler (assigned) | `profiling_exception_evidence` | no: undecided (Q65) | no: undecided (Q65) | no: undecided (Q65) |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | yes | yes | no: role_not_allowed |
 | Consultant/profiler (assigned) | `cv` | yes | yes | yes |
 | Consultant/profiler (assigned) | `participant_upload` | yes | yes | yes |
 | Consultant/profiler (assigned) | `qualification_certificate` | yes | yes | yes |
@@ -571,7 +571,7 @@ open it.
 | Consultant/profiler (not assigned) | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Consultant/profiler (not assigned) | `dsv_cancellation` | no: role_not_allowed | no: role_not_allowed | no: immutable |
 | Consultant/profiler (not assigned) | `asu_proof` | no: not_assigned | no: not_assigned | no: role_not_allowed |
-| Consultant/profiler (not assigned) | `profiling_exception_evidence` | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `profiling_exception_evidence` | no: not_assigned | no: not_assigned | no: role_not_allowed |
 | Consultant/profiler (not assigned) | `cv` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `participant_upload` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `qualification_certificate` | no: not_assigned | no: not_assigned | no: not_assigned |
@@ -582,7 +582,7 @@ open it.
 | PL | `dsv_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
 | PL | `dsv_cancellation` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
 | PL | `asu_proof` | yes | no: role_not_allowed | yes |
-| PL | `profiling_exception_evidence` | no: undecided (Q65) | no: undecided (Q65) | no: undecided (Q65) |
+| PL | `profiling_exception_evidence` | yes | no: role_not_allowed | yes |
 | PL | `cv` | yes | yes | yes |
 | PL | `participant_upload` | yes | yes | yes |
 | PL | `qualification_certificate` | yes | yes | yes |
@@ -645,6 +645,8 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `kug200b_signed_scan` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `asu_proof` | `add` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `asu_proof` | `review` | yes | no: mode_not_allowed |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | `add` | yes | no: mode_not_allowed |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `delete` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `participant_upload` | `review` | yes | no: mode_not_allowed |
@@ -659,6 +661,8 @@ Only the staff cells that differ from normal mode.
 | PL | `kug200b_signed_scan` | `delete` | yes | no: mode_not_allowed |
 | PL | `asu_proof` | `add` | yes | no: mode_not_allowed |
 | PL | `asu_proof` | `delete` | yes | no: mode_not_allowed |
+| PL | `profiling_exception_evidence` | `add` | yes | no: mode_not_allowed |
+| PL | `profiling_exception_evidence` | `delete` | yes | no: mode_not_allowed |
 | PL | `cv` | `review` | yes | no: mode_not_allowed |
 | PL | `cv` | `delete` | yes | no: mode_not_allowed |
 | PL | `participant_upload` | `review` | yes | no: mode_not_allowed |
@@ -678,6 +682,8 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `kug200b_signed_scan` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `asu_proof` | `add` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `asu_proof` | `review` | yes | no: mode_not_allowed |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | `add` | yes | no: mode_not_allowed |
+| Consultant/profiler (assigned) | `profiling_exception_evidence` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `add` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `review` | yes | no: mode_not_allowed |
 | Consultant/profiler (assigned) | `cv` | `delete` | yes | no: mode_not_allowed |
@@ -695,6 +701,8 @@ Only the staff cells that differ from normal mode.
 | PL | `kug200b_signed_scan` | `delete` | yes | no: mode_not_allowed |
 | PL | `asu_proof` | `add` | yes | no: mode_not_allowed |
 | PL | `asu_proof` | `delete` | yes | no: mode_not_allowed |
+| PL | `profiling_exception_evidence` | `add` | yes | no: mode_not_allowed |
+| PL | `profiling_exception_evidence` | `delete` | yes | no: mode_not_allowed |
 | PL | `cv` | `add` | yes | no: mode_not_allowed |
 | PL | `cv` | `review` | yes | no: mode_not_allowed |
 | PL | `cv` | `delete` | yes | no: mode_not_allowed |
@@ -887,6 +895,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `agentur_submission_rejected` | `profiling` | no | no | `rejectedOn`, `reason` |
 | `agentur_submission_original_retained` | `profiling` | no | no | `originalSentOn` |
 | `ba_report_recorded` | `dsv` | no | no | `kind`, `outcome`, `reportedOn`, `reason` |
+| `exception_evidence_recorded` | `profiling` | no | no | `kind` |
 
 ## Aggregates
 
@@ -917,16 +926,10 @@ slice (Slices 6 and 7).
 
 | Question | Subject | Key | Action | Phase and mode |
 | --- | --- | --- | --- | --- |
-| Q65 | Consultant/profiler (assigned) | `profiling_exception_evidence` | `add` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | Consultant/profiler (assigned) | `profiling_exception_evidence` | `review` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | Consultant/profiler (assigned) | `profiling_exception_evidence` | `delete` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `dsv_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `dsv_signed_scan` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `dsv_cancellation` | `add` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | PL | `dsv_cancellation` | `review` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | PL | `profiling_exception_evidence` | `add` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | PL | `profiling_exception_evidence` | `review` | any phase normal, any phase assisted, any phase break_glass |
-| Q65 | PL | `profiling_exception_evidence` | `delete` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Back office | `dsv_signed_scan` | `add` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Back office | `dsv_signed_scan` | `review` | any phase normal, any phase assisted, any phase break_glass |
 | Q65 | Back office | `dsv_cancellation` | `add` | any phase normal, any phase assisted, any phase break_glass |

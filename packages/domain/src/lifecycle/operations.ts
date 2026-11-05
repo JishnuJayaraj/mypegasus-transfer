@@ -51,6 +51,7 @@ export const operationFailures = {
     "not_informed",
     "profiling_closed",
     "no_future_start",
+    "evidence_missing",
   ],
   revokeProfilingException: [
     "actor_not_allowed",
@@ -183,12 +184,16 @@ export function requestProfilingException(
 
 /**
  * Four eyes: a different staff user approves or rejects a documented request, before entry,
- * while profiling is open and a future start applies (Q80, round 10).
+ * while profiling is open and a future start applies (Q80, round 10). An approval needs the
+ * request's evidence still usable (`evidencePresent`: none of its documents quarantined,
+ * invalidated or deleted since); a rejection doesn't (process-and-lifecycle.md, profiling
+ * exceptions).
  */
 export function decideProfilingException(
   ctx: OperationContext,
   exception: ProfilingException,
   decision: "approve" | "reject",
+  evidencePresent = true,
 ): OperationResult<ProfilingException, "decideProfilingException"> {
   if (ctx.actor.type !== "user") return fail("actor_not_allowed");
   if (exception.status !== "requested") return fail("not_requested");
@@ -196,6 +201,7 @@ export function decideProfilingException(
   if (ctx.current.status !== "informed") return fail("not_informed");
   if (closedProfiling.has(ctx.current.profilingStatus)) return fail("profiling_closed");
   if (!hasFutureStart(ctx)) return fail("no_future_start");
+  if (decision === "approve" && !evidencePresent) return fail("evidence_missing");
   return {
     ok: true,
     next: {

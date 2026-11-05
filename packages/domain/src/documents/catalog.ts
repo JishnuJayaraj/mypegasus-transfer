@@ -6,7 +6,8 @@ import type { AccessCategory } from "../fields/catalog";
  * Document types (data-protection.md, documents; Q87 B; the first six are the ones completeness
  * rules name; `cv` from catalog version 2, Q142 *assumed*; `tl407_form` from version 3, Q179; the
  * signed TL 407's operations from version 4, Q184; the ASU proof's from version 5, Q186; the
- * generated Kug 200b and the signed Kug 200b's operations from version 6, Q179, Q184).
+ * generated Kug 200b and the signed Kug 200b's operations from version 6, Q179, Q184; the
+ * profiling exception evidence's from version 7, Q194).
  */
 export const DocumentType = z.enum([
   "tl407_signed_scan",
@@ -114,15 +115,15 @@ const participantOwned = {
 } as const;
 
 /**
- * Version 6 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
+ * Version 7 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
  * version.
  * Version 2 adds `cv`, file names and the operations of the participant's own documents; version 3
  * the generated TL 407 (`tl407_form`, Q179); version 4 the signed TL 407's operations (Q183, Q184);
  * version 5 the ASU proof's (Q186); version 6 the generated Kug 200b (`kug200b_form`, Q179) and the
- * signed Kug 200b's operations (Q184).
+ * signed Kug 200b's operations (Q184); version 7 the profiling exception evidence's (Q194).
  */
 export const documentTypeCatalog = {
-  version: 6,
+  version: 7,
   types: [
     {
       // The signed paper (data-protection.md, signed scans; Q183, Q184): the assigned consultant
@@ -187,18 +188,29 @@ export const documentTypeCatalog = {
       },
     },
     {
+      // The evidence of a profiling exception (data-protection.md, exception evidence; Q194):
+      // health when medically related, else confidential, so the stricter for every unstructured
+      // upload. Evidence like signed paper, so `signed` (normal mode only, never changed once
+      // reviewed). Write-only for the PL: they add it and quarantine it, open it only in assisted
+      // mode or through break-glass, and delete it before its review; the assigned consultant
+      // reviews it (a file's presence is no verification) and quarantines it.
       type: "profiling_exception_evidence",
-      // health when medically related, else confidential: the stricter until Slice 6 tells them apart
       accessCategory: "health",
       dataClass: "special_category",
       retentionClass: "participation_record",
-      signed: false,
+      signed: true,
       roles: {
         consultant: "open",
         project_lead: "assisted_or_break_glass",
         regional_operations_manager: "metadata",
       },
-      ...undecided,
+      fileName: false,
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant"],
+        delete: ["project_lead"],
+        quarantine: ["consultant", "project_lead"],
+      },
     },
     { type: "cv", ...participantOwned },
     { type: "participant_upload", ...participantOwned },

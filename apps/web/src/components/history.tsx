@@ -231,6 +231,9 @@ export function HistoryTab({
           date: formatDate(text(details.rejectedOn)),
           reason: coded("history.rejectionReasons", text(details.reason) ?? ""),
         });
+      // An exception's evidence record (D30): its kind, never its facts.
+      case "exception_evidence_recorded":
+        return coded("profiling.exception.kinds", text(details.kind) ?? "");
       // A BA reporting task's outcome (D28): what it reports, the sent date or the reason.
       case "ba_report_recorded": {
         const kind = coded("participant.tasks.kinds", text(details.kind) ?? "");

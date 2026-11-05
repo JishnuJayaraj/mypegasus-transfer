@@ -389,6 +389,47 @@ stateDiagram-v2
   profiling finishes, the participation closes or the project becomes `ta_only`; the PL
   **revokes** one that still applies. A passed start leaves it pending for a new start date,
   but it can never authorise entry for the missed date. All closures are audited.
+- **Profiling exceptions with evidence** *(as built in Slice 6, PR 6-7; D30, Q194; readings
+  Q208)*: on the tab "Profiling" the block "Ausnahme vom Profiling" shows the current request
+  (status, reason, dates, the evidence's kind) and the evidence documents by upload instant and
+  review state only. The PL (and the assigned consultant) uploads `profiling_exception_evidence`
+  there ("Nachweis hochladen"); the PL never opens it (data-protection.md, exception evidence),
+  the assigned consultant reviews it on "Unterlagen", and a file's presence is no verification.
+  The PL's safety actions sit on the same list ("Unter Quarantäne stellen", "Quarantäne
+  aufheben", "Löschen" before the review, each with a reason chosen in a dialog), authorised
+  without any read right (the review of PR #102).
+  "Ausnahme beantragen" (the PL, while `informed`, profiling open, no open request): a reason code
+  and the evidence, each chosen explicitly (no default): **reviewed documents** (the accepted,
+  usable ones the PL ticks) or the **Agentur's confirmation** (the Agentur from the
+  participation's choices, the confirming contact or reference, the confirmation date, not in
+  the future). The app first records the immutable **evidence record**
+  (`POST /participations/{id}/exception-evidence`; an Agentur outside the choices is refused
+  server-side, `agentur_unknown`), then the request on it
+  (`POST /participations/{id}/profiling-exception-requests`); `ba_confirmed_other` needs a BA
+  confirmation (`ba_confirmation_missing`). The request function reads the record under the
+  participation lock: another participation's record or one whose documents no longer count
+  (quarantined, invalidated, deleted) is `evidence_missing`; the record's fingerprint equal to the
+  latest request's is `evidence_unchanged`, so identical bytes under a new id, another order or an
+  equal confirmation re-entered never count as changed evidence. **"Freigaben"** (`/reviews`, the
+  regional operations manager of the project's region) lists the pending requests of `informed`
+  participations: project, reason code, the request date, the TG start, the evidence's kind and
+  "Nachweis vorhanden" (or that it no longer counts); no name, no case data, no evidence content.
+  "Genehmigen" and "Ablehnen" are confirmed in a dialog and send the evidence record shown
+  (`409 source_changed` if the request rests on another); never on one's own request (four eyes,
+  403); an approval needs the evidence still usable (`evidence_missing`), a rejection doesn't. The
+  decision takes the project's exclusive lock first (ADR-0002, D31). "Widerrufen" (the PL, before
+  entry) captures the request and the status shown when its dialog opens and sends them
+  (`409 source_changed` if it was decided meanwhile, `request_not_current` if another request
+  replaced it; never adopted silently); after entry the exception is closed by completing
+  profiling, and the compliance escalation applies. **An approval counts only while its evidence
+  does** (the review of PR #102): while a document of its record is quarantined, invalidated or
+  deleted, the fact `profilingExceptionApproved` is withheld from every later evaluation; after a
+  quarantine's lift it is valid and recorded no earlier than the lift. The request, its decision,
+  the history and past snapshots stay as they were. A request from before evidence records rests on
+  a `legacy_unverified` record (the upgrade, ADR-0002), which never counts. The
+  exception's events keep round 17's details; recording evidence is audited
+  `exception_evidence_recorded` (its id and kind; for documents how many) in the `profiling`
+  history.
 
 ### The profiling record *(accepted, Q192, Q193; as built in Slice 6, PR 6-2; readings Q198)*
 
@@ -423,8 +464,11 @@ The staff app's tab "Profiling" (data-protection.md, the profiling record, for w
   registration date and recorded at the later of the registration, the link of its accepted proof
   and a lifted quarantine of the proving document: a proof accepted yesterday and linked today is
   recorded today. Without a proof, or with a quarantined or invalidated proving document, there is
-  none. The DSV and exception-evidence facts stay fail closed until their PRs, so nobody enters the
-  TG on real facts yet; the seed overlays its synthetic facts.
+  none. A request's evidence (PR 6-7) is its record of this participation while usable: valid on
+  the BA's confirmation date or, for documents, the day the record was made, recorded at the
+  record's creation. The DSV facts stay fail closed until Slice 7, so nobody enters the TG on real
+  facts yet; the seed overlays its synthetic facts and records real BA confirmations for its
+  exception requests.
 - **Sessions** (Q193): date and `von`/`bis` (`hh:mm`), written whole by the assigned consultant
   with the record's revision (`409 stale_revision`): `bis` after `von` (equal refused), no date
   after today in Berlin, no two of one day overlapping (touching ends are fine), at most 50. Each

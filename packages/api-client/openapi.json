@@ -6193,7 +6193,8 @@
           "agentur_submission_original_sent",
           "agentur_submission_rejected",
           "agentur_submission_original_retained",
-          "ba_report_recorded"
+          "ba_report_recorded",
+          "exception_evidence_recorded"
         ]
       },
       "HistoryActor": {
@@ -11731,6 +11732,9 @@
               "pattern": "^(0[1-9]|1[0-2])-[0-9]{4}$"
             }
           },
+          "exception": {
+            "$ref": "#/components/schemas/ProfilingExceptionView"
+          },
           "transitions": {
             "type": "array",
             "items": {
@@ -11788,6 +11792,7 @@
           "profilingDoneSupported",
           "tl407Submission",
           "tl407Versions",
+          "exception",
           "transitions",
           "capabilities"
         ],
@@ -12333,6 +12338,163 @@
           "submitted_before_signature",
           "submitted_before_rejection",
           null
+        ]
+      },
+      "ProfilingExceptionView": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "requested",
+                  "approved",
+                  "rejected",
+                  "revoked",
+                  "superseded"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "participant_prevented_documented",
+                  "agentur_scheduling_unavailable",
+                  "force_majeure",
+                  "ba_confirmed_other"
+                ]
+              },
+              "requestedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "decidedOn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "evidenceRecordId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "evidenceKind": {
+                "type": "string",
+                "enum": [
+                  "documents",
+                  "ba_confirmation",
+                  "legacy_unverified"
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "status",
+              "reason",
+              "requestedOn",
+              "decidedOn",
+              "evidenceRecordId",
+              "evidenceKind"
+            ]
+          },
+          "evidenceDocuments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "documentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "addedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "reviewState": {
+                  "type": "string",
+                  "enum": [
+                    "unreviewed",
+                    "accepted",
+                    "rejected"
+                  ]
+                },
+                "usable": {
+                  "type": "boolean"
+                },
+                "quarantined": {
+                  "type": "boolean"
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "delete": {
+                      "type": "boolean"
+                    },
+                    "quarantine": {
+                      "type": "boolean"
+                    },
+                    "liftQuarantine": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "delete",
+                    "quarantine",
+                    "liftQuarantine"
+                  ]
+                }
+              },
+              "required": [
+                "documentId",
+                "addedAt",
+                "reviewState",
+                "usable",
+                "quarantined",
+                "capabilities"
+              ]
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "addEvidence": {
+                "type": "boolean"
+              },
+              "request": {
+                "type": "boolean"
+              },
+              "revoke": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "addEvidence",
+              "request",
+              "revoke"
+            ]
+          }
+        },
+        "required": [
+          "current",
+          "evidenceDocuments",
+          "capabilities"
         ]
       },
       "ProfilingTransition": {
@@ -15228,6 +15390,247 @@
         "enum": [
           "tl407_not_submitted",
           "profiling_compliance"
+        ]
+      },
+      "ExceptionEvidenceCreated": {
+        "type": "object",
+        "properties": {
+          "evidenceRecordId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "evidenceRecordId"
+        ]
+      },
+      "ExceptionEvidenceInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "documents"
+                ]
+              },
+              "documentIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "required": [
+              "kind",
+              "documentIds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ba_confirmation"
+                ]
+              },
+              "agenturKey": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+              },
+              "reference": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "confirmedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "agenturKey",
+              "reference",
+              "confirmedOn"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ProfilingExceptionRequested": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "requestId"
+        ]
+      },
+      "ProfilingExceptionRequestInput": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "participant_prevented_documented",
+              "agentur_scheduling_unavailable",
+              "force_majeure",
+              "ba_confirmed_other"
+            ]
+          },
+          "evidenceRecordId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "reason",
+          "evidenceRecordId"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingExceptionDecisionInput": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          },
+          "evidenceRecordId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "decision",
+          "evidenceRecordId"
+        ],
+        "additionalProperties": false
+      },
+      "ProfilingExceptionRevocationInput": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "requested",
+              "approved"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewQueue": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "requestId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "projectName": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "participant_prevented_documented",
+                    "agentur_scheduling_unavailable",
+                    "force_majeure",
+                    "ba_confirmed_other"
+                  ]
+                },
+                "requestedOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "tgStart": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "evidenceRecordId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "evidenceKind": {
+                  "type": "string",
+                  "enum": [
+                    "documents",
+                    "ba_confirmation",
+                    "legacy_unverified"
+                  ]
+                },
+                "evidencePresent": {
+                  "type": "boolean"
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "decide": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "decide"
+                  ]
+                }
+              },
+              "required": [
+                "requestId",
+                "projectId",
+                "projectName",
+                "reason",
+                "requestedOn",
+                "tgStart",
+                "evidenceRecordId",
+                "evidenceKind",
+                "evidencePresent",
+                "capabilities"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       },
       "DevStaffUser": {
@@ -28953,6 +29356,456 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Escalations"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/exception-evidence": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "An evidence record for a profiling exception (the PL, while informed): accepted evidence documents of the participation, or a BA confirmation (Agentur, contact or reference, date; normalised). Immutable; its fingerprint stays in the database",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExceptionEvidenceInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recorded; the record's opaque id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExceptionEvidenceCreated"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/profiling-exception-requests": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Request a profiling exception (the PL, while informed and before the TG start): a reason code and the evidence record it rests on; a new request after a rejection or revocation needs changed evidence (evidence_unchanged)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingExceptionRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Requested; the request id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilingExceptionRequested"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiling-exception-requests/{requestId}/decision": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Approve or reject a pending profiling exception (the regional operations manager of the project's region, never the requester): names the evidence record shown in Freigaben (409 source_changed if the request rests on another); an approval needs that evidence still usable",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingExceptionDecisionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Decided"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/profiling-exception-requests/{requestId}/revocation": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Revoke the current profiling exception request or approval (the PL, before TG entry): names the status shown on the tab (409 source_changed if it was decided meanwhile). After entry the completion and compliance workflow applies instead",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "requestId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfilingExceptionRevocationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Revoked"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; no name, case data or evidence content",
+        "responses": {
+          "200": {
+            "description": "The pending requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueue"
                 }
               }
             }

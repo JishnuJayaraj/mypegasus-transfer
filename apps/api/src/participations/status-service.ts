@@ -29,7 +29,10 @@ import {
   requestProfilingException,
   revokeProfilingException,
   statusFieldOfTrack,
+  normaliseBaConfirmation,
   type AnyStatus,
+  type BaConfirmation,
+  type ExceptionEvidenceInput,
   type EndReason,
   type EntryWave,
   type GuardId,
@@ -131,14 +134,35 @@ const datedTransitions: ReadonlySet<string> = new Set([
   "profiling_done",
   "dsv_expired",
 ]);
-const notFound = new Set(["participation_not_found", "project_not_found", "request_not_found"]);
-const stale = new Set(["stale_status", "request_not_current"]);
+const notFound = new Set([
+  "participation_not_found",
+  "project_not_found",
+  "request_not_found",
+  // An evidence document the PL named that isn't one of this participation's (D30).
+  "document_not_found",
+]);
+const stale = new Set(["stale_status", "request_not_current", "source_changed"]);
+/** The evidence functions' state refusals (data-protection.md, exception evidence): a 422. */
+const domainCodes = new Set([
+  "not_informed",
+  "evidence_missing",
+  "evidence_unchanged",
+  "ba_confirmation_missing",
+  "confirmation_in_future",
+  "reference_invalid",
+]);
 
 /** A refusal of a status function (`P0001`, the code is the message) as a service error. */
 function fromDatabase(error: unknown): unknown {
   const code = functionRefusal(error);
   if (code === undefined) return error;
-  const kind = notFound.has(code) ? "not_found" : stale.has(code) ? "stale" : "integrity";
+  const kind = notFound.has(code)
+    ? "not_found"
+    : stale.has(code)
+      ? "stale"
+      : domainCodes.has(code)
+        ? "domain"
+        : "integrity";
   return new StatusServiceError(kind, code);
 }
 
@@ -688,8 +712,46 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
     },
 
     /**
-     * A new request names its evidence record; the facts provider resolves and validates it
-     * (none in Slice 1: `evidence_missing`). Returns the request id only, never the fingerprint.
+     * An evidence record (data-protection.md, exception evidence; D30): the PL, while the
+     * participation is `informed`, from accepted evidence documents or a BA confirmation (its
+     * reference normalised, its date not after today). The function fingerprints it and checks
+     * every document under the lock. Returns the record's opaque id, never the fingerprint.
+     */
+    createExceptionEvidence(
+      actor: ServiceActor,
+      input: { participationId: string } & ExceptionEvidenceInput,
+      correlation: Correlation = {},
+    ): Promise<{ evidenceRecordId: string }> {
+      return transaction(async (tx) => {
+        const loaded = await load(tx, input.participationId, actor);
+        permitOperation(actor, { kind: "requestProfilingException" }, loaded);
+        if (loaded.p.status !== "informed") return fail("domain", "not_informed");
+        let confirmation: BaConfirmation | null = null;
+        if (input.kind === "ba_confirmation") {
+          const normalised = normaliseBaConfirmation(input, loaded.context.today);
+          if (!normalised.ok) return fail("domain", normalised.code);
+          confirmation = normalised.value;
+        }
+        const documentIds = input.kind === "documents" ? `{${input.documentIds.join(",")}}` : null;
+        return {
+          evidenceRecordId: await call(
+            tx,
+            sql`create_exception_evidence_record(p_context => ${audit(actor, correlation)},
+              p_participation_id => ${input.participationId}::uuid,
+              p_kind => ${input.kind}::exception_evidence_kind,
+              p_document_ids => ${documentIds}::uuid[],
+              p_agentur_key => ${confirmation?.agenturKey ?? null}::text,
+              p_reference => ${confirmation?.reference ?? null}::text,
+              p_confirmed_on => ${confirmation?.confirmedOn ?? null}::date)`,
+          ),
+        };
+      });
+    },
+
+    /**
+     * A new request names its evidence record; the facts provider resolves and validates it, and
+     * the function reads it again under the lock (`evidence_missing`, `evidence_unchanged`).
+     * Returns the request id only, never the fingerprint.
      */
     requestProfilingException(
       actor: ServiceActor,
@@ -710,7 +772,7 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
           ...(resolved?.baConfirmation && { baConfirmation: resolved.baConfirmation }),
         });
         if (!result.ok) return fail("domain", result.code);
-        const { evidenceRecordId, evidenceFingerprint } = result.next;
+        const { evidenceRecordId } = result.next;
         return {
           requestId: await call(
             tx,
@@ -718,44 +780,75 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
               p_reason => ${input.reason}::profiling_exception_reason,
               p_requested_on => ${loaded.context.today}::date,
               p_evidence_record_id => ${evidenceRecordId}::uuid,
-              p_evidence_fingerprint => ${evidenceFingerprint}::text,
               p_context => ${audit(actor, correlation)})`,
           ),
         };
       });
     },
 
+    /**
+     * The regional operations manager's decision (Q80; D31: the project's exclusive lock first).
+     * `evidenceRecordId` is the record the approver saw in "Freigaben": a request resting on
+     * another is `source_changed`; an approval needs that evidence still usable.
+     */
     decideProfilingException(
       actor: ServiceActor,
-      input: { requestId: string; approve: boolean },
+      input: { requestId: string; approve: boolean; evidenceRecordId: string },
       correlation: Correlation = {},
     ): Promise<{ auditEventId: string }> {
       return transaction(async (tx) => {
+        const owner = await selectFirst(
+          tx
+            .select({ projectId: profilingExceptionRequest.projectId })
+            .from(profilingExceptionRequest)
+            .where(eq(profilingExceptionRequest.id, input.requestId)),
+        );
+        if (!owner) return fail("not_found", "request_not_found");
+        await tx.execute(sql`select lock_project_setup(${owner.projectId}::uuid)`);
         const loaded = await loadRequest(tx, input.requestId, actor);
         const { requestedBy } = loaded.exception;
         permitOperation(actor, { kind: "decideProfilingException", requestedBy }, loaded);
+        if (loaded.exception.evidenceRecordId !== input.evidenceRecordId) {
+          return fail("stale", "source_changed");
+        }
+        const { rows } = await tx.execute<{ usable: boolean }>(
+          sql`select exception_evidence_usable(${input.evidenceRecordId}::uuid) as usable`,
+        );
         const decision = input.approve ? "approve" : "reject";
-        const result = decideProfilingException(loaded.context, loaded.exception, decision);
+        const result = decideProfilingException(
+          loaded.context,
+          loaded.exception,
+          decision,
+          rows[0]!.usable,
+        );
         if (!result.ok) return fail("domain", result.code);
         return {
           auditEventId: await call(
             tx,
             sql`decide_profiling_exception(p_request_id => ${input.requestId}::uuid,
               p_approve => ${input.approve}::boolean, p_decided_on => ${loaded.context.today}::date,
+              p_evidence_record_id => ${input.evidenceRecordId}::uuid,
               p_context => ${audit(actor, correlation)})`,
           ),
         };
       });
     },
 
+    /**
+     * The PL withdraws the current request or approval before entry. `status` is the one the PL
+     * saw on the tab: a request decided meanwhile is `source_changed`, never revoked unseen.
+     */
     revokeProfilingException(
       actor: ServiceActor,
-      input: { requestId: string },
+      input: { requestId: string; status?: "requested" | "approved" },
       correlation: Correlation = {},
     ): Promise<{ auditEventId: string }> {
       return transaction(async (tx) => {
         const loaded = await loadRequest(tx, input.requestId, actor);
         permitOperation(actor, { kind: "revokeProfilingException" }, loaded);
+        if (input.status !== undefined && loaded.exception.status !== input.status) {
+          return fail("stale", "source_changed");
+        }
         const result = revokeProfilingException(loaded.context, loaded.exception);
         if (!result.ok) return fail("domain", result.code);
         return {

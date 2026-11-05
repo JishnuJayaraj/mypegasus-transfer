@@ -1698,7 +1698,8 @@
       "agentur_submission_original_sent": "Original an die Agentur versandt",
       "agentur_submission_rejected": "Von der Agentur abgelehnt",
       "agentur_submission_original_retained": "Original liegt der Agentur weiter vor",
-      "ba_report_recorded": "BA-Meldung erledigt"
+      "ba_report_recorded": "BA-Meldung erledigt",
+      "exception_evidence_recorded": "Nachweis zur Ausnahme erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -2575,6 +2576,114 @@
       "retainedTitle": "Original liegt der Agentur vor",
       "retainedConfirm": "Bestätigen",
       "retainedText": "Die Agentur {{agentur}} hat das am {{date}} versandte Original dieses Bogens noch vorliegen. Nur bestätigen, wenn die Agentur das bestätigt hat; sonst das Original erneut versenden."
+    },
+    "exception": {
+      "title": "Ausnahme vom Profiling",
+      "intro": "Nur wenn das Profiling vor dem Beginn in der Transfergesellschaft nachweislich nicht möglich ist. Die Ausnahme braucht einen Nachweis: Unterlagen, die die zugeordnete Beratung geprüft und angenommen hat, oder die Bestätigung der Agentur. Die Freigabe erteilt die Regionale Betriebsleitung.",
+      "none": "Keine Ausnahme beantragt.",
+      "status": "Status",
+      "reason": "Grund",
+      "requestedOn": "Beantragt am",
+      "decidedOn": "Entschieden am",
+      "evidence": "Nachweis",
+      "statuses": {
+        "requested": "Beantragt",
+        "approved": "Genehmigt",
+        "rejected": "Abgelehnt",
+        "revoked": "Widerrufen",
+        "superseded": "Gegenstandslos"
+      },
+      "kinds": {
+        "documents": "Geprüfte Unterlagen",
+        "ba_confirmation": "Bestätigung der Agentur",
+        "legacy_unverified": "Nachweis aus der Zeit vor der Prüfung (zählt nicht)"
+      },
+      "documents": "Hochgeladene Nachweise",
+      "document": "Hochgeladen am {{at}}: {{state}}",
+      "documentStates": {
+        "usable": "geprüft und angenommen",
+        "unreviewed": "noch nicht geprüft",
+        "accepted": "nicht mehr verwendbar",
+        "rejected": "abgelehnt",
+        "quarantined": "unter Quarantäne"
+      },
+      "reviewHint": "Die zugeordnete Beratung prüft die Nachweise im Tab „Unterlagen“. Die Projektleitung kann sie nicht öffnen.",
+      "upload": "Nachweis hochladen",
+      "request": "Ausnahme beantragen",
+      "revoke": "Widerrufen",
+      "dialog": {
+        "title": "Ausnahme vom Profiling beantragen",
+        "reason": "Grund",
+        "chooseReason": "Grund wählen",
+        "evidence": "Nachweis",
+        "documents": "Geprüfte Unterlagen ({{count}} angenommen)",
+        "noDocuments": "Noch keine geprüften Unterlagen: Nachweis hochladen und von der zugeordneten Beratung prüfen lassen, oder die Bestätigung der Agentur erfassen.",
+        "chooseDocuments": "Welche Unterlagen belegen die Ausnahme?",
+        "document": "Nachweis vom {{at}}",
+        "baConfirmation": "Bestätigung der Agentur",
+        "agentur": "Agentur",
+        "chooseAgentur": "Agentur wählen",
+        "reference": "Ansprechperson oder Aktenzeichen",
+        "referenceHelp": "Wer bei der Agentur bestätigt hat, oder das Zeichen der Bestätigung. Keine Gesundheitsangaben.",
+        "confirmedOn": "Bestätigt am (TT.MM.JJJJ)",
+        "invalidDate": "Bitte ein gültiges Datum eingeben (TT.MM.JJJJ).",
+        "final": "Der Nachweis wird unveränderlich gespeichert. Die Regionale Betriebsleitung entscheidet über den Antrag.",
+        "confirm": "Beantragen",
+        "cancel": "Abbrechen"
+      },
+      "revokeDialog": {
+        "title": "Ausnahme widerrufen",
+        "text": "Die Ausnahme ({{status}}, beantragt am {{date}}) wird widerrufen. Ein neuer Antrag braucht einen geänderten Nachweis.",
+        "confirm": "Ausnahme widerrufen"
+      },
+      "messages": {
+        "uploaded": "Nachweis hochgeladen. Die zugeordnete Beratung prüft ihn.",
+        "requested": "Ausnahme beantragt.",
+        "revoked": "Ausnahme widerrufen.",
+        "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+        "forbidden": "Sie dürfen das nicht.",
+        "notFound": "Nicht gefunden. Bitte die Seite neu laden.",
+        "codes": {
+          "evidence_missing": "Der Nachweis zählt nicht (mehr): Unterlagen müssen geprüft und angenommen sein.",
+          "evidence_unchanged": "Derselbe Nachweis wie beim letzten Antrag. Ein neuer Antrag braucht einen geänderten Nachweis.",
+          "ba_confirmation_missing": "Für „Von der Agentur anders bestätigt“ ist die Bestätigung der Agentur nötig.",
+          "confirmation_in_future": "Das Bestätigungsdatum liegt in der Zukunft.",
+          "reference_invalid": "Bitte die Ansprechperson oder das Aktenzeichen angeben (höchstens 100 Zeichen, eine Zeile).",
+          "exception_open": "Es gibt schon einen offenen Antrag.",
+          "not_informed": "Eine Ausnahme ist nur vor dem Beginn in der Transfergesellschaft möglich.",
+          "no_future_start": "Der Beginn in der Transfergesellschaft liegt nicht in der Zukunft.",
+          "profiling_closed": "Das Profiling ist schon abgeschlossen.",
+          "not_revocable": "Dieser Antrag kann nicht mehr widerrufen werden.",
+          "no_longer_applicable": "Dieser Antrag ist gegenstandslos.",
+          "source_changed": "Der Antrag hat sich inzwischen geändert. Bitte die Seite neu laden.",
+          "request_not_current": "Das ist nicht mehr der aktuelle Antrag. Bitte die Seite neu laden.",
+          "agentur_unknown": "Diese Agentur ist für die Teilnahme nicht hinterlegt."
+        },
+        "quarantined": "Nachweis unter Quarantäne gestellt.",
+        "lifted": "Quarantäne aufgehoben.",
+        "deleted": "Nachweis gelöscht."
+      },
+      "quarantine": "Unter Quarantäne stellen",
+      "lift": "Quarantäne aufheben",
+      "delete": "Löschen",
+      "quarantineDialog": {
+        "title": "Nachweis unter Quarantäne stellen",
+        "confirm": "Unter Quarantäne stellen",
+        "text": "Der Nachweis zählt sofort nicht mehr; eine darauf gestützte Ausnahme gilt erst wieder, wenn die Quarantäne aufgehoben ist."
+      },
+      "deleteDialog": {
+        "title": "Nachweis löschen",
+        "confirm": "Nachweis löschen",
+        "text": "Nur vor der Prüfung möglich. Die Datei wird gelöscht; dass es sie gab, bleibt im Verlauf."
+      },
+      "quarantineReasons": {
+        "suspected_wrong_person": "Vermutlich Unterlage einer anderen Person",
+        "suspected_wrong_acceptance": "Vermutlich zu Unrecht angenommen"
+      },
+      "deleteReasons": {
+        "wrong_person": "Unterlage einer anderen Person",
+        "wrong_file": "Falsche Datei"
+      }
     }
   },
   "asu": {
@@ -2965,5 +3074,54 @@
     "oldest_one": "älteste seit {{count}} Tag",
     "oldest_other": "älteste seit {{count}} Tagen",
     "oldestToday": "älteste seit heute"
+  },
+  "reviews": {
+    "title": "Freigaben",
+    "loading": "Die Freigaben werden geladen …",
+    "failed": "Die Freigaben konnten nicht geladen werden.",
+    "forbidden": "Die Freigaben sind der Regionalen Betriebsleitung vorbehalten.",
+    "intro": "Beantragte Ausnahmen vom Profiling in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Daten und ob der Nachweis vorliegt – keine Namen und keine Nachweise selbst. Eigene Anträge entscheidet eine andere Person.",
+    "listTitle": "Beantragte Ausnahmen",
+    "empty": "Keine offenen Anträge.",
+    "columns": {
+      "project": "Projekt",
+      "reason": "Grund",
+      "requestedOn": "Beantragt am",
+      "tgStart": "Beginn TG",
+      "evidence": "Nachweis",
+      "actions": "Aktionen"
+    },
+    "evidencePresent": "Nachweis vorhanden ({{kind}})",
+    "evidenceMissing": "Nachweis zählt nicht mehr ({{kind}})",
+    "item": "{{project}}, {{reason}}, beantragt am {{date}}",
+    "approve": "Genehmigen",
+    "reject": "Ablehnen",
+    "ownRequest": "Eigener Antrag",
+    "dialog": {
+      "approveTitle": "Ausnahme genehmigen",
+      "rejectTitle": "Ausnahme ablehnen",
+      "approveConfirm": "Genehmigen",
+      "rejectConfirm": "Ablehnen",
+      "cancel": "Abbrechen",
+      "evidence": "Nachweis: {{kind}}, geprüft und vorhanden.",
+      "final": "Die Entscheidung wird gespeichert und kann nicht geändert werden."
+    },
+    "messages": {
+      "approved": "Ausnahme genehmigt.",
+      "rejected": "Ausnahme abgelehnt.",
+      "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+      "forbidden": "Sie dürfen diesen Antrag nicht entscheiden.",
+      "notFound": "Den Antrag gibt es nicht mehr. Die Liste wurde neu geladen.",
+      "codes": {
+        "source_changed": "Der Antrag stützt sich inzwischen auf einen anderen Nachweis. Die Liste wurde neu geladen.",
+        "evidence_missing": "Der Nachweis zählt nicht mehr. Genehmigen ist nicht möglich.",
+        "not_requested": "Der Antrag ist schon entschieden.",
+        "request_not_current": "Das ist nicht mehr der aktuelle Antrag. Die Liste wurde neu geladen.",
+        "not_informed": "Die Teilnahme ist nicht mehr vor dem Beginn in der Transfergesellschaft.",
+        "profiling_closed": "Das Profiling ist schon abgeschlossen.",
+        "no_future_start": "Der Beginn in der Transfergesellschaft liegt nicht mehr in der Zukunft.",
+        "four_eyes": "Eigene Anträge entscheidet eine andere Person."
+      }
+    }
   }
 }

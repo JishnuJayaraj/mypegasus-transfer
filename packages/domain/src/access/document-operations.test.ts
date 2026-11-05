@@ -26,7 +26,7 @@ kug200b_signed_scan          actor actor yes  unass yes  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
 asu_proof                    actor actor yes  unass yes  role role role role
-profiling_exception_evidence actor actor und  unass und  role role role role
+profiling_exception_evidence actor actor yes  unass yes  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
 qualification_certificate    yes   yes   yes  unass yes  role role role role
@@ -39,7 +39,7 @@ kug200b_signed_scan          actor actor yes  unass yes  role role role role
 dsv_signed_scan              actor actor role role  und  und  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
 asu_proof                    actor actor yes  unass role role role role role
-profiling_exception_evidence actor actor und  unass und  role role role role
+profiling_exception_evidence actor actor yes  unass role role role role role
 cv                           actor actor yes  unass yes  role role role role
 participant_upload           actor actor yes  unass yes  role role role role
 qualification_certificate    actor actor yes  unass yes  role role role role
@@ -52,7 +52,7 @@ kug200b_signed_scan          actor actor role role  yes  role role role role
 dsv_signed_scan              imm   imm   imm  imm   imm  imm  imm  imm  imm
 dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
 asu_proof                    actor actor role role  yes  role role role role
-profiling_exception_evidence actor actor und  unass und  role role role role
+profiling_exception_evidence actor actor role role  yes  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
 qualification_certificate    yes   yes   yes  unass yes  role role role role

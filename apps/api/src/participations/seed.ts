@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { ManualClock, scheduledAt } from "@transfer/adapters";
 import {
   eq,
@@ -11,7 +10,7 @@ import {
   type Database,
 } from "@transfer/db";
 import type { DatedFact, GuardFacts, IsoDate } from "@transfer/domain";
-import { dbGuardFacts, type GuardFactsProvider, type RequestEvidence } from "./guard-facts";
+import { dbGuardFacts, type GuardFactsProvider } from "./guard-facts";
 import { createStatusService, type ServiceActor, type StatusService } from "./status-service";
 import { staffSubject } from "./subjects";
 
@@ -90,18 +89,6 @@ const lateAsu: DatedFact = {
 };
 const profiled = { tl407Signed: recorded("2091-02-01"), profilingDone: recorded("2091-02-01") };
 
-/** Synthetic evidence: one record per participation, fingerprinted as Slice 4b will (round 17). */
-function evidenceFor(participationId: string): RequestEvidence {
-  const canonical = `profiling-exception-evidence:v1\n${participationId}\nseed-evidence-digest`;
-  return {
-    evidence: {
-      ...before,
-      recordId: participationId.replace("-a000-", "-8000-"),
-      fingerprint: `sha256:v1:${createHash("sha256").update(canonical).digest("hex")}`,
-    },
-  };
-}
-
 export const seedFacts: Readonly<Record<string, GuardFacts>> = {
   [p.offeredExceptionRequested]: dsvDocuments,
   [p.signedExceptionRejected]: dsvDocuments,
@@ -116,13 +103,13 @@ export const seedFacts: Readonly<Record<string, GuardFacts>> = {
   [p.taOnlyCompleted]: { taMeasuresComplete: before },
 };
 
-/** The production provider plus the seed's synthetic facts and evidence. */
+/** The production provider plus the seed's synthetic facts; evidence records are real ones. */
 const seedFactsProvider: GuardFactsProvider = {
   facts: async (tx, input) => ({
     ...(await dbGuardFacts.facts(tx, input)),
     ...seedFacts[input.participationId],
   }),
-  evidence: async (_tx, { participationId }) => evidenceFor(participationId),
+  evidence: dbGuardFacts.evidence,
 };
 
 type Step = {
@@ -187,13 +174,26 @@ function exception(participationId: string, decision?: boolean, revoke = false):
   return {
     on: D1,
     run: async (s) => {
+      // A synthetic BA confirmation (data-protection.md, exception evidence). Its date is a past
+      // one in database time, which the function checks; the seed's clock runs in 2091.
+      const { evidenceRecordId } = await s.createExceptionEvidence(pl, {
+        participationId,
+        kind: "ba_confirmation",
+        agenturKey: "beispielstadt-nord",
+        reference: `Seed ${participationId.slice(-4)}`,
+        confirmedOn: "2026-01-15",
+      });
       const { requestId } = await s.requestProfilingException(pl, {
         participationId,
         reason: "agentur_scheduling_unavailable",
-        evidenceRecordId: evidenceFor(participationId).evidence.recordId,
+        evidenceRecordId,
       });
       if (decision !== undefined) {
-        await s.decideProfilingException(manager, { requestId, approve: decision });
+        await s.decideProfilingException(manager, {
+          requestId,
+          approve: decision,
+          evidenceRecordId,
+        });
       }
       if (revoke) await s.revokeProfilingException(pl, { requestId });
     },

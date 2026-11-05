@@ -107,3 +107,24 @@ export async function createWave(
   );
   return rows[0].id;
 }
+
+/**
+ * A BA confirmation evidence record of the participation (data-protection.md, exception
+ * evidence), recorded by the PL; its id. Different references give different fingerprints.
+ */
+export function baEvidence(
+  client: Pick<Client, "query">,
+  participationId: string,
+  reference = "az-1",
+  context = pl,
+): Promise<string> {
+  return call(client, "create_exception_evidence_record", {
+    context,
+    participationId,
+    kind: "ba_confirmation",
+    documentIds: null,
+    agenturKey: "beispielstadt-nord",
+    reference,
+    confirmedOn: "2026-01-15",
+  });
+}

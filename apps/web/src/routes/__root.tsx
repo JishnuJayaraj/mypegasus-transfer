@@ -57,6 +57,10 @@ function RootLayout() {
                   grant.role === "regional_admin" ||
                   (grant.role === "admin" && grant.regionId === null),
               ) && <NavLink to="/admin/escalations">{t("escalations.title")}</NavLink>}
+              {/* The queue "Freigaben" (Q80): the regional operations managers. */}
+              {user.orgRoles.some((grant) => grant.role === "regional_operations_manager") && (
+                <NavLink to="/reviews">{t("reviews.title")}</NavLink>
+              )}
             </>
           )
         }

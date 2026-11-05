@@ -1119,6 +1119,52 @@ the readings.
   (`audit_event_lifecycle_has_participation`) in the `dsv` stream; `record_audit_event` refuses
   it. A closed participation's task is closed too (an early exit's is created at the exit).
 
+## Amendment 2026-11-05: profiling exception evidence (Slice 6, PR 6-7)
+
+Migrations `0085_exception_evidence.sql` (generated) and `0086_exception_evidence_functions.sql`
+(hand-written, the 0084 hardening); process-and-lifecycle.md (profiling exceptions) and
+data-protection.md (exception evidence) hold the rules, Q208 the readings.
+
+- **Upgrade of an existing database** (the review of PR #102): 0085 creates the table; 0086 first
+  gives every request recorded before it a `legacy_unverified` record (its id, participation and
+  fingerprint, the requester and request date; no source), stops with `legacy_evidence_conflict`
+  if one id is named by requests of two participations (the transaction leaves the database
+  unchanged), and only then adds the request's FK. `exception_evidence_usable` is false for a
+  legacy record, so it supports no request, approval or fact. Tested from a database at 0084
+  (`exception-evidence-migration.int.test.ts`).
+- **Table:** `profiling_exception_evidence_record` (`exception_evidence_kind`: `documents`,
+  `ba_confirmation` or `legacy_unverified`; `document_ids uuid[]` or `agentur_key`, `reference`, `confirmed_on`; the
+  `fingerprint`; `created_by`, `created_on`, `created_at`), composite FK to the participation, a
+  CHECK for one complete source, the fingerprint's format; immutable by trigger for every role
+  (`record_immutable`); `transfer_app` selects it. `profiling_exception_request` gains the
+  composite FK `(evidence_record_id, participation_id)` to it.
+- **Document catalog version 7:** `profiling_exception_evidence` becomes `signed`; add and
+  quarantine `{consultant, project_lead}`, review `{consultant}`, delete `{project_lead}`; its
+  `open_roles` stay `{consultant}`. `review_document` needs no change for it (no scan origin, no
+  paper arguments).
+- **Helpers:** `normalise_ba_reference` (NFC, spaces, trim, ICU `lower`, NFC; null for a control
+  character or nothing), `exception_evidence_fingerprint` (round 17's payload), both internal;
+  `exception_evidence_usable(record)` (SECURITY DEFINER, for transfer_app: a BA confirmation, or
+  documents all live, accepted, not quarantined or invalidated).
+- **Functions:** `create_exception_evidence_record(p_context, p_participation_id, p_kind,
+  p_document_ids, p_agentur_key, p_reference, p_confirmed_on)`: the PL as themselves, `informed`
+  (`not_informed`), `document_not_found`, `evidence_missing`, `reference_invalid`,
+  `confirmation_in_future`, `invalid_argument`; `lock_participation`, then the documents `FOR
+  SHARE` in id order; audited `exception_evidence_recorded` (a participation event,
+  `profiling` stream; `record_audit_event` refuses it). `request_profiling_exception` loses
+  `p_evidence_fingerprint` (DROP with the old signature, CREATE, the grants again): it reads the
+  record of this participation under the lock, its documents `FOR SHARE`, and refuses
+  `evidence_missing`, `evidence_unchanged` and `ba_confirmation_missing`.
+  `decide_profiling_exception` gains `p_evidence_record_id` (DROP, CREATE, the grants): the
+  project's exclusive advisory lock first (D31), then `lock_current_request`; `source_changed`
+  for another record, `evidence_missing` for an approval on unusable evidence.
+- **Status service:** `createExceptionEvidence`; the decision takes `lock_project_setup` before it
+  loads the request and compares the record shown; the revocation compares the status shown. The
+  evidence functions' state refusals map to `domain`, `document_not_found` to `not_found`,
+  `source_changed` to `stale`. `dbGuardFacts.evidence` reads the record; `dbGuardFacts` withholds
+  `profilingExceptionApproved` while the approved request's evidence doesn't count and dates it
+  from a later quarantine lift.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

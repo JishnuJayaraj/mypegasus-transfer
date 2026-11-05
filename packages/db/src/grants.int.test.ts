@@ -246,6 +246,8 @@ const statusFunctions = [
   "record_agentur_rejection",
   "profiling_declined_dates",
   "record_ba_report",
+  "create_exception_evidence_record",
+  "exception_evidence_usable",
 ];
 const helpers = [
   "assert_context",
@@ -266,6 +268,9 @@ const helpers = [
   "append_template_pin",
   "scoped_setting_keys",
   "ba_reporting_task_progresses",
+  "exception_evidence_fingerprint",
+  "normalise_ba_reference",
+  "profiling_exception_evidence_record_immutable",
   "create_early_exit_task",
   "assert_global_admin",
   "is_project_lead",
@@ -582,6 +587,26 @@ describe("transfer_app and the amendments and BA reporting tasks", () => {
       `insert into ba_reporting_task (participation_id, project_id, reporting_kind, subject_date) values (gen_random_uuid(), '${seedProjectIds.werkNord}', 'early_exit', '2027-01-01')`,
     ),
   ])("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// data-protection.md, exception evidence (PR 6-7): the records are read by the app and written only
+// by create_exception_evidence_record.
+describe("transfer_app and the exception evidence records", () => {
+  it("may select them", async () => {
+    expect(
+      (await app.query("select id, kind, reference from profiling_exception_evidence_record")).rows,
+    ).toEqual([]);
+  });
+
+  it.each(
+    writes(
+      "profiling_exception_evidence_record",
+      "id",
+      `insert into profiling_exception_evidence_record (project_id, participation_id, kind, agentur_key, reference, confirmed_on, fingerprint, created_by, created_on) values ('${seedProjectIds.werkNord}', gen_random_uuid(), 'ba_confirmation', 'nord', 'x', '2027-01-01', 'sha256:v1:${"0".repeat(64)}', '${staffUserId}', '2027-01-01')`,
+    ),
+  )("may not %s (42501)", async (_label, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
   });
 });
@@ -971,9 +996,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 to 6 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 7 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 50 },
+      { n: 61 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });
