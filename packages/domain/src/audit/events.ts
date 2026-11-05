@@ -16,6 +16,7 @@ import {
   OverrideChange,
 } from "../projects/agentur-settings";
 import { BaReportingKind } from "../projects/participation-dates";
+import { BaReportNotRequiredReason } from "../projects/ba-reporting";
 import { RelaxationReasonCode, RuleId } from "../projects/relaxations";
 import { SettingKey } from "../projects/migration";
 import { waveDateFields } from "../projects/waves";
@@ -223,6 +224,7 @@ export const AuditEventType = z.enum([
   "agentur_submission_original_sent",
   "agentur_submission_rejected",
   "agentur_submission_original_retained",
+  "ba_report_recorded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -339,6 +341,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "agentur_submission_original_sent",
   "agentur_submission_rejected",
   "agentur_submission_original_retained",
+  "ba_report_recorded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1456,6 +1459,28 @@ export const AuditEvent = z.discriminatedUnion("type", [
       rejectedOn: isoDate,
       reason: AgenturRejectionReason,
     }),
+  }),
+  /**
+   * A BA reporting task closed (process-and-lifecycle.md, BA reporting; D28): what it reports and
+   * its outcome, with the sent date or the reason.
+   */
+  event("ba_report_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.union([
+      z.strictObject({
+        taskId: z.uuid(),
+        kind: BaReportingKind,
+        outcome: z.literal("reported"),
+        reportedOn: isoDate,
+      }),
+      z.strictObject({
+        taskId: z.uuid(),
+        kind: BaReportingKind,
+        outcome: z.literal("not_required"),
+        reason: BaReportNotRequiredReason,
+      }),
+    ]),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

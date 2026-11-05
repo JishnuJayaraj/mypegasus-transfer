@@ -82,6 +82,17 @@ export const mayListField = (
   field: (typeof listedFields)[number],
 ) => allowed(subject, projectId, participationId, field, "list");
 
+/**
+ * Whether the viewer reads a participation's BA reporting tasks (data-protection.md, BA reporting
+ * tasks: like other confidential case data): the overview's "BA-Meldungen", the work list's
+ * `ba_report_pending` and the outcome's visibility (404 otherwise).
+ */
+export const mayReadBaReportingTasks = (
+  subject: Subject,
+  projectId: string,
+  participationId: string,
+) => allowed(subject, projectId, participationId, "baReportingTask", "read");
+
 /** One participation as the API loads it, before projection. */
 export type ParticipationRecord = {
   amendments: DsvAmendmentView[];

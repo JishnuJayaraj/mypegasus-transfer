@@ -12899,6 +12899,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ba-reporting-tasks/{taskId}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Gemeldet am" or "Nicht erforderlich" (the PL or back office): closes a pending BA reporting task once, with the actual sent date (from the task's day to today) or a closed reason; never edited afterwards */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    taskId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BaReportInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/escalations": {
         parameters: {
             query?: never;
@@ -14061,6 +14155,16 @@ export interface components {
              * @example 2027-03-01
              */
             reportedOn: string | null;
+            /** @enum {string|null} */
+            notRequiredReason: "agentur_confirmed_not_required" | "no_claim_month_affected" | "created_in_error" | null;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            decidedAt: string | null;
+            capabilities: {
+                recordOutcome: boolean;
+            };
         };
         ManualParticipationInput: {
             values: {
@@ -14169,7 +14273,7 @@ export interface components {
             portal?: components["schemas"]["PortalReach"];
             appointment?: components["schemas"]["AppointmentFilter"];
             /** @enum {string} */
-            agentur?: "open" | "tl407_escalated" | "tl407_resubmission_open" | "tl407_original_missing" | "kug200b_confirmation_missing";
+            agentur?: "open" | "tl407_escalated" | "tl407_resubmission_open" | "tl407_original_missing" | "kug200b_confirmation_missing" | "ba_report_pending";
         };
         /** @enum {string} */
         DeadlineKind: "offer_deadline" | "tg_start" | "asu_due" | "tl407_submission" | "latest_entry_cutoff" | "privacy_notice" | "profiling_exception";
@@ -14266,7 +14370,7 @@ export interface components {
             date: string;
         };
         /** @enum {string} */
-        AgenturItemKind: "tl407_escalated" | "tl407_resubmission_open" | "tl407_original_missing" | "kug200b_confirmation_missing";
+        AgenturItemKind: "tl407_escalated" | "tl407_resubmission_open" | "tl407_original_missing" | "kug200b_confirmation_missing" | "ba_report_pending";
         WorklistReminder: {
             /**
              * Format: date
@@ -14766,7 +14870,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -17040,6 +17144,21 @@ export interface components {
              */
             rejectedOn: string;
             reason: components["schemas"]["AgenturRejectionReason"];
+        };
+        BaReportInput: {
+            /** @enum {string} */
+            outcome: "reported";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            reportedOn: string;
+        } | {
+            /** @enum {string} */
+            outcome: "not_required";
+            /** @enum {string} */
+            reason: "agentur_confirmed_not_required" | "no_claim_month_affected" | "created_in_error";
         };
         Escalations: {
             /**

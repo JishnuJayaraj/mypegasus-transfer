@@ -886,6 +886,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `agentur_submission_original_sent` | `profiling` | no | no | `originalSentOn` |
 | `agentur_submission_rejected` | `profiling` | no | no | `rejectedOn`, `reason` |
 | `agentur_submission_original_retained` | `profiling` | no | no | `originalSentOn` |
+| `ba_report_recorded` | `dsv` | no | no | `kind`, `outcome`, `reportedOn`, `reason` |
 
 ## Aggregates
 

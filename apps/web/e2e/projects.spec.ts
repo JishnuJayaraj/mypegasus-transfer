@@ -182,7 +182,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByText("Vertragsdaten geändert", { exact: true })).toBeVisible();
-  const reports = page.getByRole("region", { name: "Meldungen an die Agentur" });
+  const reports = page.getByRole("region", { name: "BA-Meldungen" });
   await expect(reports.getByRole("cell", { name: "Geplantes Ende geändert" })).toBeVisible();
   await expect(reports.getByRole("cell", { name: "Ausstehend" })).toBeVisible();
   await expect(page.getByText("31.01.2092 (individuell)")).toBeVisible();

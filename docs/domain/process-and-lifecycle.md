@@ -878,14 +878,29 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
 - **BA reporting** (Q102, Q111): every contractual date change creates a durable reporting task
   (`later_entry`, `planned_end_changed`, or `early_exit` for an exit before the contractual end),
   `pending` until reported through the Agentur's channel (Kug 208 for later entries and early
-  exits; a changed planned residence before any newly affected month is claimed). Project closure
-  and the affected monthly claim are blocked while a required report is pending.
+  exits; a changed planned residence before any newly affected month is claimed). The report is
+  due before the affected monthly claim and before project closure, but neither exists in the MVP,
+  so the app enforces no due date (Q207).
   `set_participation_dates` creates one task per changed effective date (`later_entry` with the
   new start, `planned_end_changed` with the new end; a change of both is one `new_start`
   amendment with two tasks) in the change's own transaction, and a database trigger creates `early_exit` with the exit date
   when a participation exits before its effective `tgEnd` or without one (`exitDate` is the last
-  day of employment, Q111 f). Every task starts `pending`; recording `reported` or
-  `not_required` comes with the Agentur-submission slice, and a task is never deleted.
+  day of employment, Q111 f). Every task starts `pending`, and a task is never deleted.
+  - **Closing a task** (D28, PR 6-6, Q207): on the overview's "BA-Meldungen" the PL or back office
+    (never a consultant) records once either "Gemeldet am", the actual date the report was sent
+    (not in the future, not before the Berlin day the task was created), or "Nicht erforderlich"
+    with a closed reason: `agentur_confirmed_not_required`, `no_claim_month_affected` or
+    `created_in_error` (a task that should never have existed). "Gemeldet am" records staff's
+    confirmation that the report was sent, never its delivery or the Agentur's acceptance; no
+    channel or reference is recorded yet. Each is confirmed in a dialog that names the task, with no default date
+    or reason. Who and when are kept, audited `ba_report_recorded` in the `dsv` stream. A closed
+    participation's task is closed the same way. The outcome is never edited: a wrong one is
+    superseded by an approved correction (data-protection.md, evidence corrections; Slice 6's
+    corrections PR), which invalidates any older open confirmation: a reopened task is closed
+    only against its current revision, or the correction creates a linked replacement task.
+  - **The work list** shows a pending task as the Agentur item `ba_report_pending` ("BA-Meldung
+    offen", from the oldest pending task's day; also for a closed participation) to whoever reads
+    the tasks. It has no due date and doesn't escalate.
 
 ## Phase 1 detail
 

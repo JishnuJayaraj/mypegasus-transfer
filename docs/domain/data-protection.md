@@ -58,7 +58,11 @@
     document: highly confidential, encrypted when uploaded, immutable, separately access-controlled.
   - **BA reporting tasks** (`baReportingTask`, PR 2h-3): **confidential**, not listable, never in
     customer exports, retention class `participation_record`; read like other confidential case
-    data (assigned consultant, PL, back office; `packages/domain/src/fields/catalog.ts`).
+    data (assigned consultant, PL, back office; `packages/domain/src/fields/catalog.ts`). PR 6-6
+    adds the outcome's facts to the same row and class: the not-required reason (a code, never
+    free text), who closed the task and when; only the PL or back office closes one. The work
+    list shows only that a task is pending and since when (`ba_report_pending`), never its kind
+    or date, to whoever reads the tasks.
   - **Entry-wave code and name** are text the PL types: they stay on the wave row and never enter
     audit details; a wave change records only the changed key names (and a changed date's old and
     new value).

@@ -41,6 +41,7 @@ import { MessagesTab } from "../../components/reminders";
 import { AppointmentsTab } from "../../components/participation-appointments";
 import { ProfilingTab } from "../../components/profiling-tab";
 import { AsuTab } from "../../components/asu-tab";
+import { BaReportingTasks } from "../../components/ba-reporting-tasks";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
@@ -686,7 +687,7 @@ function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string
       <EntryWaveChoice detail={detail} projectId={projectId} />
       <ParticipationDatesForm detail={detail} />
       <Amendments detail={detail} />
-      <ReportingTasks detail={detail} />
+      <BaReportingTasks detail={detail} />
     </>
   );
 }
@@ -732,33 +733,6 @@ function Amendments({ detail }: { detail: Detail }) {
         }))}
         rows={rows}
         emptyState={t("participant.amendments.empty")}
-      />
-    </section>
-  );
-}
-
-/**
- * The BA reporting tasks (process-and-lifecycle.md, "BA reporting"): pending until the
- * Agentur-submission slice records them.
- */
-function ReportingTasks({ detail }: { detail: Detail }) {
-  const { t } = useTranslation();
-  if (detail.baReportingTasks === undefined) return null;
-  const rows = detail.baReportingTasks.map((task) => ({
-    id: task.id,
-    reportingKind: t(`participant.tasks.kinds.${task.reportingKind}`),
-    subjectDate: formatDate(task.subjectDate),
-    createdAt: formatTimestamp(task.createdAt),
-    status: t(`participant.tasks.statuses.${task.status}`),
-  }));
-  const columns = ["reportingKind", "subjectDate", "createdAt", "status"] as const;
-  return (
-    <section className="tp-section" aria-label={t("participant.tasks.title")}>
-      <SimpleTable
-        title={t("participant.tasks.title")}
-        columns={columns.map((key) => ({ key, header: t(`participant.tasks.columns.${key}`) }))}
-        rows={rows}
-        emptyState={t("participant.tasks.empty")}
       />
     </section>
   );

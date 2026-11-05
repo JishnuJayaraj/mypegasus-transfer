@@ -29,7 +29,12 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   asuDueDate: null,
   kug200b: { channel: null, offeredOn: null, signed: false, declinedOn: null, withdrawals: [] },
   appointments: { bookings: [], notices: [], closedAt: null },
-  agentur: { attempts: [], leadTimeDays: null, kug200bRegistration: null },
+  agentur: {
+    attempts: [],
+    leadTimeDays: null,
+    kug200bRegistration: null,
+    baReportPendingSince: null,
+  },
   ...overrides,
 });
 const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({

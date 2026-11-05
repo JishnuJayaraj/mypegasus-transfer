@@ -1,0 +1,8 @@
+CREATE TYPE "public"."ba_report_not_required_reason" AS ENUM('agentur_confirmed_not_required', 'no_claim_month_affected', 'created_in_error');--> statement-breakpoint
+ALTER TYPE "public"."audit_event_type" ADD VALUE 'ba_report_recorded';--> statement-breakpoint
+ALTER TABLE "ba_reporting_task" DROP CONSTRAINT "ba_reporting_task_reported_fields";--> statement-breakpoint
+ALTER TABLE "ba_reporting_task" ADD COLUMN "not_required_reason" "ba_report_not_required_reason";--> statement-breakpoint
+ALTER TABLE "ba_reporting_task" ADD COLUMN "decided_by" uuid;--> statement-breakpoint
+ALTER TABLE "ba_reporting_task" ADD COLUMN "decided_at" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "ba_reporting_task" ADD CONSTRAINT "ba_reporting_task_decided_by_staff_user_id_fk" FOREIGN KEY ("decided_by") REFERENCES "public"."staff_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ba_reporting_task" ADD CONSTRAINT "ba_reporting_task_outcome_fields" CHECK (("ba_reporting_task"."status" = 'reported') = ("ba_reporting_task"."reported_on" is not null) and ("ba_reporting_task"."status" = 'not_required') = ("ba_reporting_task"."not_required_reason" is not null) and ("ba_reporting_task"."status" = 'pending') = ("ba_reporting_task"."decided_by" is null) and ("ba_reporting_task"."decided_by" is null) = ("ba_reporting_task"."decided_at" is null) and ("ba_reporting_task"."status" = 'reported' or ("ba_reporting_task"."channel" is null and "ba_reporting_task"."reference" is null)));

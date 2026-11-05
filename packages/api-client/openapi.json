@@ -3380,6 +3380,38 @@
             "examples": [
               "2027-03-01"
             ]
+          },
+          "notRequiredReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "agentur_confirmed_not_required",
+              "no_claim_month_affected",
+              "created_in_error",
+              null
+            ]
+          },
+          "decidedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "recordOutcome": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "recordOutcome"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -3388,7 +3420,10 @@
           "subjectDate",
           "status",
           "createdAt",
-          "reportedOn"
+          "reportedOn",
+          "notRequiredReason",
+          "decidedAt",
+          "capabilities"
         ],
         "additionalProperties": false
       },
@@ -3844,7 +3879,8 @@
               "tl407_escalated",
               "tl407_resubmission_open",
               "tl407_original_missing",
-              "kug200b_confirmation_missing"
+              "kug200b_confirmation_missing",
+              "ba_report_pending"
             ]
           }
         },
@@ -4228,7 +4264,8 @@
           "tl407_escalated",
           "tl407_resubmission_open",
           "tl407_original_missing",
-          "kug200b_confirmation_missing"
+          "kug200b_confirmation_missing",
+          "ba_report_pending"
         ]
       },
       "WorklistReminder": {
@@ -6155,7 +6192,8 @@
           "asu_confirmation_recorded",
           "agentur_submission_original_sent",
           "agentur_submission_rejected",
-          "agentur_submission_original_retained"
+          "agentur_submission_original_retained",
+          "ba_report_recorded"
         ]
       },
       "HistoryActor": {
@@ -15058,6 +15096,58 @@
           "reason"
         ],
         "additionalProperties": false
+      },
+      "BaReportInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "reported"
+                ]
+              },
+              "reportedOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "outcome",
+              "reportedOn"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "not_required"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "agentur_confirmed_not_required",
+                  "no_claim_month_affected",
+                  "created_in_error"
+                ]
+              }
+            },
+            "required": [
+              "outcome",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        ]
       },
       "Escalations": {
         "type": "object",
@@ -28685,6 +28775,100 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AgenturRejectionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ba-reporting-tasks/{taskId}/outcome": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"Gemeldet am\" or \"Nicht erforderlich\" (the PL or back office): closes a pending BA reporting task once, with the actual sent date (from the task's day to today) or a closed reason; never edited afterwards",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "taskId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BaReportInput"
               }
             }
           }

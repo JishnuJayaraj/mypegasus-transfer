@@ -147,9 +147,16 @@ export {
   type DatesIssueCode,
 } from "./projects/participation-dates";
 export {
+  BaReportInput,
+  BaReportNotRequiredReason,
+  BaReportOutcome,
+  mayRecordBaReport,
+} from "./projects/ba-reporting";
+export {
   entryWaveAssignment,
   participationDatesCapability,
   mayListField,
+  mayReadBaReportingTasks,
   participationDetail,
   participationListScope,
   type ParticipationListScope,

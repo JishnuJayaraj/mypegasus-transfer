@@ -8,6 +8,7 @@ import {
   AuditStream,
   BaReportingKind,
   BaReportingStatus,
+  BaReportNotRequiredReason,
   DsvAmendmentKind,
   DsvStatus,
   EndReason,
@@ -389,6 +390,10 @@ export const amendmentOriginalLocation = pgEnum(
 );
 export const baReportingKind = pgEnum("ba_reporting_kind", values(BaReportingKind));
 export const baReportingStatus = pgEnum("ba_reporting_status", values(BaReportingStatus));
+export const baReportNotRequiredReason = pgEnum(
+  "ba_report_not_required_reason",
+  values(BaReportNotRequiredReason),
+);
 export const relaxationRequestStatus = pgEnum(
   "relaxation_request_status",
   values(RelaxationRequestStatus),
@@ -2706,9 +2711,10 @@ export const participationDsvAmendment = pgTable(
 );
 
 /**
- * A BA reporting task (process-and-lifecycle.md, "BA reporting"; round 32): created by
- * `set_participation_dates` for each changed effective date and by the early-exit trigger,
- * always `pending` in Slice 2; its status only moves forward (a trigger), it is never deleted.
+ * A BA reporting task (process-and-lifecycle.md, "BA reporting"; round 32): created `pending` by
+ * `set_participation_dates` for each changed effective date and by the early-exit trigger; closed
+ * once by `record_ba_report` (`reported` with the sent date, `not_required` with its reason, who
+ * and when). Its status only moves forward (a trigger), it is never deleted or edited.
  */
 export const baReportingTask = pgTable(
   "ba_reporting_task",
@@ -2724,10 +2730,15 @@ export const baReportingTask = pgTable(
     amendmentId: uuid("amendment_id"),
     status: baReportingStatus("status").notNull().default("pending"),
     createdAt: createdAt(),
-    // Recorded by the Agentur-submission slice; their controlled values come with it.
+    /** "Gemeldet am": the actual date the report was sent (D28). */
     reportedOn: dateColumn("reported_on"),
+    // Never written yet: a channel and reference need controlled values first (Q207).
     channel: text("channel"),
     reference: text("reference"),
+    /** "Nicht erforderlich": the closed reason (D28). */
+    notRequiredReason: baReportNotRequiredReason("not_required_reason"),
+    decidedBy: uuid("decided_by").references(() => staffUser.id),
+    decidedAt: instant("decided_at"),
   },
   (t) => [
     foreignKey({
@@ -2741,10 +2752,11 @@ export const baReportingTask = pgTable(
       foreignColumns: [participationDsvAmendment.id, participationDsvAmendment.projectId],
     }),
     index("ba_reporting_task_participation_idx").on(t.participationId),
-    // Reported tasks carry their date; channel and reference only once reported.
+    // A reported task carries its date, a not-required one its reason, a closed one who and
+    // when; channel and reference only once reported.
     check(
-      "ba_reporting_task_reported_fields",
-      sql`(${t.status} = 'reported') = (${t.reportedOn} is not null) and (${t.status} = 'reported' or (${t.channel} is null and ${t.reference} is null))`,
+      "ba_reporting_task_outcome_fields",
+      sql`(${t.status} = 'reported') = (${t.reportedOn} is not null) and (${t.status} = 'not_required') = (${t.notRequiredReason} is not null) and (${t.status} = 'pending') = (${t.decidedBy} is null) and (${t.decidedBy} is null) = (${t.decidedAt} is null) and (${t.status} = 'reported' or (${t.channel} is null and ${t.reference} is null))`,
     ),
   ],
 );

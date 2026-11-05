@@ -23,7 +23,8 @@ the Kug 200a's header); 6-5a-1 records its readings as Q203; 6-5a-2, estimated a
 lines, stays one PR (the owner's choice, 2026-10-29) and records its readings as Q205 (accepted with
 amendments in the review of PR #99). 6-5b, estimated at about 2,150 lines, stays one PR (the
 owner's choice, 2026-11-04) and records its readings as Q206 (accepted with amendments in the
-review of PR #100). Q1 stays
+review of PR #100). 6-6, estimated at about 650 lines, stays one PR and records its readings as
+Q207 (accepted in the review of PR #101, with a requirement for 6-8). Q1 stays
 `verify`. This is not an
 external DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
@@ -820,6 +821,10 @@ a file name, a form's content or a token.
   can't open the evidence; the approver is never the requester; the queue holds no raw evidence.
 
 **6-8**
+- A BA outcome's correction invalidates an older open confirmation dialog: a task reopened to
+  `pending` is closed only against its current revision (a stale outcome refused), or the
+  correction creates a linked replacement task; a regression test covers the stale dialog (the
+  review of PR #101, Q207 (6)).
 - A correction needs a second person; a rejected request changes nothing; an approved document
   invalidation stops its fact, purges a wrong person's file and keeps the tombstone and history; an
   ASU supersession is recorded at the approval instant; a status that rested on invalidated evidence

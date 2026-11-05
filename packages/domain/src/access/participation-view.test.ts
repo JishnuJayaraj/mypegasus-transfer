@@ -4,6 +4,7 @@ import type { Subject } from "./decide";
 import type { OperationContext } from "../lifecycle/operations";
 import {
   entryWaveAssignment,
+  mayReadBaReportingTasks,
   participationDatesCapability,
   participationDetail,
   participationListScope,
@@ -160,6 +161,9 @@ const record: ParticipationRecord = {
       status: "pending",
       createdAt: "2027-02-21T09:00:00.000000Z",
       reportedOn: null,
+      notRequiredReason: null,
+      decidedAt: null,
+      capabilities: { recordOutcome: true },
     },
   ],
   assignments: [
@@ -314,6 +318,18 @@ describe("participationDetail", () => {
       },
     };
     expect(hints(unset)).toEqual([]);
+  });
+});
+
+describe("mayReadBaReportingTasks (data-protection.md, BA reporting tasks)", () => {
+  it("is the PL's, back office's and the assigned consultant's, like other confidential case data", () => {
+    const read = (subject: Subject) => mayReadBaReportingTasks(subject, projectId, "p-1");
+    expect(read(staff({ [projectId]: ["project_lead"] }))).toBe(true);
+    expect(read(staff({ [projectId]: ["back_office"] }))).toBe(true);
+    expect(read(staff({ [projectId]: ["consultant"] }, { assigned: ["p-1"] }))).toBe(true);
+    expect(read(staff({ [projectId]: ["consultant"] }))).toBe(false);
+    expect(read(staff({ [otherProject]: ["project_lead"] }))).toBe(false);
+    expect(read(staff({}, { org: ["admin"] }))).toBe(false);
   });
 });
 

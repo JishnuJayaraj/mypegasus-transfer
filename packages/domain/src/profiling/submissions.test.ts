@@ -48,6 +48,7 @@ const work = (overrides: Partial<Tl407WorkFacts> = {}): Tl407WorkFacts => ({
   attempts: [],
   leadTimeDays: 10,
   kug200bRegistration: null,
+  baReportPendingSince: null,
   ...overrides,
 });
 const approved = { validOn: "2027-03-01", recordedAt: new Date("2027-03-01T09:00:00Z") };
@@ -270,6 +271,19 @@ describe("agenturItems (process-and-lifecycle.md, TL 407 submission)", () => {
     expect(agenturItems(closed, "ta_tg", work({ attempts: [attempt()] }), "2027-06-01")).toEqual([
       { kind: "tl407_original_missing", date: "2027-03-10" },
     ]);
+  });
+
+  it("lists a pending BA report last, from its day, in every project type and status (D28)", () => {
+    const pending = work({ baReportPendingSince: "2027-02-01" });
+    const item = { kind: "ba_report_pending", date: "2027-02-01" };
+    // An early exit's task is created at the exit: a closed participation keeps it.
+    for (const s of [informed, snapshot({ current: state("exited") })]) {
+      expect(agenturItems(s, "ta_tg", pending, today)).toEqual([item]);
+      expect(agenturItems(s, "ta_only", pending, today)).toEqual([item]);
+    }
+    expect(
+      agenturItems(informed, "ta_tg", work({ ...pending, attempts: [attempt(), rejected] }), today),
+    ).toEqual([{ kind: "tl407_original_missing", date: "2027-03-10" }, item]);
   });
 });
 

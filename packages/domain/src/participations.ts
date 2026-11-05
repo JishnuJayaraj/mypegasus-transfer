@@ -15,6 +15,7 @@ import { PrivacyNoticeState } from "./privacy/notice-state";
 import { AgenturKey } from "./projects/agentur-settings";
 import { ConfigBlocker } from "./projects/pins";
 import { PlacementAgenturChoice } from "./projects/placement-agentur";
+import { BaReportNotRequiredReason } from "./projects/ba-reporting";
 
 const activationCapabilities = z.strictObject({
   issueActivationCode: z.boolean(),
@@ -114,7 +115,11 @@ export const DsvAmendmentView = z
   .meta({ id: "DsvAmendment" });
 export type DsvAmendmentView = z.infer<typeof DsvAmendmentView>;
 
-/** A BA reporting task as the detail shows it (process-and-lifecycle.md, "BA reporting"). */
+/**
+ * A BA reporting task as the detail shows it (process-and-lifecycle.md, "BA reporting"): its
+ * outcome once recorded, and whether the viewer may record it now (the PL or back office, while
+ * pending).
+ */
 export const BaReportingTaskView = z
   .strictObject({
     id: z.uuid(),
@@ -122,7 +127,13 @@ export const BaReportingTaskView = z
     subjectDate: isoDate,
     status: BaReportingStatus,
     createdAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
+    /** "Gemeldet am": the actual date the report was sent; set only when `reported`. */
     reportedOn: isoDate.nullable(),
+    /** "Nicht erforderlich": why; set only when `not_required`. */
+    notRequiredReason: BaReportNotRequiredReason.nullable(),
+    /** When the outcome was recorded (UTC); null while pending. */
+    decidedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }).nullable(),
+    capabilities: z.strictObject({ recordOutcome: z.boolean() }),
   })
   .meta({ id: "BaReportingTask" });
 export type BaReportingTaskView = z.infer<typeof BaReportingTaskView>;
