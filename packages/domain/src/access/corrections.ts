@@ -2,7 +2,7 @@ import type { DocumentType } from "../documents/catalog";
 import { fieldEntry } from "../fields/catalog";
 
 /**
- * Who may request an evidence correction (`append_evidence_correction`; rounds 12–13, Q88
+ * Who may request an evidence correction (`request_evidence_correction`; rounds 12–13, Q88
  * *assumed*). It covers only data retained in the evidence set; payroll and personnel data
  * are corrected by their own active/payroll operations while they are retained. An explicit
  * table: it is not derived from who may open a document, and it grants no read access. The

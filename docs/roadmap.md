@@ -88,6 +88,17 @@ Gotenberg), overflow attachment, scan upload, Agentur submission status.
 Deferred here from Slice 2: sending BA reports (marking reporting tasks `reported` or
 `not_required`); the affected monthly claim and project closure stay blocked while a required
 report is pending (process-and-lifecycle.md, BA reporting).
+**Done** 2026-11-05 (PRs 6-1 to 6-8, with 6-3, 6-4 and 6-5 split): plan archived in
+[`plans/archive/slice-6.md`](plans/archive/slice-6.md); its rules live in ADR-0002, ADR-0006,
+ADR-0009, ADR-0010, `domain/ba-forms.md`, `domain/data-protection.md`,
+`domain/process-and-lifecycle.md`, `domain/regional-variation.md` and
+`architecture/overview.md`; its readings in Q198–Q209.
+Not in Slice 6 (D34), still open: automatic ASU reminders (Q1, Q152); narrative health detail and
+its explicit consent; the DSV PDF and its tracking (Slice 7); field corrections of the evidence
+set (identity, dates; the correction-authority table's field rows); retransmitting a Kug 200b
+batch and correcting a batch's sent date (Q204); signed forms in the portal (Q67); an ASU upload by
+the participant; electronic BA interfaces; KuG claims, billing and project closure; the half-yearly
+Agentur report and other reports (Slice 9); PDF batch jobs; AI.
 
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of

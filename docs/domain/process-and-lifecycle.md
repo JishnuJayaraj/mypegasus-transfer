@@ -558,8 +558,8 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
   confirmed (Q152).
 - **As built (Slice 6, PR 6-4a; Q186, Q201):** the PL or the assigned consultant sets the
   route with its version (`set_asu_route`, `asu_route_set`), the placement Agentur's
-  `defaultChannel` preselected, never a blocker; it is fixed once a registration is recorded (an
-  entry error is corrected through an approved correction, PR 6-8). On `online_self` /
+  `defaultChannel` preselected, never a blocker; it is fixed while a current registration exists
+  (an entry error is corrected through an approved correction, below). On `online_self` /
   `in_person` the PL or the assigned consultant records the actual date (`record_asu_registration`,
   not after today) with the route version they reviewed (a route changed since is
   `409 stale_revision`, never frozen unseen); its proof is either the PL's **attestation** given with it (the BA-Kundennummer,
@@ -567,7 +567,18 @@ person or by phone. Kug 200b is the usual channel in transfer projects, not the 
   `ba_online_account_inspected`, `ba_confirmed_by_phone`) or an accepted BA confirmation
   (`asu_proof`) the assigned consultant links afterwards (`link_asu_proof`, `asu_proof_linked`). A
   registration without its proof gives no fact. On `kug_200b` the batch's submission records the
-  registration (Kug 200b batches below). One registration per participation (`asu_registered`).
+  registration (Kug 200b batches below). One **current** registration per participation
+  (`asu_registered`).
+- **Corrections** (data-protection.md, evidence corrections; Slice 6, PR 6-8; Q186, Q209): an
+  entry error is never fixed by a new route or a duplicate registration. On the PL's request and the
+  regional operations manager's approval a registration is **superseded** with the corrected
+  actual date (a new current registration, same route and proof, whose complete fact is recorded at
+  the approval instant: the fact `asuRegisteredWithProof` is `validOn` the corrected date,
+  `recordedAt` the approval) or **invalidated** (no current registration: the due date applies again
+  and the PL records a new one, the route changeable again). The original stays, linked, in the
+  history. On `kug_200b` the date is the batch's, so the registration is only invalidated. A status
+  that rested on the registration stays; the work list shows `evidence_invalidated` until a new
+  current registration is recorded.
 - **Completeness** (regional-variation.md, the base rules): the engine's state for `asu_proof`
   comes from the record: accepted once a registration with proof exists, on any route, without a
   file; else the live BA confirmations', an accepted but unlinked one still awaiting its link. The
@@ -939,9 +950,13 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
     channel or reference is recorded yet. Each is confirmed in a dialog that names the task, with no default date
     or reason. Who and when are kept, audited `ba_report_recorded` in the `dsv` stream. A closed
     participation's task is closed the same way. The outcome is never edited: a wrong one is
-    superseded by an approved correction (data-protection.md, evidence corrections; Slice 6's
-    corrections PR), which invalidates any older open confirmation: a reopened task is closed
-    only against its current revision, or the correction creates a linked replacement task.
+    superseded by an approved correction (data-protection.md, evidence corrections), which
+    invalidates any older open confirmation. As built (PR 6-8, Q209): the PL requests it on a
+    closed task ("Korrektur beantragen", a reason code and the documented source); once the
+    regional operations manager approves, a **linked replacement task** is created `pending`
+    (same kind, date and amendment; "Ersetzt eine korrigierte Meldung") and the original keeps its
+    outcome, marked "Durch Korrektur ersetzt". The original is never reopened, so a dialog still
+    open for it records nothing (`already_recorded`); the replacement is closed as any task.
   - **The work list** shows a pending task as the Agentur item `ba_report_pending` ("BA-Meldung
     offen", from the oldest pending task's day; also for a closed participation) to whoever reads
     the tasks. It has no due date and doesn't escalate.

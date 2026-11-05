@@ -644,6 +644,39 @@ generator then. No action now.
   evidence; the review of PR #102): `404` only when neither applies; the opening and the review
   keep the read check.
 
+## Note 2026-11-05 (Slice 6, PR 6-8): evidence corrections
+
+- `POST /participations/{id}/evidence-corrections` (`EvidenceCorrectionRequestInput`, by
+  `correction`: `invalidate_document { documentId, wrongPerson }`,
+  `invalidate_asu_registration { registrationId }`,
+  `supersede_asu_registration { registrationId, registeredOn }`,
+  `supersede_ba_report { taskId }`; each with `reason` (`CorrectionReason`) and `source` (one line,
+  ≤ 200 characters); nothing has a default) → `201 { correctionId }`. Order: a hidden participation
+  is `404`; a target that isn't the participation's, or that the viewer neither reads nor may
+  request a correction of (a grant of its own, like the safety operations), is `404` whatever its
+  state; without the correction-authority table's role `403` (back office on a BA task, the
+  consultant); then `422` `document_not_accepted`, `task_pending`, `asu_route_kug200b`,
+  `registered_on_in_future` and `correction_unchanged` (at `/registeredOn`), `source_invalid` (at
+  `/source`), `target_corrected`, `correction_pending`. Logs carry ids and codes, never the source.
+- `POST /evidence-corrections/{id}/decision` (`{ decision: "approve" | "reject" }`) → `204`. A
+  correction is visible to the regional operations manager of its project's region and to the
+  project's PL; to anyone else `404`. `403` without the operation (the requester:
+  `four_eyes`/`same_person_approval`); `409` `source_changed` once decided (the queue showed
+  another state; never another request of the same target); `422` `target_corrected`. An approved
+  wrong person's file is queued for `documents.purge-object` in the decision's transaction.
+- `GET /reviews` → `ReviewQueue { items, corrections }`, each `CorrectionReviewItem {
+  correctionId, projectId, projectName, targetKind, action, documentType, reportingKind,
+  wrongPerson, reason, source, requestedOn, targetRecordedOn, capabilities.decide }`: no
+  participant id or name, no file, no corrected value, by schema.
+- `Document` gains `correction { invalidated, pending }` and `capabilities.requestCorrection`; an
+  invalidated document's opening is `422 document_invalidated`, a quarantine's lift while a
+  correction is pending `422 correction_pending`. The exception evidence documents of "Profiling"
+  gain `capabilities.requestCorrection`. `AsuRegistration` gains `corrected` and `correction {
+  pending, mayRequest }` and shows the current registration only; `BaReportingTask` gains
+  `supersededBy`, `replacesTaskId` and `correction { pending, mayRequest }`. The work list's
+  `caseItems` gain `evidence_invalidated` with the approval's day. ASU writes on a superseded or
+  invalidated registration answer `422 asu_registration_corrected`.
+
 ## Conventions as built (Slices 0–2)
 
 Status service (`apps/api/src/participations/status-service.ts`):

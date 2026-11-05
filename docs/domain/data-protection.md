@@ -526,7 +526,8 @@ decision, reason and approval; references and timestamps), not raw health-relate
 evidence.
 
 **Evidence corrections** *(assumed, Q88, round 12)*: never by in-place editing, only through
-**`append_evidence_correction`**, targeting a document or a field. Who may request it is an
+**`request_evidence_correction`** and its approval **`decide_evidence_correction`**, targeting a
+document, a record (an ASU registration, a BA reporting outcome) or, in a later slice, a field. Who may request it is an
 explicit correction-authority table (`packages/domain/src/access/corrections.ts`), separate from
 who may open a document; requesting grants no read access.
 - Documents: PL for TL 407, Kug 200b, ASU proof, exception evidence, CVs, uploads and
@@ -547,9 +548,50 @@ who may open a document; requesting grants no read access.
   eyes; corrected sensitive values encrypted; audit events with IDs, field key, actor and
   timestamps, never the values; the approver sees category, basis and references, no value they
   couldn't otherwise read.
-- An invalidated document (`invalidated_by_correction`, Slice 6, PR 6-8) supplies no fact (the
-  TL 407 facts reader already skips it), counts nothing in completeness and is not opened by the
-  ordinary opening; 6-8 adds the last two before it writes any invalidation (Q200).
+- **As built (Slice 6, PR 6-8; readings Q209 *assumed*)** for three targets; field corrections
+  stay with a later slice:
+  - **Targets and effects.** An accepted **document**: invalidated (`invalidated_by_correction`);
+    the request states explicitly whether it is a **wrong person's file**, which on approval
+    becomes a tombstone (`wrong_person`, the file name erased) whose object `documents.purge-object`
+    purges; the row and the history stay. A current **ASU registration**: **superseded** with the
+    corrected actual registration date (a new current registration with the same route and proof,
+    recorded and proven at the approval instant, `correction_id`; the original keeps its row,
+    `superseded_by`) or **invalidated** (`invalidated_by`; the PL then records a registration again,
+    on the same or another route). On `kug_200b` the date is the batch's, so a registration there is
+    only invalidated (`asu_route_kug200b`). A closed **BA reporting outcome**: superseded by a linked
+    replacement task (`pending`, `replaces_task_id`), the original's outcome and history unchanged
+    (`superseded_by`); a confirmation dialog still open for the original is refused
+    (`already_recorded`), since it names the original (Q207 (6)).
+  - **The request:** the correction-authority table's roles (the PL; for the DSV and its
+    cancellation also back office; nobody for a working copy), as themselves, in normal mode; a
+    reason code (`ba_legal_reference`, `data_subject_rectification`, `corrected_source_document`,
+    `documented_internal_error`) and the documented source (one line, at most 200 characters,
+    normalised; the form says to enter no names or health details); nothing preset. One pending
+    request per target. The request is authorised by its own grant, independent of a read right:
+    the PL requests the correction of the exception evidence they can't open. A request changes
+    nothing.
+  - **The decision:** the regional operations manager of the project's region in "Freigaben",
+    never the requester; under the project's exclusive lock; a rejection changes nothing; a
+    request decided meanwhile is `409 source_changed`, never another request of the same target.
+    The queue shows the project, the target's kind and category (the document type or the
+    report's kind), the action, whether it is a wrong person's file, the reason, the source and
+    the dates (requested, the target's recording day): no name, no file and no corrected value.
+  - **Storage:** `evidence_correction`, append-only; internal / `case_internal`
+    (`evidenceCorrection`, codes, dates and the source); its retention class per row, the
+    target's. No corrected value of these targets is sensitive, so nothing is encrypted.
+  - **History** (`case`, the PL and the assigned consultant): `evidence_correction_requested`
+    (target kind, action, reason) and `evidence_correction_decided` (the same and the decision);
+    never the source or a value.
+  - **Withheld facts:** an invalidated document supplies no fact (every facts reader skips it),
+    counts nothing in completeness and opens for nobody, a link opened before it included; it isn't
+    quarantined again, and no quarantine is lifted while a correction of the document is pending.
+    A superseded or invalidated registration supplies nothing; the facts and the ASU record read the
+    current one. Past snapshots and the history stay. Nothing restores an invalidation.
+  - **"Nachweis ungültig"** (`evidence_invalidated`, a case item on the work list): from the
+    approval of an invalidation that nothing has replaced yet: evidence (a catalog type marked
+    `signed`) without a valid document of its type accepted after the approval, or an ASU
+    registration without a current one recorded after it. The status that rested on it stays for
+    the PL to resolve (a new signed form, a new registration, or the reconciliation rules).
 - A correction alone never bypasses lifecycle guards or changes Transfer-KuG eligibility,
   contractual dates or payments: that takes a reconciliation, contractual amendment or recorded
   BA/legal determination.
@@ -865,8 +907,8 @@ and highly confidential data only; ordinary person-data writes are `participant_
   evaluation (`tl407_facts` skips it; a past snapshot stays as it was) and counts nothing in
   completeness. Whoever quarantined it, while they still may, or the PL lifts it, audited
   `document_quarantine_lifted`; its fact counts as recorded from the lift, and past snapshots stay
-  as they were (Q200). A pending correction will refuse the lift once corrections exist (6-8). The
-  approved correction workflow is still required before live use.
+  as they were (Q200). A pending correction refuses the lift (`correction_pending`), and an
+  invalidated document isn't quarantined or lifted (evidence corrections, below).
 - **History** (`case`, the PL and the assigned consultant): `document_quarantined` (its reason),
   `document_quarantine_lifted`; `signed_declaration_recorded` in `profiling` (form code, version,
   the declaration codes, never a value).
@@ -1004,7 +1046,7 @@ and highly confidential data only; ordinary person-data writes are `participant_
   `wrong_person` or `wrong_file`; never by back office or the participant. **Quarantined at once
   by the PL or the assigned consultant** (the catalog's quarantine roles, a type's review roles
   unless it names others), the PL without any right to open, review or link it; the lift is the
-  quarantining person's or the PL's. The permanent correction comes with Slice 6, PR 6-8.
+  quarantining person's or the PL's. The permanent correction is an approved evidence correction.
   The assigned consultant, who opens it, links an accepted one as the registration's proof,
   confirming it supports the registration's date. A quarantined or invalidated proving document
   supplies no fact.
