@@ -242,6 +242,7 @@ const statusFunctions = [
   // submission; data-protection.md, the regional view)
   "submit_tl407",
   "record_original_sent",
+  "record_original_retained",
   "record_agentur_rejection",
   "profiling_declined_dates",
 ];

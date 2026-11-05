@@ -2,7 +2,8 @@
 -- Q92, Q188, Q189): the PL records a TL 407's submission to the placement Agentur, "Original
 -- versandt am" and the Agentur's rejection; every attempt is its own `agentur_submission` row, a
 -- rejection reopens the work until a new submission and never touches the signatures, the scan or
--- the profiling track. The reader of the refusals' dates for the regional view (counts only), the
+-- the profiling track; after a rejection the PL may confirm that the Agentur still holds an earlier
+-- dispatched original. The reader of the refusals' dates for the regional view (counts only), the
 -- history's projection rows and the grants. Same hardening as 0078: SECURITY DEFINER owned by
 -- transfer_owner, a fixed search_path with pg_temp last, schema-qualified names, no dynamic SQL,
 -- EXECUTE only for transfer_app, database time, refusals as P0001 with a stable code, never a
@@ -49,7 +50,7 @@ ALTER TABLE audit_event ADD CONSTRAINT audit_event_lifecycle_has_participation C
     'kug200b_offer_declined', 'declaration_withdrawal_recorded',
     'declaration_withdrawal_ba_notified', 'agentur_submission_recorded',
     'asu_confirmation_recorded', 'agentur_submission_original_sent',
-    'agentur_submission_rejected'));
+    'agentur_submission_rejected', 'agentur_submission_original_retained'));
 --> statement-breakpoint
 
 -- The domain's `auditProjection` (the drift test holds them equal): both in the `profiling`
@@ -57,7 +58,8 @@ ALTER TABLE audit_event ADD CONSTRAINT audit_event_lifecycle_has_participation C
 INSERT INTO audit_event_projection (event_type, field, stream, shows_change, shows_reason,
   detail_keys) VALUES
   ('agentur_submission_original_sent', NULL, 'profiling', false, false, '{originalSentOn}'),
-  ('agentur_submission_rejected', NULL, 'profiling', false, false, '{rejectedOn,reason}');
+  ('agentur_submission_rejected', NULL, 'profiling', false, false, '{rejectedOn,reason}'),
+  ('agentur_submission_original_retained', NULL, 'profiling', false, false, '{originalSentOn}');
 --> statement-breakpoint
 
 -- Internal helper (no grant).
@@ -224,6 +226,52 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
+-- "Original liegt der Agentur vor" (Q206 (4)): after a rejection and a new submission of the same
+-- paper, the PL confirms that the same Agentur still holds the original an earlier attempt
+-- dispatched; never assumed. Once (`original_recorded`), where the new attempt needs an original
+-- apart from the submission (`original_not_required`). The earlier attempt must be one of the
+-- participation's (`retained_original_not_found` otherwise): a TL 407 recorded before this one, of
+-- the same scan and Agentur, rejected, with its original dispatched (`original_not_retainable`).
+-- The new attempt links it and keeps its actual date. Audited `agentur_submission_original_retained`.
+CREATE FUNCTION record_original_retained(
+  p_context audit_context, p_submission_id uuid, p_retained_from uuid
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  s public.agentur_submission;
+  e public.agentur_submission;
+BEGIN
+  IF p_submission_id IS NULL OR p_retained_from IS NULL THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  s := public.lock_agentur_submission(p_context, p_submission_id);
+  IF s.form_code::text <> 'tl407' OR NOT s.original_required
+     OR s.channel::text = 'paper_original' THEN
+    RAISE EXCEPTION 'original_not_required';
+  END IF;
+  IF s.original_sent_on IS NOT NULL THEN
+    RAISE EXCEPTION 'original_recorded';
+  END IF;
+  SELECT * INTO e FROM public.agentur_submission
+  WHERE id = p_retained_from AND participation_id = s.participation_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'retained_original_not_found';
+  END IF;
+  IF e.id = s.id OR e.form_code::text <> 'tl407' OR e.document_id <> s.document_id
+     OR e.agentur_key <> s.agentur_key OR e.rejected_on IS NULL OR e.original_sent_on IS NULL
+     OR e.recorded_at >= s.recorded_at THEN
+    RAISE EXCEPTION 'original_not_retainable';
+  END IF;
+  UPDATE public.agentur_submission SET original_sent_on = e.original_sent_on,
+    original_retained_from = e.id, original_recorded_by = (p_context).staff_user_id,
+    original_recorded_at = now()
+  WHERE id = s.id;
+  PERFORM public.write_audit_event(s.project_id, s.participation_id,
+    'agentur_submission_original_retained', p_context, NULL, NULL, NULL, NULL, NULL,
+    pg_catalog.jsonb_build_object('submissionId', s.id, 'retainedFrom', e.id,
+      'originalSentOn', pg_catalog.to_char(e.original_sent_on, 'YYYY-MM-DD')), false);
+END $$;
+--> statement-breakpoint
+
 -- "Von der Agentur abgelehnt" (D26; Q189): the PL records once per attempt (`already_rejected`)
 -- the Agentur's rejection of a TL 407 submission (a batch's Kug 200b has no rejection yet,
 -- `rejection_not_applicable`, Q204) with its date, from the submission to today in Berlin
@@ -314,7 +362,8 @@ BEGIN
       'declaration_withdrawal_ba_notified', 'export_created', 'export_downloaded',
       'kug200b_batch_created', 'kug200b_batch_submitted', 'kug200b_batch_discarded',
       'agentur_submission_recorded', 'asu_confirmation_recorded',
-      'agentur_submission_original_sent', 'agentur_submission_rejected') THEN
+      'agentur_submission_original_sent', 'agentur_submission_rejected',
+      'agentur_submission_original_retained') THEN
     RAISE EXCEPTION 'event_type_reserved';
   END IF;
   PERFORM public.assert_context(p_context, p_participation_id, '{user,participant,system}');
@@ -329,10 +378,10 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
--- Grants: transfer_app already selects `agentur_submission` (0078); it executes the three writes
+-- Grants: transfer_app already selects `agentur_submission` (0078); it executes the four writes
 -- and the reader.
 REVOKE ALL ON FUNCTION lock_agentur_submission, submit_tl407, record_original_sent,
-  record_agentur_rejection, profiling_declined_dates FROM PUBLIC;
+  record_original_retained, record_agentur_rejection, profiling_declined_dates FROM PUBLIC;
 --> statement-breakpoint
-GRANT EXECUTE ON FUNCTION submit_tl407, record_original_sent, record_agentur_rejection,
-  profiling_declined_dates TO transfer_app;
+GRANT EXECUTE ON FUNCTION submit_tl407, record_original_sent, record_original_retained,
+  record_agentur_rejection, profiling_declined_dates TO transfer_app;

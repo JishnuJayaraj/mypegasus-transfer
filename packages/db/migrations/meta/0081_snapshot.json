@@ -1,5 +1,5 @@
 {
-  "id": "f33a7758-4176-4dc7-852a-b72c1fb90fa1",
+  "id": "8b990c8d-d313-4490-89aa-963a835a60d8",
   "prevId": "de0bee77-08a4-47ad-8d16-84c308e441e5",
   "version": "7",
   "dialect": "postgresql",
@@ -427,6 +427,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "original_retained_from": {
+          "name": "original_retained_from",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "rejected_on": {
           "name": "rejected_on",
           "type": "date",
@@ -549,6 +555,15 @@
           "columnsTo": ["id", "project_id"],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "agentur_submission_original_retained_from_fk": {
+          "name": "agentur_submission_original_retained_from_fk",
+          "tableFrom": "agentur_submission",
+          "tableTo": "agentur_submission",
+          "columnsFrom": ["original_retained_from"],
+          "columnsTo": ["id"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -575,7 +590,7 @@
         },
         "agentur_submission_original": {
           "name": "agentur_submission_original",
-          "value": "(\"agentur_submission\".\"original_sent_on\" is null) = (\"agentur_submission\".\"original_recorded_by\" is null) and (\"agentur_submission\".\"original_recorded_by\" is null) = (\"agentur_submission\".\"original_recorded_at\" is null) and (\"agentur_submission\".\"original_sent_on\" is null or (\"agentur_submission\".\"original_required\" and \"agentur_submission\".\"channel\" <> 'paper_original' and \"agentur_submission\".\"original_sent_on\" >= \"agentur_submission\".\"submitted_on\"))"
+          "value": "(\"agentur_submission\".\"original_sent_on\" is null) = (\"agentur_submission\".\"original_recorded_by\" is null) and (\"agentur_submission\".\"original_recorded_by\" is null) = (\"agentur_submission\".\"original_recorded_at\" is null) and (\"agentur_submission\".\"original_retained_from\" is null or (\"agentur_submission\".\"original_sent_on\" is not null and \"agentur_submission\".\"original_retained_from\" <> \"agentur_submission\".\"id\")) and (\"agentur_submission\".\"original_sent_on\" is null or (\"agentur_submission\".\"original_required\" and \"agentur_submission\".\"channel\" <> 'paper_original' and (\"agentur_submission\".\"original_sent_on\" >= \"agentur_submission\".\"submitted_on\" or \"agentur_submission\".\"original_retained_from\" is not null)))"
         },
         "agentur_submission_rejection": {
           "name": "agentur_submission_rejection",
@@ -9156,7 +9171,8 @@
         "agentur_submission_recorded",
         "asu_confirmation_recorded",
         "agentur_submission_original_sent",
-        "agentur_submission_rejected"
+        "agentur_submission_rejected",
+        "agentur_submission_original_retained"
       ]
     },
     "public.audit_stream": {

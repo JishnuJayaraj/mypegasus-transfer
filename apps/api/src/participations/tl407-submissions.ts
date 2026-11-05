@@ -67,6 +67,7 @@ export type AttemptRow = Tl407Attempt & {
   documentId: string;
   formVersion: string;
   agenturKey: string;
+  originalRetainedFrom: string | null;
   rejectionReason: AgenturRejectionReason | null;
   recordedAt: string;
 };
@@ -89,6 +90,7 @@ export async function attemptsOf(
       submittedOn: agenturSubmission.submittedOn,
       originalRequired: sql<boolean>`coalesce(${agenturSubmission.originalRequired}, false)`,
       originalSentOn: agenturSubmission.originalSentOn,
+      originalRetainedFrom: agenturSubmission.originalRetainedFrom,
       rejectedOn: agenturSubmission.rejectedOn,
       rejectionReason: agenturSubmission.rejectionReason,
       recordedAt: utc(agenturSubmission.recordedAt),

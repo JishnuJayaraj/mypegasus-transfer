@@ -2351,6 +2351,8 @@ export const agenturSubmission = pgTable(
     originalSentOn: dateColumn("original_sent_on"),
     originalRecordedBy: uuid("original_recorded_by").references(() => staffUser.id),
     originalRecordedAt: instant("original_recorded_at"),
+    /** The earlier attempt whose dispatched original the same Agentur still holds (Q206 (4)). */
+    originalRetainedFrom: uuid("original_retained_from"),
     rejectedOn: dateColumn("rejected_on"),
     rejectionReason: agenturRejectionReason("rejection_reason"),
     rejectionRecordedBy: uuid("rejection_recorded_by").references(() => staffUser.id),
@@ -2381,9 +2383,15 @@ export const agenturSubmission = pgTable(
       "agentur_submission_original_required",
       sql`(${t.formCode} = 'tl407') = (${t.originalRequired} is not null)`,
     ),
+    foreignKey({
+      name: "agentur_submission_original_retained_from_fk",
+      columns: [t.originalRetainedFrom],
+      foreignColumns: [t.id],
+    }),
+    // A retained original keeps its earlier dispatch's actual date, before this submission.
     check(
       "agentur_submission_original",
-      sql`(${t.originalSentOn} is null) = (${t.originalRecordedBy} is null) and (${t.originalRecordedBy} is null) = (${t.originalRecordedAt} is null) and (${t.originalSentOn} is null or (${t.originalRequired} and ${t.channel} <> 'paper_original' and ${t.originalSentOn} >= ${t.submittedOn}))`,
+      sql`(${t.originalSentOn} is null) = (${t.originalRecordedBy} is null) and (${t.originalRecordedBy} is null) = (${t.originalRecordedAt} is null) and (${t.originalRetainedFrom} is null or (${t.originalSentOn} is not null and ${t.originalRetainedFrom} <> ${t.id})) and (${t.originalSentOn} is null or (${t.originalRequired} and ${t.channel} <> 'paper_original' and (${t.originalSentOn} >= ${t.submittedOn} or ${t.originalRetainedFrom} is not null)))`,
     ),
     check(
       "agentur_submission_rejection",

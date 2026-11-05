@@ -137,6 +137,30 @@ export function tl407SubmissionProblem(
   return null;
 }
 
+/** An attempt with what identifies its paper and destination. */
+export type Tl407AttemptRef = Tl407Attempt & { id: string; documentId: string; agenturKey: string };
+
+/**
+ * The earlier dispatched original the same Agentur may still hold for a standing attempt
+ * (Q206 (4)): of the newest earlier attempt of the same scan and Agentur that was rejected after
+ * its original went out. The PL confirms it; it is never assumed. `attempts` newest first.
+ */
+export function retainableOriginal(
+  attempt: Tl407AttemptRef,
+  attempts: readonly Tl407AttemptRef[],
+): { submissionId: string; originalSentOn: IsoDate } | null {
+  if (attempt.rejectedOn !== null || !originalOutstanding(attempt)) return null;
+  const earlier = attempts.slice(attempts.findIndex((a) => a.id === attempt.id) + 1);
+  const held = earlier.find(
+    (a) =>
+      a.documentId === attempt.documentId &&
+      a.agenturKey === attempt.agenturKey &&
+      a.rejectedOn !== null &&
+      a.originalSentOn !== null,
+  );
+  return held ? { submissionId: held.id, originalSentOn: held.originalSentOn! } : null;
+}
+
 export type FollowUpProblem =
   | "original_not_required"
   | "original_recorded"
@@ -296,6 +320,15 @@ export const Tl407SubmissionView = z
     submittedOn: isoDate,
     originalRequired: z.boolean(),
     originalSentOn: isoDate.nullable(),
+    /** The earlier attempt whose original the Agentur still holds, when the PL confirmed it. */
+    originalRetainedFrom: z.uuid().nullable(),
+    /**
+     * The earlier dispatch the PL may confirm the Agentur still holds ("Original liegt der
+     * Agentur vor"; Q206 (4)); null when there is none or the viewer can't record it.
+     */
+    retainableOriginal: z
+      .strictObject({ submissionId: z.uuid(), originalSentOn: isoDate })
+      .nullable(),
     rejection: z.strictObject({ rejectedOn: isoDate, reason: AgenturRejectionReason }).nullable(),
     recordedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }),
     capabilities: z.strictObject({ recordOriginal: z.boolean(), recordRejection: z.boolean() }),
@@ -351,6 +384,14 @@ export const Tl407SubmissionCreated = z
 export const OriginalSentInput = z
   .strictObject({ originalSentOn: isoDate })
   .meta({ id: "OriginalSentInput" });
+
+/**
+ * `POST /agentur-submissions/{id}/original-retained`: the earlier attempt whose dispatched original
+ * the same Agentur still holds (Q206 (4)).
+ */
+export const OriginalRetainedInput = z
+  .strictObject({ retainedFrom: z.uuid() })
+  .meta({ id: "OriginalRetainedInput" });
 
 /** `POST /agentur-submissions/{id}/rejection`: "Von der Agentur abgelehnt" with the date and reason. */
 export const AgenturRejectionInput = z

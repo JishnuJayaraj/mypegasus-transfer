@@ -336,6 +336,51 @@ describe("the rejection, the resubmission and the original (Q189)", () => {
   });
 });
 
+describe("an original the Agentur still holds (Q206 (4))", () => {
+  it("is offered to the PL after a resubmission of the same paper, confirmed, and keeps its date", async () => {
+    await settings();
+    const { id, documentId } = await ready({ signedDaysAgo: 12 });
+    const first = await submitted(id, documentId, { submittedOn: await day(-10) });
+    const sent = await request("POST", `/agentur-submissions/${first}/original`, projectLead, {
+      originalSentOn: await day(-9),
+    });
+    expect(sent.status).toBe(204);
+    const rejected = await request("POST", `/agentur-submissions/${first}/rejection`, projectLead, {
+      rejectedOn: await day(-5),
+      reason: "incomplete",
+    });
+    expect(rejected.status).toBe(204);
+    const second = await submitted(id, documentId, { submittedOn: await day(-1) });
+    const attempt = (await profiling(id)).tl407Submission.attempts[0]!;
+    expect(attempt).toMatchObject({
+      id: second,
+      originalSentOn: null,
+      originalRetainedFrom: null,
+      retainableOriginal: { submissionId: first, originalSentOn: await day(-9) },
+    });
+    // Never assumed: the original is still missing until the PL confirms it.
+    expect((await row(id)).agenturItems).toEqual([
+      { kind: "tl407_original_missing", date: await day(-1) },
+    ]);
+    // The consultant reads it, may not confirm it.
+    expect(
+      (await profiling(id, consultant)).tl407Submission.attempts[0]!.retainableOriginal,
+    ).toBeNull();
+    const retain = (retainedFrom: string, as: string = projectLead) =>
+      request("POST", `/agentur-submissions/${second}/original-retained`, as, { retainedFrom });
+    await expectProblem(await retain(first, consultant), 403, "forbidden");
+    expect(await codes(await retain(second))).toEqual(["original_not_retainable"]);
+    expect((await retain(first)).status).toBe(204);
+    expect((await profiling(id)).tl407Submission.attempts[0]).toMatchObject({
+      originalSentOn: await day(-9),
+      originalRetainedFrom: first,
+      retainableOriginal: null,
+      capabilities: { recordOriginal: false, recordRejection: true },
+    });
+    expect((await row(id)).agenturItems).toEqual([]);
+  });
+});
+
 describe("the work list's deadline, items and counts (D27)", () => {
   it("dates tl407_submission by the lead time and counts the tile and group from the same items", async () => {
     await settings();

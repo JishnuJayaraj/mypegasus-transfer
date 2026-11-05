@@ -887,6 +887,8 @@ const attempt = (overrides: object = {}) => ({
   submittedOn: "2026-10-21",
   originalRequired: true,
   originalSentOn: null,
+  originalRetainedFrom: null,
+  retainableOriginal: null,
   rejection: null,
   recordedAt: "2026-10-21T09:00:00.000000Z",
   capabilities: { recordOriginal: true, recordRejection: true },
@@ -903,7 +905,7 @@ const next = (refusal: string | null = null) => ({
 
 /** The section's actions, by name (a closed dialog's buttons stay in jsdom's tree). */
 const submissionActions =
-  /Übermittlung an die Agentur erfassen|Original versandt|Agentur-Ablehnung eintragen/;
+  /Übermittlung an die Agentur erfassen|Original versandt|Agentur-Ablehnung eintragen|Original liegt/;
 
 describe("Übermittlung an die Agentur", () => {
   it("records the PL's submission with the channel and original rule the PL saw", async () => {
@@ -997,5 +999,61 @@ describe("Übermittlung an die Agentur", () => {
     expect(within(section).getByText("am 23.10.2026 (veraltete Formularversion)")).toBeVisible();
     expect(within(section).getByText(/Formularverantwortlichen informieren/)).toBeVisible();
     expect(within(section).queryByRole("button", { name: submissionActions })).toBeNull();
+  });
+
+  it("confirms an original the Agentur still holds, linking the earlier dispatch (Q206 (4))", async () => {
+    const user = userEvent.setup();
+    const earlier = "00000000-0000-4000-a000-0000000000e8";
+    const { calls } = setup({
+      profiler: false,
+      submission: {
+        attempts: [
+          attempt({ retainableOriginal: { submissionId: earlier, originalSentOn: "2026-10-12" } }),
+          attempt({
+            id: earlier,
+            submittedOn: "2026-10-10",
+            originalSentOn: "2026-10-12",
+            rejection: { rejectedOn: "2026-10-18", reason: "incomplete" },
+            capabilities: { recordOriginal: false, recordRejection: false },
+          }),
+        ],
+        next: next("already_submitted"),
+      },
+      routes: {
+        [`POST /api/v1/agentur-submissions/${submissionId}/original-retained`]: () =>
+          new Response(null, { status: 204 }),
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    await user.click(
+      within(section).getByRole("button", { name: "Original liegt der Agentur vor" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Original liegt der Agentur vor" });
+    expect(within(dialog).getByText(/am 12\.10\.2026 versandte Original/)).toBeVisible();
+    await user.click(within(dialog).getByRole("button", { name: "Bestätigen" }));
+    await waitFor(() =>
+      expect(
+        callTo(calls, `POST /api/v1/agentur-submissions/${submissionId}/original-retained`)[0]
+          ?.body,
+      ).toEqual({ retainedFrom: earlier }),
+    );
+  });
+
+  it("shows a retained original by its earlier date", async () => {
+    setup({
+      profiler: true,
+      submission: {
+        attempts: [
+          attempt({
+            originalSentOn: "2026-10-12",
+            originalRetainedFrom: "00000000-0000-4000-a000-0000000000e8",
+            capabilities: { recordOriginal: false, recordRejection: false },
+          }),
+        ],
+        next: null,
+      },
+    });
+    const section = await screen.findByRole("region", { name: "Übermittlung an die Agentur" });
+    expect(within(section).getByText("12.10.2026 (liegt der Agentur vor)")).toBeVisible();
   });
 });

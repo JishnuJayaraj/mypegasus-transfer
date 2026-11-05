@@ -373,6 +373,102 @@ describe("record_original_sent (D26)", () => {
   });
 });
 
+const retain = (submissionId: string, retainedFrom: string, context = pl) =>
+  call(app, "record_original_retained", { context, submissionId, retainedFrom });
+
+describe("record_original_retained (Q206 (4))", () => {
+  it("links the earlier dispatch of the same paper to the same Agentur and keeps its date", async () => {
+    const id = await participation();
+    const documentId = await acceptedScan(id, 10);
+    const first = await submit({ id, documentId, submittedOn: await daysAgo(9) });
+    await original(first, await daysAgo(8));
+    await reject(first, await daysAgo(4));
+    const second = await submit({ id, documentId, submittedOn: await daysAgo(2) });
+    // A new dated original before the new submission is refused; the retained one isn't.
+    await expect(original(second, await daysAgo(8))).rejects.toMatchObject(
+      failsWith("date_before_submission"),
+    );
+    await expect(retain(second, first, asConsultant)).rejects.toMatchObject(
+      failsWith("actor_not_allowed"),
+    );
+    await retain(second, first);
+    expect(
+      await one(
+        "select original_sent_on::text as sent, original_retained_from as source from agentur_submission where id = $1",
+        [second],
+      ),
+    ).toEqual({ sent: await daysAgo(8), source: first });
+    await expect(retain(second, first)).rejects.toMatchObject(failsWith("original_recorded"));
+    expect((await events(id)).at(-1)).toEqual({
+      event_type: "agentur_submission_original_retained",
+      details: { submissionId: second, retainedFrom: first, originalSentOn: await daysAgo(8) },
+    });
+  });
+
+  it("is never assumed: only an earlier, rejected, dispatched attempt of the same scan and Agentur", async () => {
+    const id = await participation();
+    const documentId = await acceptedScan(id, 10);
+    const first = await submit({ id, documentId, submittedOn: await daysAgo(9) });
+    await reject(first, await daysAgo(6));
+    const second = await submit({ id, documentId, submittedOn: await daysAgo(5) });
+    // No original was dispatched with the first attempt.
+    await expect(retain(second, first)).rejects.toMatchObject(failsWith("original_not_retainable"));
+    await expect(retain(second, second)).rejects.toMatchObject(
+      failsWith("original_not_retainable"),
+    );
+    await expect(retain(second, randomUUID())).rejects.toMatchObject(
+      failsWith("retained_original_not_found"),
+    );
+    // Another participation's attempt is not found either.
+    const other = await participation();
+    const otherScan = await acceptedScan(other, 10);
+    const foreign = await submit({
+      id: other,
+      documentId: otherScan,
+      submittedOn: await daysAgo(9),
+    });
+    await expect(retain(second, foreign)).rejects.toMatchObject(
+      failsWith("retained_original_not_found"),
+    );
+    // A different paper: the original held is another one.
+    await original(second, await daysAgo(5));
+    await reject(second, await daysAgo(4));
+    const newScan = await acceptedScan(id, 3);
+    const third = await submit({ id, documentId: newScan, submittedOn: await daysAgo(2) });
+    await expect(retain(third, second)).rejects.toMatchObject(failsWith("original_not_retainable"));
+    // The same paper, but the earlier dispatch went to another Agentur.
+    await owner.query("update agentur_submission set document_id = $2 where id = $1", [
+      third,
+      documentId,
+    ]);
+    await owner.query(
+      "update agentur_submission set agentur_key = 'beispielstadt-sued' where id = $1",
+      [second],
+    );
+    await expect(retain(third, second)).rejects.toMatchObject(failsWith("original_not_retainable"));
+    await owner.query("update agentur_submission set agentur_key = $2 where id = $1", [
+      second,
+      agenturKey,
+    ]);
+    await retain(third, second);
+  });
+
+  it("isn't offered where no separate original is needed", async () => {
+    const id = await participation();
+    const documentId = await acceptedScan(id, 10);
+    const first = await submit({ id, documentId, submittedOn: await daysAgo(9) });
+    await original(first, await daysAgo(8));
+    await reject(first, await daysAgo(4));
+    const second = await submit({
+      id,
+      documentId,
+      submittedOn: await daysAgo(2),
+      channel: "paper_original",
+    });
+    await expect(retain(second, first)).rejects.toMatchObject(failsWith("original_not_required"));
+  });
+});
+
 describe("profiling_declined_dates (data-protection.md, the regional view)", () => {
   it("gives the latest refusal's effective date, dates only", async () => {
     const id = await participation();

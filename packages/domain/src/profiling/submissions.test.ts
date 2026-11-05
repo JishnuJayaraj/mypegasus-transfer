@@ -8,6 +8,7 @@ import {
   originalOutstanding,
   originalSentProblem,
   rejectionProblem,
+  retainableOriginal,
   tl407EscalationDate,
   tl407EscalationDaysAfterTgStart,
   tl407SubmissionDeadline,
@@ -269,5 +270,44 @@ describe("agenturItems (process-and-lifecycle.md, TL 407 submission)", () => {
     expect(agenturItems(closed, "ta_tg", work({ attempts: [attempt()] }), "2027-06-01")).toEqual([
       { kind: "tl407_original_missing", date: "2027-03-10" },
     ]);
+  });
+});
+
+/** An attempt with its paper and Agentur. */
+const ref = (
+  id: string,
+  overrides: Partial<Tl407Attempt> & { documentId?: string; agenturKey?: string } = {},
+) => ({
+  id,
+  documentId: "scan-a",
+  agenturKey: "nord",
+  ...attempt(overrides),
+});
+
+describe("retainableOriginal (Q206 (4))", () => {
+  const first = ref("first", { originalSentOn: "2027-03-11", rejectedOn: "2027-03-15" });
+  const second = ref("second", { submittedOn: "2027-03-16" });
+
+  it("offers the newest earlier dispatch of the same scan to the same Agentur", () => {
+    expect(retainableOriginal(second, [second, first])).toEqual({
+      submissionId: "first",
+      originalSentOn: "2027-03-11",
+    });
+    const middle = ref("middle", { originalSentOn: "2027-03-13", rejectedOn: "2027-03-14" });
+    expect(retainableOriginal(second, [second, middle, first])?.submissionId).toBe("middle");
+  });
+
+  it("offers nothing without such a dispatch, nor for an attempt that needs no original", () => {
+    expect(retainableOriginal(second, [second, { ...first, originalSentOn: null }])).toBeNull();
+    expect(retainableOriginal(second, [second, { ...first, documentId: "scan-b" }])).toBeNull();
+    expect(retainableOriginal(second, [second, { ...first, agenturKey: "sued" }])).toBeNull();
+    expect(retainableOriginal(second, [second, { ...first, rejectedOn: null }])).toBeNull();
+    expect(
+      retainableOriginal({ ...second, originalSentOn: "2027-03-16" }, [second, first]),
+    ).toBeNull();
+    expect(
+      retainableOriginal({ ...second, channel: "paper_original" }, [second, first]),
+    ).toBeNull();
+    expect(retainableOriginal(first, [second, first])).toBeNull();
   });
 });

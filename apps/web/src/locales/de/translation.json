@@ -1657,7 +1657,8 @@
       "agentur_submission_recorded": "An die Agentur übermittelt",
       "asu_confirmation_recorded": "Bestätigung der Agentur erfasst",
       "agentur_submission_original_sent": "Original an die Agentur versandt",
-      "agentur_submission_rejected": "Von der Agentur abgelehnt"
+      "agentur_submission_rejected": "Von der Agentur abgelehnt",
+      "agentur_submission_original_retained": "Original liegt der Agentur weiter vor"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -2522,9 +2523,16 @@
           "form_version_outdated": "Die Agentur nimmt diese Formularversion nicht mehr an.",
           "submission_settings_missing": "Einstellungen der Agentur fehlen.",
           "placement_agentur_missing": "Keine Vermittlungs-Agentur gesetzt.",
-          "participation_closed": "Die Teilnahme ist abgeschlossen."
+          "participation_closed": "Die Teilnahme ist abgeschlossen.",
+          "original_not_retainable": "Dieses Original kann nicht übernommen werden (anderer Bogen, andere Agentur oder nicht versandt).",
+          "retained_original_not_found": "Die frühere Übermittlung wurde nicht gefunden."
         }
-      }
+      },
+      "originalRetained": "{{date}} (liegt der Agentur vor)",
+      "confirmRetained": "Original liegt der Agentur vor",
+      "retainedTitle": "Original liegt der Agentur vor",
+      "retainedConfirm": "Bestätigen",
+      "retainedText": "Die Agentur {{agentur}} hat das am {{date}} versandte Original dieses Bogens noch vorliegen. Nur bestätigen, wenn die Agentur das bestätigt hat; sonst das Original erneut versenden."
     }
   },
   "asu": {

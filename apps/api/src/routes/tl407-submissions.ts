@@ -3,6 +3,7 @@ import { agenturSubmission, eq, participation, sql } from "@transfer/db";
 import {
   AgenturRejectionInput,
   mayRecordTl407Submission,
+  OriginalRetainedInput,
   OriginalSentInput,
   Tl407SubmissionCreated,
   Tl407SubmissionInput,
@@ -48,6 +49,8 @@ const fieldOf: Record<string, string> = {
   document_not_found: "documentId",
   scan_unusable: "documentId",
   form_version_outdated: "documentId",
+  retained_original_not_found: "retainedFrom",
+  original_not_retainable: "retainedFrom",
 };
 
 /** The functions' refusals as their problems (allowlisted), or rethrown. */
@@ -70,6 +73,8 @@ function refused(c: Context<AppEnv>, error: unknown, dateField: string | null = 
       "original_recorded",
       "already_rejected",
       "rejection_not_applicable",
+      "retained_original_not_found",
+      "original_not_retainable",
       ...Object.keys(fieldOf),
     ].includes(code)
   ) {
@@ -236,6 +241,50 @@ export function tl407SubmissionRoutes(deps: Deps) {
         );
       } catch (error) {
         return refused(c, error, "originalSentOn") as never;
+      }
+      return c.body(null, 204) as never;
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/agentur-submissions/{submissionId}/original-retained",
+      tags: ["participations"],
+      summary:
+        '"Original liegt der Agentur vor" (the PL): after a rejection and a new submission of the same scan, the same Agentur still holds the original an earlier attempt dispatched; links that attempt and keeps its date; never assumed',
+      middleware,
+      request: {
+        params: SubmissionParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: OriginalRetainedInput } },
+        },
+      },
+      responses: {
+        204: { description: "Recorded" },
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "unsupported-media-type",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { submissionId } = c.req.valid("param");
+      const { retainedFrom } = c.req.valid("json");
+      const lead = await submissionLead(c, submissionId);
+      if ("response" in lead) return lead.response as never;
+      try {
+        await db.execute(
+          sql`select record_original_retained(p_context => ${context(c)},
+            p_submission_id => ${submissionId}::uuid, p_retained_from => ${retainedFrom}::uuid)`,
+        );
+      } catch (error) {
+        return refused(c, error) as never;
       }
       return c.body(null, 204) as never;
     },

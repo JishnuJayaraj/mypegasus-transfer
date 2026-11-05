@@ -28,6 +28,7 @@ import {
   mayViewProfiling,
   originalOutstanding,
   parseProfilingAssessment,
+  retainableOriginal,
   ProfilingAssessmentInput,
   ProfilingAssessmentView,
   ProfilingDeclarationsInput,
@@ -491,6 +492,9 @@ export function profilingRoutes(deps: Deps) {
       submittedOn: a.submittedOn,
       originalRequired: a.originalRequired,
       originalSentOn: a.originalSentOn,
+      originalRetainedFrom: a.originalRetainedFrom,
+      // Offered to the PL on the standing attempt, never assumed (Q206 (4)).
+      retainableOriginal: lead ? retainableOriginal(a, record.attempts) : null,
       rejection:
         a.rejectedOn === null ? null : { rejectedOn: a.rejectedOn, reason: a.rejectionReason! },
       recordedAt: a.recordedAt,

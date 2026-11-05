@@ -224,6 +224,7 @@ export function HistoryTab({
         return t("history.dated", { date: formatDate(text(details.confirmedOn)) });
       // The TL 407's original and the Agentur's rejection by their dates and reason.
       case "agentur_submission_original_sent":
+      case "agentur_submission_original_retained":
         return t("history.dated", { date: formatDate(text(details.originalSentOn)) });
       case "agentur_submission_rejected":
         return t("history.rejection", {

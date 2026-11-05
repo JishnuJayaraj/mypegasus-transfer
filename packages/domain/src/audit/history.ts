@@ -207,6 +207,7 @@ export const auditProjection: {
   // Agentur's rejection by their dates and reason.
   agentur_submission_original_sent: shown("profiling", { details: ["originalSentOn"] }),
   agentur_submission_rejected: shown("profiling", { details: ["rejectedOn", "reason"] }),
+  agentur_submission_original_retained: shown("profiling", { details: ["originalSentOn"] }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */

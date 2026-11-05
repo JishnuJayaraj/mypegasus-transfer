@@ -137,6 +137,7 @@ describe("audit event types (ADR-0002)", () => {
       "asu_confirmation_recorded",
       "agentur_submission_original_sent",
       "agentur_submission_rejected",
+      "agentur_submission_original_retained",
     ]);
   });
 
@@ -242,6 +243,7 @@ describe("audit event types (ADR-0002)", () => {
       "asu_confirmation_recorded",
       "agentur_submission_original_sent",
       "agentur_submission_rejected",
+      "agentur_submission_original_retained",
     ]);
   });
 
@@ -542,6 +544,10 @@ describe("the other event types", () => {
     [
       "agentur_submission_original_sent",
       { details: { submissionId: otherId, originalSentOn: "2026-12-01" } },
+    ],
+    [
+      "agentur_submission_original_retained",
+      { details: { submissionId: otherId, retainedFrom: otherId, originalSentOn: "2026-11-20" } },
     ],
     [
       "agentur_submission_rejected",

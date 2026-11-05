@@ -6154,7 +6154,8 @@
           "agentur_submission_recorded",
           "asu_confirmation_recorded",
           "agentur_submission_original_sent",
-          "agentur_submission_rejected"
+          "agentur_submission_rejected",
+          "agentur_submission_original_retained"
         ]
       },
       "HistoryActor": {
@@ -12164,6 +12165,38 @@
               "2027-03-01"
             ]
           },
+          "originalRetainedFrom": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "retainableOriginal": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "submissionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "originalSentOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "submissionId",
+              "originalSentOn"
+            ],
+            "additionalProperties": false
+          },
           "rejection": {
             "type": [
               "object",
@@ -12219,6 +12252,8 @@
           "submittedOn",
           "originalRequired",
           "originalSentOn",
+          "originalRetainedFrom",
+          "retainableOriginal",
           "rejection",
           "recordedAt",
           "capabilities"
@@ -14987,6 +15022,19 @@
         },
         "required": [
           "originalSentOn"
+        ],
+        "additionalProperties": false
+      },
+      "OriginalRetainedInput": {
+        "type": "object",
+        "properties": {
+          "retainedFrom": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "retainedFrom"
         ],
         "additionalProperties": false
       },
@@ -28449,6 +28497,100 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/OriginalSentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agentur-submissions/{submissionId}/original-retained": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "\"Original liegt der Agentur vor\" (the PL): after a rejection and a new submission of the same scan, the same Agentur still holds the original an earlier attempt dispatched; links that attempt and keeps its date; never assumed",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "submissionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OriginalRetainedInput"
               }
             }
           }

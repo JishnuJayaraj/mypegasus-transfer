@@ -222,6 +222,7 @@ export const AuditEventType = z.enum([
   "asu_confirmation_recorded",
   "agentur_submission_original_sent",
   "agentur_submission_rejected",
+  "agentur_submission_original_retained",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -337,6 +338,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "asu_confirmation_recorded",
   "agentur_submission_original_sent",
   "agentur_submission_rejected",
+  "agentur_submission_original_retained",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1431,6 +1433,19 @@ export const AuditEvent = z.discriminatedUnion("type", [
     ...ofParticipation,
     actor: staffActor,
     details: z.strictObject({ submissionId: z.uuid(), originalSentOn: isoDate }),
+  }),
+  /**
+   * "Original liegt der Agentur vor" (Q206 (4)): after a rejection the same Agentur still holds the
+   * same paper's original an earlier attempt dispatched; its actual date and that attempt.
+   */
+  event("agentur_submission_original_retained", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      submissionId: z.uuid(),
+      retainedFrom: z.uuid(),
+      originalSentOn: isoDate,
+    }),
   }),
   /** "Von der Agentur abgelehnt" (Q189): the date and reason; the signatures stay as they are. */
   event("agentur_submission_rejected", {

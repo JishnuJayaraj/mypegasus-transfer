@@ -26,7 +26,7 @@ import { participationProfilingQuery, useApi } from "../api";
 type View = components["schemas"]["Profiling"];
 type Attempt = components["schemas"]["Tl407Submission"];
 type Reason = components["schemas"]["AgenturRejectionReason"];
-type Dialog = { kind: "original" | "rejection"; attempt: Attempt } | { kind: "none" };
+type Dialog = { kind: "original" | "rejection" | "retained"; attempt: Attempt } | { kind: "none" };
 
 const reasons = ["outdated_form_version", "incomplete", "other"] as const satisfies Reason[];
 
@@ -140,7 +140,11 @@ export function Tl407Submission({ view }: { view: View }) {
               channel: `${attempt.agenturKey}, ${channel(attempt.channel)}`,
               version: attempt.formVersion.replace("-", "/"),
               original: attempt.originalSentOn
-                ? formatDate(attempt.originalSentOn)
+                ? attempt.originalRetainedFrom
+                  ? t("profiling.submission.originalRetained", {
+                      date: formatDate(attempt.originalSentOn),
+                    })
+                  : formatDate(attempt.originalSentOn)
                 : attempt.rejection
                   ? "–"
                   : !attempt.originalRequired
@@ -156,6 +160,16 @@ export function Tl407Submission({ view }: { view: View }) {
                 : "",
               actions: (
                 <>
+                  {attempt.retainableOriginal && (
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setDialog({ kind: "retained", attempt })}
+                    >
+                      {t("profiling.submission.confirmRetained")}
+                    </Button>
+                  )}
                   {attempt.capabilities.recordOriginal && (
                     <Button
                       kind="ghost"
@@ -183,6 +197,19 @@ export function Tl407Submission({ view }: { view: View }) {
           />
         )}
       </Stack>
+      <RetainedDialog
+        dialog={dialog}
+        busy={busy}
+        onClose={() => setDialog({ kind: "none" })}
+        onConfirm={(attempt) =>
+          act(() =>
+            api.POST("/api/v1/agentur-submissions/{submissionId}/original-retained", {
+              params: { path: { submissionId: attempt.id } },
+              body: { retainedFrom: attempt.retainableOriginal!.submissionId },
+            }),
+          )
+        }
+      />
       <FollowUpDialog
         dialog={dialog}
         busy={busy}
@@ -205,6 +232,44 @@ export function Tl407Submission({ view }: { view: View }) {
         }
       />
     </section>
+  );
+}
+
+/**
+ * "Original liegt der Agentur vor" (Q206 (4)): the PL confirms that the same Agentur still holds
+ * the original dispatched with an earlier attempt of this paper; the earlier date is kept.
+ */
+function RetainedDialog(props: {
+  dialog: Dialog;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (attempt: Attempt) => Promise<boolean>;
+}) {
+  const { t } = useTranslation();
+  const attempt = props.dialog.kind === "retained" ? props.dialog.attempt : undefined;
+  const held = attempt?.retainableOriginal;
+  return (
+    <Modal
+      open={held !== undefined && held !== null}
+      size="sm"
+      modalHeading={t("profiling.submission.retainedTitle")}
+      primaryButtonText={t("profiling.submission.retainedConfirm")}
+      secondaryButtonText={t("profiling.submission.cancel")}
+      primaryButtonDisabled={props.busy}
+      onRequestClose={props.onClose}
+      onRequestSubmit={() => {
+        if (attempt) void props.onConfirm(attempt);
+      }}
+    >
+      {attempt && held && (
+        <p>
+          {t("profiling.submission.retainedText", {
+            agentur: attempt.agenturKey,
+            date: formatDate(held.originalSentOn),
+          })}
+        </p>
+      )}
+    </Modal>
   );
 }
 
@@ -280,7 +345,7 @@ function FollowUpDialog(props: {
   const [reason, setReason] = useState<Reason | "">("");
   const [invalid, setInvalid] = useState(false);
   const { dialog } = props;
-  const kind = dialog.kind === "none" ? undefined : dialog.kind;
+  const kind = dialog.kind === "original" || dialog.kind === "rejection" ? dialog.kind : undefined;
   const close = () => {
     setDate("");
     setReason("");
@@ -288,7 +353,7 @@ function FollowUpDialog(props: {
     props.onClose();
   };
   const submit = async () => {
-    if (dialog.kind === "none") return;
+    if (dialog.kind !== "original" && dialog.kind !== "rejection") return;
     const parsed = parseDisplayDate(date);
     if (!parsed.ok || parsed.value === undefined) {
       setInvalid(true);

@@ -626,6 +626,7 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     original_sent_on: "agenturSubmissions",
     original_recorded_by: null,
     original_recorded_at: "agenturSubmissions",
+    original_retained_from: "agenturSubmissions",
     rejected_on: "agenturSubmissions",
     rejection_reason: "agenturSubmissions",
     rejection_recorded_by: null,

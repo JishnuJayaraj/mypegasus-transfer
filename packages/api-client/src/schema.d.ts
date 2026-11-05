@@ -12711,6 +12711,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agentur-submissions/{submissionId}/original-retained": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** "Original liegt der Agentur vor" (the PL): after a rejection and a new submission of the same scan, the same Agentur still holds the original an earlier attempt dispatched; links that attempt and keeps its date; never assumed */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    submissionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OriginalRetainedInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agentur-submissions/{submissionId}/rejection": {
         parameters: {
             query?: never;
@@ -14672,7 +14766,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -16140,6 +16234,18 @@ export interface components {
              * @example 2027-03-01
              */
             originalSentOn: string | null;
+            /** Format: uuid */
+            originalRetainedFrom: string | null;
+            retainableOriginal: {
+                /** Format: uuid */
+                submissionId: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                originalSentOn: string;
+            } | null;
             rejection: {
                 /**
                  * Format: date
@@ -16921,6 +17027,10 @@ export interface components {
              * @example 2027-03-01
              */
             originalSentOn: string;
+        };
+        OriginalRetainedInput: {
+            /** Format: uuid */
+            retainedFrom: string;
         };
         AgenturRejectionInput: {
             /**
