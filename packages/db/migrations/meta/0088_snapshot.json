@@ -214,80 +214,54 @@
         "activation_code_project_id_project_id_fk": {
           "name": "activation_code_project_id_project_id_fk",
           "tableFrom": "activation_code",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "activation_code_identity_checked_by_staff_user_id_fk": {
           "name": "activation_code_identity_checked_by_staff_user_id_fk",
           "tableFrom": "activation_code",
-          "columnsFrom": [
-            "identity_checked_by"
-          ],
+          "columnsFrom": ["identity_checked_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "activation_code_handed_over_by_staff_user_id_fk": {
           "name": "activation_code_handed_over_by_staff_user_id_fk",
           "tableFrom": "activation_code",
-          "columnsFrom": [
-            "handed_over_by"
-          ],
+          "columnsFrom": ["handed_over_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "activation_code_issued_by_staff_user_id_fk": {
           "name": "activation_code_issued_by_staff_user_id_fk",
           "tableFrom": "activation_code",
-          "columnsFrom": [
-            "issued_by"
-          ],
+          "columnsFrom": ["issued_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "activation_code_revoked_by_staff_user_id_fk": {
           "name": "activation_code_revoked_by_staff_user_id_fk",
           "tableFrom": "activation_code",
-          "columnsFrom": [
-            "revoked_by"
-          ],
+          "columnsFrom": ["revoked_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "activation_code_participation_fk": {
           "name": "activation_code_participation_fk",
           "tableFrom": "activation_code",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -296,17 +270,12 @@
       "uniqueConstraints": {
         "activation_code_code_hash_unique": {
           "name": "activation_code_code_hash_unique",
-          "columns": [
-            "code_hash"
-          ],
+          "columns": ["code_hash"],
           "nullsNotDistinct": false
         },
         "activation_code_id_project_unique": {
           "name": "activation_code_id_project_unique",
-          "columns": [
-            "id",
-            "project_id"
-          ],
+          "columns": ["id", "project_id"],
           "nullsNotDistinct": false
         }
       },
@@ -527,108 +496,72 @@
         "agentur_submission_project_id_project_id_fk": {
           "name": "agentur_submission_project_id_project_id_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_document_id_document_id_fk": {
           "name": "agentur_submission_document_id_document_id_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_recorded_by_staff_user_id_fk": {
           "name": "agentur_submission_recorded_by_staff_user_id_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "recorded_by"
-          ],
+          "columnsFrom": ["recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_original_recorded_by_staff_user_id_fk": {
           "name": "agentur_submission_original_recorded_by_staff_user_id_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "original_recorded_by"
-          ],
+          "columnsFrom": ["original_recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_rejection_recorded_by_staff_user_id_fk": {
           "name": "agentur_submission_rejection_recorded_by_staff_user_id_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "rejection_recorded_by"
-          ],
+          "columnsFrom": ["rejection_recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_participation_fk": {
           "name": "agentur_submission_participation_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_batch_fk": {
           "name": "agentur_submission_batch_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "batch_id",
-            "project_id"
-          ],
+          "columnsFrom": ["batch_id", "project_id"],
           "tableTo": "kug200b_batch",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "agentur_submission_original_retained_from_fk": {
           "name": "agentur_submission_original_retained_from_fk",
           "tableFrom": "agentur_submission",
-          "columnsFrom": [
-            "original_retained_from"
-          ],
+          "columnsFrom": ["original_retained_from"],
           "tableTo": "agentur_submission",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -637,10 +570,7 @@
       "uniqueConstraints": {
         "agentur_submission_batch_member_unique": {
           "name": "agentur_submission_batch_member_unique",
-          "columns": [
-            "batch_id",
-            "participation_id"
-          ],
+          "columns": ["batch_id", "participation_id"],
           "nullsNotDistinct": false
         }
       },
@@ -830,54 +760,36 @@
         "appointment_project_id_project_id_fk": {
           "name": "appointment_project_id_project_id_fk",
           "tableFrom": "appointment",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_host_staff_user_id_staff_user_id_fk": {
           "name": "appointment_host_staff_user_id_staff_user_id_fk",
           "tableFrom": "appointment",
-          "columnsFrom": [
-            "host_staff_user_id"
-          ],
+          "columnsFrom": ["host_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_created_by_staff_user_id_fk": {
           "name": "appointment_created_by_staff_user_id_fk",
           "tableFrom": "appointment",
-          "columnsFrom": [
-            "created_by"
-          ],
+          "columnsFrom": ["created_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_audience_wave_fk": {
           "name": "appointment_audience_wave_fk",
           "tableFrom": "appointment",
-          "columnsFrom": [
-            "audience_wave_id",
-            "project_id"
-          ],
+          "columnsFrom": ["audience_wave_id", "project_id"],
           "tableTo": "project_entry_wave",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -886,10 +798,7 @@
       "uniqueConstraints": {
         "appointment_id_project_unique": {
           "name": "appointment_id_project_unique",
-          "columns": [
-            "id",
-            "project_id"
-          ],
+          "columns": ["id", "project_id"],
           "nullsNotDistinct": false
         }
       },
@@ -1185,162 +1094,108 @@
         "appointment_booking_project_id_project_id_fk": {
           "name": "appointment_booking_project_id_project_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_booked_by_staff_user_id_fk": {
           "name": "appointment_booking_booked_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "booked_by"
-          ],
+          "columnsFrom": ["booked_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_cancelled_by_staff_user_id_fk": {
           "name": "appointment_booking_cancelled_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "cancelled_by"
-          ],
+          "columnsFrom": ["cancelled_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_attendance_recorded_by_staff_user_id_fk": {
           "name": "appointment_booking_attendance_recorded_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "attendance_recorded_by"
-          ],
+          "columnsFrom": ["attendance_recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_informed_basis_by_staff_user_id_fk": {
           "name": "appointment_booking_informed_basis_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "informed_basis_by"
-          ],
+          "columnsFrom": ["informed_basis_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_conflict_escalated_by_staff_user_id_fk": {
           "name": "appointment_booking_conflict_escalated_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "conflict_escalated_by"
-          ],
+          "columnsFrom": ["conflict_escalated_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_conflict_resolved_by_staff_user_id_fk": {
           "name": "appointment_booking_conflict_resolved_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "conflict_resolved_by"
-          ],
+          "columnsFrom": ["conflict_resolved_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_attendance_superseded_by_staff_user_id_fk": {
           "name": "appointment_booking_attendance_superseded_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "attendance_superseded_by"
-          ],
+          "columnsFrom": ["attendance_superseded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_missed_resolved_by_staff_user_id_fk": {
           "name": "appointment_booking_missed_resolved_by_staff_user_id_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "missed_resolved_by"
-          ],
+          "columnsFrom": ["missed_resolved_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_participation_fk": {
           "name": "appointment_booking_participation_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_appointment_fk": {
           "name": "appointment_booking_appointment_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "appointment_id",
-            "project_id"
-          ],
+          "columnsFrom": ["appointment_id", "project_id"],
           "tableTo": "appointment",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "appointment_booking_follow_up_fk": {
           "name": "appointment_booking_follow_up_fk",
           "tableFrom": "appointment_booking",
-          "columnsFrom": [
-            "follow_up_of",
-            "participation_id"
-          ],
+          "columnsFrom": ["follow_up_of", "participation_id"],
           "tableTo": "appointment_booking",
-          "columnsTo": [
-            "id",
-            "participation_id"
-          ],
+          "columnsTo": ["id", "participation_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1349,10 +1204,7 @@
       "uniqueConstraints": {
         "appointment_booking_id_participation_unique": {
           "name": "appointment_booking_id_participation_unique",
-          "columns": [
-            "id",
-            "participation_id"
-          ],
+          "columns": ["id", "participation_id"],
           "nullsNotDistinct": false
         }
       },
@@ -1502,54 +1354,36 @@
         "assisted_mode_project_id_project_id_fk": {
           "name": "assisted_mode_project_id_project_id_fk",
           "tableFrom": "assisted_mode",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "assisted_mode_staff_user_id_staff_user_id_fk": {
           "name": "assisted_mode_staff_user_id_staff_user_id_fk",
           "tableFrom": "assisted_mode",
-          "columnsFrom": [
-            "staff_user_id"
-          ],
+          "columnsFrom": ["staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "assisted_mode_staff_session_hash_staff_session_token_hash_fk": {
           "name": "assisted_mode_staff_session_hash_staff_session_token_hash_fk",
           "tableFrom": "assisted_mode",
-          "columnsFrom": [
-            "staff_session_hash"
-          ],
+          "columnsFrom": ["staff_session_hash"],
           "tableTo": "staff_session",
-          "columnsTo": [
-            "token_hash"
-          ],
+          "columnsTo": ["token_hash"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "assisted_mode_participation_fk": {
           "name": "assisted_mode_participation_fk",
           "tableFrom": "assisted_mode",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1617,41 +1451,27 @@
         "asu_record_project_id_project_id_fk": {
           "name": "asu_record_project_id_project_id_fk",
           "tableFrom": "asu_record",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_record_set_by_staff_user_id_fk": {
           "name": "asu_record_set_by_staff_user_id_fk",
           "tableFrom": "asu_record",
-          "columnsFrom": [
-            "set_by"
-          ],
+          "columnsFrom": ["set_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_record_participation_fk": {
           "name": "asu_record_participation_fk",
           "tableFrom": "asu_record",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1828,132 +1648,90 @@
         "asu_registration_project_id_project_id_fk": {
           "name": "asu_registration_project_id_project_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_recorded_by_staff_user_id_fk": {
           "name": "asu_registration_recorded_by_staff_user_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "recorded_by"
-          ],
+          "columnsFrom": ["recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_proof_document_id_document_id_fk": {
           "name": "asu_registration_proof_document_id_document_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "proof_document_id"
-          ],
+          "columnsFrom": ["proof_document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_proof_linked_by_staff_user_id_fk": {
           "name": "asu_registration_proof_linked_by_staff_user_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "proof_linked_by"
-          ],
+          "columnsFrom": ["proof_linked_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_agentur_submission_id_agentur_submission_id_fk": {
           "name": "asu_registration_agentur_submission_id_agentur_submission_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "agentur_submission_id"
-          ],
+          "columnsFrom": ["agentur_submission_id"],
           "tableTo": "agentur_submission",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_confirmed_by_staff_user_id_fk": {
           "name": "asu_registration_confirmed_by_staff_user_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "confirmed_by"
-          ],
+          "columnsFrom": ["confirmed_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_superseded_by_evidence_correction_id_fk": {
           "name": "asu_registration_superseded_by_evidence_correction_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "superseded_by"
-          ],
+          "columnsFrom": ["superseded_by"],
           "tableTo": "evidence_correction",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_invalidated_by_evidence_correction_id_fk": {
           "name": "asu_registration_invalidated_by_evidence_correction_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "invalidated_by"
-          ],
+          "columnsFrom": ["invalidated_by"],
           "tableTo": "evidence_correction",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_correction_id_evidence_correction_id_fk": {
           "name": "asu_registration_correction_id_evidence_correction_id_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "correction_id"
-          ],
+          "columnsFrom": ["correction_id"],
           "tableTo": "evidence_correction",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "asu_registration_participation_fk": {
           "name": "asu_registration_participation_fk",
           "tableFrom": "asu_registration",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -1962,9 +1740,7 @@
       "uniqueConstraints": {
         "asu_registration_submission_unique": {
           "name": "asu_registration_submission_unique",
-          "columns": [
-            "agentur_submission_id"
-          ],
+          "columns": ["agentur_submission_id"],
           "nullsNotDistinct": false
         }
       },
@@ -2188,26 +1964,18 @@
         "audit_event_project_id_project_id_fk": {
           "name": "audit_event_project_id_project_id_fk",
           "tableFrom": "audit_event",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "audit_event_actor_staff_user_id_staff_user_id_fk": {
           "name": "audit_event_actor_staff_user_id_staff_user_id_fk",
           "tableFrom": "audit_event",
-          "columnsFrom": [
-            "actor_staff_user_id"
-          ],
+          "columnsFrom": ["actor_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -2304,10 +2072,7 @@
       "uniqueConstraints": {
         "audit_event_projection_unique": {
           "name": "audit_event_projection_unique",
-          "columns": [
-            "event_type",
-            "field"
-          ],
+          "columns": ["event_type", "field"],
           "nullsNotDistinct": true
         }
       },
@@ -2458,95 +2223,63 @@
         "ba_reporting_task_project_id_project_id_fk": {
           "name": "ba_reporting_task_project_id_project_id_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "ba_reporting_task_decided_by_staff_user_id_fk": {
           "name": "ba_reporting_task_decided_by_staff_user_id_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "decided_by"
-          ],
+          "columnsFrom": ["decided_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "ba_reporting_task_superseded_by_ba_reporting_task_id_fk": {
           "name": "ba_reporting_task_superseded_by_ba_reporting_task_id_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "superseded_by"
-          ],
+          "columnsFrom": ["superseded_by"],
           "tableTo": "ba_reporting_task",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "ba_reporting_task_replaces_task_id_ba_reporting_task_id_fk": {
           "name": "ba_reporting_task_replaces_task_id_ba_reporting_task_id_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "replaces_task_id"
-          ],
+          "columnsFrom": ["replaces_task_id"],
           "tableTo": "ba_reporting_task",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "ba_reporting_task_correction_id_evidence_correction_id_fk": {
           "name": "ba_reporting_task_correction_id_evidence_correction_id_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "correction_id"
-          ],
+          "columnsFrom": ["correction_id"],
           "tableTo": "evidence_correction",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "ba_reporting_task_participation_fk": {
           "name": "ba_reporting_task_participation_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "ba_reporting_task_amendment_fk": {
           "name": "ba_reporting_task_amendment_fk",
           "tableFrom": "ba_reporting_task",
-          "columnsFrom": [
-            "amendment_id",
-            "project_id"
-          ],
+          "columnsFrom": ["amendment_id", "project_id"],
           "tableTo": "participation_dsv_amendment",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -2555,9 +2288,7 @@
       "uniqueConstraints": {
         "ba_reporting_task_replaces_unique": {
           "name": "ba_reporting_task_replaces_unique",
-          "columns": [
-            "replaces_task_id"
-          ],
+          "columns": ["replaces_task_id"],
           "nullsNotDistinct": false
         }
       },
@@ -2677,39 +2408,27 @@
         "config_relaxation_request_project_id_project_id_fk": {
           "name": "config_relaxation_request_project_id_project_id_fk",
           "tableFrom": "config_relaxation_request",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "config_relaxation_request_requested_by_staff_user_id_fk": {
           "name": "config_relaxation_request_requested_by_staff_user_id_fk",
           "tableFrom": "config_relaxation_request",
-          "columnsFrom": [
-            "requested_by"
-          ],
+          "columnsFrom": ["requested_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "config_relaxation_request_decided_by_staff_user_id_fk": {
           "name": "config_relaxation_request_decided_by_staff_user_id_fk",
           "tableFrom": "config_relaxation_request",
-          "columnsFrom": [
-            "decided_by"
-          ],
+          "columnsFrom": ["decided_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -2774,10 +2493,7 @@
       "compositePrimaryKeys": {
         "config_template_version_pkey": {
           "name": "config_template_version_pkey",
-          "columns": [
-            "agentur_key",
-            "version"
-          ]
+          "columns": ["agentur_key", "version"]
         }
       },
       "uniqueConstraints": {},
@@ -2922,54 +2638,36 @@
         "consent_record_project_id_project_id_fk": {
           "name": "consent_record_project_id_project_id_fk",
           "tableFrom": "consent_record",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "consent_record_actor_staff_user_id_staff_user_id_fk": {
           "name": "consent_record_actor_staff_user_id_staff_user_id_fk",
           "tableFrom": "consent_record",
-          "columnsFrom": [
-            "actor_staff_user_id"
-          ],
+          "columnsFrom": ["actor_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "consent_record_document_id_document_id_fk": {
           "name": "consent_record_document_id_document_id_fk",
           "tableFrom": "consent_record",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "consent_record_participation_fk": {
           "name": "consent_record_participation_fk",
           "tableFrom": "consent_record",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -3267,127 +2965,81 @@
         "document_project_id_project_id_fk": {
           "name": "document_project_id_project_id_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_added_by_staff_user_id_staff_user_id_fk": {
           "name": "document_added_by_staff_user_id_staff_user_id_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "added_by_staff_user_id"
-          ],
+          "columnsFrom": ["added_by_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_reviewed_by_staff_user_id_fk": {
           "name": "document_reviewed_by_staff_user_id_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "reviewed_by"
-          ],
+          "columnsFrom": ["reviewed_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_deleted_by_staff_user_id_staff_user_id_fk": {
           "name": "document_deleted_by_staff_user_id_staff_user_id_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "deleted_by_staff_user_id"
-          ],
+          "columnsFrom": ["deleted_by_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_quarantined_by_staff_user_id_fk": {
           "name": "document_quarantined_by_staff_user_id_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "quarantined_by"
-          ],
+          "columnsFrom": ["quarantined_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_invalidated_by_correction_evidence_correction_id_fk": {
           "name": "document_invalidated_by_correction_evidence_correction_id_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "invalidated_by_correction"
-          ],
+          "columnsFrom": ["invalidated_by_correction"],
           "tableTo": "evidence_correction",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_participation_fk": {
           "name": "document_participation_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_generation_fk": {
           "name": "document_generation_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "generation_document_id",
-            "participation_id",
-            "form_code"
-          ],
+          "columnsFrom": ["generation_document_id", "participation_id", "form_code"],
           "tableTo": "form_generation",
-          "columnsTo": [
-            "document_id",
-            "participation_id",
-            "form_code"
-          ],
+          "columnsTo": ["document_id", "participation_id", "form_code"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_policy_fk": {
           "name": "document_policy_fk",
           "tableFrom": "document",
-          "columnsFrom": [
-            "type",
-            "catalog_version",
-            "retention_class"
-          ],
+          "columnsFrom": ["type", "catalog_version", "retention_class"],
           "tableTo": "document_type_policy",
-          "columnsTo": [
-            "type",
-            "catalog_version",
-            "retention_class"
-          ],
+          "columnsTo": ["type", "catalog_version", "retention_class"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -3523,41 +3175,27 @@
         "document_link_document_id_document_id_fk": {
           "name": "document_link_document_id_document_id_fk",
           "tableFrom": "document_link",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_link_project_id_project_id_fk": {
           "name": "document_link_project_id_project_id_fk",
           "tableFrom": "document_link",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "document_link_participation_fk": {
           "name": "document_link_participation_fk",
           "tableFrom": "document_link",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -3660,20 +3298,13 @@
       "compositePrimaryKeys": {
         "document_type_policy_pkey": {
           "name": "document_type_policy_pkey",
-          "columns": [
-            "type",
-            "catalog_version"
-          ]
+          "columns": ["type", "catalog_version"]
         }
       },
       "uniqueConstraints": {
         "document_type_policy_retention_unique": {
           "name": "document_type_policy_retention_unique",
-          "columns": [
-            "type",
-            "catalog_version",
-            "retention_class"
-          ],
+          "columns": ["type", "catalog_version", "retention_class"],
           "nullsNotDistinct": false
         }
       },
@@ -3838,93 +3469,63 @@
         "evidence_correction_project_id_project_id_fk": {
           "name": "evidence_correction_project_id_project_id_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "evidence_correction_document_id_document_id_fk": {
           "name": "evidence_correction_document_id_document_id_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "evidence_correction_asu_registration_id_asu_registration_id_fk": {
           "name": "evidence_correction_asu_registration_id_asu_registration_id_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "asu_registration_id"
-          ],
+          "columnsFrom": ["asu_registration_id"],
           "tableTo": "asu_registration",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "evidence_correction_ba_reporting_task_id_ba_reporting_task_id_fk": {
           "name": "evidence_correction_ba_reporting_task_id_ba_reporting_task_id_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "ba_reporting_task_id"
-          ],
+          "columnsFrom": ["ba_reporting_task_id"],
           "tableTo": "ba_reporting_task",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "evidence_correction_requested_by_staff_user_id_fk": {
           "name": "evidence_correction_requested_by_staff_user_id_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "requested_by"
-          ],
+          "columnsFrom": ["requested_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "evidence_correction_decided_by_staff_user_id_fk": {
           "name": "evidence_correction_decided_by_staff_user_id_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "decided_by"
-          ],
+          "columnsFrom": ["decided_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "evidence_correction_participation_fk": {
           "name": "evidence_correction_participation_fk",
           "tableFrom": "evidence_correction",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -4018,39 +3619,27 @@
         "export_link_project_id_project_id_fk": {
           "name": "export_link_project_id_project_id_fk",
           "tableFrom": "export_link",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "export_link_batch_id_kug200b_batch_id_fk": {
           "name": "export_link_batch_id_kug200b_batch_id_fk",
           "tableFrom": "export_link",
-          "columnsFrom": [
-            "batch_id"
-          ],
+          "columnsFrom": ["batch_id"],
           "tableTo": "kug200b_batch",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "export_link_staff_user_id_staff_user_id_fk": {
           "name": "export_link_staff_user_id_staff_user_id_fk",
           "tableFrom": "export_link",
-          "columnsFrom": [
-            "staff_user_id"
-          ],
+          "columnsFrom": ["staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -4268,54 +3857,36 @@
         "form_generation_project_id_project_id_fk": {
           "name": "form_generation_project_id_project_id_fk",
           "tableFrom": "form_generation",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "form_generation_document_id_document_id_fk": {
           "name": "form_generation_document_id_document_id_fk",
           "tableFrom": "form_generation",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "form_generation_generated_by_staff_user_id_fk": {
           "name": "form_generation_generated_by_staff_user_id_fk",
           "tableFrom": "form_generation",
-          "columnsFrom": [
-            "generated_by"
-          ],
+          "columnsFrom": ["generated_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "form_generation_participation_fk": {
           "name": "form_generation_participation_fk",
           "tableFrom": "form_generation",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -4324,18 +3895,12 @@
       "uniqueConstraints": {
         "form_generation_document_unique": {
           "name": "form_generation_document_unique",
-          "columns": [
-            "document_id"
-          ],
+          "columns": ["document_id"],
           "nullsNotDistinct": false
         },
         "form_generation_scan_target": {
           "name": "form_generation_scan_target",
-          "columns": [
-            "document_id",
-            "participation_id",
-            "form_code"
-          ],
+          "columns": ["document_id", "participation_id", "form_code"],
           "nullsNotDistinct": false
         }
       },
@@ -4410,26 +3975,18 @@
         "import_column_mapping_project_id_project_id_fk": {
           "name": "import_column_mapping_project_id_project_id_fk",
           "tableFrom": "import_column_mapping",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "import_column_mapping_updated_by_staff_user_id_fk": {
           "name": "import_column_mapping_updated_by_staff_user_id_fk",
           "tableFrom": "import_column_mapping",
-          "columnsFrom": [
-            "updated_by"
-          ],
+          "columnsFrom": ["updated_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -4437,10 +3994,7 @@
       "compositePrimaryKeys": {
         "import_column_mapping_pkey": {
           "name": "import_column_mapping_pkey",
-          "columns": [
-            "project_id",
-            "header_hmac"
-          ]
+          "columns": ["project_id", "header_hmac"]
         }
       },
       "uniqueConstraints": {},
@@ -4488,10 +4042,7 @@
       "compositePrimaryKeys": {
         "job_run_pkey": {
           "name": "job_run_pkey",
-          "columns": [
-            "job_name",
-            "run_date"
-          ]
+          "columns": ["job_name", "run_date"]
         }
       },
       "uniqueConstraints": {},
@@ -4627,52 +4178,36 @@
         "kug200b_batch_project_id_project_id_fk": {
           "name": "kug200b_batch_project_id_project_id_fk",
           "tableFrom": "kug200b_batch",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_batch_created_by_staff_user_id_fk": {
           "name": "kug200b_batch_created_by_staff_user_id_fk",
           "tableFrom": "kug200b_batch",
-          "columnsFrom": [
-            "created_by"
-          ],
+          "columnsFrom": ["created_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_batch_submitted_by_staff_user_id_fk": {
           "name": "kug200b_batch_submitted_by_staff_user_id_fk",
           "tableFrom": "kug200b_batch",
-          "columnsFrom": [
-            "submitted_by"
-          ],
+          "columnsFrom": ["submitted_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_batch_discarded_by_staff_user_id_fk": {
           "name": "kug200b_batch_discarded_by_staff_user_id_fk",
           "tableFrom": "kug200b_batch",
-          "columnsFrom": [
-            "discarded_by"
-          ],
+          "columnsFrom": ["discarded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -4681,10 +4216,7 @@
       "uniqueConstraints": {
         "kug200b_batch_project_unique": {
           "name": "kug200b_batch_project_unique",
-          "columns": [
-            "id",
-            "project_id"
-          ],
+          "columns": ["id", "project_id"],
           "nullsNotDistinct": false
         }
       },
@@ -4786,56 +4318,36 @@
         "kug200b_batch_member_project_id_project_id_fk": {
           "name": "kug200b_batch_member_project_id_project_id_fk",
           "tableFrom": "kug200b_batch_member",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_batch_member_document_id_document_id_fk": {
           "name": "kug200b_batch_member_document_id_document_id_fk",
           "tableFrom": "kug200b_batch_member",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_batch_member_batch_fk": {
           "name": "kug200b_batch_member_batch_fk",
           "tableFrom": "kug200b_batch_member",
-          "columnsFrom": [
-            "batch_id",
-            "project_id"
-          ],
+          "columnsFrom": ["batch_id", "project_id"],
           "tableTo": "kug200b_batch",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_batch_member_participation_fk": {
           "name": "kug200b_batch_member_participation_fk",
           "tableFrom": "kug200b_batch_member",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -4843,10 +4355,7 @@
       "compositePrimaryKeys": {
         "kug200b_batch_member_pkey": {
           "name": "kug200b_batch_member_pkey",
-          "columns": [
-            "batch_id",
-            "participation_id"
-          ]
+          "columns": ["batch_id", "participation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4900,41 +4409,27 @@
         "kug200b_decline_project_id_project_id_fk": {
           "name": "kug200b_decline_project_id_project_id_fk",
           "tableFrom": "kug200b_decline",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_decline_declined_by_staff_user_id_fk": {
           "name": "kug200b_decline_declined_by_staff_user_id_fk",
           "tableFrom": "kug200b_decline",
-          "columnsFrom": [
-            "declined_by"
-          ],
+          "columnsFrom": ["declined_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_decline_participation_fk": {
           "name": "kug200b_decline_participation_fk",
           "tableFrom": "kug200b_decline",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -5032,67 +4527,45 @@
         "kug200b_withdrawal_project_id_project_id_fk": {
           "name": "kug200b_withdrawal_project_id_project_id_fk",
           "tableFrom": "kug200b_withdrawal",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_withdrawal_consent_id_consent_record_id_fk": {
           "name": "kug200b_withdrawal_consent_id_consent_record_id_fk",
           "tableFrom": "kug200b_withdrawal",
-          "columnsFrom": [
-            "consent_id"
-          ],
+          "columnsFrom": ["consent_id"],
           "tableTo": "consent_record",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_withdrawal_recorded_by_staff_user_id_fk": {
           "name": "kug200b_withdrawal_recorded_by_staff_user_id_fk",
           "tableFrom": "kug200b_withdrawal",
-          "columnsFrom": [
-            "recorded_by"
-          ],
+          "columnsFrom": ["recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_withdrawal_ba_notified_by_staff_user_id_fk": {
           "name": "kug200b_withdrawal_ba_notified_by_staff_user_id_fk",
           "tableFrom": "kug200b_withdrawal",
-          "columnsFrom": [
-            "ba_notified_by"
-          ],
+          "columnsFrom": ["ba_notified_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "kug200b_withdrawal_participation_fk": {
           "name": "kug200b_withdrawal_participation_fk",
           "tableFrom": "kug200b_withdrawal",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -5101,9 +4574,7 @@
       "uniqueConstraints": {
         "kug200b_withdrawal_consent_unique": {
           "name": "kug200b_withdrawal_consent_unique",
-          "columns": [
-            "consent_id"
-          ],
+          "columns": ["consent_id"],
           "nullsNotDistinct": false
         }
       },
@@ -5167,12 +4638,7 @@
       "uniqueConstraints": {
         "lifecycle_edge_unique": {
           "name": "lifecycle_edge_unique",
-          "columns": [
-            "track",
-            "from_value",
-            "to_value",
-            "kind"
-          ],
+          "columns": ["track", "from_value", "to_value", "kind"],
           "nullsNotDistinct": true
         }
       },
@@ -5336,28 +4802,18 @@
         "one_time_code_challenge_project_id_project_id_fk": {
           "name": "one_time_code_challenge_project_id_project_id_fk",
           "tableFrom": "one_time_code_challenge",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "one_time_code_challenge_participation_fk": {
           "name": "one_time_code_challenge_participation_fk",
           "tableFrom": "one_time_code_challenge",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -5450,56 +4906,36 @@
         "participant_account_project_id_project_id_fk": {
           "name": "participant_account_project_id_project_id_fk",
           "tableFrom": "participant_account",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_account_identity_assured_by_staff_user_id_fk": {
           "name": "participant_account_identity_assured_by_staff_user_id_fk",
           "tableFrom": "participant_account",
-          "columnsFrom": [
-            "identity_assured_by"
-          ],
+          "columnsFrom": ["identity_assured_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_account_participation_fk": {
           "name": "participant_account_participation_fk",
           "tableFrom": "participant_account",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_account_activation_code_fk": {
           "name": "participant_account_activation_code_fk",
           "tableFrom": "participant_account",
-          "columnsFrom": [
-            "activation_code_id",
-            "project_id"
-          ],
+          "columnsFrom": ["activation_code_id", "project_id"],
           "tableTo": "activation_code",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -5621,67 +5057,45 @@
         "participant_assignment_project_id_project_id_fk": {
           "name": "participant_assignment_project_id_project_id_fk",
           "tableFrom": "participant_assignment",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_assignment_staff_user_id_staff_user_id_fk": {
           "name": "participant_assignment_staff_user_id_staff_user_id_fk",
           "tableFrom": "participant_assignment",
-          "columnsFrom": [
-            "staff_user_id"
-          ],
+          "columnsFrom": ["staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_assignment_assigned_by_staff_user_id_fk": {
           "name": "participant_assignment_assigned_by_staff_user_id_fk",
           "tableFrom": "participant_assignment",
-          "columnsFrom": [
-            "assigned_by"
-          ],
+          "columnsFrom": ["assigned_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_assignment_ended_by_staff_user_id_fk": {
           "name": "participant_assignment_ended_by_staff_user_id_fk",
           "tableFrom": "participant_assignment",
-          "columnsFrom": [
-            "ended_by"
-          ],
+          "columnsFrom": ["ended_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_assignment_participation_fk": {
           "name": "participant_assignment_participation_fk",
           "tableFrom": "participant_assignment",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -5829,41 +5243,27 @@
         "participant_channel_project_id_project_id_fk": {
           "name": "participant_channel_project_id_project_id_fk",
           "tableFrom": "participant_channel",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_channel_consent_id_consent_record_id_fk": {
           "name": "participant_channel_consent_id_consent_record_id_fk",
           "tableFrom": "participant_channel",
-          "columnsFrom": [
-            "consent_id"
-          ],
+          "columnsFrom": ["consent_id"],
           "tableTo": "consent_record",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_channel_participation_fk": {
           "name": "participant_channel_participation_fk",
           "tableFrom": "participant_channel",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -5996,28 +5396,18 @@
         "participant_details_project_id_project_id_fk": {
           "name": "participant_details_project_id_project_id_fk",
           "tableFrom": "participant_details",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_details_participation_fk": {
           "name": "participant_details_participation_fk",
           "tableFrom": "participant_details",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -6145,28 +5535,18 @@
         "participant_health_data_project_id_project_id_fk": {
           "name": "participant_health_data_project_id_project_id_fk",
           "tableFrom": "participant_health_data",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_health_data_participation_fk": {
           "name": "participant_health_data_participation_fk",
           "tableFrom": "participant_health_data",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -6258,28 +5638,18 @@
         "participant_identifier_data_project_id_project_id_fk": {
           "name": "participant_identifier_data_project_id_project_id_fk",
           "tableFrom": "participant_identifier_data",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_identifier_data_participation_fk": {
           "name": "participant_identifier_data_participation_fk",
           "tableFrom": "participant_identifier_data",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -6363,28 +5733,18 @@
         "participant_identity_project_id_project_id_fk": {
           "name": "participant_identity_project_id_project_id_fk",
           "tableFrom": "participant_identity",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_identity_participation_fk": {
           "name": "participant_identity_participation_fk",
           "tableFrom": "participant_identity",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -6393,10 +5753,7 @@
       "uniqueConstraints": {
         "participant_identity_project_personnel_number_unique": {
           "name": "participant_identity_project_personnel_number_unique",
-          "columns": [
-            "project_id",
-            "personnel_number"
-          ],
+          "columns": ["project_id", "personnel_number"],
           "nullsNotDistinct": false
         }
       },
@@ -6541,28 +5898,18 @@
         "participant_profile_project_id_project_id_fk": {
           "name": "participant_profile_project_id_project_id_fk",
           "tableFrom": "participant_profile",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_profile_participation_fk": {
           "name": "participant_profile_participation_fk",
           "tableFrom": "participant_profile",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -6681,41 +6028,27 @@
         "participant_profiling_project_id_project_id_fk": {
           "name": "participant_profiling_project_id_project_id_fk",
           "tableFrom": "participant_profiling",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_profiling_declarations_recorded_by_staff_user_id_fk": {
           "name": "participant_profiling_declarations_recorded_by_staff_user_id_fk",
           "tableFrom": "participant_profiling",
-          "columnsFrom": [
-            "declarations_recorded_by"
-          ],
+          "columnsFrom": ["declarations_recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_profiling_participation_fk": {
           "name": "participant_profiling_participation_fk",
           "tableFrom": "participant_profiling",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -6978,28 +6311,18 @@
         "participant_profiling_assessment_project_id_project_id_fk": {
           "name": "participant_profiling_assessment_project_id_project_id_fk",
           "tableFrom": "participant_profiling_assessment",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_profiling_assessment_participation_fk": {
           "name": "participant_profiling_assessment_participation_fk",
           "tableFrom": "participant_profiling_assessment",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -7134,28 +6457,18 @@
         "participant_profiling_health_assessment_project_id_project_id_fk": {
           "name": "participant_profiling_health_assessment_project_id_project_id_fk",
           "tableFrom": "participant_profiling_health_assessment",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_profiling_health_assessment_participation_fk": {
           "name": "participant_profiling_health_assessment_participation_fk",
           "tableFrom": "participant_profiling_health_assessment",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -7368,108 +6681,72 @@
         "participant_reminder_project_id_project_id_fk": {
           "name": "participant_reminder_project_id_project_id_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_channel_id_participant_channel_id_fk": {
           "name": "participant_reminder_channel_id_participant_channel_id_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "channel_id"
-          ],
+          "columnsFrom": ["channel_id"],
           "tableTo": "participant_channel",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_consent_id_consent_record_id_fk": {
           "name": "participant_reminder_consent_id_consent_record_id_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "consent_id"
-          ],
+          "columnsFrom": ["consent_id"],
           "tableTo": "consent_record",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_requested_by_staff_user_id_fk": {
           "name": "participant_reminder_requested_by_staff_user_id_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "requested_by"
-          ],
+          "columnsFrom": ["requested_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_booking_id_appointment_booking_id_fk": {
           "name": "participant_reminder_booking_id_appointment_booking_id_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "booking_id"
-          ],
+          "columnsFrom": ["booking_id"],
           "tableTo": "appointment_booking",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_followed_up_by_staff_user_id_fk": {
           "name": "participant_reminder_followed_up_by_staff_user_id_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "followed_up_by"
-          ],
+          "columnsFrom": ["followed_up_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_participation_fk": {
           "name": "participant_reminder_participation_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_reminder_appointment_fk": {
           "name": "participant_reminder_appointment_fk",
           "tableFrom": "participant_reminder",
-          "columnsFrom": [
-            "appointment_id",
-            "project_id"
-          ],
+          "columnsFrom": ["appointment_id", "project_id"],
           "tableTo": "appointment",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -7619,28 +6896,18 @@
         "participant_residence_social_data_project_id_project_id_fk": {
           "name": "participant_residence_social_data_project_id_project_id_fk",
           "tableFrom": "participant_residence_social_data",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_residence_social_data_participation_fk": {
           "name": "participant_residence_social_data_participation_fk",
           "tableFrom": "participant_residence_social_data",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -7809,43 +7076,27 @@
         "participant_session_project_id_project_id_fk": {
           "name": "participant_session_project_id_project_id_fk",
           "tableFrom": "participant_session",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_session_participation_fk": {
           "name": "participant_session_participation_fk",
           "tableFrom": "participant_session",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participant_session_activation_code_fk": {
           "name": "participant_session_activation_code_fk",
           "tableFrom": "participant_session",
-          "columnsFrom": [
-            "activation_code_id",
-            "project_id"
-          ],
+          "columnsFrom": ["activation_code_id", "project_id"],
           "tableTo": "activation_code",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -8043,43 +7294,27 @@
         "participation_project_id_project_id_fk": {
           "name": "participation_project_id_project_id_fk",
           "tableFrom": "participation",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participation_entry_wave_same_project_fk": {
           "name": "participation_entry_wave_same_project_fk",
           "tableFrom": "participation",
-          "columnsFrom": [
-            "entry_wave_id",
-            "project_id"
-          ],
+          "columnsFrom": ["entry_wave_id", "project_id"],
           "tableTo": "project_entry_wave",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participation_current_exception_request_fk": {
           "name": "participation_current_exception_request_fk",
           "tableFrom": "participation",
-          "columnsFrom": [
-            "profiling_exception_request_id",
-            "id"
-          ],
+          "columnsFrom": ["profiling_exception_request_id", "id"],
           "tableTo": "profiling_exception_request",
-          "columnsTo": [
-            "id",
-            "participation_id"
-          ],
+          "columnsTo": ["id", "participation_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -8088,10 +7323,7 @@
       "uniqueConstraints": {
         "participation_id_project_unique": {
           "name": "participation_id_project_unique",
-          "columns": [
-            "id",
-            "project_id"
-          ],
+          "columns": ["id", "project_id"],
           "nullsNotDistinct": false
         }
       },
@@ -8272,41 +7504,27 @@
         "participation_dsv_amendment_project_id_project_id_fk": {
           "name": "participation_dsv_amendment_project_id_project_id_fk",
           "tableFrom": "participation_dsv_amendment",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participation_dsv_amendment_confirmed_by_staff_user_id_fk": {
           "name": "participation_dsv_amendment_confirmed_by_staff_user_id_fk",
           "tableFrom": "participation_dsv_amendment",
-          "columnsFrom": [
-            "confirmed_by"
-          ],
+          "columnsFrom": ["confirmed_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "participation_dsv_amendment_participation_fk": {
           "name": "participation_dsv_amendment_participation_fk",
           "tableFrom": "participation_dsv_amendment",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -8315,10 +7533,7 @@
       "uniqueConstraints": {
         "participation_dsv_amendment_id_project": {
           "name": "participation_dsv_amendment_id_project",
-          "columns": [
-            "id",
-            "project_id"
-          ],
+          "columns": ["id", "project_id"],
           "nullsNotDistinct": false
         }
       },
@@ -8421,56 +7636,36 @@
         "privacy_notice_delivery_project_id_project_id_fk": {
           "name": "privacy_notice_delivery_project_id_project_id_fk",
           "tableFrom": "privacy_notice_delivery",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "privacy_notice_delivery_provided_by_staff_user_id_fk": {
           "name": "privacy_notice_delivery_provided_by_staff_user_id_fk",
           "tableFrom": "privacy_notice_delivery",
-          "columnsFrom": [
-            "provided_by"
-          ],
+          "columnsFrom": ["provided_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "privacy_notice_delivery_participation_fk": {
           "name": "privacy_notice_delivery_participation_fk",
           "tableFrom": "privacy_notice_delivery",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "privacy_notice_delivery_activation_code_fk": {
           "name": "privacy_notice_delivery_activation_code_fk",
           "tableFrom": "privacy_notice_delivery",
-          "columnsFrom": [
-            "activation_code_id",
-            "project_id"
-          ],
+          "columnsFrom": ["activation_code_id", "project_id"],
           "tableTo": "activation_code",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -8587,41 +7782,27 @@
         "profiling_exception_evidence_record_project_id_project_id_fk": {
           "name": "profiling_exception_evidence_record_project_id_project_id_fk",
           "tableFrom": "profiling_exception_evidence_record",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_exception_evidence_record_created_by_staff_user_id_fk": {
           "name": "profiling_exception_evidence_record_created_by_staff_user_id_fk",
           "tableFrom": "profiling_exception_evidence_record",
-          "columnsFrom": [
-            "created_by"
-          ],
+          "columnsFrom": ["created_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_exception_evidence_record_participation_fk": {
           "name": "profiling_exception_evidence_record_participation_fk",
           "tableFrom": "profiling_exception_evidence_record",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -8630,10 +7811,7 @@
       "uniqueConstraints": {
         "profiling_exception_evidence_record_id_participation_unique": {
           "name": "profiling_exception_evidence_record_id_participation_unique",
-          "columns": [
-            "id",
-            "participation_id"
-          ],
+          "columns": ["id", "participation_id"],
           "nullsNotDistinct": false
         }
       },
@@ -8774,69 +7952,45 @@
         "profiling_exception_request_project_id_project_id_fk": {
           "name": "profiling_exception_request_project_id_project_id_fk",
           "tableFrom": "profiling_exception_request",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_exception_request_requested_by_staff_user_id_fk": {
           "name": "profiling_exception_request_requested_by_staff_user_id_fk",
           "tableFrom": "profiling_exception_request",
-          "columnsFrom": [
-            "requested_by"
-          ],
+          "columnsFrom": ["requested_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_exception_request_decided_by_staff_user_id_fk": {
           "name": "profiling_exception_request_decided_by_staff_user_id_fk",
           "tableFrom": "profiling_exception_request",
-          "columnsFrom": [
-            "decided_by"
-          ],
+          "columnsFrom": ["decided_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_exception_request_participation_fk": {
           "name": "profiling_exception_request_participation_fk",
           "tableFrom": "profiling_exception_request",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_exception_request_evidence_fk": {
           "name": "profiling_exception_request_evidence_fk",
           "tableFrom": "profiling_exception_request",
-          "columnsFrom": [
-            "evidence_record_id",
-            "participation_id"
-          ],
+          "columnsFrom": ["evidence_record_id", "participation_id"],
           "tableTo": "profiling_exception_evidence_record",
-          "columnsTo": [
-            "id",
-            "participation_id"
-          ],
+          "columnsTo": ["id", "participation_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -8845,10 +7999,7 @@
       "uniqueConstraints": {
         "profiling_exception_request_id_participation_unique": {
           "name": "profiling_exception_request_id_participation_unique",
-          "columns": [
-            "id",
-            "participation_id"
-          ],
+          "columns": ["id", "participation_id"],
           "nullsNotDistinct": false
         }
       },
@@ -8958,41 +8109,27 @@
         "profiling_session_project_id_project_id_fk": {
           "name": "profiling_session_project_id_project_id_fk",
           "tableFrom": "profiling_session",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_session_recorded_by_staff_user_id_fk": {
           "name": "profiling_session_recorded_by_staff_user_id_fk",
           "tableFrom": "profiling_session",
-          "columnsFrom": [
-            "recorded_by"
-          ],
+          "columnsFrom": ["recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "profiling_session_participation_fk": {
           "name": "profiling_session_participation_fk",
           "tableFrom": "profiling_session",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9152,39 +8289,27 @@
         "project_created_by_staff_user_id_fk": {
           "name": "project_created_by_staff_user_id_fk",
           "tableFrom": "project",
-          "columnsFrom": [
-            "created_by"
-          ],
+          "columnsFrom": ["created_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "project_activated_by_staff_user_id_fk": {
           "name": "project_activated_by_staff_user_id_fk",
           "tableFrom": "project",
-          "columnsFrom": [
-            "activated_by"
-          ],
+          "columnsFrom": ["activated_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "project_region_id_region_id_fk": {
           "name": "project_region_id_region_id_fk",
           "tableFrom": "project",
-          "columnsFrom": [
-            "region_id"
-          ],
+          "columnsFrom": ["region_id"],
           "tableTo": "region",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9257,26 +8382,18 @@
         "project_config_override_project_id_project_id_fk": {
           "name": "project_config_override_project_id_project_id_fk",
           "tableFrom": "project_config_override",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "project_config_override_created_by_staff_user_id_fk": {
           "name": "project_config_override_created_by_staff_user_id_fk",
           "tableFrom": "project_config_override",
-          "columnsFrom": [
-            "created_by"
-          ],
+          "columnsFrom": ["created_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9284,10 +8401,7 @@
       "compositePrimaryKeys": {
         "project_config_override_pkey": {
           "name": "project_config_override_pkey",
-          "columns": [
-            "project_id",
-            "version"
-          ]
+          "columns": ["project_id", "version"]
         }
       },
       "uniqueConstraints": {},
@@ -9377,13 +8491,9 @@
         "project_entry_wave_project_id_project_id_fk": {
           "name": "project_entry_wave_project_id_project_id_fk",
           "tableFrom": "project_entry_wave",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9392,18 +8502,12 @@
       "uniqueConstraints": {
         "project_entry_wave_project_code_unique": {
           "name": "project_entry_wave_project_code_unique",
-          "columns": [
-            "project_id",
-            "code"
-          ],
+          "columns": ["project_id", "code"],
           "nullsNotDistinct": false
         },
         "project_entry_wave_id_project_unique": {
           "name": "project_entry_wave_id_project_unique",
-          "columns": [
-            "id",
-            "project_id"
-          ],
+          "columns": ["id", "project_id"],
           "nullsNotDistinct": false
         }
       },
@@ -9480,26 +8584,18 @@
         "project_membership_project_id_project_id_fk": {
           "name": "project_membership_project_id_project_id_fk",
           "tableFrom": "project_membership",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "project_membership_staff_user_id_staff_user_id_fk": {
           "name": "project_membership_staff_user_id_staff_user_id_fk",
           "tableFrom": "project_membership",
-          "columnsFrom": [
-            "staff_user_id"
-          ],
+          "columnsFrom": ["staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9507,11 +8603,7 @@
       "compositePrimaryKeys": {
         "project_membership_pkey": {
           "name": "project_membership_pkey",
-          "columns": [
-            "project_id",
-            "staff_user_id",
-            "role"
-          ]
+          "columns": ["project_id", "staff_user_id", "role"]
         }
       },
       "uniqueConstraints": {},
@@ -9612,41 +8704,27 @@
         "project_template_pin_project_id_project_id_fk": {
           "name": "project_template_pin_project_id_project_id_fk",
           "tableFrom": "project_template_pin",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "project_template_pin_pinned_by_staff_user_id_fk": {
           "name": "project_template_pin_pinned_by_staff_user_id_fk",
           "tableFrom": "project_template_pin",
-          "columnsFrom": [
-            "pinned_by"
-          ],
+          "columnsFrom": ["pinned_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "project_template_pin_version_fk": {
           "name": "project_template_pin_version_fk",
           "tableFrom": "project_template_pin",
-          "columnsFrom": [
-            "agentur_key",
-            "version"
-          ],
+          "columnsFrom": ["agentur_key", "version"],
           "tableTo": "config_template_version",
-          "columnsTo": [
-            "agentur_key",
-            "version"
-          ],
+          "columnsTo": ["agentur_key", "version"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9694,9 +8772,7 @@
       "uniqueConstraints": {
         "region_code_unique": {
           "name": "region_code_unique",
-          "columns": [
-            "code"
-          ],
+          "columns": ["code"],
           "nullsNotDistinct": false
         }
       },
@@ -9737,10 +8813,7 @@
       "compositePrimaryKeys": {
         "role_field_knowledge_pkey": {
           "name": "role_field_knowledge_pkey",
-          "columns": [
-            "project_role",
-            "access_category"
-          ]
+          "columns": ["project_role", "access_category"]
         }
       },
       "uniqueConstraints": {},
@@ -9810,41 +8883,27 @@
         "self_service_notice_acknowledgement_project_id_project_id_fk": {
           "name": "self_service_notice_acknowledgement_project_id_project_id_fk",
           "tableFrom": "self_service_notice_acknowledgement",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "self_service_notice_acknowledgement_actor_staff_user_id_staff_user_id_fk": {
           "name": "self_service_notice_acknowledgement_actor_staff_user_id_staff_user_id_fk",
           "tableFrom": "self_service_notice_acknowledgement",
-          "columnsFrom": [
-            "actor_staff_user_id"
-          ],
+          "columnsFrom": ["actor_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "self_service_notice_acknowledgement_participation_fk": {
           "name": "self_service_notice_acknowledgement_participation_fk",
           "tableFrom": "self_service_notice_acknowledgement",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -9853,10 +8912,7 @@
       "uniqueConstraints": {
         "self_service_notice_acknowledgement_version_unique": {
           "name": "self_service_notice_acknowledgement_version_unique",
-          "columns": [
-            "participation_id",
-            "notice_version"
-          ],
+          "columns": ["participation_id", "notice_version"],
           "nullsNotDistinct": false
         }
       },
@@ -9973,54 +9029,36 @@
         "signed_declaration_project_id_project_id_fk": {
           "name": "signed_declaration_project_id_project_id_fk",
           "tableFrom": "signed_declaration",
-          "columnsFrom": [
-            "project_id"
-          ],
+          "columnsFrom": ["project_id"],
           "tableTo": "project",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "signed_declaration_document_id_document_id_fk": {
           "name": "signed_declaration_document_id_document_id_fk",
           "tableFrom": "signed_declaration",
-          "columnsFrom": [
-            "document_id"
-          ],
+          "columnsFrom": ["document_id"],
           "tableTo": "document",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "signed_declaration_recorded_by_staff_user_id_fk": {
           "name": "signed_declaration_recorded_by_staff_user_id_fk",
           "tableFrom": "signed_declaration",
-          "columnsFrom": [
-            "recorded_by"
-          ],
+          "columnsFrom": ["recorded_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "signed_declaration_participation_fk": {
           "name": "signed_declaration_participation_fk",
           "tableFrom": "signed_declaration",
-          "columnsFrom": [
-            "participation_id",
-            "project_id"
-          ],
+          "columnsFrom": ["participation_id", "project_id"],
           "tableTo": "participation",
-          "columnsTo": [
-            "id",
-            "project_id"
-          ],
+          "columnsTo": ["id", "project_id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -10029,10 +9067,7 @@
       "uniqueConstraints": {
         "signed_declaration_unique": {
           "name": "signed_declaration_unique",
-          "columns": [
-            "document_id",
-            "declaration"
-          ],
+          "columns": ["document_id", "declaration"],
           "nullsNotDistinct": false
         }
       },
@@ -10143,26 +9178,18 @@
         "staff_audit_event_actor_staff_user_id_staff_user_id_fk": {
           "name": "staff_audit_event_actor_staff_user_id_staff_user_id_fk",
           "tableFrom": "staff_audit_event",
-          "columnsFrom": [
-            "actor_staff_user_id"
-          ],
+          "columnsFrom": ["actor_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "staff_audit_event_subject_staff_user_id_staff_user_id_fk": {
           "name": "staff_audit_event_subject_staff_user_id_staff_user_id_fk",
           "tableFrom": "staff_audit_event",
-          "columnsFrom": [
-            "subject_staff_user_id"
-          ],
+          "columnsFrom": ["subject_staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -10239,39 +9266,27 @@
         "staff_org_role_staff_user_id_staff_user_id_fk": {
           "name": "staff_org_role_staff_user_id_staff_user_id_fk",
           "tableFrom": "staff_org_role",
-          "columnsFrom": [
-            "staff_user_id"
-          ],
+          "columnsFrom": ["staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "staff_org_role_region_id_region_id_fk": {
           "name": "staff_org_role_region_id_region_id_fk",
           "tableFrom": "staff_org_role",
-          "columnsFrom": [
-            "region_id"
-          ],
+          "columnsFrom": ["region_id"],
           "tableTo": "region",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         },
         "staff_org_role_granted_by_staff_user_id_fk": {
           "name": "staff_org_role_granted_by_staff_user_id_fk",
           "tableFrom": "staff_org_role",
-          "columnsFrom": [
-            "granted_by"
-          ],
+          "columnsFrom": ["granted_by"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -10280,11 +9295,7 @@
       "uniqueConstraints": {
         "staff_org_role_unique": {
           "name": "staff_org_role_unique",
-          "columns": [
-            "staff_user_id",
-            "role",
-            "region_id"
-          ],
+          "columns": ["staff_user_id", "role", "region_id"],
           "nullsNotDistinct": true
         }
       },
@@ -10361,13 +9372,9 @@
         "staff_session_staff_user_id_staff_user_id_fk": {
           "name": "staff_session_staff_user_id_staff_user_id_fk",
           "tableFrom": "staff_session",
-          "columnsFrom": [
-            "staff_user_id"
-          ],
+          "columnsFrom": ["staff_user_id"],
           "tableTo": "staff_user",
-          "columnsTo": [
-            "id"
-          ],
+          "columnsTo": ["id"],
           "onUpdate": "no action",
           "onDelete": "no action"
         }
@@ -10469,17 +9476,12 @@
       "uniqueConstraints": {
         "staff_user_email_unique": {
           "name": "staff_user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "nullsNotDistinct": false
         },
         "staff_user_oidc_identity_key": {
           "name": "staff_user_oidc_identity_key",
-          "columns": [
-            "oidc_issuer",
-            "oidc_subject"
-          ],
+          "columns": ["oidc_issuer", "oidc_subject"],
           "nullsNotDistinct": false
         }
       },
@@ -10530,85 +9532,47 @@
     "public.activation_channel": {
       "name": "activation_channel",
       "schema": "public",
-      "values": [
-        "letter",
-        "sheet",
-        "in_person"
-      ]
+      "values": ["letter", "sheet", "in_person"]
     },
     "public.activation_delivery_kind": {
       "name": "activation_delivery_kind",
       "schema": "public",
-      "values": [
-        "email",
-        "sms"
-      ]
+      "values": ["email", "sms"]
     },
     "public.activation_delivery_status": {
       "name": "activation_delivery_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "sent",
-        "failed",
-        "unknown"
-      ]
+      "values": ["pending", "sent", "failed", "unknown"]
     },
     "public.activation_purpose": {
       "name": "activation_purpose",
       "schema": "public",
-      "values": [
-        "activation",
-        "recovery"
-      ]
+      "values": ["activation", "recovery"]
     },
     "public.activation_revoke_reason": {
       "name": "activation_revoke_reason",
       "schema": "public",
-      "values": [
-        "reissued",
-        "not_handed_over",
-        "lost",
-        "delivery_failed",
-        "participation_closed"
-      ]
+      "values": ["reissued", "not_handed_over", "lost", "delivery_failed", "participation_closed"]
     },
     "public.actor_type": {
       "name": "actor_type",
       "schema": "public",
-      "values": [
-        "user",
-        "participant",
-        "system"
-      ]
+      "values": ["user", "participant", "system"]
     },
     "public.agentur_rejection_reason": {
       "name": "agentur_rejection_reason",
       "schema": "public",
-      "values": [
-        "outdated_form_version",
-        "incomplete",
-        "other"
-      ]
+      "values": ["outdated_form_version", "incomplete", "other"]
     },
     "public.agentur_submission_channel": {
       "name": "agentur_submission_channel",
       "schema": "public",
-      "values": [
-        "paper_courier",
-        "paper_post",
-        "scan_email",
-        "upload",
-        "email",
-        "paper_original"
-      ]
+      "values": ["paper_courier", "paper_post", "scan_email", "upload", "email", "paper_original"]
     },
     "public.amendment_original_location": {
       "name": "amendment_original_location",
       "schema": "public",
-      "values": [
-        "paper_personnel_file"
-      ]
+      "values": ["paper_personnel_file"]
     },
     "public.appointment_cancel_reason": {
       "name": "appointment_cancel_reason",
@@ -10624,94 +9588,57 @@
     "public.appointment_kind": {
       "name": "appointment_kind",
       "schema": "public",
-      "values": [
-        "info_event",
-        "consultation"
-      ]
+      "values": ["info_event", "consultation"]
     },
     "public.appointment_status": {
       "name": "appointment_status",
       "schema": "public",
-      "values": [
-        "scheduled",
-        "cancelled"
-      ]
+      "values": ["scheduled", "cancelled"]
     },
     "public.assignment_end_reason": {
       "name": "assignment_end_reason",
       "schema": "public",
-      "values": [
-        "unassigned",
-        "consultant_removed",
-        "account_deactivated"
-      ]
+      "values": ["unassigned", "consultant_removed", "account_deactivated"]
     },
     "public.assisted_mode_end_reason": {
       "name": "assisted_mode_end_reason",
       "schema": "public",
-      "values": [
-        "ended",
-        "staff_session_ended"
-      ]
+      "values": ["ended", "staff_session_ended"]
     },
     "public.assisted_mode_how": {
       "name": "assisted_mode_how",
       "schema": "public",
-      "values": [
-        "in_person",
-        "phone"
-      ]
+      "values": ["in_person", "phone"]
     },
     "public.asu_attestation_source": {
       "name": "asu_attestation_source",
       "schema": "public",
-      "values": [
-        "ba_document_inspected",
-        "ba_online_account_inspected",
-        "ba_confirmed_by_phone"
-      ]
+      "values": ["ba_document_inspected", "ba_online_account_inspected", "ba_confirmed_by_phone"]
     },
     "public.asu_channel": {
       "name": "asu_channel",
       "schema": "public",
-      "values": [
-        "kug_200b",
-        "online_self",
-        "in_person"
-      ]
+      "values": ["kug_200b", "online_self", "in_person"]
     },
     "public.asu_proof_kind": {
       "name": "asu_proof_kind",
       "schema": "public",
-      "values": [
-        "kug200b_submission",
-        "ba_confirmation",
-        "ba_customer_number"
-      ]
+      "values": ["kug200b_submission", "ba_confirmation", "ba_customer_number"]
     },
     "public.attendance": {
       "name": "attendance",
       "schema": "public",
-      "values": [
-        "attended",
-        "absent"
-      ]
+      "values": ["attended", "absent"]
     },
     "public.attendance_after_close_reason": {
       "name": "attendance_after_close_reason",
       "schema": "public",
-      "values": [
-        "late_entry",
-        "correction"
-      ]
+      "values": ["late_entry", "correction"]
     },
     "public.attendance_conflict_resolution": {
       "name": "attendance_conflict_resolution",
       "schema": "public",
-      "values": [
-        "replacement_basis",
-        "information_delivered_otherwise"
-      ]
+      "values": ["replacement_basis", "information_delivered_otherwise"]
     },
     "public.audit_event_type": {
       "name": "audit_event_type",
@@ -10824,41 +9751,22 @@
     "public.audit_stream": {
       "name": "audit_stream",
       "schema": "public",
-      "values": [
-        "case",
-        "profiling",
-        "dsv",
-        "payroll",
-        "security",
-        "review"
-      ]
+      "values": ["case", "profiling", "dsv", "payroll", "security", "review"]
     },
     "public.ba_report_not_required_reason": {
       "name": "ba_report_not_required_reason",
       "schema": "public",
-      "values": [
-        "agentur_confirmed_not_required",
-        "no_claim_month_affected",
-        "created_in_error"
-      ]
+      "values": ["agentur_confirmed_not_required", "no_claim_month_affected", "created_in_error"]
     },
     "public.ba_reporting_kind": {
       "name": "ba_reporting_kind",
       "schema": "public",
-      "values": [
-        "later_entry",
-        "planned_end_changed",
-        "early_exit"
-      ]
+      "values": ["later_entry", "planned_end_changed", "early_exit"]
     },
     "public.ba_reporting_status": {
       "name": "ba_reporting_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "reported",
-        "not_required"
-      ]
+      "values": ["pending", "reported", "not_required"]
     },
     "public.booking_cancel_reason": {
       "name": "booking_cancel_reason",
@@ -10873,91 +9781,57 @@
     "public.booking_origin": {
       "name": "booking_origin",
       "schema": "public",
-      "values": [
-        "participant",
-        "staff",
-        "walk_in"
-      ]
+      "values": ["participant", "staff", "walk_in"]
     },
     "public.booking_status": {
       "name": "booking_status",
       "schema": "public",
-      "values": [
-        "booked",
-        "cancelled"
-      ]
+      "values": ["booked", "cancelled"]
     },
     "public.challenge_invalidation": {
       "name": "challenge_invalidation",
       "schema": "public",
-      "values": [
-        "superseded",
-        "delivery_failed"
-      ]
+      "values": ["superseded", "delivery_failed"]
     },
     "public.channel_removal_reason": {
       "name": "channel_removal_reason",
       "schema": "public",
-      "values": [
-        "consent_revoked",
-        "lost_access_replaced"
-      ]
+      "values": ["consent_revoked", "lost_access_replaced"]
     },
     "public.channel_suspension_reason": {
       "name": "channel_suspension_reason",
       "schema": "public",
-      "values": [
-        "lost_access"
-      ]
+      "values": ["lost_access"]
     },
     "public.channel_verification": {
       "name": "channel_verification",
       "schema": "public",
-      "values": [
-        "one_time_code",
-        "activation_link"
-      ]
+      "values": ["one_time_code", "activation_link"]
     },
     "public.consent_end_reason": {
       "name": "consent_end_reason",
       "schema": "public",
-      "values": [
-        "revoked",
-        "lost_access_replaced",
-        "superseded"
-      ]
+      "values": ["revoked", "lost_access_replaced", "superseded"]
     },
     "public.consent_purpose": {
       "name": "consent_purpose",
       "schema": "public",
-      "values": [
-        "portal_contact",
-        "kug200b_profile_access"
-      ]
+      "values": ["portal_contact", "kug200b_profile_access"]
     },
     "public.consent_source": {
       "name": "consent_source",
       "schema": "public",
-      "values": [
-        "portal",
-        "paper_form"
-      ]
+      "values": ["portal", "paper_form"]
     },
     "public.contact_channel_kind": {
       "name": "contact_channel_kind",
       "schema": "public",
-      "values": [
-        "email",
-        "sms"
-      ]
+      "values": ["email", "sms"]
     },
     "public.correction_action": {
       "name": "correction_action",
       "schema": "public",
-      "values": [
-        "invalidate",
-        "supersede"
-      ]
+      "values": ["invalidate", "supersede"]
     },
     "public.correction_reason": {
       "name": "correction_reason",
@@ -10972,73 +9846,42 @@
     "public.correction_status": {
       "name": "correction_status",
       "schema": "public",
-      "values": [
-        "requested",
-        "approved",
-        "rejected"
-      ]
+      "values": ["requested", "approved", "rejected"]
     },
     "public.correction_target_kind": {
       "name": "correction_target_kind",
       "schema": "public",
-      "values": [
-        "document",
-        "asu_registration",
-        "ba_reporting_task"
-      ]
+      "values": ["document", "asu_registration", "ba_reporting_task"]
     },
     "public.document_delete_reason": {
       "name": "document_delete_reason",
       "schema": "public",
-      "values": [
-        "wrong_person",
-        "wrong_file",
-        "duplicate",
-        "participant_request"
-      ]
+      "values": ["wrong_person", "wrong_file", "duplicate", "participant_request"]
     },
     "public.document_media_type": {
       "name": "document_media_type",
       "schema": "public",
-      "values": [
-        "application/pdf",
-        "image/jpeg",
-        "image/png"
-      ]
+      "values": ["application/pdf", "image/jpeg", "image/png"]
     },
     "public.document_quarantine_reason": {
       "name": "document_quarantine_reason",
       "schema": "public",
-      "values": [
-        "suspected_wrong_person",
-        "suspected_wrong_acceptance"
-      ]
+      "values": ["suspected_wrong_person", "suspected_wrong_acceptance"]
     },
     "public.document_review_reason": {
       "name": "document_review_reason",
       "schema": "public",
-      "values": [
-        "unreadable",
-        "wrong_document",
-        "incomplete"
-      ]
+      "values": ["unreadable", "wrong_document", "incomplete"]
     },
     "public.document_review_state": {
       "name": "document_review_state",
       "schema": "public",
-      "values": [
-        "unreviewed",
-        "accepted",
-        "rejected"
-      ]
+      "values": ["unreviewed", "accepted", "rejected"]
     },
     "public.document_session_kind": {
       "name": "document_session_kind",
       "schema": "public",
-      "values": [
-        "staff",
-        "participant"
-      ]
+      "values": ["staff", "participant"]
     },
     "public.document_type": {
       "name": "document_type",
@@ -11082,21 +9925,12 @@
     "public.dsv_amendment_kind": {
       "name": "dsv_amendment_kind",
       "schema": "public",
-      "values": [
-        "extension",
-        "new_start"
-      ]
+      "values": ["extension", "new_start"]
     },
     "public.dsv_status": {
       "name": "dsv_status",
       "schema": "public",
-      "values": [
-        "not_offered",
-        "dsv_offered",
-        "dsv_signed",
-        "dsv_declined",
-        "dsv_expired"
-      ]
+      "values": ["not_offered", "dsv_offered", "dsv_signed", "dsv_declined", "dsv_expired"]
     },
     "public.edge_kind": {
       "name": "edge_kind",
@@ -11137,11 +9971,7 @@
     "public.exception_evidence_kind": {
       "name": "exception_evidence_kind",
       "schema": "public",
-      "values": [
-        "documents",
-        "ba_confirmation",
-        "legacy_unverified"
-      ]
+      "values": ["documents", "ba_confirmation", "legacy_unverified"]
     },
     "public.export_kind": {
       "name": "export_kind",
@@ -11156,37 +9986,22 @@
     "public.form_code": {
       "name": "form_code",
       "schema": "public",
-      "values": [
-        "tl407",
-        "kug200b",
-        "kug200a"
-      ]
+      "values": ["tl407", "kug200b", "kug200a"]
     },
     "public.gender": {
       "name": "gender",
       "schema": "public",
-      "values": [
-        "male",
-        "female",
-        "diverse",
-        "not_specified"
-      ]
+      "values": ["male", "female", "diverse", "not_specified"]
     },
     "public.identity_assurance": {
       "name": "identity_assurance",
       "schema": "public",
-      "values": [
-        "birth_date",
-        "photo_id"
-      ]
+      "values": ["birth_date", "photo_id"]
     },
     "public.identity_check": {
       "name": "identity_check",
       "schema": "public",
-      "values": [
-        "none",
-        "photo_id"
-      ]
+      "values": ["none", "photo_id"]
     },
     "public.import_target": {
       "name": "import_target",
@@ -11211,48 +10026,27 @@
     "public.jobboerse_choice": {
       "name": "jobboerse_choice",
       "schema": "public",
-      "values": [
-        "full",
-        "anonymous_callme",
-        "anonymous_no_contact",
-        "none"
-      ]
+      "values": ["full", "anonymous_callme", "anonymous_no_contact", "none"]
     },
     "public.kug200b_batch_artifact": {
       "name": "kug200b_batch_artifact",
       "schema": "public",
-      "values": [
-        "kug200a",
-        "accepted_alternative"
-      ]
+      "values": ["kug200a", "accepted_alternative"]
     },
     "public.kug200b_batch_channel": {
       "name": "kug200b_batch_channel",
       "schema": "public",
-      "values": [
-        "paper_courier",
-        "paper_post",
-        "scan_email",
-        "upload"
-      ]
+      "values": ["paper_courier", "paper_post", "scan_email", "upload"]
     },
     "public.kug200b_batch_status": {
       "name": "kug200b_batch_status",
       "schema": "public",
-      "values": [
-        "open",
-        "submitted",
-        "discarded"
-      ]
+      "values": ["open", "submitted", "discarded"]
     },
     "public.lifecycle_track": {
       "name": "lifecycle_track",
       "schema": "public",
-      "values": [
-        "main",
-        "profiling",
-        "dsv"
-      ]
+      "values": ["main", "profiling", "dsv"]
     },
     "public.main_status": {
       "name": "main_status",
@@ -11271,66 +10065,37 @@
     "public.marital_status": {
       "name": "marital_status",
       "schema": "public",
-      "values": [
-        "single",
-        "married"
-      ]
+      "values": ["single", "married"]
     },
     "public.missed_resolution": {
       "name": "missed_resolution",
       "schema": "public",
-      "values": [
-        "participant_declined",
-        "information_delivered_otherwise",
-        "no_longer_needed"
-      ]
+      "values": ["participant_declined", "information_delivered_otherwise", "no_longer_needed"]
     },
     "public.notice_follow_up_method": {
       "name": "notice_follow_up_method",
       "schema": "public",
-      "values": [
-        "phone",
-        "in_person",
-        "letter",
-        "not_needed"
-      ]
+      "values": ["phone", "in_person", "letter", "not_needed"]
     },
     "public.notice_language": {
       "name": "notice_language",
       "schema": "public",
-      "values": [
-        "de",
-        "en"
-      ]
+      "values": ["de", "en"]
     },
     "public.notice_method": {
       "name": "notice_method",
       "schema": "public",
-      "values": [
-        "letter",
-        "sheet",
-        "email",
-        "sms",
-        "in_person_print"
-      ]
+      "values": ["letter", "sheet", "email", "sms", "in_person_print"]
     },
     "public.one_time_code_purpose": {
       "name": "one_time_code_purpose",
       "schema": "public",
-      "values": [
-        "login",
-        "channel_verification",
-        "step_up"
-      ]
+      "values": ["login", "channel_verification", "step_up"]
     },
     "public.org_role": {
       "name": "org_role",
       "schema": "public",
-      "values": [
-        "admin",
-        "regional_admin",
-        "regional_operations_manager"
-      ]
+      "values": ["admin", "regional_admin", "regional_operations_manager"]
     },
     "public.participant_session_end_reason": {
       "name": "participant_session_end_reason",
@@ -11349,10 +10114,7 @@
     "public.participant_session_state": {
       "name": "participant_session_state",
       "schema": "public",
-      "values": [
-        "activating",
-        "active"
-      ]
+      "values": ["activating", "active"]
     },
     "public.profiling_exception_reason": {
       "name": "profiling_exception_reason",
@@ -11367,23 +10129,12 @@
     "public.profiling_exception_status": {
       "name": "profiling_exception_status",
       "schema": "public",
-      "values": [
-        "none",
-        "requested",
-        "approved",
-        "rejected",
-        "revoked",
-        "superseded"
-      ]
+      "values": ["none", "requested", "approved", "rejected", "revoked", "superseded"]
     },
     "public.profiling_exception_superseded_reason": {
       "name": "profiling_exception_superseded_reason",
       "schema": "public",
-      "values": [
-        "participation_closed",
-        "project_ta_only",
-        "profiling_closed"
-      ]
+      "values": ["participation_closed", "project_ta_only", "profiling_closed"]
     },
     "public.profiling_status": {
       "name": "profiling_status",
@@ -11399,27 +10150,17 @@
     "public.project_role": {
       "name": "project_role",
       "schema": "public",
-      "values": [
-        "project_lead",
-        "consultant",
-        "back_office"
-      ]
+      "values": ["project_lead", "consultant", "back_office"]
     },
     "public.project_status": {
       "name": "project_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "active"
-      ]
+      "values": ["draft", "active"]
     },
     "public.project_type": {
       "name": "project_type",
       "schema": "public",
-      "values": [
-        "ta_only",
-        "ta_tg"
-      ]
+      "values": ["ta_only", "ta_tg"]
     },
     "public.relaxation_reason_code": {
       "name": "relaxation_reason_code",
@@ -11434,12 +10175,7 @@
     "public.relaxation_request_status": {
       "name": "relaxation_request_status",
       "schema": "public",
-      "values": [
-        "requested",
-        "approved",
-        "rejected",
-        "withdrawn"
-      ]
+      "values": ["requested", "approved", "rejected", "withdrawn"]
     },
     "public.reminder_cancel_reason": {
       "name": "reminder_cancel_reason",
@@ -11469,30 +10205,17 @@
     "public.reminder_status": {
       "name": "reminder_status",
       "schema": "public",
-      "values": [
-        "queued",
-        "dispatching",
-        "sent",
-        "failed",
-        "delivery_unknown",
-        "cancelled"
-      ]
+      "values": ["queued", "dispatching", "sent", "failed", "delivery_unknown", "cancelled"]
     },
     "public.scan_origin": {
       "name": "scan_origin",
       "schema": "public",
-      "values": [
-        "generated",
-        "external_paper"
-      ]
+      "values": ["generated", "external_paper"]
     },
     "public.sensitive_step_up_method": {
       "name": "sensitive_step_up_method",
       "schema": "public",
-      "values": [
-        "birth_date",
-        "photo_id_and_code"
-      ]
+      "values": ["birth_date", "photo_id_and_code"]
     },
     "public.staff_audit_event_type": {
       "name": "staff_audit_event_type",
@@ -11514,37 +10237,22 @@
     "public.staff_session_end_reason": {
       "name": "staff_session_end_reason",
       "schema": "public",
-      "values": [
-        "logout",
-        "deactivated",
-        "superseded"
-      ]
+      "values": ["logout", "deactivated", "superseded"]
     },
     "public.status_field": {
       "name": "status_field",
       "schema": "public",
-      "values": [
-        "status",
-        "profiling_status",
-        "dsv_status"
-      ]
+      "values": ["status", "profiling_status", "dsv_status"]
     },
     "public.step_up_method": {
       "name": "step_up_method",
       "schema": "public",
-      "values": [
-        "birth_date",
-        "one_time_code"
-      ]
+      "values": ["birth_date", "one_time_code"]
     },
     "public.tg_entry_kind": {
       "name": "tg_entry_kind",
       "schema": "public",
-      "values": [
-        "scheduled_entry",
-        "scheduled_entry_catchup",
-        "reconciliation"
-      ]
+      "values": ["scheduled_entry", "scheduled_entry_catchup", "reconciliation"]
     }
   },
   "schemas": {},
