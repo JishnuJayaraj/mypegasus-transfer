@@ -156,6 +156,7 @@ export {
   entryWaveAssignment,
   participationDatesCapability,
   mayListField,
+  mayReadAsuRegistration,
   mayReadBaReportingTasks,
   participationDetail,
   participationListScope,

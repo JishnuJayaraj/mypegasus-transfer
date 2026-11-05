@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CorrectionState } from "./corrections/model";
 import { AssignedConsultant, assignmentLimit } from "./projects/team";
 import { page } from "./api";
 import { isoDate } from "./iso-date";
@@ -133,6 +134,15 @@ export const BaReportingTaskView = z
     notRequiredReason: BaReportNotRequiredReason.nullable(),
     /** When the outcome was recorded (UTC); null while pending. */
     decidedAt: z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" }).nullable(),
+    /**
+     * An approved correction superseded this outcome by the linked replacement task (Q190,
+     * Q207 (6)); the outcome and its history stay.
+     */
+    supersededBy: z.uuid().nullable(),
+    /** The task this one replaces after an approved correction. */
+    replacesTaskId: z.uuid().nullable(),
+    /** A correction awaiting its decision, and "Korrektur beantragen" for the viewer. */
+    correction: CorrectionState,
     capabilities: z.strictObject({ recordOutcome: z.boolean() }),
   })
   .meta({ id: "BaReportingTask" });

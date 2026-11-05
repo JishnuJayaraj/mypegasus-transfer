@@ -25,12 +25,14 @@ const document = (overrides: Partial<DocumentView> = {}): DocumentView => ({
   onBehalf: false,
   review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
   quarantine: null,
+  correction: { invalidated: false, pending: false },
   capabilities: {
     open: true,
     review: false,
     delete: true,
     quarantine: false,
     liftQuarantine: false,
+    requestCorrection: false,
   },
   ...overrides,
 });
@@ -250,6 +252,7 @@ describe("the documents page", () => {
         delete: false,
         quarantine: false,
         liftQuarantine: false,
+        requestCorrection: false,
       },
     });
     setup({ list: { ...emptyDocuments(), documents: [locked] } });

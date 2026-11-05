@@ -20,7 +20,9 @@ import {
   ParticipationDatesInput,
   mayListField,
   mayPerformOperation,
+  correctionRequestable,
   mayRecordBaReport,
+  mayRequestCorrection,
   mayViewAsu,
   mayViewProfiling,
   ParticipationListQuery,
@@ -186,12 +188,31 @@ export function participationRoutes(deps: Deps) {
           reportedOn: baReportingTask.reportedOn,
           notRequiredReason: baReportingTask.notRequiredReason,
           decidedAt: utc(baReportingTask.decidedAt),
+          supersededBy: baReportingTask.supersededBy,
+          replacesTaskId: baReportingTask.replacesTaskId,
+          // Qualified by hand: a single-table select renders its columns unqualified.
+          correctionPending: sql<boolean>`exists (select from evidence_correction c
+            where c.ba_reporting_task_id = "ba_reporting_task"."id" and c.status = 'requested')`,
         })
         .from(baReportingTask)
         .where(eq(baReportingTask.participationId, participationId))
         .orderBy(asc(baReportingTask.createdAt), asc(baReportingTask.reportingKind))
-    ).map((task) => ({
+    ).map(({ correctionPending, ...task }) => ({
       ...task,
+      // "Korrektur beantragen" on a closed outcome (data-protection.md, evidence corrections).
+      correction: {
+        pending: correctionPending,
+        mayRequest:
+          correctionRequestable(
+            {
+              kind: "ba_reporting_task",
+              status: task.status,
+              superseded: task.supersededBy !== null,
+            },
+            correctionPending,
+          ) &&
+          mayRequestCorrection(subject, { kind: "ba_reporting_task", taskId: task.id }, target),
+      },
       capabilities: { recordOutcome: recordsBaReports && task.status === "pending" },
     }));
     const assignments = (await consultantsOf(db, [participationId])).get(participationId) ?? [];

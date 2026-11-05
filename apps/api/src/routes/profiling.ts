@@ -65,6 +65,7 @@ import { createStatusService, StatusServiceError } from "../participations/statu
 import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { requireSession, sessionUser } from "../session";
+import { documentCorrection } from "../participations/evidence-corrections";
 import { auditContext, utc } from "../sql";
 
 // The profiling record (process-and-lifecycle.md, the profiling record; data-protection.md, the
@@ -218,6 +219,7 @@ export async function readProfilingRecord(db: Database, participationId: string)
           quarantineReason: document.quarantineReason,
           quarantinedBy: document.quarantinedBy,
           quarantinedAt: utc(document.quarantinedAt),
+          ...documentCorrection,
           // Whether a fact may rest on it, and from when (`tl407_evidence`).
           counts: sql<boolean>`${document.reviewState} = 'accepted'
             and ${document.quarantinedAt} is null and ${document.invalidatedByCorrection} is null`,
@@ -399,12 +401,16 @@ export function profilingRoutes(deps: Deps) {
     const documentTarget = target as PermissionTarget & { participationId: string };
     const normal = { kind: "normal" } as const;
     // A scan is reviewed only while the participation is open (`participation_closed`).
-    const scanCapabilities = (reviewState: DocumentReviewState, quarantinedBy: string | null) => {
+    const scanCapabilities = (scan: {
+      reviewState: DocumentReviewState;
+      quarantinedBy: string | null;
+      invalidated: boolean;
+      correctionPending: boolean;
+    }) => {
       const capabilities = documentCapabilities(subject, documentTarget, normal, {
         type: "tl407_signed_scan",
         addedByParticipant: false,
-        reviewState,
-        quarantinedBy,
+        ...scan,
       });
       return { ...capabilities, review: capabilities.review && open };
     };
@@ -414,6 +420,9 @@ export function profilingRoutes(deps: Deps) {
         addedByParticipant: false,
         reviewState,
         quarantinedBy: null,
+        // A working copy is no evidence: never corrected.
+        invalidated: false,
+        correctionPending: false,
       }).open;
     return {
       participationId,
@@ -451,7 +460,7 @@ export function profilingRoutes(deps: Deps) {
           scan.quarantineReason === null
             ? null
             : { reasonCode: scan.quarantineReason, quarantinedAt: scan.quarantinedAt! },
-        capabilities: scanCapabilities(scan.reviewState, scan.quarantinedBy),
+        capabilities: scanCapabilities(scan),
       })),
       tl407SignedOn: record.tl407SignedOn,
       profilingDoneSupported: record.profilingDoneSupported,

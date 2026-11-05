@@ -1,10 +1,12 @@
 import {
   agenturSubmission,
+  and,
   asuRecord,
   asuRegistration,
   document,
   eq,
   inArray,
+  isNull,
   sql,
   type Database,
 } from "@transfer/db";
@@ -44,6 +46,10 @@ export type AsuRegistrationRow = {
   documentQuarantineLiftedAt: string | null;
   /** "Bestätigung der Agentur am" (the route `kug_200b`). */
   confirmedOn: string | null;
+  /** It replaces a superseded registration (an approved correction's). */
+  corrected: boolean;
+  /** A correction of it awaits its decision. */
+  correctionPending: boolean;
 };
 
 export type AsuState = {
@@ -125,6 +131,9 @@ export async function asuStatesOf(
       documentQuarantineLiftedAt: sql<string | null>`case when ${document.quarantineLiftedAt}
         is not null then ${utc(document.quarantineLiftedAt)} end`,
       confirmedOn: asuRegistration.confirmedOn,
+      corrected: sql<boolean>`${asuRegistration.correctionId} is not null`,
+      correctionPending: sql<boolean>`exists (select from evidence_correction c
+        where c.asu_registration_id = "asu_registration"."id" and c.status = 'requested')`,
     })
     .from(asuRegistration)
     .leftJoin(agenturSubmission, eq(agenturSubmission.id, asuRegistration.agenturSubmissionId))
@@ -137,7 +146,15 @@ export async function asuStatesOf(
         sql`coalesce(${asuRegistration.proofDocumentId}, ${agenturSubmission.documentId})`,
       ),
     )
-    .where(inArray(asuRegistration.participationId, [...participationIds]));
+    // The current registration only: a superseded or invalidated one stays as history and
+    // supplies nothing (data-protection.md, evidence corrections).
+    .where(
+      and(
+        inArray(asuRegistration.participationId, [...participationIds]),
+        isNull(asuRegistration.supersededBy),
+        isNull(asuRegistration.invalidatedBy),
+      ),
+    );
   for (const { participationId, ...route } of routes) {
     states.set(participationId, { ...states.get(participationId)!, ...route });
   }

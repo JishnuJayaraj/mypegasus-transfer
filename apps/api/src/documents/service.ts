@@ -46,6 +46,7 @@ import { errorForLog } from "../logger";
 import { domainProblem, problem } from "../problem";
 import { assistedModeRequired } from "../routes/assisted-mode";
 import { formRegistry } from "../forms/registry";
+import { documentCorrection } from "../participations/evidence-corrections";
 import { utc } from "../sql";
 import { objectKey } from "./files";
 import { purgeDocumentObject } from "./purge";
@@ -89,6 +90,7 @@ const selected = {
   formVersion: document.formVersion,
   signedOn: document.signedOn,
   countersignedOn: document.countersignedOn,
+  ...documentCorrection,
 };
 type Row = {
   id: string;
@@ -110,6 +112,8 @@ type Row = {
   formVersion: string | null;
   signedOn: string | null;
   countersignedOn: string | null;
+  invalidated: boolean;
+  correctionPending: boolean;
 };
 
 /** Log a size by its bucket only (data-protection.md, uploads as built). */
@@ -164,6 +168,8 @@ function refused(c: Context<AppEnv>, error: unknown) {
     case "document_immutable":
     case "document_quarantined":
     case "document_not_quarantined":
+    case "document_invalidated":
+    case "correction_pending":
     case "delete_reason_not_allowed":
     case "signature_in_future":
     case "signature_before_generation":
@@ -182,6 +188,8 @@ export function capabilitiesOf(actor: DocumentActor, row: Row) {
     addedByParticipant: row.addedBy === "participant",
     reviewState: row.reviewState,
     quarantinedBy: row.quarantinedBy,
+    invalidated: row.invalidated,
+    correctionPending: row.correctionPending,
   });
 }
 
@@ -201,6 +209,7 @@ function view(actor: DocumentActor, row: Row): DocumentView {
       row.quarantineReason === null
         ? null
         : { reasonCode: row.quarantineReason, quarantinedAt: row.quarantinedAt! },
+    correction: { invalidated: row.invalidated, pending: row.correctionPending },
     capabilities: capabilitiesOf(actor, row),
   };
 }
@@ -391,6 +400,7 @@ export function documentService(deps: Deps) {
     const row = await one(actor, documentId);
     if (!row) return problem(c, "not-found");
     if (row.quarantinedBy !== null) return domainProblem(c, ["document_quarantined"]);
+    if (row.invalidated) return domainProblem(c, ["document_invalidated"]);
     if (!view(actor, row).capabilities.open) return problem(c, "forbidden");
     if (!files) return storageUnavailable(c);
     const token = randomBytes(32).toString("base64url");

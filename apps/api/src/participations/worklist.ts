@@ -161,6 +161,8 @@ export async function loadWorklist(
         tx,
         ids.filter((id) => mayReadBaReportingTasks(subject, projectId, id)),
       );
+      // "Nachweis ungültig" (data-protection.md, evidence corrections).
+      const invalidated = await evidenceInvalidatedOf(tx, ids);
       const leadTimes = await submissionSettingsOf(
         tx,
         release,
@@ -235,6 +237,7 @@ export async function loadWorklist(
                 declinedOn: offers.get(p.id)!.declinedOn,
                 withdrawals: offers.get(p.id)!.withdrawals,
               },
+              evidenceInvalidatedSince: invalidated.get(p.id) ?? null,
               agentur: {
                 attempts: attempts.get(p.id)!,
                 leadTimeDays:
@@ -299,6 +302,38 @@ function kug200bRegistrationOf(state: AsuState) {
   return registration?.proofKind === "kug200b_submission"
     ? { registeredOn: registration.registeredOn, confirmedOn: registration.confirmedOn }
     : null;
+}
+
+/**
+ * Per participation the Berlin day of the oldest approved invalidation nothing has replaced yet
+ * (data-protection.md, evidence corrections; Q209): evidence (a type the catalog marks `signed`)
+ * without a later valid document of its type accepted after the approval, or an ASU registration
+ * without a current one recorded after it. The status that rested on it stays.
+ */
+async function evidenceInvalidatedOf(db: Pick<Database, "execute">, ids: readonly string[]) {
+  if (ids.length === 0) return new Map<string, string>();
+  const { rows } = await db.execute<{ participation_id: string; since: string }>(sql`
+    select c.participation_id,
+      to_char(min(c.decided_at at time zone 'Europe/Berlin'), 'YYYY-MM-DD') as since
+    from evidence_correction c
+    left join document d on d.id = c.document_id
+    where c.participation_id = any(${sql.param([...ids])}::uuid[])
+      and c.status = 'approved' and c.action = 'invalidate'
+      and (c.target_kind = 'document'
+          and exists (select from document_type_policy pol
+            where pol.type = d.type and pol.catalog_version = d.catalog_version and pol.signed)
+          and not exists (select from document n
+            where n.participation_id = c.participation_id and n.type = d.type
+              and n.deleted_at is null and n.review_state = 'accepted'
+              and n.quarantined_at is null and n.invalidated_by_correction is null
+              and n.reviewed_at > c.decided_at)
+        or c.target_kind = 'asu_registration'
+          and not exists (select from asu_registration g
+            where g.participation_id = c.participation_id
+              and g.superseded_by is null and g.invalidated_by is null
+              and g.recorded_at > c.decided_at))
+    group by c.participation_id`);
+  return new Map(rows.map((row) => [row.participation_id, row.since]));
 }
 
 /** Per participation the Berlin day its oldest pending BA reporting task was created. */

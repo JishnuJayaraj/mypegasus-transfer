@@ -3401,6 +3401,23 @@
             "format": "date-time",
             "description": "UTC timestamp (ISO 8601)"
           },
+          "supersededBy": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "replacesTaskId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "correction": {
+            "$ref": "#/components/schemas/CorrectionState"
+          },
           "capabilities": {
             "type": "object",
             "properties": {
@@ -3423,9 +3440,27 @@
           "reportedOn",
           "notRequiredReason",
           "decidedAt",
+          "supersededBy",
+          "replacesTaskId",
+          "correction",
           "capabilities"
         ],
         "additionalProperties": false
+      },
+      "CorrectionState": {
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "boolean"
+          },
+          "mayRequest": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "pending",
+          "mayRequest"
+        ]
       },
       "ManualParticipationInput": {
         "type": "object",
@@ -4219,7 +4254,8 @@
             "enum": [
               "knowledge_date_missing",
               "kug200b_offer_open",
-              "kug200b_withdrawal_ba_notice"
+              "kug200b_withdrawal_ba_notice",
+              "evidence_invalidated"
             ]
           },
           "date": {
@@ -6194,7 +6230,9 @@
           "agentur_submission_rejected",
           "agentur_submission_original_retained",
           "ba_report_recorded",
-          "exception_evidence_recorded"
+          "exception_evidence_recorded",
+          "evidence_correction_requested",
+          "evidence_correction_decided"
         ]
       },
       "HistoryActor": {
@@ -11253,6 +11291,22 @@
             ],
             "additionalProperties": false
           },
+          "correction": {
+            "type": "object",
+            "properties": {
+              "invalidated": {
+                "type": "boolean"
+              },
+              "pending": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "invalidated",
+              "pending"
+            ],
+            "additionalProperties": false
+          },
           "capabilities": {
             "$ref": "#/components/schemas/DocumentCapabilities"
           }
@@ -11268,6 +11322,7 @@
           "onBehalf",
           "review",
           "quarantine",
+          "correction",
           "capabilities"
         ],
         "additionalProperties": false
@@ -11296,6 +11351,9 @@
           },
           "liftQuarantine": {
             "type": "boolean"
+          },
+          "requestCorrection": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -11303,7 +11361,8 @@
           "review",
           "delete",
           "quarantine",
-          "liftQuarantine"
+          "liftQuarantine",
+          "requestCorrection"
         ],
         "additionalProperties": false
       },
@@ -12452,12 +12511,16 @@
                     },
                     "liftQuarantine": {
                       "type": "boolean"
+                    },
+                    "requestCorrection": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
                     "delete",
                     "quarantine",
-                    "liftQuarantine"
+                    "liftQuarantine",
+                    "requestCorrection"
                   ]
                 }
               },
@@ -13569,6 +13632,12 @@
             "examples": [
               "2027-03-01"
             ]
+          },
+          "corrected": {
+            "type": "boolean"
+          },
+          "correction": {
+            "$ref": "#/components/schemas/CorrectionState"
           }
         },
         "required": [
@@ -13578,7 +13647,9 @@
           "recordedAt",
           "proof",
           "withProofSince",
-          "confirmedOn"
+          "confirmedOn",
+          "corrected",
+          "correction"
         ],
         "additionalProperties": false
       },
@@ -15627,11 +15698,309 @@
                 "capabilities"
               ]
             }
+          },
+          "corrections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "correctionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "projectId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "projectName": {
+                  "type": "string"
+                },
+                "targetKind": {
+                  "$ref": "#/components/schemas/CorrectionTargetKind"
+                },
+                "action": {
+                  "$ref": "#/components/schemas/CorrectionAction"
+                },
+                "documentType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "tl407_signed_scan",
+                    "kug200b_signed_scan",
+                    "dsv_signed_scan",
+                    "dsv_cancellation",
+                    "asu_proof",
+                    "profiling_exception_evidence",
+                    "cv",
+                    "participant_upload",
+                    "qualification_certificate",
+                    "tl407_form",
+                    "kug200b_form",
+                    null
+                  ]
+                },
+                "reportingKind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "later_entry",
+                    "planned_end_changed",
+                    "early_exit",
+                    null
+                  ]
+                },
+                "wrongPerson": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                },
+                "reason": {
+                  "$ref": "#/components/schemas/CorrectionReason"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "requestedOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "targetRecordedOn": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "decide": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "decide"
+                  ]
+                }
+              },
+              "required": [
+                "correctionId",
+                "projectId",
+                "projectName",
+                "targetKind",
+                "action",
+                "documentType",
+                "reportingKind",
+                "wrongPerson",
+                "reason",
+                "source",
+                "requestedOn",
+                "targetRecordedOn",
+                "capabilities"
+              ]
+            }
           }
         },
         "required": [
-          "items"
+          "items",
+          "corrections"
         ]
+      },
+      "CorrectionTargetKind": {
+        "type": "string",
+        "enum": [
+          "document",
+          "asu_registration",
+          "ba_reporting_task"
+        ]
+      },
+      "CorrectionAction": {
+        "type": "string",
+        "enum": [
+          "invalidate",
+          "supersede"
+        ]
+      },
+      "CorrectionReason": {
+        "type": "string",
+        "enum": [
+          "ba_legal_reference",
+          "data_subject_rectification",
+          "corrected_source_document",
+          "documented_internal_error"
+        ]
+      },
+      "EvidenceCorrectionRequested": {
+        "type": "object",
+        "properties": {
+          "correctionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "correctionId"
+        ],
+        "additionalProperties": false
+      },
+      "EvidenceCorrectionRequestInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "correction": {
+                "type": "string",
+                "enum": [
+                  "invalidate_document"
+                ]
+              },
+              "documentId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "wrongPerson": {
+                "type": "boolean"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/CorrectionReason"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "correction",
+              "documentId",
+              "wrongPerson",
+              "reason",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "correction": {
+                "type": "string",
+                "enum": [
+                  "invalidate_asu_registration"
+                ]
+              },
+              "registrationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/CorrectionReason"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "correction",
+              "registrationId",
+              "reason",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "correction": {
+                "type": "string",
+                "enum": [
+                  "supersede_asu_registration"
+                ]
+              },
+              "registrationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "registeredOn": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "reason": {
+                "$ref": "#/components/schemas/CorrectionReason"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "correction",
+              "registrationId",
+              "registeredOn",
+              "reason",
+              "source"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "correction": {
+                "type": "string",
+                "enum": [
+                  "supersede_ba_report"
+                ]
+              },
+              "taskId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/CorrectionReason"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "correction",
+              "taskId",
+              "reason",
+              "source"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "EvidenceCorrectionDecisionInput": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approve",
+              "reject"
+            ]
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "additionalProperties": false
       },
       "DevStaffUser": {
         "type": "object",
@@ -29798,7 +30167,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; no name, case data or evidence content",
+        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; no name, case data, evidence content or corrected value",
         "responses": {
           "200": {
             "description": "The pending requests",
@@ -29822,6 +30191,211 @@
           },
           "403": {
             "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/evidence-corrections": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Request a correction of wrong evidence (the PL, by the correction-authority table): invalidate an accepted document (stating whether it is a wrong person's file), supersede an ASU registration with the corrected date or invalidate it, or supersede a closed BA reporting outcome; with a reason code and the documented source. Changes nothing until the regional operations manager approves it",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceCorrectionRequestInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Requested; the correction's id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceCorrectionRequested"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/evidence-corrections/{correctionId}/decision": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Approve or reject a pending evidence correction (the regional operations manager of the project's region, never the requester), as Freigaben showed it (409 source_changed once decided). An approval invalidates or supersedes the target, keeping the original linked; a wrong person's file is purged. No status, guard or date moves",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "correctionId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceCorrectionDecisionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Decided"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported media type",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

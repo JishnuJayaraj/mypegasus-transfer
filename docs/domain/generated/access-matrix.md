@@ -896,6 +896,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `agentur_submission_original_retained` | `profiling` | no | no | `originalSentOn` |
 | `ba_report_recorded` | `dsv` | no | no | `kind`, `outcome`, `reportedOn`, `reason` |
 | `exception_evidence_recorded` | `profiling` | no | no | `kind` |
+| `evidence_correction_requested` | `case` | no | no | `targetKind`, `action`, `reason` |
+| `evidence_correction_decided` | `case` | no | no | `targetKind`, `action`, `reason`, `decision` |
 
 ## Aggregates
 

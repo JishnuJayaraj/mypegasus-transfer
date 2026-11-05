@@ -124,6 +124,8 @@ status functions, and the rest isn't evidence-set data.
 | document | `cv` | PL |
 | document | `participant_upload` | PL |
 | document | `qualification_certificate` | PL |
+| record | `asu_registration` | PL |
+| record | `ba_reporting_task` | PL |
 | field | `tgStart` | PL, Back office |
 | field | `tgEnd` | PL, Back office |
 | field | `dsvSignedOn` | PL, Back office |

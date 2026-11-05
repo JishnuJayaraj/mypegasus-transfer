@@ -140,11 +140,15 @@ export const ExceptionEvidenceDocument = z.object({
   /** Accepted, not quarantined, invalidated or deleted: it can be part of a record. */
   usable: z.boolean(),
   quarantined: z.boolean(),
-  /** The safety actions without any opening (the review of PR #102). */
+  /**
+   * The safety actions without any opening (the review of PR #102), "Korrektur beantragen"
+   * among them (data-protection.md, evidence corrections).
+   */
   capabilities: z.object({
     delete: z.boolean(),
     quarantine: z.boolean(),
     liftQuarantine: z.boolean(),
+    requestCorrection: z.boolean(),
   }),
 });
 

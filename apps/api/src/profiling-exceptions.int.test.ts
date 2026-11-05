@@ -159,7 +159,12 @@ describe("POST /participations/{id}/exception-evidence", () => {
           reviewState: "unreviewed",
           usable: false,
           quarantined: false,
-          capabilities: { delete: true, quarantine: true, liftQuarantine: false },
+          capabilities: {
+            delete: true,
+            quarantine: true,
+            liftQuarantine: false,
+            requestCorrection: false,
+          },
         },
         {
           documentId: accepted,
@@ -167,7 +172,14 @@ describe("POST /participations/{id}/exception-evidence", () => {
           reviewState: "accepted",
           usable: true,
           quarantined: false,
-          capabilities: { delete: false, quarantine: true, liftQuarantine: false },
+          // The PL requests its correction without reading it (data-protection.md, evidence
+          // corrections).
+          capabilities: {
+            delete: false,
+            quarantine: true,
+            liftQuarantine: false,
+            requestCorrection: true,
+          },
         },
       ],
       capabilities: { addEvidence: true, request: true, revoke: false },
