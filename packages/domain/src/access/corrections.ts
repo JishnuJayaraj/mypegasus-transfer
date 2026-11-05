@@ -12,6 +12,10 @@ import { fieldEntry } from "../fields/catalog";
  */
 export type EvidenceCorrectionTarget =
   | { kind: "document"; documentType: DocumentType; documentId: string }
+  /** An ASU registration: superseded with a corrected date, or invalidated (Q186). */
+  | { kind: "asu_registration"; registrationId: string }
+  /** A BA reporting task's recorded outcome: superseded by a linked replacement task (Q190). */
+  | { kind: "ba_reporting_task"; taskId: string }
   /** `entryId` names the one entry of a collection field (a profiling session). */
   | { kind: "field"; fieldKey: string; entryId?: string };
 
@@ -70,6 +74,8 @@ export function correctionRequesters(
   target: EvidenceCorrectionTarget,
 ): readonly CorrectionRequester[] {
   if (target.kind === "document") return documentCorrectionAuthority[target.documentType];
+  // The ASU record and the BA reporting outcome: the PL (D29, Q186, Q190).
+  if (target.kind === "asu_registration" || target.kind === "ba_reporting_task") return pl;
   fieldEntry(target.fieldKey); // an unknown field is an error, not a denial
   return fieldCorrectionAuthority[target.fieldKey] ?? [];
 }

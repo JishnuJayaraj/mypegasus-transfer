@@ -78,6 +78,8 @@ describe("documentCapabilities", () => {
     addedByParticipant: true,
     reviewState: "unreviewed",
     quarantinedBy: null,
+    invalidated: false,
+    correctionPending: false,
   } as const;
 
   it("lets the consultant and PL open, review and delete in normal mode", () => {
@@ -88,6 +90,7 @@ describe("documentCapabilities", () => {
         delete: true,
         quarantine: true,
         liftQuarantine: false,
+        requestCorrection: false,
       });
     }
   });
@@ -99,6 +102,7 @@ describe("documentCapabilities", () => {
       delete: false,
       quarantine: false,
       liftQuarantine: false,
+      requestCorrection: false,
     });
     expect(documentCapabilities(subject("back_office"), target, accessModes.normal, cv)).toEqual({
       open: false,
@@ -106,6 +110,7 @@ describe("documentCapabilities", () => {
       delete: false,
       quarantine: false,
       liftQuarantine: false,
+      requestCorrection: false,
     });
   });
 
@@ -120,6 +125,7 @@ describe("documentCapabilities", () => {
       delete: true,
       quarantine: false,
       liftQuarantine: false,
+      requestCorrection: false,
     });
     expect(documentCapabilities(participant, target, accessModes.normal, accepted).delete).toBe(
       false,
@@ -141,6 +147,8 @@ describe("documentCapabilities", () => {
       addedByParticipant: false,
       reviewState: "unreviewed",
       quarantinedBy: "someone",
+      invalidated: false,
+      correctionPending: false,
     } as const;
     expect(documentCapabilities(pl, target, accessModes.normal, scan)).toEqual({
       open: false,
@@ -148,6 +156,7 @@ describe("documentCapabilities", () => {
       delete: true,
       quarantine: false,
       liftQuarantine: true,
+      requestCorrection: false,
     });
     const accepted = { ...scan, reviewState: "accepted", quarantinedBy: null } as const;
     expect(documentCapabilities(pl, target, accessModes.normal, accepted)).toEqual({
@@ -156,7 +165,43 @@ describe("documentCapabilities", () => {
       delete: false,
       quarantine: true,
       liftQuarantine: false,
+      requestCorrection: true,
     });
+  });
+  it("opens, quarantines and lifts an invalidated document for nobody; one correction at a time", () => {
+    const pl = subject("project_lead");
+    const accepted = {
+      type: "tl407_signed_scan",
+      addedByParticipant: false,
+      reviewState: "accepted",
+      quarantinedBy: null,
+      invalidated: false,
+      correctionPending: false,
+    } as const;
+    const invalidated = { ...accepted, invalidated: true };
+    expect(documentCapabilities(pl, target, accessModes.normal, invalidated)).toEqual({
+      open: false,
+      review: false,
+      delete: false,
+      quarantine: false,
+      liftQuarantine: false,
+      requestCorrection: false,
+    });
+    expect(
+      documentCapabilities(pl, target, accessModes.normal, {
+        ...accepted,
+        quarantinedBy: "someone",
+        correctionPending: true,
+      }),
+    ).toMatchObject({ liftQuarantine: false, requestCorrection: false });
+    // the authority table: the PL, never the consultant; never in assisted mode
+    expect(
+      documentCapabilities(subject("consultant"), target, accessModes.normal, accepted)
+        .requestCorrection,
+    ).toBe(false);
+    expect(documentCapabilities(pl, target, accessModes.assisted, accepted).requestCorrection).toBe(
+      false,
+    );
   });
 });
 

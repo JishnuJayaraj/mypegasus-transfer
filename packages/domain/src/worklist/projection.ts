@@ -71,11 +71,19 @@ export const WorklistCapabilities = z.strictObject({
  * Staff work on a row that isn't a dated deadline (process-and-lifecycle.md, deadline warnings):
  * `knowledge_date_missing` with the ASU reference date as a labelled orientation, never overdue
  * ("Kenntnisdatum klären"); `kug200b_offer_open` with the offer's date and
- * `kug200b_withdrawal_ba_notice` with the withdrawal's date of receipt (`kug200bItems`).
+ * `kug200b_withdrawal_ba_notice` with the withdrawal's date of receipt (`kug200bItems`);
+ * `evidence_invalidated` ("Nachweis ungültig") from the approval of the oldest invalidation that
+ * nothing has replaced yet: the status that rested on it stays (data-protection.md, evidence
+ * corrections).
  */
 export const WorklistCaseItem = z
   .strictObject({
-    kind: z.enum(["knowledge_date_missing", "kug200b_offer_open", "kug200b_withdrawal_ba_notice"]),
+    kind: z.enum([
+      "knowledge_date_missing",
+      "kug200b_offer_open",
+      "kug200b_withdrawal_ba_notice",
+      "evidence_invalidated",
+    ]),
     date: isoDate,
   })
   .meta({ id: "WorklistCaseItem" });
@@ -143,6 +151,11 @@ export type WorklistFacts = Pick<
   kug200b: Omit<Kug200bOfferFacts, "projectType" | "status">;
   /** The TL 407's attempts, the lead time and a batch's registration (`agenturItems`). */
   agentur: Tl407WorkFacts;
+  /**
+   * The Berlin day the oldest invalidation not yet replaced was approved (an evidence document
+   * without a later valid one of its type, an ASU registration without a later current one).
+   */
+  evidenceInvalidatedSince: IsoDate | null;
   appointments: {
     bookings: readonly AppointmentItemBooking[];
     notices: readonly AppointmentItemNotice[];
@@ -246,6 +259,9 @@ export function worklistProjection(
         ? [{ kind: "knowledge_date_missing" as const, date: facts.asuDueDate.date }]
         : []),
       ...kug200bItems({ ...facts.kug200b, projectType: project.type, status: current.status }),
+      ...(facts.evidenceInvalidatedSince === null
+        ? []
+        : [{ kind: "evidence_invalidated" as const, date: facts.evidenceInvalidatedSince }]),
     ],
     agenturItems: agenturItems(snapshot, project.type, facts.agentur, today),
     flags: remainingFlags(lifecycleFlags(snapshot, project, today)),

@@ -27,6 +27,7 @@ import { Kug200bBatchArtifact, kug200bBatchMax } from "../asu/batches";
 import { AgenturSubmissionChannel } from "../asu/batches-api";
 import { AgenturRejectionReason } from "../profiling/submissions";
 import { kug200bDeclarations, ScanOrigin } from "../documents/scans";
+import { CorrectionAction, CorrectionReason, CorrectionTargetKind } from "../corrections/model";
 import { DocumentDeleteReason, DocumentReviewReason, QuarantineReason } from "../documents/state";
 import {
   ActivationChannel,
@@ -228,6 +229,10 @@ export const AuditEventType = z.enum([
   // Slice 6, exception evidence (process-and-lifecycle.md, profiling exceptions), written only by
   // its function
   "exception_evidence_recorded",
+  // Slice 6, evidence corrections (data-protection.md, evidence corrections), written only by
+  // their functions
+  "evidence_correction_requested",
+  "evidence_correction_decided",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -346,6 +351,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "agentur_submission_original_retained",
   "ba_report_recorded",
   "exception_evidence_recorded",
+  "evidence_correction_requested",
+  "evidence_correction_decided",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1502,6 +1509,35 @@ export const AuditEvent = z.discriminatedUnion("type", [
       }),
       z.strictObject({ evidenceRecordId: z.uuid(), kind: z.literal("ba_confirmation") }),
     ]),
+  }),
+  /**
+   * A correction requested (data-protection.md, evidence corrections): its id, the target's kind,
+   * the action and the reason code; never the documented source, a corrected value or a file.
+   */
+  event("evidence_correction_requested", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      correctionId: z.uuid(),
+      targetKind: CorrectionTargetKind,
+      action: CorrectionAction,
+      reason: CorrectionReason,
+    }),
+  }),
+  /**
+   * A correction decided by the regional operations manager (four eyes): approved, it invalidated or
+   * superseded its target (a replacement's id, a wrong person's file purged); rejected, nothing.
+   */
+  event("evidence_correction_decided", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      correctionId: z.uuid(),
+      targetKind: CorrectionTargetKind,
+      action: CorrectionAction,
+      reason: CorrectionReason,
+      decision: z.enum(["approved", "rejected"]),
+    }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

@@ -1198,3 +1198,22 @@ export {
   type BaConfirmationProblem,
   type CanonicalEvidenceSource,
 } from "./profiling/exception-evidence";
+export {
+  correctionRequestable,
+  CorrectionAction,
+  CorrectionReason,
+  CorrectionReviewItem,
+  correctionShape,
+  CorrectionSource,
+  correctionSourceMaxLength,
+  CorrectionState,
+  CorrectionStatus,
+  CorrectionTargetKind,
+  EvidenceCorrectionDecisionInput,
+  EvidenceCorrectionRequested,
+  EvidenceCorrectionRequestInput,
+  mayDecideCorrection,
+  mayRequestCorrection,
+  normaliseCorrectionSource,
+  type EvidenceCorrectionKind,
+} from "./corrections/model";

@@ -98,7 +98,7 @@ export const fieldCatalog: readonly FieldEntry[] = [
   // and the Kug 200b offer's decline, withdrawals and their BA notice (Q185); the submissions to an
   // Agentur and the batch memberships (process-and-lifecycle.md, Kug 200b batches)
   ...fields(
-    ["asuChannel", "asuRegistration", "kug200bOffer", "agenturSubmissions"],
+    ["asuChannel", "asuRegistration", "kug200bOffer", "agenturSubmissions", "evidenceCorrection"],
     "internal",
     "case_internal",
     false,

@@ -27,7 +27,9 @@ it("renders every edge, guard and operation (docs/domain/generated/lifecycle-tra
     OperationKind.options.length +
       // a generated form is no evidence: nobody requests its correction
       DocumentType.options.filter((type) => documentCorrectionAuthority[type].length > 0).length +
-      Object.keys(fieldCorrectionAuthority).length,
+      Object.keys(fieldCorrectionAuthority).length +
+      // the ASU registration and the BA reporting outcome (D29)
+      2,
   );
   expect(doc).toContain(
     "| main | `active_in_tg` | `exited` | user | manual | Consultant/profiler (assigned), PL | — | all |",
@@ -36,6 +38,8 @@ it("renders every edge, guard and operation (docs/domain/generated/lifecycle-tra
   expect(doc).toContain("| `requestEvidenceCorrection` | PL, Back office | — |");
   expect(doc).toContain("| document | `asu_proof` | PL |");
   expect(doc).toContain("| field | `tgEntryDate` | PL, Back office |");
+  expect(doc).toContain("| record | `asu_registration` | PL |");
+  expect(doc).toContain("| record | `ba_reporting_task` | PL |");
   expect(doc).toContain("| main | *(create)* | `imported` | user | manual | PL | — | all |");
   expect(doc).toContain(
     "| dsv | `dsv_expired` | `dsv_offered` | user | manual | PL, Back office | `before_cutoff`, `offer_deadline_valid` | all |",

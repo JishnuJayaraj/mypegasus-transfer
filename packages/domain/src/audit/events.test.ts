@@ -140,6 +140,8 @@ describe("audit event types (ADR-0002)", () => {
       "agentur_submission_original_retained",
       "ba_report_recorded",
       "exception_evidence_recorded",
+      "evidence_correction_requested",
+      "evidence_correction_decided",
     ]);
   });
 
@@ -248,6 +250,8 @@ describe("audit event types (ADR-0002)", () => {
       "agentur_submission_original_retained",
       "ba_report_recorded",
       "exception_evidence_recorded",
+      "evidence_correction_requested",
+      "evidence_correction_decided",
     ]);
   });
 
@@ -586,6 +590,29 @@ describe("the other event types", () => {
     [
       "exception_evidence_recorded",
       { details: { evidenceRecordId: otherId, kind: "ba_confirmation" } },
+    ],
+    [
+      "evidence_correction_requested",
+      {
+        details: {
+          correctionId: otherId,
+          targetKind: "document",
+          action: "invalidate",
+          reason: "corrected_source_document",
+        },
+      },
+    ],
+    [
+      "evidence_correction_decided",
+      {
+        details: {
+          correctionId: otherId,
+          targetKind: "asu_registration",
+          action: "supersede",
+          reason: "documented_internal_error",
+          decision: "approved",
+        },
+      },
     ],
     [
       "declaration_withdrawal_recorded",
@@ -1186,6 +1213,44 @@ describe("the other event types", () => {
     [
       "exception_evidence_recorded",
       { details: { evidenceRecordId: otherId, kind: "ba_confirmation", reference: "az 1" } },
+    ],
+    // A correction names codes only: never its documented source or a corrected value.
+    [
+      "evidence_correction_requested",
+      {
+        details: {
+          correctionId: otherId,
+          targetKind: "document",
+          action: "invalidate",
+          reason: "ba_legal_reference",
+          source: "Schreiben vom 03.11.",
+        },
+      },
+    ],
+    [
+      "evidence_correction_requested",
+      {
+        participationId: null,
+        details: {
+          correctionId: otherId,
+          targetKind: "document",
+          action: "invalidate",
+          reason: "ba_legal_reference",
+        },
+      },
+    ],
+    [
+      "evidence_correction_decided",
+      {
+        details: {
+          correctionId: otherId,
+          targetKind: "asu_registration",
+          action: "supersede",
+          reason: "ba_legal_reference",
+          decision: "approved",
+          registeredOn: "2026-11-02",
+        },
+      },
     ],
     [
       "participation_dates_changed",

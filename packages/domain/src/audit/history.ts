@@ -211,6 +211,12 @@ export const auditProjection: {
   // A BA reporting task's outcome (D28), beside the contractual date change that created it.
   ba_report_recorded: shown("dsv", { details: ["kind", "outcome", "reportedOn", "reason"] }),
   exception_evidence_recorded: shown("profiling", { details: ["kind"] }),
+  // Evidence corrections (data-protection.md, evidence corrections): the target's kind, the
+  // action, the reason code and the decision; never the source or a corrected value.
+  evidence_correction_requested: shown("case", { details: ["targetKind", "action", "reason"] }),
+  evidence_correction_decided: shown("case", {
+    details: ["targetKind", "action", "reason", "decision"],
+  }),
 };
 
 /** One event type's projection; `status_changed` needs its field. */
