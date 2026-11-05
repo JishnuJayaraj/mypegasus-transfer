@@ -48,6 +48,10 @@ const CorrectionParams = z.object({ correctionId: z.uuid() });
 
 const normal = { kind: "normal" } as const;
 
+/** The staff user acting for themselves in this request. */
+const context = (c: Context<AppEnv>) =>
+  auditContext(sessionUser(c).id, c.get("requestId") as string);
+
 /** Where a refused request points (ADR-0010). */
 const fields: Record<string, string> = {
   source_invalid: "source",
@@ -148,8 +152,6 @@ export function evidenceCorrectionRoutes(deps: Deps) {
   const { db, logger } = deps;
   const router = createRouter();
   const middleware = [requireSession(deps)];
-  const context = (c: Context<AppEnv>) =>
-    auditContext(sessionUser(c).id, c.get("requestId") as string);
 
   router.openapi(
     createRoute({
