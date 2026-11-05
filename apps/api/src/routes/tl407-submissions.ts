@@ -144,6 +144,10 @@ export function tl407SubmissionRoutes(deps: Deps) {
             .select({ key: participation.placementAgenturKey, status: participation.status })
             .from(participation)
             .where(eq(participation.id, participationId));
+          // The destination the PL reviewed: another placement Agentur since is a changed source,
+          // even with identical settings (compared under the project's lock, which every
+          // placement change takes).
+          if (current!.key !== input.agenturKey) return "changed" as const;
           const closed = ["withdrawn", "ta_completed", "exited"].includes(current!.status);
           // A closed participation is refused by the function; its Agentur is never resolved.
           const resolved =

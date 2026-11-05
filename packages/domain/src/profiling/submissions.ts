@@ -8,7 +8,7 @@ import { validBy } from "../lifecycle/guards";
 import type { ParticipationSnapshot } from "../lifecycle/planner";
 import { effectiveTgStart } from "../lifecycle/waves";
 import type { ProjectType } from "../project";
-import type { RegionalSettings } from "../projects/agentur-settings";
+import { AgenturKey, type RegionalSettings } from "../projects/agentur-settings";
 
 // The TL 407's submission to the Agentur (process-and-lifecycle.md, TL 407 submission; Q54, Q92,
 // Q188, Q189): every attempt is kept; an Agentur's rejection reopens the work until a new
@@ -319,12 +319,14 @@ export const Tl407SubmissionState = z
 export type Tl407SubmissionState = z.infer<typeof Tl407SubmissionState>;
 
 /**
- * `POST /participations/{id}/tl407-submissions` (the PL): the scan and the channel and original
- * rule the PL saw, and the actual sent date; anything changed since is `source_changed`.
+ * `POST /participations/{id}/tl407-submissions` (the PL): the scan, the destination (the placement
+ * Agentur), the channel and original rule the PL saw, and the actual sent date; anything changed
+ * since is `source_changed`.
  */
 export const Tl407SubmissionInput = z
   .strictObject({
     documentId: z.uuid(),
+    agenturKey: AgenturKey,
     channel: AgenturSubmissionChannel,
     originalRequired: z.boolean(),
     submittedOn: isoDate,

@@ -14945,6 +14945,10 @@
             "type": "string",
             "format": "uuid"
           },
+          "agenturKey": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+          },
           "channel": {
             "$ref": "#/components/schemas/AgenturSubmissionChannel"
           },
@@ -14962,6 +14966,7 @@
         },
         "required": [
           "documentId",
+          "agenturKey",
           "channel",
           "originalRequired",
           "submittedOn"

@@ -113,6 +113,7 @@ export function Tl407Submission({ view }: { view: View }) {
                   params: { path: { participationId: view.participationId } },
                   body: {
                     documentId: next.documentId!,
+                    agenturKey: next.agenturKey!,
                     channel: next.channel!,
                     originalRequired: next.originalRequired!,
                     submittedOn,

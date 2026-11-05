@@ -926,6 +926,7 @@ describe("Übermittlung an die Agentur", () => {
     await waitFor(() =>
       expect(callTo(calls, `POST ${detailPath}/tl407-submissions`)[0]?.body).toEqual({
         documentId: submittedScanId,
+        agenturKey: "beispielstadt-nord",
         channel: "email",
         originalRequired: true,
         submittedOn: "2026-10-21",

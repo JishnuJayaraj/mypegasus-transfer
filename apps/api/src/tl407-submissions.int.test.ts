@@ -24,6 +24,7 @@ const { projectLead, consultant, backOffice, regionalAdmin, admin, regionalOpera
   seedStaffUserIds;
 const staff = {} as Record<string, { Cookie: string }>;
 const ost = "beispielstadt-ost";
+const west = "beispielstadt-west";
 const hex = (bytes = 32) => randomBytes(bytes).toString("hex");
 const all = { submissionChannel: "email", originalRequired: true, leadTimeDays: 10 } as const;
 
@@ -54,6 +55,7 @@ const day = async (offset = 0) =>
 /** Ost's Agentur-scoped `agentur_submission` settings (all four unless overridden). */
 async function settings(
   values: Record<string, unknown> = { ...all, rejectsOutdatedFormVersions: false },
+  agenturKey: string = ost,
 ) {
   const { rows } = await sql(
     "select coalesce(max(version), 0)::int as v from project_config_override where project_id = $1",
@@ -61,7 +63,7 @@ async function settings(
   );
   const res = await request(
     "PUT",
-    `/projects/${werkNord}/config/agentur-settings/${ost}`,
+    `/projects/${werkNord}/config/agentur-settings/${agenturKey}`,
     projectLead,
     {
       expectedVersion: rows[0].v,
@@ -142,6 +144,7 @@ const submit = async (
 ) =>
   request("POST", `/participations/${id}/tl407-submissions`, as, {
     documentId,
+    agenturKey: ost,
     channel: "email",
     originalRequired: true,
     submittedOn: await day(-1),
@@ -230,7 +233,9 @@ describe("POST /participations/{id}/tl407-submissions (D26)", () => {
       "update participation set placement_agentur_key = null, placement_agentur_set_at = null where id = $1",
       [id],
     );
-    expect(await codes(await submit(id, documentId))).toEqual(["placement_agentur_missing"]);
+    // The tab says why; a request still naming the Agentur the PL saw is a changed source.
+    expect((await profiling(id)).tl407Submission.next?.problem).toBe("placement_agentur_missing");
+    expect(await codes(await submit(id, documentId), 409)).toEqual(["source_changed"]);
   });
 
   it("refuses with source_changed when the settings the PL saw changed", async () => {
@@ -242,6 +247,19 @@ describe("POST /participations/{id}/tl407-submissions (D26)", () => {
     expect(await codes(await submit(id, documentId, { originalRequired: false }), 409)).toEqual([
       "source_changed",
     ]);
+  });
+
+  it("refuses with source_changed when the placement Agentur changed after the PL saw it", async () => {
+    // Ost and West with identical settings: only the destination differs.
+    await settings();
+    await settings(undefined, west);
+    const { id, documentId } = await ready();
+    expect((await profiling(id)).tl407Submission.next?.agenturKey).toBe(ost);
+    await sql("update participation set placement_agentur_key = $2 where id = $1", [id, west]);
+    expect(await codes(await submit(id, documentId), 409)).toEqual(["source_changed"]);
+    expect((await profiling(id)).tl407Submission.attempts).toEqual([]);
+    await submitted(id, documentId, { agenturKey: west });
+    expect((await profiling(id)).tl407Submission.attempts[0]!.agenturKey).toBe(west);
   });
 
   it("supports no submission with a quarantined scan", async () => {

@@ -16904,6 +16904,7 @@ export interface components {
         Tl407SubmissionInput: {
             /** Format: uuid */
             documentId: string;
+            agenturKey: string;
             channel: components["schemas"]["AgenturSubmissionChannel"];
             originalRequired: boolean;
             /**
