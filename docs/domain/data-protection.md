@@ -128,7 +128,8 @@
     regions and for the global admin every one; anyone else `403`, the PL and the regional
     operations manager included. Per project: its name, its active PLs' display names and, per
     type (`tl407_not_submitted`, `profiling_compliance`), the number of escalated participations
-    and the days since the oldest escalated. Projects without one aren't listed. The response's
+    and the days since the oldest escalated (each escalation dated by its current episode,
+    process-and-lifecycle.md, TL 407 submission). Projects without one aren't listed. The response's
     schema has no participant id, name or date of a person; the API reads only the open
     participations a rule applies to, and a refusal's date through `profiling_declined_dates`
     (dates only, no audit row leaves the database). Not cached (`no-store`).
@@ -960,12 +961,13 @@ and highly confidential data only; ordinary person-data writes are `participant_
   stream and the Agentur's confirmation in `case`; the batch's own events are project-level.
 - **The TL 407's submissions** (process-and-lifecycle.md, TL 407 submission; Slice 6, PR 6-5b):
   `agentur_submission` rows of the TL 407 also keep whether the original was required, "Original
-  versandt am" and the Agentur's rejection (date, reason), each with who recorded it when; the
+  versandt am" (or, after a resubmission, the link to the earlier dispatch the Agentur still
+  holds, Q206 (4)) and the Agentur's rejection (date, reason), each with who recorded it when; the
   same classification and `participation_record` (no new personal data beyond dates and codes).
   The PL records them (`submit_tl407`, `record_original_sent`, `record_agentur_rejection`, under
   the participation's lock); the PL and the assigned consultant read them on "Profiling"; the
   `profiling` stream shows `agentur_submission_original_sent` (date) and
-  `agentur_submission_rejected` (date, reason).
+  `agentur_submission_rejected` (date, reason) and `agentur_submission_original_retained` (date).
 - Logs carry ids, codes and counts, never a token, a value or a file's content. The bound: a print
   file ≤ 100 forms; a batch ≤ 200 members.
 

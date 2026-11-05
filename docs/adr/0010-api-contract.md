@@ -564,23 +564,28 @@ generator then. No action now.
 
 ## Note 2026-11-04 (Slice 6, PR 6-5b): the TL 407's submission and the regional view
 
-- `POST /participations/{id}/tl407-submissions` (`Tl407SubmissionInput` `{ documentId, channel,
-  originalRequired, submittedOn }`: the scan and the settings the PL saw; the PL) → `201
+- `POST /participations/{id}/tl407-submissions` (`Tl407SubmissionInput` `{ documentId,
+  agenturKey, channel, originalRequired, submittedOn }`: the scan, the destination and the
+  settings the PL saw; the PL) → `201
   Tl407SubmissionCreated { submissionId }`. Visibility is the tab's (`404` also for an unassigned
   consultant), then `403` for anyone but the PL. The route takes the project's lock, resolves the
-  placement Agentur's settings under it and answers `409 source_changed` when they differ from the
-  body (also for the function's `settings_changed`). `422` codes `participation_closed`,
+  placement Agentur's settings under it and answers `409 source_changed` when the placement
+  Agentur or its settings differ from the body (also for the function's `settings_changed`). `422` codes `participation_closed`,
   `placement_agentur_missing`, `submission_settings_missing`, `already_submitted`,
   `document_not_found`, `scan_unusable` and `form_version_outdated` (at `/documentId`),
   `submitted_on_in_future`, `submitted_before_signature`, `submitted_before_rejection` (at
   `/submittedOn`).
-- `POST /agentur-submissions/{id}/original` (`{ originalSentOn }`) and `…/rejection` (`{
-  rejectedOn, reason }`, `AgenturRejectionReason`) → `204`; a submission the viewer can't see on the
+- `POST /agentur-submissions/{id}/original` (`{ originalSentOn }`), `…/original-retained`
+  (`OriginalRetainedInput { retainedFrom }`, Q206 (4)) and `…/rejection` (`{ rejectedOn, reason
+  }`, `AgenturRejectionReason`) → `204`; a submission the viewer can't see on the
   tab `404`; `422` `original_not_required`, `original_recorded`, `already_rejected`,
-  `rejection_not_applicable`, `date_in_future` and `date_before_submission` (at the date).
+  `rejection_not_applicable`, `date_in_future` and `date_before_submission` (at the date),
+  `retained_original_not_found` and `original_not_retainable` (at `/retainedFrom`).
 - `Profiling` gains `tl407Submission` (`Tl407SubmissionState`): `attempts` newest first
   (`Tl407Submission`: scan, version, Agentur, channel, `submittedOn`, `originalRequired`,
-  `originalSentOn`, `rejection`, `recordedAt`, `capabilities.recordOriginal/recordRejection`) and,
+  `originalSentOn`, `originalRetainedFrom`, `retainableOriginal` (the earlier dispatch the PL may
+  confirm, null for anyone else), `rejection`, `recordedAt`,
+  `capabilities.recordOriginal/recordRejection`) and,
   for the PL, `next` (the usable scan, the placement Agentur, the resolved channel and original
   rule, and `problem`: `Tl407SubmissionProblem` or null); null for anyone else.
 - The work list: `DeadlineKind` adds `tl407_submission` (after `asu_due`); `WorklistItem` gains

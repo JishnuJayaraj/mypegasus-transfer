@@ -1064,7 +1064,10 @@ data-protection.md (the regional view) hold the rules, Q206 the readings.
   submission) and the Agentur's rejection (`rejected_on`, `rejection_reason`
   `agentur_rejection_reason`, `rejection_recorded_by/at`, whole, `tl407` only, not before the
   submission). A partial unique index keeps one standing (unrejected) TL 407 submission per
-  participation (`agentur_submission_tl407_live_unique`). `transfer_app` still writes none.
+  participation (`agentur_submission_tl407_live_unique`). `original_retained_from` (a self-link,
+  `agentur_submission_original_retained_from_fk`) records an earlier dispatch the Agentur still
+  holds; such an original keeps the earlier date, so only it may precede the submission.
+  `transfer_app` still writes none.
 - **What the API resolves:** the placement Agentur's channel, `originalRequired` and the TL 407
   versions it rejects as outdated (only where `rejectsOutdatedFormVersions` is `true`), after
   taking `lock_project_setup`, which every configuration write and `set_placement_agentur` take;
@@ -1081,11 +1084,15 @@ data-protection.md (the regional view) hold the rules, Q206 the readings.
   `submitted_on_in_future`, `submitted_before_signature`, `submitted_before_rejection`; audited
   `agentur_submission_recorded`). `record_original_sent` (`submission_not_found`,
   `original_not_required`, `original_recorded`, `date_in_future`, `date_before_submission`;
-  `agentur_submission_original_sent`). `record_agentur_rejection` (`rejection_not_applicable` for a
+  `agentur_submission_original_sent`). `record_original_retained` (Q206 (4); the same refusals as
+  the original's, then `retained_original_not_found` for an attempt not of the participation and
+  `original_not_retainable` unless it is an earlier, rejected TL 407 attempt of the same scan and
+  Agentur with its original dispatched; `agentur_submission_original_retained`).
+  `record_agentur_rejection` (`rejection_not_applicable` for a
   batch's Kug 200b, Q204; `already_rejected`, the two dates; `agentur_submission_rejected`); neither
   touches the scan or a status. `profiling_declined_dates(uuid[])` reads the effective date of each
   participation's latest change to `profiling_declined` for the regional view (dates only;
-  `transfer_app` selects no `audit_event`). `record_audit_event` refuses the two new types; both are
+  `transfer_app` selects no `audit_event`). `record_audit_event` refuses the three new types; all are
   participation events (`audit_event_lifecycle_has_participation`).
 
 ## Conventions as built (Slices 0–2)

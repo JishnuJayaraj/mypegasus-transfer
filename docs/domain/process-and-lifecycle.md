@@ -330,12 +330,16 @@ stateDiagram-v2
     later signature, not before the last rejection), while the participation is open. Refused
     without a placement Agentur, with the `agentur_submission` blocker (all four settings, Q92),
     while a submission stands, and for a version expired in the registry only where the
-    Agentur's resolved `rejectsOutdatedFormVersions` is `true` (Q188). The PL submits the settings
-    shown; changed meanwhile, `409 source_changed`. Every attempt is its own `agentur_submission`
+    Agentur's resolved `rejectsOutdatedFormVersions` is `true` (Q188). The PL submits the
+    destination (the placement Agentur) and the settings shown; another Agentur since, even with
+    identical settings, or changed settings is `409 source_changed`. Every attempt is its own `agentur_submission`
     row, which keeps whether the Agentur needed the original when it was sent.
   - **"Original versandt am"**, once, where the Agentur needs the paper original apart from the
     submission (`originalRequired`, not `paper_original`): until then the item
-    `tl407_original_missing`.
+    `tl407_original_missing`. After a rejection and a new submission of the same paper to the same
+    Agentur, the PL may instead confirm **"Original liegt der Agentur vor"** (Q206 (4)): the new
+    attempt links the earlier dispatch and keeps its actual date. It is never assumed: the item
+    stays until the PL confirms it or records a new dispatch.
   - **"Von der Agentur abgelehnt"** (`outdated_form_version`, `incomplete`, `other`, with its
     date), once per attempt: it reopens the work (`tl407_resubmission_open`) until a new
     submission, and never invalidates the signatures, the scan or the completed profiling. A
@@ -349,7 +353,10 @@ stateDiagram-v2
   - **Escalation:** still not submitted from TG start + `tl407EscalationDaysAfterTgStart` (14) →
     the item `tl407_escalated` for the PL and the type `tl407_not_submitted` in the regional
     admin's view, whatever the exception: no baseline moves, so a late catch-up escalates at once
-    when that day has passed. A rejection counts as not submitted.
+    when that day has passed. A rejection counts as not submitted, so a rejection after that day
+    re-escalates at once. The escalation is dated by its **current episode** (Q206 (8)): from TG
+    start + 14, or from a later rejection that reopened it, so its age never counts the time a
+    submission stood ("seit heute" for a rejection received today).
   - **Compliance escalation at once:** a refusal after entry (`profiling_declined_after_entry`)
     or a missed one-month deadline under an exception (`profiling_exception_deadline_missed`, the
     day after the deadline) is the type `profiling_compliance` the day it happens, with no grace
