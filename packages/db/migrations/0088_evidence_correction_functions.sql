@@ -586,6 +586,81 @@ BEGIN
 END $$;
 --> statement-breakpoint
 
+-- The reporting obligation's first day (D28, Q207 (2); the review of PR #103): the Berlin day the
+-- first task of a replacement chain was created. A replacement an approved correction created
+-- keeps its own `created_at` but reports the same obligation, so a report actually sent before
+-- the correction is recorded with its true date, through repeated corrections too.
+CREATE FUNCTION ba_reporting_obligation_day(p_task_id uuid)
+RETURNS date LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
+  WITH RECURSIVE chain AS (
+    SELECT id, replaces_task_id, created_at, 0 AS depth
+    FROM public.ba_reporting_task WHERE id = p_task_id
+    UNION ALL
+    SELECT t.id, t.replaces_task_id, t.created_at, c.depth + 1
+    FROM public.ba_reporting_task t JOIN chain c ON t.id = c.replaces_task_id
+  )
+  SELECT (created_at AT TIME ZONE 'Europe/Berlin')::date FROM chain
+  ORDER BY depth DESC LIMIT 1
+$$;
+--> statement-breakpoint
+
+-- "Gemeldet am" (0084) on a replacement task is not before its obligation's first day
+-- (`date_before_task`), not the replacement's own creation day.
+CREATE OR REPLACE FUNCTION record_ba_report(
+  p_context audit_context, p_task_id uuid, p_outcome ba_reporting_status, p_reported_on date,
+  p_reason ba_report_not_required_reason
+) RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+DECLARE
+  v_participation_id uuid;
+  v_shape_ok boolean := CASE p_outcome::text
+    WHEN 'reported' THEN p_reported_on IS NOT NULL AND p_reason IS NULL
+    WHEN 'not_required' THEN p_reason IS NOT NULL AND p_reported_on IS NULL
+    ELSE false END;
+  t public.ba_reporting_task;
+BEGIN
+  IF p_task_id IS NULL OR NOT coalesce(v_shape_ok, false) THEN
+    RAISE EXCEPTION 'invalid_argument';
+  END IF;
+  -- participation_id never changes, so it can be read before the lock.
+  SELECT participation_id INTO v_participation_id FROM public.ba_reporting_task
+  WHERE id = p_task_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'task_not_found';
+  END IF;
+  PERFORM public.assert_context(p_context, v_participation_id, '{user}');
+  IF (p_context).on_behalf_of IS NOT NULL THEN
+    RAISE EXCEPTION 'actor_not_allowed';
+  END IF;
+  PERFORM public.lock_participation(v_participation_id);
+  IF NOT public.document_staff_roles(v_participation_id, (p_context).staff_user_id)
+      && ARRAY['project_lead', 'back_office'] THEN
+    RAISE EXCEPTION 'actor_not_allowed';
+  END IF;
+  SELECT * INTO t FROM public.ba_reporting_task WHERE id = p_task_id FOR UPDATE;
+  IF t.status::text <> 'pending' THEN
+    RAISE EXCEPTION 'already_recorded';
+  END IF;
+  IF p_reported_on > public.berlin_today() THEN
+    RAISE EXCEPTION 'date_in_future';
+  END IF;
+  IF p_reported_on < public.ba_reporting_obligation_day(t.id) THEN
+    RAISE EXCEPTION 'date_before_task';
+  END IF;
+  UPDATE public.ba_reporting_task SET status = p_outcome, reported_on = p_reported_on,
+    not_required_reason = p_reason, decided_by = (p_context).staff_user_id, decided_at = now()
+  WHERE id = t.id;
+  PERFORM public.write_audit_event(t.project_id, t.participation_id, 'ba_report_recorded',
+    p_context, NULL, NULL, NULL, NULL, NULL,
+    CASE p_outcome::text
+      WHEN 'reported' THEN pg_catalog.jsonb_build_object('taskId', t.id,
+        'kind', t.reporting_kind, 'outcome', p_outcome,
+        'reportedOn', pg_catalog.to_char(p_reported_on, 'YYYY-MM-DD'))
+      ELSE pg_catalog.jsonb_build_object('taskId', t.id, 'kind', t.reporting_kind,
+        'outcome', p_outcome, 'reason', p_reason)
+    END, false);
+END $$;
+--> statement-breakpoint
+
 -- `record_audit_event` (0086) refuses the new types: only their functions write them.
 CREATE OR REPLACE FUNCTION record_audit_event(
   p_project_id uuid, p_participation_id uuid, p_event_type audit_event_type, p_context audit_context,
@@ -773,8 +848,8 @@ END $$;
 -- - a document: `invalidated_by_correction`; a wrong person's file also becomes a tombstone
 --   (`wrong_person`, the file name erased) whose object the caller purges (the returned id);
 -- - an ASU registration: `invalidated_by`, or `superseded_by` with a new current registration
---   carrying the corrected date, the same route and proof, recorded and proven now
---   (`correction_id`);
+--   carrying the corrected date and the same route, recorded now (`correction_id`); the PL's
+--   attestation carries over and is proven now, a BA confirmation is linked again;
 -- - a BA reporting task: a new `pending` replacement task (`replaces_task_id`, `correction_id`),
 --   the original's `superseded_by`; the original's outcome and history stay.
 -- A target corrected meanwhile is `target_corrected`. No status, guard, date or payment moves.
@@ -853,10 +928,16 @@ BEGIN
         INSERT INTO public.asu_registration (id, project_id, participation_id, channel,
           registered_on, recorded_by, proof_kind, proof_document_id, attestation_source,
           proof_linked_by, proof_linked_at, correction_id)
+        -- The PL's attestation, given by the requesting role with the corrected date, carries
+        -- over; a BA confirmation document doesn't: the assigned consultant links it again,
+        -- confirming it supports the corrected date (Q209 (3)), and the fact waits for that.
         VALUES (pg_catalog.gen_random_uuid(), g.project_id, g.participation_id, g.channel,
-          c.corrected_registered_on, (p_context).staff_user_id, g.proof_kind,
-          g.proof_document_id, g.attestation_source, g.proof_linked_by,
-          CASE WHEN g.proof_kind IS NOT NULL THEN now() END, c.id);
+          c.corrected_registered_on, (p_context).staff_user_id,
+          CASE WHEN g.proof_kind::text = 'ba_customer_number' THEN g.proof_kind END,
+          NULL,
+          CASE WHEN g.proof_kind::text = 'ba_customer_number' THEN g.attestation_source END,
+          CASE WHEN g.proof_kind::text = 'ba_customer_number' THEN g.proof_linked_by END,
+          CASE WHEN g.proof_kind::text = 'ba_customer_number' THEN now() END, c.id);
       END IF;
     ELSE
       IF t.superseded_by IS NOT NULL THEN
@@ -887,6 +968,7 @@ END $$;
 GRANT SELECT ON TABLE evidence_correction TO transfer_app;
 --> statement-breakpoint
 REVOKE ALL ON FUNCTION evidence_correction_append_only, normalise_correction_source,
+  ba_reporting_obligation_day,
   request_evidence_correction, decide_evidence_correction FROM PUBLIC;
 --> statement-breakpoint
 GRANT EXECUTE ON FUNCTION request_evidence_correction, decide_evidence_correction TO transfer_app;

@@ -503,6 +503,52 @@ describe("decide_evidence_correction (four eyes, D29, D31)", () => {
     ).rejects.toMatchObject(failsWith("target_corrected"));
   });
 
+  it("supersedes a registration proven by a BA confirmation without its proof, until it is linked again", async () => {
+    const id = await participation();
+    await call(app, "set_asu_route", {
+      context: pl,
+      participationId: id,
+      channel: "in_person",
+      version: 0,
+    });
+    const registrationId = await call(app, "record_asu_registration", {
+      context: asConsultant,
+      participationId: id,
+      id: randomUUID(),
+      registeredOn: await daysAgo(10),
+      routeVersion: 1,
+    });
+    const proof = await document(id);
+    const link = (target: string) =>
+      call(app, "link_asu_proof", {
+        context: asConsultant,
+        participationId: id,
+        registrationId: target,
+        documentId: proof,
+      });
+    await link(registrationId);
+    await decide(
+      await request({
+        participationId: id,
+        targetKind: "asu_registration",
+        action: "supersede",
+        targetId: registrationId,
+        registeredOn: await daysAgo(12),
+      }),
+    );
+    const current = await one(
+      `select id, proof_kind, proof_document_id from asu_registration
+       where participation_id = $1 and superseded_by is null and invalidated_by is null`,
+      [id],
+    );
+    expect(current).toMatchObject({ proof_kind: null, proof_document_id: null });
+    // The consultant confirms the document supports the corrected date by linking it again.
+    await link(current.id);
+    expect(
+      await one("select proof_kind::text from asu_registration where id = $1", [current.id]),
+    ).toEqual({ proof_kind: "ba_confirmation" });
+  });
+
   it("invalidates an ASU registration: it stays, linked, and a new one may be recorded", async () => {
     const id = await participation();
     const registrationId = await registration(id, await daysAgo(10));
@@ -583,13 +629,31 @@ describe("decide_evidence_correction (four eyes, D29, D31)", () => {
         reason: null,
       }),
     ).rejects.toMatchObject(failsWith("already_recorded"));
-    await call(app, "record_ba_report", {
-      context: pl,
-      taskId: replacement,
-      outcome: "reported",
-      reportedOn: await daysAgo(0),
-      reason: null,
-    });
+    // The replacement reports the same obligation: a report sent before the correction, after
+    // the original task's day, keeps its true date (the review of PR #103); never earlier.
+    const report = async (task: string, days: number) =>
+      call(app, "record_ba_report", {
+        context: pl,
+        taskId: task,
+        outcome: "reported",
+        reportedOn: await daysAgo(days),
+        reason: null,
+      });
+    await expect(report(replacement, 4)).rejects.toMatchObject(failsWith("date_before_task"));
+    await report(replacement, 2);
+    // A second correction: its replacement still dates from the first task's day.
+    await decide(
+      await request({
+        participationId: id,
+        targetKind: "ba_reporting_task",
+        targetId: replacement,
+      }),
+    );
+    const second = (
+      await one("select id from ba_reporting_task where replaces_task_id = $1", [replacement])
+    ).id as string;
+    await expect(report(second, 4)).rejects.toMatchObject(failsWith("date_before_task"));
+    await report(second, 3);
     // The original's outcome is never edited, and its link is set once.
     await expect(
       owner.query("update ba_reporting_task set superseded_by = null where id = $1", [taskId]),

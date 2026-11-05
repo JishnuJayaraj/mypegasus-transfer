@@ -276,6 +276,7 @@ const helpers = [
   "profiling_exception_evidence_record_immutable",
   "evidence_correction_append_only",
   "normalise_correction_source",
+  "ba_reporting_obligation_day",
   "create_early_exit_task",
   "assert_global_admin",
   "is_project_lead",
