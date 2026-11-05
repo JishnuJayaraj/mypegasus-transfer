@@ -890,11 +890,14 @@ While `active_in_tg`, a participation has **dated periods** (from, to): `active`
     (never a consultant) records once either "Gemeldet am", the actual date the report was sent
     (not in the future, not before the Berlin day the task was created), or "Nicht erforderlich"
     with a closed reason: `agentur_confirmed_not_required`, `no_claim_month_affected` or
-    `created_in_error`. Each is confirmed in a dialog that names the task, with no default date
+    `created_in_error` (a task that should never have existed). "Gemeldet am" records staff's
+    confirmation that the report was sent, never its delivery or the Agentur's acceptance; no
+    channel or reference is recorded yet. Each is confirmed in a dialog that names the task, with no default date
     or reason. Who and when are kept, audited `ba_report_recorded` in the `dsv` stream. A closed
     participation's task is closed the same way. The outcome is never edited: a wrong one is
     superseded by an approved correction (data-protection.md, evidence corrections; Slice 6's
-    corrections PR).
+    corrections PR), which invalidates any older open confirmation: a reopened task is closed
+    only against its current revision, or the correction creates a linked replacement task.
   - **The work list** shows a pending task as the Agentur item `ba_report_pending` ("BA-Meldung
     offen", from the oldest pending task's day; also for a closed participation) to whoever reads
     the tasks. It has no due date and doesn't escalate.
