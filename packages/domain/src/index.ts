@@ -1175,3 +1175,23 @@ export {
   Kug200bBatchSubmitted,
   Kug200bBatchView,
 } from "./asu/batches-api";
+export {
+  baReferenceMaxLength,
+  canonicalEvidence,
+  evidencePayloadPrefix,
+  ExceptionEvidenceCreated,
+  ExceptionEvidenceDocument,
+  ExceptionEvidenceInput,
+  ExceptionEvidenceKind,
+  normaliseBaConfirmation,
+  normaliseBaReference,
+  ProfilingExceptionDecisionInput,
+  ProfilingExceptionRequestInput,
+  ProfilingExceptionRevocationInput,
+  ProfilingExceptionView,
+  ReviewItem,
+  ReviewQueue,
+  type BaConfirmation,
+  type BaConfirmationProblem,
+  type CanonicalEvidenceSource,
+} from "./profiling/exception-evidence";

@@ -225,6 +225,9 @@ export const AuditEventType = z.enum([
   "agentur_submission_rejected",
   "agentur_submission_original_retained",
   "ba_report_recorded",
+  // Slice 6, exception evidence (process-and-lifecycle.md, profiling exceptions), written only by
+  // its function
+  "exception_evidence_recorded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -342,6 +345,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "agentur_submission_rejected",
   "agentur_submission_original_retained",
   "ba_report_recorded",
+  "exception_evidence_recorded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1480,6 +1484,23 @@ export const AuditEvent = z.discriminatedUnion("type", [
         outcome: z.literal("not_required"),
         reason: BaReportNotRequiredReason,
       }),
+    ]),
+  }),
+  /**
+   * An exception evidence record (process-and-lifecycle.md, profiling exceptions; Q194): its
+   * opaque id, kind and, for documents, how many; never a fingerprint, a document id, the
+   * Agentur or the reference.
+   */
+  event("exception_evidence_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.union([
+      z.strictObject({
+        evidenceRecordId: z.uuid(),
+        kind: z.literal("documents"),
+        documentCount: z.number().int().min(1),
+      }),
+      z.strictObject({ evidenceRecordId: z.uuid(), kind: z.literal("ba_confirmation") }),
     ]),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */

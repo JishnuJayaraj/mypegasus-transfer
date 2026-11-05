@@ -116,6 +116,16 @@ describe("deciding a profiling exception (AC-6, Q80)", () => {
     });
   });
 
+  it("approves only while the evidence is still usable; rejects regardless", () => {
+    const deciding = op({ actor: manager });
+    expect(decideProfilingException(deciding, requested, "approve", false)).toEqual(
+      fail("evidence_missing"),
+    );
+    expect(decideProfilingException(deciding, requested, "reject", false)).toMatchObject({
+      ok: true,
+    });
+  });
+
   it.each([
     ["by the system", { actor: system }, requested, "actor_not_allowed"],
     [

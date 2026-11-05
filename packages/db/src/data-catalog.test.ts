@@ -71,6 +71,7 @@ describe("data catalog", () => {
       project_membership: entry("project_master", "internal"),
       project_entry_wave: entry("project_master", "internal"),
       participation: entry("participation_record", "confidential", true),
+      profiling_exception_evidence_record: entry("participation_record", "confidential", true),
       profiling_exception_request: entry("participation_record", "confidential", true),
       participant_identity: entry("participation_record", "confidential", true),
       participant_details: entry("personnel_file", "confidential", true),

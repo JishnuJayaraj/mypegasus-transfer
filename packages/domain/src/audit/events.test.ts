@@ -139,6 +139,7 @@ describe("audit event types (ADR-0002)", () => {
       "agentur_submission_rejected",
       "agentur_submission_original_retained",
       "ba_report_recorded",
+      "exception_evidence_recorded",
     ]);
   });
 
@@ -246,6 +247,7 @@ describe("audit event types (ADR-0002)", () => {
       "agentur_submission_rejected",
       "agentur_submission_original_retained",
       "ba_report_recorded",
+      "exception_evidence_recorded",
     ]);
   });
 
@@ -576,6 +578,14 @@ describe("the other event types", () => {
           reason: "created_in_error",
         },
       },
+    ],
+    [
+      "exception_evidence_recorded",
+      { details: { evidenceRecordId: otherId, kind: "documents", documentCount: 2 } },
+    ],
+    [
+      "exception_evidence_recorded",
+      { details: { evidenceRecordId: otherId, kind: "ba_confirmation" } },
     ],
     [
       "declaration_withdrawal_recorded",
@@ -1161,6 +1171,21 @@ describe("the other event types", () => {
     [
       "ba_report_recorded",
       { details: { taskId: otherId, kind: "early_exit", outcome: "not_required", reason: "x" } },
+    ],
+    // Evidence names its kind only: no fingerprint, no reference (round 17).
+    [
+      "exception_evidence_recorded",
+      {
+        details: {
+          evidenceRecordId: otherId,
+          kind: "ba_confirmation",
+          fingerprint: `sha256:v1:${"a".repeat(64)}`,
+        },
+      },
+    ],
+    [
+      "exception_evidence_recorded",
+      { details: { evidenceRecordId: otherId, kind: "ba_confirmation", reference: "az 1" } },
     ],
     [
       "participation_dates_changed",

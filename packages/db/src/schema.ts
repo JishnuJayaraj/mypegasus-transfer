@@ -14,6 +14,7 @@ import {
   EndReason,
   ImportTarget,
   MainStatus,
+  ExceptionEvidenceKind,
   ProfilingExceptionReason,
   ProfilingExceptionStatus,
   ProfilingExceptionSupersededReason,
@@ -376,6 +377,10 @@ export const profilingExceptionSupersededReason = pgEnum(
   "profiling_exception_superseded_reason",
   values(ProfilingExceptionSupersededReason),
 );
+export const exceptionEvidenceKind = pgEnum(
+  "exception_evidence_kind",
+  values(ExceptionEvidenceKind),
+);
 export const auditEventType = pgEnum("audit_event_type", values(AuditEventType));
 export const auditStream = pgEnum("audit_stream", values(AuditStream));
 export const accessCategory = pgEnum("access_category", values(AccessCategory));
@@ -676,6 +681,75 @@ const requestStatusIn = (...list: string[]) =>
   sql.raw(`"profiling_exception_request"."status" in (${list.map((v) => `'${v}'`).join(", ")})`);
 
 /**
+ * One immutable evidence record of a profiling exception (data-protection.md, exception evidence;
+ * Q194, round 17): the accepted `profiling_exception_evidence` document versions (their ids, in
+ * id order; the files stay in `document`), or a structured BA confirmation, normalised (the
+ * Agentur's key, the confirming contact or reference, the date). Its fingerprint is computed by
+ * `create_exception_evidence_record`; confidential evidence metadata, never in audit details,
+ * logs or client responses. Written only by that function, never updated or deleted;
+ * `transfer_app` may only select.
+ */
+export const profilingExceptionEvidenceRecord = pgTable(
+  "profiling_exception_evidence_record",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    kind: exceptionEvidenceKind("kind").notNull(),
+    documentIds: uuid("document_ids").array(),
+    agenturKey: text("agentur_key"),
+    reference: text("reference"),
+    confirmedOn: dateColumn("confirmed_on"),
+    fingerprint: text("fingerprint").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => staffUser.id),
+    /** The Berlin date it was recorded: a documents record's evidence counts from it. */
+    createdOn: dateColumn("created_on").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t): PgTableExtraConfigValue[] => [
+    foreignKey({
+      name: "profiling_exception_evidence_record_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    // Target of the request's evidence FK.
+    unique("profiling_exception_evidence_record_id_participation_unique").on(
+      t.id,
+      t.participationId,
+    ),
+    index("profiling_exception_evidence_record_participation_idx").on(t.participationId),
+    check(
+      "profiling_exception_evidence_record_fingerprint",
+      sql`${t.fingerprint} ~ '^sha256:v1:[0-9a-f]{64}$'`,
+    ),
+    // One source per record, complete.
+    check(
+      "profiling_exception_evidence_record_source",
+      sql`case ${t.kind}::text
+        when 'documents' then ${t.documentIds} is not null
+          and cardinality(${t.documentIds}) between 1 and 20
+          and ${t.agenturKey} is null and ${t.reference} is null and ${t.confirmedOn} is null
+        else ${t.documentIds} is null and ${t.agenturKey} is not null
+          and ${t.reference} is not null and ${t.confirmedOn} is not null end`,
+    ),
+    check(
+      "profiling_exception_evidence_record_agentur_key",
+      sql`${t.agenturKey} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`,
+    ),
+    check(
+      "profiling_exception_evidence_record_reference",
+      sql`char_length(${t.reference}) between 1 and 100`,
+    ),
+  ],
+);
+
+/**
  * One profiling-exception request (Q81, Q94, round 16): a first-class, authoritative record. Its
  * reason and evidence identity never change; status and decision progress on the row (a trigger
  * enforces both), and every progression is audited. A later attempt is a new row. Written only
@@ -699,7 +773,7 @@ export const profilingExceptionRequest = pgTable(
     requestedAt: timestamp("requested_at", { withTimezone: true, mode: "string" })
       .notNull()
       .defaultNow(),
-    /** The immutable evidence record (Slice 4b); no FK until it exists. */
+    /** The immutable evidence record of the same participation it rests on. */
     evidenceRecordId: uuid("evidence_record_id").notNull(),
     /**
      * Its versioned canonical fingerprint (`sha256:v1:…`, round 17): changed evidence means a
@@ -718,6 +792,14 @@ export const profilingExceptionRequest = pgTable(
       name: "profiling_exception_request_participation_fk",
       columns: [t.participationId, t.projectId],
       foreignColumns: [participation.id, participation.projectId],
+    }),
+    foreignKey({
+      name: "profiling_exception_request_evidence_fk",
+      columns: [t.evidenceRecordId, t.participationId],
+      foreignColumns: [
+        profilingExceptionEvidenceRecord.id,
+        profilingExceptionEvidenceRecord.participationId,
+      ],
     }),
     // Target of the participation's current-request FK.
     unique("profiling_exception_request_id_participation_unique").on(t.id, t.participationId),
@@ -3217,6 +3299,7 @@ export const tables = [
   projectMembership,
   projectEntryWave,
   participation,
+  profilingExceptionEvidenceRecord,
   profilingExceptionRequest,
   participantIdentity,
   participantDetails,

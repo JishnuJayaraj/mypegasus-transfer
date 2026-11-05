@@ -255,6 +255,7 @@ describe("document_type_policy", () => {
       { catalog_version: 4, n: 10 },
       { catalog_version: 5, n: 10 },
       { catalog_version: 6, n: 11 },
+      { catalog_version: 7, n: 11 },
     ]);
   });
 });
@@ -275,7 +276,7 @@ describe("add_document (Q146)", () => {
       ),
     ).toEqual({
       type: "cv",
-      catalog_version: 6,
+      catalog_version: 7,
       retention_class: "personnel_file",
       file_name: FILE_NAME,
       added_by: "participant",

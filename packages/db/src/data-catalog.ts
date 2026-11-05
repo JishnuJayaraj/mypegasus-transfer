@@ -356,6 +356,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "confidential",
     holdsParticipantData: true,
   },
+  // The evidence a request rests on (data-protection.md, exception evidence; Q81, Q194): document
+  // ids or the normalised BA confirmation; the documents themselves are catalogued by their type.
+  profiling_exception_evidence_record: {
+    retentionClass: "participation_record",
+    dataClass: "confidential",
+    holdsParticipantData: true,
+  },
   audit_event: {
     retentionClass: "audit_log",
     dataClass: "confidential",
@@ -495,6 +502,20 @@ export const fieldColumns: Record<string, Record<string, string | null>> = {
     status_version: null,
     placement_agentur_key: "placementAgenturKey",
     placement_agentur_set_at: "placementAgenturKey",
+    created_at: null,
+  },
+  profiling_exception_evidence_record: {
+    id: null,
+    project_id: null,
+    participation_id: null,
+    kind: "profilingExceptionEvidence",
+    document_ids: null,
+    agentur_key: "profilingExceptionEvidence",
+    reference: "profilingExceptionEvidence",
+    confirmed_on: "profilingExceptionEvidence",
+    fingerprint: null,
+    created_by: null,
+    created_on: null,
     created_at: null,
   },
   profiling_exception_request: {

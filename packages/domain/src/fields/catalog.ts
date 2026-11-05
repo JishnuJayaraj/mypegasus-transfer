@@ -164,6 +164,9 @@ export const fieldCatalog: readonly FieldEntry[] = [
   }),
   // codes only; `participant_prevented_documented` deliberately reveals no illness (Q81)
   field("profilingExceptionReasonCode", C, "confidential", false, record),
+  // The structured BA confirmation behind an exception (data-protection.md, exception evidence;
+  // Q194): the Agentur, the contact or reference, the date; never a clinical file, never in lists
+  field("profilingExceptionEvidence", C, "confidential", false, { listable: false, ...record }),
   // special category; the yes/no answers are kept 3 months after exit (Q141)
   field("healthRestrictions", "special_category", "health", true, healthRecord),
   field("severeDisability", "special_category", "disability", true, healthRecord),

@@ -21,7 +21,7 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(6);
+    expect(documentTypeCatalog.version).toBe(7);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
@@ -58,6 +58,7 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
           "tl407_form",
           "tl407_signed_scan",
           "asu_proof",
+          "profiling_exception_evidence",
           "kug200b_form",
           "kug200b_signed_scan",
         ].includes(t.type),
@@ -69,6 +70,25 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
         false,
       ]);
     }
+  });
+});
+
+describe("document-type catalog version 7 (Q194)", () => {
+  it("gives the exception evidence its operations: write-only for the PL, reviewed by the consultant", () => {
+    expect(documentTypeEntry("profiling_exception_evidence")).toMatchObject({
+      accessCategory: "health",
+      dataClass: "special_category",
+      signed: true,
+      fileName: false,
+      retentionClass: "participation_record",
+      roles: { consultant: "open", project_lead: "assisted_or_break_glass" },
+      operations: {
+        add: ["consultant", "project_lead"],
+        review: ["consultant"],
+        delete: ["project_lead"],
+        quarantine: ["consultant", "project_lead"],
+      },
+    });
   });
 });
 

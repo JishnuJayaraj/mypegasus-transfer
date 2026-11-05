@@ -73,7 +73,7 @@ kug200b_signed_scan          never never imm   unass imm   never never never nev
 dsv_signed_scan              never never never unass imm   imm   never never never
 dsv_cancellation             never never never unass imm   imm   never never never
 asu_proof                    never never imm   unass imm   never never never never
-profiling_exception_evidence never never op    unass op    never never never never
+profiling_exception_evidence never never imm   unass imm   never never never never
 cv                           op    op    op    unass op    never never never never
 participant_upload           op    op    op    unass op    never never never never
 qualification_certificate    op    op    op    unass op    never never never never

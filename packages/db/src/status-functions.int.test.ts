@@ -3,6 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
 import {
   auditContext,
+  baEvidence,
   call,
   changeStatus,
   createWave,
@@ -522,19 +523,39 @@ describe("change_participation_status (AC-16)", () => {
 });
 
 const fingerprint = (c: string) => `sha256:v1:${c.repeat(64)}`;
-const evidenceRecord = "00000000-0000-4000-8000-0000000000e1";
+const unknownId = "00000000-0000-4000-8000-0000000000e1";
 
-const request = (id: string, extra: { context?: string; fingerprint?: string } = {}) =>
+/**
+ * A request resting on a new BA confirmation record (data-protection.md, exception evidence):
+ * the same `evidence` letter gives the same facts, so the same fingerprint (round 17); a
+ * participation that can't record evidence yet is asked with `recordId`.
+ */
+const request = async (
+  id: string,
+  extra: { context?: string; evidence?: string; recordId?: string } = {},
+) =>
   call(app, "request_profiling_exception", {
     id,
     reason: "agentur_scheduling_unavailable",
     requestedOn: "2027-02-01",
-    evidenceRecordId: evidenceRecord,
-    evidenceFingerprint: extra.fingerprint ?? fingerprint("a"),
+    evidenceRecordId: extra.recordId ?? (await baEvidence(app, id, `ref-${extra.evidence ?? "a"}`)),
     context: extra.context ?? pl,
   });
-const decide = (requestId: string, approve: boolean, context = reviewer) =>
-  call(app, "decide_profiling_exception", { requestId, approve, decidedOn: "2027-02-03", context });
+/** The evidence record a request rests on (what "Freigaben" shows the approver). */
+const recordOf = async (requestId: string) =>
+  ((
+    await owner.query("select evidence_record_id from profiling_exception_request where id = $1", [
+      requestId,
+    ])
+  ).rows[0]?.evidence_record_id ?? unknownId) as string;
+const decide = async (requestId: string, approve: boolean, context = reviewer) =>
+  call(app, "decide_profiling_exception", {
+    requestId,
+    approve,
+    decidedOn: "2027-02-03",
+    evidenceRecordId: await recordOf(requestId),
+    context,
+  });
 const revoke = (requestId: string, context = pl) =>
   call(app, "revoke_profiling_exception", { requestId, context });
 
@@ -563,8 +584,8 @@ describe("profiling exception requests (Q94, round 16)", () => {
         reason_code: "agentur_scheduling_unavailable",
         requested_by: seedStaffUserIds.projectLead,
         requested_on: "2027-02-01",
-        evidence_record_id: evidenceRecord,
-        evidence_fingerprint: fingerprint("a"),
+        evidence_record_id: await recordOf(requestId),
+        evidence_fingerprint: expect.stringMatching(/^sha256:v1:[0-9a-f]{64}$/),
         decided_by: null,
         decided_on: null,
         decided_at: null,
@@ -588,13 +609,16 @@ describe("profiling exception requests (Q94, round 16)", () => {
     );
     expect(requestedEvent.details).toEqual({
       profilingExceptionRequestId: requestId,
-      evidenceRecordId: evidenceRecord,
+      evidenceRecordId: await recordOf(requestId),
     });
     expect((await events(id)).slice(-2)).toMatchObject([
       {
         event_type: "profiling_exception_requested",
         reason_code: "agentur_scheduling_unavailable",
-        details: { profilingExceptionRequestId: requestId, evidenceRecordId: evidenceRecord },
+        details: {
+          profilingExceptionRequestId: requestId,
+          evidenceRecordId: await recordOf(requestId),
+        },
       },
       {
         event_type: "profiling_exception_approved",
@@ -612,17 +636,19 @@ describe("profiling exception requests (Q94, round 16)", () => {
     await expect(revoke(first)).rejects.toMatchObject(failsWith("not_revocable"));
     // The same fingerprint is unchanged evidence, even under another evidence record (Q94).
     await expect(request(id)).rejects.toMatchObject(failsWith("evidence_unchanged"));
-    const second = await request(id, { fingerprint: fingerprint("b") });
+    const second = await request(id, { evidence: "b" });
     await decide(second, true);
     await revoke(second);
     await expect(decide(first, true)).rejects.toMatchObject(failsWith("request_not_current"));
-    const third = await request(id, { fingerprint: fingerprint("c") });
+    const third = await request(id, { evidence: "c" });
 
-    expect((await requests(id)).map((r) => [r.id, r.status, r.evidence_fingerprint])).toEqual([
-      [first, "rejected", fingerprint("a")],
-      [second, "revoked", fingerprint("b")],
-      [third, "requested", fingerprint("c")],
+    const rows = await requests(id);
+    expect(rows.map((r) => [r.id, r.status])).toEqual([
+      [first, "rejected"],
+      [second, "revoked"],
+      [third, "requested"],
     ]);
+    expect(new Set(rows.map((r) => r.evidence_fingerprint)).size).toBe(3);
     expect((await row(id)).profiling_exception_request_id).toBe(third);
     const trail = (await events(id)).filter((e) => e.event_type.startsWith("profiling_exception"));
     expect(trail.map((e) => [e.event_type, e.details.profilingExceptionRequestId])).toEqual([
@@ -661,34 +687,28 @@ describe("profiling exception requests (Q94, round 16)", () => {
     }
     if (situation === "open") await request(id);
     const context = situation === "system" ? nightly : pl;
-    await expect(request(id, { context, fingerprint: fingerprint("f") })).rejects.toMatchObject(
+    const recordId = situation === "imported" ? unknownId : undefined;
+    await expect(request(id, { context, evidence: "f", recordId })).rejects.toMatchObject(
       failsWith(code),
     );
   });
 
-  it("refuses a request without evidence or with a malformed fingerprint", async () => {
+  it("refuses a request without a record of this participation, or with a malformed fingerprint", async () => {
     const id = await informedParticipation(app);
-    const args = {
-      id,
-      reason: "force_majeure",
-      requestedOn: "2027-02-01",
-      evidenceRecordId: evidenceRecord,
-      context: pl,
-    };
-    for (const missing of [
-      { evidenceFingerprint: null },
-      { evidenceRecordId: null, evidenceFingerprint: fingerprint("a") },
-    ]) {
+    const args = { id, reason: "force_majeure", requestedOn: "2027-02-01", context: pl };
+    for (const evidenceRecordId of [null, unknownId]) {
       await expect(
-        call(app, "request_profiling_exception", { ...args, ...missing }),
+        call(app, "request_profiling_exception", { ...args, evidenceRecordId }),
       ).rejects.toMatchObject(failsWith("evidence_missing"));
     }
+    const requestId = await request(id);
     await expect(
       // Unversioned (round 16's format) is malformed now (round 17).
-      call(app, "request_profiling_exception", {
-        ...args,
-        evidenceFingerprint: `sha256:${"a".repeat(64)}`,
-      }),
+      asOwner(
+        `insert into profiling_exception_request (project_id, participation_id, reason_code, status, requested_by, requested_on, evidence_record_id, evidence_fingerprint)
+         select project_id, participation_id, reason_code, 'revoked', requested_by, requested_on, evidence_record_id, $2 from profiling_exception_request where id = $1`,
+        [requestId, `sha256:${"a".repeat(64)}`],
+      ),
     ).rejects.toMatchObject({
       code: "23514",
       constraint: "profiling_exception_request_fingerprint",
@@ -696,9 +716,7 @@ describe("profiling exception requests (Q94, round 16)", () => {
   });
 
   it("refuses an unknown request and a foreign participant", async () => {
-    await expect(decide(evidenceRecord, true)).rejects.toMatchObject(
-      failsWith("request_not_found"),
-    );
+    await expect(decide(unknownId, true)).rejects.toMatchObject(failsWith("request_not_found"));
     const id = await informedParticipation(app);
     const requestId = await request(id);
     const participant = auditContext({ actorType: "participant", participationId: id });
