@@ -19,6 +19,36 @@ describe("participationEscalations (Q57, Q189)", () => {
     ]);
   });
 
+  it("ages a TL 407 escalation from the rejection that reopened it: 0 days the day it arrives", () => {
+    const rejected = {
+      submittedOn: "2027-04-01",
+      channel: "email" as const,
+      originalRequired: false,
+      originalSentOn: null,
+      rejectedOn: "2027-06-01",
+    };
+    const [escalation] = participationEscalations(
+      snapshot(),
+      project,
+      [rejected],
+      null,
+      "2027-06-01",
+    );
+    expect(escalation).toEqual({ type: "tl407_not_submitted", since: "2027-06-01" });
+    const [row] = escalationRows(
+      [
+        {
+          projectId: "00000000-0000-4000-8000-000000000001",
+          projectName: "Werk",
+          leads: [],
+          participations: [[escalation!]],
+        },
+      ],
+      "2027-06-01",
+    );
+    expect(row!.counts).toEqual([{ type: "tl407_not_submitted", count: 1, oldestDaysOverdue: 0 }]);
+  });
+
   it("escalates a refusal after entry the same day, never before the entry", () => {
     const declined = entered("profiling_declined");
     expect(participationEscalations(declined, project, [], "2027-04-10", "2027-04-10")).toEqual([

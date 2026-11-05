@@ -388,6 +388,24 @@ describe("GET /escalations (data-protection.md, the regional view; Q57)", () => 
     expect(tl407Count(adminView.rows)).toBe(tl407Count(after.rows));
   });
 
+  it("dates a re-escalation by the rejection that reopened it: seit heute, not since TG start + 14", async () => {
+    await settings();
+    const { id, documentId } = await ready({ tgStartIn: -30, signedDaysAgo: 25 });
+    const submission = await submitted(id, documentId, { submittedOn: await day(-20) });
+    expect((await row(id)).agenturItems).toEqual([
+      { kind: "tl407_original_missing", date: await day(-20) },
+    ]);
+    const res = await request("POST", `/agentur-submissions/${submission}/rejection`, projectLead, {
+      rejectedOn: await day(0),
+      reason: "other",
+    });
+    expect(res.status).toBe(204);
+    expect((await row(id)).agenturItems).toEqual([
+      { kind: "tl407_escalated", date: await day(0) },
+      { kind: "tl407_resubmission_open", date: await day(0) },
+    ]);
+  });
+
   it("is nobody else's: the PL, a consultant, back office and the operations manager get 403", async () => {
     for (const as of [projectLead, consultant, backOffice, regionalOperationsManager]) {
       await expectProblem(await request("GET", "/escalations", as), 403, "forbidden");

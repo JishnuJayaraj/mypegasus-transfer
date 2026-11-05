@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgenturSubmissionChannel } from "../asu/batches-api";
-import { addDays, daysBetween } from "../dates";
+import { addDays, daysBetween, laterIsoDate } from "../dates";
 import { FormVersion } from "../forms/field-map";
 import { isoDate, type IsoDate } from "../iso-date";
 import { terminalMainStatuses, type MainStatus } from "../lifecycle/enums";
@@ -196,7 +196,12 @@ export function tl407SubmissionDeadline(
   return agentur.leadTimeDays === null ? start : addDays(start, -agentur.leadTimeDays);
 }
 
-/** The day the TL 407 escalates while unsubmitted: TG start + 14, whatever the exception (Q189). */
+/**
+ * The start of the TL 407's current escalation episode, while it is escalated (Q189, Q206 (8)):
+ * the trigger is TG start + 14 with no submission standing, whatever the exception; an episode
+ * starts there or, when a rejection reopened the work later, on the rejection's day, so its age
+ * never counts the time a submission stood. Null while not escalated.
+ */
 export function tl407EscalationDate(
   s: ParticipationSnapshot,
   projectType: ProjectType,
@@ -208,8 +213,11 @@ export function tl407EscalationDate(
   if (liveAttempt(attempts)) return null;
   const start = effectiveTgStart(s.participation, s.wave);
   if (start === null) return null;
-  const date = addDays(start, tl407EscalationDaysAfterTgStart);
-  return daysBetween(date, today) >= 0 ? date : null;
+  const trigger = addDays(start, tl407EscalationDaysAfterTgStart);
+  if (daysBetween(trigger, today) < 0) return null;
+  // Attempts are newest first; with none standing, the newest is the last rejected one.
+  const rejectedOn = attempts[0]?.rejectedOn ?? null;
+  return rejectedOn === null ? trigger : laterIsoDate(trigger, rejectedOn);
 }
 
 /** What the Agentur items read of one participation. */

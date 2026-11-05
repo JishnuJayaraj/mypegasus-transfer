@@ -199,6 +199,18 @@ describe("tl407EscalationDate (Q54, Q189)", () => {
     expect(tl407EscalationDate(informed, "ta_tg", [rejected], "2027-05-20")).toBe("2027-04-15");
   });
 
+  it("dates the current episode: a rejection after the trigger starts a new one that day (Q206 (8))", () => {
+    const late = attempt({ submittedOn: "2027-04-01", rejectedOn: "2027-05-20" });
+    expect(tl407EscalationDate(informed, "ta_tg", [late], "2027-05-20")).toBe("2027-05-20");
+    expect(tl407EscalationDate(informed, "ta_tg", [late], "2027-05-25")).toBe("2027-05-20");
+    // While it stood, nothing was escalated.
+    expect(
+      tl407EscalationDate(informed, "ta_tg", [{ ...late, rejectedOn: null }], "2027-05-20"),
+    ).toBeNull();
+    // A rejection before the trigger still escalates from TG start + 14.
+    expect(tl407EscalationDate(informed, "ta_tg", [late, rejected], "2027-04-14")).toBeNull();
+  });
+
   it("none in ta_only, after a submission, when closed or without a TG start", () => {
     const later = "2027-06-01";
     expect(tl407EscalationDate(informed, "ta_only", [], later)).toBeNull();
