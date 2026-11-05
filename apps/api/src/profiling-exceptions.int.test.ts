@@ -1,4 +1,11 @@
-import { createDb, seedProjectIds, seedStaffUserIds } from "@transfer/db";
+import {
+  createDb,
+  eq,
+  participation as participationTable,
+  profilingExceptionRequest,
+  seedProjectIds,
+  seedStaffUserIds,
+} from "@transfer/db";
 import {
   auditContext,
   call,
@@ -10,7 +17,9 @@ import {
 import { ProfilingView, ReviewQueue } from "@transfer/domain";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
+import { dbGuardFacts } from "./participations/guard-facts";
+import { exceptionOf } from "./participations/status-service";
+import { expectProblem, jsonRequest, login, origin, readJson, testApp } from "./testing";
 
 // Profiling exceptions with evidence (process-and-lifecycle.md, profiling exceptions;
 // data-protection.md, exception evidence; D30, Q80, Q194, Q208) against transfer_test on the
@@ -149,12 +158,16 @@ describe("POST /participations/{id}/exception-evidence", () => {
           addedAt: expect.any(String),
           reviewState: "unreviewed",
           usable: false,
+          quarantined: false,
+          capabilities: { delete: true, quarantine: true, liftQuarantine: false },
         },
         {
           documentId: accepted,
           addedAt: expect.any(String),
           reviewState: "accepted",
           usable: true,
+          quarantined: false,
+          capabilities: { delete: false, quarantine: true, liftQuarantine: false },
         },
       ],
       capabilities: { addEvidence: true, request: true, revoke: false },
@@ -198,6 +211,52 @@ describe("POST /participations/{id}/exception-evidence", () => {
     expect(await codes(await record(id, { ...confirmation, reference: "a\nb" }))).toEqual([
       "reference_invalid",
     ]);
+  });
+
+  it("refuses an Agentur outside the participation's choices (Q208 (6))", async () => {
+    const id = await participation();
+    const res = await record(id, { ...confirmation, agenturKey: "no-such-agentur" });
+    expect((await expectProblem(res, 422, "domain-error")).errors).toEqual([
+      expect.objectContaining({ code: "agentur_unknown", pointer: "/agenturKey" }),
+    ]);
+    // The consultant is refused by permission first, whatever the Agentur.
+    await expectProblem(
+      await record(id, { ...confirmation, agenturKey: "no-such-agentur" }, consultant),
+      403,
+      "forbidden",
+    );
+  });
+
+  it("lets the PL quarantine, lift and delete their upload without reading it", async () => {
+    const id = await participation();
+    const documentId = await evidenceDocument(id, randomUUID(), false);
+    const path = `/participations/${id}/documents/${documentId}`;
+    expect((await tab(id)).exception.evidenceDocuments[0]).toMatchObject({
+      quarantined: false,
+      capabilities: { delete: true, quarantine: true, liftQuarantine: false },
+    });
+    expect(
+      (
+        await request("POST", `${path}/quarantine`, projectLead, {
+          reasonCode: "suspected_wrong_person",
+        })
+      ).status,
+    ).toBe(200);
+    expect((await tab(id)).exception.evidenceDocuments[0]).toMatchObject({
+      quarantined: true,
+      usable: false,
+      capabilities: { quarantine: false, liftQuarantine: true },
+    });
+    expect((await request("POST", `${path}/quarantine-lift`, projectLead, {})).status).toBe(200);
+    const removed = await app.request(`/api/v1${path}?reasonCode=wrong_file`, {
+      method: "DELETE",
+      headers: { ...staff[projectLead]!, Origin: origin },
+    });
+    expect(removed.status).toBe(204);
+    expect((await tab(id)).exception.evidenceDocuments).toEqual([]);
+    // Still no opening for the PL.
+    const opening = await request("POST", `${path}/opening`, projectLead, {});
+    expect([403, 404]).toContain(opening.status);
   });
 
   it("never lets the PL open the evidence; the consultant who reviews it may", async () => {
@@ -327,5 +386,47 @@ describe("requests, Freigaben and decisions", () => {
     ]);
     expect((await revoke(requestId, "approved")).status).toBe(204);
     expect((await tab(id)).exception.current).toMatchObject({ status: "revoked" });
+  });
+
+  it("withholds the approval while its evidence is quarantined and restores it from the lift", async () => {
+    const id = await participation();
+    const documentId = await evidenceDocument(id);
+    const evidenceRecordId = await recordId(id, { kind: "documents", documentIds: [documentId] });
+    const requestId = await requested(id, evidenceRecordId);
+    await decide(requestId, { decision: "approve", evidenceRecordId });
+    const approval = () =>
+      db.transaction(async (tx) => {
+        const [row] = await tx
+          .select()
+          .from(profilingExceptionRequest)
+          .innerJoin(
+            participationTable,
+            eq(participationTable.profilingExceptionRequestId, profilingExceptionRequest.id),
+          )
+          .where(eq(participationTable.id, id));
+        const facts = await dbGuardFacts.facts(tx, {
+          participationId: id,
+          currentRequest: exceptionOf(row!.profiling_exception_request),
+        });
+        return facts.profilingExceptionApproved;
+      });
+    const decided = await approval();
+    expect(decided).toBeDefined();
+    await call(owner.$client, "quarantine_document", {
+      context: asConsultant,
+      documentId,
+      reason: "suspected_wrong_person",
+    });
+    expect(await approval()).toBeUndefined();
+    await call(owner.$client, "lift_document_quarantine", { context: asConsultant, documentId });
+    const { rows } = await owner.$client.query(
+      "select quarantine_lifted_at from document where id = $1",
+      [documentId],
+    );
+    const restored = await approval();
+    expect(restored?.recordedAt.getTime()).toBe(new Date(rows[0].quarantine_lifted_at).getTime());
+    expect(restored!.recordedAt.getTime()).toBeGreaterThan(decided!.recordedAt.getTime());
+    // The approval itself stays as decided.
+    expect((await tab(id)).exception.current).toMatchObject({ requestId, status: "approved" });
   });
 });

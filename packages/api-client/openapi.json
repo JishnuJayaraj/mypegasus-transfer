@@ -12399,7 +12399,8 @@
                 "type": "string",
                 "enum": [
                   "documents",
-                  "ba_confirmation"
+                  "ba_confirmation",
+                  "legacy_unverified"
                 ]
               }
             },
@@ -12436,13 +12437,37 @@
                 },
                 "usable": {
                   "type": "boolean"
+                },
+                "quarantined": {
+                  "type": "boolean"
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "delete": {
+                      "type": "boolean"
+                    },
+                    "quarantine": {
+                      "type": "boolean"
+                    },
+                    "liftQuarantine": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "delete",
+                    "quarantine",
+                    "liftQuarantine"
+                  ]
                 }
               },
               "required": [
                 "documentId",
                 "addedAt",
                 "reviewState",
-                "usable"
+                "usable",
+                "quarantined",
+                "capabilities"
               ]
             }
           },
@@ -15570,7 +15595,8 @@
                   "type": "string",
                   "enum": [
                     "documents",
-                    "ba_confirmation"
+                    "ba_confirmation",
+                    "legacy_unverified"
                   ]
                 },
                 "evidencePresent": {

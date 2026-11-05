@@ -1,5 +1,6 @@
 import { sql, type Database } from "@transfer/db";
 import {
+  documentCapabilities,
   mayAddDocument,
   mayPerformOperation,
   maySeeReview,
@@ -18,6 +19,30 @@ import {
 /** An instant as ISO 8601 UTC text. */
 const utc = (column: string) =>
   sql.raw(`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')`);
+
+/**
+ * What the viewer may do with an evidence document on the tab without opening it: delete it
+ * before its review, quarantine it at once, lift a quarantine (the review of PR #102).
+ */
+function safetyActions(
+  subject: Subject,
+  target: PermissionTarget & { participationId: string },
+  reviewState: "unreviewed" | "accepted" | "rejected",
+  quarantinedBy: string | null,
+) {
+  const all = documentCapabilities(
+    subject,
+    target,
+    { kind: "normal" },
+    {
+      type: "profiling_exception_evidence",
+      addedByParticipant: false,
+      reviewState,
+      quarantinedBy,
+    },
+  );
+  return { delete: all.delete, quarantine: all.quarantine, liftQuarantine: all.liftQuarantine };
+}
 
 /**
  * The exception block of one participation for the viewer (the PL or the assigned consultant):
@@ -50,7 +75,8 @@ export async function exceptionViewOf(
     added_at: string;
     review_state: "unreviewed" | "accepted" | "rejected";
     usable: boolean;
-  }>(sql`select id as document_id, ${utc("added_at")} as added_at, review_state,
+    quarantined_by: string | null;
+  }>(sql`select id as document_id, ${utc("added_at")} as added_at, review_state, quarantined_by,
       review_state = 'accepted' and quarantined_at is null
         and invalidated_by_correction is null as usable
     from document
@@ -82,6 +108,8 @@ export async function exceptionViewOf(
       addedAt: d.added_at,
       reviewState: d.review_state,
       usable: d.usable,
+      quarantined: d.quarantined_by !== null,
+      capabilities: safetyActions(subject, target, d.review_state, d.quarantined_by),
     })),
     capabilities: {
       addEvidence:

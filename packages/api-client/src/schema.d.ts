@@ -16851,7 +16851,7 @@ export interface components {
                 /** Format: uuid */
                 evidenceRecordId: string;
                 /** @enum {string} */
-                evidenceKind: "documents" | "ba_confirmation";
+                evidenceKind: "documents" | "ba_confirmation" | "legacy_unverified";
             } | null;
             evidenceDocuments: {
                 /** Format: uuid */
@@ -16861,6 +16861,12 @@ export interface components {
                 /** @enum {string} */
                 reviewState: "unreviewed" | "accepted" | "rejected";
                 usable: boolean;
+                quarantined: boolean;
+                capabilities: {
+                    delete: boolean;
+                    quarantine: boolean;
+                    liftQuarantine: boolean;
+                };
             }[];
             capabilities: {
                 addEvidence: boolean;
@@ -17739,7 +17745,7 @@ export interface components {
                 /** Format: uuid */
                 evidenceRecordId: string;
                 /** @enum {string} */
-                evidenceKind: "documents" | "ba_confirmation";
+                evidenceKind: "documents" | "ba_confirmation" | "legacy_unverified";
                 evidencePresent: boolean;
                 capabilities: {
                     decide: boolean;

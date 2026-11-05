@@ -511,7 +511,9 @@ describe("contact data (Q112) and the placement Agentur hint (Q139)", () => {
       .from(participantDetails)
       .where(eq(participantDetails.participationId, participationId));
     expect(details).toEqual({ city: "Hamburg", mobile: "0171 7654321" });
-  });
+    // Two previews and a confirm: about 2 s alone, past the 5 s default under coverage on a busy
+    // CI runner (the CI run of PR #102); the assertions are unchanged.
+  }, 30_000);
 });
 
 describe("GET /portal/consents (Q138)", () => {

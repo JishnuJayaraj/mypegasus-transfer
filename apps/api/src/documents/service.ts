@@ -25,7 +25,7 @@ import {
   type DocumentMediaType,
   type DocumentReviewReason,
   type DocumentReviewState,
-  type DocumentType,
+  DocumentType,
   type DocumentPermission,
   type DocumentReviewInput,
   type DocumentTarget,
@@ -236,6 +236,23 @@ export function documentService(deps: Deps) {
   /** One live document of the participation the actor may read, else undefined (a 404). */
   async function one(actor: DocumentActor, documentId: string) {
     const types = readableDocumentTypes(actor.subject, actor.target, actor.mode);
+    const [row] = await rows(actor.target.participationId, types, documentId);
+    return row;
+  }
+
+  /**
+   * One live document for a safety operation (deletion, quarantine and its lift): of a type the
+   * actor reads, or one the operation is granted for without a read right (the PL's write-only
+   * exception evidence, data-protection.md, exception evidence; the review of PR #102). Grants no
+   * opening; the operation's own permission and the function decide again.
+   */
+  async function operable(
+    actor: DocumentActor,
+    documentId: string,
+    granted: (type: DocumentType) => boolean,
+  ) {
+    const readable = readableDocumentTypes(actor.subject, actor.target, actor.mode);
+    const types = DocumentType.options.filter((type) => readable.includes(type) || granted(type));
     const [row] = await rows(actor.target.participationId, types, documentId);
     return row;
   }
@@ -465,7 +482,15 @@ export function documentService(deps: Deps) {
     documentId: string,
     reason: DocumentDeleteReason | null,
   ) {
-    const row = await one(actor, documentId);
+    const row = await operable(actor, documentId, (type) =>
+      [false, true].some(
+        (addedByParticipant) =>
+          mayDeleteDocument(actor.subject, type, actor.target, actor.mode, {
+            addedByParticipant,
+            reviewState: "unreviewed",
+          }).ok,
+      ),
+    );
     if (!row) return problem(c, "not-found");
     const permission = mayDeleteDocument(actor.subject, row.type, actor.target, actor.mode, {
       addedByParticipant: row.addedBy === "participant",
@@ -507,7 +532,11 @@ export function documentService(deps: Deps) {
     documentId: string,
     reason: QuarantineReason | null,
   ) {
-    const row = await one(actor, documentId);
+    const row = await operable(
+      actor,
+      documentId,
+      (type) => mayQuarantineDocument(actor.subject, type, actor.target, actor.mode).ok,
+    );
     if (!row) return problem(c, "not-found");
     const { subject, target, mode } = actor;
     const permission =

@@ -1,8 +1,9 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { eq, profilingExceptionRequest } from "@transfer/db";
+import { eq, profilingExceptionRequest, projectTemplatePin } from "@transfer/db";
 import {
   ExceptionEvidenceCreated,
   ExceptionEvidenceInput,
+  mayPerformOperation,
   maySeeReview,
   mayViewProfiling,
   ProfilingExceptionDecisionInput,
@@ -15,6 +16,7 @@ import {
 import type { Context } from "hono";
 import { projectAccess, staffSubjectOf } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
+import { loadRelease } from "../projects/template-pins";
 import { createStatusService, StatusServiceError } from "../participations/status-service";
 import { reviewItemsOf } from "../participations/profiling-exceptions";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -62,6 +64,20 @@ export function profilingExceptionRoutes(deps: Deps) {
   const router = createRouter();
   const middleware = [requireSession(deps)];
   const service = createStatusService({ db, clock, ...(deps.facts && { facts: deps.facts }) });
+  const release = loadRelease(deps.env.configDir);
+
+  /**
+   * The Agenturen a BA confirmation may name: the participation's Agentur choices, the release
+   * catalog's and the project's pinned ones (Q208 (6), enforced here, not only in the dropdown).
+   */
+  async function knownAgentur(projectId: string, agenturKey: string) {
+    if (release.catalog.some((t) => t.agenturKey === agenturKey)) return true;
+    const pins = await db
+      .select({ agenturKey: projectTemplatePin.agenturKey })
+      .from(projectTemplatePin)
+      .where(eq(projectTemplatePin.projectId, projectId));
+    return pins.some((pin) => pin.agenturKey === agenturKey);
+  }
 
   /**
    * A request as the viewer may know it: a 404 unless they decide it from "Freigaben" (the
@@ -116,6 +132,17 @@ export function profilingExceptionRoutes(deps: Deps) {
       const input = c.req.valid("json");
       const access = await profilingAccess(db, c, participationId);
       if (!access.ok) return access.response as never;
+      // Permission before state (ADR-0010): only then whether the Agentur is one of the choices.
+      const { subject, target } = access.access;
+      if (!mayPerformOperation(subject, { kind: "requestProfilingException" }, target).ok) {
+        return problem(c, "forbidden") as never;
+      }
+      if (
+        input.kind === "ba_confirmation" &&
+        !(await knownAgentur(access.access.target.projectId, input.agenturKey))
+      ) {
+        return domainProblem(c, [{ code: "agentur_unknown", field: "agenturKey" }]) as never;
+      }
       try {
         const created = await service.createExceptionEvidence(
           access.access.subject,
