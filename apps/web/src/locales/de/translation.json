@@ -917,7 +917,7 @@
         "reportedTitle": "Meldung als gesendet festhalten",
         "not_requiredTitle": "Meldung als nicht erforderlich festhalten",
         "task": "Meldung: {{kind}} zum {{date}}",
-        "reportedOnHelp": "Tragen Sie das Datum ein, an dem die Meldung tatsächlich an die Agentur ging – nicht in der Zukunft und nicht vor dem Tag, an dem die Aufgabe angelegt wurde.",
+        "reportedOnHelp": "Tragen Sie das Datum ein, an dem die Meldung tatsächlich an die Agentur ging – nicht in der Zukunft und nicht vor dem Tag, an dem die Meldepflicht entstand (bei einer ersetzten Meldung: die ursprüngliche Aufgabe).",
         "reportedOn": "Gemeldet am",
         "invalidDate": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
         "reason": "Grund",
@@ -3216,7 +3216,8 @@
       "sourceHelp": "Wo die Korrektur belegt ist, z. B. Schreiben oder Vermerk mit Datum und Aktenzeichen. Keine Namen, keine Gesundheitsangaben.",
       "final": "Die Korrektur gilt erst, wenn die Regionale Betriebsleitung sie freigibt. Kein Status wird dadurch zurückgesetzt.",
       "confirm": "Beantragen",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "kug200bOnlyInvalidate": "Auf dem Weg Kug 200b ist das Meldedatum das der Sammelmeldung. Die Meldung kann nur für ungültig erklärt werden; danach wird sie neu erfasst."
     },
     "messages": {
       "requested": "Korrektur beantragt. Sie wird in den Freigaben entschieden.",

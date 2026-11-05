@@ -142,6 +142,8 @@ function setup(first: ReturnType<typeof view>, afterWrite = first, viewAsu = tru
         : answer(),
     [`POST ${detailPath}/asu/registration`]: answer,
     [`POST ${detailPath}/asu/proof-link`]: answer,
+    [`POST ${detailPath}/evidence-corrections`]: () =>
+      json({ correctionId: "00000000-0000-4000-e000-000000000001" }, 201),
     [`POST ${detailPath}/documents/${proofId}/quarantine`]: answer,
     [`POST ${detailPath}/documents/${proofId}/quarantine-lift`]: answer,
     [`POST ${detailPath}/forms/kug200b`]: () =>
@@ -723,5 +725,47 @@ describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
       }),
     );
     expect(await screen.findByText("Bestätigung der Agentur am 01.12.2026")).toBeVisible();
+  });
+
+  it("offers only the invalidation of a batch's registration: its date is the batch's (Q209 (3))", async () => {
+    const user = userEvent.setup();
+    const submitted = {
+      id: registrationId,
+      channel: "kug_200b",
+      registeredOn: "2026-11-24",
+      recordedAt: "2026-11-24T09:00:00.000000Z",
+      proof: {
+        kind: "kug200b_submission",
+        attestationSource: null,
+        linkedAt: "2026-11-24T09:00:00.000000Z",
+      },
+      withProofSince: "2026-11-24T09:00:00.000000Z",
+      corrected: false,
+      correction: { pending: false, mayRequest: true },
+      confirmedOn: null,
+    };
+    const { calls } = setup(
+      view({
+        route: { channel: "kug_200b", version: 1, defaultChannel: null },
+        registration: submitted,
+      }),
+    );
+    const registration = await section("Meldung");
+    await user.click(registration.getByRole("button", { name: /^Korrektur beantragen: / }));
+    const dialog = screen.getByRole("dialog", { name: "Korrektur beantragen" });
+    expect(within(dialog).queryByLabelText("Richtiges Meldedatum")).toBeNull();
+    expect(within(dialog).queryByRole("radio")).toBeNull();
+    expect(within(dialog).getByText(/kann nur für ungültig erklärt werden/)).toBeVisible();
+    await user.selectOptions(within(dialog).getByLabelText("Grund"), "ba_legal_reference");
+    await user.type(within(dialog).getByLabelText("Dokumentierte Quelle"), "BA-Schreiben 02.12.");
+    await user.click(within(dialog).getByRole("button", { name: "Beantragen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/evidence-corrections`)[0]?.body).toEqual({
+        correction: "invalidate_asu_registration",
+        registrationId,
+        reason: "ba_legal_reference",
+        source: "BA-Schreiben 02.12.",
+      }),
+    );
   });
 });

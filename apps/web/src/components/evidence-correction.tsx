@@ -39,7 +39,8 @@ type Reason = Input["reason"];
 /** What the correction targets, as captured when the dialog opens. */
 export type CorrectionTarget =
   | { kind: "document"; id: string; label: string }
-  | { kind: "asu_registration"; id: string; label: string }
+  /** On `kug_200b` the date is the batch's: only an invalidation is offered (Q209 (3)). */
+  | { kind: "asu_registration"; id: string; label: string; kug200b: boolean }
   | { kind: "ba_reporting_task"; id: string; label: string };
 
 const reasons = [
@@ -122,7 +123,10 @@ function CorrectionDialog(props: {
   const [reason, setReason] = useState<Reason | "">("");
   const [source, setSource] = useState("");
   const [wrongPerson, setWrongPerson] = useState<"yes" | "no" | "">("");
-  const [action, setAction] = useState<"supersede" | "invalidate" | "">("");
+  const [action, setAction] = useState<"supersede" | "invalidate" | "">(
+    // The one permitted action, not a preset: there is nothing else to choose.
+    target.kind === "asu_registration" && target.kug200b ? "invalidate" : "",
+  );
   const [date, setDate] = useState("");
   const [invalidDate, setInvalidDate] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -230,7 +234,10 @@ function CorrectionDialog(props: {
             />
           </RadioButtonGroup>
         )}
-        {target.kind === "asu_registration" && (
+        {target.kind === "asu_registration" && target.kug200b && (
+          <p>{t("corrections.dialog.kug200bOnlyInvalidate")}</p>
+        )}
+        {target.kind === "asu_registration" && !target.kug200b && (
           <>
             <RadioButtonGroup
               name="correction-action"

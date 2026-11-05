@@ -509,6 +509,7 @@ function RegistrationSection(props: {
             {correction.button({
               kind: "asu_registration",
               id: registration.id,
+              kug200b: registration.channel === "kug_200b",
               label: t("asu.registration.registeredOn", {
                 date: formatDate(registration.registeredOn),
                 channel: t(`asu.channels.${registration.channel}`),
