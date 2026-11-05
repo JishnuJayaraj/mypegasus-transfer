@@ -314,7 +314,7 @@ function activeEntitlement(role: AccessRole, request: Request<PersonResource>): 
 /**
  * Evidence set (Q64, rounds 11–12): the intersection of the role's active-phase entitlement and
  * break-glass, with the active view; lists never; no writes (signed documents stay immutable).
- * Exceptional corrections are `append_evidence_correction`, an operation of its own.
+ * Exceptional corrections are `request_evidence_correction`, an operation of its own.
  */
 function evidenceSetDecision(role: AccessRole, request: Request<PersonResource>): Decision {
   const { action } = request;

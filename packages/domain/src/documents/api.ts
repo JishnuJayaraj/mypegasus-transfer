@@ -51,6 +51,8 @@ export const DocumentCapabilities = z
     delete: z.boolean(),
     quarantine: z.boolean(),
     liftQuarantine: z.boolean(),
+    /** "Korrektur beantragen" (data-protection.md, evidence corrections). */
+    requestCorrection: z.boolean(),
   })
   .meta({ id: "DocumentCapabilities" });
 export type DocumentCapabilities = z.infer<typeof DocumentCapabilities>;
@@ -75,6 +77,11 @@ export const DocumentView = z
     }),
     /** Quarantined (data-protection.md, quarantine): it opens for nobody and counts nothing. */
     quarantine: z.strictObject({ reasonCode: QuarantineReason, quarantinedAt: utc }).nullable(),
+    /**
+     * The evidence's correction (data-protection.md, evidence corrections): invalidated by an
+     * approved one (it opens for nobody and counts nothing), or one awaiting its decision.
+     */
+    correction: z.strictObject({ invalidated: z.boolean(), pending: z.boolean() }),
     capabilities: DocumentCapabilities,
   })
   .meta({ id: "Document" });

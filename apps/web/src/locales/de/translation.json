@@ -917,7 +917,7 @@
         "reportedTitle": "Meldung als gesendet festhalten",
         "not_requiredTitle": "Meldung als nicht erforderlich festhalten",
         "task": "Meldung: {{kind}} zum {{date}}",
-        "reportedOnHelp": "Tragen Sie das Datum ein, an dem die Meldung tatsächlich an die Agentur ging – nicht in der Zukunft und nicht vor dem Tag, an dem die Aufgabe angelegt wurde.",
+        "reportedOnHelp": "Tragen Sie das Datum ein, an dem die Meldung tatsächlich an die Agentur ging – nicht in der Zukunft und nicht vor dem Tag, an dem die Meldepflicht entstand (bei einer ersetzten Meldung: die ursprüngliche Aufgabe).",
         "reportedOn": "Gemeldet am",
         "invalidDate": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
         "reason": "Grund",
@@ -936,7 +936,9 @@
           "date_in_future": "Das Datum liegt in der Zukunft.",
           "date_before_task": "Das Datum liegt vor dem Tag, an dem die Aufgabe angelegt wurde."
         }
-      }
+      },
+      "superseded": "Durch Korrektur ersetzt",
+      "replacement": "Ersetzt eine korrigierte Meldung"
     },
     "assignments": {
       "title": "Zuständige Beratung",
@@ -1410,7 +1412,8 @@
     "knowledgeDateMissing": "Orientierung {{date}} – Kenntnisdatum klären",
     "caseItems": {
       "kug200b_offer_open": "Kug 200b offen (angeboten am {{date}})",
-      "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren (eingegangen am {{date}})"
+      "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren (eingegangen am {{date}})",
+      "evidence_invalidated": "Nachweis ungültig (seit {{date}})"
     },
     "kug200b": {
       "generate": "Kug 200b erzeugen",
@@ -1699,7 +1702,9 @@
       "agentur_submission_rejected": "Von der Agentur abgelehnt",
       "agentur_submission_original_retained": "Original liegt der Agentur weiter vor",
       "ba_report_recorded": "BA-Meldung erledigt",
-      "exception_evidence_recorded": "Nachweis zur Ausnahme erfasst"
+      "exception_evidence_recorded": "Nachweis zur Ausnahme erfasst",
+      "evidence_correction_requested": "Korrektur beantragt",
+      "evidence_correction_decided": "Korrektur entschieden"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1804,7 +1809,8 @@
       "other": "sonstiger Grund"
     },
     "baReported": "{{kind}}: gemeldet am {{date}}",
-    "baNotRequired": "{{kind}}: nicht erforderlich ({{reason}})"
+    "baNotRequired": "{{kind}}: nicht erforderlich ({{reason}})",
+    "correction": "{{target}} {{action}} ({{reason}})"
   },
   "appointments": {
     "title": "Termine",
@@ -2950,7 +2956,8 @@
       "missing": "Bestätigung der Agentur: noch nicht erfasst",
       "invalid": "Bitte ein gültiges Datum im Format TT.MM.JJJJ angeben.",
       "save": "Bestätigung erfassen"
-    }
+    },
+    "corrected": "Nach Korrektur erfasst"
   },
   "agentur": {
     "loading": "Agentur wird geladen …",
@@ -3080,7 +3087,7 @@
     "loading": "Die Freigaben werden geladen …",
     "failed": "Die Freigaben konnten nicht geladen werden.",
     "forbidden": "Die Freigaben sind der Regionalen Betriebsleitung vorbehalten.",
-    "intro": "Beantragte Ausnahmen vom Profiling in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Daten und ob der Nachweis vorliegt – keine Namen und keine Nachweise selbst. Eigene Anträge entscheidet eine andere Person.",
+    "intro": "Beantragte Ausnahmen vom Profiling und Korrekturen von Nachweisen in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Quelle, Daten und ob der Nachweis vorliegt – keine Namen, keine Nachweise selbst und keine korrigierten Werte. Eigene Anträge entscheidet eine andere Person.",
     "listTitle": "Beantragte Ausnahmen",
     "empty": "Keine offenen Anträge.",
     "columns": {
@@ -3121,6 +3128,111 @@
         "profiling_closed": "Das Profiling ist schon abgeschlossen.",
         "no_future_start": "Der Beginn in der Transfergesellschaft liegt nicht mehr in der Zukunft.",
         "four_eyes": "Eigene Anträge entscheidet eine andere Person."
+      }
+    },
+    "corrections": {
+      "listTitle": "Beantragte Korrekturen",
+      "empty": "Keine offenen Korrekturen.",
+      "columns": {
+        "project": "Projekt",
+        "target": "Nachweis",
+        "action": "Korrektur",
+        "reason": "Grund",
+        "source": "Quelle",
+        "requestedOn": "Beantragt am",
+        "recordedOn": "Erfasst am",
+        "actions": "Aktionen"
+      },
+      "wrongPerson": "Datei einer anderen Person",
+      "item": "{{project}}, {{target}}, beantragt am {{date}}",
+      "approve": "Freigeben",
+      "reject": "Zurückweisen",
+      "approveLabel": "Korrektur freigeben",
+      "rejectLabel": "Korrektur zurückweisen",
+      "dialog": {
+        "approveTitle": "Korrektur freigeben",
+        "rejectTitle": "Korrektur zurückweisen",
+        "approveConfirm": "Freigeben",
+        "rejectConfirm": "Zurückweisen",
+        "effect": {
+          "invalidate_document": "Der Nachweis wird für ungültig erklärt; er zählt nicht mehr und wird nicht mehr geöffnet.",
+          "invalidate_document_wrong_person": "Der Nachweis wird für ungültig erklärt und die Datei gelöscht; der Verlauf bleibt.",
+          "invalidate_asu_registration": "Die ASU-Meldung wird für ungültig erklärt; sie bleibt im Verlauf.",
+          "supersede_asu_registration": "Die ASU-Meldung wird mit dem beantragten Datum ersetzt, erfasst zum Zeitpunkt der Freigabe.",
+          "supersede_ba_reporting_task": "Das Ergebnis der BA-Meldung wird durch eine neue, offene BA-Meldung ersetzt."
+        },
+        "source": "Quelle: {{source}}",
+        "noStatus": "Kein Status, keine Frist und kein Datum der Teilnahme wird dadurch geändert.",
+        "final": "Die Entscheidung wird gespeichert und kann nicht geändert werden."
+      },
+      "messages": {
+        "approved": "Korrektur freigegeben.",
+        "rejected": "Korrektur zurückgewiesen.",
+        "codes": {
+          "source_changed": "Die Korrektur ist schon entschieden. Die Liste wurde neu geladen.",
+          "target_corrected": "Der Nachweis ist inzwischen schon korrigiert."
+        }
+      }
+    }
+  },
+  "corrections": {
+    "request": "Korrektur beantragen",
+    "pending": "Korrektur beantragt",
+    "invalidated": "Ungültig (Korrektur)",
+    "targets": {
+      "document": "Unterlage",
+      "asu_registration": "ASU-Meldung",
+      "ba_reporting_task": "BA-Meldung"
+    },
+    "actions": {
+      "invalidate": "für ungültig erklären",
+      "supersede": "ersetzen"
+    },
+    "decisions": {
+      "approved": "freigegeben",
+      "rejected": "zurückgewiesen"
+    },
+    "reasons": {
+      "ba_legal_reference": "Rechtsgrundlage oder Vorgabe der BA",
+      "data_subject_rectification": "Berichtigungsantrag der betroffenen Person",
+      "corrected_source_document": "Berichtigtes Quelldokument",
+      "documented_internal_error": "Dokumentierter interner Fehler"
+    },
+    "dialog": {
+      "title": "Korrektur beantragen",
+      "target": "Betrifft: {{target}}",
+      "wrongPerson": "Gehört die Datei einer anderen Person?",
+      "wrongPersonYes": "Ja – die Datei wird nach der Freigabe gelöscht, der Verlauf bleibt",
+      "wrongPersonNo": "Nein – der Nachweis wird für ungültig erklärt, die Datei bleibt",
+      "action": "Was soll korrigiert werden?",
+      "supersede": "Das Meldedatum ist falsch erfasst",
+      "invalidate": "Die Meldung ist ungültig",
+      "registeredOn": "Richtiges Meldedatum",
+      "invalidDate": "Bitte ein gültiges Datum im Format TT.MM.JJJJ eingeben.",
+      "replacement": "Nach der Freigabe wird eine neue, offene BA-Meldung angelegt; das erfasste Ergebnis bleibt im Verlauf.",
+      "reason": "Grund",
+      "chooseReason": "Grund wählen",
+      "source": "Dokumentierte Quelle",
+      "sourceHelp": "Wo die Korrektur belegt ist, z. B. Schreiben oder Vermerk mit Datum und Aktenzeichen. Keine Namen, keine Gesundheitsangaben.",
+      "final": "Die Korrektur gilt erst, wenn die Regionale Betriebsleitung sie freigibt. Kein Status wird dadurch zurückgesetzt.",
+      "confirm": "Beantragen",
+      "cancel": "Abbrechen",
+      "kug200bOnlyInvalidate": "Auf dem Weg Kug 200b ist das Meldedatum das der Sammelmeldung. Die Meldung kann nur für ungültig erklärt werden; danach wird sie neu erfasst."
+    },
+    "messages": {
+      "requested": "Korrektur beantragt. Sie wird in den Freigaben entschieden.",
+      "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+      "forbidden": "Sie dürfen diese Korrektur nicht beantragen.",
+      "notFound": "Den Nachweis gibt es nicht mehr. Die Ansicht wurde neu geladen.",
+      "codes": {
+        "correction_pending": "Für diesen Nachweis ist schon eine Korrektur beantragt.",
+        "target_corrected": "Dieser Nachweis ist schon korrigiert.",
+        "document_not_accepted": "Nur angenommene Unterlagen werden korrigiert.",
+        "task_pending": "Eine offene BA-Meldung wird erfasst, nicht korrigiert.",
+        "asu_route_kug200b": "Auf dem Weg Kug 200b ist das Meldedatum das der Sammelmeldung; die Meldung kann nur für ungültig erklärt werden.",
+        "registered_on_in_future": "Das Meldedatum darf nicht in der Zukunft liegen.",
+        "correction_unchanged": "Das Meldedatum ist schon so erfasst.",
+        "source_invalid": "Bitte die Quelle in einer Zeile angeben."
       }
     }
   }

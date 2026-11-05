@@ -162,6 +162,7 @@ const capabilities = {
   delete: false,
   quarantine: true,
   liftQuarantine: false,
+  requestCorrection: false,
 };
 /** A signed TL 407 scan as the tab lists it. */
 function scanOf(overrides: Record<string, unknown> = {}) {

@@ -248,6 +248,9 @@ const statusFunctions = [
   "record_ba_report",
   "create_exception_evidence_record",
   "exception_evidence_usable",
+  // Slice 6: evidence corrections (data-protection.md, evidence corrections)
+  "request_evidence_correction",
+  "decide_evidence_correction",
 ];
 const helpers = [
   "assert_context",
@@ -271,6 +274,9 @@ const helpers = [
   "exception_evidence_fingerprint",
   "normalise_ba_reference",
   "profiling_exception_evidence_record_immutable",
+  "evidence_correction_append_only",
+  "normalise_correction_source",
+  "ba_reporting_obligation_day",
   "create_early_exit_task",
   "assert_global_admin",
   "is_project_lead",
@@ -605,6 +611,26 @@ describe("transfer_app and the exception evidence records", () => {
       "profiling_exception_evidence_record",
       "id",
       `insert into profiling_exception_evidence_record (project_id, participation_id, kind, agentur_key, reference, confirmed_on, fingerprint, created_by, created_on) values ('${seedProjectIds.werkNord}', gen_random_uuid(), 'ba_confirmation', 'nord', 'x', '2027-01-01', 'sha256:v1:${"0".repeat(64)}', '${staffUserId}', '2027-01-01')`,
+    ),
+  )("may not %s (42501)", async (_label, sql) => {
+    await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);
+  });
+});
+
+// data-protection.md, evidence corrections (PR 6-8): the corrections are read by the app and written
+// only by request_evidence_correction and decide_evidence_correction.
+describe("transfer_app and the evidence corrections", () => {
+  it("may select them", async () => {
+    expect((await app.query("select id, status, source from evidence_correction")).rows).toEqual(
+      [],
+    );
+  });
+
+  it.each(
+    writes(
+      "evidence_correction",
+      "id",
+      `insert into evidence_correction (project_id, participation_id, target_kind, action, ba_reporting_task_id, reason, source, retention_class, requested_by) values ('${seedProjectIds.werkNord}', gen_random_uuid(), 'ba_reporting_task', 'supersede', gen_random_uuid(), 'ba_legal_reference', 'x', 'participation_record', '${staffUserId}')`,
     ),
   )("may not %s (42501)", async (_label, sql) => {
     await expect(app.query(sql)).rejects.toMatchObject(permissionDenied);

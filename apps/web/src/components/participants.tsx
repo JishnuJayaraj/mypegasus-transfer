@@ -64,7 +64,11 @@ const columns = [
 const pageSize = 25;
 
 type ListItem = components["schemas"]["WorklistItem"];
-type Kug200bItemKind = "kug200b_offer_open" | "kug200b_withdrawal_ba_notice";
+type CaseItemKind =
+  | "kug200b_offer_open"
+  | "kug200b_withdrawal_ba_notice"
+  // "Nachweis ungültig" (data-protection.md, evidence corrections): the status stays.
+  | "evidence_invalidated";
 type ActivationPrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
 type PrivacyNoticePrintItem = components["schemas"]["PrivacyNoticeBatchResult"]["items"][number];
 type PrintState =
@@ -548,7 +552,7 @@ const WorklistTable = memo(function WorklistTable({
             <span key={case_.kind}>
               {" "}
               <Tag type="purple" size="sm">
-                {t(`worklist.caseItems.${case_.kind as Kug200bItemKind}`, {
+                {t(`worklist.caseItems.${case_.kind as CaseItemKind}`, {
                   date: formatDate(case_.date),
                 })}
               </Tag>

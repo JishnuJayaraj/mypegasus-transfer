@@ -65,6 +65,14 @@ export const evidenceCorrectionWho = () => [
     (type) =>
       [`document ${type}`, operationWho("requestEvidenceCorrection", document(type))] as const,
   ),
+  [
+    "record asu_registration",
+    operationWho("requestEvidenceCorrection", { kind: "asu_registration", registrationId: "a" }),
+  ] as const,
+  [
+    "record ba_reporting_task",
+    operationWho("requestEvidenceCorrection", { kind: "ba_reporting_task", taskId: "a" }),
+  ] as const,
   ...fieldCatalog.map(
     ({ key }) =>
       [

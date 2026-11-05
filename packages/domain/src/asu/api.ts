@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CorrectionState } from "../corrections/model";
 import { DocumentCapabilities } from "../documents/api";
 import { ScanOrigin } from "../documents/scans";
 import { DocumentReviewReason, DocumentReviewState, QuarantineReason } from "../documents/state";
@@ -52,6 +53,13 @@ export const AsuRegistrationView = z
     withProofSince: instant.nullable(),
     /** "Bestätigung der Agentur am" (the route `kug_200b` only; follow-up, never a condition). */
     confirmedOn: isoDate.nullable(),
+    /**
+     * It replaces a registration an approved correction superseded (data-protection.md, evidence
+     * corrections): recorded at the approval, with the corrected date.
+     */
+    corrected: z.boolean(),
+    /** A correction of it awaiting its decision, and "Korrektur beantragen" for the viewer. */
+    correction: CorrectionState,
   })
   .meta({ id: "AsuRegistration" });
 export type AsuRegistrationView = z.infer<typeof AsuRegistrationView>;

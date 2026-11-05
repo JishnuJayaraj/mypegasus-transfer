@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CorrectionReviewItem } from "../corrections/model";
 import type { Subject } from "../access/decide";
 import { isoDate, type IsoDate } from "../iso-date";
 import { ProfilingExceptionReason, ProfilingExceptionStatus } from "../lifecycle/enums";
@@ -139,11 +140,15 @@ export const ExceptionEvidenceDocument = z.object({
   /** Accepted, not quarantined, invalidated or deleted: it can be part of a record. */
   usable: z.boolean(),
   quarantined: z.boolean(),
-  /** The safety actions without any opening (the review of PR #102). */
+  /**
+   * The safety actions without any opening (the review of PR #102), "Korrektur beantragen"
+   * among them (data-protection.md, evidence corrections).
+   */
   capabilities: z.object({
     delete: z.boolean(),
     quarantine: z.boolean(),
     liftQuarantine: z.boolean(),
+    requestCorrection: z.boolean(),
   }),
 });
 
@@ -190,7 +195,10 @@ export const ReviewItem = z.object({
 });
 export type ReviewItem = z.infer<typeof ReviewItem>;
 
-export const ReviewQueue = z.object({ items: z.array(ReviewItem) }).meta({ id: "ReviewQueue" });
+/** "Freigaben": the pending profiling exceptions and evidence corrections, each oldest first. */
+export const ReviewQueue = z
+  .object({ items: z.array(ReviewItem), corrections: z.array(CorrectionReviewItem) })
+  .meta({ id: "ReviewQueue" });
 
 /** Who has the queue "Freigaben": a regional operations manager (Q80). */
 export function seesReviews(subject: Subject): boolean {

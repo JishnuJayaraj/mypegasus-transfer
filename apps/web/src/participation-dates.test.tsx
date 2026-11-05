@@ -78,6 +78,9 @@ const task = {
   reportedOn: null,
   notRequiredReason: null,
   decidedAt: null,
+  supersededBy: null,
+  replacesTaskId: null,
+  correction: { pending: false, mayRequest: false },
   capabilities: { recordOutcome: false },
 };
 

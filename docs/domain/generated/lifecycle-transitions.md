@@ -108,7 +108,7 @@ their slices (3, 5, 7).
 | `setPlacementAgentur` | PL, Back office | — |
 | `startAssistedMode` | Consultant/profiler (assigned), PL, Back office | — |
 
-`requestEvidenceCorrection` (`append_evidence_correction`) by target, from the
+`requestEvidenceCorrection` (`request_evidence_correction`) by target, from the
 correction-authority table (round 12, Q88), not from who may open a document; requesting grants
 no read access. Every other field can't be corrected this way: statuses change only through the
 status functions, and the rest isn't evidence-set data.
@@ -124,6 +124,8 @@ status functions, and the rest isn't evidence-set data.
 | document | `cv` | PL |
 | document | `participant_upload` | PL |
 | document | `qualification_certificate` | PL |
+| record | `asu_registration` | PL |
+| record | `ba_reporting_task` | PL |
 | field | `tgStart` | PL, Back office |
 | field | `tgEnd` | PL, Back office |
 | field | `dsvSignedOn` | PL, Back office |

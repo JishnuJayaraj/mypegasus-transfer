@@ -29,6 +29,7 @@ function safetyActions(
   target: PermissionTarget & { participationId: string },
   reviewState: "unreviewed" | "accepted" | "rejected",
   quarantinedBy: string | null,
+  correction: { invalidated: boolean; correctionPending: boolean },
 ) {
   const all = documentCapabilities(
     subject,
@@ -39,9 +40,15 @@ function safetyActions(
       addedByParticipant: false,
       reviewState,
       quarantinedBy,
+      ...correction,
     },
   );
-  return { delete: all.delete, quarantine: all.quarantine, liftQuarantine: all.liftQuarantine };
+  return {
+    delete: all.delete,
+    quarantine: all.quarantine,
+    liftQuarantine: all.liftQuarantine,
+    requestCorrection: all.requestCorrection,
+  };
 }
 
 /**
@@ -76,7 +83,12 @@ export async function exceptionViewOf(
     review_state: "unreviewed" | "accepted" | "rejected";
     usable: boolean;
     quarantined_by: string | null;
+    invalidated: boolean;
+    correction_pending: boolean;
   }>(sql`select id as document_id, ${utc("added_at")} as added_at, review_state, quarantined_by,
+      invalidated_by_correction is not null as invalidated,
+      exists (select from evidence_correction c
+        where c.document_id = document.id and c.status = 'requested') as correction_pending,
       review_state = 'accepted' and quarantined_at is null
         and invalidated_by_correction is null as usable
     from document
@@ -109,7 +121,10 @@ export async function exceptionViewOf(
       reviewState: d.review_state,
       usable: d.usable,
       quarantined: d.quarantined_by !== null,
-      capabilities: safetyActions(subject, target, d.review_state, d.quarantined_by),
+      capabilities: safetyActions(subject, target, d.review_state, d.quarantined_by, {
+        invalidated: d.invalidated,
+        correctionPending: d.correction_pending,
+      }),
     })),
     capabilities: {
       addEvidence:

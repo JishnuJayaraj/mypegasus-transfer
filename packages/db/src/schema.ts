@@ -9,6 +9,11 @@ import {
   BaReportingKind,
   BaReportingStatus,
   BaReportNotRequiredReason,
+  CorrectionAction,
+  CorrectionReason,
+  CorrectionStatus,
+  CorrectionTargetKind,
+  correctionSourceMaxLength,
   DsvAmendmentKind,
   DsvStatus,
   EndReason,
@@ -395,6 +400,10 @@ export const amendmentOriginalLocation = pgEnum(
 );
 export const baReportingKind = pgEnum("ba_reporting_kind", values(BaReportingKind));
 export const baReportingStatus = pgEnum("ba_reporting_status", values(BaReportingStatus));
+export const correctionTargetKind = pgEnum("correction_target_kind", values(CorrectionTargetKind));
+export const correctionAction = pgEnum("correction_action", values(CorrectionAction));
+export const correctionReason = pgEnum("correction_reason", values(CorrectionReason));
+export const correctionStatus = pgEnum("correction_status", values(CorrectionStatus));
 export const baReportNotRequiredReason = pgEnum(
   "ba_report_not_required_reason",
   values(BaReportNotRequiredReason),
@@ -1895,8 +1904,14 @@ export const document = pgTable(
     quarantinedBy: uuid("quarantined_by").references(() => staffUser.id),
     quarantinedAt: instant("quarantined_at"),
     quarantineLiftedAt: instant("quarantine_lifted_at"),
-    /** Set by an approved correction (data-protection.md, evidence corrections); none yet. */
-    invalidatedByCorrection: uuid("invalidated_by_correction"),
+    /**
+     * Set by an approved correction (data-protection.md, evidence corrections): it opens for
+     * nobody, gives no fact and counts nothing. A value from before corrections existed keeps it
+     * invalidated (the FK is NOT VALID for those rows, Q209).
+     */
+    invalidatedByCorrection: uuid("invalidated_by_correction").references(
+      (): AnyPgColumn => evidenceCorrection.id,
+    ),
   },
   (t) => [
     foreignKey({
@@ -2180,6 +2195,15 @@ export const asuRegistration = pgTable(
     confirmedOn: dateColumn("confirmed_on"),
     confirmedBy: uuid("confirmed_by").references(() => staffUser.id),
     confirmedAt: instant("confirmed_at"),
+    /**
+     * The approved correction that superseded it (Q186): its replacement is the registration
+     * whose `correction_id` names the same correction, with the corrected date.
+     */
+    supersededBy: uuid("superseded_by").references((): AnyPgColumn => evidenceCorrection.id),
+    /** The approved correction that invalidated it: it stays, linked, and supplies nothing. */
+    invalidatedBy: uuid("invalidated_by").references((): AnyPgColumn => evidenceCorrection.id),
+    /** On a superseding registration: the approved correction it carries out. */
+    correctionId: uuid("correction_id").references((): AnyPgColumn => evidenceCorrection.id),
   },
   (t) => [
     foreignKey({
@@ -2187,8 +2211,17 @@ export const asuRegistration = pgTable(
       columns: [t.participationId, t.projectId],
       foreignColumns: [participation.id, participation.projectId],
     }),
-    unique("asu_registration_participation_unique").on(t.participationId),
-    unique("asu_registration_proof_document_unique").on(t.proofDocumentId),
+    // One current registration per participation; superseded and invalidated ones stay.
+    uniqueIndex("asu_registration_current_unique")
+      .on(t.participationId)
+      .where(sql`superseded_by is null and invalidated_by is null`),
+    uniqueIndex("asu_registration_current_proof_unique")
+      .on(t.proofDocumentId)
+      .where(sql`superseded_by is null and invalidated_by is null`),
+    check(
+      "asu_registration_corrected_once",
+      sql`num_nonnulls(${t.supersededBy}, ${t.invalidatedBy}) <= 1`,
+    ),
     check(
       "asu_registration_proof_whole",
       sql`(${t.proofKind} is null) = (${t.proofLinkedAt} is null) and (${t.proofLinkedAt} is null) = (${t.proofLinkedBy} is null)`,
@@ -2824,6 +2857,13 @@ export const baReportingTask = pgTable(
     notRequiredReason: baReportNotRequiredReason("not_required_reason"),
     decidedBy: uuid("decided_by").references(() => staffUser.id),
     decidedAt: instant("decided_at"),
+    /** The replacement task an approved correction created; this outcome stays (Q190). */
+    supersededBy: uuid("superseded_by").references((): AnyPgColumn => baReportingTask.id),
+    /** On a replacement task: the task it replaces and the approved correction. */
+    replacesTaskId: uuid("replaces_task_id")
+      .unique("ba_reporting_task_replaces_unique")
+      .references((): AnyPgColumn => baReportingTask.id),
+    correctionId: uuid("correction_id").references((): AnyPgColumn => evidenceCorrection.id),
   },
   (t) => [
     foreignKey({
@@ -2842,6 +2882,84 @@ export const baReportingTask = pgTable(
     check(
       "ba_reporting_task_outcome_fields",
       sql`(${t.status} = 'reported') = (${t.reportedOn} is not null) and (${t.status} = 'not_required') = (${t.notRequiredReason} is not null) and (${t.status} = 'pending') = (${t.decidedBy} is null) and (${t.decidedBy} is null) = (${t.decidedAt} is null) and (${t.status} = 'reported' or (${t.channel} is null and ${t.reference} is null))`,
+    ),
+    // Only a closed outcome is superseded; a replacement names its task and correction.
+    check(
+      "ba_reporting_task_correction",
+      sql`(${t.supersededBy} is null or ${t.status} <> 'pending') and (${t.replacesTaskId} is null) = (${t.correctionId} is null)`,
+    ),
+  ],
+);
+
+/**
+ * An evidence correction (data-protection.md, evidence corrections; Q183, Q186, Q190; readings
+ * Q209): the PL's request on one target (an accepted document, a current ASU registration, a closed
+ * BA reporting task) with what an approval does, the reason code, the documented source and the
+ * corrected date where there is one; the regional operations manager's decision, never by the
+ * requester. Append-only: only its decision is written once. Its retention class is its target's
+ * (per row). Codes, dates and the source, `case_internal` (`evidenceCorrection`); no corrected
+ * value of these targets is sensitive, so nothing is encrypted. Written only by
+ * `request_evidence_correction` and `decide_evidence_correction`.
+ */
+export const evidenceCorrection = pgTable(
+  "evidence_correction",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id").notNull(),
+    targetKind: correctionTargetKind("target_kind").notNull(),
+    action: correctionAction("action").notNull(),
+    documentId: uuid("document_id").references((): AnyPgColumn => document.id),
+    asuRegistrationId: uuid("asu_registration_id").references(
+      (): AnyPgColumn => asuRegistration.id,
+    ),
+    baReportingTaskId: uuid("ba_reporting_task_id").references(
+      (): AnyPgColumn => baReportingTask.id,
+    ),
+    /** A document's: whether it is a wrong person's file (purged once approved). */
+    wrongPerson: boolean("wrong_person"),
+    /** An ASU supersession's corrected actual registration date. */
+    correctedRegisteredOn: dateColumn("corrected_registered_on"),
+    reason: correctionReason("reason").notNull(),
+    /** Where it is documented: one normalised line, no name or health detail. */
+    source: text("source").notNull(),
+    retentionClass: text("retention_class").notNull(),
+    status: correctionStatus("status").notNull().default("requested"),
+    requestedBy: uuid("requested_by")
+      .notNull()
+      .references(() => staffUser.id),
+    requestedAt: instant("requested_at").notNull().defaultNow(),
+    decidedBy: uuid("decided_by").references(() => staffUser.id),
+    decidedAt: instant("decided_at"),
+  },
+  (t) => [
+    foreignKey({
+      name: "evidence_correction_participation_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    index("evidence_correction_participation_idx").on(t.participationId),
+    // One pending request per target.
+    uniqueIndex("evidence_correction_one_pending_idx")
+      .on(sql`coalesce(document_id, asu_registration_id, ba_reporting_task_id)`)
+      .where(sql`status = 'requested'`),
+    check(
+      "evidence_correction_target",
+      sql`num_nonnulls(${t.documentId}, ${t.asuRegistrationId}, ${t.baReportingTaskId}) = 1 and (${t.targetKind} = 'document') = (${t.documentId} is not null) and (${t.targetKind} = 'asu_registration') = (${t.asuRegistrationId} is not null) and (${t.targetKind} = 'ba_reporting_task') = (${t.baReportingTaskId} is not null)`,
+    ),
+    check(
+      "evidence_correction_action",
+      sql`(${t.targetKind} <> 'document' or ${t.action} = 'invalidate') and (${t.targetKind} <> 'ba_reporting_task' or ${t.action} = 'supersede') and (${t.targetKind} = 'document') = (${t.wrongPerson} is not null) and (${t.targetKind} = 'asu_registration' and ${t.action} = 'supersede') = (${t.correctedRegisteredOn} is not null)`,
+    ),
+    check(
+      "evidence_correction_source",
+      sql`char_length(${t.source}) between 1 and ${sql.raw(String(correctionSourceMaxLength))} and ${t.source} !~ '[[:cntrl:]]' and ${t.source} = btrim(${t.source})`,
+    ),
+    check(
+      "evidence_correction_decision",
+      sql`(${t.status} = 'requested') = (${t.decidedBy} is null) and (${t.decidedBy} is null) = (${t.decidedAt} is null) and ${t.decidedBy} is distinct from ${t.requestedBy}`,
     ),
   ],
 );
@@ -3352,4 +3470,5 @@ export const tables = [
   importColumnMapping,
   participationDsvAmendment,
   baReportingTask,
+  evidenceCorrection,
 ];

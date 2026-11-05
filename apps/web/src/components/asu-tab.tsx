@@ -24,6 +24,7 @@ import {
 import { useId, useState, type ChangeEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationAsuQuery, useApi } from "../api";
+import { useCorrectionRequest } from "./evidence-correction";
 import { documentNavigation } from "./documents-tab";
 import { ReloadNotice, useDraft } from "./draft";
 import { Kug200bSection } from "./kug200b-section";
@@ -161,6 +162,7 @@ export function AsuTab({ detail }: { detail: Detail }) {
         }
       />
       <RegistrationSection
+        projectId={detail.projectId}
         view={view}
         busy={busy}
         onRecord={(body) =>
@@ -449,6 +451,7 @@ type RegistrationBody = components["schemas"]["AsuRegistrationInput"];
 
 /** "Meldung" and "Meldung erfassen" (process-and-lifecycle.md, Arbeitsuchendmeldung): the date and its proof, the number write-only. */
 function RegistrationSection(props: {
+  projectId: string;
   view: View;
   busy: boolean;
   onRecord: (body: RegistrationBody) => Promise<boolean>;
@@ -468,6 +471,10 @@ function RegistrationSection(props: {
   const typing = date !== "" || number !== "";
   if (!typing && reviewed !== view.route.version) setReviewed(view.route.version);
   const routeChanged = typing && reviewed !== view.route.version;
+  const correction = useCorrectionRequest({
+    participationId: view.participationId,
+    projectId: props.projectId,
+  });
 
   if (registration) {
     const { proof } = registration;
@@ -495,6 +502,22 @@ function RegistrationSection(props: {
         ) : (
           proof && <p>{t("asu.registration.proofUnusable")}</p>
         )}
+        {registration.corrected && <p>{t("asu.corrected")}</p>}
+        {registration.correction.pending && <p>{t("corrections.pending")}</p>}
+        {registration.correction.mayRequest && (
+          <div>
+            {correction.button({
+              kind: "asu_registration",
+              id: registration.id,
+              kug200b: registration.channel === "kug_200b",
+              label: t("asu.registration.registeredOn", {
+                date: formatDate(registration.registeredOn),
+                channel: t(`asu.channels.${registration.channel}`),
+              }),
+            })}
+          </div>
+        )}
+        {correction.element}
         {registration.channel === "kug_200b" && (
           <Confirmation
             confirmedOn={registration.confirmedOn}

@@ -35,6 +35,10 @@ import {
   type StaffUser,
   type WorklistItem,
   type WorklistProject,
+  evidenceInvalidatedSince,
+  type ApprovedInvalidation,
+  type DocumentType,
+  type RecoveryFacts,
 } from "@transfer/domain";
 import { projectAccess, projectTarget } from "../access";
 import { itemBookingsOf, itemNoticesOf } from "../appointments/items";
@@ -161,6 +165,8 @@ export async function loadWorklist(
         tx,
         ids.filter((id) => mayReadBaReportingTasks(subject, projectId, id)),
       );
+      // "Nachweis ungültig" (data-protection.md, evidence corrections).
+      const invalidated = await invalidationsOf(tx, ids);
       const leadTimes = await submissionSettingsOf(
         tx,
         release,
@@ -235,6 +241,10 @@ export async function loadWorklist(
                 declinedOn: offers.get(p.id)!.declinedOn,
                 withdrawals: offers.get(p.id)!.withdrawals,
               },
+              evidenceInvalidatedSince: invalidatedSince(
+                invalidated.get(p.id),
+                asuStates.get(p.id)!,
+              ),
               agentur: {
                 attempts: attempts.get(p.id)!,
                 leadTimeDays:
@@ -299,6 +309,115 @@ function kug200bRegistrationOf(state: AsuState) {
   return registration?.proofKind === "kug200b_submission"
     ? { registeredOn: registration.registeredOn, confirmedOn: registration.confirmedOn }
     : null;
+}
+
+/**
+ * Per participation the approved invalidations and the replacement evidence it has now
+ * (data-protection.md, evidence corrections; Q209 (7) as amended): which fact each invalidated
+ * piece supported (a registration's proof), the valid documents with their acceptance and TL 407
+ * signature dates, the retained dates, and whether the open exception request still rests on
+ * evidence that doesn't count. The ASU fact comes from the caller's `asuStatesOf`.
+ */
+async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly string[]) {
+  const result = new Map<
+    string,
+    { invalidations: ApprovedInvalidation[]; facts: Omit<RecoveryFacts, "asu"> }
+  >();
+  if (ids.length === 0) return result;
+  const list = sql.param([...ids]);
+  const { rows: corrections } = await db.execute<{
+    participation_id: string;
+    decided_at: string;
+    decided_on: string;
+    target_kind: "document" | "asu_registration";
+    document_type: DocumentType | null;
+    signed: boolean | null;
+    supported_registration: boolean;
+  }>(sql`
+    select c.participation_id,
+      to_char(c.decided_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as decided_at,
+      to_char(c.decided_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as decided_on,
+      c.target_kind, d.type as document_type, pol.signed,
+      exists (select from asu_registration g
+          left join agentur_submission s on s.id = g.agentur_submission_id
+        where g.participation_id = c.participation_id
+          and d.id in (g.proof_document_id, s.document_id)) as supported_registration
+    from evidence_correction c
+    left join document d on d.id = c.document_id
+    left join document_type_policy pol
+      on pol.type = d.type and pol.catalog_version = d.catalog_version
+    where c.participation_id = any(${list}::uuid[])
+      and c.status = 'approved' and c.action = 'invalidate'
+    order by c.decided_at`);
+  const withInvalidations = [...new Set(corrections.map((c) => c.participation_id))];
+  if (withInvalidations.length === 0) return result;
+  const scoped = sql.param(withInvalidations);
+  const { rows: participations } = await db.execute<{
+    id: string;
+    tg_entry_date: string | null;
+    profiling_done_on: string | null;
+    exception_unsupported: boolean;
+  }>(sql`
+    select p.id, p.tg_entry_date::text, p.profiling_done_on::text,
+      coalesce(r.status::text in ('requested', 'approved')
+        and not exception_evidence_usable(r.evidence_record_id), false) as exception_unsupported
+    from participation p
+    left join profiling_exception_request r on r.id = p.profiling_exception_request_id
+    where p.id = any(${scoped}::uuid[])`);
+  const { rows: documents } = await db.execute<{
+    participation_id: string;
+    type: DocumentType;
+    accepted_at: string;
+    signed_on: string | null;
+  }>(sql`
+    select participation_id, type,
+      to_char(reviewed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as accepted_at,
+      greatest(signed_on, countersigned_on)::text as signed_on
+    from document
+    where participation_id = any(${scoped}::uuid[]) and deleted_at is null
+      and review_state = 'accepted' and quarantined_at is null
+      and invalidated_by_correction is null`);
+  for (const p of participations) {
+    result.set(p.id, {
+      invalidations: [],
+      facts: {
+        tgEntryDate: p.tg_entry_date,
+        profilingDoneOn: p.profiling_done_on,
+        exceptionUnsupported: p.exception_unsupported,
+        documents: documents
+          .filter((d) => d.participation_id === p.id)
+          .map((d) => ({ type: d.type, acceptedAt: d.accepted_at, signedOn: d.signed_on })),
+      },
+    });
+  }
+  for (const c of corrections) {
+    result.get(c.participation_id)!.invalidations.push({
+      decidedAt: c.decided_at,
+      decidedOn: c.decided_on,
+      target:
+        c.target_kind === "asu_registration"
+          ? { kind: "asu_registration" }
+          : {
+              kind: "document",
+              documentType: c.document_type!,
+              signed: c.signed === true,
+              supportedRegistration: c.supported_registration,
+            },
+    });
+  }
+  return result;
+}
+
+/** "Nachweis ungültig" since, with the current ASU fact; null without an open invalidation. */
+function invalidatedSince(
+  entry: { invalidations: ApprovedInvalidation[]; facts: Omit<RecoveryFacts, "asu"> } | undefined,
+  asu: AsuState,
+) {
+  if (!entry) return null;
+  const fact = asu.fact
+    ? { validOn: asu.fact.validOn, recordedAt: asu.fact.recordedAt.toISOString() }
+    : null;
+  return evidenceInvalidatedSince(entry.invalidations, { ...entry.facts, asu: fact });
 }
 
 /** Per participation the Berlin day its oldest pending BA reporting task was created. */

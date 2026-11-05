@@ -142,6 +142,8 @@ function setup(first: ReturnType<typeof view>, afterWrite = first, viewAsu = tru
         : answer(),
     [`POST ${detailPath}/asu/registration`]: answer,
     [`POST ${detailPath}/asu/proof-link`]: answer,
+    [`POST ${detailPath}/evidence-corrections`]: () =>
+      json({ correctionId: "00000000-0000-4000-e000-000000000001" }, 201),
     [`POST ${detailPath}/documents/${proofId}/quarantine`]: answer,
     [`POST ${detailPath}/documents/${proofId}/quarantine-lift`]: answer,
     [`POST ${detailPath}/forms/kug200b`]: () =>
@@ -191,6 +193,7 @@ const plProof = (quarantined: boolean) => ({
     delete: false,
     quarantine: !quarantined,
     liftQuarantine: quarantined,
+    requestCorrection: false,
   },
 });
 
@@ -422,6 +425,8 @@ describe("the tab Arbeitsuche", () => {
         linkedAt: "2026-11-02T09:00:00.000000Z",
       },
       withProofSince: "2026-11-02T09:00:00.000000Z",
+      corrected: false,
+      correction: { pending: false, mayRequest: false },
     };
     const { proofDocuments: _, ...summary } = view({ registration, missing: [] });
     setup(summary as ReturnType<typeof view>);
@@ -447,6 +452,8 @@ describe("the tab Arbeitsuche", () => {
           linkedAt: "2026-11-03T09:00:00.000000Z",
         },
         withProofSince: "2026-11-03T09:00:00.000000Z",
+        corrected: false,
+        correction: { pending: false, mayRequest: false },
       },
     });
     const { calls } = setup(
@@ -493,6 +500,7 @@ describe("the tab Arbeitsuche", () => {
         delete: false,
         quarantine: true,
         liftQuarantine: false,
+        requestCorrection: false,
       },
     };
     const registration = {
@@ -502,6 +510,8 @@ describe("the tab Arbeitsuche", () => {
       recordedAt: "2026-11-01T09:00:00.000000Z",
       proof: null,
       withProofSince: null,
+      corrected: false,
+      correction: { pending: false, mayRequest: false },
     };
     const { calls } = setup(
       view({ registration, proofDocuments: [proof], capabilities: { linkProof: true } }),
@@ -557,7 +567,15 @@ const unreviewedScan = {
   review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
   signedOn: null,
   quarantine: null,
-  capabilities: { open: true, review: true, delete: true, quarantine: true, liftQuarantine: false },
+  correction: { invalidated: false, pending: false },
+  capabilities: {
+    open: true,
+    review: true,
+    delete: true,
+    quarantine: true,
+    liftQuarantine: false,
+    requestCorrection: false,
+  },
 };
 
 describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
@@ -681,6 +699,8 @@ describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
         linkedAt: "2026-11-24T09:00:00.000000Z",
       },
       withProofSince: "2026-11-24T09:00:00.000000Z",
+      corrected: false,
+      correction: { pending: false, mayRequest: false },
       confirmedOn: null,
     };
     const { calls } = setup(
@@ -705,5 +725,47 @@ describe("the Kug 200b on the tab Arbeitsuche (Q185, Q197)", () => {
       }),
     );
     expect(await screen.findByText("Bestätigung der Agentur am 01.12.2026")).toBeVisible();
+  });
+
+  it("offers only the invalidation of a batch's registration: its date is the batch's (Q209 (3))", async () => {
+    const user = userEvent.setup();
+    const submitted = {
+      id: registrationId,
+      channel: "kug_200b",
+      registeredOn: "2026-11-24",
+      recordedAt: "2026-11-24T09:00:00.000000Z",
+      proof: {
+        kind: "kug200b_submission",
+        attestationSource: null,
+        linkedAt: "2026-11-24T09:00:00.000000Z",
+      },
+      withProofSince: "2026-11-24T09:00:00.000000Z",
+      corrected: false,
+      correction: { pending: false, mayRequest: true },
+      confirmedOn: null,
+    };
+    const { calls } = setup(
+      view({
+        route: { channel: "kug_200b", version: 1, defaultChannel: null },
+        registration: submitted,
+      }),
+    );
+    const registration = await section("Meldung");
+    await user.click(registration.getByRole("button", { name: /^Korrektur beantragen: / }));
+    const dialog = screen.getByRole("dialog", { name: "Korrektur beantragen" });
+    expect(within(dialog).queryByLabelText("Richtiges Meldedatum")).toBeNull();
+    expect(within(dialog).queryByRole("radio")).toBeNull();
+    expect(within(dialog).getByText(/kann nur für ungültig erklärt werden/)).toBeVisible();
+    await user.selectOptions(within(dialog).getByLabelText("Grund"), "ba_legal_reference");
+    await user.type(within(dialog).getByLabelText("Dokumentierte Quelle"), "BA-Schreiben 02.12.");
+    await user.click(within(dialog).getByRole("button", { name: "Beantragen" }));
+    await waitFor(() =>
+      expect(callTo(calls, `POST ${detailPath}/evidence-corrections`)[0]?.body).toEqual({
+        correction: "invalidate_asu_registration",
+        registrationId,
+        reason: "ba_legal_reference",
+        source: "BA-Schreiben 02.12.",
+      }),
+    );
   });
 });

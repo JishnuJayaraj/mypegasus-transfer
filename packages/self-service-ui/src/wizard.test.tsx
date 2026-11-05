@@ -592,12 +592,14 @@ describe("Unterlagen (regional-variation.md, self-service wizard)", () => {
       onBehalf: false,
       review: { state: "unreviewed", reasonCode: null, reviewedAt: null },
       quarantine: null,
+      correction: { invalidated: false, pending: false },
       capabilities: {
         open: true,
         review: false,
         delete: true,
         quarantine: false,
         liftQuarantine: false,
+        requestCorrection: false,
       },
     });
     const { source } = renderWizard([withDocuments(false), withDocuments()], {

@@ -10,6 +10,7 @@ import {
 import { uploadableDocumentTypes, type DocumentCapabilities } from "./api";
 import { DocumentType } from "./catalog";
 import type { DocumentReviewState } from "./state";
+import { correctionRequestable, mayRequestCorrection } from "../corrections/model";
 
 // What a viewer sees of a participation's documents and may do with each (data-protection.md,
 // documents and access matrix; Q146 *assumed*). Pure: the API loads the rows and applies the
@@ -63,7 +64,11 @@ export function addableDocumentTypes(
 
 /**
  * What the viewer may do with one live document now. A quarantined one opens for nobody and is
- * not reviewed (data-protection.md, quarantine); a deletion before review stays possible.
+ * not reviewed (data-protection.md, quarantine); a deletion before review stays possible. An
+ * invalidated one opens for nobody either, isn't quarantined again, and its quarantine isn't
+ * lifted (data-protection.md, evidence corrections); nor is any while a correction is pending.
+ * "Korrektur beantragen" on an accepted, valid document without a pending request, in normal mode,
+ * by the correction-authority table, independent of any read right.
  */
 export function documentCapabilities(
   subject: Subject,
@@ -75,19 +80,42 @@ export function documentCapabilities(
     reviewState: DocumentReviewState;
     /** Who quarantined it, while it is; else null. */
     quarantinedBy: string | null;
+    /** Invalidated by an approved correction. */
+    invalidated: boolean;
+    /** A correction of it awaits its decision. */
+    correctionPending: boolean;
   },
 ): DocumentCapabilities {
-  const { type, addedByParticipant, reviewState, quarantinedBy } = document;
+  const { type, addedByParticipant, reviewState, quarantinedBy, invalidated } = document;
   const quarantined = quarantinedBy !== null;
   return {
-    open: !quarantined && decision(subject, target, type, "open_document", mode).effect === "allow",
+    open:
+      !quarantined &&
+      !invalidated &&
+      decision(subject, target, type, "open_document", mode).effect === "allow",
     review:
       !quarantined &&
       reviewState === "unreviewed" &&
       mayReviewDocument(subject, type, target, mode).ok,
     delete: mayDeleteDocument(subject, type, target, mode, { addedByParticipant, reviewState }).ok,
-    quarantine: !quarantined && mayQuarantineDocument(subject, type, target, mode).ok,
+    quarantine:
+      !quarantined && !invalidated && mayQuarantineDocument(subject, type, target, mode).ok,
     liftQuarantine:
-      quarantined && mayLiftDocumentQuarantine(subject, type, target, mode, quarantinedBy).ok,
+      quarantined &&
+      !invalidated &&
+      !document.correctionPending &&
+      mayLiftDocumentQuarantine(subject, type, target, mode, quarantinedBy).ok,
+    requestCorrection:
+      mode.kind === "normal" &&
+      correctionRequestable(
+        { kind: "document", reviewState, invalidated },
+        document.correctionPending,
+      ) &&
+      // The authority table doesn't depend on which document of the type.
+      mayRequestCorrection(
+        subject,
+        { kind: "document", documentType: type, documentId: "document" },
+        target,
+      ),
   };
 }

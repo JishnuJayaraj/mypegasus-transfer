@@ -14,6 +14,8 @@ import {
 import {
   applicableAsuDueDate,
   asuRegisteredSince,
+  correctionRequestable,
+  mayRequestCorrection,
   asuRegistrationProblem,
   AsuConfirmationInput,
   AsuProofLinkInput,
@@ -57,6 +59,7 @@ import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
 import { requireSession, sessionUser } from "../session";
+import { documentCorrection } from "../participations/evidence-corrections";
 import { auditContext, utc } from "../sql";
 import { closedStatuses } from "./profiling";
 
@@ -95,6 +98,7 @@ function refused(c: Context<AppEnv>, error: unknown) {
     code === "asu_route_kug200b" ||
     code === "registered_on_in_future" ||
     code === "asu_registration_not_found" ||
+    code === "asu_registration_corrected" ||
     code === "asu_proof_present" ||
     code === "document_not_found" ||
     code === "document_not_accepted" ||
@@ -189,6 +193,7 @@ export function asuRoutes(deps: Deps) {
                 quarantinedBy: document.quarantinedBy,
                 quarantinedAt: sql<string | null>`case when ${document.quarantinedAt} is not null
               then ${utc(document.quarantinedAt)} end`,
+                ...documentCorrection,
               })
               .from(document)
               .where(
@@ -241,6 +246,7 @@ export function asuRoutes(deps: Deps) {
                 quarantinedBy: document.quarantinedBy,
                 quarantinedAt: sql<string | null>`case when ${document.quarantinedAt} is not null
               then ${utc(document.quarantinedAt)} end`,
+                ...documentCorrection,
               })
               .from(document)
               .where(
@@ -312,6 +318,20 @@ export function asuRoutes(deps: Deps) {
                   },
             withProofSince: asuRegisteredSince(registrationFacts(registration)),
             confirmedOn: registration.confirmedOn,
+            corrected: registration.corrected,
+            correction: {
+              pending: registration.correctionPending,
+              mayRequest:
+                correctionRequestable(
+                  { kind: "asu_registration", current: true },
+                  registration.correctionPending,
+                ) &&
+                mayRequestCorrection(
+                  subject,
+                  { kind: "asu_registration", registrationId: registration.id },
+                  target,
+                ),
+            },
           },
           ...(readsProofs && {
             proofDocuments: proofs.map((proof) => ({
@@ -332,6 +352,8 @@ export function asuRoutes(deps: Deps) {
                 addedByParticipant: false,
                 reviewState: proof.reviewState,
                 quarantinedBy: proof.quarantinedBy,
+                invalidated: proof.invalidated,
+                correctionPending: proof.correctionPending,
               }),
             })),
           }),
@@ -361,6 +383,8 @@ export function asuRoutes(deps: Deps) {
                     addedByParticipant: false,
                     reviewState: form.reviewState,
                     quarantinedBy: null,
+                    invalidated: false,
+                    correctionPending: false,
                   }).open,
                 },
               })),
@@ -370,6 +394,8 @@ export function asuRoutes(deps: Deps) {
                   addedByParticipant: false,
                   reviewState: scan.reviewState,
                   quarantinedBy: scan.quarantinedBy,
+                  invalidated: scan.invalidated,
+                  correctionPending: scan.correctionPending,
                 });
                 return {
                   documentId: scan.documentId,

@@ -34,13 +34,16 @@ export const QuarantineReason = z
 export type QuarantineReason = z.infer<typeof QuarantineReason>;
 
 /**
- * The completeness engine's state of a document; a deleted or quarantined one counts nothing
- * (null; data-protection.md, quarantine).
+ * The completeness engine's state of a document; a deleted, quarantined or invalidated one counts
+ * nothing (null; data-protection.md, quarantine and evidence corrections).
  */
 export function documentState(document: {
   reviewState: DocumentReviewState;
   deletedAt: string | null;
   quarantined: boolean;
+  invalidated: boolean;
 }): DocumentState | null {
-  return document.deletedAt === null && !document.quarantined ? states[document.reviewState] : null;
+  return document.deletedAt === null && !document.quarantined && !document.invalidated
+    ? states[document.reviewState]
+    : null;
 }

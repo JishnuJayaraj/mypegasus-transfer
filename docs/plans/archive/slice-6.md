@@ -1,7 +1,7 @@
 # Slice 6 — Profiling & forms (F6)
 
 Status: **approved** 2026-10-24 by the product owner for development on synthetic data (PR #87,
-[the product review](../reviews/2026-10-24-pr-87-product-review.md) of `e73b312`), with the
+[the product review](../../reviews/2026-10-24-pr-87-product-review.md) of `e73b312`), with the
 review's amendments carried in this revision: external paper forms, quarantine and approved
 corrections of wrong evidence, the complete ASU fact's recording instant, both exception-evidence
 sources, immediate compliance escalation, the statutory ASU branches, the official Kug 200a, the
@@ -26,7 +26,11 @@ owner's choice, 2026-11-04) and records its readings as Q206 (accepted with amen
 review of PR #100). 6-6, estimated at about 650 lines, stays one PR and records its readings as
 Q207 (accepted in the review of PR #101, with a requirement for 6-8). 6-7, estimated at about
 2,100 lines (the plan's ~1,300 before), stays one PR (the owner's choice, 2026-11-05) and records
-its readings as Q208. Q1 stays
+its readings as Q208. 6-8, estimated at about 2,900 lines (the plan's ~1,000 before: superseding
+an ASU registration ends the one-registration-per-participation invariant six functions and two
+readers relied on), stays one PR (the owner's choice, 2026-11-05) and records its readings as
+Q209. Slice 6 is done; its rules live in the domain docs, ADR-0002, ADR-0006, ADR-0009, ADR-0010
+and `architecture/overview.md`. Q1 stays
 `verify`. This is not an
 external DPO, legal, works-council or Agentur confirmation.
 Roadmap: Arbeitsuchendmeldung (ASU record, due date, Kug 200b, batch export), profiling screen,
@@ -150,7 +154,7 @@ list's deadlines and items, the audit history (`auditProjection`, `audit_event_p
   back office has no tab.
 - **D11. Profiling track actions** (`POST /participations/{id}/profiling-status`; Q60: the PL and
   the assigned consultant, normal mode): along the edges of the
-  [transitions table](../domain/generated/lifecycle-transitions.md) through the status service and
+  [transitions table](../../domain/generated/lifecycle-transitions.md) through the status service and
   `apply_status_change`, with track activity as built (also forward and a refusal while
   `active_in_tg` under an approved exception, Q74). `profiling_done` needs `tl407_signed` (an
   accepted, unquarantined TL 407 scan, D17) and `profilingDoneOn`: not before the later actual
@@ -481,7 +485,7 @@ and project fields for the rest, filled when set, a blank one on the handwriting
 | 6-5b | TL 407 submission and escalation (D26, D27): attempts, originals, rejections, `tl407_submission`, `tl407_escalated`, compliance escalation, `GET /escalations`, work-list items and filter | 6-3b | ~1,100 |
 | 6-6 | BA reporting tasks (D28) | — | ~400 |
 | 6-7 | Profiling exceptions (D30): evidence records of both sources, evidence review, fingerprints, request, decision, revocation, the queue "Freigaben" | — | ~1,300 |
-| 6-8 | Corrections (D29): requests and decisions for documents, ASU registrations and BA outcomes in "Freigaben", the purge after an approved wrong-person invalidation, `evidence_invalidated` | 6-4a, 6-6, 6-7 | ~1,000 |
+| 6-8 | Corrections (D29): requests and decisions for documents, ASU registrations and BA outcomes in "Freigaben", the purge after an approved wrong-person invalidation, `evidence_invalidated` | 6-4a, 6-6, 6-7 | ~1,000 (~2,900 as estimated before building; one PR, the owner's choice) |
 
 Each PR that changes the document-type catalog takes its next version when it merges.
 

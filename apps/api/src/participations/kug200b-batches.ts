@@ -109,7 +109,8 @@ async function factsOf(db: Db, projectId: string) {
       placementAgenturKey: participation.placementAgenturKey,
       asuChannel: asuRecord.channel,
       asuRegistered: sql<boolean>`exists (select from ${asuRegistration}
-        where ${asuRegistration.participationId} = ${participation.id})`,
+        where ${asuRegistration.participationId} = ${participation.id}
+          and ${asuRegistration.supersededBy} is null and ${asuRegistration.invalidatedBy} is null)`,
       inOpenBatch: sql<boolean>`exists (select from ${kug200bBatchMember}
         join ${kug200bBatch} on ${kug200bBatch.id} = ${kug200bBatchMember.batchId}
           and ${kug200bBatch.status} = 'open'

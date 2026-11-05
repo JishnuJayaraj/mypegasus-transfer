@@ -93,6 +93,16 @@ export const mayReadBaReportingTasks = (
   participationId: string,
 ) => allowed(subject, projectId, participationId, "baReportingTask", "read");
 
+/**
+ * Whether the viewer reads a participation's ASU registrations (data-protection.md, the ASU
+ * record): a correction's ASU target is visible to them (404 otherwise).
+ */
+export const mayReadAsuRegistration = (
+  subject: Subject,
+  projectId: string,
+  participationId: string,
+) => allowed(subject, projectId, participationId, "asuRegistration", "read");
+
 /** One participation as the API loads it, before projection. */
 export type ParticipationRecord = {
   amendments: DsvAmendmentView[];

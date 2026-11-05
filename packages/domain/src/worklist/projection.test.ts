@@ -27,6 +27,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   channels: [],
   lastReminder: null,
   asuDueDate: null,
+  evidenceInvalidatedSince: null,
   kug200b: { channel: null, offeredOn: null, signed: false, declinedOn: null, withdrawals: [] },
   appointments: { bookings: [], notices: [], closedAt: null },
   agentur: {
@@ -98,6 +99,20 @@ describe("worklistProjection", () => {
     const orientation = row({ kind: "orientation", date: "2027-03-20" });
     expect(orientation.deadlines.map((d) => d.kind)).not.toContain("asu_due");
     expect(orientation.caseItems).toEqual([{ kind: "knowledge_date_missing", date: "2027-03-20" }]);
+  });
+
+  it("shows `evidence_invalidated` from the approval while nothing replaced it; the status stays (data-protection.md, evidence corrections)", () => {
+    const s = snapshot({ wave: null });
+    const row = worklistProjection(
+      facts({ evidenceInvalidatedSince: "2027-03-02" }),
+      s,
+      project,
+      "2027-03-25",
+      now,
+      viewer(),
+    );
+    expect(row.caseItems).toEqual([{ kind: "evidence_invalidated", date: "2027-03-02" }]);
+    expect(row.status).toBe(s.current.status);
   });
 
   it("projects statuses, listable person fields, actions, deadlines, flags, portal and capabilities", () => {

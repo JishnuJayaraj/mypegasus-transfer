@@ -425,7 +425,14 @@ describe("staff (Q146)", () => {
     expect(res.status).toBe(201);
     expect(await readJson(res, DocumentView)).toMatchObject({ addedBy: "staff", onBehalf: false });
     const list = await readJson(await staffRequest("projectLead", "GET", path()), DocumentList);
-    const all = { open: true, review: true, delete: true, quarantine: true, liftQuarantine: false };
+    const all = {
+      open: true,
+      review: true,
+      delete: true,
+      quarantine: true,
+      liftQuarantine: false,
+      requestCorrection: false,
+    };
     expect(list.documents.map((d) => d.capabilities)).toEqual([all, all]);
     const reviewed = await staffRequest("projectLead", "POST", path(`/${documentId}/review`), {
       decision: "accepted",

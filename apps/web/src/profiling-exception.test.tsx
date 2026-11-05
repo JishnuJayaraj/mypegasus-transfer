@@ -84,7 +84,12 @@ const accepted = {
   reviewState: "accepted",
   usable: true,
   quarantined: false,
-  capabilities: { delete: false, quarantine: true, liftQuarantine: false },
+  capabilities: {
+    delete: false,
+    quarantine: true,
+    liftQuarantine: false,
+    requestCorrection: false,
+  },
 };
 const approved = {
   requestId,
@@ -206,7 +211,12 @@ describe("Ausnahme vom Profiling", () => {
       ...accepted,
       reviewState: "unreviewed",
       usable: false,
-      capabilities: { delete: true, quarantine: true, liftQuarantine: false },
+      capabilities: {
+        delete: true,
+        quarantine: true,
+        liftQuarantine: false,
+        requestCorrection: false,
+      },
     };
     const documentPath = `${detailPath}/documents/${documentId}`;
     const { calls } = setup(
@@ -246,7 +256,12 @@ describe("Ausnahme vom Profiling", () => {
           documentId: "00000000-0000-4000-a000-0000000000d2",
           reviewState: "unreviewed",
           usable: false,
-          capabilities: { delete: true, quarantine: true, liftQuarantine: false },
+          capabilities: {
+            delete: true,
+            quarantine: true,
+            liftQuarantine: false,
+            requestCorrection: false,
+          },
         },
       ],
       capabilities: { addEvidence: true, request: false, revoke: true },
@@ -372,7 +387,7 @@ function reviews(items: object[], routes: Parameters<typeof mockApi>[0] = {}) {
   const mock = mockApi({
     "GET /api/v1/me": () => json(staffUsers[1]),
     "GET /api/v1/dev/staff-users": () => json(staffUsers),
-    "GET /api/v1/reviews": () => json({ items }),
+    "GET /api/v1/reviews": () => json({ items, corrections: [] }),
     ...routes,
   });
   renderApp("/reviews", mock.api);
