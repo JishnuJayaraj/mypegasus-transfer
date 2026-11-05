@@ -3,7 +3,7 @@ import { createDb, seedProjectIds, seedStaffUserIds, seedWaves } from "@transfer
 import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import type { DatedFact, GuardFacts } from "@transfer/domain";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { failClosedFacts, type GuardFactsProvider } from "./guard-facts";
+import { dbGuardFacts, failClosedFacts, type GuardFactsProvider } from "./guard-facts";
 import { staffSubject } from "./subjects";
 import { createStatusService, StatusServiceError, type ServiceActor } from "./status-service";
 
@@ -37,13 +37,10 @@ const consultantFor = (...assigned: string[]) =>
 const system: ServiceActor = { kind: "system", job: "lifecycle.evaluate-project" };
 
 const fact: DatedFact = { validOn: "2091-01-20", recordedAt: new Date("2091-01-20T10:00:00Z") };
-const fingerprint = `sha256:v1:${"ab".repeat(32)}`;
-/** A provider with recorded facts and evidence, as Slice 4b and later will supply. */
+/** A provider with recorded facts, as Slice 6 and later supply; evidence records are real. */
 const withFacts = (facts: GuardFacts): GuardFactsProvider => ({
   facts: async (tx, input) => ({ ...(await failClosedFacts.facts(tx, input)), ...facts }),
-  evidence: async (_tx, { evidenceRecordId }) => ({
-    evidence: { ...fact, recordId: evidenceRecordId, fingerprint },
-  }),
+  evidence: dbGuardFacts.evidence,
 });
 
 const refused = (kind: StatusServiceError["kind"], code: string, failedGuards: string[] = []) =>
@@ -349,40 +346,97 @@ describe("creation and wave assignment", () => {
   });
 });
 
-describe("profiling exceptions", () => {
-  const evidenceRecordId = "00000000-0000-4000-8000-0000000000e1";
-  const withEvidence = createStatusService({ db, clock, facts: withFacts({}) });
+/** A BA confirmation recorded by the PL (data-protection.md, exception evidence); its id. */
+const evidence = async (participationId: string, reference = "AZ 1") =>
+  (
+    await service.createExceptionEvidence(pl, {
+      participationId,
+      kind: "ba_confirmation",
+      agenturKey: "beispielstadt-nord",
+      reference,
+      // Database time decides "not in the future"; the test clock runs in 2091.
+      confirmedOn: "2026-01-15",
+    })
+  ).evidenceRecordId;
 
-  it("refuses every request with evidence_missing until Slice 4b validates evidence", async () => {
+describe("profiling exceptions", () => {
+  const unknownId = "00000000-0000-4000-8000-0000000000e1";
+  it("refuses a request without a record of this participation (evidence_missing)", async () => {
+    const id = await informed({ wave: true });
+    const other = await informed({ wave: true });
+    for (const evidenceRecordId of [unknownId, await evidence(other)]) {
+      await expect(
+        service.requestProfilingException(pl, {
+          participationId: id,
+          reason: "force_majeure",
+          evidenceRecordId,
+        }),
+      ).rejects.toEqual(refused("domain", "evidence_missing"));
+    }
+    expect(await state(id)).toMatchObject({ exception_status: null, status_version: 2 });
+  });
+
+  it("records evidence by the PL only, normalised, and refuses a future confirmation", async () => {
     const id = await informed({ wave: true });
     await expect(
-      service.requestProfilingException(pl, {
+      service.createExceptionEvidence(consultantFor(id), {
         participationId: id,
-        reason: "force_majeure",
-        evidenceRecordId,
+        kind: "ba_confirmation",
+        agenturKey: "nord",
+        reference: "x",
+        confirmedOn: "2026-01-15",
       }),
-    ).rejects.toEqual(refused("domain", "evidence_missing"));
-    expect(await state(id)).toMatchObject({ exception_status: null, status_version: 2 });
+    ).rejects.toEqual(refused("forbidden", "role_not_allowed"));
+    await expect(
+      service.createExceptionEvidence(pl, {
+        participationId: id,
+        kind: "ba_confirmation",
+        agenturKey: "nord",
+        reference: "x",
+        confirmedOn: "2091-01-21",
+      }),
+    ).rejects.toEqual(refused("domain", "confirmation_in_future"));
+    const recordId = await evidence(id, "  Frau  Ünal ");
+    const { rows } = await owner.query(
+      "select reference from profiling_exception_evidence_record where id = $1",
+      [recordId],
+    );
+    expect(rows).toEqual([{ reference: "frau ünal" }]);
   });
 
   it("requests, decides by a regional operations manager and returns no fingerprint", async () => {
     const id = await informed({ wave: true });
-    const result = await withEvidence.requestProfilingException(pl, {
+    const evidenceRecordId = await evidence(id);
+    const result = await service.requestProfilingException(pl, {
       participationId: id,
       reason: "agentur_scheduling_unavailable",
       evidenceRecordId,
     });
     expect(Object.keys(result)).toEqual(["requestId"]);
+    const decision = { requestId: result.requestId, approve: true, evidenceRecordId };
+    await expect(service.decideProfilingException(pl, decision)).rejects.toEqual(
+      refused("forbidden", "role_not_allowed"),
+    );
+    // The record the approver saw must be the request's (Q208).
     await expect(
-      withEvidence.decideProfilingException(pl, { requestId: result.requestId, approve: true }),
-    ).rejects.toEqual(refused("forbidden", "role_not_allowed"));
-    await withEvidence.decideProfilingException(manager, {
-      requestId: result.requestId,
-      approve: true,
-    });
+      service.decideProfilingException(manager, { ...decision, evidenceRecordId: unknownId }),
+    ).rejects.toEqual(refused("stale", "source_changed"));
+    await service.decideProfilingException(manager, decision);
     expect(await state(id)).toMatchObject({ exception_status: "approved" });
-    await withEvidence.revokeProfilingException(pl, { requestId: result.requestId });
+    // A revocation of the status the PL no longer sees is refused.
+    await expect(
+      service.revokeProfilingException(pl, { requestId: result.requestId, status: "requested" }),
+    ).rejects.toEqual(refused("stale", "source_changed"));
+    await service.revokeProfilingException(pl, { requestId: result.requestId, status: "approved" });
     expect(await state(id)).toMatchObject({ exception_status: "revoked" });
+    // A new request needs changed evidence: an equal confirmation re-entered isn't (Q94).
+    await expect(
+      service.requestProfilingException(pl, {
+        participationId: id,
+        reason: "agentur_scheduling_unavailable",
+        evidenceRecordId: await evidence(id, " az 1"),
+      }),
+    ).rejects.toEqual(refused("domain", "evidence_unchanged"));
   });
 
   it("never lets the requester decide, even holding both roles (four eyes)", async () => {
@@ -392,22 +446,23 @@ describe("profiling exceptions", () => {
       { [werkNord]: ["project_lead"] },
       { regional_operations_manager: "all" },
     );
-    const { requestId } = await withEvidence.requestProfilingException(both, {
+    const evidenceRecordId = await evidence(id);
+    const { requestId } = await service.requestProfilingException(both, {
       participationId: id,
       reason: "force_majeure",
       evidenceRecordId,
     });
     await expect(
-      withEvidence.decideProfilingException(both, { requestId, approve: true }),
+      service.decideProfilingException(both, { requestId, approve: true, evidenceRecordId }),
     ).rejects.toEqual(refused("forbidden", "four_eyes"));
   });
 
   it("supersedes a pending request in the transaction of the change that makes it stale", async () => {
     const id = await informed({ wave: true });
-    await withEvidence.requestProfilingException(pl, {
+    await service.requestProfilingException(pl, {
       participationId: id,
       reason: "force_majeure",
-      evidenceRecordId,
+      evidenceRecordId: await evidence(id),
     });
     await service.changeStatus(consultantFor(id), {
       participationId: id,
@@ -420,35 +475,35 @@ describe("profiling exceptions", () => {
 
   it("refuses an unknown request and one that is no longer current", async () => {
     await expect(
-      service.decideProfilingException(manager, { requestId: evidenceRecordId, approve: true }),
+      service.decideProfilingException(manager, {
+        requestId: unknownId,
+        approve: true,
+        evidenceRecordId: unknownId,
+      }),
     ).rejects.toEqual(refused("not_found", "request_not_found"));
     const id = await informed({ wave: true });
-    const first = await withEvidence.requestProfilingException(pl, {
+    const firstEvidence = await evidence(id, "az 1");
+    const first = await service.requestProfilingException(pl, {
       participationId: id,
       reason: "force_majeure",
-      evidenceRecordId,
+      evidenceRecordId: firstEvidence,
     });
-    await withEvidence.decideProfilingException(manager, {
+    await service.decideProfilingException(manager, {
       requestId: first.requestId,
       approve: false,
+      evidenceRecordId: firstEvidence,
     });
-    const changed = createStatusService({
-      db,
-      clock,
-      facts: {
-        ...withFacts({}),
-        evidence: async (_tx, { evidenceRecordId: recordId }) => ({
-          evidence: { ...fact, recordId, fingerprint: `sha256:v1:${"cd".repeat(32)}` },
-        }),
-      },
-    });
-    await changed.requestProfilingException(pl, {
+    await service.requestProfilingException(pl, {
       participationId: id,
       reason: "force_majeure",
-      evidenceRecordId,
+      evidenceRecordId: await evidence(id, "az 2"),
     });
     await expect(
-      changed.decideProfilingException(manager, { requestId: first.requestId, approve: true }),
+      service.decideProfilingException(manager, {
+        requestId: first.requestId,
+        approve: true,
+        evidenceRecordId: firstEvidence,
+      }),
     ).rejects.toEqual(refused("stale", "request_not_current"));
   });
 });

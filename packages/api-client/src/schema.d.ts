@@ -13047,6 +13047,458 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/exception-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** An evidence record for a profiling exception (the PL, while informed): accepted evidence documents of the participation, or a BA confirmation (Agentur, contact or reference, date; normalised). Immutable; its fingerprint stays in the database */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ExceptionEvidenceInput"];
+                };
+            };
+            responses: {
+                /** @description Recorded; the record's opaque id */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExceptionEvidenceCreated"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/profiling-exception-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request a profiling exception (the PL, while informed and before the TG start): a reason code and the evidence record it rests on; a new request after a rejection or revocation needs changed evidence (evidence_unchanged) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingExceptionRequestInput"];
+                };
+            };
+            responses: {
+                /** @description Requested; the request id */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProfilingExceptionRequested"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiling-exception-requests/{requestId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve or reject a pending profiling exception (the regional operations manager of the project's region, never the requester): names the evidence record shown in Freigaben (409 source_changed if the request rests on another); an approval needs that evidence still usable */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingExceptionDecisionInput"];
+                };
+            };
+            responses: {
+                /** @description Decided */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profiling-exception-requests/{requestId}/revocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revoke the current profiling exception request or approval (the PL, before TG entry): names the status shown on the tab (409 source_changed if it was decided meanwhile). After entry the completion and compliance workflow applies instead */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    requestId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProfilingExceptionRevocationInput"];
+                };
+            };
+            responses: {
+                /** @description Revoked */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unsupported media type */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; no name, case data or evidence content */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The pending requests */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReviewQueue"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dev/outbox": {
         parameters: {
             query?: never;
@@ -14870,7 +15322,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -16195,6 +16647,7 @@ export interface components {
             signedDeclarations?: components["schemas"]["Tl407SignedDeclarations"];
             tl407Submission: components["schemas"]["Tl407SubmissionState"];
             tl407Versions: string[];
+            exception: components["schemas"]["ProfilingExceptionView"];
             transitions: components["schemas"]["ProfilingTransition"][];
             capabilities: {
                 record: boolean;
@@ -16375,6 +16828,46 @@ export interface components {
         AgenturRejectionReason: "outdated_form_version" | "incomplete" | "other";
         /** @enum {string|null} */
         Tl407SubmissionProblem: "participation_closed" | "placement_agentur_missing" | "submission_settings_missing" | "scan_unusable" | "already_submitted" | "form_version_outdated" | "submitted_on_in_future" | "submitted_before_signature" | "submitted_before_rejection" | null;
+        ProfilingExceptionView: {
+            current: {
+                /** Format: uuid */
+                requestId: string;
+                /** @enum {string} */
+                status: "requested" | "approved" | "rejected" | "revoked" | "superseded";
+                /** @enum {string} */
+                reason: "participant_prevented_documented" | "agentur_scheduling_unavailable" | "force_majeure" | "ba_confirmed_other";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                requestedOn: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                decidedOn: string | null;
+                /** Format: uuid */
+                evidenceRecordId: string;
+                /** @enum {string} */
+                evidenceKind: "documents" | "ba_confirmation";
+            } | null;
+            evidenceDocuments: {
+                /** Format: uuid */
+                documentId: string;
+                /** Format: date-time */
+                addedAt: string;
+                /** @enum {string} */
+                reviewState: "unreviewed" | "accepted" | "rejected";
+                usable: boolean;
+            }[];
+            capabilities: {
+                addEvidence: boolean;
+                request: boolean;
+                revoke: boolean;
+            };
+        };
         ProfilingTransition: {
             /** @enum {string} */
             to: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
@@ -17182,6 +17675,77 @@ export interface components {
         };
         /** @enum {string} */
         EscalationType: "tl407_not_submitted" | "profiling_compliance";
+        ExceptionEvidenceCreated: {
+            /** Format: uuid */
+            evidenceRecordId: string;
+        };
+        ExceptionEvidenceInput: {
+            /** @enum {string} */
+            kind: "documents";
+            documentIds: string[];
+        } | {
+            /** @enum {string} */
+            kind: "ba_confirmation";
+            agenturKey: string;
+            reference: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            confirmedOn: string;
+        };
+        ProfilingExceptionRequested: {
+            /** Format: uuid */
+            requestId: string;
+        };
+        ProfilingExceptionRequestInput: {
+            /** @enum {string} */
+            reason: "participant_prevented_documented" | "agentur_scheduling_unavailable" | "force_majeure" | "ba_confirmed_other";
+            /** Format: uuid */
+            evidenceRecordId: string;
+        };
+        ProfilingExceptionDecisionInput: {
+            /** @enum {string} */
+            decision: "approve" | "reject";
+            /** Format: uuid */
+            evidenceRecordId: string;
+        };
+        ProfilingExceptionRevocationInput: {
+            /** @enum {string} */
+            status: "requested" | "approved";
+        };
+        ReviewQueue: {
+            items: {
+                /** Format: uuid */
+                requestId: string;
+                /** Format: uuid */
+                projectId: string;
+                projectName: string;
+                /** @enum {string} */
+                reason: "participant_prevented_documented" | "agentur_scheduling_unavailable" | "force_majeure" | "ba_confirmed_other";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                requestedOn: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                tgStart: string | null;
+                /** Format: uuid */
+                evidenceRecordId: string;
+                /** @enum {string} */
+                evidenceKind: "documents" | "ba_confirmation";
+                evidencePresent: boolean;
+                capabilities: {
+                    decide: boolean;
+                };
+            }[];
+        };
         DevStaffUser: {
             /** Format: uuid */
             id: string;

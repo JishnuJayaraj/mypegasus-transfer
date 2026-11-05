@@ -82,16 +82,46 @@ async function tl407Facts(tx: Transaction, participationIds: readonly string[]) 
 }
 
 /**
+ * The evidence record a request names (data-protection.md, exception evidence; Q94, Q194): of
+ * this participation and still usable (`exception_evidence_usable`), valid from the BA's
+ * confirmation date or, for documents, the day it was recorded; a BA confirmation also gives
+ * the `ba_confirmed_other` fact. Undefined otherwise (`evidence_missing`). Read after the
+ * participation is locked; the request function reads it again.
+ */
+async function recordedEvidence(
+  tx: Transaction,
+  { participationId, evidenceRecordId }: { participationId: string; evidenceRecordId: string },
+): Promise<RequestEvidence | undefined> {
+  const { rows } = await tx.execute<{
+    kind: "documents" | "ba_confirmation";
+    fingerprint: string;
+    valid_on: string;
+    recorded_at: string;
+    usable: boolean;
+  }>(sql`select kind, fingerprint, coalesce(confirmed_on, created_on)::text as valid_on,
+      ${utcText("created_at")} as recorded_at, exception_evidence_usable(id) as usable
+    from profiling_exception_evidence_record
+    where id = ${evidenceRecordId}::uuid and participation_id = ${participationId}::uuid`);
+  const row = rows[0];
+  if (!row?.usable) return undefined;
+  const fact = { validOn: row.valid_on, recordedAt: new Date(row.recorded_at) };
+  return {
+    evidence: { ...fact, recordId: evidenceRecordId, fingerprint: row.fingerprint },
+    ...(row.kind === "ba_confirmation" && { baConfirmation: fact }),
+  };
+}
+
+/**
  * The facts recorded in the database (process-and-lifecycle.md, guards and the snapshot rule):
  * `tl407Signed` and `profilingDone` from `tl407_facts`, which counts only accepted TL 407 scans
  * that are neither quarantined nor invalidated, and `asuRegisteredWithProof` from the ASU record
  * (`asuRegisteredSince`: a usable proof, recorded when the complete registration-with-proof was),
- * each with the database instant its complete fact was recorded at. Everything else stays fail
- * closed until its slice records it (the DSV in Slice 7, the exception evidence in PR 6-7).
+ * each with the database instant its complete fact was recorded at, and a request's evidence
+ * record. Everything else stays fail closed until its slice records it (the DSV in Slice 7).
  */
 export const dbGuardFacts: GuardFactsProvider = {
   facts: async (tx, input) => (await dbGuardFacts.many!(tx, [input]))[0]!,
-  evidence: failClosedFacts.evidence,
+  evidence: recordedEvidence,
   many: async (tx, inputs) => {
     const ids = inputs.map((input) => input.participationId);
     const recorded = await tl407Facts(tx, ids);

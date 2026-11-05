@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalEvidence,
   ExceptionEvidenceInput,
+  maySeeReview,
   normaliseBaConfirmation,
   normaliseBaReference,
+  seesReviews,
 } from "./exception-evidence";
 
 const participationId = "00000000-0000-4000-a000-000000000001";
@@ -120,5 +122,34 @@ describe("ExceptionEvidenceInput", () => {
         agenturKey: "nord",
       }).success,
     ).toBe(false);
+  });
+});
+
+const manager = (regionIds: "all" | ReadonlySet<string>) =>
+  ({
+    kind: "staff",
+    staffUserId: "rom-1",
+    orgRoles: new Map([["regional_operations_manager" as const, { regionIds }]]),
+    projectRoles: {},
+    assignedParticipationIds: new Set<string>(),
+  }) as const;
+
+describe("the queue Freigaben (Q80)", () => {
+  const regionalAdmin = {
+    ...manager("all"),
+    orgRoles: new Map([["regional_admin" as const, { regionIds: "all" as const }]]),
+  };
+
+  it("is the regional operations manager's, for the projects of their regions", () => {
+    const north = manager(new Set(["north"]));
+    expect(seesReviews(north)).toBe(true);
+    expect(seesReviews(regionalAdmin)).toBe(false);
+    expect(seesReviews({ kind: "participant", participationId: "p" } as never)).toBe(false);
+    expect(maySeeReview(north, { regionId: "north" })).toBe(true);
+    expect(maySeeReview(north, { regionId: "south" })).toBe(false);
+    expect(maySeeReview(north, { regionId: null })).toBe(false);
+    expect(maySeeReview(manager("all"), { regionId: null })).toBe(true);
+    expect(maySeeReview(regionalAdmin, { regionId: "north" })).toBe(false);
+    expect(maySeeReview({ kind: "participant" } as never, { regionId: "north" })).toBe(false);
   });
 });

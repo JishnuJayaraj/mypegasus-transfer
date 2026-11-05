@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Subject } from "../access/decide";
 import { isoDate, type IsoDate } from "../iso-date";
 import { ProfilingExceptionReason, ProfilingExceptionStatus } from "../lifecycle/enums";
 import { AgenturKey } from "../projects/agentur-settings";
@@ -99,8 +100,12 @@ export const ExceptionEvidenceInput = z
 export type ExceptionEvidenceInput = z.infer<typeof ExceptionEvidenceInput>;
 
 export const ExceptionEvidenceCreated = z
-  .object({ evidenceRecordId: z.uuid(), kind: ExceptionEvidenceKind })
+  .object({ evidenceRecordId: z.uuid() })
   .meta({ id: "ExceptionEvidenceCreated" });
+
+export const ProfilingExceptionRequested = z
+  .object({ requestId: z.uuid() })
+  .meta({ id: "ProfilingExceptionRequested" });
 
 /** `POST /participations/{id}/profiling-exception-requests`: the reason and the record it rests on. */
 export const ProfilingExceptionRequestInput = z
@@ -115,9 +120,12 @@ export const ProfilingExceptionDecisionInput = z
   .strictObject({ decision: z.enum(["approve", "reject"]), evidenceRecordId: z.uuid() })
   .meta({ id: "ProfilingExceptionDecisionInput" });
 
-/** `POST /profiling-exception-requests/{id}/revocation`: the record the PL saw on the tab. */
+/**
+ * `POST /profiling-exception-requests/{id}/revocation`: the status the PL saw on the tab
+ * (`409 source_changed` if it was decided meanwhile).
+ */
 export const ProfilingExceptionRevocationInput = z
-  .strictObject({ evidenceRecordId: z.uuid() })
+  .strictObject({ status: z.enum(["requested", "approved"]) })
   .meta({ id: "ProfilingExceptionRevocationInput" });
 
 /** An evidence document of the participation as the exception block shows it: no file, no name. */
@@ -173,3 +181,18 @@ export const ReviewItem = z.object({
 export type ReviewItem = z.infer<typeof ReviewItem>;
 
 export const ReviewQueue = z.object({ items: z.array(ReviewItem) }).meta({ id: "ReviewQueue" });
+
+/** Who has the queue "Freigaben": a regional operations manager (Q80). */
+export function seesReviews(subject: Subject): boolean {
+  return subject.kind === "staff" && subject.orgRoles.has("regional_operations_manager");
+}
+
+/** Whether a project's requests are in the viewer's "Freigaben": their region's (Q80, Q126). */
+export function maySeeReview(subject: Subject, project: { regionId: string | null }): boolean {
+  if (subject.kind !== "staff") return false;
+  const scope = subject.orgRoles.get("regional_operations_manager")?.regionIds;
+  return (
+    scope === "all" ||
+    (scope !== undefined && project.regionId !== null && scope.has(project.regionId))
+  );
+}

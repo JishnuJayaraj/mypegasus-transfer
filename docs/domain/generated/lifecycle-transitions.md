@@ -77,7 +77,7 @@ their slices (3, 5, 7).
 |---|---|---|
 | `assignEntryWave` | PL | `actor_not_allowed`, `not_ta_tg`, `status_not_open`, `dsv_already_offered`, `individual_dates_set`, `wave_of_other_project`, `wave_unchanged` |
 | `requestProfilingException` | PL | `actor_not_allowed`, `not_ta_tg`, `not_informed`, `profiling_closed`, `no_future_start`, `exception_open`, `reason_invalid`, `evidence_missing`, `evidence_unchanged`, `ba_confirmation_missing` |
-| `decideProfilingException` | Regional operations manager | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed`, `no_future_start` |
+| `decideProfilingException` | Regional operations manager | `actor_not_allowed`, `not_requested`, `four_eyes`, `not_informed`, `profiling_closed`, `no_future_start`, `evidence_missing` |
 | `revokeProfilingException` | PL | `actor_not_allowed`, `not_revocable`, `no_longer_applicable`, `not_informed` |
 | `supersedeStaleException` | system | `not_pending`, `still_applicable` |
 | `correctEndReason` | PL | `actor_not_allowed`, `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged` |

@@ -58,6 +58,7 @@ import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
 import { fieldEncryptionKey } from "../field-encryption";
 import { formRegistry } from "../forms/registry";
+import { exceptionViewOf } from "../participations/profiling-exceptions";
 import { attemptsOf, submissionSettingsOf } from "../participations/tl407-submissions";
 import { loadRelease } from "../projects/template-pins";
 import { createStatusService, StatusServiceError } from "../participations/status-service";
@@ -457,6 +458,10 @@ export function profilingRoutes(deps: Deps) {
       ...(records && { signedDeclarations: record.signed ?? null }),
       tl407Submission: await submissionStateOf(subject, target, record, today),
       tl407Versions: registry.versions("tl407"),
+      exception: await exceptionViewOf(db, subject, documentTarget, {
+        status: record.status,
+        profilingStatus: record.profilingStatus,
+      }),
       transitions,
       capabilities: {
         record: records && open,
