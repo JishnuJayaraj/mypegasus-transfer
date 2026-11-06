@@ -86,7 +86,7 @@ test("appointments: the PL invites, the participant books and cancels in the por
   const portal = await participant.newPage();
   await loggedInAsOwner(portal, baseURL!, participationId);
   await portal.goto("/portal/");
-  await portal.getByRole("link", { name: "Termine" }).click();
+  await portal.getByRole("link", { name: "Termine", exact: true }).click();
   const invitations = portal.getByRole("region", { name: "Einladungen" });
   const item = invitations.getByRole("listitem");
   await expect(item.getByRole("heading", { level: 3 })).toHaveText(/^Infoveranstaltung am /);
@@ -101,7 +101,7 @@ test("appointments: the PL invites, the participant books and cancels in the por
   // English, then back to the start page's link.
   await portal.goto("/portal/");
   await choosePortalLanguage(portal, "English");
-  await portal.getByRole("link", { name: "Appointments" }).click();
+  await portal.getByRole("link", { name: "Appointments", exact: true }).click();
   await expect(portal.getByRole("region", { name: "Invitations" })).toBeVisible();
   await expect(portal.getByRole("button", { name: "Book" })).toBeVisible();
   expect(await fitsWidth(portal)).toBe(true);
