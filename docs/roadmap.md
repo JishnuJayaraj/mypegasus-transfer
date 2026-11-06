@@ -101,14 +101,16 @@ the participant; electronic BA interfaces; KuG claims, billing and project closu
 Agentur report and other reports (Slice 9); PDF batch jobs; AI.
 
 ## Slice 6b — UX foundation (staff app and portal)
-Placed before Slice 7 (the owner's review of the UI, 2026-11-06): one job per screen, visible
+Interleaved with Slice 7 (the owner's review of the UI, 2026-11-06; the plan's D1): 6b-1/6b-2 now
+alongside Slice 7's backend, 6b-3 before Slice 7's first web PR: one job per screen, visible
 hierarchy and progressive disclosure, built on Carbon in `packages/ui`. Shell fixes (login without
 nav, responsive menu, breadcrumbs, product mark), a UI kit (page header with actions, cards, status
 tags, designed loading/empty/error states, an interactive table), the work list (urgency sort,
 quick views, filter panel, six default columns, batch bar), the project page and dashboard ("Heute
-zu tun" first), the participant overview, and the portal home ("Das fehlt noch"). No domain,
-lifecycle or access changes. Plan: [`plans/slice-6b.md`](plans/slice-6b.md) (draft); Q210–Q214.
-Later UX polish (dark mode, saved views, "Meine Aufgaben", shortcuts, Carbon v12) is listed in its
+zu tun" first), the participant overview, and the portal home ("Das fehlt noch"). No lifecycle
+or access changes; one new domain read rule (`nextStep`). Plan: [`plans/slice-6b.md`](plans/slice-6b.md) (revised); Q221–Q225 (accepted).
+Later UX polish (dark mode, saved views, "Meine Aufgaben", shortcuts, the timeline's Slice 8
+stage, Carbon v12) is listed in its
 D9 for Slice 9 or v1.1.
 
 ## Slice 7 — DSV (F8)
