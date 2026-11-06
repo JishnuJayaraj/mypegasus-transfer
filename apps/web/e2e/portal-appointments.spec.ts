@@ -1,6 +1,6 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { seedProjectIds } from "@transfer/db";
-import { expect, expectAccessible, test } from "./helpers";
+import { choosePortalLanguage, expect, expectAccessible, test } from "./helpers";
 import { activatedParticipant, loggedInAsOwner } from "./participants";
 
 // Invitations and the portal's "Termine" (data-protection.md, invitations and appointments: the
@@ -100,7 +100,7 @@ test("appointments: the PL invites, the participant books and cancels in the por
 
   // English, then back to the start page's link.
   await portal.goto("/portal/");
-  await portal.getByLabel("Sprache").selectOption("en");
+  await choosePortalLanguage(portal, "English");
   await portal.getByRole("link", { name: "Appointments" }).click();
   await expect(portal.getByRole("region", { name: "Invitations" })).toBeVisible();
   await expect(portal.getByRole("button", { name: "Book" })).toBeVisible();

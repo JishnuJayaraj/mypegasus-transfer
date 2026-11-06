@@ -4,6 +4,7 @@ import { ApiProblemError, type components } from "@transfer/api-client";
 import { Button, InlineNotification, Stack } from "@transfer/ui";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Facts, useFormat } from "../components/appointment";
 import { problemCode } from "../problem";
 
 export const Route = createFileRoute("/appointments")({ component: Appointments });
@@ -321,52 +322,4 @@ function Heading(props: { id: string; kind: Kind; details: Details | null }) {
         : t(`appointments.kinds.${props.kind}`)}
     </h3>
   );
-}
-
-/** Time, title and venue: the generic texts the organizer chose. */
-function Facts({ details }: { details: Details }) {
-  const { t } = useTranslation();
-  const format = useFormat();
-  return (
-    <dl className="tp-appointment-facts">
-      <dt>{t("appointments.time")}</dt>
-      <dd>
-        {t("appointments.timeRange", {
-          start: format.time(details.startsAt),
-          end: format.time(details.endsAt),
-        })}
-      </dd>
-      {details.title && (
-        <>
-          <dt>{t("appointments.subject")}</dt>
-          <dd>{details.title}</dd>
-        </>
-      )}
-      <dt>{t("appointments.venue")}</dt>
-      <dd>{details.venue}</dd>
-    </dl>
-  );
-}
-
-/** Dates and times in Europe/Berlin, in the page's language. */
-function useFormat() {
-  const { i18n } = useTranslation();
-  const locale = i18n.resolvedLanguage === "en" ? "en-GB" : "de-DE";
-  const date = new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Berlin",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-  const time = new Intl.DateTimeFormat(locale, {
-    timeZone: "Europe/Berlin",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  return {
-    date: (at: string) => date.format(Date.parse(at)),
-    time: (at: string) => time.format(Date.parse(at)),
-  };
 }

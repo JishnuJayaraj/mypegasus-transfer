@@ -1,20 +1,20 @@
-import { expect, expectAccessible, test } from "./helpers";
+import { choosePortalLanguage, expect, expectAccessible, test } from "./helpers";
 
-// AC-18: the portal (built, served by the API at /portal/) renders in German, switches to
-// English with <html lang>, and shows the API status. The web and portal SPAs are separate
-// builds; this suite drives both over HTTP only.
-test("portal: German by default, switch to English, API status", async ({ page }) => {
+// AC-18: the portal (built, served by the API at /portal/) renders in German and switches to
+// English with <html lang> in its header. The web and portal SPAs are separate builds; this suite
+// drives both over HTTP only. The start page shows no API status (slice 6b, AC 13).
+test("portal: German by default, switch to English in the header, no API status", async ({
+  page,
+}) => {
   await page.goto("/portal/");
   await expect(page.getByRole("heading", { name: "Willkommen" })).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("lang", "de");
   await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-  await expect(page.getByText(/Verbindung zum Server besteht/)).toBeVisible();
+  await expect(page.getByText(/Verbindung zum Server/)).toHaveCount(0);
   await expectAccessible(page);
 
-  await page.getByLabel("Sprache").selectOption("en");
+  await choosePortalLanguage(page, "English");
   await expect(page.getByRole("heading", { name: "Welcome" })).toBeVisible();
-  await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByText(/Connected to the server/)).toBeVisible();
   await expectAccessible(page);
 });
 

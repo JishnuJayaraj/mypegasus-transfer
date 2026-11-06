@@ -11,6 +11,8 @@ import {
   ParticipationSensitiveQuery,
   ParticipationSensitiveValues,
   PortalConsents,
+  PortalProgress,
+  portalProgress,
   PortalSelfService,
   PortalSelfServiceWrite,
   PortalSensitiveValues,
@@ -27,6 +29,7 @@ import {
   sensitiveValuesSchema,
   valueIssueCode,
   valueWarnings,
+  type AppointmentKind,
   type PortalStepUp,
   type SelfServiceField,
   type SensitiveField,
@@ -166,6 +169,56 @@ export function selfServiceRoutes(deps: Deps) {
       c.header("Cache-Control", "no-store");
       const session = portalSession(c);
       return c.json(await stateOf(session.participationId, session.tokenHash), 200);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "get",
+      path: "/portal/progress",
+      tags: ["portal"],
+      summary:
+        "The portal home's checklist: the participant's tasks with a done flag and the optional pages; no value",
+      middleware: active,
+      responses: {
+        200: json(PortalProgress, "The tasks"),
+        ...problemResponses("unauthenticated"),
+      },
+    }),
+    async (c) => {
+      c.header("Cache-Control", "no-store");
+      const { participationId } = portalSession(c);
+      const now = deps.clock.now().toISOString();
+      // Invited appointments that still count: booked ones, and upcoming ones not cancelled.
+      const [record, { rows: invitations }] = await Promise.all([
+        loadSelfService(db, release, participationId),
+        db.execute<{ appointmentId: string; kind: AppointmentKind; booked: boolean }>(
+          sql`select * from (
+                select a.id as "appointmentId", a.kind, a.status, a.starts_at, exists (
+                  select 1 from appointment_booking b
+                  where b.appointment_id = a.id and b.participation_id = ${participationId}::uuid
+                    and b.status = 'booked') as booked
+                from appointment a
+                where a.id in (select appointment_id from participant_reminder
+                               where participation_id = ${participationId}::uuid
+                                 and kind = 'appointment_invitation')
+              ) invited
+              where booked or (status = 'scheduled' and starts_at > ${now}::timestamptz)
+              order by starts_at, "appointmentId"`,
+        ),
+      ]);
+      return c.json(
+        portalProgress({
+          wizard: record!.wizard,
+          noticeAcknowledged: record!.acknowledgedAt !== null,
+          invitations: invitations.map(({ appointmentId, kind, booked }) => ({
+            appointmentId,
+            kind,
+            booked,
+          })),
+        }),
+        200,
+      );
     },
   );
 

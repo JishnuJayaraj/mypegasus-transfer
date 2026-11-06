@@ -8,7 +8,7 @@ import {
   seedProjectIds,
 } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, openPortalAccountMenu, test } from "./helpers";
 
 const PRIVATE = "erika.privat@example.org";
 
@@ -119,6 +119,10 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await expectAccessible(page);
   await page.getByRole("link", { name: "Zur Startseite" }).click();
   await expect(page.getByRole("heading", { name: "Hallo Erika" })).toBeVisible();
+  await expectAccessible(page);
+  // "Mein Konto" holds the masked channels.
+  await openPortalAccountMenu(page);
+  await page.getByRole("link", { name: "Mein Konto" }).click();
   await expect(page.getByText(/E-Mail e…@example.org, bestätigt am/)).toBeVisible();
   await expectAccessible(page);
 
@@ -133,6 +137,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
 
   // The participant logs out and logs in again by code, through the email's link (ADR-0007).
   await page.goto("/portal/");
+  await openPortalAccountMenu(page);
   await page.getByRole("button", { name: "Abmelden" }).click();
   await page.getByRole("link", { name: "Anmelden" }).click();
   await expect(page).toHaveURL(/\/portal\/login$/);
@@ -152,6 +157,7 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await expect(page.getByRole("heading", { name: "Hallo Erika" })).toBeVisible();
 
   // Channels (Q123): the masked list; the last one warns before it goes.
+  await page.goto("/portal/account");
   await page.getByRole("link", { name: "Kontaktwege verwalten" }).click();
   await expect(page.getByRole("heading", { name: "Ihre Kontaktwege" })).toBeVisible();
   await page.getByRole("button", { name: "Entfernen" }).click();

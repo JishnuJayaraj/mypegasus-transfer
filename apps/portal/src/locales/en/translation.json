@@ -5,27 +5,63 @@
     "notFound": "This page does not exist."
   },
   "language": {
-    "label": "Language"
+    "menu": "Language: {{language}}"
   },
   "home": {
     "title": "Welcome",
-    "intro": "Soon you will be able to enter your details for the transfer project and see your documents here.",
-    "activate": "Activate your access",
+    "intro": "In the participant portal you give your details for the transfer project, upload documents and book appointments.",
+    "loginTitle": "You already have access",
+    "loginText": "Log in with your email address or mobile number. We will send you a login code.",
+    "login": "Log in",
+    "activateTitle": "You are here for the first time",
+    "activateText": "Did you receive a letter with an activation code? Use it to set up your access.",
+    "activate": "Start with an activation code",
     "greeting": "Hello {{name}}",
+    "areas": "Your areas",
+    "selfService": "My details",
+    "selfServiceText": "Your details for the counselling and your documents.",
+    "appointments": "Appointments",
+    "appointmentsText": "Invitations, booked appointments and appointments to book.",
+    "consents": "Consents",
+    "consentsText": "What you consented to, and since when.",
     "channels": "Your contact details",
     "channelEmail": "Email {{address}}, confirmed on {{at}}",
     "channelSms": "Mobile {{address}}, confirmed on {{at}}",
-    "logout": "Log out",
-    "login": "Log in",
     "manageChannels": "Manage your contact details",
-    "selfService": "My details",
-    "consents": "Consents",
-    "appointments": "Appointments"
+    "missing": {
+      "title": "Still to do",
+      "progress": "Your progress",
+      "count": "{{done}} of {{total}} tasks done ({{percent}} %)",
+      "nothing": "Nothing is missing from you at the moment. When there is something to do, it will be here.",
+      "done_one": "{{count}} task done",
+      "done_other": "{{count}} tasks done",
+      "stateOpen": "Open:",
+      "stateDone": "Done:",
+      "notice": "Read and confirm the information about your details",
+      "section": "Give your details: {{page}}",
+      "upload": "Upload a document: {{type}}",
+      "appointment": "Book an appointment: {{kind}}",
+      "optional": "Optional",
+      "optionalText": "These details help the counselling. They are optional and do not count towards your progress.",
+      "failed": "Your tasks could not be loaded."
+    },
+    "next": {
+      "title": "Your next appointment",
+      "none": "You have no appointment booked at the moment.",
+      "invited_one": "You have an invitation to an appointment. Please book it.",
+      "invited_other": "You have {{count}} invitations to appointments. Please book them.",
+      "all": "All appointments"
+    }
+  },
+  "account": {
+    "menu": "My account",
+    "title": "My account",
+    "session": "Session",
+    "sessionText": "On a shared or someone else's device, please always log out.",
+    "logout": "Log out"
   },
   "status": {
-    "checking": "Checking the connection …",
-    "ok": "Connected to the server (version {{version}}).",
-    "unavailable": "The server cannot be reached right now. Please try again later."
+    "checking": "Checking the connection …"
   },
   "activate": {
     "title": "Activate your access",

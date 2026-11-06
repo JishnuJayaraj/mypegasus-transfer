@@ -5,27 +5,63 @@
     "notFound": "Diese Seite gibt es nicht."
   },
   "language": {
-    "label": "Sprache"
+    "menu": "Sprache: {{language}}"
   },
   "home": {
     "title": "Willkommen",
-    "intro": "Hier können Sie bald Ihre Angaben für das Transferprojekt machen und Ihre Unterlagen einsehen.",
-    "activate": "Zugang aktivieren",
+    "intro": "Im Teilnehmerportal machen Sie Ihre Angaben für das Transferprojekt, laden Unterlagen hoch und buchen Termine.",
+    "loginTitle": "Sie haben schon einen Zugang",
+    "loginText": "Melden Sie sich mit Ihrer E-Mail-Adresse oder Mobilnummer an. Wir senden Ihnen einen Anmeldecode.",
+    "login": "Anmelden",
+    "activateTitle": "Sie sind zum ersten Mal hier",
+    "activateText": "Sie haben einen Brief mit einem Aktivierungscode bekommen? Damit richten Sie Ihren Zugang ein.",
+    "activate": "Mit Aktivierungscode starten",
     "greeting": "Hallo {{name}}",
+    "areas": "Ihre Bereiche",
+    "selfService": "Meine Angaben",
+    "selfServiceText": "Ihre Angaben für die Beratung und Ihre Unterlagen.",
+    "appointments": "Termine",
+    "appointmentsText": "Einladungen, gebuchte Termine und Termine zum Buchen.",
+    "consents": "Einwilligungen",
+    "consentsText": "Wozu Sie eingewilligt haben, und seit wann.",
     "channels": "Ihre Kontaktwege",
     "channelEmail": "E-Mail {{address}}, bestätigt am {{at}}",
     "channelSms": "Mobilnummer {{address}}, bestätigt am {{at}}",
-    "logout": "Abmelden",
-    "login": "Anmelden",
     "manageChannels": "Kontaktwege verwalten",
-    "selfService": "Meine Angaben",
-    "consents": "Einwilligungen",
-    "appointments": "Termine"
+    "missing": {
+      "title": "Das fehlt noch",
+      "progress": "Ihr Fortschritt",
+      "count": "{{done}} von {{total}} Aufgaben erledigt ({{percent}} %)",
+      "nothing": "Zurzeit fehlt nichts von Ihnen. Wenn wieder etwas zu tun ist, steht es hier.",
+      "done_one": "{{count}} Aufgabe erledigt",
+      "done_other": "{{count}} Aufgaben erledigt",
+      "stateOpen": "Offen:",
+      "stateDone": "Erledigt:",
+      "notice": "Hinweise zu Ihren Angaben lesen und bestätigen",
+      "section": "Angaben machen: {{page}}",
+      "upload": "Unterlage hochladen: {{type}}",
+      "appointment": "Termin buchen: {{kind}}",
+      "optional": "Freiwillig",
+      "optionalText": "Diese Angaben helfen bei der Beratung. Sie sind freiwillig und zählen nicht zum Fortschritt.",
+      "failed": "Ihre Aufgaben konnten nicht geladen werden."
+    },
+    "next": {
+      "title": "Ihr nächster Termin",
+      "none": "Sie haben zurzeit keinen Termin gebucht.",
+      "invited_one": "Sie haben eine Einladung zu einem Termin. Bitte buchen Sie ihn.",
+      "invited_other": "Sie haben {{count}} Einladungen zu Terminen. Bitte buchen Sie sie.",
+      "all": "Alle Termine"
+    }
+  },
+  "account": {
+    "menu": "Mein Konto",
+    "title": "Mein Konto",
+    "session": "Sitzung",
+    "sessionText": "Auf einem fremden oder geteilten Gerät melden Sie sich bitte immer ab.",
+    "logout": "Abmelden"
   },
   "status": {
-    "checking": "Verbindung wird geprüft …",
-    "ok": "Verbindung zum Server besteht (Version {{version}}).",
-    "unavailable": "Der Server ist gerade nicht erreichbar. Bitte versuchen Sie es später noch einmal."
+    "checking": "Verbindung wird geprüft …"
   },
   "activate": {
     "title": "Zugang aktivieren",

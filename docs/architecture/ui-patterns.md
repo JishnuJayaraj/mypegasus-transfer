@@ -88,6 +88,8 @@ primitives, following the Carbon for IBM Products patterns without depending on
 | A task over the page (form, filters, bulk action) | `SidePanel` | Below. |
 | An action that may be blocked | `ActionButton unavailableReason` | C1. |
 | A confirmation or a short choice | Carbon `Modal` | As before; a modal with input follows C4. |
+| Progress of tasks (not loading) | a native `progress` in `.tp-task-progress` | With a visible label and the count ("3 von 10 Aufgaben erledigt (30 %)") as its description (the portal, below). |
+| A header menu (user menu, the portal's language switch) | `HeaderPanelAction` | Its content renders only while open; `close()` returns the focus to the button, `close({ returnFocus: false })` after a link. |
 
 ### The work list
 
@@ -121,6 +123,26 @@ menu's trigger for that (`RowAction.onClick(trigger)`), since the menu item is g
 filters, side panels and dialogs are one column and fully usable without two-dimensional
 scrolling. Only a data table may scroll horizontally, inside its own focusable container; the
 page never does. Each UI PR records a manual zoom check (200% and 400%) with its axe results.
+
+### The portal
+
+The participant portal (`apps/portal`) is mobile-first at 320px and uses the same kit. Its shell
+(`PortalShell`) is the staff shell's dark header without a side navigation; its `actions` are the
+language switch (a `HeaderPanelAction` named "Sprache: Deutsch", each language named in itself
+with `lang` and `aria-pressed`; choosing one closes the panel and returns the focus) and, while
+logged in, the account menu ("Mein Konto", "Abmelden"). No page body has a language select. A
+panel link that leaves the page closes it with `close({ returnFocus: false })`, so the focus
+doesn't jump back into the header.
+
+The start page answers "What do I still have to do?" (C5). Logged out it offers one choice in two
+cards: "Anmelden" and "Mit Aktivierungscode starten", each with a sentence on who it is for.
+Logged in: the one `h1` (the greeting), the card "Das fehlt noch" (the progress, the open tasks
+each as a link to where it is done, the done ones behind a `details` summary, then "Freiwillig"
+outside the count), the card "Ihr nächster Termin", then the participant's areas as cards with
+one link each (the title; the text is its description, the whole card clickable). Task progress is
+a native `progress` (`.tp-task-progress`), never Carbon's `ProgressBar`, which marks itself busy and
+announces "Loading". Each task's state is an icon and visually hidden text ("Offen:",
+"Erledigt:"), never colour alone. The channels and "Abmelden" are on "Mein Konto" (`/account`).
 
 ## i18n
 

@@ -15,7 +15,6 @@ import {
 import { InlineNotification, Stack } from "@transfer/ui";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { LanguageSelect } from "../components/language";
 
 export const Route = createFileRoute("/self-service")({
   validateSearch: (search: Record<string, unknown>): { step?: string } =>
@@ -135,7 +134,6 @@ function SelfService() {
   const source = useMemo(() => portalSource(api), [api]);
   return (
     <Stack gap={6}>
-      <LanguageSelect id="self-service-language" />
       <SelfServiceWizard
         source={source}
         step={step}

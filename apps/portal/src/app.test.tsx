@@ -10,7 +10,7 @@ import { createPortalRouter } from "./router";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-/** The portal at `path` over a fake fetch that answers GET /api/v1/health. */
+/** The portal at `path` over a fake fetch that answers GET /api/v1/health and nothing else. */
 function renderPortal(health: () => Response | Promise<Response>, path = "/portal/") {
   const calls: string[] = [];
   const api = createApiClient({
@@ -36,6 +36,13 @@ afterEach(async () => {
   await i18n.changeLanguage("de");
 });
 
+/** Opens the header's language menu and picks a language. */
+async function chooseLanguage(current: string, name: string) {
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: current }));
+  await user.click(screen.getByRole("button", { name }));
+}
+
 describe("portal shell", () => {
   it("renders in German by default, with <html lang=de dir=ltr>", async () => {
     renderPortal(healthy);
@@ -44,35 +51,32 @@ describe("portal shell", () => {
     expect(document.documentElement.dir).toBe("ltr");
   });
 
-  it("shows the API status from /api/v1/health through the API client", async () => {
+  it("shows no API status on the start page and never asks the health endpoint", async () => {
     const { calls } = renderPortal(healthy);
-    expect(
-      await screen.findByText("Verbindung zum Server besteht (Version 1.2.3)."),
-    ).toBeInTheDocument();
-    expect(calls).toContain("/api/v1/health");
+    expect(await screen.findByRole("heading", { name: "Willkommen" })).toBeInTheDocument();
+    expect(screen.queryByText(/Verbindung|Server/)).toBeNull();
+    expect(calls).not.toContain("/api/v1/health");
   });
 
-  it("says when the API cannot be reached", async () => {
-    renderPortal(() => Promise.reject(new TypeError("Failed to fetch")));
-    expect(await screen.findByText(/Der Server ist gerade nicht erreichbar/)).toBeInTheDocument();
-  });
-
-  it("switches to English: text and <html lang> change (AC-18)", async () => {
+  it("switches to English in the header: text and <html lang> change, the focus returns (AC-18)", async () => {
     renderPortal(healthy);
-    await userEvent.selectOptions(await screen.findByLabelText("Sprache"), "en");
+    await chooseLanguage("Sprache: Deutsch", "English");
 
     expect(await screen.findByRole("heading", { name: "Welcome" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Language")).toHaveValue("en");
-    expect(await screen.findByText("Connected to the server (version 1.2.3).")).toBeInTheDocument();
+    const menu = screen.getByRole("button", { name: "Language: English" });
+    expect(menu).toHaveFocus();
     expect(document.documentElement.lang).toBe("en");
     expect(document.documentElement.dir).toBe("ltr");
   });
 
-  it("names each language in that language", async () => {
+  it("names each language in that language and marks the current one", async () => {
+    const user = userEvent.setup();
     renderPortal(healthy);
-    const english = await screen.findByRole("option", { name: "English" });
+    await user.click(await screen.findByRole("button", { name: "Sprache: Deutsch" }));
+    const english = screen.getByRole("button", { name: "English" });
     expect(english).toHaveAttribute("lang", "en");
-    expect(screen.getByRole("option", { name: "Deutsch" })).toHaveAttribute("lang", "de");
+    expect(english).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Deutsch" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("shows a not-found message for unknown portal paths", async () => {
@@ -94,9 +98,9 @@ describe("public Article 14 notice", () => {
     expect(calls).toEqual([]);
   });
 
-  it("switches the immutable notice to English", async () => {
+  it("switches the immutable notice to English in the header", async () => {
     renderPortal(healthy, path);
-    await userEvent.selectOptions(await screen.findByLabelText("Sprache"), "en");
+    await chooseLanguage("Sprache: Deutsch", "English");
     expect(
       await screen.findByRole("heading", { name: "Privacy information under Article 14 GDPR" }),
     ).toBeInTheDocument();

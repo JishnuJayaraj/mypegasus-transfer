@@ -167,7 +167,7 @@ describe("activation (D22, D23)", () => {
 });
 
 describe("the portal home", () => {
-  it("greets an active participant with their masked channels and logs out", async () => {
+  it("offers the account menu to an active participant, with Mein Konto and logout", async () => {
     const user = userEvent.setup();
     let loggedIn = true;
     const { calls } = renderPortal("/portal/", {
@@ -178,17 +178,25 @@ describe("the portal home", () => {
       },
     });
     expect(await screen.findByRole("heading", { name: "Hallo Erika" })).toBeInTheDocument();
-    expect(screen.getByText(/E-Mail e…@example.org, bestätigt am 21.10.2026/)).toBeInTheDocument();
+    // the channels are on "Mein Konto", not on the start page
+    expect(screen.queryByText(/e…@example.org/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Mein Konto" }));
+    expect(screen.getByRole("link", { name: "Mein Konto" })).toHaveAttribute(
+      "href",
+      "/portal/account",
+    );
     await user.click(screen.getByRole("button", { name: "Abmelden" }));
-    expect(await screen.findByRole("link", { name: "Zugang aktivieren" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Mit Aktivierungscode starten" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mein Konto" })).toBeNull();
     expect(calls).toContainEqual({ path: "/api/v1/portal/logout", body: {} });
   });
 
   it("offers the activation without a session", async () => {
     renderPortal("/portal/", { "GET /api/v1/portal/me": () => problem(401, "unauthenticated") });
-    expect(await screen.findByRole("link", { name: "Zugang aktivieren" })).toHaveAttribute(
-      "href",
-      "/portal/activate",
-    );
+    expect(
+      await screen.findByRole("link", { name: "Mit Aktivierungscode starten" }),
+    ).toHaveAttribute("href", "/portal/activate");
   });
 });

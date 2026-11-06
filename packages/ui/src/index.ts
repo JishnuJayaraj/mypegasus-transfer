@@ -30,12 +30,17 @@ export {
 } from "@carbon/react";
 export {
   Add,
+  ArrowRight,
+  Calendar,
+  CheckmarkFilled,
+  CircleDash,
   Edit,
   Filter,
   Folder,
   Location,
   Logout,
   TaskApproved,
+  Translate,
   UserAvatar,
   UserMultiple,
   WarningAlt,

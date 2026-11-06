@@ -34,6 +34,23 @@ export const me = {
 
 export type Handler = (body: Record<string, unknown> | undefined) => Response;
 
+/** A participant with the notice done and one open page; nothing optional. */
+export const progress = {
+  tasks: [
+    { kind: "notice", done: true },
+    { kind: "section", page: "personal", done: false },
+  ],
+  optional: [],
+};
+
+export const noAppointments = { invitations: [], bookings: [], cancelled: [], bookable: [] };
+
+/** What the start page loads besides `/portal/me`, unless a test answers it itself. */
+const homeDefaults: Record<string, Handler> = {
+  "GET /api/v1/portal/progress": () => json(progress),
+  "GET /api/v1/portal/appointments": () => json(noAppointments),
+};
+
 export function renderPortal(path: string, routes: Record<string, Handler>) {
   const calls: { path: string; body?: Record<string, unknown> }[] = [];
   const api = createApiClient({
@@ -44,7 +61,8 @@ export function renderPortal(path: string, routes: Record<string, Handler>) {
       const text = request.method === "GET" ? "" : await request.text();
       const body = text ? (JSON.parse(text) as Record<string, unknown>) : undefined;
       calls.push({ path: pathname, ...(body && { body }) });
-      const handler = routes[`${request.method} ${pathname}`];
+      const key = `${request.method} ${pathname}`;
+      const handler = routes[key] ?? homeDefaults[key];
       return handler ? handler(body) : json({ status: "ok", version: "1" });
     },
   });

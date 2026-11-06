@@ -1,6 +1,7 @@
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { InlineNotification, PortalShell } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
+import { HeaderActions } from "../components/header";
 import type { RouterContext } from "../router";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -15,6 +16,7 @@ function RootLayout() {
       productName={t("app.name")}
       skipToContentLabel={t("app.skipToContent")}
       homeHref={import.meta.env.BASE_URL}
+      actions={<HeaderActions />}
     >
       <Outlet />
     </PortalShell>

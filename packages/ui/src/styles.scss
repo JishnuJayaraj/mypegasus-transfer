@@ -956,3 +956,182 @@ body {
     box-shadow: none;
   }
 }
+
+// The portal header's panels: the language list and the account menu's link.
+.tp-language-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-02;
+}
+
+.tp-language-list .cds--btn[aria-pressed="true"] {
+  @include type.type-style("heading-compact-01");
+
+  background: theme.$layer-selected-01;
+}
+
+.tp-header-panel-link {
+  @include type.type-style("body-compact-01");
+
+  color: theme.$link-primary;
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: 2px;
+  }
+}
+
+// The portal home's checklist ("Das fehlt noch"): each task's state as an icon and hidden text.
+.tp-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-04;
+}
+
+.tp-task {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-03;
+  overflow-wrap: anywhere;
+}
+
+.tp-task-icon {
+  flex: none;
+  fill: theme.$icon-secondary;
+}
+
+.tp-task--done .tp-task-icon {
+  fill: theme.$support-success;
+}
+
+.tp-task-done > summary {
+  cursor: pointer;
+  margin-block-end: $spacing-04;
+  color: theme.$link-primary;
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: 2px;
+  }
+}
+
+.tp-task-optional {
+  padding-block-start: $spacing-05;
+  border-block-start: 1px solid theme.$border-subtle-01;
+
+  > h3 {
+    @include type.type-style("heading-compact-01");
+  }
+
+  > .tp-hint {
+    margin-block: $spacing-02 $spacing-04;
+  }
+}
+
+.tp-next-appointment {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-04;
+
+  > svg {
+    flex: none;
+    fill: theme.$icon-secondary;
+  }
+}
+
+.tp-next-appointment-heading {
+  @include type.type-style("heading-compact-01");
+}
+
+// A card with one link (the portal home's areas): the link is its title, its text describes it, and
+// the link's ::after stretches over the card so the whole card is clickable.
+.tp-area-link {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: $spacing-02 $spacing-04;
+  align-items: start;
+  align-content: start;
+  block-size: 100%;
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle-01;
+  background: theme.$layer-01;
+
+  &:hover {
+    background: theme.$layer-hover-01;
+  }
+
+  &:has(a:focus-visible) {
+    outline: 2px solid theme.$focus;
+    outline-offset: -2px;
+  }
+}
+
+.tp-area-link-title {
+  @include type.type-style("heading-compact-02");
+
+  color: theme.$link-primary;
+  text-decoration: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.tp-area-link-text {
+  @include type.type-style("body-01");
+
+  grid-column: 1;
+  color: theme.$text-secondary;
+}
+
+.tp-area-link-icon {
+  grid-column: 2;
+  grid-row: 1;
+  fill: theme.$link-primary;
+}
+
+// The portal home's progress: a native <progress> (Carbon's ProgressBar announces loading).
+.tp-task-progress {
+  display: grid;
+  gap: $spacing-03;
+
+  > label {
+    @include type.type-style("label-01");
+
+    color: theme.$text-secondary;
+  }
+
+  > progress {
+    appearance: none;
+    inline-size: 100%;
+    block-size: $spacing-03;
+    border: 0;
+    background: theme.$layer-accent-01;
+    color: theme.$interactive;
+  }
+
+  > progress::-webkit-progress-bar {
+    background: theme.$layer-accent-01;
+  }
+
+  > progress::-webkit-progress-value {
+    background: theme.$interactive;
+  }
+
+  > progress::-moz-progress-bar {
+    background: theme.$interactive;
+  }
+
+  > p {
+    @include type.type-style("helper-text-01");
+
+    color: theme.$text-secondary;
+  }
+}

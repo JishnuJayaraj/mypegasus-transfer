@@ -92,3 +92,21 @@ export async function showColumn(page: Page, header: string) {
     .click();
   await list.getByRole("button", { name: "Spalten" }).click();
 }
+
+/**
+ * The portal's language switch in its header (a menu button named by the current language):
+ * opens it and picks `language`, named in itself ("English", "Deutsch").
+ */
+export async function choosePortalLanguage(page: Page, language: "Deutsch" | "English") {
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: /^(Sprache|Language):/ })
+    .click();
+  await page.getByRole("button", { name: language, exact: true }).click();
+  await expect(page.locator("html")).toHaveAttribute("lang", language === "English" ? "en" : "de");
+}
+
+/** The portal's account menu in the header: "Mein Konto" and "Abmelden". */
+export async function openPortalAccountMenu(page: Page) {
+  await page.getByRole("banner").getByRole("button", { name: "Mein Konto" }).click();
+}

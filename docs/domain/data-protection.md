@@ -750,6 +750,18 @@ and highly confidential data only; ordinary person-data writes are `participant_
   "Gesundheit" (last before "Weitere Angaben", behind the step-up) read their group each time they
   open and keep the values only in the page's form, never in the query cache; the progress bar
   counts them by presence. Nothing is kept in browser storage; logging out drops the cached state.
+- **The portal start page: "Das fehlt noch"** (`GET /api/v1/portal/progress`, `no-store`; slice
+  6b, C5 in `docs/architecture/ui-patterns.md`): the participant's own tasks with a done flag and
+  codes only, never a value: the purposes notice; each wizard page with a required field (done
+  when none is missing, the sensitive pages by presence); each required upload of the
+  participant's own document types (`documentPresent` rules that apply now, done while a
+  non-rejected document is there, or an accepted one where the rule asks for it); each appointment
+  they were invited to that is still upcoming and not cancelled, or that they booked (done with a
+  live booking). Pages without a required field are listed as "Freiwillig" and never counted, so
+  filling one changes nothing. Computed by the completeness engine (`portalProgress`); the start
+  page loads only `/portal/me`, `/portal/progress` and `/portal/appointments` (the next booking's
+  generic details), never `/portal/self-service` or a sensitive group. "Mein Konto" shows the
+  masked channels and "Abmelden".
 
 ### The profiling record *(accepted, Q49, Q85, Q192, Q193; as built in Slice 6, PR 6-2; readings Q198)*
 
