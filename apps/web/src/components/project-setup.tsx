@@ -3,6 +3,7 @@ import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   Button,
   ButtonSet,
+  Card,
   formatTimestamp,
   InlineNotification,
   Select,
@@ -11,7 +12,7 @@ import {
   Stack,
   useToast,
 } from "@transfer/ui";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { projectConfigQuery, projectQuery, templateCatalogQuery, useApi } from "../api";
 import { ProjectActivation, useSubmissionText } from "./project-activation";
@@ -25,14 +26,25 @@ const columns = ["label", "agenturKey", "version", "sha256Prefix", "pinnedAt", "
 type Notice = { kind: "success" | "error"; text: string };
 
 /**
- * The setup section of the project page (Slice 2 plan 5.13): the Project Agentur, the pinned
- * templates and what blocks the project. The pin form follows the server's capabilities for this
- * project (round 26), never catalog access: only its PL pins, and the Project Agentur is chosen
- * only while draft. A pin with newer catalog versions is migrated with review (5.8) when the
- * server says so (`capabilities.migrateTemplate`, the pin's `migrationTargets`). The API's 403
+ * The setup of the project page ("Einrichtung"), as two cards: "Projekt" (status, region, what
+ * blocks the project, its activation) and "Agentur" (the Project Agentur, the pinned templates,
+ * their migration and the Agentur-specific settings). The pin form follows the server's
+ * capabilities for this project (regional-variation.md, template versions), never catalog access:
+ * only its PL pins, and the Project Agentur is chosen only while draft. A pin with newer catalog
+ * versions is migrated with review when the server says so (`capabilities.migrateTemplate`, the pin's `migrationTargets`). The API's 403
  * stays the enforcement.
  */
-export function ProjectSetup({ projectId }: { projectId: string }) {
+export function ProjectSetup({
+  projectId,
+  region,
+  agentur,
+}: {
+  projectId: string;
+  /** The region's change form, for those who may change it (in the card "Projekt"). */
+  region?: ReactNode;
+  /** The Agentur-specific settings (in the card "Agentur", after the pins). */
+  agentur?: ReactNode;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const { data: config } = useSuspenseQuery(projectConfigQuery(api, projectId));
@@ -78,80 +90,92 @@ export function ProjectSetup({ projectId }: { projectId: string }) {
   const migratingPin = migratable.find((pin) => pin.agenturKey === migrating);
 
   return (
-    <section aria-labelledby="project-setup" className="tp-section">
-      <h2 id="project-setup">{t("setup.title")}</h2>
-      <p>
-        {project.status === "active" && project.activatedAt
-          ? t("setup.activeSince", { at: formatTimestamp(project.activatedAt) })
-          : t("setup.draft")}
-      </p>
-      <p>
-        {projectAgentur
-          ? t("setup.projectAgentur", {
-              label: projectAgentur.label.de,
-              version: projectAgentur.version,
-            })
-          : t("setup.noProjectAgentur")}
-      </p>
-      <SimpleTable
-        title={t("setup.pins")}
-        columns={[...columns, ...(migratable.length ? (["actions"] as const) : [])].map((key) => ({
-          key,
-          header: t(`setup.columns.${key}`),
-        }))}
-        rows={rows}
-        emptyState={t("setup.pinsEmpty")}
-      />
-      {migration && (
-        <InlineNotification
-          kind={migration.kind}
-          title={migration.text}
-          onClose={() => setMigration(undefined)}
-        />
-      )}
-      {migratingPin && (
-        <TemplateMigration
-          key={migratingPin.agenturKey}
-          projectId={projectId}
-          pin={migratingPin}
-          onDone={(notice) => {
-            setMigrating(undefined);
-            setMigration(notice);
-          }}
-          onCancel={() => setMigrating(undefined)}
-        />
-      )}
-      <Blockers config={config} />
-      {refusal && (
-        <InlineNotification kind="error" title={refusal} onClose={() => setRefusal(undefined)} />
-      )}
-      {warnings && (
-        <InlineNotification
-          kind="warning"
-          title={t("setup.activate.warnings")}
-          subtitle={warnings.map(submission).join(" · ")}
-          onClose={() => setWarnings(undefined)}
-        />
-      )}
-      {capabilities.activateProject && (
-        <ProjectActivation
-          projectId={projectId}
-          config={config}
-          onActivated={(found) => {
-            setRefusal(undefined);
-            setWarnings(found.length ? found : undefined);
-          }}
-          onRefused={setRefusal}
-        />
-      )}
-      {capabilities.pinTemplate && catalog.data && (
-        <PinForm
-          projectId={projectId}
-          catalog={catalog.data}
-          setsProjectAgentur={capabilities.setProjectAgentur}
-        />
-      )}
-    </section>
+    <>
+      <Card id="setup-project" title={t("setup.project")}>
+        <Stack gap={5}>
+          <p>
+            {project.status === "active" && project.activatedAt
+              ? t("setup.activeSince", { at: formatTimestamp(project.activatedAt) })
+              : t("setup.draft")}
+          </p>
+          {region}
+          <Blockers config={config} />
+          {refusal && (
+            <InlineNotification
+              kind="error"
+              title={refusal}
+              onClose={() => setRefusal(undefined)}
+            />
+          )}
+          {warnings && (
+            <InlineNotification
+              kind="warning"
+              title={t("setup.activate.warnings")}
+              subtitle={warnings.map(submission).join(" · ")}
+              onClose={() => setWarnings(undefined)}
+            />
+          )}
+          {capabilities.activateProject && (
+            <ProjectActivation
+              projectId={projectId}
+              config={config}
+              onActivated={(found) => {
+                setRefusal(undefined);
+                setWarnings(found.length ? found : undefined);
+              }}
+              onRefused={setRefusal}
+            />
+          )}
+        </Stack>
+      </Card>
+      <Card id="setup-agentur" title={t("setup.agenturTitle")}>
+        <Stack gap={5}>
+          <p>
+            {projectAgentur
+              ? t("setup.projectAgentur", {
+                  label: projectAgentur.label.de,
+                  version: projectAgentur.version,
+                })
+              : t("setup.noProjectAgentur")}
+          </p>
+          <SimpleTable
+            title={t("setup.pins")}
+            columns={[...columns, ...(migratable.length ? (["actions"] as const) : [])].map(
+              (key) => ({ key, header: t(`setup.columns.${key}`) }),
+            )}
+            rows={rows}
+            emptyState={t("setup.pinsEmpty")}
+          />
+          {migration && (
+            <InlineNotification
+              kind={migration.kind}
+              title={migration.text}
+              onClose={() => setMigration(undefined)}
+            />
+          )}
+          {migratingPin && (
+            <TemplateMigration
+              key={migratingPin.agenturKey}
+              projectId={projectId}
+              pin={migratingPin}
+              onDone={(notice) => {
+                setMigrating(undefined);
+                setMigration(notice);
+              }}
+              onCancel={() => setMigrating(undefined)}
+            />
+          )}
+          {capabilities.pinTemplate && catalog.data && (
+            <PinForm
+              projectId={projectId}
+              catalog={catalog.data}
+              setsProjectAgentur={capabilities.setProjectAgentur}
+            />
+          )}
+          {agentur}
+        </Stack>
+      </Card>
+    </>
   );
 }
 

@@ -250,9 +250,9 @@ describe("template migration with review", () => {
     ["a pin without a newer version", config(2, [])],
   ])("isn't offered to %s", async (_label, initial) => {
     setup({}, initial);
-    expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Agentur" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: action })).toBeNull();
-    const setupSection = screen.getByRole("region", { name: "Einrichtung" });
-    expect(within(setupSection).queryByRole("columnheader", { name: "Aktionen" })).toBeNull();
+    const pins = screen.getByRole("table", { name: "Gepinnte Vorlagen" });
+    expect(within(pins).queryByRole("columnheader", { name: "Aktionen" })).toBeNull();
   });
 });

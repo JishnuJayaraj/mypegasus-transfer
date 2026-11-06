@@ -17,6 +17,11 @@ export interface TableColumn {
 
 interface SimpleTableProps {
   title: string;
+  /**
+   * The title names the table without being shown, when the page's heading already says it
+   * (ui-patterns.md, principle 6: the projects page says "Projekte" once).
+   */
+  hideTitle?: boolean;
   columns: TableColumn[];
   /** Cell values are display text, already formatted, or an element such as a link. */
   rows: ({ id: string } & Record<string, ReactNode>)[];
@@ -38,10 +43,11 @@ export function SimpleTable({ footer, ...props }: SimpleTableProps) {
   );
 }
 
-function Rows({ title, columns, rows, emptyState }: Omit<SimpleTableProps, "footer">) {
+function Rows({ title, hideTitle, columns, rows, emptyState }: Omit<SimpleTableProps, "footer">) {
+  const shownTitle = hideTitle ? undefined : title;
   if (rows.length === 0) {
     return (
-      <TableContainer title={title}>
+      <TableContainer title={shownTitle}>
         <div className="tp-table-empty">{emptyState}</div>
       </TableContainer>
     );
@@ -49,8 +55,8 @@ function Rows({ title, columns, rows, emptyState }: Omit<SimpleTableProps, "foot
   return (
     <DataTable rows={rows} headers={columns}>
       {({ rows: tableRows, headers, getTableProps, getHeaderProps, getRowProps }) => (
-        <TableContainer title={title}>
-          <Table {...getTableProps()}>
+        <TableContainer title={shownTitle}>
+          <Table {...getTableProps()} aria-label={hideTitle ? title : undefined}>
             <TableHead>
               <TableRow>
                 {headers.map((header) => (

@@ -30,6 +30,8 @@ export {
 } from "@carbon/react";
 export {
   Add,
+  ChevronDown,
+  ChevronUp,
   Edit,
   Filter,
   Folder,
@@ -70,6 +72,14 @@ export {
 } from "./shell";
 export { SidePanel, type PendingNavigation } from "./side-panel";
 export { EmptyState, Loading, PageSkeleton, TableSkeleton } from "./states";
-export { StatusTag, statusCodes, statusTag, type StatusFamily, type StatusTone } from "./status";
+export {
+  StatusTag,
+  statusCodes,
+  statusTag,
+  toneIcon,
+  type StatusFamily,
+  type StatusTone,
+} from "./status";
 export { SimpleTable, type TableColumn } from "./table";
+export { CountTile, TilesSkeleton } from "./tiles";
 export { ToastProvider, useToast } from "./toast";

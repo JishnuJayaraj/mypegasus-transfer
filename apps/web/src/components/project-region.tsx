@@ -1,13 +1,30 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { ApiProblemError } from "@transfer/api-client";
-import { Button, InlineNotification, Select, SelectItem } from "@transfer/ui";
+import { Button, InlineNotification, Select, SelectItem, Stack } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { projectConfigQuery, projectQuery, regionsQuery, useApi } from "../api";
 
 /**
- * The project's region (Q126): shown to everyone who sees the project; changed by the PL while
- * draft and by a global admin at any time, as `capabilities.setProjectRegion` says.
+ * The project's region as one line of text ("Region: Niederlassung Nord (NORD)"), for the page
+ * header's metadata (Q126: everyone who sees the project sees its region).
+ */
+export function useRegionText(projectId: string): string | undefined {
+  const { t } = useTranslation();
+  const api = useApi();
+  const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
+  const regions = useQuery(regionsQuery(api));
+  if (!project.regionId) return t("projectRegion.none");
+  const current = regions.data?.find((region) => region.id === project.regionId);
+  return current
+    ? t("projectRegion.current", { region: `${current.name} (${current.code})` })
+    : undefined;
+}
+
+/**
+ * Changing the project's region (Q126), in "Einrichtung": by the PL while draft and by a global
+ * admin at any time, as `capabilities.setProjectRegion` says; nothing for anyone else, who sees
+ * the region in the page header. The API's refusal stays the enforcement.
  */
 export function ProjectRegion({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -18,7 +35,6 @@ export function ProjectRegion({ projectId }: { projectId: string }) {
   const regions = useQuery(regionsQuery(api));
   const [regionId, setRegionId] = useState(project.regionId ?? "");
   const [refusal, setRefusal] = useState<string>();
-  const current = regions.data?.find((region) => region.id === project.regionId);
 
   const change = useMutation({
     mutationFn: async () => {
@@ -40,40 +56,20 @@ export function ProjectRegion({ projectId }: { projectId: string }) {
       ),
   });
 
+  if (!config.capabilities.setProjectRegion) return null;
   return (
-    <div className="tp-bulk-actions">
-      {config.capabilities.setProjectRegion ? (
-        <>
-          <Select
-            id="project-region-change"
-            labelText={t("projectForm.region")}
-            value={regionId}
-            onChange={(event) => setRegionId(event.target.value)}
-          >
-            {!project.regionId && <SelectItem value="" text={t("projectForm.chooseRegion")} />}
-            {(regions.data ?? []).map((region) => (
-              <SelectItem
-                key={region.id}
-                value={region.id}
-                text={`${region.name} (${region.code})`}
-              />
-            ))}
-          </Select>
-          <Button
-            kind="secondary"
-            disabled={!regionId || regionId === project.regionId || change.isPending}
-            onClick={() => change.mutate()}
-          >
-            {t("projectRegion.save")}
-          </Button>
-        </>
-      ) : (
-        <p>
-          {current
-            ? t("projectRegion.current", { region: `${current.name} (${current.code})` })
-            : t("projectRegion.none")}
-        </p>
-      )}
+    <Stack gap={5} className="tp-form">
+      <Select
+        id="project-region-change"
+        labelText={t("projectForm.region")}
+        value={regionId}
+        onChange={(event) => setRegionId(event.target.value)}
+      >
+        {!project.regionId && <SelectItem value="" text={t("projectForm.chooseRegion")} />}
+        {(regions.data ?? []).map((region) => (
+          <SelectItem key={region.id} value={region.id} text={`${region.name} (${region.code})`} />
+        ))}
+      </Select>
       {refusal && (
         <InlineNotification
           kind="error"
@@ -83,6 +79,15 @@ export function ProjectRegion({ projectId }: { projectId: string }) {
           onClose={() => setRefusal(undefined)}
         />
       )}
-    </div>
+      <div>
+        <Button
+          kind="secondary"
+          disabled={!regionId || regionId === project.regionId || change.isPending}
+          onClick={() => change.mutate()}
+        >
+          {t("projectRegion.save")}
+        </Button>
+      </div>
+    </Stack>
   );
 }

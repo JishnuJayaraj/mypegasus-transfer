@@ -47,7 +47,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
 
   // Create a project; it shows at the top without a reload, as a draft. Its contractual
   // dates belong to its entry waves (Slice 2, Q79), not to this form.
-  await page.getByRole("link", { name: "Projekt anlegen" }).click();
+  await page.getByRole("link", { name: "Neues Projekt" }).click();
   await expect(page).toHaveURL(/\/projects\/new$/);
   await expectAccessible(page);
   await page.getByLabel("Projektname").fill("E2E Projekt Ost");
@@ -122,7 +122,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("button", { name: "Aktivieren" }).click();
   await expect(page.getByText("Projekt aktiviert", { exact: true })).toBeVisible();
   await expect(page.getByText(/^Status: aktiv seit/)).toBeVisible();
-  await expect(page.getByText(/· Aktiv$/)).toBeVisible();
+  // The page header's status tag (the plan of Slice 6b, 6b-4).
+  await expect(page.locator(".tp-page-header").getByText("Aktiv", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Aktivieren" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Als Projekt-Agentur festlegen" })).toHaveCount(0);
   await expectAccessible(page);
@@ -222,9 +223,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   await page.getByRole("tab", { name: "Einrichtung" }).click();
 
-  const configuration = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });
+  // The Agentur-specific settings, inside the card "Agentur" (the plan of Slice 6b, 6b-4).
+  const configuration = page.getByRole("region", { name: "Konfiguration" });
 
   // A project-specific exception to the Project Agentur's
   // template (Q93), then the migration to version 2 with its review: the PL removes the setting,
@@ -238,7 +238,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await configuration.getByLabel("Bestätigt am").fill("01.10.2026");
   await configuration.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Einstellung gespeichert")).toBeVisible();
-  const setupSection = page.getByRole("region", { name: "Einrichtung" });
+  const setupSection = page.getByRole("region", { name: "Agentur" });
   await setupSection
     .getByRole("button", { name: "Agentur für Arbeit Beispielstadt Nord (Beispiel) migrieren" })
     .click();

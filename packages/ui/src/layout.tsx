@@ -26,6 +26,8 @@ interface BlockProps {
   /** Actions for this block only, at the end of its header. */
   actions?: ReactNode;
   children?: ReactNode;
+  /** The block's own id, for an in-page link to it ("#project-import"). */
+  id?: string;
 }
 
 function BlockHeader({
@@ -35,7 +37,7 @@ function BlockHeader({
   description,
   actions,
   prefix,
-}: BlockProps & { id: string; level: HeadingLevel; prefix: string }) {
+}: Omit<BlockProps, "id"> & { id: string; level: HeadingLevel; prefix: string }) {
   return (
     <div className={`${prefix}-header`}>
       <div className={`${prefix}-heading`}>
@@ -50,10 +52,17 @@ function BlockHeader({
 }
 
 /** A titled part of a page: a heading, an optional description and actions, then the body. */
-export function Section({ title, level = 2, description, actions, children }: BlockProps) {
+export function Section({
+  title,
+  level = 2,
+  description,
+  actions,
+  children,
+  id: anchor,
+}: BlockProps) {
   const id = useId();
   return (
-    <section className="tp-section" aria-labelledby={id}>
+    <section id={anchor} className="tp-section" aria-labelledby={id}>
       <BlockHeader
         id={id}
         title={title}
@@ -68,10 +77,10 @@ export function Section({ title, level = 2, description, actions, children }: Bl
 }
 
 /** A bordered block on the layer colour, for one topic (e.g. an appointment's details). */
-export function Card({ title, level = 2, description, actions, children }: BlockProps) {
+export function Card({ title, level = 2, description, actions, children, id: anchor }: BlockProps) {
   const id = useId();
   return (
-    <section className="tp-card" aria-labelledby={id}>
+    <section id={anchor} className="tp-card" aria-labelledby={id}>
       <BlockHeader
         id={id}
         title={title}

@@ -31,7 +31,13 @@ describe("project list", () => {
       "GET /api/v1/projects": () => json({ items: [], nextCursor: null }),
     });
     renderApp("/projects", api);
-    expect(await screen.findByText("Es gibt noch keine Projekte.")).toBeInTheDocument();
+    // What this is, how a project is created and by whom (ui-patterns.md, principle 7).
+    expect(await screen.findByText("Noch keine Projekte")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ein Projekt legt an, wem die Administration das erlaubt hat/),
+    ).toBeInTheDocument();
+    // "Projekte" once: the page's h1 names the list (principle 6).
+    expect(screen.getAllByText("Projekte", { selector: "h1, h2, h3, h4" })).toHaveLength(1);
   });
 
   it("loads the next page with the cursor", async () => {

@@ -185,6 +185,18 @@ body {
   }
 }
 
+// A button never grows past its container (Carbon allows 20rem, wider than a card at 375px) and
+// a button set wraps, instead of pushing the page sideways (D10); a long label wraps inside.
+:where(.tp-content, .tp-portal-content) .cds--btn {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.cds--btn-set {
+  flex-wrap: wrap;
+  row-gap: $spacing-03;
+}
+
 // A Carbon stack's one implicit column may not grow past its container (a wide fieldset would
 // push the page sideways otherwise, D10).
 .cds--stack-vertical {
@@ -224,6 +236,21 @@ body {
 .tp-page-header-title {
   gap: $spacing-05;
   min-inline-size: 0;
+}
+
+// A header tag (a customer's or type's name) wraps instead of truncating: Carbon turns a
+// truncated tag into a button with a tooltip, a tab stop that does nothing, and at 400% zoom
+// the full text must stay readable (D10).
+.tp-page-header-tags .cds--tag {
+  max-inline-size: 100%;
+  block-size: auto;
+  min-block-size: 1.125rem;
+}
+
+.tp-page-header-tags .cds--tag__label {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tp-page-header-metadata {
@@ -281,6 +308,10 @@ body {
   h2,
   h3 {
     @include type.type-style("heading-compact-02");
+  }
+
+  h4 {
+    @include type.type-style("heading-compact-01");
   }
 }
 
@@ -571,7 +602,7 @@ body {
 // The dashboard's tiles: each one a link to the work list with its filter (Slice 5).
 .tp-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
   gap: $spacing-05;
   margin-block: $spacing-05 $spacing-07;
   padding: 0;
@@ -954,5 +985,217 @@ body {
   .tp-print-page {
     margin: 0;
     box-shadow: none;
+  }
+}
+
+// The dashboard (ui-patterns.md, dashboard; Slice 6b): "Heute zu tun" tiles, each one link with
+// icon, number, label, a severity border at the start and an arrow. A tile never forces the page
+// wider than the viewport (D10): one column at 400% zoom.
+.tp-count-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: $spacing-05;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tp-tile {
+  display: grid;
+  grid-template-areas:
+    "icon arrow"
+    "count count"
+    "label label";
+  grid-template-columns: 1fr auto;
+  row-gap: $spacing-02;
+  block-size: 100%;
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle-01;
+  border-inline-start: 4px solid theme.$border-strong-01;
+  background: theme.$layer-01;
+  color: theme.$text-primary;
+  text-decoration: none;
+
+  &:hover {
+    background: theme.$layer-hover-01;
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: -2px;
+  }
+}
+
+.tp-tile-icon {
+  grid-area: icon;
+  fill: theme.$icon-secondary;
+}
+
+.tp-tile-arrow {
+  grid-area: arrow;
+  fill: theme.$link-primary;
+}
+
+.tp-tile-count {
+  grid-area: count;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tp-tile-label {
+  @include type.type-style("body-compact-01");
+
+  grid-area: label;
+  overflow-wrap: anywhere;
+}
+
+.tp-tile--danger {
+  border-inline-start-color: theme.$support-error;
+
+  .tp-tile-icon {
+    fill: theme.$support-error;
+  }
+}
+
+.tp-tile--warning {
+  border-inline-start-color: theme.$support-warning;
+
+  .tp-tile-icon {
+    fill: theme.$support-caution-major;
+  }
+}
+
+.tp-tile--info {
+  border-inline-start-color: theme.$support-info;
+
+  .tp-tile-icon {
+    fill: theme.$support-info;
+  }
+}
+
+.tp-tile--success {
+  border-inline-start-color: theme.$support-success;
+
+  .tp-tile-icon {
+    fill: theme.$support-success;
+  }
+}
+
+.tp-tile-skeleton.cds--skeleton__placeholder {
+  inline-size: 100%;
+  block-size: 7.5rem;
+}
+
+// "Weitere offene Arbeit": the other counts as one wrapping line of links.
+.tp-count-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03 $spacing-06;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// A compact count table inside a card (Verlauf, Alle Kennzahlen): label, optional bar, number.
+.tp-count-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    @include type.type-style("body-compact-01");
+
+    padding-block: $spacing-02;
+    padding-inline: 0 $spacing-03;
+    border-block-end: 1px solid theme.$border-subtle-01;
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  th {
+    @include type.type-style("label-01");
+
+    color: theme.$text-secondary;
+  }
+
+  .tp-count-table-detail {
+    display: block;
+    color: theme.$text-secondary;
+  }
+
+  .tp-count-table-number {
+    padding-inline-end: 0;
+    text-align: end;
+    white-space: nowrap;
+  }
+}
+
+// A funnel bar (Verlauf): the width is the share of all counted participations, set through
+// React's style prop (the CSSOM, which the CSP allows; app.ts). The number beside it is the text.
+.tp-bar {
+  display: block;
+  block-size: $spacing-03;
+  margin-block-start: $spacing-02;
+  background: theme.$layer-accent-01;
+}
+
+.tp-bar-fill {
+  display: block;
+  block-size: 100%;
+  background: theme.$interactive;
+}
+
+// A setup page with an in-page anchor list beside its sections on wide screens (Einrichtung).
+.tp-anchored {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $spacing-07;
+
+  @media (min-width: 66rem) {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+}
+
+.tp-anchor-list {
+  display: none;
+
+  @media (min-width: 66rem) {
+    position: sticky;
+    inset-block-start: $spacing-09;
+    display: block;
+    align-self: start;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding-block: $spacing-02;
+    border-inline-start: 2px solid theme.$border-subtle-01;
+    padding-inline-start: $spacing-04;
+  }
+}
+
+.tp-anchor-list-title {
+  @include type.type-style("label-01");
+
+  margin-block-end: $spacing-03;
+  color: theme.$text-secondary;
+}
+
+// Sections of cards stacked with the card spacing; an anchor target clears the fixed header.
+.tp-anchored-content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-06;
+  min-inline-size: 0;
+
+  > .tp-card {
+    scroll-margin-block-start: $spacing-10;
   }
 }

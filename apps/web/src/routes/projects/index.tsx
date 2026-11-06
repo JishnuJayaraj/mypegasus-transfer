@@ -1,6 +1,15 @@
 import { useQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, createLink } from "@tanstack/react-router";
-import { Add, Button, formatTimestamp, Link, PageHeader, SimpleTable } from "@transfer/ui";
+import {
+  Add,
+  Button,
+  EmptyState,
+  formatTimestamp,
+  Link,
+  PageHeader,
+  SimpleTable,
+  StatusTag,
+} from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { meQuery, projectsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
@@ -35,7 +44,7 @@ function ProjectsPage() {
       ),
       customerName: project.customerName,
       type: t(`projects.types.${project.type}`),
-      status: t(`projects.statuses.${project.status}`),
+      status: <StatusTag family="project" code={project.status} />,
       createdAt: formatTimestamp(project.createdAt),
     }));
   const columns = (["name", "customerName", "type", "status", "createdAt"] as const).map((key) => ({
@@ -50,16 +59,24 @@ function ProjectsPage() {
         primaryAction={
           mayCreate && (
             <ButtonLink to="/projects/new" renderIcon={Add}>
-              {t("projects.create")}
+              {t("projects.new")}
             </ButtonLink>
           )
         }
       />
+      {/* "Projekte" once: the page's h1 names the table (ui-patterns.md, principle 6). */}
       <SimpleTable
         title={t("projects.title")}
+        hideTitle
         columns={columns}
         rows={rows}
-        emptyState={t("projects.empty")}
+        emptyState={
+          <EmptyState
+            variant="noData"
+            title={t("projects.emptyTitle")}
+            description={mayCreate ? t("projects.emptyMayCreate") : t("projects.emptyOthers")}
+          />
+        }
         footer={
           hasNextPage && (
             <Button
