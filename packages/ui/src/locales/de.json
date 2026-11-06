@@ -1,0 +1,44 @@
+{
+  "loading": "Wird geladen …",
+  "pageHeader": {
+    "breadcrumb": "Navigationspfad",
+    "actions": "Aktionen"
+  },
+  "emptyState": {
+    "resetFilters": "Filter zurücksetzen",
+    "retry": "Erneut versuchen"
+  },
+  "sidePanel": {
+    "close": "Schließen",
+    "discardTitle": "Änderungen verwerfen?",
+    "discardText": "Ihre Eingaben in diesem Bereich sind noch nicht gespeichert.",
+    "discard": "Verwerfen",
+    "keep": "Weiter bearbeiten"
+  },
+  "relativeDate": {
+    "today": "heute",
+    "dueToday": "heute fällig",
+    "inDays_one": "in {{count}} Tag",
+    "inDays_other": "in {{count}} Tagen",
+    "daysAgo_one": "vor {{count}} Tag",
+    "daysAgo_other": "vor {{count}} Tagen",
+    "overdue_one": "seit {{count}} Tag überfällig",
+    "overdue_other": "seit {{count}} Tagen überfällig"
+  },
+  "dataTable": {
+    "rowActions": "Aktionen für {{name}}",
+    "selectRow": "{{name}} auswählen",
+    "selectAll": "Alle Zeilen auswählen",
+    "selected_one": "{{count}} ausgewählt",
+    "selected_other": "{{count}} ausgewählt",
+    "cancelSelection": "Auswahl aufheben",
+    "columns": "Spalten",
+    "columnsLegend": "Angezeigte Spalten",
+    "showMore": "Weitere anzeigen",
+    "shownOf": "{{shown}} von {{count}} angezeigt",
+    "sortBy": "Nach {{column}} sortieren",
+    "sortedAscending": "aufsteigend sortiert",
+    "sortedDescending": "absteigend sortiert",
+    "actionsColumn": "Aktionen"
+  }
+}

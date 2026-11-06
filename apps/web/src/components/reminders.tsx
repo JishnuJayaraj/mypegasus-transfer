@@ -6,6 +6,7 @@ import {
   formatDate,
   formatTimestamp,
   InlineNotification,
+  Loading,
   Modal,
   Select,
   SelectItem,
@@ -217,7 +218,7 @@ export function MessagesTab({ participationId }: { participationId: string }) {
       </p>
     );
   }
-  if (!query.data) return <p aria-live="polite">{t("worklist.loading")}</p>;
+  if (!query.data) return <Loading label={t("worklist.loading")} />;
   const items = query.data.pages.flatMap((page) => page.items);
   return (
     <section className="tp-section" aria-labelledby="participant-messages">
@@ -252,17 +253,18 @@ export function MessagesTab({ participationId }: { participationId: string }) {
           ),
         }))}
         emptyState={t("reminders.tab.empty")}
+        footer={
+          query.hasNextPage && (
+            <Button
+              kind="tertiary"
+              disabled={query.isFetchingNextPage}
+              onClick={() => void query.fetchNextPage()}
+            >
+              {t("reminders.tab.more")}
+            </Button>
+          )
+        }
       />
-      {query.hasNextPage && (
-        <Button
-          className="tp-load-more"
-          kind="tertiary"
-          disabled={query.isFetchingNextPage}
-          onClick={() => void query.fetchNextPage()}
-        >
-          {t("reminders.tab.more")}
-        </Button>
-      )}
       {followUp && (
         <FollowUpDialog
           participationId={participationId}

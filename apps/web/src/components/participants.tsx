@@ -5,7 +5,6 @@ import {
   berlinDate as appointmentDate,
   berlinTime as appointmentTime,
   compareUrgency,
-  daysBetween,
   matchesSearch,
   matchesWorklistFilter,
   mostUrgent,
@@ -16,16 +15,23 @@ import {
   Add,
   Button,
   Checkbox,
+  EmptyState,
   formatDate,
+  Grid,
   InlineNotification,
   Link,
+  RelativeDate,
   Select,
   SelectItem,
   SimpleTable,
+  Stack,
+  StatusTag,
+  TableSkeleton,
   Tag,
   TextInput,
   useToast,
 } from "@transfer/ui";
+import type { ReactNode } from "react";
 import { memo, useCallback, useDeferredValue, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, projectConfigQuery, useApi, worklistQuery } from "../api";
@@ -229,185 +235,223 @@ export function Participants({
   return (
     <section aria-labelledby="project-participants" className="tp-section">
       <h2 id="project-participants">{t("participants.title")}</h2>
-      {created && (
-        <>
-          <InlineNotification
-            kind="success"
-            title={t("manual.created")}
-            onClose={() => setCreated(null)}
-          />
-          <p>
-            <RouterLink
-              to="/projects/$projectId/participations/$participationId"
-              params={{ projectId, participationId: created }}
-            >
-              {t("manual.openCreated")}
-            </RouterLink>
-          </p>
-        </>
-      )}
-      {adding ? (
-        <ManualParticipationForm
-          projectId={projectId}
-          onCancel={() => setAdding(false)}
-          onCreated={async (detail) => {
-            setAdding(false);
-            setCreated(detail.id);
-            showToast({ title: t("manual.created") });
-            await Promise.all([
-              refresh(),
-              queryClient.invalidateQueries({ queryKey: entryWavesQuery(api, projectId).queryKey }),
-            ]);
-          }}
-        />
-      ) : (
-        config.capabilities.importParticipations && (
-          <Button
-            className="tp-load-more"
-            renderIcon={Add}
-            onClick={() => {
-              setCreated(null);
-              setAdding(true);
-            }}
-          >
-            {t("manual.add")}
-          </Button>
-        )
-      )}
-      {problem === 403 ? (
-        <p role="alert">{t("participants.forbidden")}</p>
-      ) : problem === 422 ? (
-        <p role="alert">{t("worklist.tooLarge")}</p>
-      ) : query.isError ? (
-        <p role="alert">{t("participants.failed")}</p>
-      ) : (
-        <>
-          <WorklistFilters
-            filter={filter}
-            onChange={onFilterChange}
-            taTg={taTg}
-            waves={waves}
-            consultants={consultants}
-          />
-          <div className="tp-bulk-actions">
-            <TextInput
-              id="worklist-search"
-              labelText={t("worklist.search")}
-              helperText={t("worklist.searchHelper")}
-              autoComplete="off"
-              spellCheck={false}
-              disabled={loading}
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
+      <Stack gap={5}>
+        {created && (
+          <>
+            <InlineNotification
+              kind="success"
+              title={t("manual.created")}
+              onClose={() => setCreated(null)}
             />
-          </div>
-          {loading ? (
-            <p aria-live="polite">{t("worklist.loading")}</p>
-          ) : (
-            <>
-              <p aria-live="polite">
-                {[
-                  t("worklist.matches", { count: matches.length }),
-                  t("worklist.asOf", { time: berlinTime.format(new Date(snapshot.generatedAt)) }),
-                  ...(selected.size > 0 ? [t("worklist.selected", { count: selected.size })] : []),
-                ].join(" · ")}
-              </p>
-              {visibleColumns.includes("select") && (
-                <div className="tp-bulk-actions">
-                  <Button
-                    kind="tertiary"
-                    size="sm"
-                    disabled={query.isFetching || matches.length === 0}
-                    onClick={() => setSelected(new Set(matches.map((item) => item.id)))}
-                  >
-                    {t("worklist.selectAll")}
-                  </Button>
-                  <Button
-                    kind="ghost"
-                    size="sm"
-                    disabled={selected.size === 0}
-                    onClick={() => setSelected(new Set())}
-                  >
-                    {t("worklist.clearSelection")}
-                  </Button>
-                </div>
-              )}
-              {mayAssign && (
-                <BulkAssign
-                  projectId={projectId}
-                  consultants={consultants}
-                  selected={[...selected]}
-                  onAssigned={() => setSelected(new Set())}
-                />
-              )}
-              {mayAssignWave && (
-                <BulkWave
-                  projectId={projectId}
-                  waves={waves}
-                  selected={selectedItems}
-                  onAssigned={() => setSelected(new Set())}
-                />
-              )}
-              {mayRemind && (
-                <BulkRemind
-                  projectId={projectId}
-                  selected={selectedItems}
-                  onSent={() => setSelected(new Set())}
-                />
-              )}
-              {mayInvite && (
-                <BulkInvite
-                  projectId={projectId}
-                  selected={selectedItems}
-                  onSent={() => setSelected(new Set())}
-                />
-              )}
-              {mayGenerateKug200b && (
-                <BulkKug200b
-                  projectId={projectId}
-                  selected={selectedItems}
-                  onGenerated={() => {
-                    setSelected(new Set());
-                    void refresh();
-                  }}
-                />
-              )}
-              {mayActivate && (
-                <BulkActivation
-                  projectId={projectId}
-                  selected={selectedItems}
-                  onPrinted={(result) => {
-                    setSelected(new Set());
-                    setPrint(result);
-                  }}
-                />
-              )}
-              <WorklistTable
-                projectId={projectId}
-                items={shownItems}
-                columns={visibleColumns}
-                selected={selected}
-                onToggle={toggle}
-                waveCode={waveCode}
-                today={today}
-                empty={items.length === 0}
+            <p>
+              <RouterLink
+                to="/projects/$projectId/participations/$participationId"
+                params={{ projectId, participationId: created }}
+              >
+                {t("manual.openCreated")}
+              </RouterLink>
+            </p>
+          </>
+        )}
+        {adding ? (
+          <ManualParticipationForm
+            projectId={projectId}
+            onCancel={() => setAdding(false)}
+            onCreated={async (detail) => {
+              setAdding(false);
+              setCreated(detail.id);
+              showToast({ title: t("manual.created") });
+              await Promise.all([
+                refresh(),
+                queryClient.invalidateQueries({
+                  queryKey: entryWavesQuery(api, projectId).queryKey,
+                }),
+              ]);
+            }}
+          />
+        ) : (
+          config.capabilities.importParticipations && (
+            <div>
+              <Button
+                renderIcon={Add}
+                onClick={() => {
+                  setCreated(null);
+                  setAdding(true);
+                }}
+              >
+                {t("manual.add")}
+              </Button>
+            </div>
+          )
+        )}
+        {problem === 403 ? (
+          <EmptyState
+            variant="forbidden"
+            title={t("participants.forbidden")}
+            description={t("participants.forbiddenWho")}
+          />
+        ) : problem === 422 ? (
+          <EmptyState variant="error" title={t("worklist.tooLarge")} />
+        ) : query.isError ? (
+          <EmptyState
+            variant="error"
+            title={t("participants.failed")}
+            onRetry={() => void query.refetch()}
+          />
+        ) : (
+          <>
+            <WorklistFilters
+              filter={filter}
+              onChange={onFilterChange}
+              taTg={taTg}
+              waves={waves}
+              consultants={consultants}
+            />
+            <Grid columns={3}>
+              <TextInput
+                id="worklist-search"
+                labelText={t("worklist.search")}
+                helperText={t("worklist.searchHelper")}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={loading}
+                value={term}
+                onChange={(event) => setTerm(event.target.value)}
               />
-              {matches.length > limit && (
-                <>
-                  <p>{t("worklist.shownOf", { shown: limit, count: matches.length })}</p>
-                  <Button
-                    className="tp-load-more"
-                    kind="tertiary"
-                    onClick={() => setShown({ key: shownKey, count: limit + pageSize })}
-                  >
-                    {t("worklist.showMore")}
-                  </Button>
-                </>
-              )}
-            </>
-          )}
-        </>
-      )}
+            </Grid>
+            {loading ? (
+              <TableSkeleton
+                label={t("worklist.loading")}
+                headers={visibleColumns
+                  .filter((key) => key !== "select")
+                  .map((key) => t(`participants.columns.${key}`))}
+              />
+            ) : (
+              <>
+                <p aria-live="polite">
+                  {[
+                    t("worklist.matches", { count: matches.length }),
+                    t("worklist.asOf", { time: berlinTime.format(new Date(snapshot.generatedAt)) }),
+                    ...(selected.size > 0
+                      ? [t("worklist.selected", { count: selected.size })]
+                      : []),
+                  ].join(" · ")}
+                </p>
+                {visibleColumns.includes("select") && (
+                  <div className="tp-bulk-actions">
+                    <Button
+                      kind="tertiary"
+                      size="sm"
+                      disabled={query.isFetching || matches.length === 0}
+                      onClick={() => setSelected(new Set(matches.map((item) => item.id)))}
+                    >
+                      {t("worklist.selectAll")}
+                    </Button>
+                    <Button
+                      kind="ghost"
+                      size="sm"
+                      disabled={selected.size === 0}
+                      onClick={() => setSelected(new Set())}
+                    >
+                      {t("worklist.clearSelection")}
+                    </Button>
+                  </div>
+                )}
+                {mayAssign && (
+                  <BulkAssign
+                    projectId={projectId}
+                    consultants={consultants}
+                    selected={[...selected]}
+                    onAssigned={() => setSelected(new Set())}
+                  />
+                )}
+                {mayAssignWave && (
+                  <BulkWave
+                    projectId={projectId}
+                    waves={waves}
+                    selected={selectedItems}
+                    onAssigned={() => setSelected(new Set())}
+                  />
+                )}
+                {mayRemind && (
+                  <BulkRemind
+                    projectId={projectId}
+                    selected={selectedItems}
+                    onSent={() => setSelected(new Set())}
+                  />
+                )}
+                {mayInvite && (
+                  <BulkInvite
+                    projectId={projectId}
+                    selected={selectedItems}
+                    onSent={() => setSelected(new Set())}
+                  />
+                )}
+                {mayGenerateKug200b && (
+                  <BulkKug200b
+                    projectId={projectId}
+                    selected={selectedItems}
+                    onGenerated={() => {
+                      setSelected(new Set());
+                      void refresh();
+                    }}
+                  />
+                )}
+                {mayActivate && (
+                  <BulkActivation
+                    projectId={projectId}
+                    selected={selectedItems}
+                    onPrinted={(result) => {
+                      setSelected(new Set());
+                      setPrint(result);
+                    }}
+                  />
+                )}
+                <WorklistTable
+                  projectId={projectId}
+                  items={shownItems}
+                  columns={visibleColumns}
+                  selected={selected}
+                  onToggle={toggle}
+                  waveCode={waveCode}
+                  today={today}
+                  emptyState={
+                    items.length === 0 ? (
+                      <EmptyState
+                        variant="noData"
+                        title={t("participants.emptyTitle")}
+                        description={t("participants.empty")}
+                      />
+                    ) : (
+                      <EmptyState
+                        variant="noMatches"
+                        title={t("worklist.noMatches")}
+                        onResetFilters={() => {
+                          setTerm("");
+                          onFilterChange({});
+                        }}
+                      />
+                    )
+                  }
+                  footer={
+                    matches.length > limit && (
+                      <>
+                        <p>{t("worklist.shownOf", { shown: limit, count: matches.length })}</p>
+                        <Button
+                          kind="tertiary"
+                          onClick={() => setShown({ key: shownKey, count: limit + pageSize })}
+                        >
+                          {t("worklist.showMore")}
+                        </Button>
+                      </>
+                    )
+                  }
+                />
+              </>
+            )}
+          </>
+        )}
+      </Stack>
     </section>
   );
 }
@@ -424,7 +468,8 @@ const WorklistTable = memo(function WorklistTable({
   onToggle,
   waveCode,
   today,
-  empty,
+  emptyState,
+  footer,
 }: {
   projectId: string;
   items: ListItem[];
@@ -433,7 +478,8 @@ const WorklistTable = memo(function WorklistTable({
   onToggle: (id: string, on: boolean) => void;
   waveCode: ReadonlyMap<string, string>;
   today: string;
-  empty: boolean;
+  emptyState: ReactNode;
+  footer: ReactNode;
 }) {
   const { t } = useTranslation();
   const label = useSelfServiceLabel();
@@ -446,15 +492,14 @@ const WorklistTable = memo(function WorklistTable({
         ? t("worklist.knowledgeDateMissing", { date: formatDate(orientation.date) })
         : "";
     }
-    const kind = t(`worklist.deadlineKinds.${urgent.kind}`);
-    const days = daysBetween(today, urgent.date);
-    const text =
-      urgent.state === "overdue"
-        ? t("worklist.deadlineOverdue", { kind, date: formatDate(urgent.date) })
-        : days === 0
-          ? t("worklist.deadlineToday", { kind })
-          : t("worklist.deadlineIn", { kind, count: days });
-    return urgent.final ? `${text} (${t("worklist.deadlineFinal")})` : text;
+    // The kind, then relative and absolute date (ui-patterns.md, principle 5).
+    return (
+      <>
+        {`${t(`worklist.deadlineKinds.${urgent.kind}`)}: `}
+        <RelativeDate date={urgent.date} today={today} kind="deadline" />
+        {urgent.final && ` (${t("worklist.deadlineFinal")})`}
+      </>
+    );
   };
   // "Termin" (process-and-lifecycle.md, appointment items): the most urgent item, else
   // the next booking.
@@ -527,9 +572,10 @@ const WorklistTable = memo(function WorklistTable({
     ),
     lastName: item.lastName ?? "",
     firstName: item.firstName ?? "",
-    status: t(`participants.statuses.${item.status}`),
-    profilingStatus: t(`participants.profilingStatuses.${item.profilingStatus}`),
-    dsvStatus: t(`participants.dsvStatuses.${item.dsvStatus}`),
+    // The three tracks run in parallel: three separate tags (ui-patterns.md, C3).
+    status: <StatusTag family="main" code={item.status} />,
+    profilingStatus: <StatusTag family="profiling" code={item.profilingStatus} />,
+    dsvStatus: <StatusTag family="dsv" code={item.dsvStatus} />,
     wave: item.entryWaveId ? (waveCode.get(item.entryWaveId) ?? "") : "",
     consultants: item.consultants.map((c) => c.displayName).join(", "),
     open:
@@ -580,7 +626,8 @@ const WorklistTable = memo(function WorklistTable({
       title={t("participants.title")}
       columns={shownColumns.map((key) => ({ key, header: t(`participants.columns.${key}`) }))}
       rows={rows}
-      emptyState={empty ? t("participants.empty") : t("worklist.noMatches")}
+      emptyState={emptyState}
+      footer={footer}
     />
   );
 });

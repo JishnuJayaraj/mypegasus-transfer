@@ -5,6 +5,7 @@ import {
   Button,
   formatDate,
   InlineNotification,
+  Loading,
   Modal,
   Select,
   SelectItem,
@@ -119,7 +120,7 @@ export function AppointmentsTab({
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return <p role="alert">{t(forbidden ? "appointments.forbidden" : "appointments.failed")}</p>;
   }
-  if (!query.data) return <p aria-live="polite">{t("appointments.loading")}</p>;
+  if (!query.data) return <Loading label={t("appointments.loading")} />;
   const { bookings, capabilities } = query.data;
   const bookable = followUp
     ? query.data.bookable.filter((item) => item.appointment.kind === followUp.kind)

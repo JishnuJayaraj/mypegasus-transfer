@@ -26,6 +26,7 @@ Start here (read the sections your task needs, not everything):
   `docs/decisions/settled-questions.md` (same `Qnn`); the dated round files only if a row isn't enough
 - Product scope (MVP): `docs/prd.md`; build order: `docs/roadmap.md`
 - Architecture and packages: `docs/architecture/overview.md`, decisions in `docs/adr/`
+- UI principles, contracts and which pattern to use: `docs/architecture/ui-patterns.md`
 
 ## Non-negotiable rules
 
@@ -205,5 +206,6 @@ isn't running in cloud sessions; CI is the reference for the image.
 - [ ] Status changes go through the audit helper
 - [ ] No real personal data anywhere
 - [ ] New personal data has a classification, access rule and `retentionClass`
+- [ ] UI follows `docs/architecture/ui-patterns.md`
 - [ ] Docs updated if behaviour or knowledge changed
 - [ ] PR description: what, why, how tested, screenshots for UI

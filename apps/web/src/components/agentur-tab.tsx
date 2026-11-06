@@ -9,6 +9,7 @@ import {
   formatTimestamp,
   InlineNotification,
   Link,
+  Loading,
   parseDisplayDate,
   SimpleTable,
   Stack,
@@ -55,7 +56,7 @@ export function AgenturTab({ projectId }: { projectId: string }) {
   const [message, setMessage] = useState<Message>();
   const [busy, setBusy] = useState(false);
 
-  if (batches.isPending) return <p aria-live="polite">{t("agentur.loading")}</p>;
+  if (batches.isPending) return <Loading label={t("agentur.loading")} />;
   if (batches.isError) {
     const forbidden = batches.error instanceof ApiProblemError && batches.error.status === 403;
     return (

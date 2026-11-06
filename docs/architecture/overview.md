@@ -68,7 +68,10 @@ Separate hostnames for web and portal are revisited in Slice 3/9.
   separate past-dated fixture (Q96).
 - `packages/api-client`: the generated OpenAPI document + types and the typed client both SPAs
   use.
-- `packages/ui`: thin wrappers around Carbon components, layout, tokens, i18n helpers.
+- `packages/ui`: thin wrappers around Carbon components, layout, tokens, i18n helpers, and the UI
+  kit (page header, section/card/grid, status tags, relative dates, loading/empty states, side
+  panel, data table) with its own i18n namespace `ui` (de/en). How and when to use each pattern:
+  [ui-patterns.md](ui-patterns.md).
 - `packages/self-service-ui` (Slice 4a): the self-service wizard, shared by the portal and (assisted
   mode) the staff app. It renders a page from the API's page definition with Carbon through
   `packages/ui`, brings its own i18n namespace `selfService` (de/en) and reads and writes through a

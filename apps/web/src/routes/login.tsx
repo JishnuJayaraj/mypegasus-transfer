@@ -70,7 +70,7 @@ function LoginPage() {
             hideCloseButton
           />
         )}
-        {devUsers.isPending && <Loading withOverlay={false} small />}
+        {devUsers.isPending && <Loading />}
         {devUsers.data && (
           <>
             <p>{t("session.login.dev")}</p>

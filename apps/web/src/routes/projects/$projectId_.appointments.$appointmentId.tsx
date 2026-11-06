@@ -4,17 +4,21 @@ import { ApiProblemError, type components } from "@transfer/api-client";
 import { matchesSearch, searchKey, terminalMainStatuses } from "@transfer/domain";
 import {
   Button,
-  ButtonSet,
+  Card,
+  Edit,
   formatDate,
   formatTimestamp,
   InlineNotification,
+  Grid,
   Link,
   Modal,
   PageHeader,
   Select,
   SelectItem,
+  Section,
   SimpleTable,
   Stack,
+  StatusTag,
   TextInput,
   useToast,
 } from "@transfer/ui";
@@ -139,7 +143,7 @@ function AppointmentPage() {
     ["audience", audience],
     ["capacity", String(appointment.capacity)],
     ["bookings", seats(appointment.bookings, appointment.capacity)],
-    ["status", t(`appointments.statuses.${appointment.status}`)],
+    // The status is the header's tag (ui-patterns.md, principle 6).
     [
       "cancelReason",
       appointment.cancelReason ? t(`appointments.cancelReasons.${appointment.cancelReason}`) : null,
@@ -147,13 +151,56 @@ function AppointmentPage() {
   ];
   return (
     <>
-      <RouterLink to="/projects/$projectId" params={{ projectId }} search={{ tab: "appointments" }}>
-        {t("appointments.page.back", { project: project.name })}
-      </RouterLink>
       <PageHeader
         title={[t(`appointments.kinds.${appointment.kind}`), appointment.title]
           .filter(Boolean)
           .join(" – ")}
+        breadcrumbs={[
+          <RouterLink key="projects" to="/projects">
+            {t("projects.title")}
+          </RouterLink>,
+          <RouterLink key="project" to="/projects/$projectId" params={{ projectId }}>
+            {project.name}
+          </RouterLink>,
+          <RouterLink
+            key="appointments"
+            to="/projects/$projectId"
+            params={{ projectId }}
+            search={{ tab: "appointments" }}
+          >
+            {t("projectDetail.appointments")}
+          </RouterLink>,
+        ]}
+        tags={<StatusTag family="appointment" code={appointment.status} />}
+        metadata={[when(appointment), appointment.venue].filter(Boolean).join(" · ")}
+        primaryAction={
+          capabilities.change &&
+          !editing && (
+            <Button renderIcon={Edit} onClick={() => setEditing(true)}>
+              {t("appointments.page.change")}
+            </Button>
+          )
+        }
+        menuActions={[
+          ...(capabilities.cancel
+            ? [
+                {
+                  label: t("appointments.page.cancel"),
+                  danger: true,
+                  onClick: () => setCancelling(true),
+                },
+              ]
+            : []),
+          ...(capabilities.correctNotTakenPlace
+            ? [
+                {
+                  label: t("appointments.attendance.notTakenPlace"),
+                  danger: true,
+                  onClick: () => setCorrecting(true),
+                },
+              ]
+            : []),
+        ]}
       />
       {appointment.needsResolution ? (
         <InlineNotification
@@ -162,56 +209,41 @@ function AppointmentPage() {
           hideCloseButton
         />
       ) : null}
-      <section className="tp-section" aria-labelledby="appointment-details">
-        <h2 id="appointment-details">{t("appointments.page.details")}</h2>
-        <dl className="tp-facts">
-          {facts
-            .filter(([, value]) => value !== null)
-            .map(([key, value]) => (
-              <div key={key}>
-                <dt>{t(`appointments.page.facts.${key}` as never)}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-        </dl>
-        {!editing && (
-          <ButtonSet>
-            {capabilities.change && (
-              <Button kind="secondary" onClick={() => setEditing(true)}>
-                {t("appointments.page.change")}
-              </Button>
-            )}
-            {capabilities.cancel && (
-              <Button kind="danger--tertiary" onClick={() => setCancelling(true)}>
-                {t("appointments.page.cancel")}
-              </Button>
-            )}
-            {capabilities.correctNotTakenPlace && (
-              <Button kind="danger--tertiary" onClick={() => setCorrecting(true)}>
-                {t("appointments.attendance.notTakenPlace")}
-              </Button>
-            )}
-          </ButtonSet>
-        )}
-        {editing && (
-          <AppointmentForm
-            projectId={projectId}
-            taTg={project.type === "ta_tg"}
-            kind={appointment.kind}
-            chooseHost={false}
-            appointment={appointment}
-            onCancel={() => setEditing(false)}
-            onSaved={async () => {
-              await refresh();
-              showToast({ title: t("appointments.saved") });
-              setEditing(false);
-            }}
-          />
-        )}
+      <Grid columns={capabilities.changeHost && !editing ? 2 : 1}>
+        <Card title={t("appointments.page.details")}>
+          {editing ? (
+            <AppointmentForm
+              projectId={projectId}
+              taTg={project.type === "ta_tg"}
+              kind={appointment.kind}
+              chooseHost={false}
+              appointment={appointment}
+              onCancel={() => setEditing(false)}
+              onSaved={async () => {
+                await refresh();
+                showToast({ title: t("appointments.saved") });
+                setEditing(false);
+              }}
+            />
+          ) : (
+            <dl className="tp-facts">
+              {facts
+                .filter(([, value]) => value !== null)
+                .map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{t(`appointments.page.facts.${key}` as never)}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+            </dl>
+          )}
+        </Card>
         {capabilities.changeHost && !editing && (
-          <HostChange appointment={appointment} projectId={projectId} onSaved={refresh} />
+          <Card title={t("appointments.page.changeHost")}>
+            <HostChange appointment={appointment} projectId={projectId} onSaved={refresh} />
+          </Card>
         )}
-      </section>
+      </Grid>
       <CancelAppointment
         appointment={appointment}
         open={cancelling}
@@ -447,8 +479,7 @@ function Bookings({
     },
   });
   return (
-    <section className="tp-section" aria-labelledby="appointment-bookings">
-      <h2 id="appointment-bookings">{t("appointments.page.bookings")}</h2>
+    <Section title={t("appointments.page.bookings")}>
       {appointment.capabilities.book && (
         <BookParticipant appointment={appointment} projectId={projectId} onBooked={onChanged} />
       )}
@@ -531,7 +562,7 @@ function Bookings({
           )}
         </Modal>
       )}
-    </section>
+    </Section>
   );
 }
 

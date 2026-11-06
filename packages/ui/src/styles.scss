@@ -18,19 +18,28 @@
 @use "@carbon/react/scss/zone";
 @use "@carbon/react/scss/layer";
 @use "@carbon/react/scss/layout";
+@use "@carbon/react/scss/colors";
 @use "@carbon/react/scss/spacing" as *;
 @use "@carbon/react/scss/type";
 @use "@carbon/react/scss/components/ui-shell";
+@use "@carbon/react/scss/components/breadcrumb";
 @use "@carbon/react/scss/components/button";
 @use "@carbon/react/scss/components/data-table";
+@use "@carbon/react/scss/components/data-table/action";
+@use "@carbon/react/scss/components/data-table/skeleton";
+@use "@carbon/react/scss/components/data-table/sort";
 @use "@carbon/react/scss/components/date-picker";
 @use "@carbon/react/scss/components/form";
 @use "@carbon/react/scss/components/text-input";
 @use "@carbon/react/scss/components/radio-button";
 @use "@carbon/react/scss/components/select";
 @use "@carbon/react/scss/components/notification";
+@use "@carbon/react/scss/components/inline-loading";
 @use "@carbon/react/scss/components/loading";
+@use "@carbon/react/scss/components/menu";
 @use "@carbon/react/scss/components/modal";
+@use "@carbon/react/scss/components/overflow-menu";
+@use "@carbon/react/scss/components/skeleton-styles";
 @use "@carbon/react/scss/components/stack";
 @use "@carbon/react/scss/components/tabs";
 @use "@carbon/react/scss/components/tag";
@@ -176,12 +185,18 @@ body {
   }
 }
 
+// A Carbon stack's one implicit column may not grow past its container (a wide fieldset would
+// push the page sideways otherwise, D10).
+.cds--stack-vertical {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+// The page header (ui-patterns.md): breadcrumbs, the title with its tags, the actions at the end
+// (they wrap below the title on narrow screens) and one metadata line.
 .tp-page-header {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: $spacing-05;
+  flex-direction: column;
+  gap: $spacing-03;
   margin-block-end: $spacing-06;
 
   h1 {
@@ -189,11 +204,305 @@ body {
   }
 }
 
+.tp-page-header-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $spacing-05;
+}
+
+.tp-page-header-title,
+.tp-page-header-tags,
+.tp-page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-03;
+}
+
+.tp-page-header-title {
+  gap: $spacing-05;
+  min-inline-size: 0;
+}
+
+.tp-page-header-metadata {
+  @include type.type-style("body-compact-01");
+
+  color: theme.$text-secondary;
+  overflow-wrap: anywhere;
+}
+
+// Carbon's menu button (its styles live in @carbon/styles only): the chevron turns when open.
+.cds--menu-button__container {
+  display: inline-flex;
+}
+
+.cds--menu-button__trigger svg {
+  transition: transform 110ms;
+}
+
+.cds--menu-button__trigger--open svg {
+  transform: rotate(180deg);
+}
+
+// Section and card (ui-patterns.md, principle 8): a header with heading, description and actions.
+.tp-section-header,
+.tp-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $spacing-03 $spacing-05;
+  margin-block-end: $spacing-05;
+}
+
+.tp-section-description,
+.tp-card-description {
+  @include type.type-style("body-01");
+
+  margin-block-start: $spacing-02;
+  color: theme.$text-secondary;
+}
+
+.tp-section-actions,
+.tp-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+}
+
+.tp-card {
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle-01;
+  background: theme.$layer-01;
+  min-inline-size: 0;
+
+  h2,
+  h3 {
+    @include type.type-style("heading-compact-02");
+  }
+}
+
+// One column below 42rem, two from 42rem, three from 66rem.
+.tp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $spacing-05;
+  margin-block-end: $spacing-07;
+
+  @media (min-width: 42rem) {
+    &.tp-grid--2,
+    &.tp-grid--3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 66rem) {
+    &.tp-grid--3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+
+// Status tags (principle 4): Carbon has no yellow tag, so "warning" is yellow-10 with the warning
+// colour as its border; the icon and the text carry the meaning.
+.tp-status-tag--warning.cds--tag {
+  border: 1px solid theme.$support-warning;
+  background-color: colors.$yellow-10;
+  color: theme.$text-primary;
+}
+
+.tp-status-tag-icon {
+  flex: none;
+  margin-inline-end: $spacing-02;
+  fill: currentColor;
+}
+
+.tp-relative-date time {
+  white-space: nowrap;
+}
+
+// States (principle 7).
 .tp-empty-state {
+  display: flex;
+  gap: $spacing-05;
+  align-items: flex-start;
+  padding: $spacing-07 $spacing-05;
+  background: theme.$layer-01;
+}
+
+.tp-empty-state-icon {
+  flex: none;
+  fill: theme.$icon-secondary;
+}
+
+.tp-empty-state--error .tp-empty-state-icon {
+  fill: theme.$support-error;
+}
+
+.tp-empty-state-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $spacing-03;
+  min-inline-size: 0;
+}
+
+.tp-empty-state-title {
+  @include type.type-style("heading-compact-02");
+}
+
+.tp-empty-state-description {
+  @include type.type-style("body-01");
+
+  color: theme.$text-secondary;
+}
+
+.tp-loading {
+  margin-block: $spacing-05;
+}
+
+// A table skeleton is decorative (its status is announced), so it is clipped to its container
+// rather than scrolled: the page never scrolls sideways (D10) and nothing unfocusable scrolls.
+.tp-table-skeleton {
+  overflow: hidden;
+}
+
+.tp-page-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+}
+
+.tp-page-skeleton-block.cds--skeleton__placeholder {
+  inline-size: 100%;
+  block-size: 12rem;
+}
+
+.tp-visually-hidden {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  block-size: 1px;
+  white-space: nowrap;
+}
+
+// C1: an action disabled with its prerequisite as text beside it.
+.tp-action {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-03;
+}
+
+.tp-action-reason {
+  @include type.type-style("helper-text-01");
+
+  color: theme.$text-secondary;
+}
+
+// The side panel (ui-patterns.md): a Carbon modal at the inline end, full height, 30rem wide;
+// full width below 42rem.
+.tp-side-panel.cds--modal {
+  justify-content: flex-end;
+  align-items: stretch;
+}
+
+.tp-side-panel .cds--modal-container {
+  position: relative;
+  inset: auto;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  block-size: 100%;
+  max-block-size: 100%;
+
+  @media (min-width: 42rem) {
+    inline-size: 30rem;
+  }
+}
+
+// Low viewports (400 % zoom: 320 × 180–256 CSS px): the whole panel scrolls as one, so the footer
+// and the discard question stay reachable instead of being cut off below the body (D10).
+@media (max-height: 30rem) {
+  .tp-side-panel .cds--modal-container {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .tp-side-panel .cds--modal-content {
+    overflow: visible;
+    max-block-size: none;
+  }
+}
+
+.tp-side-panel-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+  padding: $spacing-05;
+  border-block-start: 2px solid theme.$support-warning;
+  background: theme.$layer-01;
+}
+
+.tp-side-panel-confirm-title {
+  @include type.type-style("heading-compact-02");
+}
+
+.tp-side-panel-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+}
+
+// The data table (ui-patterns.md): its own scroll container, both directions, so the header
+// stays at the top and only the table scrolls sideways (D10), never the page.
+.tp-data-table {
+  margin-block-end: $spacing-05;
+}
+
+.tp-data-table-scroll {
+  overflow: auto;
+  max-block-size: max(20rem, 70vh);
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: -2px;
+  }
+
+  .cds--data-table thead th {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+  }
+}
+
+.tp-column-chooser {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03 $spacing-06;
+  padding: $spacing-05;
+  background: theme.$layer-01;
+
+  legend {
+    @include type.type-style("label-01");
+
+    margin-block-end: $spacing-03;
+  }
+}
+
+// A plain text empty state inside a SimpleTable's container.
+.tp-table-empty {
   padding: $spacing-07 $spacing-05;
 }
 
-.tp-load-more {
+.tp-data-table-more,
+.tp-table-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $spacing-05;
   margin-block-start: $spacing-05;
 }
 
@@ -259,10 +568,20 @@ body {
 }
 
 // Label/value pairs, such as a participant's data (Slice 2, PR 2h-1).
+// Label and value side by side from 30rem; below (400 % zoom) the value goes under its label (D10).
 .tp-facts {
   display: grid;
-  grid-template-columns: minmax(10rem, max-content) 1fr;
-  gap: $spacing-03 $spacing-06;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $spacing-02 $spacing-06;
+
+  @media (min-width: 30rem) {
+    grid-template-columns: minmax(10rem, max-content) minmax(0, 1fr);
+    row-gap: $spacing-03;
+  }
+
+  dd {
+    overflow-wrap: anywhere;
+  }
 
   div {
     display: contents;

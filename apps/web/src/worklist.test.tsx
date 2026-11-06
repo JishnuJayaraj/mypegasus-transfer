@@ -210,11 +210,13 @@ describe("Teilnehmende", () => {
     const row = (await (await ready()).findByRole("link", { name: "BSP-0001" })).closest("tr")!;
     expect(within(row).getByText(/^2 offen/)).toBeInTheDocument();
     expect(within(row).getByText("Mobilnummer fehlt")).toBeInTheDocument();
-    expect(within(row).getByRole("cell", { name: "TG-Beginn: in 8 Tagen" })).toBeInTheDocument();
+    expect(
+      within(row).getByRole("cell", { name: "TG-Beginn: in 8 Tagen · 30.10.2026" }),
+    ).toBeInTheDocument();
     const other = list().getByRole("link", { name: "BSP-0002" }).closest("tr")!;
     expect(
       within(other).getByRole("cell", {
-        name: "Datenschutzhinweis: überschritten seit 01.10.2026",
+        name: "Datenschutzhinweis: seit 21 Tagen überfällig · 01.10.2026",
       }),
     ).toBeInTheDocument();
     expect(within(other).getByRole("cell", { name: "Einwilligung fehlt" })).toBeInTheDocument();
@@ -347,6 +349,47 @@ describe("Teilnehmende", () => {
     await waitFor(() =>
       expect(calls.filter((c) => c.key === `GET ${path}/worklist`)).toHaveLength(2),
     );
+  });
+
+  it("tells no participants from no matches, which resets the filters and the search", async () => {
+    const { router } = setup({}, "?tab=participants&status=exited");
+    const section = await ready();
+    const empty = (
+      await section.findByText("Keine Teilnehmenden entsprechen der Suche und den Filtern.")
+    ).closest(".tp-empty-state")! as HTMLElement;
+    await userEvent.click(within(empty).getByRole("button", { name: "Filter zurücksetzen" }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ tab: "participants" }));
+    await waitFor(() => expect(personnelNumbers()).toHaveLength(items.length));
+  });
+
+  it("says there are no participants yet, with the next step", async () => {
+    setup({ [`GET ${path}/worklist`]: () => json(worklist([])) });
+    const section = await ready();
+    expect(await section.findByText("Noch keine Teilnehmenden")).toBeInTheDocument();
+    expect(section.getByText(/Importieren Sie eine Datei/)).toBeInTheDocument();
+    expect(section.queryByRole("button", { name: "Filter zurücksetzen" })).not.toBeInTheDocument();
+  });
+
+  it("offers a retry when the list failed to load", async () => {
+    let fail = true;
+    setup({
+      [`GET ${path}/worklist`]: () => (fail ? problem(500, "internal") : json(worklist(items))),
+    });
+    const section = await ready();
+    const alert = (
+      await section.findByText("Die Teilnehmenden konnten nicht geladen werden.")
+    ).closest<HTMLElement>("[role=alert]")!;
+    fail = false;
+    await userEvent.click(within(alert).getByRole("button", { name: "Erneut versuchen" }));
+    expect(await section.findByRole("link", { name: "BSP-0001" })).toBeInTheDocument();
+  });
+
+  it("shows the three tracks as separate status tags (C3)", async () => {
+    setup();
+    const row = (await (await ready()).findByRole("link", { name: "BSP-0001" })).closest("tr")!;
+    const tags = [...row.querySelectorAll(".tp-status-tag")].map((tag) => tag.textContent);
+    expect(tags).toHaveLength(3);
+    expect(tags[0]).toBe("Informiert");
   });
 
   it("says when the list is too large or not allowed", async () => {

@@ -47,7 +47,7 @@ function ProjectsPage() {
     <>
       <PageHeader
         title={t("projects.title")}
-        actions={
+        primaryAction={
           mayCreate && (
             <ButtonLink to="/projects/new" renderIcon={Add}>
               {t("projects.create")}
@@ -60,17 +60,18 @@ function ProjectsPage() {
         columns={columns}
         rows={rows}
         emptyState={t("projects.empty")}
+        footer={
+          hasNextPage && (
+            <Button
+              kind="tertiary"
+              disabled={isFetchingNextPage}
+              onClick={() => void fetchNextPage()}
+            >
+              {t("projects.loadMore")}
+            </Button>
+          )
+        }
       />
-      {hasNextPage && (
-        <Button
-          className="tp-load-more"
-          kind="tertiary"
-          disabled={isFetchingNextPage}
-          onClick={() => void fetchNextPage()}
-        >
-          {t("projects.loadMore")}
-        </Button>
-      )}
     </>
   );
 }

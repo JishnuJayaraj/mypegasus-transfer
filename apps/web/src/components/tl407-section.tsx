@@ -5,6 +5,7 @@ import {
   Checkbox,
   formatTimestamp,
   InlineNotification,
+  Loading,
   SimpleTable,
   Stack,
   useToast,
@@ -74,7 +75,7 @@ function SummaryBlock({ participationId }: { participationId: string }) {
       return data as Summary;
     },
   });
-  if (query.isPending) return <p aria-live="polite">{t("profiling.tl407.loading")}</p>;
+  if (query.isPending) return <Loading label={t("profiling.tl407.loading")} />;
   if (query.isError) return <p role="alert">{t("profiling.tl407.readinessFailed")}</p>;
   const summary = query.data;
   return (
