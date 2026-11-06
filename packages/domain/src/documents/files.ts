@@ -57,6 +57,7 @@ export function documentFileName(name: string): string | null {
 const downloadStems: Partial<Record<DocumentType, string>> = {
   tl407_form: "tl407",
   kug200b_form: "kug200b",
+  dsv_form: "dsv",
 };
 
 /**

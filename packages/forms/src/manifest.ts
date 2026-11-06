@@ -21,11 +21,15 @@ export const FormsManifest = z.strictObject({
       fields: z.int().positive(),
     }),
   ),
-  /** Our own HTML templates (`templates/own/<name>/v<n>/`), each file by its SHA-256. */
+  /**
+   * Our own HTML templates (`templates/own/<name>/v<n>/`), each file by its SHA-256;
+   * `approvedForLive` from the version's `template.json` where it has one (the DSV, D1).
+   */
   templates: z.array(
     z.strictObject({
       ref: z.string().regex(/^[a-z0-9-]+:v[1-9][0-9]*$/),
       files: z.record(z.string(), sha256),
+      approvedForLive: z.boolean().optional(),
     }),
   ),
 });
@@ -43,3 +47,13 @@ export const FormSource = z.object({
   verifiedBlank: z.literal(true),
 });
 export type FormSource = z.infer<typeof FormSource>;
+
+/**
+ * An own template version's `template.json` (ADR-0009, the DSV template): whether its wording was
+ * reviewed for live use, and a note on its source. Part of the immutable version.
+ */
+export const OwnTemplateMeta = z.strictObject({
+  approvedForLive: z.boolean(),
+  note: z.string().min(1),
+});
+export type OwnTemplateMeta = z.infer<typeof OwnTemplateMeta>;

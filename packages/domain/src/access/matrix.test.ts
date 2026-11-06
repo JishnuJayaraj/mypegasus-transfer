@@ -52,7 +52,8 @@ cv                           meta  meta  meta  unass meta   never never never ne
 participant_upload           meta  meta  meta  unass meta   never never never never
 qualification_certificate    meta  meta  meta  unass meta   never never never never
 tl407_form                   never never meta  unass meta   never never never never
-kug200b_form                 never never meta  unass meta   never never never never`;
+kug200b_form                 never never meta  unass meta   never never never never
+dsv_form                     never never never unass meta   meta  never never never`;
 
 const documentOpen = `
 tl407_signed_scan            never  never  opened unass opened never  never never never
@@ -65,7 +66,8 @@ cv                           opened opened opened unass opened never  never neve
 participant_upload           opened opened opened unass opened never  never never never
 qualification_certificate    opened opened opened unass opened never  never never never
 tl407_form                   never  never  opened unass opened never  never never never
-kug200b_form                 never  never  opened unass opened never  never never never`;
+kug200b_form                 never  never  opened unass opened never  never never never
+dsv_form                     never  never  never  unass opened opened never never never`;
 
 const documentWrite = `
 tl407_signed_scan            never never imm   unass imm   never never never never
@@ -78,7 +80,8 @@ cv                           op    op    op    unass op    never never never nev
 participant_upload           op    op    op    unass op    never never never never
 qualification_certificate    op    op    op    unass op    never never never never
 tl407_form                   never never imm   unass imm   never never never never
-kug200b_form                 never never imm   unass imm   never never never never`;
+kug200b_form                 never never imm   unass imm   never never never never
+dsv_form                     never never never unass imm   imm   never never never`;
 
 // Q87 A (round 11): filtered audit projections; events of another staff user.
 const auditRead = `

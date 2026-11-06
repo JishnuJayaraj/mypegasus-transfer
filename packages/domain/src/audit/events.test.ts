@@ -142,6 +142,8 @@ describe("audit event types (ADR-0002)", () => {
       "exception_evidence_recorded",
       "evidence_correction_requested",
       "evidence_correction_decided",
+      "dsv_form_generated",
+      "dsv_template_pinned",
     ]);
   });
 
@@ -252,6 +254,8 @@ describe("audit event types (ADR-0002)", () => {
       "exception_evidence_recorded",
       "evidence_correction_requested",
       "evidence_correction_decided",
+      "dsv_form_generated",
+      "dsv_template_pinned",
     ]);
   });
 
@@ -859,6 +863,14 @@ describe("the other event types", () => {
       "entry_wave_changed",
       { participationId: null, details: { waveId: otherId, fields: ["code"] } },
     ],
+    [
+      "dsv_form_generated",
+      { details: { documentId: otherId, templateVersion: "v1", deadlineKind: "wave" } },
+    ],
+    [
+      "dsv_template_pinned",
+      { participationId: null, details: { templateVersion: "v2", previousVersion: "v1" } },
+    ],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -1290,6 +1302,23 @@ describe("the other event types", () => {
         },
       },
     ],
+    // The DSV's generation names its version and deadline kind, never the deadline or a value.
+    [
+      "dsv_form_generated",
+      {
+        details: {
+          documentId: otherId,
+          templateVersion: "v1",
+          deadlineKind: "wave",
+          offerDeadline: "2091-03-12",
+        },
+      },
+    ],
+    [
+      "dsv_form_generated",
+      { details: { documentId: otherId, templateVersion: "1", deadlineKind: "explicit" } },
+    ],
+    ["dsv_template_pinned", { details: { templateVersion: "v1" } }],
   ])("reject an invalid %s", (type, fields) => {
     expect(AuditEvent.safeParse({ ...base, type, ...fields }).success).toBe(false);
   });

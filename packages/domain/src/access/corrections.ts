@@ -41,6 +41,7 @@ export const documentCorrectionAuthority: Readonly<
   // forms).
   tl407_form: [],
   kug200b_form: [],
+  dsv_form: [],
 };
 
 /** Evidence-set fields and their requesters (round 13); no other field is corrected this way. */

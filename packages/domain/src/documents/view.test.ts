@@ -47,6 +47,7 @@ describe("readableDocumentTypes", () => {
     expect(readableDocumentTypes(subject("back_office"), target, accessModes.normal)).toEqual([
       "dsv_signed_scan",
       "dsv_cancellation",
+      "dsv_form",
     ]);
     expect(readableDocumentTypes(subject("admin"), target, accessModes.normal)).toEqual([]);
   });

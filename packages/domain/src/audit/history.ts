@@ -214,6 +214,10 @@ export const auditProjection: {
   // Evidence corrections (data-protection.md, evidence corrections): the target's kind, the
   // action, the reason code and the decision; never the source or a corrected value.
   evidence_correction_requested: shown("case", { details: ["targetKind", "action", "reason"] }),
+  // The DSV's generation (process-and-lifecycle.md, the DSV): in the DSV stream, by its template
+  // version and how its deadline was chosen; the pin is project-level.
+  dsv_form_generated: shown("dsv", { details: ["templateVersion", "deadlineKind"] }),
+  dsv_template_pinned: projectLevel,
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "decision"],
   }),

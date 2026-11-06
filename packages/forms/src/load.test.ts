@@ -13,6 +13,7 @@ import {
   loadFormsManifest,
   loadFormVersion,
   loadOwnTemplate,
+  ownTemplateVersions,
   renderFormsManifest,
 } from "./load";
 
@@ -97,6 +98,43 @@ describe("loadOwnTemplate", () => {
     writeFileSync(new URL("own/anlage-profilingbogen/v1/footer.html", dir), "<p>changed</p>");
     expect(refused(() => loadOwnTemplate("anlage-profilingbogen:v1", dir))).toBe(
       "anlage-profilingbogen:v1: hash_mismatch",
+    );
+  });
+});
+
+describe("the DSV template (ADR-0009, the DSV template; Slice 7 D1)", () => {
+  it("is a synthetic sample stamped on every page and not approved for live use", () => {
+    const template = loadOwnTemplate("dsv:v1");
+    // the header repeats on every page; the watermark is fixed, so printed on each page too
+    expect(template.header).toContain("MUSTER – NICHT ZUR VERWENDUNG");
+    expect(template.index).toMatch(/class="watermark"[^>]*>MUSTER – NICHT ZUR VERWENDUNG</);
+    expect(template.footer).toContain('class="totalPages"');
+    for (const placeholder of ["participant", "birthDate", "address", "customer", "company"]) {
+      expect(template.index).toContain(`{{${placeholder}}}`);
+    }
+    expect(template.index).toContain("{{offerDeadline}}");
+    expect(ownTemplateVersions("dsv")).toEqual([{ version: "v1", approvedForLive: false }]);
+    expect(ownTemplateVersions("anlage-profilingbogen")).toEqual([
+      { version: "v1", approvedForLive: false },
+    ]);
+  });
+
+  it("puts template.json in the manifest by hash, with its approval", () => {
+    const entry = buildFormsManifest().templates.find((template) => template.ref === "dsv:v1")!;
+    expect(Object.keys(entry.files)).toEqual([
+      "index.html",
+      "header.html",
+      "footer.html",
+      "template.json",
+    ]);
+    expect(entry.approvedForLive).toBe(false);
+    const dir = copy(formsDir);
+    writeFileSync(
+      new URL("own/dsv/v1/template.json", dir),
+      JSON.stringify({ approvedForLive: true, note: "x" }),
+    );
+    expect(buildFormsManifest(dir).templates.find((t) => t.ref === "dsv:v1")!.approvedForLive).toBe(
+      true,
     );
   });
 });
