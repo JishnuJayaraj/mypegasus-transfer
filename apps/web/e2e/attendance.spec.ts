@@ -150,7 +150,7 @@ test("the work list: a missed info event under 'Termine überfällig' until the 
   await page.goto(`/projects/${projectId}`);
   await expect(page.getByRole("link", { name: /^\d+ Termine überfällig$/ })).toBeVisible();
   await expect(page.getByRole("table", { name: "Termine" })).toBeVisible();
-  await page.locator(".tp-tiles").screenshot({
+  await page.getByRole("region", { name: "Heute zu tun" }).screenshot({
     path: test.info().outputPath("dashboard-tiles.png"),
   });
   await page.getByRole("table", { name: "Termine" }).screenshot({

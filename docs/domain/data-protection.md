@@ -179,7 +179,10 @@
   sent, never in a URL, a query key, a log or browser storage, and the snapshot stays in memory.
   Only the code filters and the sort (a column code) sit in the URL. From Slice 6b the term, the
   column choice and the scroll position are kept in the page's memory for the way back from a
-  participant (ui-patterns.md, C6), never in browser storage, so a reload forgets them. From Slice 5b each row carries its appointment items and
+  participant (ui-patterns.md, C6), never in browser storage, so a reload forgets them. The participant page's breadcrumb links back
+  with the list's code filters and sort (the URL's, never the term), handed over in the
+  navigation's history state; the participant page reads its open items, deadlines and
+  appointments from the same snapshot, so it shows nothing beyond the viewer's list scope. From Slice 5b each row carries its appointment items and
   next booking (process-and-lifecycle.md, appointment items): codes, ids and times, never a title
   or venue; the `needs_resolution` item only for the PL, who alone resolves it.
 - **Page titles (Slice 6b):** the staff app's document title names the page and its project

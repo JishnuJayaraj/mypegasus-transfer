@@ -74,17 +74,19 @@ primitives, following the Carbon for IBM Products patterns without depending on
 |---|---|---|
 | Top of a page | `PageHeader` | `breadcrumbs` (ancestor links; the page is the title), `title` (the one `h1`), `tags`, `metadata` (one plain line), `primaryAction` (one), `menuActions` ("Aktionen"; destructive ones last, in red). |
 | A titled part of a page | `Section` | `h2` by default, `level={3}` inside a section, panel or tab. In a tab panel that is named by its tab, no section heading repeats the tab. |
-| One topic as a block | `Card` | Details, a small form, a summary; a card's actions are its own. |
-| Side by side | `Grid columns={2 or 3}` | One column below 42rem, two from 42rem, three from 66rem; logical properties only. |
+| One topic as a block | `Card` | Details, a small form, a summary; a card's actions are its own. `id` makes it an in-page link target (`#project-import`). |
+| A count to act on | `CountTile` | A dashboard tile: icon, number, label, a severity border (by `tone`; a zero is neutral) and an arrow, as one link to exactly the counted rows ("1 Überfällig"). Its label is the quick view's with the same filter. `TilesSkeleton` while loading. |
+| A share of a total | `tp-count-table` with `tp-bar` | A compact count table in a card; the bar's width is set through React's `style` prop (the CSSOM, CSP-safe), the bar is `aria-hidden` and the number beside it is the text. No chart library. |
+| Side by side | `Grid columns={2 or 3}` | One column below 42rem, two from 42rem, three from 66rem; logical properties only. `collapse="wide"` skips the two-column step (one column below 66rem) for columns that only read as a set, such as the participant overview's. |
 | Vertical rhythm | `Stack gap={…}` | A button in a stack is wrapped in a `div` so it keeps its width. |
-| A status, track, deadline state, flag or appointment status | `StatusTag family code` | One map (`statusTag`) from the domain's codes to tone, Carbon tag type, icon and label key (the app catalog's existing keys, e.g. `participants.statuses.*`). A new domain code fails the typecheck until it is mapped. Yellow is `yellow-10` with the warning colour as border, since Carbon has no yellow tag. |
+| A status, track, deadline state, flag, appointment or project status | `StatusTag family code` | One map (`statusTag`) from the domain's codes to tone, Carbon tag type, icon and label key (the app catalog's existing keys, e.g. `participants.statuses.*`). A new domain code fails the typecheck until it is mapped. Yellow is `yellow-10` with the warning colour as border, since Carbon has no yellow tag. `prefix` names the track where the code alone is ambiguous ("Profiling: Angenommen", C3). |
 | A date in a list | `RelativeDate date today kind` | `kind="deadline"`: "in 3 Tagen", "heute fällig", "seit 2 Tagen überfällig" (overdue from the day after); `kind="event"`: "heute", "vor 2 Tagen". `today` is the caller's Berlin date (e.g. the snapshot's), never read by the component. |
 | A route loading | `PageSkeleton` | The router's pending component. |
 | A list loading | `TableSkeleton headers` | With the real column headers; announced through a hidden status. |
 | A small part loading | `Loading label` | Replaces the loose "Wird geladen…" paragraphs. |
 | Nothing to show | `EmptyState variant` | `noData` (what this is, why it is empty, the next step as `action`), `noMatches` (with `onResetFilters`: "Filter zurücksetzen"), `forbidden` (who may see it), `error` (with `onRetry`: "Erneut versuchen"). Forbidden and error are alerts. |
 | An interactive list | `DataTable` | Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (a named `group`, the only thing that scrolls sideways, D10), selection with a batch bar of its own rendered only with a selection (`batchActions`: four buttons, the rest under "Weitere Aktionen", each told its button for the focus return), a row overflow menu (`rowActions`), `onRowClick` (a click outside the row's controls; the row's link stays the keyboard's way), a column chooser (`columnChooser`, `hiddenColumns` to keep the choice in memory across a navigation), "Weitere anzeigen" over the loaded rows (`pageSize`, `limit`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. Without rows the empty state replaces the table, under the `toolbar` (a search or filter that found nothing stays changeable). |
-| A small read-only table | `SimpleTable` | Its `footer` holds "Mehr laden" of a cursor list or the list's add action. |
+| A small read-only table | `SimpleTable` | Its `footer` holds "Mehr laden" of a cursor list or the list's add action. `hideTitle` when the page or card heading already names it (the table keeps the name for assistive technology). |
 | A task over the page (form, filters, bulk action) | `SidePanel` | Below. |
 | An action that may be blocked | `ActionButton unavailableReason` | C1. |
 | A confirmation or a short choice | Carbon `Modal` | As before; a modal with input follows C4. |
@@ -100,6 +102,57 @@ tags, the toolbar with the count line ("142 Teilnehmende · Stand 09:41", "12 Tr
 filtered), the search and "Filter" (a side panel with the filters in groups, applied at once).
 The default order is the domain's (C2); a header sort is a code in the URL. Row click opens the
 object; the way back restores the view (C6).
+
+### The dashboard
+
+The project's "Übersicht" (`apps/web/src/components/project-dashboard.tsx`) has three layers:
+
+1. **"Heute zu tun"**: four `CountTile`s from the existing counts, labelled like their quick
+   views (`tileLabelKey`): "Überfällig", "In den nächsten 14 Tagen", "Angaben/Unterlagen fehlen"
+   and, for the PL, "Termine zu klären", else "Hinweise". When all four are zero the row says
+   **"Keine offenen Punkte in diesen Ansichten"**, never "Alles erledigt": open work outside these
+   views (a mandatory BA reporting task, also after the participation closed; Agentur items;
+   flags) isn't counted there, so "Weitere offene Arbeit" lists every other open-work count as a
+   link right below. A true all-clear would need every category checked and is not offered.
+2. **"Verlauf"**: the main status and, in `ta_tg`, the DSV track, each as its own card of bars of
+   all participations (C3: two summaries, never one sequence), with the total as a link.
+3. **"Alle Kennzahlen"**: the other groups as compact cards in a three-column grid, open from
+   1280px and collapsed below (a disclosure button; the viewer's choice in component state).
+
+Every number links to the work list with exactly the counted rows.
+
+### Setup pages
+
+A tab of settings ("Einrichtung") is cards, one per topic, each with an `id`; from 66rem an
+in-page anchor list ("Auf dieser Seite") sits beside them and is hidden below, where the cards
+simply follow each other. An admin control (the region's change) is in its card only for those
+who may use it; everyone else reads the value where it is shown (the page header's metadata).
+
+### The participant page
+
+The pattern for one object with parallel tracks (`apps/web/src/routes/projects/$projectId_.participations.$participationId.tsx`,
+`components/participant-overview.tsx`). The header's breadcrumb ends with the list the object came
+from, with that list's codes and sort (C6): the work list hands them over in the navigation's
+history state (a reload of the participant page keeps it), the work list's memory is the fallback.
+The tags name their track (C3); the actions the capabilities allow are under "Aktionen", the
+reminder and the invitation reuse the work list's dialogs with the one row. The derived hints are
+one "Handlungsbedarf" notification with a list, never one banner each.
+
+The overview is three columns (`Grid columns={3} collapse="wide"`) that separate concerns:
+*Stand* (each track its own summary with its tag, its short step list of the fixed lifecycle core
+and its key date; never one sequence across tracks), *Offen* (the open items in C2's order,
+`openSteps`, five shown and the rest behind "Alle n anzeigen", each linking to the tab or card
+that resolves it, with C1's prerequisite as text where the action there is blocked) and
+*Termine & Zuständigkeit*. Below them: the timeline, "Stammdaten", then one card per topic whose
+edit forms open in one side panel (C4). The open items, deadlines and appointments come from the
+work list's row of the participation (no API of its own); a viewer without the work list sees the
+page without them and is told why.
+
+The timeline (D12, stage 1) is inline SVG styled by CSS classes (no inline `<style>`, CSP) without
+a chart library: the TG period as a bar, a "heute" line, one shape per kind (circle, diamond,
+square; red for an overdue deadline) with a legend in text. Each marker is a link that the
+keyboard reaches, with a tooltip on hover and focus (Escape hides it). Below the graphic the same
+events as a list, which is the accessible equivalent; below 30rem only the list shows.
 
 ### Side panel
 

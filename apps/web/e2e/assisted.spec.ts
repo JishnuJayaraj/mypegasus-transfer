@@ -37,10 +37,14 @@ test("slice 4a: placement Agentur, the participant's wizard, assisted mode by ph
   // its custom field.
   await page.goto(detail);
   await expect(page.getByRole("heading", { name: "Beispiel, Erika" })).toBeVisible();
-  await page
+  // The change opens in a side panel (ui-patterns.md, C4).
+  await page.getByRole("button", { name: "Vermittlungs-Agentur festlegen" }).click();
+  const agenturPanel = page.getByRole("dialog", { name: "Vermittlungs-Agentur" });
+  await agenturPanel
     .getByRole("combobox", { name: "Vermittlungs-Agentur festlegen" })
     .fill("beispielstadt-nord");
-  await page.getByRole("button", { name: "Vermittlungs-Agentur speichern" }).click();
+  await agenturPanel.getByRole("button", { name: "Vermittlungs-Agentur speichern" }).click();
+  await expect(agenturPanel).toBeHidden();
   const placement = page.getByRole("region", { name: "Vermittlungs-Agentur" });
   await expect(placement).toContainText("beispielstadt-nord");
   await ok(

@@ -151,8 +151,8 @@ export function AgenturSettings({ projectId }: { projectId: string }) {
   ] as const;
 
   return (
-    <section aria-labelledby="project-overrides" className="tp-section">
-      <h2 id="project-overrides">{t("overrides.title")}</h2>
+    <section aria-labelledby="project-overrides">
+      <h3 id="project-overrides">{t("overrides.title")}</h3>
       <p>{t("overrides.version", { version: config.override.version })}</p>
       {error && (
         <InlineNotification kind="error" title={t(`overrides.errors.${error}`)} hideCloseButton />
@@ -290,9 +290,9 @@ function AgenturSettingForm(props: {
   return (
     <Form className="tp-form" onSubmit={submit} noValidate>
       <Stack gap={5}>
-        <h3>
+        <h4>
           {scoped ? t("overrides.editTitle", { agentur: scoped.agenturKey }) : t("overrides.add")}
-        </h3>
+        </h4>
         {formError && (
           <InlineNotification kind="error" title={message(formError)} hideCloseButton />
         )}

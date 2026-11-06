@@ -53,9 +53,7 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, me = staffUsers[1]) {
 
 const openTeam = async () => {
   await userEvent.click(await screen.findByRole("tab", { name: "Team" }));
-  return within(
-    (await screen.findByRole("heading", { name: "Team", level: 2 })).closest("section")!,
-  );
+  return within(await screen.findByRole("region", { name: "Team" }));
 };
 
 describe("the Team tab (Q126)", () => {
@@ -200,11 +198,16 @@ describe("the project's region (Q126)", () => {
       [`PATCH ${path}`]: () => json({ ...project, regionId: regions[1]!.id }),
     });
     renderApp(`/projects/${project.id}`, api);
+    // Not above the tabs (AC 11): the header names the region; changing it is in "Einrichtung".
+    expect(await screen.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Region (Niederlassung)")).toBeNull();
+    await userEvent.click(screen.getByRole("tab", { name: "Einrichtung" }));
+    const card = within(await screen.findByRole("region", { name: "Projekt" }));
     await userEvent.selectOptions(
-      await screen.findByLabelText("Region (Niederlassung)"),
-      await screen.findByRole("option", { name: "Niederlassung Süd (SUED)" }),
+      await card.findByLabelText("Region (Niederlassung)"),
+      await card.findByRole("option", { name: "Niederlassung Süd (SUED)" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Region ändern" }));
+    await userEvent.click(card.getByRole("button", { name: "Region ändern" }));
     await waitFor(() =>
       expect(calls).toContainEqual({ key: `PATCH ${path}`, body: { regionId: regions[1]!.id } }),
     );
@@ -221,5 +224,8 @@ describe("the project's region (Q126)", () => {
     renderApp(`/projects/${project.id}`, api);
     expect(await screen.findByText("Region: Niederlassung Nord (NORD)")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Region ändern" })).toBeNull();
+    await userEvent.click(screen.getByRole("tab", { name: "Einrichtung" }));
+    await screen.findByRole("region", { name: "Projekt" });
+    expect(screen.queryByLabelText("Region (Niederlassung)")).toBeNull();
   });
 });

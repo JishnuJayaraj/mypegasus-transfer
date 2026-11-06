@@ -234,13 +234,21 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## The project page (Slice 5, PR 5-1)
 
-- The tabs "Übersicht" (the dashboard), "Teilnehmende" (the work list), "Termine" (the
-  appointments, PR 5b-1), "Einrichtung" (project setup, Agentur settings, waves, import) and
-  "Team"; the tab, the work list's code filters and its sort
-  are the route's search params (`?tab=participants&status=informed&sort=-deadline`), never a
-  person's value. Each tab loads its data only while shown. The page header's primary action is
-  "Teilnehmende hinzufügen" (the manual creation in a side panel, with the import's capability),
-  and "Datei importieren" is in its "Aktionen".
+- The tabs, by how often they are used (Slice 6b, PR 6b-4): "Übersicht" (the dashboard),
+  "Teilnehmende" (the work list), "Termine" (the appointments, PR 5b-1), "Agentur" (`ta_tg`),
+  "Einrichtung" and "Team"; the tab, the work list's code filters and its sort are the route's
+  search params (`?tab=participants&status=informed&sort=-deadline`), never a person's value, and
+  `tab` names a tab, never its position (`projectTabs`). Each tab loads its data only while shown,
+  and no panel repeats its tab's label as a heading (ui-patterns.md, principle 6).
+- The page header (PR 6b-4): the breadcrumb "Projekte", the project's name as the one `h1`, the
+  customer, type and status as tags, the region as the metadata line (`RegionText`). Its
+  primary action is "Teilnehmende hinzufügen" (the manual creation in a side panel, with the
+  import's capability), and "Datei importieren" is in its "Aktionen" (it opens "Einrichtung" at
+  `#project-import`).
+- **"Einrichtung"** (PR 6b-4) is cards with an in-page anchor list from 66rem: "Projekt" (status,
+  the region's change form for those with `capabilities.setProjectRegion`, the blockers and the
+  activation), "Agentur" (the Project Agentur, the pins, their migration and the Agentur-specific
+  settings), "Eintrittswellen", "Kopf der Kug 200a" (`ta_tg`) and "Import" (`project-import`).
 - One snapshot per project (`worklistQuery`, `GET /projects/{id}/worklist`) feeds the work list;
   its query key is the prefix of every participant query of the project, so a change to a
   participation refreshes the list and the dashboard alike. The domain's `WorklistFilter`,
@@ -280,13 +288,18 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   offen" and the group "Agentur". **"Eskalationen"** (`/admin/escalations`, in the navigation of
   regional admins and the global admin; `GET /escalations`) lists counts per project and type with
   the PLs, never a participant.
-- **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende",
-  "Angaben/Unterlagen fehlen", "In den nächsten 14 Tagen", "Überfällig", "Hinweise", "nicht
-  erreichbar"; a tile that is a work-list quick view has its label, Slice 6b) and tables per status, track, wave, activation and notice state, deadline kind and
-  state and flag. Each count is defined as a `WorklistFilter` (`projectFunnel`, `funnelFilters`)
-  and links to the work list with that filter, so a count and its drill-down are one predicate
-  (a domain test holds `count = items.filter(filter).length`). Tables and tiles, no chart library
-  (the CSP forbids inline styles). From PR 5b-4 the tiles "Termine überfällig" and "Termine zu
+- **The dashboard** ("Übersicht") counts distinct participations. Each count is defined as a
+  `WorklistFilter` (`projectFunnel`, `funnelFilters`) and links to the work list with that filter,
+  so a count and its drill-down are one predicate (a domain test holds
+  `count = items.filter(filter).length`). From Slice 6b (PR 6b-4; ui-patterns.md, dashboard) it
+  has three layers: "Heute zu tun" (four `CountTile`s labelled like their quick views:
+  "Überfällig", "In den nächsten 14 Tagen", "Angaben/Unterlagen fehlen" and, for the PL, "Termine
+  zu klären", else "Hinweise"; then every other tile under "Weitere offene Arbeit"), "Verlauf" (the
+  main status and, in `ta_tg`, the DSV track as bars of all participations, with the total
+  "n Teilnehmende") and "Alle Kennzahlen" (the other groups as compact cards, collapsed below
+  1280px). The bars are CSS widths set through React's `style` prop: the CSP forbids inline
+  `<style>` and `style` attributes in markup, not the CSSOM (`apps/api/src/app.ts`), so no chart
+  library is needed. From PR 5b-4 the tiles "Termine überfällig" and "Termine zu
   klären" and the table "Termine" (one count per value of the filter `appointment`: a next
   booking, the two unions, each item kind) count the appointment items the same way
   (process-and-lifecycle.md, appointment items).
@@ -313,6 +326,13 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## The participant page
 
+- From Slice 6b (6b-5) the page follows ui-patterns.md, "The participant page": breadcrumb back to
+  the work list as it was left, three track tags, "Aktionen", one "Handlungsbedarf"; the overview
+  with *Stand*, *Offen*, *Termine & Zuständigkeit*, the timeline (stage 1, the facts the page
+  already loads) and the cards "Stammdaten", "Portalaktivierung und Datenschutzhinweis", "Welle und
+  Vertragsdaten" and "BA-Meldungen", whose edit forms open in a side panel. The open items come
+  from the work list's snapshot (`GET /projects/{id}/worklist`, the viewer's own scope), usually
+  already cached from the list.
 - The tabs "Übersicht", "Selbstauskunft", "Unterlagen", "Termine", "Nachrichten" and "Verlauf", the tab in
   the route's search param (`?tab=history`); each tab other than the overview loads its data only
   while shown, so opening "Verlauf" (an audited opening, data-protection.md) happens only when the

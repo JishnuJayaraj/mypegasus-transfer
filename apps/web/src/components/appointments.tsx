@@ -115,8 +115,8 @@ export function AppointmentsTab({ projectId, taTg }: { projectId: string; taTg: 
   const capabilities = query.data.pages[0]!.capabilities;
   const items = query.data.pages.flatMap((page) => page.items);
   return (
-    <section className="tp-section" aria-labelledby="project-appointments">
-      <h2 id="project-appointments">{t("appointments.title")}</h2>
+    // Named by its tab, without a heading of its own (ui-patterns.md, principle 6).
+    <section className="tp-section" aria-label={t("appointments.title")}>
       <p>{t("appointments.intro")}</p>
       {creating ? (
         <AppointmentForm
@@ -158,6 +158,7 @@ export function AppointmentsTab({ projectId, taTg }: { projectId: string; taTg: 
       </Select>
       <SimpleTable
         title={t("appointments.title")}
+        hideTitle
         columns={(
           ["kind", "when", "venue", "host", "bookings", "status", "resolution", "actions"] as const
         ).map((key) => ({ key, header: t(`appointments.columns.${key}`) }))}

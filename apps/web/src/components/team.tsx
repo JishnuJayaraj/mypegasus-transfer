@@ -96,8 +96,8 @@ export function ProjectTeam({ projectId }: { projectId: string }) {
   }));
 
   return (
-    <section aria-labelledby="project-team" className="tp-section">
-      <h2 id="project-team">{t("team.title")}</h2>
+    // Named by its tab, without a heading of its own (ui-patterns.md, principle 6).
+    <section aria-label={t("team.title")} className="tp-section">
       {error && (
         <InlineNotification
           kind="error"

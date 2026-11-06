@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -192,10 +192,40 @@ describe("changing the contractual dates", () => {
       capabilities: { assignEntryWave: false, setParticipationDates: false },
       refusals: { assignEntryWave: "dsv_already_offered", setParticipationDates: "dsv_offer_open" },
     });
-    expect(
-      await screen.findByText(/Ein DSV-Angebot ist offen: Das ausgehändigte/),
-    ).toBeInTheDocument();
+    // Authorised but blocked: the button stays, disabled, with its prerequisite as text (C1).
+    const button = await screen.findByRole("button", { name: "Vertragsdaten ändern" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(/Ein DSV-Angebot ist offen: Das ausgehändigte/);
+    expect(screen.getByText(/Ein DSV-Angebot ist offen: Das ausgehändigte/)).toBeVisible();
+  });
+
+  it("renders no change for a viewer without the permission (C1)", async () => {
+    setup({
+      ...detail,
+      capabilities: { assignEntryWave: false, setParticipationDates: false },
+      refusals: { assignEntryWave: "forbidden", setParticipationDates: "forbidden" },
+    });
+    await screen.findByRole("region", { name: "Welle und Vertragsdaten" });
     expect(screen.queryByRole("button", { name: "Vertragsdaten ändern" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Welle zuordnen" })).toBeNull();
+  });
+
+  it("opens the form in a side panel that keeps the input on Escape (C4)", async () => {
+    const calls = setup(detail, () => json(detail));
+    await open();
+    const panel = await screen.findByRole("dialog", { name: "Vertragsdaten ändern" });
+    await type("TG-Ende (TT.MM.JJJJ)", "31.01.2092");
+    await userEvent.keyboard("{Escape}");
+    const question = await screen.findByRole("alertdialog", { name: "Änderungen verwerfen?" });
+    expect(within(question).getByRole("button", { name: "Weiter bearbeiten" })).toHaveFocus();
+    // Escape on the question keeps editing: the panel and the input stay.
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(panel).toBeInTheDocument();
+    expect(within(panel).getByLabelText("TG-Ende (TT.MM.JJJJ)")).toHaveValue("31.01.2092");
+    expect(sent(calls)).toEqual([]);
+    // Without changes the panel closes at once, and the form has no "Abbrechen" of its own.
+    expect(within(panel).queryByRole("button", { name: "Abbrechen" })).toBeNull();
   });
 
   it("lists the amendments and the review hint", async () => {

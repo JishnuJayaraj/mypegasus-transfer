@@ -109,6 +109,11 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, shown: object = detai
 }
 
 const section = (name: string) => screen.findByRole("region", { name });
+/** Opens a side panel from its button (C4) and returns the panel. */
+const openPanel = async (button: string, name = button) => {
+  await userEvent.click(await screen.findByRole("button", { name: button }));
+  return screen.findByRole("dialog", { name });
+};
 
 describe("the participant page", () => {
   it("shows person, contact, status, wave and dates; a missing value as a dash", async () => {
@@ -122,7 +127,10 @@ describe("the participant page", () => {
       within(contact).getByText("Musterstraße 1, 99999 Beispielstadt, DE"),
     ).toBeInTheDocument();
     expect(within(contact).getAllByText("—")).toHaveLength(2);
-    expect(within(await section("Status")).getByText("Importiert")).toBeInTheDocument();
+    const stand = await section("Stand");
+    expect(
+      within(within(stand).getByRole("region", { name: "Status" })).getAllByText("Importiert"),
+    ).not.toHaveLength(0);
     expect(within(await section("Welle und Vertragsdaten")).getByText("Welle")).toBeInTheDocument();
   });
 
@@ -138,8 +146,10 @@ describe("the participant page", () => {
     );
     expect(await screen.findByRole("heading", { name: "Teilnehmende Person" })).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Kontakt" })).toBeNull();
-    expect(screen.queryByLabelText("Welle zuordnen")).toBeNull();
-    expect(screen.getByText("Nur die Projektleitung ordnet Wellen zu.")).toBeInTheDocument();
+    // Not authorised: no wave choice at all, and no prerequisite to wait for (C1).
+    await section("Welle und Vertragsdaten");
+    expect(screen.queryByRole("button", { name: "Welle zuordnen" })).toBeNull();
+    expect(screen.queryByText("Nur die Projektleitung ordnet Wellen zu.")).toBeNull();
   });
 
   it("names the API's reason for a closed status, not one guessed from the data", async () => {
@@ -200,13 +210,21 @@ describe("the participant page", () => {
       [`PUT ${detailPath}/entry-wave`]: () =>
         json({ ...detail, entryWave: w1, capabilities: { assignEntryWave: true } }),
     });
-    await userEvent.selectOptions(await screen.findByLabelText("Welle zuordnen"), option1);
-    await userEvent.click(screen.getByRole("button", { name: "Welle zuordnen" }));
+    const panel = await openPanel("Welle zuordnen");
+    await userEvent.selectOptions(
+      await within(panel).findByRole("combobox", { name: "Welle zuordnen" }),
+      option1,
+    );
+    await userEvent.click(within(panel).getByRole("button", { name: "Welle zuordnen" }));
     expect(await screen.findByText("Welle zugeordnet")).toBeInTheDocument();
     expect(calls.find((c) => c.key === `PUT ${detailPath}/entry-wave`)?.body).toEqual({
       waveId: w1.id,
     });
-    expect(await screen.findByLabelText("Andere Welle zuordnen")).toBeInTheDocument();
+    // Saved: the panel closes and the card offers the change.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(
+      await screen.findByRole("button", { name: "Andere Welle zuordnen" }),
+    ).toBeInTheDocument();
   });
 
   it("shows a refusal by its code and reads the participation again", async () => {
@@ -216,10 +234,16 @@ describe("the participant page", () => {
           errors: [{ pointer: "", code: "dsv_already_offered", detail: "Refused" }],
         }),
     });
-    await userEvent.selectOptions(await screen.findByLabelText("Welle zuordnen"), option2);
-    await userEvent.click(screen.getByRole("button", { name: "Welle zuordnen" }));
+    const panel = await openPanel("Welle zuordnen");
+    await userEvent.selectOptions(
+      await within(panel).findByRole("combobox", { name: "Welle zuordnen" }),
+      option2,
+    );
+    await userEvent.click(within(panel).getByRole("button", { name: "Welle zuordnen" }));
     expect(
-      await screen.findByText("Nach dem ersten DSV-Angebot ändert sich die Welle nicht mehr."),
+      await within(panel).findByText(
+        "Nach dem ersten DSV-Angebot ändert sich die Welle nicht mehr.",
+      ),
     ).toBeInTheDocument();
     expect(calls.filter((c) => c.key === `GET ${detailPath}`).length).toBeGreaterThan(1);
   });
@@ -301,9 +325,9 @@ describe("activation details", () => {
       },
       activationDetail,
     );
-    const panel = await section("Portalaktivierung und Datenschutzhinweis");
-    expect(await within(panel).findByText("Petra Projektleitung")).toBeInTheDocument();
-
+    const card = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(await within(card).findByText("Petra Projektleitung")).toBeInTheDocument();
+    const panel = await openPanel("Persönlich senden");
     const send = within(panel).getByRole("button", { name: "Aktivierungslink senden" });
     await userEvent.type(
       within(panel).getByLabelText("Private E-Mail-Adresse oder Mobilnummer"),
@@ -349,15 +373,12 @@ describe("activation details", () => {
       },
       { ...activationDetail, activationStatus: used.status },
     );
-    const panel = await section("Portalaktivierung und Datenschutzhinweis");
-    expect(await within(panel).findByText("Petra Projektleitung")).toBeInTheDocument();
-    expect(within(panel).queryByRole("button", { name: "Code widerrufen" })).toBeNull();
+    const card = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(await within(card).findByText("Petra Projektleitung")).toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Code widerrufen" })).toBeNull();
+    const panel = await openPanel("Datenschutzhinweis ausgedruckt persönlich übergeben");
     await userEvent.selectOptions(within(panel).getByLabelText("Sprache"), "en");
-    await userEvent.click(
-      within(panel).getByRole("button", {
-        name: "Datenschutzhinweis ausgedruckt persönlich übergeben",
-      }),
-    );
+    await userEvent.click(within(panel).getByRole("button", { name: "Übergabe erfassen" }));
     await waitFor(() =>
       expect(calls).toContainEqual({
         key: `POST ${detailPath}/privacy-notices`,
@@ -466,7 +487,11 @@ describe("an activated account (ADR-0007, Q123)", () => {
         capabilities: { ...detail.capabilities, ...recovered.capabilities },
       },
     );
-    const panel = await section("Portalaktivierung und Datenschutzhinweis");
+    await section("Portalaktivierung und Datenschutzhinweis");
+    const panel = await openPanel(
+      "Zugang wiederherstellen",
+      "Zugang wiederherstellen (Zugang verloren)",
+    );
     const recovery = await within(panel).findByRole("group", {
       name: "Zugang wiederherstellen (Zugang verloren)",
     });
@@ -540,8 +565,12 @@ describe("an activated account (ADR-0007, Q123)", () => {
         capabilities: { ...detail.capabilities, ...suspended.capabilities },
       },
     );
-    const panel = await section("Portalaktivierung und Datenschutzhinweis");
-    expect(await within(panel).findByText(/Gesperrt seit 23\.10\.2026/)).toBeInTheDocument();
+    const card = await section("Portalaktivierung und Datenschutzhinweis");
+    expect(await within(card).findByText(/Gesperrt seit 23\.10\.2026/)).toBeInTheDocument();
+    const panel = await openPanel(
+      "Zugang wiederherstellen",
+      "Zugang wiederherstellen (Zugang verloren)",
+    );
     const recovery = within(panel).getByRole("group", {
       name: "Zugang wiederherstellen (Zugang verloren)",
     });
@@ -599,9 +628,11 @@ describe("the participant's consultants (Q62)", () => {
       { ...detail, assignments: [assigned] },
     );
     const consultants = await section("Zuständige Beratung");
-    expect(within(consultants).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
+    expect(within(consultants).getByText("Bernd Beratung")).toBeInTheDocument();
+    const panel = await openPanel("Beratung zuweisen");
+    expect(within(panel).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
     await userEvent.click(
-      within(consultants).getByRole("button", { name: "Zuweisung von Bernd Beratung aufheben" }),
+      within(panel).getByRole("button", { name: "Zuweisung von Bernd Beratung aufheben" }),
     );
     await waitFor(() =>
       expect(calls.map((c) => c.key)).toContain(
@@ -614,11 +645,12 @@ describe("the participant's consultants (Q62)", () => {
     const calls = setup({ [`POST ${projectPath}/assignments`]: () => json({ assigned: 1 }) });
     const consultants = await section("Zuständige Beratung");
     expect(within(consultants).getByText("Niemandem zugewiesen.")).toBeInTheDocument();
+    const panel = await openPanel("Beratung zuweisen");
     await userEvent.selectOptions(
-      within(consultants).getByLabelText("Beraterin oder Berater"),
+      within(panel).getByLabelText("Beraterin oder Berater"),
       consultant.id,
     );
-    await userEvent.click(within(consultants).getByRole("button", { name: "Zuweisen" }));
+    await userEvent.click(within(panel).getByRole("button", { name: "Zuweisen" }));
     await waitFor(() =>
       expect(calls).toContainEqual({
         key: `POST ${projectPath}/assignments`,
@@ -637,16 +669,22 @@ describe("the participant's consultants (Q62)", () => {
       },
     );
     const consultants = await section("Zuständige Beratung");
-    expect(within(consultants).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
+    expect(within(consultants).getByText("Bernd Beratung")).toBeInTheDocument();
     expect(within(consultants).queryByRole("button")).toBeNull();
   });
 });
 
-/** The placement Agentur combobox of the participant page. */
-const field = async () =>
-  within(await section("Vermittlungs-Agentur")).findByRole("combobox", {
+/** The placement Agentur combobox, in its side panel opened from the overview. */
+const field = async () => {
+  await userEvent.click(
+    within(await section("Vermittlungs-Agentur")).getByRole("button", {
+      name: "Vermittlungs-Agentur festlegen",
+    }),
+  );
+  return within(await screen.findByRole("dialog")).findByRole("combobox", {
     name: "Vermittlungs-Agentur festlegen",
   });
+};
 
 describe("the participant's placement Agentur (Q139)", () => {
   const choices = [
@@ -697,7 +735,7 @@ describe("the participant's placement Agentur (Q139)", () => {
     expect(
       within(shown).getByText(/Übermittlung an die Agentur ist blockiert/),
     ).toBeInTheDocument();
-    expect(within(shown).queryByRole("combobox")).toBeNull();
+    expect(within(shown).queryByRole("button")).toBeNull();
   });
 
   it("chooses a catalog Agentur, says which version will be pinned, and saves it", async () => {

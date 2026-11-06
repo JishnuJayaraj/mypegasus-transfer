@@ -43,16 +43,16 @@ describe("the administration navigation", () => {
     expect(screen.getByRole("link", { name: "Regionen" })).toBeInTheDocument();
   });
 
-  it("hides them from a PL, and shows the PL 'Projekt anlegen'", async () => {
+  it("hides them from a PL, and shows the PL 'Neues Projekt'", async () => {
     renderApp("/projects", setup({}, lead).api);
-    expect(await screen.findByRole("link", { name: "Projekt anlegen" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Neues Projekt" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Mitarbeitende" })).toBeNull();
   });
 
-  it("offers 'Projekt anlegen' only to accounts that may create projects", async () => {
+  it("offers 'Neues Projekt' only to accounts that may create projects", async () => {
     renderApp("/projects", setup().api);
     expect(await screen.findByRole("link", { name: "Mitarbeitende" })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Projekt anlegen" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Neues Projekt" })).toBeNull();
   });
 });
 

@@ -6,6 +6,7 @@ import {
   LifecycleFlag,
   MainStatus,
   ProfilingStatus,
+  ProjectStatus,
 } from "@transfer/domain";
 import { describe, expect, it } from "vitest";
 import { StatusTag, statusCodes, statusTag } from "./status";
@@ -19,6 +20,7 @@ describe("the status map", () => {
     expect(statusCodes.deadline.toSorted()).toEqual(DeadlineState.options.toSorted());
     expect(statusCodes.flag.toSorted()).toEqual(LifecycleFlag.options.toSorted());
     expect(statusCodes.appointment.toSorted()).toEqual(AppointmentStatus.options.toSorted());
+    expect(statusCodes.project.toSorted()).toEqual(ProjectStatus.options.toSorted());
   });
 
   it("follows the colour language: overdue red, due soon yellow, done green, terminal gray", () => {
@@ -54,5 +56,10 @@ describe("StatusTag", () => {
     const tag = screen.getByText("Überschritten").closest(".cds--tag")!;
     expect(tag).toHaveAttribute("data-tone", "danger");
     expect(tag.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("names the track before the code with a prefix (C3)", () => {
+    renderUi(<StatusTag family="deadline" code="overdue" prefix="Frist" />);
+    expect(screen.getByText("Frist: Überschritten")).toBeInTheDocument();
   });
 });

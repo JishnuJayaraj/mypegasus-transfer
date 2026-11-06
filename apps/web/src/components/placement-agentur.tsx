@@ -9,7 +9,7 @@ import {
   Stack,
   useToast,
 } from "@transfer/ui";
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { worklistQuery, participationQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
@@ -27,12 +27,48 @@ const ChoiceOption = (choice: Choice) => <span>{choiceText(choice)}</span>;
 
 /**
  * The placement Agentur of a participant (Q139; regional-variation.md, "Placement Agentur"): the
- * current key and whether its Agentur submission is blocked, and for the PL and back office
- * (`capabilities.setPlacementAgentur`) a combobox of the catalog's and the project's Agenturen
- * that also takes a free key. An unpinned catalog Agentur is pinned at its latest version by the
- * API; the helper text says which version applies before the user confirms.
+ * current key, when it was set and whether its Agentur submission is blocked. The overview shows
+ * it under "Termine & Zuständigkeit"; the change is `PlacementAgenturForm` in a side panel.
  */
-export function PlacementAgentur({ detail, projectId }: { detail: Detail; projectId: string }) {
+export function PlacementAgenturFacts({ detail }: { detail: Detail }) {
+  const { t } = useTranslation();
+  const current = detail.placementAgenturKey;
+  const choice = detail.placementAgenturChoices.find((c) => c.agenturKey === current);
+  const blocked = detail.submissionBlockers.some((b) => b.code === "agentur_submission_blocked");
+  return (
+    <>
+      {/* Under its heading "Vermittlungs-Agentur": the value, not the label again. */}
+      <p>
+        {current ? (choice ? choiceText(choice) : current) : t("participant.placementAgentur.none")}
+      </p>
+      {detail.placementAgenturSetAt && (
+        <p className="tp-secondary-line">
+          {`${t("participant.placementAgentur.setAt")}: ${formatTimestamp(detail.placementAgenturSetAt)}`}
+        </p>
+      )}
+      {blocked && <p>{t("participant.placementAgentur.submissionBlocked")}</p>}
+    </>
+  );
+}
+
+/**
+ * The change, for the PL and back office (`capabilities.setPlacementAgentur`), in a side panel: a
+ * combobox of the catalog's and the project's Agenturen that also takes a free key. An unpinned
+ * catalog Agentur is pinned at its latest version by the API; the helper text says which version
+ * applies before the user confirms. A refusal keeps the panel open with the input (C4).
+ */
+export function PlacementAgenturForm({
+  detail,
+  projectId,
+  onDirtyChange,
+  onSaved,
+}: {
+  detail: Detail;
+  projectId: string;
+  /** Whether a key is entered and not yet saved (C4). */
+  onDirtyChange?: (dirty: boolean) => void;
+  onSaved?: () => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
@@ -41,6 +77,8 @@ export function PlacementAgentur({ detail, projectId }: { detail: Detail; projec
   const [error, setError] = useState<string>();
   const choices = detail.placementAgenturChoices;
   const current = detail.placementAgenturKey;
+  // A layout effect, so an Escape right after typing already asks (ui-patterns.md, side panel).
+  useLayoutEffect(() => onDirtyChange?.(key !== ""), [key, onDirtyChange]);
 
   const save = useMutation({
     mutationFn: async (agenturKey: string) => {
@@ -60,6 +98,8 @@ export function PlacementAgentur({ detail, projectId }: { detail: Detail; projec
       });
       setKey("");
       setError(undefined);
+      onDirtyChange?.(false);
+      onSaved?.();
     },
     onError: async (failure) => {
       const problem = failure instanceof ApiProblemError ? failure : undefined;
@@ -72,10 +112,6 @@ export function PlacementAgentur({ detail, projectId }: { detail: Detail; projec
     },
   });
 
-  const labelOf = (agenturKey: string) => {
-    const choice = choices.find((c) => c.agenturKey === agenturKey);
-    return choice ? choiceText(choice) : agenturKey;
-  };
   const chosen = choices.find((c) => c.agenturKey === key);
   const valid = keyFormat.test(key);
   const helper = !valid
@@ -97,53 +133,34 @@ export function PlacementAgentur({ detail, projectId }: { detail: Detail; projec
     if (valid) save.mutate(key);
   }
 
-  const blocked = detail.submissionBlockers.some((b) => b.code === "agentur_submission_blocked");
   return (
-    <section className="tp-section" aria-label={t("participant.placementAgentur.title")}>
-      <h2>{t("participant.placementAgentur.title")}</h2>
-      <dl className="tp-facts">
+    <Form className="tp-form" onSubmit={submit} noValidate>
+      <Stack gap={5}>
+        {error && <InlineNotification kind="error" title={message(error)} hideCloseButton />}
+        <ComboBox<Choice>
+          id="participant-placement-agentur"
+          titleText={t(
+            current ? "participant.placementAgentur.change" : "participant.placementAgentur.choose",
+          )}
+          placeholder={t("participant.placementAgentur.placeholder")}
+          items={choices.filter((c) => c.agenturKey !== current)}
+          itemToString={(item) => item?.agenturKey ?? ""}
+          itemToElement={ChoiceOption}
+          allowCustomValue
+          onChange={({ selectedItem, inputValue }) =>
+            setKey(selectedItem?.agenturKey ?? inputValue?.trim() ?? "")
+          }
+          onInputChange={(text) => setKey(text.trim())}
+          helperText={helper}
+          invalid={key !== "" && !valid}
+          invalidText={t("participant.placementAgentur.invalidKey")}
+        />
         <div>
-          <dt>{t("participant.placementAgentur.current")}</dt>
-          <dd>{current ? labelOf(current) : t("participant.placementAgentur.none")}</dd>
+          <Button type="submit" disabled={!valid || save.isPending}>
+            {t("participant.placementAgentur.save")}
+          </Button>
         </div>
-        {detail.placementAgenturSetAt && (
-          <div>
-            <dt>{t("participant.placementAgentur.setAt")}</dt>
-            <dd>{formatTimestamp(detail.placementAgenturSetAt)}</dd>
-          </div>
-        )}
-      </dl>
-      {blocked && <p>{t("participant.placementAgentur.submissionBlocked")}</p>}
-      {detail.capabilities.setPlacementAgentur && (
-        <Form className="tp-form" onSubmit={submit} noValidate>
-          <Stack gap={5}>
-            {error && <InlineNotification kind="error" title={message(error)} hideCloseButton />}
-            <ComboBox<Choice>
-              id="participant-placement-agentur"
-              titleText={t(
-                current
-                  ? "participant.placementAgentur.change"
-                  : "participant.placementAgentur.choose",
-              )}
-              placeholder={t("participant.placementAgentur.placeholder")}
-              items={choices.filter((c) => c.agenturKey !== current)}
-              itemToString={(item) => item?.agenturKey ?? ""}
-              itemToElement={ChoiceOption}
-              allowCustomValue
-              onChange={({ selectedItem, inputValue }) =>
-                setKey(selectedItem?.agenturKey ?? inputValue?.trim() ?? "")
-              }
-              onInputChange={(text) => setKey(text.trim())}
-              helperText={helper}
-              invalid={key !== "" && !valid}
-              invalidText={t("participant.placementAgentur.invalidKey")}
-            />
-            <Button type="submit" disabled={!valid || save.isPending}>
-              {t("participant.placementAgentur.save")}
-            </Button>
-          </Stack>
-        </Form>
-      )}
-    </section>
+      </Stack>
+    </Form>
   );
 }

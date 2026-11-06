@@ -13,6 +13,7 @@ import type {
   LifecycleFlag,
   MainStatus,
   ProfilingStatus,
+  ProjectStatus,
 } from "@transfer/domain";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +32,7 @@ interface StatusCodes {
   deadline: DeadlineState;
   flag: LifecycleFlag;
   appointment: AppointmentStatus;
+  project: ProjectStatus;
 }
 export type StatusFamily = keyof StatusCodes;
 
@@ -71,6 +73,8 @@ const tones: { [F in StatusFamily]: Record<StatusCodes[F], StatusTone> } = {
     profiling_declined_after_entry: "warning",
   },
   appointment: { scheduled: "info", cancelled: "neutral" },
+  // A draft project is not running yet; an active one is in progress.
+  project: { draft: "neutral", active: "info" },
 };
 
 /**
@@ -84,6 +88,7 @@ const labelPrefix: Record<StatusFamily, string> = {
   deadline: "worklist.deadlineStates",
   flag: "worklist.flags",
   appointment: "appointments.statuses",
+  project: "projects.statuses",
 };
 
 const toneTag = {
@@ -93,6 +98,11 @@ const toneTag = {
   info: { type: "blue", icon: InProgress },
   neutral: { type: "gray", icon: CircleDash },
 } as const;
+
+/** Each tone's icon, for a tag or a tile (ui-patterns.md, principle 4). */
+export const toneIcon = Object.fromEntries(
+  Object.entries(toneTag).map(([tone, { icon }]) => [tone, icon]),
+) as { [T in StatusTone]: (typeof toneTag)[T]["icon"] };
 
 /** A code's tone, Carbon tag type, icon and label key (the one map; tests cover every code). */
 export function statusTag<F extends StatusFamily>(
@@ -108,21 +118,27 @@ export const statusCodes = Object.fromEntries(
   Object.entries(tones).map(([family, codes]) => [family, Object.keys(codes)]),
 ) as { [F in StatusFamily]: StatusCodes[F][] };
 
-/** A status, track, deadline or flag as a tag with its icon and text. */
+/**
+ * A status, track, deadline or flag as a tag with its icon and text. `prefix` names the track where
+ * a code alone is ambiguous ("Profiling: Angenommen" beside "DSV: Angeboten", C3).
+ */
 export function StatusTag<F extends StatusFamily>({
   family,
   code,
+  prefix,
 }: {
   family: F;
   code: StatusCodes[F];
+  prefix?: string;
 }) {
   const { t } = useTranslation();
   const { tone, type, icon: Icon, labelKey } = statusTag(family, code);
+  const label = String(t(labelKey as never));
   // Carbon draws no icon in a small tag, so the icon is part of the content.
   return (
     <Tag type={type} size="sm" className={`tp-status-tag tp-status-tag--${tone}`} data-tone={tone}>
       <Icon size={12} aria-hidden="true" className="tp-status-tag-icon" />
-      {String(t(labelKey as never))}
+      {prefix ? `${prefix}: ${label}` : label}
     </Tag>
   );
 }

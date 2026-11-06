@@ -1,54 +1,57 @@
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, createLink, type ErrorComponentProps } from "@tanstack/react-router";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  createFileRoute,
+  createLink,
+  useRouter,
+  useRouterState,
+  type ErrorComponentProps,
+} from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
-  Button,
-  Checkbox,
-  formatDate,
-  formatTimestamp,
   InlineNotification,
   Link,
   PageHeader,
-  Select,
-  SelectItem,
-  SimpleTable,
+  StatusTag,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
-  TextInput,
+  type MenuAction,
 } from "@transfer/ui";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   entryWavesQuery,
-  worklistQuery,
-  participationActivationQuery,
   participationQuery,
   projectQuery,
   projectTeamQuery,
   useApi,
+  worklistQuery,
 } from "../../api";
-import { EntryWaveChoice } from "../../components/entry-wave-choice";
-import { ParticipationDatesForm } from "../../components/participation-dates-form";
-import { PlacementAgentur } from "../../components/placement-agentur";
-import { RecoveryPanel } from "../../components/recovery";
-import { RouteError } from "../../components/route-error";
+import { StartAssistedMode } from "../../components/assisted-mode";
+import { AsuTab } from "../../components/asu-tab";
 import { DocumentsTab } from "../../components/documents-tab";
 import { HistoryTab } from "../../components/history";
-import { MessagesTab } from "../../components/reminders";
+import { BulkInvite } from "../../components/invitations";
+import type { StepTarget } from "../../components/open-steps";
+import { activationPanels } from "../../components/participant-activation";
+import {
+  ParticipantOverview,
+  type ItemState,
+  type OverviewPanel,
+} from "../../components/participant-overview";
+import { berlinToday } from "../../components/participant-timeline";
 import { AppointmentsTab } from "../../components/participation-appointments";
 import { ProfilingTab } from "../../components/profiling-tab";
-import { AsuTab } from "../../components/asu-tab";
-import { BaReportingTasks } from "../../components/ba-reporting-tasks";
+import { RecoveryPrint, type RecoveryPrinted } from "../../components/recovery";
+import { BulkRemind, MessagesTab } from "../../components/reminders";
+import { RouteError } from "../../components/route-error";
 import { SelfServiceTab } from "../../components/self-service-tab";
-import { useConsultants } from "../../components/team";
-import type de from "../../locales/de/translation.json";
+import { worklistMemory } from "../../components/worklist-state";
 import { usePageTitle } from "../../page-title";
 
 type Detail = components["schemas"]["ParticipationDetail"];
-type FieldKey = keyof typeof de.participant.fields;
 const RouterLink = createLink(Link);
 
 /**
@@ -119,27 +122,50 @@ function ParticipationError(props: ErrorComponentProps) {
 }
 
 /**
- * One participant (process-and-lifecycle.md; data-protection.md, access matrix): person, contact,
- * status, placement Agentur, wave and contractual dates; the tab "Selbstauskunft" with what the
- * participant answered and assisted mode; the tab "Unterlagen" with their documents. The API sends only what the viewer may read: an absent
- * field isn't shown, a field without a value shows a dash. Actions follow the API's capabilities.
+ * One participant (process-and-lifecycle.md; data-protection.md, access matrix), as the plan of
+ * Slice 6b (6b-5) lays it out: the page header with the breadcrumb back to the work list as it was
+ * left (ui-patterns.md, C6), the three tracks as separate tags (C3) and the actions the
+ * capabilities allow under "Aktionen"; one "Handlungsbedarf" with the hints; the overview and the
+ * tabs. The API sends only what the viewer may read: an absent field isn't shown, a field without
+ * a value shows a dash. The document title names the page, never the person (data-protection.md,
+ * page titles).
  */
 function ParticipationPage() {
   const { t } = useTranslation();
   const { projectId, participationId } = Route.useParams();
   const { tab } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const router = useRouter();
   const api = useApi();
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
   // The page, not the person: no name in the title (data-protection.md, page titles).
   usePageTitle(t("participant.title"), project.name);
   const { data: detail } = useSuspenseQuery(participationQuery(api, participationId));
+  // The open items, the deadlines and the appointments are the work list's row (no new API); a
+  // viewer without the work list (403) sees the page without them.
+  const worklist = useQuery(worklistQuery(api, projectId));
+  const [panel, setPanel] = useState<OverviewPanel | null>(null);
+  const [dialog, setDialog] = useState<"remind" | "invite" | "assisted" | null>(null);
+  const [printed, setPrinted] = useState<RecoveryPrinted | null>(null);
+  const fromList = useRouterState({ select: (state) => state.location.state.worklistSearch });
   // The loader refuses a participant of another project; the cache can't change that later.
   if (detail.projectId !== projectId) {
     return <InlineNotification kind="error" title={t("participant.notFound")} hideCloseButton />;
   }
-  const { person, dates } = detail;
+  const taTg = project.type === "ta_tg";
+  const { person } = detail;
   const name = [person.lastName, person.firstName].filter(Boolean).join(", ");
+  const item = worklist.data?.items.find((row) => row.id === detail.id);
+  const row: ItemState = worklist.isPending
+    ? { state: "loading" }
+    : worklist.isError
+      ? worklist.error instanceof ApiProblemError && [403, 404].includes(worklist.error.status)
+        ? { state: "unavailable" }
+        : { state: "failed", retry: () => void worklist.refetch() }
+      : item
+        ? { state: "loaded", item }
+        : { state: "unavailable" };
+  const today = berlinToday(worklist.data?.generatedAt);
   // Back office and the org roles have no tab "Profiling" (data-protection.md, Q49); the tab
   // "Arbeitsuche" is the case readers' in a `ta_tg` project (Q89).
   const shown = tabs.filter(
@@ -148,50 +174,78 @@ function ParticipationPage() {
       (key !== "asu" || detail.capabilities.viewAsu),
   );
   const current = shown.includes(tab) ? tab : undefined;
+
+  /** Whether the viewer has a tab or card an item links to. */
+  const available = (target: StepTarget) =>
+    "tab" in target
+      ? shown.includes(target.tab)
+      : target.anchor === "participant-dates"
+        ? taTg
+        : target.anchor === "participant-ba"
+          ? taTg && detail.baReportingTasks !== undefined
+          : true;
+  const location = (target: StepTarget) => ({
+    to: "/projects/$projectId/participations/$participationId" as const,
+    params: { projectId, participationId },
+    search: "tab" in target ? { tab: target.tab } : {},
+    ...("anchor" in target && { hash: target.anchor }),
+  });
+  const href = (target: StepTarget) => router.buildLocation(location(target)).href;
+  const open = (target: StepTarget) => {
+    // The history state (the way back to the list) stays with the page's own navigations.
+    void navigate({ ...location(target), state: true }).then(() => {
+      if ("anchor" in target) document.getElementById(target.anchor)?.scrollIntoView();
+    });
+  };
+
+  // The breadcrumb's way back: the work list with the codes and sort it was left with (C6), from
+  // the navigation's history state (kept on a reload), else from the page's memory.
+  const listSearch = fromList ?? worklistMemory(projectId).search;
+  const menuActions: MenuAction[] = [
+    ...activationPanels(detail).map((kind) => ({
+      label: t(`participant.actions.${kind}`),
+      onClick: () => setPanel(kind),
+    })),
+    ...(item && (item.capabilities.remind.allowed || item.capabilities.remind.code !== null)
+      ? [{ label: t("participant.actions.remind"), onClick: () => setDialog("remind") }]
+      : []),
+    ...(item?.capabilities.invite.allowed
+      ? [{ label: t("participant.actions.invite"), onClick: () => setDialog("invite") }]
+      : []),
+    ...(detail.capabilities.startAssistedMode
+      ? [{ label: t("participant.actions.assisted"), onClick: () => setDialog("assisted") }]
+      : []),
+  ];
+  const metadata = [
+    person.personnelNumber &&
+      t("participant.header.personnelNumber", { number: person.personnelNumber }),
+    taTg &&
+      t("participant.header.wave", {
+        wave: detail.entryWave?.code ?? t("participant.header.noWave"),
+      }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   /** A tab's content; each but the overview is loaded only while it is shown. */
-  function panel(key: (typeof tabs)[number]): ReactNode {
-    if (key !== undefined && key !== current) return null;
+  function panelOf(key: (typeof tabs)[number]): ReactNode {
+    if (key !== current) return null;
     switch (key) {
       case undefined:
         return (
-          <>
-            <Facts
-              title={t("participant.person")}
-              rows={[
-                ["personnelNumber", person.personnelNumber],
-                ["lastName", person.lastName],
-                ["firstName", person.firstName],
-                ["birthDate", date(person.birthDate)],
-                ["oldEmploymentEndDate", date(person.oldEmploymentEndDate)],
-              ]}
-            />
-            <Facts
-              title={t("participant.contact")}
-              rows={[
-                ["address", address(person.address)],
-                ["phone", person.phone],
-                ["mobile", person.mobile],
-                ["privateEmail", person.privateEmail],
-                ["workEmail", person.workEmail],
-              ]}
-            />
-            {person.workEmail !== undefined && <p>{t("participant.workEmailHint")}</p>}
-            <Facts
-              title={t("participant.status")}
-              rows={[
-                ["status", t(`participants.statuses.${detail.status}`)],
-                ["profilingStatus", t(`participants.profilingStatuses.${detail.profilingStatus}`)],
-                ["dsvStatus", t(`participants.dsvStatuses.${detail.dsvStatus}`)],
-                ["tgEntryDate", date(dates.tgEntryDate)],
-                ["exitDate", date(dates.exitDate)],
-                ["withdrawnOn", date(dates.withdrawnOn)],
-              ]}
-            />
-            <PlacementAgentur detail={detail} projectId={projectId} />
-            <Assignments detail={detail} projectId={projectId} />
-            <ActivationPanel detail={detail} projectId={projectId} />
-            {project.type === "ta_tg" && <WaveAndDates detail={detail} projectId={projectId} />}
-          </>
+          <ParticipantOverview
+            detail={detail}
+            projectId={projectId}
+            taTg={taTg}
+            row={row}
+            today={today}
+            panel={panel}
+            onPanel={setPanel}
+            href={href}
+            onOpen={open}
+            available={available}
+            onPrinted={setPrinted}
+          />
         );
       // The tab reads the participant's self-service data.
       case "self-service":
@@ -224,23 +278,88 @@ function ParticipationPage() {
 
   return (
     <>
-      <RouterLink to="/projects/$projectId" params={{ projectId }} search={{ tab: "participants" }}>
-        {t("participant.back", { project: project.name })}
-      </RouterLink>
-      <PageHeader title={name || t("participant.title")} />
-      {detail.hints.map((hint) => (
+      <PageHeader
+        title={name || t("participant.title")}
+        breadcrumbs={[
+          // Ancestors, never the current page: each active only on exactly its own URL.
+          <RouterLink key="projects" to="/projects" activeOptions={{ exact: true }}>
+            {t("projects.title")}
+          </RouterLink>,
+          <RouterLink
+            key="project"
+            to="/projects/$projectId"
+            params={{ projectId }}
+            activeOptions={{ exact: true }}
+          >
+            {project.name}
+          </RouterLink>,
+          <RouterLink
+            key="participants"
+            to="/projects/$projectId"
+            params={{ projectId }}
+            search={{ ...listSearch?.filter, tab: "participants", sort: listSearch?.sort }}
+            activeOptions={{ exact: true }}
+          >
+            {t("projectDetail.participants")}
+          </RouterLink>,
+        ]}
+        tags={<TrackTags detail={detail} taTg={taTg} />}
+        metadata={metadata}
+        menuActions={menuActions}
+      />
+      {detail.hints.length > 0 && (
         <InlineNotification
-          key={hint}
           kind="warning"
-          title={t(`participant.hints.${hint}`)}
+          title={t("participant.hints.title")}
           hideCloseButton
+          lowContrast
+        >
+          <ul className="tp-list">
+            {detail.hints.map((hint) => (
+              <li key={hint}>{t(`participant.hints.${hint}`)}</li>
+            ))}
+          </ul>
+        </InlineNotification>
+      )}
+      {printed && (
+        <RecoveryPrint
+          printed={printed}
+          projectId={projectId}
+          onClose={() => setPrinted(null)}
+          onChanged={async () => {
+            await worklist.refetch();
+          }}
         />
-      ))}
+      )}
+      {dialog === "remind" && item && (
+        <BulkRemind
+          projectId={projectId}
+          selected={[item]}
+          onSent={() => undefined}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {dialog === "invite" && item && (
+        <BulkInvite
+          projectId={projectId}
+          selected={[item]}
+          onSent={() => undefined}
+          onClose={() => setDialog(null)}
+        />
+      )}
+      {/* Mounted only while open: the tab "Selbstauskunft" has its own. */}
+      {dialog === "assisted" && (
+        <StartAssistedMode
+          projectId={projectId}
+          participationId={participationId}
+          controlled={{ open: true, onClose: () => setDialog(null) }}
+        />
+      )}
       <Tabs
         selectedIndex={shown.indexOf(current)}
         onChange={({ selectedIndex }) => {
           const next = shown[selectedIndex];
-          void navigate({ search: next ? { tab: next } : {}, replace: true });
+          void navigate({ search: next ? { tab: next } : {}, replace: true, state: true });
         }}
       >
         <TabList aria-label={t("participant.tabs.label")}>
@@ -250,9 +369,11 @@ function ParticipationPage() {
             </Tab>
           ))}
         </TabList>
+        {/* Each panel is named by its tab, never by a heading of its own (ui-patterns.md,
+            principle 6). */}
         <TabPanels>
           {shown.map((key) => (
-            <TabPanel key={key ?? "overview"}>{panel(key)}</TabPanel>
+            <TabPanel key={key ?? "overview"}>{panelOf(key)}</TabPanel>
           ))}
         </TabPanels>
       </Tabs>
@@ -260,503 +381,28 @@ function ParticipationPage() {
   );
 }
 
-function ActivationPanel({ detail, projectId }: { detail: Detail; projectId: string }) {
+/** The three tracks as three separate tags, each named (ui-patterns.md, C3). */
+function TrackTags({ detail, taTg }: { detail: Detail; taTg: boolean }) {
   const { t } = useTranslation();
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const mayRead = Object.values({
-    issue: detail.capabilities.issueActivationCode,
-    handover: detail.capabilities.recordHandover,
-    revoke: detail.capabilities.revokeActivationCode,
-    notice: detail.capabilities.providePrivacyNotice,
-  }).some(Boolean);
-  const query = useQuery({
-    ...participationActivationQuery(api, detail.id),
-    enabled: mayRead,
-  });
-  const [language, setLanguage] = useState<"de" | "en">("de");
-  const [deliveryKind, setDeliveryKind] = useState<"email" | "sms">("email");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [identityChecked, setIdentityChecked] = useState(false);
-  const [confirmReissue, setConfirmReissue] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const refresh = async () => {
-    setFailed(false);
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: participationActivationQuery(api, detail.id).queryKey,
-      }),
-      queryClient.invalidateQueries({ queryKey: participationQuery(api, detail.id).queryKey }),
-      queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
-    ]);
-  };
-  const send = useMutation({
-    mutationFn: async () => {
-      const { data } = await api.POST(
-        "/api/v1/participations/{participationId}/activation-codes/in-person",
-        {
-          params: { path: { participationId: detail.id } },
-          body: {
-            deliveryKind,
-            deliveryAddress,
-            language,
-            identityChecked: true,
-            replaceOpenCode: confirmReissue,
-          },
-        },
-      );
-      if (!data) throw new Error("Activation delivery failed");
-      return data;
-    },
-    onSuccess: async () => {
-      setDeliveryAddress("");
-      setIdentityChecked(false);
-      setConfirmReissue(false);
-      await refresh();
-    },
-    onError: () => setFailed(true),
-  });
-  const revoke = useMutation({
-    mutationFn: async () => {
-      const activationCodeId = query.data?.current?.activationCodeId;
-      if (!activationCodeId) throw new Error("No activation code");
-      const { data } = await api.POST(
-        "/api/v1/participations/{participationId}/activation-codes/revocation",
-        {
-          params: { path: { participationId: detail.id } },
-          body: { activationCodeId, reason: "lost" },
-        },
-      );
-      if (!data) throw new Error("Revocation failed");
-    },
-    onSuccess: refresh,
-    onError: () => setFailed(true),
-  });
-  const provideNotice = useMutation({
-    mutationFn: async () => {
-      const { data, response } = await api.POST(
-        "/api/v1/participations/{participationId}/privacy-notices",
-        {
-          params: { path: { participationId: detail.id } },
-          body: { language, method: "in_person_print", handedOver: true },
-        },
-      );
-      if (!data && response.status !== 201) throw new Error("Notice handover failed");
-    },
-    onSuccess: refresh,
-    onError: () => setFailed(true),
-  });
-  const status = query.data?.status ?? detail.activationStatus;
-  const current = query.data?.current;
-  const requiresReissueConfirmation = ["printed", "open", "delivery_unknown"].includes(status.code);
-  // Expired codes are still open in the database; locked and used ones can't be revoked.
-  const revocable = requiresReissueConfirmation || status.code === "expired";
-  return (
-    <section className="tp-section" aria-label={t("activation.detail.title")}>
-      <h2>{t("activation.detail.title")}</h2>
-      {failed && (
-        <InlineNotification
-          kind="error"
-          title={t("activation.detail.failed")}
-          onClose={() => setFailed(false)}
-        />
-      )}
-      <dl className="tp-facts">
-        <div>
-          <dt>{t("activation.detail.status")}</dt>
-          <dd>
-            {status.account === "activated"
-              ? status.code === "none"
-                ? t("activation.status.activated")
-                : t("activation.status.activatedRecovery", {
-                    code: t(`activation.code.${status.code}`),
-                  })
-              : t(`activation.code.${status.code}`)}
-          </dd>
-        </div>
-        {query.data?.account && (
-          <>
-            <div>
-              <dt>{t("activation.detail.activatedAt")}</dt>
-              <dd>{formatTimestamp(query.data.account.activatedAt)}</dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.identityAssurance")}</dt>
-              <dd>{t(`activation.assurance.${query.data.account.identityAssurance}`)}</dd>
-            </div>
-          </>
-        )}
-        <div>
-          <dt>{t("activation.detail.notice")}</dt>
-          <dd>
-            {t(`activation.notice.${detail.privacyNoticeState.state}`, {
-              dueOn: detail.privacyNoticeState.dueOn,
-            })}
-          </dd>
-        </div>
-        {current && (
-          <>
-            <div>
-              <dt>{t("activation.detail.purpose")}</dt>
-              <dd>{t(`activation.purpose.${current.purpose}`)}</dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.channel")}</dt>
-              <dd>{t(`activation.channel.${current.channel}`)}</dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.issuedAt")}</dt>
-              <dd>{formatTimestamp(current.issuedAt)}</dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.issuedBy")}</dt>
-              <dd>{current.issuedByDisplayName}</dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.expiresAt")}</dt>
-              <dd>{formatTimestamp(current.expiresAt)}</dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.delivery")}</dt>
-              <dd>
-                {current.deliveryStatus ? t(`activation.delivery.${current.deliveryStatus}`) : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt>{t("activation.detail.attempts")}</dt>
-              <dd>{current.attemptsLeft}</dd>
-            </div>
-          </>
-        )}
-      </dl>
-      {query.data && query.data.channels.length > 0 && (
-        <>
-          <h3>{t("activation.detail.channels")}</h3>
-          {/* Q123 (data-protection.md): kind, states and dates; the address never reaches staff. */}
-          <ul className="tp-list">
-            {query.data.channels.map((channel) => (
-              <li key={channel.id}>
-                {t("activation.detail.channelLine", {
-                  kind: t(`activation.deliveryKind.${channel.kind}`),
-                  verifiedAt: formatTimestamp(channel.verifiedAt),
-                  verifiedBy: t(`activation.verifiedBy.${channel.verifiedBy}`),
-                  consentGivenAt: formatTimestamp(channel.consentGivenAt),
-                })}{" "}
-                {t("activation.detail.consentVersion", { version: channel.consentVersion })}{" "}
-                {channel.noticeSentAt
-                  ? t("activation.detail.noticeSent", { at: formatTimestamp(channel.noticeSentAt) })
-                  : t("activation.detail.noticePending")}
-                {channel.suspendedAt &&
-                  !channel.removedAt &&
-                  ` ${t("activation.detail.suspended", { at: formatTimestamp(channel.suspendedAt) })}`}
-                {channel.removedAt &&
-                  ` ${t("activation.detail.removed", { at: formatTimestamp(channel.removedAt) })}`}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {(detail.capabilities.issueActivationCode || detail.capabilities.providePrivacyNotice) && (
-        <Select
-          id="activation-detail-language"
-          labelText={t("activation.bulk.language")}
-          value={language}
-          onChange={(event) => setLanguage(event.target.value as "de" | "en")}
-        >
-          <SelectItem value="de" text="Deutsch" />
-          <SelectItem value="en" text="English" />
-        </Select>
-      )}
-      {detail.capabilities.issueActivationCode && status.account !== "activated" && (
-        <fieldset className="tp-fieldset">
-          <legend>{t("activation.detail.sendInPerson")}</legend>
-          <Select
-            id="activation-delivery-kind"
-            labelText={t("activation.detail.deliveryKind")}
-            value={deliveryKind}
-            onChange={(event) => setDeliveryKind(event.target.value as "email" | "sms")}
-          >
-            <SelectItem value="email" text={t("activation.deliveryKind.email")} />
-            <SelectItem value="sms" text={t("activation.deliveryKind.sms")} />
-          </Select>
-          <TextInput
-            id="activation-delivery-address"
-            labelText={t("activation.detail.deliveryAddress")}
-            value={deliveryAddress}
-            onChange={(event) => setDeliveryAddress(event.target.value)}
-            autoComplete="off"
-          />
-          <Checkbox
-            id="activation-identity-checked"
-            labelText={t("activation.detail.identityChecked")}
-            checked={identityChecked}
-            onChange={(_, { checked }) => setIdentityChecked(checked)}
-          />
-          {requiresReissueConfirmation && (
-            <Checkbox
-              id="activation-confirm-reissue"
-              labelText={t("activation.detail.confirmReissue")}
-              checked={confirmReissue}
-              onChange={(_, { checked }) => setConfirmReissue(checked)}
-            />
-          )}
-          <Button
-            disabled={
-              !deliveryAddress ||
-              !identityChecked ||
-              (requiresReissueConfirmation && !confirmReissue) ||
-              send.isPending
-            }
-            onClick={() => send.mutate()}
-          >
-            {t("activation.detail.send")}
-          </Button>
-        </fieldset>
-      )}
-      {detail.capabilities.issueActivationCode && status.account === "activated" && (
-        <RecoveryPanel
-          participationId={detail.id}
-          projectId={projectId}
-          language={language}
-          openCode={requiresReissueConfirmation}
-          onChanged={refresh}
-        />
-      )}
-      <div className="tp-bulk-actions">
-        {detail.capabilities.revokeActivationCode && current && revocable && (
-          <Button
-            kind="danger--tertiary"
-            disabled={revoke.isPending}
-            onClick={() => revoke.mutate()}
-          >
-            {t("activation.detail.revoke")}
-          </Button>
-        )}
-        {detail.capabilities.providePrivacyNotice &&
-          detail.privacyNoticeState.state !== "provided" && (
-            <Button
-              kind="secondary"
-              disabled={provideNotice.isPending}
-              onClick={() => provideNotice.mutate()}
-            >
-              {t("activation.detail.noticeHandedOver")}
-            </Button>
-          )}
-        {detail.capabilities.issueActivationCode && status.account !== "activated" && (
-          <RouterLink
-            to="/projects/$projectId"
-            params={{ projectId }}
-            search={{ tab: "participants" }}
-          >
-            {t("activation.detail.issuePrint")}
-          </RouterLink>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/**
- * The consultants the participant is assigned to (Q62); the PL assigns another consultant of the
- * project or ends an assignment (`capabilities.assignParticipations`). Access follows at once.
- */
-function Assignments({ detail, projectId }: { detail: Detail; projectId: string }) {
-  const { t } = useTranslation();
-  const api = useApi();
-  const queryClient = useQueryClient();
-  const { consultants } = useConsultants(projectId);
-  const [staffUserId, setStaffUserId] = useState("");
-  const [failed, setFailed] = useState(false);
-  const may = detail.capabilities.assignParticipations;
-  const refresh = async () => {
-    setFailed(false);
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: participationQuery(api, detail.id).queryKey }),
-      queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
-    ]);
-  };
-  const assign = useMutation({
-    mutationFn: () =>
-      api.POST("/api/v1/projects/{projectId}/assignments", {
-        params: { path: { projectId } },
-        body: { staffUserId, participationIds: [detail.id] },
-      }),
-    onSuccess: async () => {
-      setStaffUserId("");
-      await refresh();
-    },
-    onError: () => setFailed(true),
-  });
-  const unassign = useMutation({
-    mutationFn: (consultant: string) =>
-      api.DELETE("/api/v1/participations/{participationId}/assignments/{staffUserId}", {
-        params: { path: { participationId: detail.id, staffUserId: consultant } },
-      }),
-    onSuccess: refresh,
-    onError: () => setFailed(true),
-  });
-  const assigned = new Set(detail.assignments.map((a) => a.staffUserId));
-  const rows = detail.assignments.map((a) => ({
-    id: a.staffUserId,
-    displayName: a.displayName,
-    assignedAt: formatTimestamp(a.assignedAt),
-    actions: may && (
-      <Button
-        kind="ghost"
-        size="sm"
-        disabled={unassign.isPending}
-        onClick={() => unassign.mutate(a.staffUserId)}
-      >
-        {t("participant.assignments.unassign", { name: a.displayName })}
-      </Button>
-    ),
-  }));
-  return (
-    <section className="tp-section" aria-label={t("participant.assignments.title")}>
-      {failed && (
-        <InlineNotification
-          kind="error"
-          title={t("participant.assignments.failed")}
-          onClose={() => setFailed(false)}
-        />
-      )}
-      <SimpleTable
-        title={t("participant.assignments.title")}
-        columns={(may
-          ? (["displayName", "assignedAt", "actions"] as const)
-          : (["displayName", "assignedAt"] as const)
-        ).map((key) => ({ key, header: t(`participant.assignments.columns.${key}`) }))}
-        rows={rows}
-        emptyState={t("participant.assignments.empty")}
-      />
-      {may && (
-        <div className="tp-bulk-actions">
-          <Select
-            id="participant-assign"
-            labelText={t("participants.assignTo")}
-            value={staffUserId}
-            onChange={(event) => setStaffUserId(event.target.value)}
-          >
-            <SelectItem value="" text={t("participants.chooseConsultant")} />
-            {consultants
-              .filter((c) => !assigned.has(c.staffUserId))
-              .map((c) => (
-                <SelectItem key={c.staffUserId} value={c.staffUserId} text={c.displayName} />
-              ))}
-          </Select>
-          <Button
-            kind="secondary"
-            disabled={!staffUserId || assign.isPending}
-            onClick={() => assign.mutate()}
-          >
-            {t("participant.assignments.assign")}
-          </Button>
-        </div>
-      )}
-    </section>
-  );
-}
-
-const date = (value: string | null | undefined) =>
-  value === undefined ? undefined : formatDate(value);
-const address = (value: Detail["person"]["address"]) =>
-  value && `${value.street}, ${value.postalCode} ${value.city}, ${value.country}`;
-
-function WaveAndDates({ detail, projectId }: { detail: Detail; projectId: string }) {
-  const { t } = useTranslation();
-  const { entryWave: wave, dates } = detail;
-  // Where a contractual date comes from: the participation's own, else the wave's
-  // (process-and-lifecycle.md, Dates).
-  const source = (own: string | null, effective: string | null) =>
-    effective === null
-      ? null
-      : `${formatDate(effective)} (${t(own === null ? "participant.fromWave" : "participant.individual")})`;
   return (
     <>
-      <Facts
-        title={t("participant.waveAndDates")}
-        rows={[
-          ["wave", wave ? `${wave.code} – ${wave.name}` : null],
-          // The wave's own four dates, also where individual dates override them.
-          ["signingDeadline", wave && formatDate(wave.signingDeadline)],
-          ["defaultTgStart", wave && formatDate(wave.defaultTgStart)],
-          ["defaultTgEnd", wave && formatDate(wave.defaultTgEnd)],
-          ["latestEntryDate", wave && formatDate(wave.latestEntryDate)],
-          ["offerDeadline", date(dates.offerDeadline)],
-          ["tgStart", source(dates.tgStart, dates.effectiveTgStart)],
-          ["tgEnd", source(dates.tgEnd, dates.effectiveTgEnd)],
-        ]}
+      <StatusTag
+        family="main"
+        code={detail.status}
+        prefix={t("participant.overview.tracks.main")}
       />
-      <EntryWaveChoice detail={detail} projectId={projectId} />
-      <ParticipationDatesForm detail={detail} />
-      <Amendments detail={detail} />
-      <BaReportingTasks detail={detail} />
+      <StatusTag
+        family="profiling"
+        code={detail.profilingStatus}
+        prefix={t("participant.overview.tracks.profiling")}
+      />
+      {taTg && (
+        <StatusTag
+          family="dsv"
+          code={detail.dsvStatus}
+          prefix={t("participant.overview.tracks.dsv")}
+        />
+      )}
     </>
-  );
-}
-
-/**
- * The DSV amendments (process-and-lifecycle.md, "DSV amendment"): evidence only; the signed
- * original stays on paper.
- */
-function Amendments({ detail }: { detail: Detail }) {
-  const { t } = useTranslation();
-  if (detail.amendments === undefined) return null;
-  const rows = detail.amendments.map((a) => ({
-    id: a.id,
-    kind: t(`participant.amendments.kinds.${a.kind}`),
-    fullyExecutedOn: formatDate(a.fullyExecutedOn),
-    dates: [
-      a.oldTgStart !== a.newTgStart &&
-        `${t("participant.fields.tgStart")}: ${formatDate(a.oldTgStart) || "—"} → ${formatDate(a.newTgStart)}`,
-      a.oldTgEnd !== a.newTgEnd &&
-        `${t("participant.fields.tgEnd")}: ${formatDate(a.oldTgEnd) || "—"} → ${formatDate(a.newTgEnd)}`,
-    ]
-      .filter(Boolean)
-      .join("; "),
-    originalLocation: t(`participant.dates.locations.${a.originalLocation}`),
-    documentReference: a.documentReference ?? "—",
-    confirmedAt: formatTimestamp(a.confirmedAt),
-  }));
-  const columns = [
-    "kind",
-    "fullyExecutedOn",
-    "dates",
-    "originalLocation",
-    "documentReference",
-    "confirmedAt",
-  ] as const;
-  return (
-    <section className="tp-section" aria-label={t("participant.amendments.title")}>
-      <SimpleTable
-        title={t("participant.amendments.title")}
-        columns={columns.map((key) => ({
-          key,
-          header: t(`participant.amendments.columns.${key}`),
-        }))}
-        rows={rows}
-        emptyState={t("participant.amendments.empty")}
-      />
-    </section>
-  );
-}
-
-/** A titled list of label/value pairs; `undefined` (not readable) hides the row. */
-function Facts({ title, rows }: { title: string; rows: [FieldKey, ReactNode][] }) {
-  const { t } = useTranslation();
-  const shown = rows.filter(([, value]) => value !== undefined);
-  if (shown.length === 0) return null;
-  return (
-    <section className="tp-section" aria-label={title}>
-      <h2>{title}</h2>
-      <dl className="tp-facts">
-        {shown.map(([key, value]) => (
-          <div key={key}>
-            <dt>{t(`participant.fields.${key}`)}</dt>
-            <dd>{value === null || value === "" ? "—" : value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
   );
 }

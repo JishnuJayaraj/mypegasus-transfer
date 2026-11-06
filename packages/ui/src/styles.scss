@@ -185,6 +185,18 @@ body {
   }
 }
 
+// A button never grows past its container (Carbon allows 20rem, wider than a card at 375px) and
+// a button set wraps, instead of pushing the page sideways (D10); a long label wraps inside.
+:where(.tp-content, .tp-portal-content) .cds--btn {
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
+.cds--btn-set {
+  flex-wrap: wrap;
+  row-gap: $spacing-03;
+}
+
 // A Carbon stack's one implicit column may not grow past its container (a wide fieldset would
 // push the page sideways otherwise, D10).
 .cds--stack-vertical {
@@ -224,6 +236,21 @@ body {
 .tp-page-header-title {
   gap: $spacing-05;
   min-inline-size: 0;
+}
+
+// A header tag (a customer's or type's name) wraps instead of truncating: Carbon turns a
+// truncated tag into a button with a tooltip, a tab stop that does nothing, and at 400% zoom
+// the full text must stay readable (D10).
+.tp-page-header-tags .cds--tag {
+  max-inline-size: 100%;
+  block-size: auto;
+  min-block-size: 1.125rem;
+}
+
+.tp-page-header-tags .cds--tag__label {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tp-page-header-metadata {
@@ -282,6 +309,10 @@ body {
   h3 {
     @include type.type-style("heading-compact-02");
   }
+
+  h4 {
+    @include type.type-style("heading-compact-01");
+  }
 }
 
 // One column below 42rem, two from 42rem, three from 66rem.
@@ -295,6 +326,12 @@ body {
     &.tp-grid--2,
     &.tp-grid--3 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 42rem) and (max-width: 65.99rem) {
+    &.tp-grid--collapse-wide {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
@@ -571,7 +608,7 @@ body {
 // The dashboard's tiles: each one a link to the work list with its filter (Slice 5).
 .tp-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
   gap: $spacing-05;
   margin-block: $spacing-05 $spacing-07;
   padding: 0;
@@ -955,6 +992,415 @@ body {
     margin: 0;
     box-shadow: none;
   }
+}
+
+// The dashboard (ui-patterns.md, dashboard; Slice 6b): "Heute zu tun" tiles, each one link with
+// icon, number, label, a severity border at the start and an arrow. A tile never forces the page
+// wider than the viewport (D10): one column at 400% zoom.
+.tp-count-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: $spacing-05;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tp-tile {
+  display: grid;
+  grid-template-areas:
+    "icon arrow"
+    "count count"
+    "label label";
+  grid-template-columns: 1fr auto;
+  row-gap: $spacing-02;
+  block-size: 100%;
+  padding: $spacing-05;
+  border: 1px solid theme.$border-subtle-01;
+  border-inline-start: 4px solid theme.$border-strong-01;
+  background: theme.$layer-01;
+  color: theme.$text-primary;
+  text-decoration: none;
+
+  &:hover {
+    background: theme.$layer-hover-01;
+  }
+
+  &:focus-visible {
+    outline: 2px solid theme.$focus;
+    outline-offset: -2px;
+  }
+}
+
+.tp-tile-icon {
+  grid-area: icon;
+  fill: theme.$icon-secondary;
+}
+
+.tp-tile-arrow {
+  grid-area: arrow;
+  fill: theme.$link-primary;
+}
+
+.tp-tile-count {
+  grid-area: count;
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.tp-tile-label {
+  @include type.type-style("body-compact-01");
+
+  grid-area: label;
+  overflow-wrap: anywhere;
+}
+
+.tp-tile--danger {
+  border-inline-start-color: theme.$support-error;
+
+  .tp-tile-icon {
+    fill: theme.$support-error;
+  }
+}
+
+.tp-tile--warning {
+  border-inline-start-color: theme.$support-warning;
+
+  .tp-tile-icon {
+    fill: theme.$support-caution-major;
+  }
+}
+
+.tp-tile--info {
+  border-inline-start-color: theme.$support-info;
+
+  .tp-tile-icon {
+    fill: theme.$support-info;
+  }
+}
+
+.tp-tile--success {
+  border-inline-start-color: theme.$support-success;
+
+  .tp-tile-icon {
+    fill: theme.$support-success;
+  }
+}
+
+.tp-tile-skeleton.cds--skeleton__placeholder {
+  inline-size: 100%;
+  block-size: 7.5rem;
+}
+
+// "Weitere offene Arbeit": the other counts as one wrapping line of links.
+.tp-count-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03 $spacing-06;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// A compact count table inside a card (Verlauf, Alle Kennzahlen): label, optional bar, number.
+.tp-count-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    @include type.type-style("body-compact-01");
+
+    padding-block: $spacing-02;
+    padding-inline: 0 $spacing-03;
+    border-block-end: 1px solid theme.$border-subtle-01;
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  th {
+    @include type.type-style("label-01");
+
+    color: theme.$text-secondary;
+  }
+
+  .tp-count-table-detail {
+    display: block;
+    color: theme.$text-secondary;
+  }
+
+  .tp-count-table-number {
+    padding-inline-end: 0;
+    text-align: end;
+    white-space: nowrap;
+  }
+}
+
+// A funnel bar (Verlauf): the width is the share of all counted participations, set through
+// React's style prop (the CSSOM, which the CSP allows; app.ts). The number beside it is the text.
+.tp-bar {
+  display: block;
+  block-size: $spacing-03;
+  margin-block-start: $spacing-02;
+  background: theme.$layer-accent-01;
+}
+
+.tp-bar-fill {
+  display: block;
+  block-size: 100%;
+  background: theme.$interactive;
+}
+
+// A setup page with an in-page anchor list beside its sections on wide screens (Einrichtung).
+.tp-anchored {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $spacing-07;
+
+  @media (min-width: 66rem) {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+}
+
+.tp-anchor-list {
+  display: none;
+
+  @media (min-width: 66rem) {
+    position: sticky;
+    inset-block-start: $spacing-09;
+    display: block;
+    align-self: start;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    padding-block: $spacing-02;
+    border-inline-start: 2px solid theme.$border-subtle-01;
+    padding-inline-start: $spacing-04;
+  }
+}
+
+.tp-anchor-list-title {
+  @include type.type-style("label-01");
+
+  margin-block-end: $spacing-03;
+  color: theme.$text-secondary;
+}
+
+// Sections of cards stacked with the card spacing; an anchor target clears the fixed header.
+.tp-anchored-content {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-06;
+  min-inline-size: 0;
+
+  > .tp-card {
+    scroll-margin-block-start: $spacing-10;
+  }
+}
+
+// A row of buttons in a card (the participant overview's actions): wraps, each button capped at
+// its container (D10, 320 CSS px).
+.tp-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+  margin-block-start: $spacing-03;
+}
+
+.tp-plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// One track of the participant's "Stand" (ui-patterns.md, C3): its own tag, step list and dates.
+.tp-track {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.tp-track-step {
+  @include type.type-style("label-01");
+
+  color: theme.$text-secondary;
+}
+
+.tp-track-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    @include type.type-style("body-compact-01");
+
+    padding-block: $spacing-01;
+    padding-inline-start: $spacing-04;
+    border-inline-start: 2px solid theme.$border-subtle-01;
+    color: theme.$text-secondary;
+  }
+
+  .tp-track-done {
+    border-inline-start-color: theme.$support-success;
+    color: theme.$text-primary;
+  }
+
+  .tp-track-current {
+    border-inline-start: 4px solid theme.$interactive;
+    color: theme.$text-primary;
+    font-weight: 600;
+  }
+}
+
+// "Offen": the open items in C2's order, each with its link and a blocked action's prerequisite.
+.tp-open-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-02;
+    padding-block: $spacing-03;
+    border-block-end: 1px solid theme.$border-subtle-01;
+    overflow-wrap: anywhere;
+  }
+}
+
+// The participant timeline (the plan of Slice 6b, D12): inline SVG styled here, never by an inline
+// <style> (CSP). Hidden below 30rem, where the list below says the same (400 % zoom, D10).
+.tp-timeline-graphic {
+  position: relative;
+  display: none;
+  margin-block-end: $spacing-05;
+
+  @media (min-width: 30rem) {
+    display: block;
+  }
+}
+
+.tp-timeline-svg {
+  display: block;
+  overflow: visible;
+}
+
+.tp-timeline-phase--tg {
+  fill: colors.$blue-20;
+}
+
+.tp-timeline-phase--ta {
+  fill: theme.$layer-accent-01;
+}
+
+.tp-timeline-axis {
+  stroke: theme.$border-strong-01;
+  stroke-width: 1;
+}
+
+.tp-timeline-axis-label,
+.tp-timeline-today-label {
+  @include type.type-style("label-01");
+
+  fill: theme.$text-secondary;
+}
+
+.tp-timeline-today {
+  stroke: theme.$support-error;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.tp-timeline-shape {
+  stroke: theme.$background;
+  stroke-width: 1.5;
+}
+
+.tp-timeline-shape--dates {
+  fill: theme.$interactive;
+}
+
+.tp-timeline-shape--deadlines {
+  fill: theme.$support-warning;
+  stroke: theme.$text-primary;
+}
+
+.tp-timeline-shape--appointments {
+  fill: colors.$purple-60;
+}
+
+.tp-timeline-shape.tp-timeline-marker--overdue {
+  fill: theme.$support-error;
+}
+
+.tp-timeline-marker a {
+  cursor: pointer;
+  outline: none;
+
+  &:hover .tp-timeline-shape,
+  &:focus-visible .tp-timeline-shape {
+    stroke: theme.$focus;
+    stroke-width: 3;
+  }
+}
+
+.tp-timeline-tooltip {
+  @include type.type-style("body-compact-01");
+
+  position: absolute;
+  z-index: 1;
+  max-inline-size: 16rem;
+  padding: $spacing-02 $spacing-03;
+  background: theme.$background-inverse;
+  color: theme.$text-inverse;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.tp-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03 $spacing-05;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    @include type.type-style("label-01");
+
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-02;
+  }
+}
+
+.tp-timeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding-block: $spacing-02;
+    border-block-end: 1px solid theme.$border-subtle-01;
+    overflow-wrap: anywhere;
+  }
+}
+
+.tp-timeline-list-date {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
 
 // The portal header's panels: the language list and the account menu's link.

@@ -47,7 +47,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
 
   // Create a project; it shows at the top without a reload, as a draft. Its contractual
   // dates belong to its entry waves (Slice 2, Q79), not to this form.
-  await page.getByRole("link", { name: "Projekt anlegen" }).click();
+  await page.getByRole("link", { name: "Neues Projekt" }).click();
   await expect(page).toHaveURL(/\/projects\/new$/);
   await expectAccessible(page);
   await page.getByLabel("Projektname").fill("E2E Projekt Ost");
@@ -122,7 +122,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("button", { name: "Aktivieren" }).click();
   await expect(page.getByText("Projekt aktiviert", { exact: true })).toBeVisible();
   await expect(page.getByText(/^Status: aktiv seit/)).toBeVisible();
-  await expect(page.getByText(/· Aktiv$/)).toBeVisible();
+  // The page header's status tag (the plan of Slice 6b, 6b-4).
+  await expect(page.locator(".tp-page-header").getByText("Aktiv", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Aktivieren" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Als Projekt-Agentur festlegen" })).toHaveCount(0);
   await expectAccessible(page);
@@ -183,9 +184,13 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByText(/^Neue Musterstraße 100, /)).toBeVisible();
   await expectAccessible(page);
   // The only other choice: W1, labelled with its code, name and dates.
-  await page.getByLabel("Welle zuordnen").selectOption({ index: 1 });
+  // The wave's choice opens in a side panel (ui-patterns.md, C4).
   await page.getByRole("button", { name: "Welle zuordnen" }).click();
+  const wavePanel = page.getByRole("dialog", { name: "Welle zuordnen" });
+  await wavePanel.getByRole("combobox", { name: "Welle zuordnen" }).selectOption({ index: 1 });
+  await wavePanel.getByRole("button", { name: "Welle zuordnen" }).click();
   await expect(page.getByText("Welle zugeordnet", { exact: true })).toBeVisible();
+  await expect(wavePanel).toBeHidden();
   await expect(page.getByText(/ \(aus der Welle\)$/).first()).toBeVisible();
   await expectAccessible(page);
   // Before any offer the PL shortens the contractual end; the
@@ -201,7 +206,11 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(reports.getByRole("cell", { name: "Ausstehend" })).toBeVisible();
   await expect(page.getByText("31.01.2092 (individuell)")).toBeVisible();
   await expectAccessible(page);
-  await page.getByRole("link", { name: /^Zurück zu / }).click();
+  // Back through the breadcrumb, to the work list as it was left (C6).
+  await page
+    .getByRole("navigation", { name: "Navigationspfad" })
+    .getByRole("link", { name: "Teilnehmende", exact: true })
+    .click();
   await expect(participants.getByRole("row")).toHaveCount(14);
 
   // The PL adds one person by hand, through the import's rules.
@@ -222,9 +231,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   await page.getByRole("tab", { name: "Einrichtung" }).click();
 
-  const configuration = page
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Konfiguration" }) });
+  // The Agentur-specific settings, inside the card "Agentur" (the plan of Slice 6b, 6b-4).
+  const configuration = page.getByRole("region", { name: "Konfiguration" });
 
   // A project-specific exception to the Project Agentur's
   // template (Q93), then the migration to version 2 with its review: the PL removes the setting,
@@ -238,7 +246,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await configuration.getByLabel("Bestätigt am").fill("01.10.2026");
   await configuration.getByRole("button", { name: "Speichern" }).click();
   await expect(page.getByText("Einstellung gespeichert")).toBeVisible();
-  const setupSection = page.getByRole("region", { name: "Einrichtung" });
+  const setupSection = page.getByRole("region", { name: "Agentur" });
   await setupSection
     .getByRole("button", { name: "Agentur für Arbeit Beispielstadt Nord (Beispiel) migrieren" })
     .click();

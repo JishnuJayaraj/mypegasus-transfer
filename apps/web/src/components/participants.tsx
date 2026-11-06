@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { createLink, useNavigate } from "@tanstack/react-router";
 import {
@@ -48,17 +48,24 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { entryWavesQuery, meQuery, projectTeamQuery, useApi, worklistQuery } from "../api";
+import { entryWavesQuery, useApi, worklistQuery } from "../api";
 import { ActivationPrintView, NoticePrintView } from "./activation-print-view";
 import { BulkInvite } from "./invitations";
 import { BulkKug200b } from "./kug200b-bulk";
 import { usePanelNavigationGuard } from "./panel-guard";
 import { BulkRemind } from "./reminders";
-import { useSelfServiceLabel } from "./self-service-tab";
+import { StepLabel } from "./open-steps";
 import { useConsultants } from "./team";
 import { ActiveFilterTags, BulkWave, WorklistFilterFields } from "./worklist-tools";
-import { codeFromSort, sortFromCode, useRemembered, worklistMemory } from "./worklist-state";
-import { quickViews, sameFilter, type ViewerRoles } from "./worklist-views";
+import {
+  codeFromSort,
+  sortFromCode,
+  useRemembered,
+  worklistMemory,
+  worklistReturn,
+} from "./worklist-state";
+import { useViewerRoles } from "./viewer-roles";
+import { quickViews, sameFilter } from "./worklist-views";
 
 const RouterLink = createLink(Link);
 
@@ -79,7 +86,6 @@ const defaultHidden: ReadonlySet<string> = new Set([
 ]);
 
 type ListItem = components["schemas"]["WorklistItem"];
-type CaseItemKind = Exclude<ListItem["caseItems"][number]["kind"], "knowledge_date_missing">;
 type ActivationPrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
 type PrivacyNoticePrintItem = components["schemas"]["PrivacyNoticeBatchResult"]["items"][number];
 type PrintState =
@@ -148,6 +154,10 @@ export function Participants({
   const { consultants, mayAssign } = useConsultants(projectId);
   const viewer = useViewerRoles(projectId);
   const [term, setTerm] = useRemembered(projectId, "term");
+  // The codes and the sort, for the participant page's breadcrumb back here (C6, AC 4).
+  useEffect(() => {
+    worklistMemory(projectId).search = { filter, ...(sort && { sort }) };
+  }, [projectId, filter, sort]);
   const search = useDeferredValue(term);
   const filterKey = JSON.stringify(filter);
   // The selection belongs to one filter; another starts afresh. The search keeps it, so rows can
@@ -247,6 +257,7 @@ export function Participants({
       ({
         to: "/projects/$projectId/participations/$participationId",
         params: { projectId, participationId: id },
+        state: worklistReturn(projectId),
       }) as const;
     const batchActions: BatchAction[] = batchKinds
       .filter((kind) => may[kind])
@@ -491,27 +502,6 @@ const noSelection: ReadonlySet<string> = new Set();
 const fullName = (item: ListItem) =>
   [item.lastName, item.firstName].filter(Boolean).join(", ") || undefined;
 
-/** The viewer's project roles (the team's members), for the quick views and the count line. */
-function useViewerRoles(projectId: string): ViewerRoles & { assignedOnly: boolean } {
-  const api = useApi();
-  const { data: me } = useQuery(meQuery(api));
-  const { data: team } = useSuspenseQuery(projectTeamQuery(api, projectId));
-  return useMemo(() => {
-    const roles = team.members.find((member) => member.staffUserId === me?.id)?.roles ?? [];
-    const projectLead = roles.includes("project_lead");
-    const backOffice = roles.includes("back_office");
-    const consultant = roles.includes("consultant");
-    return {
-      staffUserId: me?.id,
-      projectLead,
-      backOffice,
-      consultant,
-      // An assigned consultant's list is their assignments (data-protection.md, the work list).
-      assignedOnly: consultant && !projectLead && !backOffice,
-    };
-  }, [team, me?.id]);
-}
-
 /**
  * The quick views above the table (the plan of Slice 6b, D6): each one filter; choosing one
  * replaces the filters. A view with no rows stays (its empty state explains it).
@@ -633,6 +623,7 @@ function useWorklistColumns({
             <RouterLink
               to="/projects/$projectId/participations/$participationId"
               params={{ projectId, participationId: item.id }}
+              state={worklistReturn(projectId)}
             >
               {fullName(item) ?? item.personnelNumber ?? t("participants.open")}
             </RouterLink>
@@ -733,41 +724,6 @@ function useWorklistColumns({
     ];
     return columns.filter((column): column is DataColumn<ListItem> => column !== false);
   }, [t, projectId, taTg, waveCode, today, rank]);
-}
-
-/** One open item as the column "Nächster Schritt" names it; tiers 1 and 3 with their date. */
-function StepLabel({ step, today }: { step: OpenStep; today: string }) {
-  const { t } = useTranslation();
-  const label = useSelfServiceLabel();
-  switch (step.source) {
-    case "deadline":
-      // The kind, then relative and absolute date (ui-patterns.md, principle 5).
-      return (
-        <>
-          {`${t(`worklist.deadlineKinds.${step.kind}`)}: `}
-          <RelativeDate date={step.date} today={today} kind="deadline" />
-          {step.final && ` (${t("worklist.deadlineFinal")})`}
-        </>
-      );
-    case "appointment":
-      return (
-        <>
-          {`${t(`worklist.appointmentItems.${step.kind}`)}: ${t(`appointments.kinds.${step.appointmentKind}`)}, `}
-          <RelativeDate date={step.date} today={today} kind="event" />
-        </>
-      );
-    case "case":
-      // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
-      return step.kind === "knowledge_date_missing"
-        ? t("worklist.knowledgeDateMissing", { date: formatDate(step.date) })
-        : t(`worklist.caseItems.${step.kind as CaseItemKind}`, { date: formatDate(step.date) });
-    case "agentur":
-      return t(`worklist.agenturItems.${step.kind}`, { date: formatDate(step.date) });
-    case "flag":
-      return t(`worklist.flags.${step.kind}`);
-    case "action":
-      return `${label(step.action.key)} ${t(`worklist.actionStates.${step.action.state}`)}`;
-  }
 }
 
 const stepKey = (step: OpenStep, i: number) => `${step.source}-${step.kind}-${i}`;
