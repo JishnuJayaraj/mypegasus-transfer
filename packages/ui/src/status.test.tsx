@@ -57,4 +57,9 @@ describe("StatusTag", () => {
     expect(tag).toHaveAttribute("data-tone", "danger");
     expect(tag.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
+
+  it("names the track before the code with a prefix (C3)", () => {
+    renderUi(<StatusTag family="deadline" code="overdue" prefix="Frist" />);
+    expect(screen.getByText("Frist: Überschritten")).toBeInTheDocument();
+  });
 });

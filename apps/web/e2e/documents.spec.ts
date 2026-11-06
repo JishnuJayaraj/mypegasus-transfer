@@ -132,6 +132,9 @@ test("slice 4b: upload in the portal, refusal, review on the tab, deletion", asy
   // Axe only once the dialog has faded out: mid-transition its colours are blended, and axe
   // reports a contrast violation for text nobody can see any more.
   await expect(reject).toBeHidden();
+  // The pointer stays where "Ablehnen" was; over a row's ghost button axe would measure the hover
+  // transition's blended colours, so it moves away first.
+  await page.mouse.move(0, 0);
   await expectAccessible(page);
 
   // 3. The participant sees it rejected, deletes it after the confirmation.

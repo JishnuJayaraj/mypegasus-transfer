@@ -20,8 +20,16 @@ export default defineConfig({
     launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined },
   },
   projects: [
+    // projects.spec.ts counts every project the PL sees, so it runs before any spec that creates
+    // one (worklist, ui-project-page, ui-participant-page): its own project, which the desktop
+    // suite depends on, whatever the file order or the number of workers.
+    { name: "project-count", testMatch: "projects.spec.ts" },
     // The suite on Desktop Chrome (1280×720).
-    { name: "desktop", testIgnore: "shell.spec.ts" },
+    {
+      name: "desktop",
+      testIgnore: ["shell.spec.ts", "projects.spec.ts"],
+      dependencies: ["project-count"],
+    },
     // The shell smoke test at 1440, 768 and 375px (UX foundation plan, D10): each test sets
     // its viewport; 375px stands in for 400 % zoom of a 1280px window.
     { name: "shell", testMatch: "shell.spec.ts" },

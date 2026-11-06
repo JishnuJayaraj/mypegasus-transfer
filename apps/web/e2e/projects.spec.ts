@@ -184,9 +184,13 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(page.getByText(/^Neue Musterstraße 100, /)).toBeVisible();
   await expectAccessible(page);
   // The only other choice: W1, labelled with its code, name and dates.
-  await page.getByLabel("Welle zuordnen").selectOption({ index: 1 });
+  // The wave's choice opens in a side panel (ui-patterns.md, C4).
   await page.getByRole("button", { name: "Welle zuordnen" }).click();
+  const wavePanel = page.getByRole("dialog", { name: "Welle zuordnen" });
+  await wavePanel.getByRole("combobox", { name: "Welle zuordnen" }).selectOption({ index: 1 });
+  await wavePanel.getByRole("button", { name: "Welle zuordnen" }).click();
   await expect(page.getByText("Welle zugeordnet", { exact: true })).toBeVisible();
+  await expect(wavePanel).toBeHidden();
   await expect(page.getByText(/ \(aus der Welle\)$/).first()).toBeVisible();
   await expectAccessible(page);
   // Before any offer the PL shortens the contractual end; the
@@ -202,7 +206,11 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(reports.getByRole("cell", { name: "Ausstehend" })).toBeVisible();
   await expect(page.getByText("31.01.2092 (individuell)")).toBeVisible();
   await expectAccessible(page);
-  await page.getByRole("link", { name: /^Zurück zu / }).click();
+  // Back through the breadcrumb, to the work list as it was left (C6).
+  await page
+    .getByRole("navigation", { name: "Navigationspfad" })
+    .getByRole("link", { name: "Teilnehmende", exact: true })
+    .click();
   await expect(participants.getByRole("row")).toHaveCount(14);
 
   // The PL adds one person by hand, through the import's rules.

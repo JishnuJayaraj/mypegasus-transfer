@@ -21,4 +21,17 @@ describe("layout primitives", () => {
     expect(screen.getByRole("heading", { name: "Details", level: 3 })).toBeInTheDocument();
     expect(card.closest(".tp-grid")).toHaveClass("tp-grid--2");
   });
+
+  it("skips the two-column step with collapse wide", () => {
+    renderUi(
+      <Grid columns={3} collapse="wide">
+        <p>{"Spalte"}</p>
+      </Grid>,
+    );
+    expect(screen.getByText("Spalte").parentElement).toHaveClass(
+      "tp-grid",
+      "tp-grid--3",
+      "tp-grid--collapse-wide",
+    );
+  });
 });

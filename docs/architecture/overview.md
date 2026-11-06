@@ -326,6 +326,13 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 ## The participant page
 
+- From Slice 6b (6b-5) the page follows ui-patterns.md, "The participant page": breadcrumb back to
+  the work list as it was left, three track tags, "Aktionen", one "Handlungsbedarf"; the overview
+  with *Stand*, *Offen*, *Termine & Zuständigkeit*, the timeline (stage 1, the facts the page
+  already loads) and the cards "Stammdaten", "Portalaktivierung und Datenschutzhinweis", "Welle und
+  Vertragsdaten" and "BA-Meldungen", whose edit forms open in a side panel. The open items come
+  from the work list's snapshot (`GET /projects/{id}/worklist`, the viewer's own scope), usually
+  already cached from the list.
 - The tabs "Übersicht", "Selbstauskunft", "Unterlagen", "Termine", "Nachrichten" and "Verlauf", the tab in
   the route's search param (`?tab=history`); each tab other than the overview loads its data only
   while shown, so opening "Verlauf" (an audited opening, data-protection.md) happens only when the

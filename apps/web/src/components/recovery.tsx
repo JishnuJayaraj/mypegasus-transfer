@@ -10,7 +10,7 @@ import {
   SelectItem,
   TextInput,
 } from "@transfer/ui";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "../api";
 import { ActivationPrintView } from "./activation-print-view";
@@ -18,6 +18,41 @@ import { SheetHandover } from "./participants";
 
 type PrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
 type Channel = "letter" | "sheet" | "in_person";
+/** A printed recovery letter or sheet: its code lives only in this print view. */
+export type RecoveryPrinted = { kind: "letter" | "sheet"; item: PrintItem };
+
+/** The print view of a recovery letter or sheet, with the sheet's handover. */
+export function RecoveryPrint({
+  printed,
+  projectId,
+  onClose,
+  onChanged,
+}: {
+  printed: RecoveryPrinted;
+  projectId: string;
+  onClose: () => void;
+  onChanged: () => Promise<void>;
+}) {
+  return (
+    <ActivationPrintView
+      kind={printed.kind}
+      items={[printed.item]}
+      onClose={onClose}
+      itemActions={
+        printed.kind === "sheet"
+          ? [
+              <SheetHandover
+                key={printed.item.activationCodeId}
+                item={printed.item}
+                projectId={projectId}
+                onChanged={() => void onChanged()}
+              />,
+            ]
+          : undefined
+      }
+    />
+  );
+}
 
 /**
  * Lost access after activation (Q130): after staff verified the person, a
@@ -31,6 +66,8 @@ export function RecoveryPanel({
   language,
   openCode,
   onChanged,
+  onPrinted,
+  onDirtyChange,
 }: {
   participationId: string;
   projectId: string;
@@ -38,6 +75,10 @@ export function RecoveryPanel({
   /** An open recovery code exists: a new one needs the conscious reissue. */
   openCode: boolean;
   onChanged: () => Promise<void>;
+  /** Shows the print view outside (a side panel closes for it); else it replaces the form. */
+  onPrinted?: (printed: RecoveryPrinted) => void;
+  /** Whether anything is entered (C4). */
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const { t } = useTranslation();
   const api = useApi();
@@ -48,7 +89,16 @@ export function RecoveryPanel({
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [confirmReissue, setConfirmReissue] = useState(false);
   const [error, setError] = useState<"open_code_exists" | "failed">();
-  const [printed, setPrinted] = useState<{ kind: "letter" | "sheet"; item: PrintItem }>();
+  const [printed, setPrinted] = useState<RecoveryPrinted>();
+  const dirty =
+    identityVerified ||
+    identityChecked ||
+    confirmReissue ||
+    deliveryAddress !== "" ||
+    channel !== "letter" ||
+    deliveryKind !== "email";
+  // A layout effect, so an Escape right after typing already asks (ui-patterns.md, side panel).
+  useLayoutEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const issue = useMutation({
     mutationFn: async () => {
       const common = {
@@ -79,7 +129,11 @@ export function RecoveryPanel({
       setDeliveryAddress("");
       setConfirmReissue(false);
       setError(undefined);
-      if (data.item && channel !== "in_person") setPrinted({ kind: channel, item: data.item });
+      if (data.item && channel !== "in_person") {
+        const shown = { kind: channel, item: data.item };
+        if (onPrinted) onPrinted(shown);
+        else setPrinted(shown);
+      }
       await onChanged();
     },
     onError: (failure) => {
@@ -90,22 +144,11 @@ export function RecoveryPanel({
 
   if (printed) {
     return (
-      <ActivationPrintView
-        kind={printed.kind}
-        items={[printed.item]}
+      <RecoveryPrint
+        printed={printed}
+        projectId={projectId}
         onClose={() => setPrinted(undefined)}
-        itemActions={
-          printed.kind === "sheet"
-            ? [
-                <SheetHandover
-                  key={printed.item.activationCodeId}
-                  item={printed.item}
-                  projectId={projectId}
-                  onChanged={() => void onChanged()}
-                />,
-              ]
-            : undefined
-        }
+        onChanged={onChanged}
       />
     );
   }
@@ -189,9 +232,11 @@ export function RecoveryPanel({
           onChange={(_, { checked }) => setConfirmReissue(checked)}
         />
       )}
-      <Button kind="danger" disabled={!ready || issue.isPending} onClick={() => issue.mutate()}>
-        {t("activation.recovery.issue")}
-      </Button>
+      <div>
+        <Button kind="danger" disabled={!ready || issue.isPending} onClick={() => issue.mutate()}>
+          {t("activation.recovery.issue")}
+        </Button>
+      </div>
     </fieldset>
   );
 }

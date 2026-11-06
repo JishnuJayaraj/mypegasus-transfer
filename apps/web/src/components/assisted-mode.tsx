@@ -127,11 +127,19 @@ export function StartAssistedMode(props: {
   participationId: string;
   /** The button's text where it isn't the generic one ("Im assistierten Modus ergänzen"). */
   label?: string;
+  /**
+   * Opened from elsewhere (the page header's "Aktionen"): no button of its own, the dialog shows
+   * while `open` and `onClose` ends it.
+   */
+  controlled?: { open: boolean; onClose: () => void };
 }) {
   const { t } = useTranslation();
   const api = useApi();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = props.controlled ? props.controlled.open : ownOpen;
+  const setOpen = (next: boolean) =>
+    props.controlled ? !next && props.controlled.onClose() : setOwnOpen(next);
   const [confirmed, setConfirmed] = useState(false);
   const [how, setHow] = useState<AssistedModeHow>();
   const [failure, setFailure] = useState<"failed" | "closed">();
@@ -170,9 +178,11 @@ export function StartAssistedMode(props: {
 
   return (
     <>
-      <Button kind="secondary" onClick={() => setOpen(true)}>
-        {props.label ?? t("participant.assisted.start")}
-      </Button>
+      {!props.controlled && (
+        <Button kind="secondary" onClick={() => setOpen(true)}>
+          {props.label ?? t("participant.assisted.start")}
+        </Button>
+      )}
       <Modal
         open={open}
         modalHeading={t("participant.assisted.start")}

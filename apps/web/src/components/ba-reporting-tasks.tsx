@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   Button,
+  Card,
   DateField,
   formatDate,
   formatTimestamp,
@@ -118,9 +119,8 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
     ...(anyAction ? (["actions"] as const) : []),
   ] as const;
   return (
-    <section className="tp-section" aria-labelledby="ba-reporting-tasks">
+    <Card id="participant-ba" title={t("participant.tasks.title")}>
       <Stack gap={5}>
-        <h2 id="ba-reporting-tasks">{t("participant.tasks.title")}</h2>
         {correction.element}
         <p>{t("participant.tasks.intro")}</p>
         {message && (
@@ -184,7 +184,7 @@ export function BaReportingTasks({ detail }: { detail: Detail }) {
         onReported={(task, reportedOn) => record(task, { outcome: "reported", reportedOn })}
         onNotRequired={(task, reason) => record(task, { outcome: "not_required", reason })}
       />
-    </section>
+    </Card>
   );
 }
 

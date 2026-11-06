@@ -127,7 +127,9 @@ test("portal: activate a printed letter, then log out and log in again by code",
   const panel = page.getByRole("region", { name: "Portalaktivierung und Datenschutzhinweis" });
   await expect(panel.getByText("Konto aktiviert")).toBeVisible();
   await expect(panel.getByText("Bereitgestellt")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Status" }).getByText("Kontaktiert")).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Stand" }).getByRole("region", { name: "Status" }),
+  ).toContainText("Schritt 2 von 5");
   await expect(page.getByText(PRIVATE)).toHaveCount(0);
   await expectAccessible(page);
 

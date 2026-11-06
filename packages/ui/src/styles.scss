@@ -329,6 +329,12 @@ body {
     }
   }
 
+  @media (min-width: 42rem) and (max-width: 65.99rem) {
+    &.tp-grid--collapse-wide {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
   @media (min-width: 66rem) {
     &.tp-grid--3 {
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1198,4 +1204,201 @@ body {
   > .tp-card {
     scroll-margin-block-start: $spacing-10;
   }
+}
+
+// A row of buttons in a card (the participant overview's actions): wraps, each button capped at
+// its container (D10, 320 CSS px).
+.tp-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+  margin-block-start: $spacing-03;
+}
+
+.tp-plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+// One track of the participant's "Stand" (ui-patterns.md, C3): its own tag, step list and dates.
+.tp-track {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-03;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.tp-track-step {
+  @include type.type-style("label-01");
+
+  color: theme.$text-secondary;
+}
+
+.tp-track-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    @include type.type-style("body-compact-01");
+
+    padding-block: $spacing-01;
+    padding-inline-start: $spacing-04;
+    border-inline-start: 2px solid theme.$border-subtle-01;
+    color: theme.$text-secondary;
+  }
+
+  .tp-track-done {
+    border-inline-start-color: theme.$support-success;
+    color: theme.$text-primary;
+  }
+
+  .tp-track-current {
+    border-inline-start: 4px solid theme.$interactive;
+    color: theme.$text-primary;
+    font-weight: 600;
+  }
+}
+
+// "Offen": the open items in C2's order, each with its link and a blocked action's prerequisite.
+.tp-open-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-02;
+    padding-block: $spacing-03;
+    border-block-end: 1px solid theme.$border-subtle-01;
+    overflow-wrap: anywhere;
+  }
+}
+
+// The participant timeline (the plan of Slice 6b, D12): inline SVG styled here, never by an inline
+// <style> (CSP). Hidden below 30rem, where the list below says the same (400 % zoom, D10).
+.tp-timeline-graphic {
+  position: relative;
+  display: none;
+  margin-block-end: $spacing-05;
+
+  @media (min-width: 30rem) {
+    display: block;
+  }
+}
+
+.tp-timeline-svg {
+  display: block;
+  overflow: visible;
+}
+
+.tp-timeline-phase--tg {
+  fill: colors.$blue-20;
+}
+
+.tp-timeline-phase--ta {
+  fill: theme.$layer-accent-01;
+}
+
+.tp-timeline-axis {
+  stroke: theme.$border-strong-01;
+  stroke-width: 1;
+}
+
+.tp-timeline-axis-label,
+.tp-timeline-today-label {
+  @include type.type-style("label-01");
+
+  fill: theme.$text-secondary;
+}
+
+.tp-timeline-today {
+  stroke: theme.$support-error;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+.tp-timeline-shape {
+  stroke: theme.$background;
+  stroke-width: 1.5;
+}
+
+.tp-timeline-shape--dates {
+  fill: theme.$interactive;
+}
+
+.tp-timeline-shape--deadlines {
+  fill: theme.$support-warning;
+  stroke: theme.$text-primary;
+}
+
+.tp-timeline-shape--appointments {
+  fill: colors.$purple-60;
+}
+
+.tp-timeline-shape.tp-timeline-marker--overdue {
+  fill: theme.$support-error;
+}
+
+.tp-timeline-marker a {
+  cursor: pointer;
+  outline: none;
+
+  &:hover .tp-timeline-shape,
+  &:focus-visible .tp-timeline-shape {
+    stroke: theme.$focus;
+    stroke-width: 3;
+  }
+}
+
+.tp-timeline-tooltip {
+  @include type.type-style("body-compact-01");
+
+  position: absolute;
+  z-index: 1;
+  max-inline-size: 16rem;
+  padding: $spacing-02 $spacing-03;
+  background: theme.$background-inverse;
+  color: theme.$text-inverse;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.tp-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03 $spacing-05;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    @include type.type-style("label-01");
+
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-02;
+  }
+}
+
+.tp-timeline-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding-block: $spacing-02;
+    border-block-end: 1px solid theme.$border-subtle-01;
+    overflow-wrap: anywhere;
+  }
+}
+
+.tp-timeline-list-date {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }
