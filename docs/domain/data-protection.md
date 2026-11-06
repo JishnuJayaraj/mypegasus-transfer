@@ -839,6 +839,17 @@ and highly confidential data only; ordinary person-data writes are `participant_
   effective TG dates have no revision, so their values: `form_person`) and the printed
   declarations, and refuses a moved one the same way; the stored object is deleted at once. Audited `form_generated` (document, code, version, Anlage: the `case` history) and
   one `warning_confirmed` per confirmed code.
+- **The generated DSV** (`dsv_form`, document catalog version 8; Slice 7, PR 7-1; readings Q226):
+  the signed DSV's access category (`employment_contract`) and class (highly confidential), class
+  `form_working_copy` with the working copies' expiry; generated and opened (the logged opening,
+  `dsv-<date>.pdf`) by the PL and back office only, never a consultant or the participant. Its
+  provenance row holds the template version, the offer deadline and how it was chosen, the
+  handwriting checklist (keys only) and the source token over the printed values (names, birth date,
+  address, the effective TG dates, the wave, the pinned template, the customer and the
+  Transfergesellschaft's fingerprint), compared under the participation lock
+  (`dsv_source_token`, `source_changed`). Audited `dsv_form_generated` (template version, deadline
+  kind) in the `dsv` history; the project's pin `dsv_template_pinned` (project-level). No value it
+  prints enters a log, an audit entry or the API's view.
 - **The working copy's expiry** (Q179; ADR-0008; `workingCopyExpiry`): the file is deleted 30 days
   after a newer generation supersedes it or its signed scan is accepted (the scan's acceptance
   instant, `scanAcceptedAt`), 30 days after the participation's terminal status, and 90 days after

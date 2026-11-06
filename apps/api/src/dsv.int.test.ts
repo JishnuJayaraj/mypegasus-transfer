@@ -15,7 +15,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
 // The tab "DSV" (process-and-lifecycle.md, the DSV: generation; data-protection.md, generated forms;
-// ADR-0009, the DSV template; Slice 7 D1–D3) against transfer_test with memory storage and the
+// ADR-0009, the DSV template) against transfer_test with memory storage and the
 // mock renderer: the view per viewer, the project's template pin, the generation with its deadline
 // chosen first, the source token compared, the generation's currency, the logged opening and the
 // production refusal of an unapproved template. Synthetic data only.

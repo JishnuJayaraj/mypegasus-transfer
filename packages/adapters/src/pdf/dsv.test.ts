@@ -6,7 +6,7 @@ import { GotenbergHtmlRenderer } from "./gotenberg";
 import { MockHtmlRenderer } from "./mock";
 import { count, extractText } from "./testing/text";
 
-// The DSV template `dsv:v1` rendered (ADR-0006, ADR-0009; Slice 7 D1): the variable parts read back
+// The DSV template `dsv:v1` rendered (ADR-0006, ADR-0009): the variable parts read back
 // (`Ł`, `ğ`), the deadline printed, HTML in a value escaped, a missing value left as a line, an
 // unbroken run longer than a line kept on the page, the sample stamp on every page. Against a real
 // Gotenberg (CI's service container) when GOTENBERG_URL is set; the mock renders the same text.

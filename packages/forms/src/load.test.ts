@@ -102,7 +102,7 @@ describe("loadOwnTemplate", () => {
   });
 });
 
-describe("the DSV template (ADR-0009, the DSV template; Slice 7 D1)", () => {
+describe("the DSV template (ADR-0009, the DSV template)", () => {
   it("is a synthetic sample stamped on every page and not approved for live use", () => {
     const template = loadOwnTemplate("dsv:v1");
     // the header repeats on every page; the watermark is fixed, so printed on each page too

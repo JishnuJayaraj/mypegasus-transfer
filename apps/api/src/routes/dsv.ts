@@ -28,7 +28,7 @@ import { requireSession, sessionUser } from "../session";
 import { auditContext } from "../sql";
 
 // The tab "DSV" (process-and-lifecycle.md, the DSV: generation; data-protection.md, generated forms
-// and the access matrix: `employment_contract`; ADR-0009, the DSV template; Slice 7 D1–D3): the
+// and the access matrix: `employment_contract`; ADR-0009, the DSV template): the
 // view, the generation with the deadline chosen before it, and the project's template pin. Order
 // as in ADR-0010: schema → visibility (404) → permission (403) → state (422, 409) → service (503).
 // Logs carry ids, codes and outcomes only, never a value the paper prints.

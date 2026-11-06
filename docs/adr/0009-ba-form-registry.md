@@ -83,3 +83,16 @@ Agenturen reject outdated versions. See `docs/domain/ba-forms.md`.
   as built).
 - The **Kug 200a 07/2025** (2 pages, 56 fields, six participant rows) has its manifest and field
   map so the registry test checks it; filling it is PR 6-5a (Q195).
+
+## Amendment 2026-11-06: the DSV template (Slice 7, PR 7-1)
+
+- **An own template version may carry `template.json`** (`{ approvedForLive, note }`), hashed into
+  the forms manifest with the other files and immutable with them; the manifest entry repeats
+  `approvedForLive` (`ownTemplateVersions(name)` reads it). A template without it counts as not
+  approved.
+- **`dsv:v<n>`** is the DSV (ba-forms.md, the DSV as built): `dsv:v1` the synthetic sample
+  (`approvedForLive: false`). The project pins one version; every generation records its form code
+  `dsv` and the version (`form_generation.form_version` `v<n>`, the `form_code` enum's `dsv`). With
+  `NODE_ENV=production` an unapproved version is refused at generation (and, from 7-2a, at the
+  offer).
+

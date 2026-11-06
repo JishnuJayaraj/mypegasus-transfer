@@ -24,7 +24,7 @@ import { participationDsvQuery, useApi } from "../api";
 import { documentNavigation } from "./documents-tab";
 
 // The tab "DSV" (process-and-lifecycle.md, the DSV: generation; data-protection.md, generated
-// forms; Slice 7 D1–D3): the track and the pinned template, "Vertrag erzeugen" with the deadline
+// forms): the track and the pinned template, "Vertrag erzeugen" with the deadline
 // chosen first (the wave's signing deadline for a first offer, else a date entered; nothing
 // preset) and what stays for the hand before printing, then the generated papers with "Öffnen" and
 // whether each can still be handed out. Every button by its capability; a blocked one names its

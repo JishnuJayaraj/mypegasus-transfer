@@ -1,5 +1,5 @@
 -- Hand-written (ADR-0002, generated forms and project setup; process-and-lifecycle.md, the DSV:
--- generation; data-protection.md, generated forms; Slice 7 D1–D3): the document functions 0089
+-- generation; data-protection.md, generated forms): the document functions 0089
 -- dropped with the recreated `document_type`, created again unchanged; document catalog version 8
 -- with the generated DSV; the DSV's source token and currency; the generation of the DSV with its
 -- deadline and token; the project's DSV template pin; the history's projection rows and the
@@ -9,7 +9,7 @@
 -- `form_code` and `audit_event_type` are compared as text here, since this runs after it in the
 -- same migration run.
 --
--- Lock order (ADR-0002; Slice 7 D26): a generation takes the project's shared advisory lock and
+-- Lock order (ADR-0002, the DSV's generation): a generation takes the project's shared advisory lock and
 -- the participation row (`lock_participation`); the pin takes the project's exclusive lock
 -- (`lock_project_setup`) first.
 
@@ -250,7 +250,7 @@ INSERT INTO audit_event_projection (event_type, field, stream, shows_change, sho
   ('dsv_template_pinned', NULL, NULL, false, false, '{}');
 --> statement-breakpoint
 
--- Document catalog version 8 (data-protection.md, documents and generated forms; Slice 7 D2): the
+-- Document catalog version 8 (data-protection.md, documents and generated forms): the
 -- generated DSV, a working copy the PL and back office open through the logged opening; written
 -- only by `record_form_generation`. Every other type as in version 7.
 INSERT INTO document_type_policy (type, catalog_version, retention_class, file_name, signed,
@@ -267,7 +267,7 @@ INSERT INTO document_type_policy (type, catalog_version, retention_class, file_n
 
 -- Internal helpers (no grant).
 
--- The DSV's source token (Slice 7 D2; the domain's `dsvSourceCanonical`, a test holds them equal):
+-- The DSV's source token (the domain's `dsvSourceCanonical`, a test holds them equal):
 -- the SHA-256, as lowercase hex, of the line `dsv-sources:v1` and one line per printed source in a
 -- fixed order, `key=` and the value as a JSON string or `null`, joined by line feeds, as UTF-8. The
 -- person and the effective dates as `form_person` reads them, the participation's wave, the
@@ -301,10 +301,10 @@ RETURNS text LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp A
 $$;
 --> statement-breakpoint
 
--- Whether a DSV generation can still be handed out (Slice 7 D3): its token equal to the current
+-- Whether a DSV generation can still be handed out (process-and-lifecycle.md, the DSV: generation as built): its token equal to the current
 -- one (with the Transfergesellschaft's current fingerprint), its deadline not passed in Berlin, and
 -- for the wave's deadline that deadline still the wave's. False for any other generation. The
--- offers (7-2a) add "no later offer ended after it".
+-- offers add "no later offer ended after it".
 CREATE FUNCTION dsv_generation_current(p_generation_id uuid, p_organisation_sha256 text)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
   SELECT coalesce((
@@ -322,8 +322,8 @@ $$;
 -- The functions transfer_app may execute.
 
 -- A generated form stored (data-protection.md, generated forms; Q179), as 0076 wrote it for the
--- TL 407 and the Kug 200b, and the DSV's (process-and-lifecycle.md, the DSV: generation; Slice 7
--- D1–D3): the PL or back office of the project as themselves (`actor_not_allowed`), the
+-- TL 407 and the Kug 200b, and the DSV's (process-and-lifecycle.md, the DSV: generation as
+-- built): the PL or back office of the project as themselves (`actor_not_allowed`), the
 -- participation locked (the shared project lock first, so a pin, which takes the exclusive one,
 -- waits); an active `ta_tg` project, an open participation in a wave with both effective TG dates,
 -- the DSV track `not_offered`, `dsv_declined` or `dsv_expired` (`dsv_offer_open` for an open offer,
@@ -500,7 +500,7 @@ BEGIN
 END $$;
 --> statement-breakpoint
 -- The project's fields (ADR-0002, project setup), as 0080 wrote it, and the DSV template's pin
--- (ADR-0009, the DSV template; Slice 7 D1): `p_dsv_template_version` alone in its call
+-- (ADR-0009, the DSV template): `p_dsv_template_version` alone in its call
 -- (`invalid_argument` with any other field), by the project's PL as themselves
 -- (`actor_not_allowed`), in a `ta_tg` project (`not_ta_tg`), only while no DSV of the project was
 -- generated (`template_pinned`: fixed from the first generation) and only to another version
@@ -523,14 +523,14 @@ DECLARE
   v text;
   v_bad boolean;
 BEGIN
-  -- The exclusive project lock is the first operation (D3, round 23).
+  -- The exclusive project lock is the first operation (ADR-0002, project setup).
   PERFORM public.lock_project_setup(p_id);
   PERFORM public.assert_context(p_context, NULL, '{user}');
   IF (p_context).on_behalf_of IS NOT NULL THEN
     RAISE EXCEPTION 'invalid_actor';
   END IF;
   SELECT * INTO r FROM public.project WHERE id = p_id;
-  -- The DSV template's pin (ADR-0009, the DSV template; Slice 7 D1), alone in its call.
+  -- The DSV template's pin (ADR-0009, the DSV template), alone in its call.
   IF p_dsv_template_version IS NOT NULL THEN
     IF p_dsv_template_version !~ '^v[1-9][0-9]{0,3}$' OR p_name IS NOT NULL
        OR p_customer_name IS NOT NULL OR p_type IS NOT NULL OR p_project_agentur_key IS NOT NULL

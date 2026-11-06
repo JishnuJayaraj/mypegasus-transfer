@@ -23,7 +23,7 @@ export const FormsManifest = z.strictObject({
   ),
   /**
    * Our own HTML templates (`templates/own/<name>/v<n>/`), each file by its SHA-256;
-   * `approvedForLive` from the version's `template.json` where it has one (the DSV, D1).
+   * `approvedForLive` from the version's `template.json` where it has one (ba-forms.md, the DSV as built).
    */
   templates: z.array(
     z.strictObject({

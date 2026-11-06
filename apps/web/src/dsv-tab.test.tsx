@@ -12,7 +12,7 @@ import {
   unpinnedConfig,
 } from "./test-utils";
 
-// The tab "DSV" (process-and-lifecycle.md, the DSV: generation; Slice 7 D1–D3) and the project's
+// The tab "DSV" (process-and-lifecycle.md, the DSV: generation) and the project's
 // "DSV-Vorlage": the deadline chosen before "Erzeugen" with nothing preset, a blocked generation's
 // prerequisite as text (ui-patterns.md, C1), the handwriting checklist before printing, the
 // generated papers with "Öffnen" and "veraltet", a moved source as a conflict, and the PL's pin.

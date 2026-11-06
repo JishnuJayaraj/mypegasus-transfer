@@ -14,7 +14,7 @@ import {
 } from "./testing";
 
 // The DSV's generation (process-and-lifecycle.md, the DSV: generation; data-protection.md,
-// generated forms; Slice 7 D1–D3) as transfer_app calls the functions: the project's template pin,
+// generated forms) as transfer_app calls the functions: the project's template pin,
 // `record_form_generation` for the DSV with its deadline and source token, the token equal to the
 // domain's canonical text, and the generation's currency. Synthetic values only.
 const urls = testDatabaseUrls();
@@ -304,7 +304,7 @@ describe("record_form_generation: the DSV", () => {
   });
 });
 
-describe("dsv_generation_current (D3)", () => {
+describe("dsv_generation_current (process-and-lifecycle.md, the DSV: generation as built)", () => {
   it("holds until a printed value, the TG, the wave's deadline or the customer changes", async () => {
     await pin("v1");
     const id = await participation();

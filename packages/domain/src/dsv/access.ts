@@ -5,8 +5,7 @@ import {
   type PermissionTarget,
 } from "../access/permissions";
 
-// Who works with the DSV (data-protection.md, access matrix: `employment_contract`; Slice 7 D1,
-// D2; Q60). Normal mode only: assisted mode and break-glass grant none of it. The database
+// Who works with the DSV (data-protection.md, access matrix: `employment_contract`; Q60). Normal mode only: assisted mode and break-glass grant none of it. The database
 // functions check the same roles again.
 
 const denied = { ok: false, because: "actor_not_allowed" } as const satisfies Permission;

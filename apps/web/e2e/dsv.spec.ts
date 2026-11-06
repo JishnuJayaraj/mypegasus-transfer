@@ -14,7 +14,7 @@ import {
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
 import { expect, expectAccessible, test } from "./helpers";
 
-// The DSV's generation (process-and-lifecycle.md, the DSV: generation; Slice 7 D1–D3): the PL pins
+// The DSV's generation (process-and-lifecycle.md, the DSV: generation): the PL pins
 // the project's DSV template on "Einrichtung", then on the participant's tab "DSV" chooses the
 // wave's signing deadline before "Erzeugen", sees what stays for the hand before printing, and
 // opens the paper through the logged opening; back office sees and opens it too. The DSV is signed

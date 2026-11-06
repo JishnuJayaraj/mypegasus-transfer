@@ -62,7 +62,7 @@ describe("workingCopyExpiry (data-protection.md, generated forms; Q179)", () => 
   });
 });
 
-describe("the DSV's working copy (Slice 7 D2; data-protection.md, generated forms)", () => {
+describe("the DSV's working copy (data-protection.md, generated forms)", () => {
   it("is a form_working_copy and expires as one: 30 days after a newer DSV, 90 when abandoned", async () => {
     const { documentTypeEntry } = await import("../documents/catalog");
     expect(documentTypeEntry("dsv_form").retentionClass).toBe("form_working_copy");

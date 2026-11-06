@@ -1224,6 +1224,26 @@ data-protection.md (evidence corrections) holds the rules, Q209 the readings.
   `agentur_submission` rows (id order) → consent rows → the sensitive rows → the BA reporting task
   → the correction or request row. Never a batch before a participation.
 
+## Amendment 2026-11-06: the DSV's generation (Slice 7, PR 7-1)
+
+- **`document_type` recreated** with `dsv_form` (as 0069 and 0075 did: catalog version 8's policy
+  rows use it in the same migration run): the constraints comparing it with a literal and the six
+  functions naming it are dropped by 0089 and created again unchanged by 0090.
+- **`record_form_generation`** (DROP/CREATE) takes the DSV: `p_offer_deadline`, `p_deadline_kind`
+  (`dsv_deadline_kind`) and the checklist; the PL or back office as themselves; the state, the
+  pinned template, the deadline (`offer_deadline_invalid`, the wave's as it is now) and the printed
+  sources (`form_person` and `dsv_source_token`) checked under the participation lock; audited
+  `dsv_form_generated`. `form_generation` gains `offer_deadline` and `deadline_kind`
+  (`form_generation_dsv`), its version check allows `v<n>` for `dsv`.
+- **`dsv_source_token(participation, organisation sha256)`** (internal, no grant) builds the
+  domain's `dsvSourceCanonical` and hashes it (a test holds them equal);
+  **`dsv_generation_current(generation, organisation sha256)`** (granted) says whether a paper can
+  still be handed out (D3).
+- **`update_project`** (DROP/CREATE) takes `p_dsv_template_version` alone: the project's PL, a
+  `ta_tg` project, no DSV generated yet (`template_pinned`); audited `dsv_template_pinned`
+  (project-level), under the exclusive project lock a generation's shared lock waits for.
+- **`record_audit_event`** refuses `dsv_form_generated` and `dsv_template_pinned`.
+
 ## Conventions as built (Slices 0–2)
 
 Roles and grants:

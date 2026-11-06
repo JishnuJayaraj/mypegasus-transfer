@@ -35,7 +35,7 @@ export type FormRegistry = {
   /** One committed version's files, expired ones included, or null. */
   version(formCode: FormCode, version: string): FormVersionFiles | null;
   template(ref: string): HtmlTemplate;
-  /** An own template's versions and whether each is approved for live use (the DSV, D1). */
+  /** An own template's versions and whether each is approved for live use (ba-forms.md, the DSV as built). */
   ownTemplateVersions(name: string): { version: string; approvedForLive: boolean }[];
   /** The font's text metrics for the layout (measured once). */
   measure(): Promise<TextMeasure>;

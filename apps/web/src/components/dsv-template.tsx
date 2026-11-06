@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { projectDsvTemplateQuery, useApi } from "../api";
 
 /**
- * "DSV-Vorlage" on "Einrichtung" (ADR-0009, the DSV template; Slice 7 D1): the project's pinned
+ * "DSV-Vorlage" on "Einrichtung" (ADR-0009, the DSV template): the project's pinned
  * DSV template version, chosen by the PL while no DSV of the project was generated and fixed from
  * the first generation. A version not approved for live use is a synthetic sample, said so next
  * to it. Back office reads it; others are told who may.

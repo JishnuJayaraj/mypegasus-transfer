@@ -141,7 +141,7 @@ describe("document-type catalog version 5 (Q186)", () => {
   });
 });
 
-describe("document-type catalog version 8 (Slice 7 D2)", () => {
+describe("document-type catalog version 8 (data-protection.md, generated forms)", () => {
   it("adds the generated DSV: the signed DSV's category, class and roles, a working copy", () => {
     const signed = documentTypeEntry("dsv_signed_scan");
     expect(documentTypeEntry("dsv_form")).toMatchObject({

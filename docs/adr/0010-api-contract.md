@@ -744,3 +744,21 @@ Import keys (`apps/api/src/imports/keys.ts`):
 - Saved column mappings and preview tokens are HMACs under two keys derived from `SESSION_SECRET`
   with HKDF-SHA256 (`import-header-mapping:v1`, `import-preview-token:v1`), so one never gives the
   other.
+
+## Note 2026-11-06 (Slice 7, PR 7-1): the tab "DSV"
+
+- `GET /participations/{id}/dsv` → `DsvView` (the PL and back office; a consultant `403`, a
+  participation the viewer can't see `404`): the track, the pinned template with its approval, the
+  deadline's choices and bounds, the **source token** of the printed values, the checklist a
+  generation would leave for the hand, the **blockers** (C1's prerequisites), the generations with
+  `stale` and `capabilities.open`, and `facts.dsvGenerated`. Codes, dates and instants only.
+- `POST /participations/{id}/dsv/generations` (`{ deadline: { kind: "wave", shown } | { kind:
+  "explicit", date }, expectedSourceToken }`, no default) → `201 DsvGenerationResult`. `409
+  source_changed` at `/expectedSourceToken`; `422` at `/deadline` (`explicit_deadline_required`,
+  `wave_deadline_missing`, `offer_deadline_invalid`) or for the state's blockers; `503
+  pdf_unavailable`/`storage_unavailable`.
+- `GET`/`PUT /projects/{id}/dsv-template` (`{ version }`): read by the PL and back office, pinned by
+  the PL (`422 template_unknown` at `/version`, `template_pinned`, `project_unchanged`,
+  `not_ta_tg`).
+- `ParticipationDetail.capabilities.viewDsv` offers the tab.
+

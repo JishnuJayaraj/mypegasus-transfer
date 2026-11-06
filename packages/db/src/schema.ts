@@ -315,7 +315,7 @@ export const project = pgTable(
     employerBetriebsnummer: text("employer_betriebsnummer"),
     employerEconomicClass: text("employer_economic_class"),
     /**
-     * The DSV template version the project prints (ADR-0009, the DSV template; Slice 7 D1): pinned
+     * The DSV template version the project prints (ADR-0009, the DSV template): pinned
      * by the PL (`update_project`, audited `dsv_template_pinned`) while no DSV of the project was
      * generated, fixed from the first generation. Null until pinned: no DSV can be generated.
      */
@@ -2062,7 +2062,7 @@ export const formGeneration = pgTable(
      */
     checklist: jsonb("checklist"),
     /**
-     * A DSV's offer deadline as printed and how it was chosen (Slice 7 D2): the wave's signing
+     * A DSV's offer deadline as printed and how it was chosen (data-protection.md, generated forms): the wave's signing
      * deadline the dialog showed, or an explicit date; null for the BA forms.
      */
     offerDeadline: dateColumn("offer_deadline"),

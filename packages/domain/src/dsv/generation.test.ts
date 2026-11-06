@@ -293,7 +293,7 @@ describe("templates and the pin", () => {
   });
 });
 
-describe("dsvGeneratedFact (D3)", () => {
+describe("dsvGeneratedFact (process-and-lifecycle.md, the DSV: generation as built)", () => {
   it("is the latest current generation, by its Berlin day and instant", () => {
     const at = (iso: string) => new Date(iso);
     expect(dsvGeneratedFact([])).toBeUndefined();

@@ -122,7 +122,7 @@ const generatableTracks: ReadonlySet<DsvStatus> = new Set([
 ]);
 
 /**
- * Why no DSV can be generated now (D2): an active `ta_tg` project with a pinned template, a
+ * Why no DSV can be generated now (process-and-lifecycle.md, the DSV: generation as built): an active `ta_tg` project with a pinned template, a
  * non-terminal participation in a wave with both effective TG dates, and a DSV track without an
  * open (`dsv_offer_open`: its paper is reopened, not regenerated) or signed offer. Empty: allowed.
  */
@@ -161,7 +161,7 @@ export type DsvDeadlineContext = {
 };
 
 /**
- * The deadline a generation prints, or why it can't (D2; the guard `offer_deadline_valid`):
+ * The deadline a generation prints, or why it can't (the guard `offer_deadline_valid`):
  * fails closed when the latest entry date or the TG start is missing.
  */
 export function dsvDeadline(
@@ -244,9 +244,9 @@ export type DsvGenerationRecord = {
 };
 
 /**
- * Whether a generation can still be handed out (D3): stale once a printed source value changed
+ * Whether a generation can still be handed out (process-and-lifecycle.md, the DSV: generation as built): stale once a printed source value changed
  * (its token differs from the current one), its deadline passed, or, for the wave's deadline, the
- * wave's signing deadline moved. A later offer ending after it joins with the offers (7-2a).
+ * wave's signing deadline moved. A later offer ending after it joins with the offers.
  */
 export function dsvGenerationProblem(
   generation: DsvGenerationRecord,
@@ -265,7 +265,7 @@ export function dsvGenerationProblem(
 }
 
 /**
- * Whether a template version may be generated (D1): any in development; in production only one
+ * Whether a template version may be generated (ba-forms.md, the DSV as built): any in development; in production only one
  * whose manifest says `approvedForLive` (`dsv_template_not_approved`; the wording's review, Q210).
  */
 export function dsvTemplateUsable(
@@ -276,7 +276,7 @@ export function dsvTemplateUsable(
 }
 
 /**
- * Whether the project's pin may change (D1): only while no DSV of the project was generated
+ * Whether the project's pin may change (ba-forms.md, the DSV as built): only while no DSV of the project was generated
  * (`template_pinned` otherwise), only in a `ta_tg` project (`not_ta_tg`), and only to another
  * version (`project_unchanged`).
  */
@@ -290,7 +290,7 @@ export function dsvPinProblem(
 }
 
 /**
- * `dsvGenerated` (D3): the latest current generation, valid from the Berlin day it was recorded
+ * `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the latest current generation, valid from the Berlin day it was recorded
  * and recorded at its instant; none while every generation is stale.
  */
 export function dsvGeneratedFact(

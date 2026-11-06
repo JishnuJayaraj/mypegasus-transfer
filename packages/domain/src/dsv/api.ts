@@ -9,7 +9,7 @@ import {
   type DsvValueKey,
 } from "./generation";
 
-// The tab "DSV" (ADR-0010; process-and-lifecycle.md, the DSV: generation; Slice 7 D1–D3): built
+// The tab "DSV" (ADR-0010; process-and-lifecycle.md, the DSV: generation): built
 // for the PL and back office, codes, dates and instants only. Never a value the paper prints: the
 // file opens through the logged opening.
 
@@ -50,7 +50,7 @@ export const DsvGenerationView = z
     offerDeadline: isoDate,
     deadlineKind: z.enum(["wave", "explicit"]),
     checklist: z.array(DsvChecklistItem),
-    /** A printed value changed, its deadline passed or the wave's deadline moved (D3). */
+    /** A printed value changed, its deadline passed or the wave's deadline moved (process-and-lifecycle.md, the DSV: generation as built). */
     stale: z.boolean(),
     capabilities: z.strictObject({ open: z.boolean() }),
   })
@@ -79,7 +79,7 @@ export const DsvView = z
     /** Why no DSV can be generated now (C1: the prerequisite next to the button). */
     blockers: z.array(z.enum(blockers)),
     generations: z.array(DsvGenerationView),
-    /** `dsvGenerated` (D3): the current generation's Berlin day and instant; null when none. */
+    /** `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the current generation's Berlin day and instant; null when none. */
     facts: z.strictObject({
       dsvGenerated: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
     }),

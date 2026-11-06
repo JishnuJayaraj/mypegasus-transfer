@@ -45,7 +45,7 @@ import { formPersonOf, organisationFingerprint, sha256, type FormPerson } from "
 import type { FormRegistry } from "./registry";
 
 // The DSV of one participation (process-and-lifecycle.md, the DSV: generation; data-protection.md,
-// generated forms; ADR-0009, the DSV template; Slice 7 D1–D3): its printed sources read in one
+// generated forms; ADR-0009, the DSV template): its printed sources read in one
 // snapshot with their source token, the generations with their currency, and the generation: the
 // deadline validated, the template rendered with its variable parts, stored encrypted and recorded
 // with the token the database compares again under the lock. Nothing here logs or answers a value
@@ -60,7 +60,7 @@ export type DsvDeps = {
   files: DocumentFiles | undefined;
   documentKeyRoot: string;
   configDir: string | undefined;
-  /** `NODE_ENV=production`: only a template approved for live use is generated (D1). */
+  /** `NODE_ENV=production`: only a template approved for live use is generated (ba-forms.md, the DSV as built). */
   production: boolean;
 };
 
@@ -239,7 +239,7 @@ export function dsvService(deps: DsvDeps) {
       : found;
   }
 
-  /** Whether a generation can still be handed out (D3). */
+  /** Whether a generation can still be handed out (process-and-lifecycle.md, the DSV: generation as built). */
   const stale = (read: DsvRead, generation: DsvRead["generations"][number], today: IsoDate) =>
     dsvGenerationProblem(
       generation,
@@ -247,7 +247,7 @@ export function dsvService(deps: DsvDeps) {
       today,
     ) !== null;
 
-  /** `dsvGenerated` (D3): the latest current generation. */
+  /** `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the latest current generation. */
   const generatedFact = (read: DsvRead, today: IsoDate) =>
     dsvGeneratedFact(
       read.generations.map((generation) => ({
