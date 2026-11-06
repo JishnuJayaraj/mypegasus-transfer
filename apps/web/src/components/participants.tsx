@@ -54,10 +54,16 @@ import { BulkInvite } from "./invitations";
 import { BulkKug200b } from "./kug200b-bulk";
 import { usePanelNavigationGuard } from "./panel-guard";
 import { BulkRemind } from "./reminders";
-import { useSelfServiceLabel } from "./self-service-tab";
+import { StepLabel } from "./open-steps";
 import { useConsultants } from "./team";
 import { ActiveFilterTags, BulkWave, WorklistFilterFields } from "./worklist-tools";
-import { codeFromSort, sortFromCode, useRemembered, worklistMemory } from "./worklist-state";
+import {
+  codeFromSort,
+  sortFromCode,
+  useRemembered,
+  worklistMemory,
+  worklistReturn,
+} from "./worklist-state";
 import { useViewerRoles } from "./viewer-roles";
 import { quickViews, sameFilter } from "./worklist-views";
 
@@ -80,7 +86,6 @@ const defaultHidden: ReadonlySet<string> = new Set([
 ]);
 
 type ListItem = components["schemas"]["WorklistItem"];
-type CaseItemKind = Exclude<ListItem["caseItems"][number]["kind"], "knowledge_date_missing">;
 type ActivationPrintItem = components["schemas"]["BatchActivationCodeResult"]["items"][number];
 type PrivacyNoticePrintItem = components["schemas"]["PrivacyNoticeBatchResult"]["items"][number];
 type PrintState =
@@ -149,6 +154,10 @@ export function Participants({
   const { consultants, mayAssign } = useConsultants(projectId);
   const viewer = useViewerRoles(projectId);
   const [term, setTerm] = useRemembered(projectId, "term");
+  // The codes and the sort, for the participant page's breadcrumb back here (C6, AC 4).
+  useEffect(() => {
+    worklistMemory(projectId).search = { filter, ...(sort && { sort }) };
+  }, [projectId, filter, sort]);
   const search = useDeferredValue(term);
   const filterKey = JSON.stringify(filter);
   // The selection belongs to one filter; another starts afresh. The search keeps it, so rows can
@@ -248,6 +257,7 @@ export function Participants({
       ({
         to: "/projects/$projectId/participations/$participationId",
         params: { projectId, participationId: id },
+        state: worklistReturn(projectId),
       }) as const;
     const batchActions: BatchAction[] = batchKinds
       .filter((kind) => may[kind])
@@ -613,6 +623,7 @@ function useWorklistColumns({
             <RouterLink
               to="/projects/$projectId/participations/$participationId"
               params={{ projectId, participationId: item.id }}
+              state={worklistReturn(projectId)}
             >
               {fullName(item) ?? item.personnelNumber ?? t("participants.open")}
             </RouterLink>
@@ -713,41 +724,6 @@ function useWorklistColumns({
     ];
     return columns.filter((column): column is DataColumn<ListItem> => column !== false);
   }, [t, projectId, taTg, waveCode, today, rank]);
-}
-
-/** One open item as the column "Nächster Schritt" names it; tiers 1 and 3 with their date. */
-function StepLabel({ step, today }: { step: OpenStep; today: string }) {
-  const { t } = useTranslation();
-  const label = useSelfServiceLabel();
-  switch (step.source) {
-    case "deadline":
-      // The kind, then relative and absolute date (ui-patterns.md, principle 5).
-      return (
-        <>
-          {`${t(`worklist.deadlineKinds.${step.kind}`)}: `}
-          <RelativeDate date={step.date} today={today} kind="deadline" />
-          {step.final && ` (${t("worklist.deadlineFinal")})`}
-        </>
-      );
-    case "appointment":
-      return (
-        <>
-          {`${t(`worklist.appointmentItems.${step.kind}`)}: ${t(`appointments.kinds.${step.appointmentKind}`)}, `}
-          <RelativeDate date={step.date} today={today} kind="event" />
-        </>
-      );
-    case "case":
-      // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
-      return step.kind === "knowledge_date_missing"
-        ? t("worklist.knowledgeDateMissing", { date: formatDate(step.date) })
-        : t(`worklist.caseItems.${step.kind as CaseItemKind}`, { date: formatDate(step.date) });
-    case "agentur":
-      return t(`worklist.agenturItems.${step.kind}`, { date: formatDate(step.date) });
-    case "flag":
-      return t(`worklist.flags.${step.kind}`);
-    case "action":
-      return `${label(step.action.key)} ${t(`worklist.actionStates.${step.action.state}`)}`;
-  }
 }
 
 const stepKey = (step: OpenStep, i: number) => `${step.source}-${step.kind}-${i}`;

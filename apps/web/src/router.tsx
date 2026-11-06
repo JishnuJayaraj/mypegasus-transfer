@@ -1,3 +1,4 @@
+import type { WorklistReturn } from "./components/worklist-state";
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import type { ApiClient } from "@transfer/api-client";
@@ -48,5 +49,9 @@ export function createAppRouter(context: Omit<RouterContext, "session">, history
 declare module "@tanstack/react-router" {
   interface Register {
     router: ReturnType<typeof createAppRouter>;
+  }
+  interface HistoryState {
+    /** The work list's codes and sort, for the participant page's breadcrumb (C6). */
+    worklistSearch?: WorklistReturn;
   }
 }

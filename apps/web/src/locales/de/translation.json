@@ -698,7 +698,11 @@
       "purpose": "Zweck",
       "suspended": "Gesperrt seit {{at}} (Zugangsverlust).",
       "removed": "Entfernt am {{at}}.",
-      "consentVersion": "Einwilligung: {{version}}"
+      "consentVersion": "Einwilligung: {{version}}",
+      "sent": "Aktivierungslink gesendet",
+      "noticeRecorded": "Übergabe des Datenschutzhinweises erfasst",
+      "noticeIntro": "Erfassen Sie, dass der Datenschutzhinweis ausgedruckt persönlich übergeben wurde, und in welcher Sprache.",
+      "noticeSubmit": "Übergabe erfassen"
     },
     "assurance": {
       "birth_date": "Geburtsdatum",
@@ -720,12 +724,12 @@
       "errors": {
         "open_code_exists": "Es gibt bereits einen offenen Code. Bestätigen Sie die bewusste Neuausstellung.",
         "failed": "Der Wiederherstellungscode konnte nicht ausgestellt werden."
-      }
+      },
+      "open": "Zugang wiederherstellen"
     }
   },
   "participant": {
     "title": "Teilnehmende Person",
-    "back": "Zurück zu {{project}}",
     "forbidden": "Sie dürfen diese teilnehmende Person nicht sehen.",
     "notFound": "Diese teilnehmende Person wurde nicht gefunden.",
     "person": "Person",
@@ -736,6 +740,7 @@
     "fromWave": "aus der Welle",
     "individual": "individuell",
     "hints": {
+      "title": "Handlungsbedarf",
       "tg_start_missed": "TG-Beginn verpasst: Der vertragliche Beginn liegt in der Vergangenheit, der Eintritt ist nicht erfolgt.",
       "new_start_needs_ba_review": "Neuer Beginn nur nach BA-/Rechtsprüfung: Das bisherige Arbeitsverhältnis endete so früh, dass jeder mögliche neue Beginn eine Lücke ließe (kein gewöhnlicher späterer Eintritt).",
       "placement_agentur_check": "Vermittlungs-Agentur prüfen: Die Person hat ihre Anschrift nach der Wahl der Vermittlungs-Agentur geändert."
@@ -843,7 +848,6 @@
         "allPartiesSigned": "Alle erforderlichen Parteien haben unterschrieben (standardmäßig alle ursprünglichen DSV-Parteien).",
         "retrievable": "Das Original ist abgelegt und bleibt auffindbar."
       },
-      "cancel": "Abbrechen",
       "save": "Speichern",
       "saved": "Vertragsdaten geändert",
       "refusals": {
@@ -970,7 +974,9 @@
       },
       "assign": "Zuweisen",
       "unassign": "Zuweisung von {{name}} aufheben",
-      "failed": "Die Zuweisung konnte nicht geändert werden."
+      "failed": "Die Zuweisung konnte nicht geändert werden.",
+      "edit": "Beratung zuweisen",
+      "assigned": "Beratung zugewiesen"
     },
     "tabs": {
       "label": "Bereiche",
@@ -1095,6 +1101,82 @@
         }
       },
       "quarantined": "unter Quarantäne"
+    },
+    "header": {
+      "personnelNumber": "Personalnummer {{number}}",
+      "wave": "Welle {{wave}}",
+      "noWave": "keine"
+    },
+    "actions": {
+      "send": "Aktivierungscode persönlich senden",
+      "recovery": "Zugang wiederherstellen",
+      "notice": "Datenschutzhinweis übergeben",
+      "remind": "Erinnern",
+      "invite": "Zu Termin einladen",
+      "assisted": "Assistierte Erfassung starten"
+    },
+    "anchors": {
+      "participant-stand": "Stand",
+      "participant-dates": "Welle und Vertragsdaten",
+      "participant-activation": "Portalaktivierung",
+      "participant-ba": "BA-Meldungen"
+    },
+    "overview": {
+      "stand": "Stand",
+      "open": "Offen",
+      "responsibility": "Termine & Zuständigkeit",
+      "masterData": "Stammdaten",
+      "tracks": {
+        "main": "Status",
+        "profiling": "Profiling",
+        "dsv": "DSV"
+      },
+      "step": "Schritt {{n}} von {{total}}",
+      "offPath": "Außerhalb der regulären Schrittfolge",
+      "steps": "Schritte: {{track}}",
+      "done": "erledigt",
+      "profilingDoneOn": "Profiling abgeschlossen am",
+      "openLoading": "Offene Punkte werden geladen",
+      "openUnavailable": "Die offenen Punkte stehen in der Teilnehmendenliste des Projekts, die Ihre Rolle nicht sieht.",
+      "openFailed": "Die offenen Punkte konnten nicht geladen werden.",
+      "retry": "Erneut versuchen",
+      "nothingOpen": "Keine offenen Punkte.",
+      "goTo": "Zu „{{place}}“",
+      "nextAppointment": "Nächster Termin",
+      "appointmentLine": "{{kind}}, {{date}}, {{time}} Uhr.",
+      "noAppointment": "Kein Termin gebucht.",
+      "allAppointments": "Alle Termine",
+      "all": "Alle {{count}} anzeigen",
+      "fewer": "Weniger anzeigen"
+    },
+    "timeline": {
+      "title": "Zeitstrahl",
+      "description": "Status, Fristen und Termine, die diese Seite bereits kennt. Die Liste darunter nennt dieselben Ereignisse.",
+      "graphic": "Zeitstrahl",
+      "today": "heute",
+      "listTitle": "Ereignisse",
+      "empty": "Noch keine datierten Ereignisse.",
+      "legend": "Legende",
+      "booked": "gebucht",
+      "appointment": "{{kind}}, {{time}} Uhr",
+      "kinds": {
+        "tgEntryDate": "Eintritt in die TG",
+        "exitDate": "Austritt",
+        "withdrawnOn": "Ausgeschieden",
+        "profilingDoneOn": "Profiling abgeschlossen",
+        "tgStart": "Geplanter TG-Beginn",
+        "tgEnd": "Geplantes TG-Ende"
+      },
+      "phases": {
+        "ta": "Transferagentur-Phase bis {{to}}",
+        "tg": "TG-Zeitraum {{from}} bis {{to}}"
+      },
+      "lanes": {
+        "dates": "Status und Vertragsdaten",
+        "deadlines": "Fristen",
+        "overdue": "Überschrittene Frist",
+        "appointments": "Termine"
+      }
     }
   },
   "manual": {

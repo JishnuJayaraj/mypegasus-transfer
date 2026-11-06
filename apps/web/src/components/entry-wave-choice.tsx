@@ -10,7 +10,7 @@ import {
   Stack,
   useToast,
 } from "@transfer/ui";
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, worklistQuery, participationQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
@@ -19,11 +19,23 @@ type Detail = components["schemas"]["ParticipationDetail"];
 type ErrorCode = keyof typeof de.participant.waveErrors;
 
 /**
- * The PL's wave choice on a participant's page (Slice 2 plan, "Planned in PR 2h", R33): offered
- * while the API's capability says so; otherwise the API's reason it is closed. The API decides
- * again on submit; a refusal shows its code's message.
+ * The PL's wave choice on a participant's page (process-and-lifecycle.md, assigning a wave), in a
+ * side panel: offered while the API's capability says so (the card shows the API's reason it is
+ * closed, ui-patterns.md C1). The API decides again on submit; a refusal shows its code's message
+ * and keeps the panel open with the choice (C4).
  */
-export function EntryWaveChoice({ detail, projectId }: { detail: Detail; projectId: string }) {
+export function EntryWaveChoice({
+  detail,
+  projectId,
+  onDirtyChange,
+  onSaved,
+}: {
+  detail: Detail;
+  projectId: string;
+  /** Whether a wave is chosen and not yet assigned (C4). */
+  onDirtyChange?: (dirty: boolean) => void;
+  onSaved?: () => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
@@ -34,6 +46,8 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
   });
   const [waveId, setWaveId] = useState("");
   const [error, setError] = useState<string>();
+  // A layout effect, so an Escape right after choosing already asks (ui-patterns.md, side panel).
+  useLayoutEffect(() => onDirtyChange?.(waveId !== ""), [waveId, onDirtyChange]);
 
   const assign = useMutation({
     mutationFn: async (chosen: string) => {
@@ -54,6 +68,7 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
       showToast({ title: t("participant.waveAssigned"), subtitle: updated.entryWave?.code });
       setWaveId("");
       setError(undefined);
+      onSaved?.();
     },
     onError: async (failure) => {
       const problem = failure instanceof ApiProblemError ? failure : undefined;
@@ -71,9 +86,10 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
     },
   });
 
-  // The server says why the choice is closed, the missing permission first (R31).
-  const refusal = detail.refusals.assignEntryWave;
+  // The card says why the choice is closed (the API's reason, C1); a refusal on submit may close
+  // it while the panel is open.
   if (!detail.capabilities.assignEntryWave) {
+    const refusal = detail.refusals.assignEntryWave;
     return (
       <>
         {error && <InlineNotification kind="error" title={message(error)} hideCloseButton />}
@@ -119,9 +135,11 @@ export function EntryWaveChoice({ detail, projectId }: { detail: Detail; project
             <SelectItem key={wave.id} value={wave.id} text={waveLabel(wave)} />
           ))}
         </Select>
-        <Button type="submit" disabled={!waveId || assign.isPending}>
-          {t("participant.assignWave")}
-        </Button>
+        <div>
+          <Button type="submit" disabled={!waveId || assign.isPending}>
+            {t("participant.assignWave")}
+          </Button>
+        </div>
       </Stack>
     </Form>
   );

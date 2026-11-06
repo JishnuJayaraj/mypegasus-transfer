@@ -97,8 +97,18 @@ export function Card({ title, level = 2, description, actions, children, id: anc
 /**
  * Columns that collapse by breakpoint: one column below 42rem, two from 42rem, three from 66rem
  * (`columns={3}`). Below the preferred 1280px a three-column grid has two columns, at 400% zoom
- * one (ui-patterns.md, responsive scope).
+ * one (ui-patterns.md, responsive scope). `collapse="wide"` skips the two-column step: one column
+ * below 66rem, for columns that only read as a set side by side (the participant overview).
  */
-export function Grid({ columns, children }: { columns: 1 | 2 | 3; children: ReactNode }) {
-  return <div className={`tp-grid tp-grid--${columns}`}>{children}</div>;
+export function Grid({
+  columns,
+  collapse = "standard",
+  children,
+}: {
+  columns: 1 | 2 | 3;
+  collapse?: "standard" | "wide";
+  children: ReactNode;
+}) {
+  const modifier = collapse === "wide" ? " tp-grid--collapse-wide" : "";
+  return <div className={`tp-grid tp-grid--${columns}${modifier}`}>{children}</div>;
 }

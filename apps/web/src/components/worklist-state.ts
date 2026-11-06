@@ -1,3 +1,4 @@
+import type { WorklistFilter } from "@transfer/domain";
 import type { TableSort } from "@transfer/ui";
 import { useCallback, useState } from "react";
 
@@ -5,6 +6,9 @@ import { useCallback, useState } from "react";
 // term, the column choice, the rows shown and the scroll position. Kept in this module's memory
 // for the session, per project, so the way back from a participant restores them; never in browser
 // storage, the URL or a query key (data-protection.md, the work list; Q223). A reload loses it.
+// The code filters and the sort are the URL's; a copy here, also handed to the participant page in
+// the navigation's history state (`worklistReturn`, which a reload of that page keeps, unlike this
+// memory), lets its breadcrumb link back to the list as it was left. Only codes, never the term.
 
 /** The columns a sort may name (`sort=deadline`, `sort=-deadline` descending). */
 export const sortKeys = [
@@ -50,7 +54,20 @@ export type WorklistMemory = {
   shown?: { key: string; limit: number };
   /** Where the page and the table were scrolled when the list was left, for one `key`. */
   scroll?: { key: string; page: number; table: number };
+  /** The code filters and the sort the list was last shown with (the URL's, never the term). */
+  search?: WorklistReturn;
 };
+
+/** The work list's codes and sort, for the way back from a participant (ui-patterns.md, C6). */
+export type WorklistReturn = { filter: WorklistFilter; sort?: string };
+
+/**
+ * The history state of a navigation from the work list to a participant: the list's codes and
+ * sort as they are when the link is followed.
+ */
+export function worklistReturn(projectId: string) {
+  return () => ({ worklistSearch: worklistMemory(projectId).search });
+}
 
 const memory = new Map<string, WorklistMemory>();
 

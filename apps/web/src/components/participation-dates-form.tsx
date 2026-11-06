@@ -13,7 +13,7 @@ import {
   TextInput,
   useToast,
 } from "@transfer/ui";
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { worklistQuery, participationQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
@@ -25,30 +25,46 @@ type Confirmation = "originalInspected" | "allPartiesSigned" | "retrievable";
 const confirmations: Confirmation[] = ["originalInspected", "allPartiesSigned", "retrievable"];
 
 /**
- * The PL's change of the contractual TG dates on a participant's page (Slice 2 plan 5.7; rounds
- * 32–34): offered with the API's capability, else the API's reason. An empty date returns to the
- * wave's. Once the DSV is signed the form asks for the fully executed amendment: the date the last
- * party signed, the original location, an optional document number and the PL's three
- * confirmations, never free text. The API decides; every refusal shows at its field.
+ * The PL's change of the contractual TG dates on a participant's page (process-and-lifecycle.md,
+ * Dates and "DSV amendment"), in a side panel: offered with the API's capability (the card shows
+ * the API's reason otherwise, ui-patterns.md C1). An empty date returns to the wave's. Once the
+ * DSV is signed the form asks for the fully executed amendment: the date the last party signed,
+ * the original location, an optional document number and the PL's three confirmations, never
+ * free text. The API decides; every refusal shows at its field and keeps the input (C4). The panel
+ * closes it; the form has no "Abbrechen" of its own.
  */
-export function ParticipationDatesForm({ detail }: { detail: Detail }) {
+export function ParticipationDatesForm({
+  detail,
+  onDirtyChange,
+  onSaved,
+}: {
+  detail: Detail;
+  /** Whether the input differs from what was saved (C4). */
+  onDirtyChange?: (dirty: boolean) => void;
+  onSaved?: () => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
   const showToast = useToast();
   const signed = detail.dsvStatus === "dsv_signed";
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState({
+  const [saved] = useState(() => ({
     tgStart: formatDate(detail.dates.tgStart),
     tgEnd: formatDate(detail.dates.tgEnd),
     fullyExecutedOn: "",
     documentReference: "",
-  });
+  }));
+  const [text, setText] = useState(saved);
   const [confirmed, setConfirmed] = useState<Record<Confirmation, boolean>>({
     originalInspected: false,
     allPartiesSigned: false,
     retrievable: false,
   });
+  const dirty =
+    (Object.keys(saved) as (keyof typeof saved)[]).some((key) => text[key] !== saved[key]) ||
+    Object.values(confirmed).some(Boolean);
+  // A layout effect, so an Escape right after typing already asks (ui-patterns.md, side panel).
+  useLayoutEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
   const [errors, setErrors] = useState<Partial<Record<Field | "form", string[]>>>({});
   const message = (code: string) =>
     t(`participant.dates.errors.${code as Code}`, {
@@ -70,7 +86,8 @@ export function ParticipationDatesForm({ detail }: { detail: Detail }) {
         queryKey: worklistQuery(api, detail.projectId).queryKey,
       });
       showToast({ title: t("participant.dates.saved") });
-      setOpen(false);
+      onDirtyChange?.(false);
+      onSaved?.();
     },
     onError: async (error) => {
       const problem = error instanceof ApiProblemError ? error : undefined;
@@ -91,15 +108,16 @@ export function ParticipationDatesForm({ detail }: { detail: Detail }) {
     },
   });
 
+  // A refusal on submit may close the capability while the panel is open: the API's reason.
   if (!detail.capabilities.setParticipationDates) {
     const refusal = detail.refusals.setParticipationDates;
-    return refusal ? <p>{t(`participant.dates.refusals.${refusal}`)}</p> : null;
-  }
-  if (!open) {
     return (
-      <Button kind="tertiary" onClick={() => setOpen(true)}>
-        {t("participant.dates.open")}
-      </Button>
+      <>
+        {errors.form?.map((code) => (
+          <InlineNotification key={code} kind="error" title={message(code)} hideCloseButton />
+        ))}
+        {refusal && <p>{t(`participant.dates.refusals.${refusal}`)}</p>}
+      </>
     );
   }
 
@@ -146,7 +164,6 @@ export function ParticipationDatesForm({ detail }: { detail: Detail }) {
   return (
     <Form className="tp-form" onSubmit={submit} noValidate>
       <Stack gap={5}>
-        <h3>{t("participant.dates.title")}</h3>
         <p>{t("participant.dates.intro")}</p>
         {[...(errors.form ?? []), ...(errors.amendment ?? [])].map((code) => (
           <InlineNotification key={code} kind="error" title={message(code)} hideCloseButton />
@@ -209,9 +226,6 @@ export function ParticipationDatesForm({ detail }: { detail: Detail }) {
           </fieldset>
         )}
         <div>
-          <Button kind="secondary" onClick={() => setOpen(false)}>
-            {t("participant.dates.cancel")}
-          </Button>
           <Button type="submit" disabled={save.isPending}>
             {t("participant.dates.save")}
           </Button>

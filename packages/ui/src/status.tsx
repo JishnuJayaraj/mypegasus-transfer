@@ -118,21 +118,27 @@ export const statusCodes = Object.fromEntries(
   Object.entries(tones).map(([family, codes]) => [family, Object.keys(codes)]),
 ) as { [F in StatusFamily]: StatusCodes[F][] };
 
-/** A status, track, deadline or flag as a tag with its icon and text. */
+/**
+ * A status, track, deadline or flag as a tag with its icon and text. `prefix` names the track where
+ * a code alone is ambiguous ("Profiling: Angenommen" beside "DSV: Angeboten", C3).
+ */
 export function StatusTag<F extends StatusFamily>({
   family,
   code,
+  prefix,
 }: {
   family: F;
   code: StatusCodes[F];
+  prefix?: string;
 }) {
   const { t } = useTranslation();
   const { tone, type, icon: Icon, labelKey } = statusTag(family, code);
+  const label = String(t(labelKey as never));
   // Carbon draws no icon in a small tag, so the icon is part of the content.
   return (
     <Tag type={type} size="sm" className={`tp-status-tag tp-status-tag--${tone}`} data-tone={tone}>
       <Icon size={12} aria-hidden="true" className="tp-status-tag-icon" />
-      {String(t(labelKey as never))}
+      {prefix ? `${prefix}: ${label}` : label}
     </Tag>
   );
 }
