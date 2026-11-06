@@ -247,6 +247,8 @@ export const ParticipationDetail = z
       viewProfiling: z.boolean(),
       /** The tab "Arbeitsuche" (whoever reads the case data, in a `ta_tg` project; Q89). */
       viewAsu: z.boolean(),
+      /** The tab "DSV" (`ta_tg`): the PL and back office (`employment_contract`). */
+      viewDsv: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({

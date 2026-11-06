@@ -1265,3 +1265,14 @@ export {
   type DsvValueKey,
 } from "./dsv/generation";
 export { dsvValues, renderDsv, type DsvDocument } from "./dsv/render";
+export { mayPinDsvTemplate, mayWorkDsv } from "./dsv/access";
+export { dsvGeneratedFact } from "./dsv/generation";
+export {
+  DsvChecklistItem,
+  DsvGenerationRequest,
+  DsvGenerationResult,
+  DsvGenerationView,
+  DsvTemplatePinInput,
+  DsvTemplateView,
+  DsvView,
+} from "./dsv/api";

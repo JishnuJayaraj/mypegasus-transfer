@@ -247,6 +247,7 @@ Only the staff cells that differ from normal mode.
 | Participant (own) | `qualification_certificate` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | Participant (own) | `tl407_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Participant (own) | `kug200b_form` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Participant (own) | `dsv_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Participant (own, no birth-date check) | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Participant (own, no birth-date check) | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Participant (own, no birth-date check) | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
@@ -258,6 +259,7 @@ Only the staff cells that differ from normal mode.
 | Participant (own, no birth-date check) | `qualification_certificate` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | Participant (own, no birth-date check) | `tl407_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Participant (own, no birth-date check) | `kug200b_form` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Participant (own, no birth-date check) | `dsv_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Consultant/profiler (assigned) | `tl407_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | Consultant/profiler (assigned) | `kug200b_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
@@ -269,6 +271,7 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `qualification_certificate` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | Consultant/profiler (assigned) | `tl407_form` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | Consultant/profiler (assigned) | `kug200b_form` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
+| Consultant/profiler (assigned) | `dsv_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Consultant/profiler (not assigned) | `tl407_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `kug200b_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `dsv_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
@@ -280,6 +283,7 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (not assigned) | `qualification_certificate` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `tl407_form` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `kug200b_form` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `dsv_form` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | PL | `tl407_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | PL | `kug200b_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | PL | `dsv_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
@@ -291,6 +295,7 @@ Only the staff cells that differ from normal mode.
 | PL | `qualification_certificate` | metadata_only | metadata_only | yes · document_opened | no: via_domain_operation |
 | PL | `tl407_form` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | PL | `kug200b_form` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
+| PL | `dsv_form` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | Back office | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Back office | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Back office | `dsv_signed_scan` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
@@ -302,6 +307,7 @@ Only the staff cells that differ from normal mode.
 | Back office | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Back office | `tl407_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Back office | `kug200b_form` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Back office | `dsv_form` | metadata_only | no: not_in_list_payloads | yes · document_opened | no: immutable |
 | Regional operations manager | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional operations manager | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional operations manager | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
@@ -313,6 +319,7 @@ Only the staff cells that differ from normal mode.
 | Regional operations manager | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `tl407_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional operations manager | `kug200b_form` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Regional operations manager | `dsv_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional admin | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional admin | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional admin | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
@@ -324,6 +331,7 @@ Only the staff cells that differ from normal mode.
 | Regional admin | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Regional admin | `tl407_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Regional admin | `kug200b_form` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Regional admin | `dsv_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Admin | `tl407_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Admin | `kug200b_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Admin | `dsv_signed_scan` | no: never | no: not_in_list_payloads | no: never | no: never |
@@ -335,6 +343,7 @@ Only the staff cells that differ from normal mode.
 | Admin | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Admin | `tl407_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 | Admin | `kug200b_form` | no: never | no: not_in_list_payloads | no: never | no: never |
+| Admin | `dsv_form` | no: never | no: not_in_list_payloads | no: never | no: never |
 
 ### Active phase, assisted mode
 
@@ -370,6 +379,7 @@ Only the staff cells that differ from normal mode.
 | Participant (own) | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Participant (own) | `tl407_form` | no: never | no: never | no: never | no: never |
 | Participant (own) | `kug200b_form` | no: never | no: never | no: never | no: never |
+| Participant (own) | `dsv_form` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
@@ -381,6 +391,7 @@ Only the staff cells that differ from normal mode.
 | Participant (own, no birth-date check) | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `tl407_form` | no: never | no: never | no: never | no: never |
 | Participant (own, no birth-date check) | `kug200b_form` | no: never | no: never | no: never | no: never |
+| Participant (own, no birth-date check) | `dsv_form` | no: never | no: never | no: never | no: never |
 | Consultant/profiler (assigned) | `tl407_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | Consultant/profiler (assigned) | `kug200b_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
@@ -392,6 +403,7 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (assigned) | `qualification_certificate` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | Consultant/profiler (assigned) | `tl407_form` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | Consultant/profiler (assigned) | `kug200b_form` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| Consultant/profiler (assigned) | `dsv_form` | no: never | no: never | no: never | no: never |
 | Consultant/profiler (not assigned) | `tl407_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `kug200b_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `dsv_signed_scan` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
@@ -403,6 +415,7 @@ Only the staff cells that differ from normal mode.
 | Consultant/profiler (not assigned) | `qualification_certificate` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `tl407_form` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `kug200b_form` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
+| Consultant/profiler (not assigned) | `dsv_form` | no: not_assigned | no: not_assigned | no: not_assigned | no: not_assigned |
 | PL | `tl407_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | PL | `kug200b_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | PL | `dsv_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
@@ -414,6 +427,7 @@ Only the staff cells that differ from normal mode.
 | PL | `qualification_certificate` | no: needs_break_glass | no: never | no: needs_break_glass | no: never |
 | PL | `tl407_form` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | PL | `kug200b_form` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
+| PL | `dsv_form` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | Back office | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
 | Back office | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
 | Back office | `dsv_signed_scan` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
@@ -425,6 +439,7 @@ Only the staff cells that differ from normal mode.
 | Back office | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Back office | `tl407_form` | no: never | no: never | no: never | no: never |
 | Back office | `kug200b_form` | no: never | no: never | no: never | no: never |
+| Back office | `dsv_form` | no: needs_break_glass | no: never | no: needs_break_glass | no: immutable |
 | Regional operations manager | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
@@ -436,6 +451,7 @@ Only the staff cells that differ from normal mode.
 | Regional operations manager | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `tl407_form` | no: never | no: never | no: never | no: never |
 | Regional operations manager | `kug200b_form` | no: never | no: never | no: never | no: never |
+| Regional operations manager | `dsv_form` | no: never | no: never | no: never | no: never |
 | Regional admin | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
 | Regional admin | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
 | Regional admin | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
@@ -447,6 +463,7 @@ Only the staff cells that differ from normal mode.
 | Regional admin | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Regional admin | `tl407_form` | no: never | no: never | no: never | no: never |
 | Regional admin | `kug200b_form` | no: never | no: never | no: never | no: never |
+| Regional admin | `dsv_form` | no: never | no: never | no: never | no: never |
 | Admin | `tl407_signed_scan` | no: never | no: never | no: never | no: never |
 | Admin | `kug200b_signed_scan` | no: never | no: never | no: never | no: never |
 | Admin | `dsv_signed_scan` | no: never | no: never | no: never | no: never |
@@ -458,6 +475,7 @@ Only the staff cells that differ from normal mode.
 | Admin | `qualification_certificate` | no: never | no: never | no: never | no: never |
 | Admin | `tl407_form` | no: never | no: never | no: never | no: never |
 | Admin | `kug200b_form` | no: never | no: never | no: never | no: never |
+| Admin | `dsv_form` | no: never | no: never | no: never | no: never |
 
 ### Evidence-set phase, assisted mode
 
@@ -511,10 +529,14 @@ Only the staff cells that differ from normal mode.
 | PL | `tl407_form` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | PL | `kug200b_form` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
 | PL | `kug200b_form` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
+| PL | `dsv_form` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
+| PL | `dsv_form` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | Back office | `dsv_signed_scan` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
 | Back office | `dsv_signed_scan` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 | Back office | `dsv_cancellation` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
 | Back office | `dsv_cancellation` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
+| Back office | `dsv_form` | `read` | no: needs_break_glass | metadata_only · break_glass_access · grant · review |
+| Back office | `dsv_form` | `open_document` | no: needs_break_glass | yes · break_glass_access · grant · review |
 
 ## Document operations
 
@@ -544,6 +566,7 @@ open it.
 | Participant (own) | `qualification_certificate` | yes | no: actor_not_allowed | yes |
 | Participant (own) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own) | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Participant (own) | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own, no birth-date check) | `tl407_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: actor_not_allowed |
 | Participant (own, no birth-date check) | `kug200b_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: actor_not_allowed |
 | Participant (own, no birth-date check) | `dsv_signed_scan` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
@@ -555,6 +578,7 @@ open it.
 | Participant (own, no birth-date check) | `qualification_certificate` | yes | no: actor_not_allowed | yes |
 | Participant (own, no birth-date check) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Participant (own, no birth-date check) | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Participant (own, no birth-date check) | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Consultant/profiler (assigned) | `tl407_signed_scan` | yes | yes | no: role_not_allowed |
 | Consultant/profiler (assigned) | `kug200b_signed_scan` | yes | yes | no: role_not_allowed |
 | Consultant/profiler (assigned) | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -566,6 +590,7 @@ open it.
 | Consultant/profiler (assigned) | `qualification_certificate` | yes | yes | yes |
 | Consultant/profiler (assigned) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Consultant/profiler (assigned) | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Consultant/profiler (assigned) | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Consultant/profiler (not assigned) | `tl407_signed_scan` | no: not_assigned | no: not_assigned | no: role_not_allowed |
 | Consultant/profiler (not assigned) | `kug200b_signed_scan` | no: not_assigned | no: not_assigned | no: role_not_allowed |
 | Consultant/profiler (not assigned) | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -577,6 +602,7 @@ open it.
 | Consultant/profiler (not assigned) | `qualification_certificate` | no: not_assigned | no: not_assigned | no: not_assigned |
 | Consultant/profiler (not assigned) | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Consultant/profiler (not assigned) | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Consultant/profiler (not assigned) | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | PL | `tl407_signed_scan` | yes | yes | yes |
 | PL | `kug200b_signed_scan` | yes | yes | yes |
 | PL | `dsv_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
@@ -588,6 +614,7 @@ open it.
 | PL | `qualification_certificate` | yes | yes | yes |
 | PL | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | PL | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| PL | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Back office | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Back office | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Back office | `dsv_signed_scan` | no: undecided (Q65) | no: undecided (Q65) | no: immutable |
@@ -599,6 +626,7 @@ open it.
 | Back office | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Back office | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Back office | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Back office | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Regional operations manager | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional operations manager | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional operations manager | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -610,6 +638,7 @@ open it.
 | Regional operations manager | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional operations manager | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Regional operations manager | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Regional operations manager | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Regional admin | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional admin | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional admin | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -621,6 +650,7 @@ open it.
 | Regional admin | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Regional admin | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Regional admin | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Regional admin | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Admin | `tl407_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Admin | `kug200b_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Admin | `dsv_signed_scan` | no: role_not_allowed | no: role_not_allowed | no: immutable |
@@ -632,6 +662,7 @@ open it.
 | Admin | `qualification_certificate` | no: role_not_allowed | no: role_not_allowed | no: role_not_allowed |
 | Admin | `tl407_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 | Admin | `kug200b_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
+| Admin | `dsv_form` | no: actor_not_allowed | no: actor_not_allowed | no: immutable |
 
 ### Assisted mode
 
@@ -898,6 +929,8 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `exception_evidence_recorded` | `profiling` | no | no | `kind` |
 | `evidence_correction_requested` | `case` | no | no | `targetKind`, `action`, `reason` |
 | `evidence_correction_decided` | `case` | no | no | `targetKind`, `action`, `reason`, `decision` |
+| `dsv_form_generated` | `dsv` | no | no | `templateVersion`, `deadlineKind` |
+| `dsv_template_pinned` | project-level | no | no | — |
 
 ## Aggregates
 

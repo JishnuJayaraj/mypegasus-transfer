@@ -2,6 +2,7 @@ import { z } from "zod";
 import { isPrintable } from "../forms/format";
 import type { TransferCompany } from "../forms/input";
 import { isoDate, type IsoDate } from "../iso-date";
+import type { DatedFact } from "../lifecycle/guards";
 import { terminalMainStatuses, type DsvStatus, type MainStatus } from "../lifecycle/enums";
 import type { ProjectStatus, ProjectType } from "../project";
 
@@ -286,4 +287,17 @@ export function dsvPinProblem(
   if (project.type !== "ta_tg") return "not_ta_tg";
   if (project.generated) return "template_pinned";
   return project.pinned === version ? "project_unchanged" : null;
+}
+
+/**
+ * `dsvGenerated` (D3): the latest current generation, valid from the Berlin day it was recorded
+ * and recorded at its instant; none while every generation is stale.
+ */
+export function dsvGeneratedFact(
+  generations: readonly { generatedOn: IsoDate; generatedAt: Date; current: boolean }[],
+): DatedFact | undefined {
+  const latest = generations
+    .filter((generation) => generation.current)
+    .toSorted((a, b) => b.generatedAt.getTime() - a.generatedAt.getTime())[0];
+  return latest && { validOn: latest.generatedOn, recordedAt: latest.generatedAt };
 }

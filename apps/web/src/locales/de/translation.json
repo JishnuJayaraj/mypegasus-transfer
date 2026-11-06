@@ -1845,7 +1845,8 @@
       "ba_report_recorded": "BA-Meldung erledigt",
       "exception_evidence_recorded": "Nachweis zur Ausnahme erfasst",
       "evidence_correction_requested": "Korrektur beantragt",
-      "evidence_correction_decided": "Korrektur entschieden"
+      "evidence_correction_decided": "Korrektur entschieden",
+      "dsv_form_generated": "DSV erzeugt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1925,6 +1926,11 @@
     "session": "{{action}}: {{date}}",
     "form": "Fassung {{version}}",
     "formWithAnlage": "Fassung {{version}}, mit Anlage",
+    "dsvForm": "Vorlage {{version}}, {{deadline}}",
+    "dsvDeadlineKinds": {
+      "wave": "Frist der Welle",
+      "explicit": "eigene Frist"
+    },
     "scanReviewed": "{{type}}: {{decision}} ({{origin}}, Fassung {{version}})",
     "scanRejected": "{{type}}: {{decision}} ({{origin}})",
     "origins": {

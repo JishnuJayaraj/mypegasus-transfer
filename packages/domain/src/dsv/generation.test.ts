@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dsvDeadline,
+  dsvGeneratedFact,
   dsvGenerationBlockers,
   DsvGenerationInput,
   dsvGenerationProblem,
@@ -289,5 +290,24 @@ describe("templates and the pin", () => {
       "template_pinned",
     );
     expect(dsvPinProblem({ ...project, type: "ta_only" }, "v1")).toBe("not_ta_tg");
+  });
+});
+
+describe("dsvGeneratedFact (D3)", () => {
+  it("is the latest current generation, by its Berlin day and instant", () => {
+    const at = (iso: string) => new Date(iso);
+    expect(dsvGeneratedFact([])).toBeUndefined();
+    expect(
+      dsvGeneratedFact([
+        { generatedOn: "2091-02-01", generatedAt: at("2091-02-01T08:00:00Z"), current: true },
+        { generatedOn: "2091-02-03", generatedAt: at("2091-02-02T23:30:00Z"), current: true },
+        { generatedOn: "2091-02-04", generatedAt: at("2091-02-04T08:00:00Z"), current: false },
+      ]),
+    ).toEqual({ validOn: "2091-02-03", recordedAt: at("2091-02-02T23:30:00Z") });
+    expect(
+      dsvGeneratedFact([
+        { generatedOn: "2091-02-04", generatedAt: at("2091-02-04T08:00:00Z"), current: false },
+      ]),
+    ).toBeUndefined();
   });
 });

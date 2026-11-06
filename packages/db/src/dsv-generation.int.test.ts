@@ -61,7 +61,7 @@ async function participation(options: { address?: boolean; projectId?: string } 
   return id;
 }
 
-const pin = (version: string, context = pl, projectId = werkNord) =>
+const pin = (version: string, context = pl, projectId: string = werkNord) =>
   call(app, "update_project", { id: projectId, context, dsvTemplateVersion: version });
 
 const personOf = async (id: string) => (await one("select form_person($1) as p", [id])).p;

@@ -3078,6 +3078,9 @@
               },
               "viewAsu": {
                 "type": "boolean"
+              },
+              "viewDsv": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -3091,7 +3094,8 @@
               "setPlacementAgentur",
               "startAssistedMode",
               "viewProfiling",
-              "viewAsu"
+              "viewAsu",
+              "viewDsv"
             ],
             "additionalProperties": false
           },
@@ -6232,7 +6236,8 @@
           "ba_report_recorded",
           "exception_evidence_recorded",
           "evidence_correction_requested",
-          "evidence_correction_decided"
+          "evidence_correction_decided",
+          "dsv_form_generated"
         ]
       },
       "HistoryActor": {
@@ -8923,7 +8928,8 @@
                 "participant_upload",
                 "qualification_certificate",
                 "tl407_form",
-                "kug200b_form"
+                "kug200b_form",
+                "dsv_form"
               ]
             }
           }
@@ -9140,7 +9146,8 @@
                   "participant_upload",
                   "qualification_certificate",
                   "tl407_form",
-                  "kug200b_form"
+                  "kug200b_form",
+                  "dsv_form"
                 ]
               },
               "done": {
@@ -11292,7 +11299,8 @@
                 "participant_upload",
                 "qualification_certificate",
                 "tl407_form",
-                "kug200b_form"
+                "kug200b_form",
+                "dsv_form"
               ]
             }
           },
@@ -11327,7 +11335,8 @@
               "participant_upload",
               "qualification_certificate",
               "tl407_form",
-              "kug200b_form"
+              "kug200b_form",
+              "dsv_form"
             ]
           },
           "mediaType": {
@@ -11534,7 +11543,8 @@
               "participant_upload",
               "qualification_certificate",
               "tl407_form",
-              "kug200b_form"
+              "kug200b_form",
+              "dsv_form"
             ]
           },
           "fileName": {
@@ -14782,6 +14792,448 @@
         ],
         "additionalProperties": false
       },
+      "DsvView": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "track": {
+            "type": "string",
+            "enum": [
+              "not_offered",
+              "dsv_offered",
+              "dsv_signed",
+              "dsv_declined",
+              "dsv_expired"
+            ]
+          },
+          "template": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "version": {
+                "type": "string",
+                "pattern": "^v[1-9][0-9]{0,3}$"
+              },
+              "approvedForLive": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "version",
+              "approvedForLive"
+            ],
+            "additionalProperties": false
+          },
+          "deadline": {
+            "type": "object",
+            "properties": {
+              "waveSigningDeadline": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "explicitRequired": {
+                "type": "boolean"
+              },
+              "latestEntryDate": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "tgStart": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "waveSigningDeadline",
+              "explicitRequired",
+              "latestEntryDate",
+              "tgStart"
+            ],
+            "additionalProperties": false
+          },
+          "sourceToken": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DsvChecklistItem"
+            }
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "not_ta_tg",
+                "project_not_active",
+                "participation_closed",
+                "no_entry_wave",
+                "tg_dates_missing",
+                "dsv_template_not_pinned",
+                "dsv_template_not_approved",
+                "dsv_offer_open",
+                "dsv_already_signed"
+              ]
+            }
+          },
+          "generations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DsvGenerationView"
+            }
+          },
+          "facts": {
+            "type": "object",
+            "properties": {
+              "dsvGenerated": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "validOn": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "UTC timestamp (ISO 8601)"
+                  }
+                },
+                "required": [
+                  "validOn",
+                  "recordedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "dsvGenerated"
+            ],
+            "additionalProperties": false
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "generate": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "generate"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "participationId",
+          "track",
+          "template",
+          "deadline",
+          "sourceToken",
+          "checklist",
+          "blockers",
+          "generations",
+          "facts",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "DsvChecklistItem": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "required_blank"
+            ]
+          },
+          "key": {
+            "type": "string",
+            "enum": [
+              "firstName",
+              "lastName",
+              "birthDate",
+              "address",
+              "customerName",
+              "transfergesellschaft"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "key"
+        ],
+        "additionalProperties": false
+      },
+      "DsvGenerationView": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC timestamp (ISO 8601)"
+          },
+          "templateVersion": {
+            "type": "string",
+            "pattern": "^v[1-9][0-9]{0,3}$"
+          },
+          "offerDeadline": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "deadlineKind": {
+            "type": "string",
+            "enum": [
+              "wave",
+              "explicit"
+            ]
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DsvChecklistItem"
+            }
+          },
+          "stale": {
+            "type": "boolean"
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "open"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "documentId",
+          "generatedAt",
+          "templateVersion",
+          "offerDeadline",
+          "deadlineKind",
+          "checklist",
+          "stale",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "DsvGenerationResult": {
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "templateVersion": {
+            "type": "string",
+            "pattern": "^v[1-9][0-9]{0,3}$"
+          },
+          "offerDeadline": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "checklist": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DsvChecklistItem"
+            }
+          }
+        },
+        "required": [
+          "documentId",
+          "templateVersion",
+          "offerDeadline",
+          "checklist"
+        ],
+        "additionalProperties": false
+      },
+      "DsvGenerationRequest": {
+        "type": "object",
+        "properties": {
+          "deadline": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "wave"
+                    ]
+                  },
+                  "shown": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "shown"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "explicit"
+                    ]
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "date"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "expectedSourceToken": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "deadline",
+          "expectedSourceToken"
+        ],
+        "additionalProperties": false
+      },
+      "DsvTemplateView": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^v[1-9][0-9]{0,3}$"
+          },
+          "fixed": {
+            "type": "boolean"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "pattern": "^v[1-9][0-9]{0,3}$"
+                },
+                "approvedForLive": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "version",
+                "approvedForLive"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "pin": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "pin"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "version",
+          "fixed",
+          "versions",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "DsvTemplatePinInput": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "pattern": "^v[1-9][0-9]{0,3}$"
+          }
+        },
+        "required": [
+          "version"
+        ],
+        "additionalProperties": false
+      },
       "ExportLink": {
         "type": "object",
         "properties": {
@@ -15870,6 +16322,7 @@
                     "qualification_certificate",
                     "tl407_form",
                     "kug200b_form",
+                    "dsv_form",
                     null
                   ]
                 },
@@ -28832,6 +29285,350 @@
           },
           "503": {
             "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The tab DSV (the PL and back office): the track, the pinned template, the deadline's choices and bounds, the source token, what a generation would leave for the hand, why none can be generated now, the generations with their currency, and dsvGenerated; never a value the paper prints",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The DSV as the viewer may work it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/generations": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Generate the DSV (the PL or back office) with the deadline chosen first: the wave's signing deadline as shown (a first offer) or an explicit date; stored encrypted as a working copy with its source token and deadline, audited dsv_form_generated. Signed on paper; no e-signature",
+        "description": "Refusals:\n- `409 source_changed` at `/expectedSourceToken`: a printed value or the wave's deadline moved since the tab was read (also when found at the record).\n- `422` at `/deadline`: `explicit_deadline_required` (a re-offer), `wave_deadline_missing`, `offer_deadline_invalid` (not today ≤ deadline ≤ the latest entry date and ≤ the TG start).\n- `422` (pointer empty): `not_ta_tg`, `project_not_active`, `participation_closed`, `no_entry_wave`, `tg_dates_missing`, `dsv_template_not_pinned`, `dsv_template_not_approved` (production only), `dsv_offer_open` (the paper is reopened, not regenerated), `dsv_already_signed`, `dsv_not_generatable`, `character_unsupported`.\n- `503 pdf_unavailable` or `storage_unavailable`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvGenerationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Generated: the document, its deadline and checklist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvGenerationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{projectId}/dsv-template": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "The project's DSV template (the PL and back office): the pinned version, the versions with their approval for live use, and whether the pin is fixed (from the first generation)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The project's DSV template",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvTemplateView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Pin the project's DSV template version (the PL; ta_tg): while no DSV of the project was generated, audited dsv_template_pinned",
+        "description": "Refusals:\n- `422` at `/version`: `template_unknown` (not in the form registry).\n- `422`: `not_ta_tg`, `template_pinned` (fixed from the first generation), `project_unchanged`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvTemplatePinInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pinned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvTemplateView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

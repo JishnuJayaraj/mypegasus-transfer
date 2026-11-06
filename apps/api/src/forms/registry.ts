@@ -13,6 +13,7 @@ import {
   loadFont,
   loadFormVersion,
   loadOwnTemplate,
+  ownTemplateVersions,
   type FormVersionFiles,
 } from "@transfer/forms/load";
 import { join } from "node:path";
@@ -34,6 +35,8 @@ export type FormRegistry = {
   /** One committed version's files, expired ones included, or null. */
   version(formCode: FormCode, version: string): FormVersionFiles | null;
   template(ref: string): HtmlTemplate;
+  /** An own template's versions and whether each is approved for live use (the DSV, D1). */
+  ownTemplateVersions(name: string): { version: string; approvedForLive: boolean }[];
   /** The font's text metrics for the layout (measured once). */
   measure(): Promise<TextMeasure>;
 };
@@ -80,6 +83,7 @@ export function formRegistry(configDir: string | undefined): FormRegistry {
       if (!template) templates.set(ref, (template = loadOwnTemplate(ref, forms)));
       return template;
     },
+    ownTemplateVersions: (name) => ownTemplateVersions(name, forms),
     measure: () => (measure ??= createTextMeasure(registry.font())),
   };
   loaded.set(key, registry);
