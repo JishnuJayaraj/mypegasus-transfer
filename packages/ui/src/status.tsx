@@ -13,6 +13,7 @@ import type {
   LifecycleFlag,
   MainStatus,
   ProfilingStatus,
+  ProjectStatus,
 } from "@transfer/domain";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +32,7 @@ interface StatusCodes {
   deadline: DeadlineState;
   flag: LifecycleFlag;
   appointment: AppointmentStatus;
+  project: ProjectStatus;
 }
 export type StatusFamily = keyof StatusCodes;
 
@@ -71,6 +73,8 @@ const tones: { [F in StatusFamily]: Record<StatusCodes[F], StatusTone> } = {
     profiling_declined_after_entry: "warning",
   },
   appointment: { scheduled: "info", cancelled: "neutral" },
+  // A draft project is not running yet; an active one is in progress.
+  project: { draft: "neutral", active: "info" },
 };
 
 /**
@@ -84,6 +88,7 @@ const labelPrefix: Record<StatusFamily, string> = {
   deadline: "worklist.deadlineStates",
   flag: "worklist.flags",
   appointment: "appointments.statuses",
+  project: "projects.statuses",
 };
 
 const toneTag = {
@@ -93,6 +98,11 @@ const toneTag = {
   info: { type: "blue", icon: InProgress },
   neutral: { type: "gray", icon: CircleDash },
 } as const;
+
+/** Each tone's icon, for a tag or a tile (ui-patterns.md, principle 4). */
+export const toneIcon = Object.fromEntries(
+  Object.entries(toneTag).map(([tone, { icon }]) => [tone, icon]),
+) as { [T in StatusTone]: (typeof toneTag)[T]["icon"] };
 
 /** A code's tone, Carbon tag type, icon and label key (the one map; tests cover every code). */
 export function statusTag<F extends StatusFamily>(

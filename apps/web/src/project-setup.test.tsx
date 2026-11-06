@@ -176,7 +176,7 @@ describe("project setup", () => {
         capabilities: { pinTemplate: false, setProjectAgentur: false },
       };
       const calls = setup({}, readOnly);
-      expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
+      expect(await screen.findByRole("region", { name: "Agentur" })).toBeInTheDocument();
       expect(screen.queryByRole("combobox", { name: "Agentur" })).toBeNull();
       expect(screen.queryByRole("button", { name: /pinnen|festlegen/ })).toBeNull();
       expect(calls.some((c) => c.key === "GET /api/v1/config/templates")).toBe(false);
@@ -317,7 +317,7 @@ describe("project activation", () => {
     ["an active project", activeConfig],
   ])("isn't offered to %s", async (_label, config) => {
     setup({}, config);
-    expect(await screen.findByRole("region", { name: "Einrichtung" })).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: "Projekt" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Aktivieren" })).toBeNull();
     expect(screen.queryByText("Projekt aktivieren")).toBeNull();
   });

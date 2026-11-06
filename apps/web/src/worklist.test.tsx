@@ -136,6 +136,17 @@ const ready = worklistSection;
 /** The shown rows' Personalnummern, in the order of the default sort unless a test sorts. */
 const personnelNumbers = () => shownPersonnelNumbers().toSorted();
 
+/** Opens "Alle Kennzahlen", collapsed below 1280px (jsdom matches no media query). */
+async function showAllFigures() {
+  const toggle = await screen.findByRole("button", { name: "Alle Kennzahlen anzeigen" });
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await userEvent.click(toggle);
+  expect(screen.getByRole("button", { name: "Alle Kennzahlen ausblenden" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+}
+
 describe("Übersicht", () => {
   it("shows the tiles, and each number opens the work list with the same filter", async () => {
     const { router } = setup({}, "");
@@ -156,6 +167,7 @@ describe("Übersicht", () => {
   it("links every table count to its filter", async () => {
     setup({}, "");
     const statuses = await screen.findByRole("table", { name: "Status" });
+    await showAllFigures();
     const informed = within(statuses).getByRole("row", { name: /Informiert/ });
     const link = within(informed).getByRole("link", { name: "2" });
     const filter = funnelFilters({ type: "ta_tg", waves: [wave] }).statuses.find(
@@ -171,6 +183,7 @@ describe("Übersicht", () => {
     const { router } = setup({}, "");
     const tile = await screen.findByRole("link", { name: "1 Termine überfällig" });
     expect(screen.getByRole("link", { name: "1 Termine zu klären" })).toBeInTheDocument();
+    await showAllFigures();
     const group = screen.getByRole("table", { name: "Termine" });
     expect(within(group).getByRole("row", { name: /Termin anstehend/ })).toHaveTextContent("1");
     expect(within(group).getByRole("row", { name: /Nicht erschienen/ })).toHaveTextContent("1");
@@ -184,6 +197,7 @@ describe("Übersicht", () => {
   it("has the tile Agentur offen and the group Agentur, each opening the work list's filter", async () => {
     const { router } = setup({}, "");
     const tile = await screen.findByRole("link", { name: "1 Agentur offen" });
+    await showAllFigures();
     const group = screen.getByRole("table", { name: "Agentur" });
     expect(within(group).getByRole("row", { name: /TL 407 eskaliert/ })).toHaveTextContent("1");
     expect(

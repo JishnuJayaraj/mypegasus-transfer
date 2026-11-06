@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { type components } from "@transfer/api-client";
-import { Button, InlineNotification, useToast } from "@transfer/ui";
+import { Button, Card, InlineNotification, Stack, useToast } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, worklistQuery, projectConfigQuery, projectQuery, useApi } from "../api";
@@ -9,10 +9,10 @@ import { ImportWizard } from "./import-wizard";
 type Result = components["schemas"]["ImportResult"];
 
 /**
- * The Import section (Slice 2 plan 5.13). The wizard appears only with the server's
- * `capabilities.importParticipations` (round 26); the API's 403 stays the enforcement. This
- * component outlives the wizard, so a refusal stays visible after the wizard went away (round 29)
- * and every refusal reads the configuration, the project and the participations again.
+ * The Import card of "Einrichtung" (its id `project-import` is the target of the page's "Datei
+ * importieren"). The wizard appears only with the server's `capabilities.importParticipations`;
+ * the API's 403 stays the enforcement. This component outlives the wizard, so a refusal stays
+ * visible after the wizard went away, and every refusal reads the configuration, the project and the participations again.
  */
 export function ImportSection({ projectId }: { projectId: string }) {
   const { t } = useTranslation();
@@ -40,50 +40,51 @@ export function ImportSection({ projectId }: { projectId: string }) {
   };
 
   return (
-    <section aria-labelledby="project-import" className="tp-section">
-      <h2 id="project-import">{t("import.title")}</h2>
-      {refusal && (
-        <InlineNotification
-          kind="error"
-          title={t("import.refused")}
-          subtitle={refusal}
-          onClose={() => setRefusal(null)}
-        />
-      )}
-      {done ? (
-        <>
+    <Card id="project-import" title={t("import.title")}>
+      <Stack gap={5}>
+        {refusal && (
           <InlineNotification
-            kind="success"
-            title={t("import.done.title")}
-            subtitle={t("import.done.text", { ...done })}
-            hideCloseButton
+            kind="error"
+            title={t("import.refused")}
+            subtitle={refusal}
+            onClose={() => setRefusal(null)}
           />
-          {!done.mappingSaved && <p>{t("import.done.mappingNotSaved")}</p>}
-          <Button
-            kind="tertiary"
-            onClick={() => {
-              setDone(null);
-              setRound(round + 1);
-            }}
-          >
-            {t("import.done.again")}
-          </Button>
-        </>
-      ) : (
-        config.capabilities.importParticipations && (
-          <ImportWizard
-            key={round}
-            projectId={projectId}
-            onRefused={refused}
-            onDone={(result) => {
-              setRefusal(null);
-              setDone(result);
-              showToast({ title: t("import.done.toast") });
-              void refresh();
-            }}
-          />
-        )
-      )}
-    </section>
+        )}
+        {done ? (
+          <>
+            <InlineNotification
+              kind="success"
+              title={t("import.done.title")}
+              subtitle={t("import.done.text", { ...done })}
+              hideCloseButton
+            />
+            {!done.mappingSaved && <p>{t("import.done.mappingNotSaved")}</p>}
+            <Button
+              kind="tertiary"
+              onClick={() => {
+                setDone(null);
+                setRound(round + 1);
+              }}
+            >
+              {t("import.done.again")}
+            </Button>
+          </>
+        ) : (
+          config.capabilities.importParticipations && (
+            <ImportWizard
+              key={round}
+              projectId={projectId}
+              onRefused={refused}
+              onDone={(result) => {
+                setRefusal(null);
+                setDone(result);
+                showToast({ title: t("import.done.toast") });
+                void refresh();
+              }}
+            />
+          )
+        )}
+      </Stack>
+    </Card>
   );
 }

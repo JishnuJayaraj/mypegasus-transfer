@@ -51,7 +51,10 @@
     "title": "Projekte",
     "create": "Projekt anlegen",
     "loadMore": "Mehr laden",
-    "empty": "Es gibt noch keine Projekte.",
+    "new": "Neues Projekt",
+    "emptyTitle": "Noch keine Projekte",
+    "emptyMayCreate": "Mit „Neues Projekt“ legen Sie ein Projekt mit Name, Kunde, Projekttyp und Region an und werden seine erste Projektleitung. Team, Projekt-Agentur und Eintrittswellen richten Sie danach im Projekt ein.",
+    "emptyOthers": "Hier stehen die Projekte, in deren Team Sie sind oder die Ihre Region betreffen. Ein Projekt legt an, wem die Administration das erlaubt hat; die Projektleitung nimmt Sie danach unter „Team“ auf.",
     "created": "Projekt angelegt",
     "columns": {
       "name": "Name",
@@ -102,6 +105,7 @@
       "actions": "Aktionen"
     },
     "tabs": "Projektbereiche",
+    "customer": "Kunde: {{customer}}",
     "overview": "Übersicht",
     "participants": "Teilnehmende",
     "setup": "Einrichtung",
@@ -146,6 +150,9 @@
   },
   "setup": {
     "title": "Einrichtung",
+    "project": "Projekt",
+    "agenturTitle": "Agentur",
+    "onThisPage": "Auf dieser Seite",
     "projectAgentur": "Projekt-Agentur: {{label}}, Vorlage Version {{version}}",
     "noProjectAgentur": "Es ist noch keine Projekt-Agentur gewählt. Ohne sie kann das Projekt nicht aktiviert werden.",
     "pins": "Gepinnte Vorlagen",
@@ -1499,12 +1506,19 @@
     }
   },
   "dashboard": {
-    "title": "Übersicht",
     "forbidden": "Sie dürfen die Übersicht dieses Projekts nicht sehen.",
+    "forbiddenWho": "Die Übersicht sehen die Projektleitung und das Backoffice des Projekts, eine Beratung für die ihr zugewiesenen Teilnehmenden.",
     "failed": "Die Übersicht konnte nicht geladen werden.",
+    "loading": "Übersicht wird geladen …",
+    "today": "Heute zu tun",
+    "nothingInViews": "Keine offenen Punkte in diesen Ansichten",
+    "moreWork": "Weitere offene Arbeit",
+    "progress": "Verlauf",
+    "all": "Alle Kennzahlen",
+    "showAll": "Alle Kennzahlen anzeigen",
+    "hideAll": "Alle Kennzahlen ausblenden",
+    "waveDates": "Unterschrift bis {{signingDeadline}} · TG-Beginn {{defaultTgStart}} · letzter Eintritt {{latestEntryDate}}",
     "scopeAssigned": "Gezählt werden die Ihnen zugewiesenen Teilnehmenden.",
-    "count": "Anzahl",
-    "showList": "{{count}}, in der Liste zeigen",
     "tiles": {
       "participations": "Teilnehmende",
       "not_reachable": "nicht erreichbar",
@@ -1529,10 +1543,7 @@
       "count": "Anzahl",
       "kind": "Frist",
       "upcoming": "In 14 Tagen",
-      "overdue": "Überschritten",
-      "latestEntryDate": "Letzter Eintritt",
-      "signingDeadline": "Unterschriftsfrist",
-      "defaultTgStart": "TG-Beginn"
+      "overdue": "Überschritten"
     },
     "noWave": "Ohne Welle",
     "noFlags": "Keine Hinweise."

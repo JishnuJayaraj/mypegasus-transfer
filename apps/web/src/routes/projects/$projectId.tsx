@@ -4,6 +4,7 @@ import { WorklistFilter } from "@transfer/domain";
 import {
   Add,
   Button,
+  Card,
   formatDate,
   InlineNotification,
   Link,
@@ -11,11 +12,13 @@ import {
   SidePanel,
   Stack,
   SimpleTable,
+  StatusTag,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
+  Tag,
   useToast,
 } from "@transfer/ui";
 import { useState } from "react";
@@ -39,7 +42,7 @@ import { Participants } from "../../components/participants";
 import { parseSortCode } from "../../components/worklist-state";
 import { ProjectDashboard } from "../../components/project-dashboard";
 import { AppointmentsTab } from "../../components/appointments";
-import { ProjectRegion } from "../../components/project-region";
+import { ProjectRegion, RegionText } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
 import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
@@ -47,13 +50,19 @@ import { usePageTitle } from "../../page-title";
 
 const RouterLink = createLink(Link);
 
-/**
- * The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Termine", "Einrichtung", "Team" and, in a
- * `ta_tg` project, "Agentur" (the Kug 200b batches, last so the others keep their place).
- */
-const tabs = [undefined, "participants", "appointments", "setup", "team", "agentur"] as const;
+/** Every tab's search value; "Übersicht" has none. Unknown values are dropped (old links open). */
+const tabs = [undefined, "participants", "appointments", "agentur", "setup", "team"] as const;
 type ProjectTab = Exclude<(typeof tabs)[number], undefined>;
 export type ProjectSearch = WorklistFilter & { tab?: ProjectTab; sort?: string };
+
+/**
+ * The tabs a project shows, by how often they are used (the plan of Slice 6b, 6b-4): Übersicht,
+ * Teilnehmende, Termine, Agentur (`ta_tg` only, the Kug 200b batches), Einrichtung, Team. The
+ * `tab` search value names a tab, never its position, so every existing link keeps working.
+ */
+export function projectTabs(taTg: boolean): (ProjectTab | undefined)[] {
+  return tabs.filter((tab) => tab !== "agentur" || taTg);
+}
 
 /**
  * The tab, the work list's code filters and its sort (data-protection.md, the work list): an
@@ -93,6 +102,9 @@ function ProjectPage() {
   const navigate = Route.useNavigate();
   const { data: project } = useSuspenseQuery(projectQuery(useApi(), projectId));
   const taTg = project.type === "ta_tg";
+  const shownTabs = projectTabs(taTg);
+  // A tab the project doesn't have (Agentur in a `ta_only` project) shows the overview.
+  const selected = Math.max(0, shownTabs.indexOf(tab));
   const tabLabels = {
     participants: t("projectDetail.participants"),
     appointments: t("projectDetail.appointments"),
@@ -100,17 +112,70 @@ function ProjectPage() {
     team: t("team.title"),
     agentur: t("projectDetail.agentur"),
   } satisfies Record<ProjectTab, string>;
-  usePageTitle(tab ? tabLabels[tab] : t("projectDetail.overview"), project.name);
+  const label = (value: ProjectTab | undefined) =>
+    value ? tabLabels[value] : t("projectDetail.overview");
+  usePageTitle(label(shownTabs[selected]), project.name);
   // Manual creation is one import row (process-and-lifecycle.md, import and manual creation):
   // offered with the import's capability, as the page's primary action; the import beside it.
   const { data: config } = useSuspenseQuery(projectConfigQuery(useApi(), projectId));
   const mayImport = config.capabilities.importParticipations;
   const [adding, setAdding] = useState(false);
   const [created, setCreated] = useState<string | null>(null);
+  const panel = (value: ProjectTab | undefined) => {
+    switch (value) {
+      case undefined:
+        return <ProjectDashboard projectId={projectId} taTg={taTg} />;
+      case "participants":
+        return (
+          <Participants
+            projectId={projectId}
+            taTg={taTg}
+            filter={filter}
+            sort={sort}
+            onChange={(next) =>
+              void navigate({
+                search: {
+                  ...next.filter,
+                  tab: "participants",
+                  ...(next.sort && { sort: next.sort }),
+                },
+                replace: true,
+              })
+            }
+          />
+        );
+      case "appointments":
+        return <AppointmentsTab projectId={projectId} taTg={taTg} />;
+      case "agentur":
+        return <AgenturTab projectId={projectId} />;
+      case "setup":
+        return <ProjectSetupTab projectId={projectId} taTg={taTg} />;
+      case "team":
+        return <ProjectTeam projectId={projectId} />;
+    }
+  };
   return (
     <>
       <PageHeader
         title={project.name}
+        breadcrumbs={[
+          // An ancestor, never the current page: active only on exactly /projects.
+          <RouterLink key="projects" to="/projects" activeOptions={{ exact: true }}>
+            {t("projects.title")}
+          </RouterLink>,
+        ]}
+        tags={
+          <>
+            <Tag type="outline" size="sm">
+              {t("projectDetail.customer", { customer: project.customerName })}
+            </Tag>
+            <Tag type="outline" size="sm">
+              {t(`projects.types.${project.type}`)}
+            </Tag>
+            <StatusTag family="project" code={project.status} />
+          </>
+        }
+        metadata={<RegionText projectId={projectId} />}
         primaryAction={
           mayImport && (
             <Button
@@ -165,79 +230,85 @@ function ProjectPage() {
           </p>
         </Stack>
       )}
-      <p>
-        {[
-          project.customerName,
-          t(`projects.types.${project.type}`),
-          t(`projects.statuses.${project.status}`),
-        ].join(" · ")}
-      </p>
-      <ProjectRegion projectId={projectId} />
       <Tabs
-        selectedIndex={tabs.indexOf(tab)}
+        selectedIndex={selected}
         onChange={({ selectedIndex }) => {
-          const next = tabs[selectedIndex];
+          const next = shownTabs[selectedIndex];
           void navigate({ search: next ? { tab: next } : {} });
         }}
       >
         <TabList aria-label={t("projectDetail.tabs")}>
-          <Tab>{t("projectDetail.overview")}</Tab>
-          <Tab>{tabLabels.participants}</Tab>
-          <Tab>{tabLabels.appointments}</Tab>
-          <Tab>{tabLabels.setup}</Tab>
-          <Tab>{tabLabels.team}</Tab>
-          {taTg && <Tab>{tabLabels.agentur}</Tab>}
+          {shownTabs.map((value) => (
+            <Tab key={value ?? "overview"}>{label(value)}</Tab>
+          ))}
         </TabList>
-        {/* Each tab loads its data only when shown. */}
+        {/* Each tab loads its data only when shown; a panel is named by its tab, never by a
+            heading of its own (ui-patterns.md, principle 6). */}
         <TabPanels>
-          <TabPanel>
-            {tab === undefined && <ProjectDashboard projectId={projectId} taTg={taTg} />}
-          </TabPanel>
-          <TabPanel>
-            {tab === "participants" && (
-              <Participants
-                projectId={projectId}
-                taTg={taTg}
-                filter={filter}
-                sort={sort}
-                onChange={(next) =>
-                  void navigate({
-                    search: {
-                      ...next.filter,
-                      tab: "participants",
-                      ...(next.sort && { sort: next.sort }),
-                    },
-                    replace: true,
-                  })
-                }
-              />
-            )}
-          </TabPanel>
-          <TabPanel>
-            {tab === "appointments" && <AppointmentsTab projectId={projectId} taTg={taTg} />}
-          </TabPanel>
-          <TabPanel>
-            {tab === "setup" && (
-              <>
-                <ProjectSetup projectId={projectId} />
-                <AgenturSettings projectId={projectId} />
-                {taTg ? (
-                  <>
-                    <EntryWaves projectId={projectId} />
-                    <Kug200aHeader projectId={projectId} />
-                  </>
-                ) : (
-                  <p>{t("waveForm.errors.not_ta_tg")}</p>
-                )}
-                <ImportSection projectId={projectId} />
-              </>
-            )}
-          </TabPanel>
-          <TabPanel>{tab === "team" && <ProjectTeam projectId={projectId} />}</TabPanel>
-          {taTg && <TabPanel>{tab === "agentur" && <AgenturTab projectId={projectId} />}</TabPanel>}
+          {shownTabs.map((value, index) => (
+            <TabPanel key={value ?? "overview"}>{index === selected && panel(value)}</TabPanel>
+          ))}
         </TabPanels>
       </Tabs>
     </>
+  );
+}
+
+/**
+ * "Einrichtung" as cards (the plan of Slice 6b, 6b-4): Projekt (status, region change, blockers,
+ * activation), Agentur (pins and Agentur-specific settings), Wellen (in `ta_only` only why there
+ * are none), Kug 200a-Kopf (`ta_tg`) and Import (`project-import`, the target of "Datei importieren"). An anchor list beside them on
+ * wide screens; below 66rem the cards simply follow each other.
+ */
+function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean }) {
+  const { t } = useTranslation();
+  const anchors = [
+    { id: "setup-project", label: t("setup.project") },
+    { id: "setup-agentur", label: t("setup.agenturTitle") },
+    { id: "setup-waves", label: t("projectDetail.waves") },
+    ...(taTg ? [{ id: "setup-kug200a", label: t("kug200aHeader.title") }] : []),
+    { id: "project-import", label: t("import.title") },
+  ];
+  return (
+    <div className="tp-anchored">
+      <nav className="tp-anchor-list" aria-label={t("setup.onThisPage")}>
+        <p className="tp-anchor-list-title" aria-hidden="true">
+          {t("setup.onThisPage")}
+        </p>
+        <ul>
+          {anchors.map(({ id, label }) => (
+            <li key={id}>
+              <RouterLink
+                to="/projects/$projectId"
+                params={{ projectId }}
+                search={{ tab: "setup" }}
+                hash={id}
+              >
+                {label}
+              </RouterLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="tp-anchored-content">
+        <ProjectSetup
+          projectId={projectId}
+          region={<ProjectRegion projectId={projectId} />}
+          agentur={<AgenturSettings projectId={projectId} />}
+        />
+        {taTg ? (
+          <>
+            <EntryWaves projectId={projectId} />
+            <Kug200aHeader projectId={projectId} />
+          </>
+        ) : (
+          <Card id="setup-waves" title={t("projectDetail.waves")}>
+            <p>{t("waveForm.errors.not_ta_tg")}</p>
+          </Card>
+        )}
+        <ImportSection projectId={projectId} />
+      </div>
+    </div>
   );
 }
 
@@ -326,9 +397,10 @@ function EntryWaves({ projectId }: { projectId: string }) {
   }));
 
   return (
-    <>
+    <Card id="setup-waves" title={t("projectDetail.waves")}>
       <SimpleTable
         title={t("projectDetail.waves")}
+        hideTitle
         columns={columns.map((key) => ({ key, header: t(`projectDetail.columns.${key}`) }))}
         rows={rows}
         emptyState={t("projectDetail.wavesEmpty")}
@@ -359,6 +431,6 @@ function EntryWaves({ projectId }: { projectId: string }) {
           }}
         />
       )}
-    </>
+    </Card>
   );
 }

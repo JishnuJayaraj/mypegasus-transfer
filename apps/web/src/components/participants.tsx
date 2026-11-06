@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { createLink, useNavigate } from "@tanstack/react-router";
 import {
@@ -48,7 +48,7 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { entryWavesQuery, meQuery, projectTeamQuery, useApi, worklistQuery } from "../api";
+import { entryWavesQuery, useApi, worklistQuery } from "../api";
 import { ActivationPrintView, NoticePrintView } from "./activation-print-view";
 import { BulkInvite } from "./invitations";
 import { BulkKug200b } from "./kug200b-bulk";
@@ -58,7 +58,8 @@ import { useSelfServiceLabel } from "./self-service-tab";
 import { useConsultants } from "./team";
 import { ActiveFilterTags, BulkWave, WorklistFilterFields } from "./worklist-tools";
 import { codeFromSort, sortFromCode, useRemembered, worklistMemory } from "./worklist-state";
-import { quickViews, sameFilter, type ViewerRoles } from "./worklist-views";
+import { useViewerRoles } from "./viewer-roles";
+import { quickViews, sameFilter } from "./worklist-views";
 
 const RouterLink = createLink(Link);
 
@@ -490,27 +491,6 @@ const noSelection: ReadonlySet<string> = new Set();
 
 const fullName = (item: ListItem) =>
   [item.lastName, item.firstName].filter(Boolean).join(", ") || undefined;
-
-/** The viewer's project roles (the team's members), for the quick views and the count line. */
-function useViewerRoles(projectId: string): ViewerRoles & { assignedOnly: boolean } {
-  const api = useApi();
-  const { data: me } = useQuery(meQuery(api));
-  const { data: team } = useSuspenseQuery(projectTeamQuery(api, projectId));
-  return useMemo(() => {
-    const roles = team.members.find((member) => member.staffUserId === me?.id)?.roles ?? [];
-    const projectLead = roles.includes("project_lead");
-    const backOffice = roles.includes("back_office");
-    const consultant = roles.includes("consultant");
-    return {
-      staffUserId: me?.id,
-      projectLead,
-      backOffice,
-      consultant,
-      // An assigned consultant's list is their assignments (data-protection.md, the work list).
-      assignedOnly: consultant && !projectLead && !backOffice,
-    };
-  }, [team, me?.id]);
-}
 
 /**
  * The quick views above the table (the plan of Slice 6b, D6): each one filter; choosing one

@@ -1,0 +1,230 @@
+import type { Page } from "@playwright/test";
+import { seedRegionIds } from "@transfer/db";
+import { mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { expect, expectAccessible, test } from "./helpers";
+import { worklistParticipations } from "./participants";
+
+// The project page, its dashboard and the projects list (docs/architecture/ui-patterns.md; UX
+// foundation plan, 6b-4): the page header with breadcrumb, tags and region; the tabs by
+// frequency; "Einrichtung" as cards with an anchor list; the dashboard's three layers. Each width
+// passes axe without a horizontal page scroll (D10). The test brings its own project (created
+// through the staff API) and participations (owner fixtures). Synthetic data only; the suite fails
+// on any CSP violation. Screenshots go to docs/screenshots/6b-4/.
+
+const screenshots = fileURLToPath(new URL("../../../docs/screenshots/6b-4/", import.meta.url));
+// 320px is a 1280px window at 400 % zoom (WCAG 1.4.10).
+const widths = [1440, 768, 375, 320] as const;
+// A 1280×720 window at 200 % and 400 % zoom, in CSS pixels (D10's manual check, emulated).
+const zooms = [
+  { width: 640, height: 360 },
+  { width: 320, height: 180 },
+] as const;
+
+/** A new `ta_tg` project of the PL (who creates it), with `count` participations. */
+async function projectWithParticipants(page: Page, baseURL: string, count: number) {
+  const api = page.context().request;
+  const headers = { Origin: baseURL };
+  await api.post("/api/v1/dev/session", {
+    headers,
+    data: { staffUserId: "00000000-0000-4000-8000-000000000003" },
+  });
+  const response = await api.post("/api/v1/projects", {
+    headers,
+    data: {
+      name: "E2E Projektseite Mitte",
+      customerName: "Beispiel Präzisionsteile GmbH",
+      type: "ta_tg",
+      regionId: seedRegionIds.nord,
+    },
+  });
+  expect(response.status()).toBe(201);
+  const { id: projectId } = (await response.json()) as { id: string };
+  await worklistParticipations(page, baseURL, {
+    projectId,
+    prefix: "PP",
+    count,
+    names: [
+      ["Jana", "Beispiel"],
+      ["Kurt", "Muster"],
+    ],
+    wave: true,
+  });
+  return projectId;
+}
+
+/** A screenshot after Carbon's transitions have ended. */
+async function shot(page: Page, name: string, fullPage = true) {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+  mkdirSync(screenshots, { recursive: true });
+  await page.screenshot({ path: `${screenshots}${name}.png`, fullPage });
+}
+
+/** No horizontal page scroll (D10); a failure names the elements that stick out. */
+async function expectNoPageScroll(page: Page) {
+  const { overflow, offenders } = await page.evaluate(() => {
+    const width = document.documentElement.clientWidth;
+    // oxlint-disable-next-line unicorn/consistent-function-scoping -- runs in the page, serialised whole
+    const scrolls = (element: Element | null): boolean =>
+      element !== null &&
+      element !== document.documentElement &&
+      (["auto", "scroll", "hidden", "clip"].includes(getComputedStyle(element).overflowX) ||
+        scrolls(element.parentElement));
+    return {
+      overflow: document.documentElement.scrollWidth - width,
+      offenders: [...document.body.querySelectorAll("*")]
+        .filter((element) => element.getBoundingClientRect().right > width + 0.5)
+        .filter((element) => !scrolls(element.parentElement))
+        .slice(0, 5)
+        .map(
+          (element) =>
+            `${element.tagName.toLowerCase()}.${[...element.classList].join(".")} "${element.textContent?.slice(0, 40)}"`,
+        ),
+    };
+  });
+  expect(overflow, `horizontal page overflow in px (${offenders.join(", ")})`).toBeLessThanOrEqual(
+    0,
+  );
+}
+
+test("the project page: header, tabs, the dashboard's three layers and Einrichtung as cards", async ({
+  page,
+  baseURL,
+}) => {
+  test.slow();
+  const projectId = await projectWithParticipants(page, baseURL!, 12);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`/projects/${projectId}`);
+
+  // The header: one h1, the breadcrumb back to the list, tags and the region as text.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("E2E Projektseite Mitte");
+  const crumbs = page.getByRole("navigation", { name: "Navigationspfad" });
+  await expect(crumbs.getByRole("link", { name: "Projekte" })).toHaveAttribute("href", "/projects");
+  const header = page.locator(".tp-page-header");
+  await expect(header.getByText("Kunde: Beispiel Präzisionsteile GmbH")).toBeVisible();
+  await expect(header.getByText("Entwurf", { exact: true })).toBeVisible();
+  await expect(header.getByText("Region: Niederlassung Nord (NORD)")).toBeVisible();
+  // AC 11: no region select above the tabs.
+  await expect(page.getByLabel("Region (Niederlassung)")).toHaveCount(0);
+  await expect(page.getByRole("tab")).toHaveText([
+    "Übersicht",
+    "Teilnehmende",
+    "Termine",
+    "Agentur",
+    "Einrichtung",
+    "Team",
+  ]);
+
+  // The dashboard: four tiles, the other open work, the funnel, every figure open at 1440.
+  const today = page.getByRole("region", { name: "Heute zu tun" });
+  await expect(today.locator(".tp-tile")).toHaveCount(4);
+  await expect(today.getByRole("region", { name: "Weitere offene Arbeit" })).toBeVisible();
+  const progress = page.getByRole("region", { name: "Verlauf" });
+  await expect(progress.getByRole("link", { name: "12 Teilnehmende" })).toBeVisible();
+  const imported = progress
+    .getByRole("table", { name: "Status" })
+    .getByRole("row", { name: /Importiert/ });
+  await expect(imported.getByRole("link", { name: "12" })).toBeVisible();
+  // The bar's width comes through the CSSOM (no CSP violation; the fixture fails on any).
+  await expect(imported.locator(".tp-bar-fill")).toHaveAttribute("style", /inline-size: 100%/);
+  const toggle = page.getByRole("button", { name: /^Alle Kennzahlen (anzeigen|ausblenden)$/ });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("table", { name: "Nach Welle" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Übersicht" })).toHaveCount(0);
+
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    // "Alle Kennzahlen" is collapsed by default below 1280px, following the width.
+    await expect(today.locator(".tp-tile")).toHaveCount(4);
+    await expect(toggle).toHaveAttribute("aria-expanded", width < 1280 ? "false" : "true");
+    await expectNoPageScroll(page);
+    await expectAccessible(page);
+    await shot(page, `project-overview-${width}`);
+  }
+  await toggle.click();
+  await expect(page.getByRole("table", { name: "Nach Welle" })).toBeVisible();
+  await expectNoPageScroll(page);
+  await expectAccessible(page);
+  await shot(page, "project-overview-all-320");
+
+  // "Datei importieren" opens "Einrichtung" at the Import card.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole("button", { name: "Aktionen" }).click();
+  await page.getByRole("menuitem", { name: "Datei importieren" }).click();
+  await expect(page).toHaveURL(/tab=setup#project-import$/);
+  await expect(page.getByRole("region", { name: "Import" })).toBeInViewport();
+
+  // "Einrichtung": cards with an anchor list on wide screens; the region is changed here.
+  await page.goto(`/projects/${projectId}?tab=setup`);
+  const anchors = page.getByRole("navigation", { name: "Auf dieser Seite" });
+  await expect(anchors.getByRole("link")).toHaveText([
+    "Projekt",
+    "Agentur",
+    "Eintrittswellen",
+    "Kopf der Kug 200a",
+    "Import",
+  ]);
+  const projectCard = page.getByRole("region", { name: "Projekt" });
+  await expect(projectCard.getByLabel("Region (Niederlassung)")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Einrichtung" })).toHaveCount(0);
+  await anchors.getByRole("link", { name: "Kopf der Kug 200a" }).click();
+  await expect(page.getByRole("region", { name: "Kopf der Kug 200a" })).toBeInViewport();
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`/projects/${projectId}?tab=setup`);
+    await expect(projectCard).toBeVisible();
+    await expect(anchors).toBeVisible({ visible: width >= 1056 });
+    await expectNoPageScroll(page);
+    await expectAccessible(page);
+    await shot(page, `project-setup-${width}`, width === 1440);
+  }
+
+  // D10, emulated: 200 % and 400 % zoom of a 1280×720 window, the overview and the setup.
+  for (const size of zooms) {
+    await page.setViewportSize(size);
+    for (const tab of ["", "?tab=setup"]) {
+      await page.goto(`/projects/${projectId}${tab}`);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectNoPageScroll(page);
+    }
+  }
+});
+
+test("the projects list: one title, status tags, 'Neues Projekt', an empty state that explains", async ({
+  page,
+  baseURL,
+}) => {
+  const api = page.context().request;
+  await api.post("/api/v1/dev/session", {
+    headers: { Origin: baseURL! },
+    data: { staffUserId: "00000000-0000-4000-8000-000000000003" },
+  });
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/projects");
+    await expect(page.getByRole("heading", { name: "Projekte" })).toHaveCount(1);
+    await expect(page.getByRole("link", { name: "Neues Projekt" })).toBeVisible();
+    await expect(page.locator(".tp-status-tag").first()).toBeVisible();
+    await expectNoPageScroll(page);
+    await expectAccessible(page);
+    await shot(page, `projects-${width}`, false);
+  }
+
+  // No project yet (the list answered empty): what this is, how a project is created, by whom.
+  await page.route(/\/api\/v1\/projects(\?.*)?$/, (route) =>
+    route.fulfill({ json: { items: [], nextCursor: null } }),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/projects");
+  await expect(page.getByText("Noch keine Projekte")).toBeVisible();
+  await expect(page.getByText(/werden seine erste Projektleitung/)).toBeVisible();
+  await expectAccessible(page);
+  await shot(page, "projects-empty-1440", false);
+});
