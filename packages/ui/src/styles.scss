@@ -478,6 +478,40 @@ body {
   }
 }
 
+// The toolbar wraps on narrow screens instead of pushing the page sideways (D10).
+.tp-data-table .cds--table-toolbar {
+  block-size: auto;
+  min-block-size: $spacing-09;
+}
+
+.tp-data-table .cds--toolbar-content {
+  flex-wrap: wrap;
+  block-size: auto;
+
+  // The search takes the room the others leave, on their line while there is room.
+  .cds--toolbar-search-container-persistent {
+    flex: 1 1 14rem;
+    inline-size: auto;
+  }
+}
+
+// The batch bar in its own toolbar: in the flow, wrapping on narrow screens (D10), never wider
+// than the page.
+.tp-data-table .cds--batch-actions {
+  position: relative;
+  flex-wrap: wrap;
+  block-size: auto;
+  min-block-size: $spacing-09;
+  max-inline-size: 100%;
+}
+
+.tp-data-table .cds--batch-actions .cds--action-list {
+  flex-wrap: wrap;
+  block-size: auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
 // A row that opens its object on click; its link stays the keyboard's way.
 .tp-data-table-row-link {
   cursor: pointer;
@@ -579,6 +613,11 @@ body {
   margin: 0;
 }
 
+// Compact choices: Carbon keeps room for an icon at a button's end; a quick view has none.
+.tp-quick-views .cds--btn {
+  padding-inline-end: $spacing-05;
+}
+
 .tp-filter-group {
   legend {
     @include type.type-style("heading-compact-01");
@@ -591,10 +630,16 @@ body {
 .tp-worklist-count {
   @include type.type-style("body-compact-01");
 
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   align-self: center;
+  margin: 0;
+  padding-block: $spacing-03;
   padding-inline: $spacing-05;
   color: theme.$text-secondary;
+
+  @media (min-width: 42rem) {
+    white-space: nowrap;
+  }
 }
 
 .tp-two-lines {
@@ -623,9 +668,13 @@ body {
   flex-direction: column;
   align-items: flex-start;
 
+  // A disclosure within the cell: the text colour, underlined, so it keeps its contrast on a
+  // selected or hovered row too (WCAG 1.4.3).
   .cds--btn--ghost {
     min-block-size: auto;
     padding-inline: 0;
+    color: theme.$text-primary;
+    text-decoration: underline;
   }
 }
 

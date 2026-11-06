@@ -78,3 +78,17 @@ export function expectWithinBudget(
   // oxlint-disable-next-line no-console -- a soft budget warns instead of failing (PERF_BUDGET)
   console.warn(`WARNING ${message}`);
 }
+
+/**
+ * Shows a work-list column from the chooser (the plan of Slice 6b, D7: six default columns, the
+ * others on demand, in memory only, so after every page load).
+ */
+export async function showColumn(page: Page, header: string) {
+  const list = page.getByRole("region", { name: "Teilnehmende" });
+  await list.getByRole("button", { name: "Spalten" }).click();
+  await list
+    .getByRole("group", { name: "Angezeigte Spalten" })
+    .getByText(header, { exact: true })
+    .click();
+  await list.getByRole("button", { name: "Spalten" }).click();
+}

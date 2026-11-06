@@ -187,7 +187,6 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
     props.items.length > 0 &&
     props.items.every((i) => selected.has(i.id));
   const someSelected = selected !== undefined && selected.size > 0 && !allSelected;
-  const hasToolbar = Boolean(selection || props.columnChooser || props.toolbar);
 
   const empty = props.items.length === 0;
   // Without rows the empty state replaces the table; a toolbar stays, so a search or a filter
@@ -203,47 +202,9 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
 
   return (
     <div className="tp-data-table">
-      {hasToolbar && (
+      {(props.toolbar || (props.columnChooser && !empty)) && (
         <TableToolbar aria-label={props.title}>
-          {/* Rendered only with a selection: no bulk control without one (principle 2). */}
-          {selection && selection.selected.size > 0 && !empty && (
-            <TableBatchActions
-              shouldShowBatchActions
-              totalSelected={selection.selected.size}
-              totalCount={props.items.length}
-              onCancel={() => selection.onChange(new Set())}
-              translateWithId={batchLabels as never}
-            >
-              {selection.batchActions.slice(0, batchActionsShown).map((action) => (
-                <TableBatchAction
-                  key={action.label}
-                  onClick={(event: MouseEvent<HTMLElement>) => action.onClick(event.currentTarget)}
-                >
-                  {action.label}
-                </TableBatchAction>
-              ))}
-              {selection.batchActions.length > batchActionsShown && (
-                <MenuButton
-                  ref={more}
-                  label={t("dataTable.moreActions")}
-                  kind="primary"
-                  size="lg"
-                  menuAlignment="bottom-end"
-                >
-                  {selection.batchActions.slice(batchActionsShown).map((action) => (
-                    <MenuItem
-                      key={action.label}
-                      label={action.label}
-                      onClick={() => action.onClick(more.current)}
-                    />
-                  ))}
-                </MenuButton>
-              )}
-            </TableBatchActions>
-          )}
-          <TableToolbarContent
-            aria-hidden={selection && selection.selected.size > 0 && !empty ? true : undefined}
-          >
+          <TableToolbarContent>
             {props.toolbar}
             {props.columnChooser && !empty && (
               <Button
@@ -257,6 +218,45 @@ export function DataTable<T extends { id: string }>(props: DataTableProps<T>) {
               </Button>
             )}
           </TableToolbarContent>
+        </TableToolbar>
+      )}
+      {/* Rendered only with a selection: no bulk control without one (principle 2). A bar of its
+          own, so the toolbar (a search to select more) stays usable beside it. */}
+      {selection && selection.selected.size > 0 && !empty && (
+        <TableToolbar aria-label={t("dataTable.batchBar")}>
+          <TableBatchActions
+            shouldShowBatchActions
+            totalSelected={selection.selected.size}
+            totalCount={props.items.length}
+            onCancel={() => selection.onChange(new Set())}
+            translateWithId={batchLabels as never}
+          >
+            {selection.batchActions.slice(0, batchActionsShown).map((action) => (
+              <TableBatchAction
+                key={action.label}
+                onClick={(event: MouseEvent<HTMLElement>) => action.onClick(event.currentTarget)}
+              >
+                {action.label}
+              </TableBatchAction>
+            ))}
+            {selection.batchActions.length > batchActionsShown && (
+              <MenuButton
+                ref={more}
+                label={t("dataTable.moreActions")}
+                kind="primary"
+                size="lg"
+                menuAlignment="bottom-end"
+              >
+                {selection.batchActions.slice(batchActionsShown).map((action) => (
+                  <MenuItem
+                    key={action.label}
+                    label={action.label}
+                    onClick={() => action.onClick(more.current)}
+                  />
+                ))}
+              </MenuButton>
+            )}
+          </TableBatchActions>
         </TableToolbar>
       )}
       {empty && props.emptyState}

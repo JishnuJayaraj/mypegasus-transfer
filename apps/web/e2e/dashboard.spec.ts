@@ -83,7 +83,7 @@ test("follow a count to its rows, search a name and assign a wave", async ({ pag
   await expectAccessible(page);
 
   // The name search runs in the browser: folded, and never in a request or the URL.
-  const search = list.getByLabel("Name oder Personalnummer suchen");
+  const search = list.getByRole("searchbox", { name: "Name oder Personalnummer suchen" });
   await search.fill("grosser jurgen");
   await expect(matches(page, 1)).toBeVisible();
   await expect(list.getByRole("row")).toHaveCount(2);
@@ -92,11 +92,14 @@ test("follow a count to its rows, search a name and assign a wave", async ({ pag
   await search.fill("");
 
   // Two rows to W1; the list reloads and the filter "ohne Welle" now matches three.
-  await list.getByRole("link", { name: "WL-0001" }).waitFor();
+  await list.getByText("WL-0001", { exact: true }).waitFor();
   await list.getByLabel("WL-0001 auswählen").check({ force: true });
   await list.getByLabel("WL-0002 auswählen").check({ force: true });
-  await list.getByLabel("Eintrittswelle", { exact: true }).selectOption({ label: "W1 – Welle 1" });
-  await list.getByRole("button", { name: "Eintrittswelle zuweisen (2)" }).click();
+  // The batch bar (ui-patterns.md): "Welle zuweisen" opens its side panel.
+  await list.getByRole("button", { name: "Welle zuweisen" }).click();
+  const panel = page.getByRole("dialog", { name: "Welle zuweisen" });
+  await panel.getByLabel("Eintrittswelle", { exact: true }).selectOption({ label: "W1 – Welle 1" });
+  await panel.getByRole("button", { name: "Eintrittswelle zuweisen (2)" }).click();
   await expect(page.getByText("2 zugewiesen, 0 unverändert")).toBeVisible();
   await expect(matches(page, 3)).toBeVisible();
   await expectAccessible(page);
@@ -129,7 +132,7 @@ test("search 2,000 participations in the browser: one request, one page of rows,
   const started = Date.now();
   await page.goto(`/projects/${projectId}?tab=participants`);
   const list = page.getByRole("region", { name: "Teilnehmende" });
-  const search = list.getByLabel("Name oder Personalnummer suchen");
+  const search = list.getByRole("searchbox", { name: "Name oder Personalnummer suchen" });
   await expect(search).toBeEnabled();
   await search.fill("PERF-1");
   await expect(matches(page, 1000)).toBeVisible();

@@ -129,14 +129,18 @@ test("the appointment page and the work list on the kit, at every width", async 
   // No matches: says so and resets the filters and the search (the empty state, principle 7).
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`/projects/${projectId}?tab=participants&deadlineState=overdue`);
-  await list.getByLabel("Name oder Personalnummer suchen").fill("Kein-Treffer-XYZ");
+  await list
+    .getByRole("searchbox", { name: "Name oder Personalnummer suchen" })
+    .fill("Kein-Treffer-XYZ");
   const empty = list.locator(".tp-empty-state");
   await expect(empty).toContainText("Keine Teilnehmenden entsprechen");
   await expectAccessible(page);
   await shot(page, "worklist-no-matches-1280");
   await empty.getByRole("button", { name: "Filter zurücksetzen" }).click();
   await expect(page).toHaveURL(/\?tab=participants$/);
-  await expect(list.getByLabel("Name oder Personalnummer suchen")).toHaveValue("");
+  await expect(
+    list.getByRole("searchbox", { name: "Name oder Personalnummer suchen" }),
+  ).toHaveValue("");
   await expect(row).toBeVisible();
   await expectNothingStored(page);
 });

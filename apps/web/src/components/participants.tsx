@@ -787,10 +787,12 @@ function NextStep({ item, today }: { item: ListItem; today: string }) {
     <div className="tp-next-step">
       <span>
         {first.tier === 1 && (
-          <Tag type="red" size="sm">
-            {t("worklist.overdueTag")}
-          </Tag>
-        )}{" "}
+          <>
+            <Tag type="red" size="sm">
+              {t("worklist.overdueTag")}
+            </Tag>{" "}
+          </>
+        )}
         <StepLabel step={first} today={today} />
       </span>
       {rest.length > 0 && (

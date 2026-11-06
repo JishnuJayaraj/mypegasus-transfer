@@ -50,11 +50,12 @@ test("appointments: the PL invites, the participant books and cancels in the por
 
   // The work list: "Zu Termin einladen" with the counts per channel and the fixed text.
   await page.goto(`/projects/${projectId}?tab=participants`);
-  const search = page.getByLabel("Name oder Personalnummer suchen");
+  const search = page.getByRole("searchbox", { name: "Name oder Personalnummer suchen" });
   await expect(search).toBeEnabled();
   await search.fill(personnelNumber);
   await page.getByRole("checkbox", { name: `${personnelNumber} auswählen` }).check({ force: true });
-  await page.getByRole("button", { name: "Zu Termin einladen (1)" }).click();
+  // The batch bar (ui-patterns.md): "Einladen" opens the dialog.
+  await page.getByRole("button", { name: "Einladen", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Zu Termin einladen" });
   await dialog.getByLabel("Termin", { exact: true }).selectOption(appointmentId);
   await expect(

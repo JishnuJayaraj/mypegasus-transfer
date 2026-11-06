@@ -83,11 +83,21 @@ primitives, following the Carbon for IBM Products patterns without depending on
 | A list loading | `TableSkeleton headers` | With the real column headers; announced through a hidden status. |
 | A small part loading | `Loading label` | Replaces the loose "Wird geladen…" paragraphs. |
 | Nothing to show | `EmptyState variant` | `noData` (what this is, why it is empty, the next step as `action`), `noMatches` (with `onResetFilters`: "Filter zurücksetzen"), `forbidden` (who may see it), `error` (with `onRetry`: "Erneut versuchen"). Forbidden and error are alerts. |
-| An interactive list | `DataTable` | Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (the only thing that scrolls sideways, D10), selection with a batch bar rendered only with a selection, a row overflow menu (`rowActions`), a column chooser kept in component state (`columnChooser`), "Weitere anzeigen" over the loaded rows (`pageSize`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. |
+| An interactive list | `DataTable` | Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (a named `group`, the only thing that scrolls sideways, D10), selection with a batch bar of its own rendered only with a selection (`batchActions`: four buttons, the rest under "Weitere Aktionen", each told its button for the focus return), a row overflow menu (`rowActions`), `onRowClick` (a click outside the row's controls; the row's link stays the keyboard's way), a column chooser (`columnChooser`, `hiddenColumns` to keep the choice in memory across a navigation), "Weitere anzeigen" over the loaded rows (`pageSize`, `limit`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. Without rows the empty state replaces the table, under the `toolbar` (a search or filter that found nothing stays changeable). |
 | A small read-only table | `SimpleTable` | Its `footer` holds "Mehr laden" of a cursor list or the list's add action. |
 | A task over the page (form, filters, bulk action) | `SidePanel` | Below. |
 | An action that may be blocked | `ActionButton unavailableReason` | C1. |
 | A confirmation or a short choice | Carbon `Modal` | As before; a modal with input follows C4. |
+
+### The work list
+
+The pattern for a list that is a working queue (`apps/web/src/components/participants.tsx`):
+quick views above the table (each one filter, its label saying what it selects and its count,
+`aria-pressed` on the active one; a view with no rows stays), the active filters as dismissible
+tags, the toolbar with the count line ("142 Teilnehmende · Stand 09:41", "12 Treffer · …" while
+filtered), the search and "Filter" (a side panel with the filters in groups, applied at once).
+The default order is the domain's (C2); a header sort is a code in the URL. Row click opens the
+object; the way back restores the view (C6).
 
 ### Side panel
 

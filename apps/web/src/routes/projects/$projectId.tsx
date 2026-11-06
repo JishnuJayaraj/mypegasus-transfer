@@ -165,6 +165,13 @@ function ProjectPage() {
           </p>
         </Stack>
       )}
+      <p>
+        {[
+          project.customerName,
+          t(`projects.types.${project.type}`),
+          t(`projects.statuses.${project.status}`),
+        ].join(" · ")}
+      </p>
       <ProjectRegion projectId={projectId} />
       <Tabs
         selectedIndex={tabs.indexOf(tab)}

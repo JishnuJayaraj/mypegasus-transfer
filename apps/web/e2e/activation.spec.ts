@@ -81,7 +81,14 @@ test("portal: activate a printed letter, then log out and log in again by code",
   await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
   await page.getByRole("tab", { name: "Teilnehmende" }).click();
   await page.getByLabel(`${personnelNumber} auswählen`).check({ force: true });
-  await page.getByRole("button", { name: "Aktivierungsbriefe drucken" }).click();
+  // The batch bar (ui-patterns.md): "Aktivierung drucken", beyond the first four actions under
+  // "Weitere Aktionen", opens its side panel.
+  await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+  await page.getByRole("menuitem", { name: "Aktivierung drucken" }).click();
+  await page
+    .getByRole("dialog", { name: "Aktivierung drucken" })
+    .getByRole("button", { name: "Aktivierungsbriefe drucken" })
+    .click();
   const printed = page.getByLabel("Aktivierungscode");
   await expect(printed).toHaveText(/^[0-9A-Z]{4}-[0-9A-Z]{4}-[0-9A-Z]{4}$/);
   const code = (await printed.textContent())!;

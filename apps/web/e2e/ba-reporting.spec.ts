@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, showColumn, test } from "./helpers";
 
 // Closing BA reporting tasks (process-and-lifecycle.md, BA reporting; D28, Q207): a contacted
 // participant of Werk Nord has two pending tasks, a later entry from two days ago and an early
@@ -92,9 +92,10 @@ test("slice 6-6: two pending BA reports, one sent and one not required", async (
 
   // 1. The work list: "BA-Meldung offen" since the older task's day, under "Agentur".
   await page.goto(`/projects/${projectId}?tab=participants&agentur=ba_report_pending`);
+  await showColumn(page, "Agentur");
   const row = page
     .getByRole("row")
-    .filter({ has: page.getByRole("link", { name: `E2E-${participationId.slice(0, 8)}` }) });
+    .filter({ has: page.getByText(`E2E-${participationId.slice(0, 8)}`, { exact: true }) });
   await expect(row).toContainText(`BA-Meldung offen (seit ${berlin(-2)})`);
   await expectAccessible(page);
   await row
@@ -145,7 +146,7 @@ test("slice 6-6: two pending BA reports, one sent and one not required", async (
 
   // Nothing is open on the work list any more.
   await page.goto(`/projects/${projectId}?tab=participants&agentur=ba_report_pending`);
-  await expect(page.getByRole("link", { name: `E2E-${participationId.slice(0, 8)}` })).toHaveCount(
+  await expect(page.getByText(`E2E-${participationId.slice(0, 8)}`, { exact: true })).toHaveCount(
     0,
   );
 });

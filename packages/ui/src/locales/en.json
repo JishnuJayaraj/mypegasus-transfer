@@ -40,6 +40,7 @@
     "sortedAscending": "sorted ascending",
     "sortedDescending": "sorted descending",
     "actionsColumn": "Actions",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "batchBar": "Actions for the selection"
   }
 }
