@@ -26,6 +26,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { regionsQuery, staffAccountsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
+import { usePageTitle } from "../../page-title";
 
 type Account = components["schemas"]["StaffAccount"];
 type Grant = components["schemas"]["OrgRoleGrant"];
@@ -62,6 +63,7 @@ const codeOf = (error: unknown) =>
  */
 function StaffPage() {
   const { t } = useTranslation();
+  usePageTitle(t("adminStaff.title"));
   const api = useApi();
   const query = useSuspenseInfiniteQuery(staffAccountsQuery(api));
   const regions = useQuery(regionsQuery(api));

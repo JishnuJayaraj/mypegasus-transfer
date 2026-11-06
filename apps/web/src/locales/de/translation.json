@@ -3,8 +3,18 @@
     "name": "Transferplattform",
     "skipToContent": "Zum Inhalt springen",
     "navigation": "Navigation",
+    "menu": "Navigation öffnen oder schließen",
+    "navGroups": {
+      "work": "Arbeit",
+      "admin": "Verwaltung"
+    },
     "closeNotification": "Meldung schließen",
     "notFound": "Diese Seite gibt es nicht.",
+    "notFoundTitle": "Seite nicht gefunden",
+    "pageTitles": {
+      "appointment": "Termin",
+      "assisted": "Assistierte Erfassung"
+    },
     "error": "Es ist ein Fehler aufgetreten. Bitte laden Sie die Seite neu."
   },
   "session": {
@@ -16,6 +26,8 @@
       "dev": "Entwicklungsmodus: Wählen Sie einen synthetischen Benutzer."
     },
     "logout": "Abmelden",
+    "userMenu": "Benutzermenü: {{name}}",
+    "projectRoles": "Rollen je Projekt (siehe Team)",
     "expired": "Sitzung abgelaufen",
     "expiredDetail": "Bitte melden Sie sich erneut an.",
     "noAccess": "Kein Zugang",

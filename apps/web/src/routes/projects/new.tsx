@@ -3,11 +3,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { PageHeader, useToast } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { ProjectForm } from "../../components/project-form";
+import { usePageTitle } from "../../page-title";
 
 export const Route = createFileRoute("/projects/new")({ component: NewProjectPage });
 
 function NewProjectPage() {
   const { t } = useTranslation();
+  usePageTitle(t("projects.create"));
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const showToast = useToast();

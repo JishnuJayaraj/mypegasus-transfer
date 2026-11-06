@@ -180,6 +180,11 @@
   Only the code filters sit in the URL. From Slice 5b each row carries its appointment items and
   next booking (process-and-lifecycle.md, appointment items): codes, ids and times, never a title
   or venue; the `needs_resolution` item only for the PL, who alone resolves it.
+- **Page titles (Slice 6b):** the staff app's document title names the page and its project
+  ("Teilnehmende · Projekt Nord – Transferplattform"), never a participant's name or any other
+  personal data, since the browser keeps titles in its history and shows them in tab lists and
+  shared screens. The shell keeps its state (the navigation's open state, the user menu) in
+  component state only, never in browser storage.
 - **Reminders (Slice 5; Q152–Q156, accepted):** manual only; no scheduled reminder (ASU
   reminders wait for Q1 and Slice 6) and no regional rule (`reminderPolicy`, regional-variation.md).
   - *Who:* a current PL of the active project for any non-terminal participation, a current

@@ -7,9 +7,20 @@ import { expect, expectAccessible, test } from "./helpers";
 const fixture = (name: string) =>
   fileURLToPath(new URL(`../../../fixtures/imports/${name}`, import.meta.url));
 
+/** The header's user menu (6b-1): named after the logged-in user. */
+const userMenu = (page: Page, name = "Petra Projektleitung") =>
+  page.getByRole("banner").getByRole("button", { name: `Benutzermenü: ${name}` });
+
+/** The dev switcher sits in the user menu. */
 async function chooseDevUser(page: Page, label: string) {
-  await page.getByRole("button", { name: "Entwicklungsbenutzer wechseln" }).click();
-  await page.getByRole("button", { name: label }).click();
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: /^Benutzermenü/ })
+    .click();
+  await page
+    .getByRole("list", { name: "Entwicklungsbenutzer wechseln" })
+    .getByRole("button", { name: label })
+    .click();
 }
 
 const me = async (page: Page) => (await page.request.get("/api/v1/me")).json();
@@ -26,7 +37,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expectAccessible(page);
   await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
   await expect(page).toHaveURL(/\/projects$/);
-  await expect(page.getByRole("banner")).toContainText("Petra Projektleitung");
+  await expect(userMenu(page)).toBeVisible();
 
   // The three seeded projects, read from Postgres.
   await expect(page.getByRole("row")).toHaveCount(4);
@@ -379,10 +390,12 @@ test("log out, log in again, and return to the login page when the session ends"
   // "Sitzung abgelaufen" and keeps the page asked for.
   await page.goto("/projects");
   await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();
-  await expect(page.getByRole("banner")).toContainText("Petra Projektleitung");
-  await page.getByRole("button", { name: "Abmelden" }).click();
+  await userMenu(page).click();
+  await page.getByRole("banner").getByRole("button", { name: "Abmelden" }).click();
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("banner")).not.toContainText("Petra Projektleitung");
+  await expect(page.getByRole("banner").getByRole("button", { name: /Benutzermenü/ })).toHaveCount(
+    0,
+  );
   expect((await page.request.get("/api/v1/me")).status()).toBe(401);
 
   await page.getByRole("button", { name: "Petra Projektleitung · Projektleitung" }).click();

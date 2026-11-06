@@ -4,6 +4,7 @@ import { Add, Button, formatTimestamp, Link, PageHeader, SimpleTable } from "@tr
 import { useTranslation } from "react-i18next";
 import { meQuery, projectsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
+import { usePageTitle } from "../../page-title";
 
 const ButtonLink = createLink(Button);
 const RouterLink = createLink(Link);
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/projects/")({
 
 function ProjectsPage() {
   const { t } = useTranslation();
+  usePageTitle(t("projects.title"));
   const api = useApi();
   const { data, hasNextPage, fetchNextPage, isFetchingNextPage } = useSuspenseInfiniteQuery(
     projectsQuery(api),

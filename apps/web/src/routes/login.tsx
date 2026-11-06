@@ -6,6 +6,7 @@ import { Button, InlineNotification, Loading, PageHeader, Stack } from "@transfe
 import { useTranslation } from "react-i18next";
 import { staffUsersQuery, useApi } from "../api";
 import { DevUserList } from "../components/dev-user-switcher";
+import { usePageTitle } from "../page-title";
 
 // The staff login page (Slice 3 plan, Web; flow 1). With AUTH_MODE=oidc: "Anmelden" goes to the
 // identity provider through `GET /api/v1/auth/login`, which comes back here with `error` when it
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const { t } = useTranslation();
+  usePageTitle(t("session.login.title"));
   const { returnTo, reason, error } = Route.useSearch();
   const devUsers = useQuery({ ...staffUsersQuery(useApi()), retry: false });
   const queryClient = useQueryClient();

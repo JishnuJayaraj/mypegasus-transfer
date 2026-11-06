@@ -59,6 +59,9 @@ describe("project list", () => {
 const oidcMode = { "GET /api/v1/dev/staff-users": () => problem(404, "not-found") };
 const noSession = { "GET /api/v1/me": () => problem(401, "unauthenticated") };
 const banner = () => screen.getByRole("banner");
+/** The header's user menu, named after the logged-in user. */
+const userMenu = (name = "Petra Projektleitung") =>
+  within(banner()).findByRole("button", { name: `Benutzermenü: ${name}` });
 
 describe("staff login (Slice 3, PR 3b)", () => {
   it("sends a first visit to the login page without 'Sitzung abgelaufen', and logs in with the dev switcher", async () => {
@@ -84,6 +87,7 @@ describe("staff login (Slice 3, PR 3b)", () => {
 
     expect(await screen.findByText("Restrukturierung Werk Nord")).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/projects");
+    await userEvent.click(await userMenu());
     expect(within(banner()).getByText("Petra Projektleitung")).toBeInTheDocument();
     expect(within(banner()).getByRole("button", { name: "Abmelden" })).toBeInTheDocument();
     expect(calls).toContainEqual({
@@ -139,6 +143,9 @@ describe("staff login (Slice 3, PR 3b)", () => {
       reason: "expired",
     });
     expect(within(banner()).queryByText("Petra Projektleitung")).not.toBeInTheDocument();
+    expect(
+      within(banner()).queryByRole("button", { name: /Benutzermenü/ }),
+    ).not.toBeInTheDocument();
   });
 
   it("logs out with 'Abmelden'", async () => {
@@ -154,12 +161,16 @@ describe("staff login (Slice 3, PR 3b)", () => {
     });
     const { router } = renderApp("/projects", api);
     expect(await screen.findByText("Restrukturierung Werk Nord")).toBeInTheDocument();
-    await userEvent.click(await within(banner()).findByRole("button", { name: "Abmelden" }));
+    await userEvent.click(await userMenu());
+    await userEvent.click(within(banner()).getByRole("button", { name: "Abmelden" }));
 
     expect(await screen.findByRole("link", { name: "Anmelden" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/login");
     expect(screen.queryByText("Sitzung abgelaufen")).not.toBeInTheDocument();
     expect(within(banner()).queryByText("Petra Projektleitung")).not.toBeInTheDocument();
+    expect(
+      within(banner()).queryByRole("button", { name: /Benutzermenü/ }),
+    ).not.toBeInTheDocument();
     expect(calls).toContainEqual({ key: "POST /api/v1/auth/logout", body: {} });
   });
 

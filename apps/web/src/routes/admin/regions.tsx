@@ -17,6 +17,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { regionsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
+import { usePageTitle } from "../../page-title";
 
 type Region = components["schemas"]["Region"];
 
@@ -31,6 +32,7 @@ const columns = ["code", "name", "actions"] as const;
 /** The regions (Niederlassungen, Q35): the global admin creates and renames them (Q126). */
 function RegionsPage() {
   const { t } = useTranslation();
+  usePageTitle(t("adminRegions.title"));
   const { data: regions } = useSuspenseQuery(regionsQuery(useApi()));
   // "new", a region's id, or no form.
   const [editing, setEditing] = useState<string | null>(null);
