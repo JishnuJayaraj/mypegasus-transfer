@@ -100,6 +100,19 @@ batch and correcting a batch's sent date (Q204); signed forms in the portal (Q67
 the participant; electronic BA interfaces; KuG claims, billing and project closure; the half-yearly
 Agentur report and other reports (Slice 9); PDF batch jobs; AI.
 
+## Slice 6b — UX foundation (staff app and portal)
+Interleaved with Slice 7 (the owner's review of the UI, 2026-11-06; the plan's D1): 6b-1/6b-2 now
+alongside Slice 7's backend, 6b-3 before Slice 7's first web PR: one job per screen, visible
+hierarchy and progressive disclosure, built on Carbon in `packages/ui`. Shell fixes (login without
+nav, responsive menu, breadcrumbs, product mark), a UI kit (page header with actions, cards, status
+tags, designed loading/empty/error states, an interactive table), the work list (urgency sort,
+quick views, filter panel, six default columns, batch bar), the project page and dashboard ("Heute
+zu tun" first), the participant overview, and the portal home ("Das fehlt noch"). No lifecycle
+or access changes; one new domain read rule (`nextStep`). Plan: [`plans/slice-6b.md`](plans/slice-6b.md) (revised); Q221–Q225 (accepted).
+Later UX polish (dark mode, saved views, "Meine Aufgaben", shortcuts, the timeline's Slice 8
+stage, Carbon v12) is listed in its
+D9 for Slice 9 or v1.1.
+
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of
 "participant signed, not fully executed", admission cutoff and system withdrawal (incl. conflict
@@ -110,7 +123,8 @@ Deferred here from Slice 2: the reconciliation route (Q68) and its review.
 Participant file, coaching notes, goals/tasks, qualification plan, applications, exit.
 
 ## Slice 9 — Reporting (F10) + hardening
-Project report, monthly customer report, exports, accessibility pass, performance pass,
+Project report, monthly customer report, exports, accessibility pass, performance pass, the UX
+items deferred in Slice 6b's D9 that the owner places here,
 security review, backup/restore, deployment manifests (`deploy/`).
 The participant-list export of F7 follows the contract of Q159 (round 39).
 
