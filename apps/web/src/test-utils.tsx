@@ -1,5 +1,5 @@
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createApiClient } from "@transfer/api-client";
 import { createQueryClient } from "./api";
@@ -213,4 +213,58 @@ export async function chooseRowAction(rowName: string, action: string) {
   await userEvent.click(button);
   const menu = document.getElementById(button.getAttribute("aria-controls")!)!;
   await userEvent.click(within(menu).getByText(action));
+}
+
+/** The work list (its section, named like its tab), once rendered. */
+export const worklistSection = async () =>
+  within(await screen.findByRole("region", { name: "Teilnehmende" }));
+
+/** The rows' Personalnummern in the order shown (the name's second line, else the link). */
+export function shownPersonnelNumbers(): string[] {
+  const section = screen.getByRole("region", { name: "Teilnehmende" });
+  return [...section.querySelectorAll("tbody tr")].map(
+    (row) =>
+      row.querySelector(".tp-secondary-line")?.textContent ??
+      row.querySelector("a")?.textContent ??
+      "",
+  );
+}
+
+/** A work-list row by its Personalnummer. */
+export async function worklistRow(personnelNumber: string): Promise<HTMLElement> {
+  const section = await worklistSection();
+  const cell = await section.findByText(personnelNumber, { selector: ".tp-secondary-line, a" });
+  return cell.closest("tr")!;
+}
+
+/** Sets one code filter in the "Filter" side panel and closes it. */
+export async function setWorklistFilter(label: string, value: string) {
+  await userEvent.click(
+    (await worklistSection()).getByRole("button", { name: /^Filter( \(\d+\))?$/ }),
+  );
+  const panel = await screen.findByRole("dialog", { name: "Filter" });
+  await userEvent.selectOptions(within(panel).getByLabelText(label), value);
+  await userEvent.click(within(panel).getByRole("button", { name: /Treffer anzeigen$/ }));
+}
+
+/** Opens a batch action from the batch bar (or its "Weitere Aktionen" menu). */
+export async function chooseBatchAction(label: string) {
+  // The bar only: a role query over the whole table is slow in jsdom.
+  const bar = await waitFor(() => {
+    const element = document.querySelector<HTMLElement>(".cds--batch-actions");
+    if (!element) throw new Error("No batch bar: nothing is selected");
+    return element;
+  });
+  const button = [...bar.querySelectorAll("button")].find((b) => b.textContent === label);
+  if (button) return userEvent.click(button);
+  const more = within(bar).getByText("Weitere Aktionen").closest("button")!;
+  await userEvent.click(more);
+  const menu = document.getElementById(more.getAttribute("aria-controls")!)!;
+  await userEvent.click(within(menu).getByText(label));
+}
+
+/** Shows a column the chooser offers (in memory only). */
+export async function showWorklistColumn(header: string) {
+  await userEvent.click(await screen.findByText("Spalten", { selector: "button" }));
+  await userEvent.click(screen.getByLabelText(header, { selector: "input[type=checkbox]" }));
 }

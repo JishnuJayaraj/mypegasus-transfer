@@ -1,8 +1,11 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
+import { forgetWorklistMemory } from "./components/worklist-state";
 
 afterEach(cleanup);
+// The work list's in-memory state (search term, columns, scroll) belongs to one test.
+afterEach(forgetWorklistMemory);
 
 // jsdom has no matchMedia; Carbon's UI shell queries it for the breakpoint.
 window.matchMedia ??= (query: string) =>

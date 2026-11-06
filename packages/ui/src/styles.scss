@@ -478,6 +478,45 @@ body {
   }
 }
 
+// The toolbar wraps on narrow screens instead of pushing the page sideways (D10).
+.tp-data-table .cds--table-toolbar {
+  block-size: auto;
+  min-block-size: $spacing-09;
+}
+
+.tp-data-table .cds--toolbar-content {
+  flex-wrap: wrap;
+  block-size: auto;
+
+  // The search takes the room the others leave, on their line while there is room.
+  .cds--toolbar-search-container-persistent {
+    flex: 1 1 14rem;
+    inline-size: auto;
+  }
+}
+
+// The batch bar in its own toolbar: in the flow, wrapping on narrow screens (D10), never wider
+// than the page.
+.tp-data-table .cds--batch-actions {
+  position: relative;
+  flex-wrap: wrap;
+  block-size: auto;
+  min-block-size: $spacing-09;
+  max-inline-size: 100%;
+}
+
+.tp-data-table .cds--batch-actions .cds--action-list {
+  flex-wrap: wrap;
+  block-size: auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+// A row that opens its object on click; its link stays the keyboard's way.
+.tp-data-table-row-link {
+  cursor: pointer;
+}
+
 .tp-column-chooser {
   display: flex;
   flex-wrap: wrap;
@@ -559,12 +598,84 @@ body {
   }
 }
 
-// The work list's filter bar and search (Slice 5).
-.tp-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: $spacing-05;
-  margin-block: $spacing-05;
+// The work list (ui-patterns.md; Slice 6b): quick views, active filters, cells with two lines.
+.tp-quick-views,
+.tp-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tp-filter-tags .cds--tag {
+  margin: 0;
+}
+
+// Compact choices: Carbon keeps room for an icon at a button's end; a quick view has none.
+.tp-quick-views .cds--btn {
+  padding-inline-end: $spacing-05;
+}
+
+.tp-filter-group {
+  legend {
+    @include type.type-style("heading-compact-01");
+
+    margin-block-end: $spacing-05;
+  }
+}
+
+// The toolbar's count line, at the start of the toolbar ("142 Teilnehmende · Stand 09:41").
+.tp-worklist-count {
+  @include type.type-style("body-compact-01");
+
+  flex: 0 1 auto;
+  align-self: center;
+  margin: 0;
+  padding-block: $spacing-03;
+  padding-inline: $spacing-05;
+  color: theme.$text-secondary;
+
+  @media (min-width: 42rem) {
+    white-space: nowrap;
+  }
+}
+
+.tp-two-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-secondary-line {
+  @include type.type-style("helper-text-01");
+
+  color: theme.$text-secondary;
+}
+
+.tp-status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-02;
+
+  .cds--tag {
+    margin: 0;
+  }
+}
+
+.tp-next-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  // A disclosure within the cell: the text colour, underlined, so it keeps its contrast on a
+  // selected or hovered row too (WCAG 1.4.3).
+  .cds--btn--ghost {
+    min-block-size: auto;
+    padding-inline: 0;
+    color: theme.$text-primary;
+    text-decoration: underline;
+  }
 }
 
 // Label/value pairs, such as a participant's data (Slice 2, PR 2h-1).

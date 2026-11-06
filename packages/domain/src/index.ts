@@ -877,6 +877,14 @@ export {
   type WorklistProject,
   type WorklistViewer,
 } from "./worklist/projection";
+export {
+  compareOpenSteps,
+  nextStep,
+  openSteps,
+  urgencyOrder,
+  type NextStepTier,
+  type OpenStep,
+} from "./worklist/next-step";
 export { matchesSearch, searchKey } from "./worklist/search";
 export {
   chooseChannel,

@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import {
@@ -52,12 +52,10 @@ const refused = (...errors: [string, string][]) =>
     errors: errors.map(([pointer, code]) => ({ pointer, code, detail: "Refused" })),
   });
 
+/** "Teilnehmende hinzufügen", the project page's primary action, opens the form in a panel. */
 async function open() {
-  const section = await screen.findByRole("region", { name: "Teilnehmende" });
-  await userEvent.click(
-    within(section).getByRole("button", { name: "Teilnehmende Person anlegen" }),
-  );
-  return section;
+  await userEvent.click(await screen.findByRole("button", { name: "Teilnehmende hinzufügen" }));
+  return within(await screen.findByRole("dialog", { name: "Teilnehmende Person anlegen" }));
 }
 const fill = async (label: string, value: string) =>
   userEvent.type(screen.getByLabelText(label), value);
@@ -74,10 +72,9 @@ describe("manual creation", () => {
       ...unpinnedConfig,
       capabilities: { ...unpinnedConfig.capabilities, importParticipations: false },
     });
-    const section = await screen.findByRole("region", { name: "Teilnehmende" });
-    expect(
-      within(section).queryByRole("button", { name: "Teilnehmende Person anlegen" }),
-    ).toBeNull();
+    await screen.findByRole("region", { name: "Teilnehmende" });
+    expect(screen.queryByRole("button", { name: "Teilnehmende hinzufügen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Aktionen" })).toBeNull();
   });
 
   it("sends the entered values and the wave, then offers the new person's page", async () => {
@@ -209,17 +206,24 @@ describe("manual creation", () => {
     ).toHaveAttribute("href", `/projects/${project.id}/participations/${existingId}`);
   });
 
-  it("says when the API refuses the PL, and can be cancelled", async () => {
+  it("says when the API refuses the PL; closing asks before discarding the input (C4)", async () => {
     setup(() => problem(403, "forbidden"));
-    const section = await open();
+    await open();
     await fillRequired();
     await userEvent.click(screen.getByRole("button", { name: "Anlegen" }));
     expect(
       await screen.findByText("Sie dürfen in diesem Projekt keine Teilnehmenden anlegen."),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
-    expect(
-      within(section).getByRole("button", { name: "Teilnehmende Person anlegen" }),
-    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Schließen" }));
+    const ask = await screen.findByRole("alertdialog", { name: "Änderungen verwerfen?" });
+    await userEvent.click(within(ask).getByRole("button", { name: "Verwerfen" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("button", { name: "Teilnehmende hinzufügen" })).toHaveFocus();
+  });
+
+  it("offers the import under Aktionen", async () => {
+    setup(() => json(created, 201));
+    await userEvent.click(await screen.findByRole("button", { name: "Aktionen" }));
+    expect(await screen.findByRole("menuitem", { name: "Datei importieren" })).toBeInTheDocument();
   });
 });

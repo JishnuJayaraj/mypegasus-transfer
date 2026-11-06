@@ -39,6 +39,8 @@
     "sortBy": "Nach {{column}} sortieren",
     "sortedAscending": "aufsteigend sortiert",
     "sortedDescending": "absteigend sortiert",
-    "actionsColumn": "Aktionen"
+    "actionsColumn": "Aktionen",
+    "moreActions": "Weitere Aktionen",
+    "batchBar": "Aktionen für die Auswahl"
   }
 }

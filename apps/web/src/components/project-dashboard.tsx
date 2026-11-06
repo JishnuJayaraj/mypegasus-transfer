@@ -6,13 +6,12 @@ import { formatDate, Link, Loading, SimpleTable } from "@transfer/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { dashboardQuery, entryWavesQuery, useApi } from "../api";
-import type de from "../locales/de/translation.json";
 import { useCountLabel, type LabelledGroup } from "./worklist-labels";
+import { tileLabelKey } from "./worklist-views";
 
 const RouterLink = createLink(Link);
 
 type Count = components["schemas"]["DashboardCount"];
-type TileKey = keyof typeof de.dashboard.tiles;
 
 /** A count as a link to "Teilnehmende" with the same filter (data-protection.md, the dashboard). */
 function CountLink({
@@ -61,7 +60,8 @@ export function ProjectDashboard({ projectId, taTg }: { projectId: string; taTg:
         {counts.tiles.map(({ key, count, filter }) => (
           <li key={key}>
             <CountLink projectId={projectId} filter={filter}>
-              <strong>{count}</strong> {t(`dashboard.tiles.${key as TileKey}`)}
+              {/* A tile that is a quick view has its label (the plan of Slice 6b, D6). */}
+              <strong>{count}</strong> {t(tileLabelKey(key))}
             </CountLink>
           </li>
         ))}

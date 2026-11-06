@@ -169,13 +169,16 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("tab", { name: "Teilnehmende" }).click();
   const participants = page.getByRole("region", { name: "Teilnehmende" });
   await expect(participants.getByRole("row")).toHaveCount(14);
-  await expect(participants.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
+  await expect(participants.getByText("BSP-0001", { exact: true })).toBeVisible();
   await expect(participants.getByRole("cell", { name: "Importiert" }).first()).toBeVisible();
   await expectAccessible(page);
 
   // The PL opens a participant's page, sees the updated address and
   // assigns the wave, then goes back to the project.
-  await participants.getByRole("link", { name: "BSP-0001", exact: true }).click();
+  await participants
+    .getByRole("row", { name: /BSP-0001\b/ })
+    .getByRole("link")
+    .click();
   await expect(page.getByRole("heading", { name: "Mustermann, Erika" })).toBeVisible();
   await expect(page.getByText(/^Neue Musterstraße 100, /)).toBeVisible();
   await expectAccessible(page);
@@ -202,7 +205,8 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await expect(participants.getByRole("row")).toHaveCount(14);
 
   // The PL adds one person by hand, through the import's rules.
-  await participants.getByRole("button", { name: "Teilnehmende Person anlegen" }).click();
+  // "Teilnehmende hinzufügen" is the page header's primary action; the form opens in a panel.
+  await page.getByRole("button", { name: "Teilnehmende hinzufügen" }).click();
   await page.getByLabel("Personalnummer", { exact: true }).fill("BSP-0100");
   await page.getByLabel("Nachname").fill("Beispiel");
   await page.getByLabel("Vorname").fill("Bernd");
@@ -213,7 +217,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByLabel("Ort", { exact: true }).fill("Beispielstadt");
   await expectAccessible(page);
   await page.getByRole("button", { name: "Anlegen", exact: true }).click();
-  await expect(participants.getByText("Teilnehmende Person angelegt")).toBeVisible();
+  await expect(page.getByText("Teilnehmende Person angelegt").first()).toBeVisible();
   await expect(participants.getByRole("row")).toHaveCount(15);
   await expectAccessible(page);
   await page.getByRole("tab", { name: "Einrichtung" }).click();
@@ -368,8 +372,11 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("tab", { name: "Teilnehmende" }).click();
   const list = page.getByRole("region", { name: "Teilnehmende" });
   await list.getByLabel("BSP-0001 auswählen").check({ force: true });
-  await list.getByLabel("Beraterin oder Berater").selectOption({ label: "Bernd Beratung" });
-  await list.getByRole("button", { name: "Zuweisen (1)", exact: true }).click();
+  // The batch bar (ui-patterns.md): "Berater zuweisen" opens its side panel.
+  await list.getByRole("button", { name: "Berater zuweisen" }).click();
+  const assignPanel = page.getByRole("dialog", { name: "Berater zuweisen" });
+  await assignPanel.getByLabel("Beraterin oder Berater").selectOption({ label: "Bernd Beratung" });
+  await assignPanel.getByRole("button", { name: "Zuweisen (1)", exact: true }).click();
   await expect(page.getByText("1 Teilnehmende zugewiesen")).toBeVisible();
   await expect(list.getByRole("row", { name: /BSP-0001/ })).toContainText("Bernd Beratung");
   await page.goto("/projects");
@@ -379,7 +386,7 @@ test("choose a dev user, see the seeded projects, create a project", async ({ pa
   await page.getByRole("tab", { name: "Teilnehmende" }).click();
   const assigned = page.getByRole("region", { name: "Teilnehmende" });
   await expect(assigned.getByRole("row")).toHaveCount(2);
-  await expect(assigned.getByRole("cell", { name: "BSP-0001", exact: true })).toBeVisible();
+  await expect(assigned.getByText("BSP-0001", { exact: true })).toBeVisible();
 });
 
 test("log out, log in again, and return to the login page when the session ends", async ({

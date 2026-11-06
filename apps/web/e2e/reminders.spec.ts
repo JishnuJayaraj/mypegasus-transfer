@@ -25,7 +25,7 @@ const outboxTo = async (staff: APIRequestContext, to: string) =>
 
 /** Selects the rows by Personalnummer through the in-memory search; the selection stays. */
 async function select(page: Page, personnelNumbers: string[]) {
-  const search = page.getByLabel("Name oder Personalnummer suchen");
+  const search = page.getByRole("searchbox", { name: "Name oder Personalnummer suchen" });
   await expect(search).toBeEnabled();
   for (const number of personnelNumbers) {
     await search.fill(number);
@@ -55,7 +55,8 @@ test("reminders: sent by email, skipped without a usable channel, and after cons
 
   await page.goto(`/projects/${projectId}?tab=participants`);
   await select(page, [personnelNumber(reachable), "REM-0001", personnelNumber(v1)]);
-  await page.getByRole("button", { name: "Erinnern (3)" }).click();
+  // The batch bar (ui-patterns.md): "Erinnern" opens the dialog.
+  await page.getByRole("button", { name: "Erinnern", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "An offene Punkte erinnern" });
   const counts = dialog.getByRole("list", { name: "Ausgewählte Teilnehmende" });
   await expect(counts.getByRole("listitem")).toHaveText([
@@ -111,7 +112,7 @@ test("reminders: sent by email, skipped without a usable channel, and after cons
   // The PL's next reminder reaches them; the first one's participant is skipped as recent.
   await page.reload();
   await select(page, [personnelNumber(v1), personnelNumber(reachable)]);
-  await page.getByRole("button", { name: "Erinnern (2)" }).click();
+  await page.getByRole("button", { name: "Erinnern", exact: true }).click();
   await expect(counts.getByRole("listitem")).toHaveText([
     "1 per E-Mail",
     /^1 kürzlich erinnert \(wieder ab \d{2}\.\d{2}\.\d{4}\)$/,

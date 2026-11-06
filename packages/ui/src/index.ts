@@ -5,6 +5,7 @@ export {
   ButtonSet,
   Checkbox,
   ComboBox,
+  DismissibleTag,
   FileUploaderButton,
   Form,
   InlineNotification,
@@ -18,7 +19,7 @@ export {
   SideNavLink,
   Stack,
   Tab,
-  TableBatchAction,
+  TableToolbarSearch,
   TabList,
   TabPanel,
   TabPanels,
@@ -30,6 +31,7 @@ export {
 export {
   Add,
   Edit,
+  Filter,
   Folder,
   Location,
   Logout,
@@ -40,9 +42,11 @@ export {
 } from "@carbon/icons-react";
 export { ActionButton } from "./action";
 export {
+  batchActionsShown,
   DataTable,
   nextSort,
   sortItems,
+  type BatchAction,
   type DataColumn,
   type RowAction,
   type SortDirection,

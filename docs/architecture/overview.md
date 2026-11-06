@@ -236,13 +236,26 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 
 - The tabs "Übersicht" (the dashboard), "Teilnehmende" (the work list), "Termine" (the
   appointments, PR 5b-1), "Einrichtung" (project setup, Agentur settings, waves, import) and
-  "Team"; the tab and the work list's code filters
-  are the route's search params (`?tab=participants&status=informed`), never a person's value.
-  Each tab loads its data only while shown.
+  "Team"; the tab, the work list's code filters and its sort
+  are the route's search params (`?tab=participants&status=informed&sort=-deadline`), never a
+  person's value. Each tab loads its data only while shown. The page header's primary action is
+  "Teilnehmende hinzufügen" (the manual creation in a side panel, with the import's capability),
+  and "Datei importieren" is in its "Aktionen".
 - One snapshot per project (`worklistQuery`, `GET /projects/{id}/worklist`) feeds the work list;
   its query key is the prefix of every participant query of the project, so a change to a
   participation refreshes the list and the dashboard alike. The domain's `WorklistFilter`,
   `matchesWorklistFilter`, `searchKey` and `mostUrgent` run in the browser as on the server.
+- **The work list on the kit** (Slice 6b, PR 6b-3; `apps/web/src/components/participants.tsx`,
+  ui-patterns.md): `DataTable` with six default columns (seven in `ta_tg`: Teilnehmende with the
+  Personalnummer as a second line, Status as three tags, Nächster Schritt, Frist, Beratung, Welle)
+  and the others in the column chooser; the default order is `urgencyOrder` (the next step's tiers,
+  process-and-lifecycle.md), computed once per snapshot in the browser, and a header sort replaces
+  it (`sort`, a code in the URL). Quick views (`worklist-views.ts`) are filters with the dashboard
+  tiles' labels; the 14 code filters are in the "Filter" side panel, the active ones tags above the
+  table. The batch bar exists only with a selection, its actions from the rows' capabilities, each
+  in a side panel or its existing dialog. The search term, the column choice, the rows shown and
+  the scroll position stay in a module's memory (`worklist-state.ts`), so the way back from a
+  participant restores them (C6) while a reload restores the defaults.
 - From PR 5-2 the work list's bulk "Erinnern" counts the selected rows by their
   `capabilities.remind` before sending, the column "Erinnert" shows the latest reminder, and the
   participant page has the tab "Nachrichten" (`apps/web/src/components/reminders.tsx`).
@@ -267,9 +280,9 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   offen" and the group "Agentur". **"Eskalationen"** (`/admin/escalations`, in the navigation of
   regional admins and the global admin; `GET /escalations`) lists counts per project and type with
   the PLs, never a participant.
-- **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende", "mit
-  offenen Angaben oder Unterlagen", "Frist in 14 Tagen", "Frist überschritten", "Hinweise", "nicht
-  erreichbar") and tables per status, track, wave, activation and notice state, deadline kind and
+- **The dashboard** ("Übersicht") shows tiles of distinct participations ("Teilnehmende",
+  "Angaben/Unterlagen fehlen", "In den nächsten 14 Tagen", "Überfällig", "Hinweise", "nicht
+  erreichbar"; a tile that is a work-list quick view has its label, Slice 6b) and tables per status, track, wave, activation and notice state, deadline kind and
   state and flag. Each count is defined as a `WorklistFilter` (`projectFunnel`, `funnelFilters`)
   and links to the work list with that filter, so a count and its drill-down are one predicate
   (a domain test holds `count = items.filter(filter).length`). Tables and tiles, no chart library
@@ -280,11 +293,10 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
 - From PR 5b-4 the work list's column "Termin" shows a row's most urgent appointment item (red for
   an overdue one, "+n weitere" beside it), else its next booking; the filter "Termine" takes the
   same values as the dashboard's group.
-- **Loading the work list:** until the snapshot has arrived the list says "Wird geladen…", the
-  search field and "Alle Treffer auswählen" are disabled and no empty state is shown; a refetch
-  after a bulk action keeps the previous snapshot visible with its time ("Stand 10:42") and keeps
-  "Alle Treffer auswählen" disabled until it is complete. The search field has
-  `autocomplete="off"`.
+- **Loading the work list:** until the snapshot has arrived the list shows a table skeleton with
+  the default columns' headers, no search, no selection and no empty state; a refetch after a
+  bulk action keeps the previous snapshot visible with its time ("Stand 10:42"). The search field
+  has `autocomplete="off"`.
 - **"Termine"** (PR 5b-1, `apps/web/src/components/appointments.tsx`): upcoming or past
   appointments (Art, Datum, Ort, Gastgeber·in, the API's count view "12 von 40" or "davon Ihre: 3"
   with "Plätze frei / ausgebucht", Status, "Klärung nötig" for the PL), "Infoveranstaltung
@@ -333,5 +345,7 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   measured on 2,000 synthetic participations: the API answers in under 1 s (best of three),
   opening "Teilnehmende" to the first result of a typed term in under 3 s, each further keystroke
   in under 100 ms (Chromium). They are always reported, fail above a ceiling of 5–10 times the
-  budget, and fail at the budget only with `PERF_BUDGET=strict` (`.env.example`).
+  budget, and fail at the budget only with `PERF_BUDGET=strict` (`.env.example`). From Slice 6b
+  the initial sort by the next step is measured too: from the snapshot's arrival to the first
+  rendered row over 2,000 participations, budget 500 ms (`worklist.spec.ts`).
 - Keep Carbon imports per-component to keep bundles small.

@@ -177,7 +177,9 @@
   `Cache-Control: private, no-store` and never enter analytics or telemetry. The name search runs
   in the browser over the snapshot (case and diacritics folded, `ß` as `ss`); the term is never
   sent, never in a URL, a query key, a log or browser storage, and the snapshot stays in memory.
-  Only the code filters sit in the URL. From Slice 5b each row carries its appointment items and
+  Only the code filters and the sort (a column code) sit in the URL. From Slice 6b the term, the
+  column choice and the scroll position are kept in the page's memory for the way back from a
+  participant (ui-patterns.md, C6), never in browser storage, so a reload forgets them. From Slice 5b each row carries its appointment items and
   next booking (process-and-lifecycle.md, appointment items): codes, ids and times, never a title
   or venue; the `needs_resolution` item only for the PL, who alone resolves it.
 - **Page titles (Slice 6b):** the staff app's document title names the page and its project

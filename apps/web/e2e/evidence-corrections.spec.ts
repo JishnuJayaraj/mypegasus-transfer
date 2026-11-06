@@ -172,7 +172,7 @@ test("slice 6-8: a wrong person's file accepted by mistake, invalidated after ap
   await page.goto(`/projects/${projectId}?tab=participants`);
   const item = page
     .getByRole("row")
-    .filter({ has: page.getByRole("link", { name: personnelNumber }) });
+    .filter({ has: page.getByText(personnelNumber, { exact: true }) });
   await expect(item).toContainText(`Nachweis ungültig (seit ${berlinToday()})`);
   await expect(item).toContainText("Informiert");
   await expectAccessible(page);

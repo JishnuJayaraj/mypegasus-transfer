@@ -2,7 +2,7 @@ import { createDb, seedProjectIds } from "@transfer/db";
 import { testDatabaseUrls } from "@transfer/db/testing";
 import { berlinDate } from "@transfer/domain";
 import type { Page } from "@playwright/test";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, showColumn, test } from "./helpers";
 import { activatedParticipant } from "./participants";
 
 // Attendance and `informed` (process-and-lifecycle.md, appointments: attendance): the PL creates
@@ -117,6 +117,7 @@ test("the work list: a missed info event under 'Termine überfällig' until the 
   const overdue = `/projects/${projectId}?tab=participants&appointment=overdue`;
   const row = () => page.getByRole("row").filter({ hasText: personnelNumber });
   await page.goto(overdue);
+  await showColumn(page, "Termin");
   await expect(row()).toContainText("Teilnahme nicht erfasst Infoveranstaltung vom");
 
   // "Teilnahme erfassen": nicht erschienen.
@@ -129,7 +130,13 @@ test("the work list: a missed info event under 'Termine überfällig' until the 
 
   // The work list's column "Termin" under the filter "Termine überfällig".
   await page.goto(overdue);
-  await expect(page.locator("#worklist-filter-appointment")).toHaveValue("overdue");
+  // The filter shows as an active tag (the filters themselves are in the "Filter" panel).
+  await expect(
+    page
+      .getByRole("list", { name: "Aktive Filter" })
+      .getByText("Termine: Termine überfällig", { exact: true }),
+  ).toBeVisible();
+  await showColumn(page, "Termin");
   await expect(row()).toContainText("Nicht erschienen Infoveranstaltung vom");
   await expectAccessible(page);
   // Wide enough for every column of the table, "Termin" included.
@@ -166,6 +173,11 @@ test("the work list: a missed info event under 'Termine überfällig' until the 
 
   // The item is gone from the work list.
   await page.goto(overdue);
-  await expect(page.locator("#worklist-filter-appointment")).toHaveValue("overdue");
-  await expect(page.getByRole("link", { name: personnelNumber })).toHaveCount(0);
+  // The filter shows as an active tag (the filters themselves are in the "Filter" panel).
+  await expect(
+    page
+      .getByRole("list", { name: "Aktive Filter" })
+      .getByText("Termine: Termine überfällig", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(personnelNumber, { exact: true })).toHaveCount(0);
 });

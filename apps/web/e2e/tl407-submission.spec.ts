@@ -8,7 +8,7 @@ import {
   seedStaffUserIds,
 } from "@transfer/db";
 import { activateAsOwner, call, pl, testDatabaseUrls } from "@transfer/db/testing";
-import { expect, expectAccessible, test } from "./helpers";
+import { expect, expectAccessible, showColumn, test } from "./helpers";
 
 // The TL 407's submission and the escalations (process-and-lifecycle.md, TL 407 submission;
 // data-protection.md, the regional view; D26, D27, Q57, Q189): an informed participant of Werk Nord
@@ -208,9 +208,10 @@ test("slice 6-5b: the TL 407 from the escalation through a rejection to the orig
 
   // The work list: "TL 407 eskaliert" first, the resubmission open (still unsubmitted).
   await page.goto(`/projects/${projectId}?tab=participants&agentur=tl407_resubmission_open`);
+  await showColumn(page, "Agentur");
   const row = page
     .getByRole("row")
-    .filter({ has: page.getByRole("link", { name: `E2E-${participationId.slice(0, 8)}` }) });
+    .filter({ has: page.getByText(`E2E-${participationId.slice(0, 8)}`, { exact: true }) });
   await expect(row).toContainText(agenturKey);
   await expect(row).toContainText("TL 407 eskaliert");
   await expectAccessible(page);

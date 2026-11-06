@@ -14,6 +14,8 @@ import {
   unpinnedConfig,
   worklist,
   worklistItem,
+  chooseBatchAction,
+  worklistRow,
 } from "./test-utils";
 
 // Teams, assignments and the project's region (Q62, Q126): what the PL and the global admin are
@@ -159,17 +161,15 @@ describe("assignments (Q62)", () => {
       [`POST ${path}/assignments`]: () => json({ assigned: 1 }),
     });
     renderApp(`/projects/${project.id}?tab=participants`, api);
-    await screen.findByRole("cell", { name: "BSP-0001" });
-    const list = within(
-      document.querySelector<HTMLElement>('[aria-labelledby="project-participants"]')!,
-    );
-    const row = (await list.findByRole("cell", { name: "BSP-0001" })).closest("tr")!;
+    const row = await worklistRow("BSP-0001");
     expect(within(row).getByRole("cell", { name: "Bernd Beratung" })).toBeInTheDocument();
-    const assign = list.getByRole("button", { name: "Zuweisen (0)" });
-    expect(assign).toBeDisabled();
-    await userEvent.click(list.getByLabelText("BSP-0002 auswählen"));
-    await userEvent.selectOptions(list.getByLabelText("Beraterin oder Berater"), consultant.id);
-    await userEvent.click(list.getByRole("button", { name: "Zuweisen (1)" }));
+    // No bulk control without a selection (ui-patterns.md, principle 2).
+    expect(screen.queryByRole("button", { name: "Berater zuweisen" })).toBeNull();
+    await userEvent.click(screen.getByLabelText("BSP-0002 auswählen"));
+    await chooseBatchAction("Berater zuweisen");
+    const panel = within(await screen.findByRole("dialog", { name: "Berater zuweisen" }));
+    await userEvent.selectOptions(panel.getByLabelText("Beraterin oder Berater"), consultant.id);
+    await userEvent.click(panel.getByRole("button", { name: "Zuweisen (1)" }));
     await waitFor(() =>
       expect(calls).toContainEqual({
         key: `POST ${path}/assignments`,
@@ -188,9 +188,9 @@ describe("assignments (Q62)", () => {
         json({ ...team, capabilities: { ...team.capabilities, assignParticipations: false } }),
     });
     renderApp(`/projects/${project.id}?tab=participants`, api);
-    expect(await screen.findByRole("cell", { name: "BSP-0001" })).toBeInTheDocument();
+    await worklistRow("BSP-0001");
     expect(screen.queryByLabelText("BSP-0002 auswählen")).toBeNull();
-    expect(screen.queryByRole("button", { name: /Zuweisen/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /zuweisen/i })).toBeNull();
   });
 });
 

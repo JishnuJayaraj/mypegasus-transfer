@@ -12,7 +12,7 @@ import {
   Stack,
   TextInput,
 } from "@transfer/ui";
-import { useState, type FormEvent } from "react";
+import { useLayoutEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, projectQuery, useApi } from "../api";
 import type de from "../locales/de/translation.json";
@@ -62,8 +62,9 @@ type Refusal = {
  */
 export function ManualParticipationForm(props: {
   projectId: string;
-  onCancel: () => void;
   onCreated: (detail: Detail) => void;
+  /** Whether anything was entered (ui-patterns.md, C4: the side panel asks before discarding). */
+  onDirtyChange: (dirty: boolean) => void;
 }) {
   const { projectId } = props;
   const { t } = useTranslation();
@@ -74,6 +75,10 @@ export function ManualParticipationForm(props: {
   const [confirmWarnings, setConfirmWarnings] = useState(false);
   const [createDespiteDuplicate, setCreateDespiteDuplicate] = useState(false);
   const [refusal, setRefusal] = useState<Refusal | null>(null);
+  const dirty = waveId !== "" || Object.values(values).some((value) => value?.trim());
+  const { onDirtyChange } = props;
+  // A layout effect, so an Escape right after typing already asks (ui-patterns.md, C4).
+  useLayoutEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
   const message = (code: string) =>
     t(`manual.issues.${code as IssueCode}`, { defaultValue: t("manual.issues.failed") });
 
@@ -155,7 +160,6 @@ export function ManualParticipationForm(props: {
   return (
     <Form className="tp-form" onSubmit={submit} noValidate>
       <Stack gap={5}>
-        <h3>{t("manual.title")}</h3>
         <p>{t("manual.intro")}</p>
         {formCodes.map((code) => (
           <InlineNotification key={code} kind="error" title={message(code)} hideCloseButton />
@@ -211,9 +215,6 @@ export function ManualParticipationForm(props: {
           />
         )}
         <div>
-          <Button kind="secondary" onClick={props.onCancel}>
-            {t("manual.cancel")}
-          </Button>
           <Button type="submit" disabled={create.isPending}>
             {t("manual.submit")}
           </Button>

@@ -544,23 +544,20 @@
     "forbidden": "Sie dürfen die Teilnehmenden dieses Projekts nicht sehen.",
     "failed": "Die Teilnehmenden konnten nicht geladen werden.",
     "columns": {
-      "personnelNumber": "Personalnummer",
-      "lastName": "Nachname",
-      "firstName": "Vorname",
       "status": "Status",
       "profilingStatus": "Profiling",
       "dsvStatus": "DSV",
-      "select": "Auswahl",
       "consultants": "Beratung",
       "activationStatus": "Aktivierung",
       "privacyNoticeState": "Datenschutzhinweis",
       "wave": "Welle",
-      "open": "Offen",
       "deadline": "Frist",
       "portal": "Portal",
       "reminded": "Erinnert",
       "appointment": "Termin",
-      "agentur": "Agentur"
+      "agentur": "Agentur",
+      "participant": "Teilnehmende",
+      "nextStep": "Nächster Schritt"
     },
     "statuses": {
       "imported": "Importiert",
@@ -629,7 +626,9 @@
       "letters": "Aktivierungsbriefe drucken",
       "sheets": "Aktivierungsblätter drucken",
       "notices": "Datenschutzhinweis drucken",
-      "failed": "Die Ausgabe konnte nicht erstellt werden. Es wurde nichts teilweise ausgestellt."
+      "failed": "Die Ausgabe konnte nicht erstellt werden. Es wurde nichts teilweise ausgestellt.",
+      "notAllIssuable": "Codes nur für alle oder keinen: {{count}} von {{total}} Ausgewählten können einen Code erhalten.",
+      "notAllNoticeable": "Datenschutzhinweis nur für alle oder keinen: {{count}} von {{total}} Ausgewählten können ihn erhalten."
     },
     "print": {
       "letter": "Aktivierungsbriefe",
@@ -1092,7 +1091,7 @@
     }
   },
   "manual": {
-    "add": "Teilnehmende Person anlegen",
+    "add": "Teilnehmende hinzufügen",
     "title": "Teilnehmende Person anlegen",
     "intro": "Es gelten dieselben Regeln wie beim Import. Die Personalnummer ist Pflicht: Sie ist der eindeutige Schlüssel, über den spätere Importe die Person finden, und wird nie automatisch vergeben. Eine vorhandene Personalnummer wird nicht überschrieben; Änderungen kommen über einen erneuten Import.",
     "dateHint": "TT.MM.JJJJ",
@@ -1172,7 +1171,8 @@
       "import_busy": "Gerade laufen mehrere Importe. Bitte versuchen Sie es in einigen Sekunden erneut.",
       "personnel_number_taken": "Diese Personalnummer gibt es in diesem Projekt bereits.",
       "value_invalid": "Ungültiger Wert; bitte korrigieren oder leer lassen"
-    }
+    },
+    "import": "Datei importieren"
   },
   "kug200aHeader": {
     "title": "Kopf der Kug 200a",
@@ -1316,12 +1316,8 @@
     "matches_one": "{{count}} Treffer",
     "matches_other": "{{count}} Treffer",
     "noMatches": "Keine Teilnehmenden entsprechen der Suche und den Filtern.",
-    "selectAll": "Alle Treffer auswählen",
-    "clearSelection": "Auswahl aufheben",
     "selected_one": "{{count}} ausgewählt",
     "selected_other": "{{count}} ausgewählt",
-    "showMore": "Weitere anzeigen",
-    "shownOf": "{{shown}} von {{count}} angezeigt",
     "filters": {
       "title": "Filter",
       "all": "Alle",
@@ -1343,7 +1339,10 @@
       "noConsultant": "Nicht zugewiesen",
       "anyFlag": "Mit Hinweis",
       "appointment": "Termine",
-      "agentur": "Agentur"
+      "agentur": "Agentur",
+      "titleActive": "Filter ({{count}})",
+      "done_one": "{{count}} Treffer anzeigen",
+      "done_other": "{{count}} Treffer anzeigen"
     },
     "actionsFilter": {
       "any": "Mit offenen Angaben oder Unterlagen",
@@ -1356,8 +1355,6 @@
       "missing": "fehlt",
       "rejected": "abgelehnt"
     },
-    "openCount_one": "{{count}} offen",
-    "openCount_other": "{{count}} offen",
     "nothingOpen": "Nichts offen",
     "deadlineKinds": {
       "offer_deadline": "DSV-Angebotsfrist",
@@ -1445,7 +1442,6 @@
       "checklist": "Vor dem Druck von Hand zu ergänzen:",
       "noChecklist": "Alle Pflichtangaben sind vorbefüllt.",
       "print": "Druckdatei öffnen",
-      "close": "Schließen",
       "failed": "Die Kug 200b konnten nicht erzeugt werden; es wurde keiner erzeugt.",
       "row": "{{name}}: {{items}}"
     },
@@ -1463,6 +1459,43 @@
       "tl407_original_missing": "Original fehlt (übermittelt am {{date}})",
       "kug200b_confirmation_missing": "Bestätigung Kug 200b fehlt (übermittelt am {{date}})",
       "ba_report_pending": "BA-Meldung offen (seit {{date}})"
+    },
+    "views": {
+      "label": "Schnellansichten",
+      "withCount": "{{view}} ({{count}})",
+      "all": "Alle",
+      "overdue": "Überfällig",
+      "upcoming": "In den nächsten 14 Tagen",
+      "actions": "Angaben/Unterlagen fehlen",
+      "flags": "Hinweise",
+      "appointmentsToResolve": "Termine zu klären",
+      "noConsultant": "Ohne Beratung",
+      "mine": "Mir zugewiesen"
+    },
+    "filterGroups": {
+      "status": "Status",
+      "dates": "Fristen & Termine",
+      "responsibility": "Zuständigkeit",
+      "reach": "Erreichbarkeit"
+    },
+    "activeFilters": "Aktive Filter",
+    "removeFilter": "Filter entfernen: {{filter}}",
+    "total_one": "{{count}} Teilnehmende",
+    "total_other": "{{count}} Teilnehmende",
+    "assignedTotal_one": "{{count}} Ihrer zugewiesenen Teilnehmenden",
+    "assignedTotal_other": "{{count}} Ihrer zugewiesenen Teilnehmenden",
+    "rowOpen": "Öffnen",
+    "overdueTag": "Überfällig",
+    "moreSteps_one": "+{{count}} weitere",
+    "moreSteps_other": "+{{count}} weitere",
+    "batch": {
+      "assign": "Berater zuweisen",
+      "wave": "Welle zuweisen",
+      "remind": "Erinnern",
+      "invite": "Einladen",
+      "kug200b": "Kug 200b erzeugen",
+      "activation": "Aktivierung drucken",
+      "applies": "Betrifft {{count}} von {{total}} ausgewählten Teilnehmenden."
     }
   },
   "dashboard": {
@@ -1474,13 +1507,8 @@
     "showList": "{{count}}, in der Liste zeigen",
     "tiles": {
       "participations": "Teilnehmende",
-      "open_actions": "mit offenen Angaben oder Unterlagen",
-      "deadline_upcoming": "Frist in 14 Tagen",
-      "deadline_overdue": "Frist überschritten",
-      "flags": "Hinweise",
       "not_reachable": "nicht erreichbar",
       "appointments_overdue": "Termine überfällig",
-      "appointments_to_resolve": "Termine zu klären",
       "agentur_open": "Agentur offen"
     },
     "groups": {
