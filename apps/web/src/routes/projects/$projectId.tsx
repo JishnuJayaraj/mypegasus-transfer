@@ -206,12 +206,15 @@ function EntryWaves({ projectId }: { projectId: string }) {
         columns={columns.map((key) => ({ key, header: t(`projectDetail.columns.${key}`) }))}
         rows={rows}
         emptyState={t("projectDetail.wavesEmpty")}
+        footer={
+          editing === null && (
+            <Button renderIcon={Add} onClick={() => setEditing("new")}>
+              {t("projectDetail.addWave")}
+            </Button>
+          )
+        }
       />
-      {editing === null ? (
-        <Button className="tp-load-more" renderIcon={Add} onClick={() => setEditing("new")}>
-          {t("projectDetail.addWave")}
-        </Button>
-      ) : (
+      {editing !== null && (
         <EntryWaveForm
           key={editing}
           projectId={projectId}

@@ -13,6 +13,7 @@ import {
   formatDate,
   formatTimestamp,
   InlineNotification,
+  Loading,
   parseDisplayDate,
   RadioButton,
   RadioButtonGroup,
@@ -71,7 +72,7 @@ export function AsuTab({ detail }: { detail: Detail }) {
   const [busy, setBusy] = useState(false);
   const path = { participationId: detail.id };
 
-  if (query.isPending) return <p aria-live="polite">{t("asu.loading")}</p>;
+  if (query.isPending) return <Loading label={t("asu.loading")} />;
   if (query.isError) {
     return <InlineNotification kind="error" title={t("asu.failed")} hideCloseButton lowContrast />;
   }

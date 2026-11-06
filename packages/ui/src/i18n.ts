@@ -1,3 +1,5 @@
+import uiDe from "./locales/de.json";
+import uiEn from "./locales/en.json";
 import { createInstance, type i18n, type Resource } from "i18next";
 import { initReactI18next } from "react-i18next";
 
@@ -34,3 +36,9 @@ export function syncDocumentLanguage(
   apply(instance.resolvedLanguage ?? instance.language);
   instance.on("languageChanged", apply);
 }
+
+/** The kit's own i18n namespace; each SPA adds it to its instance, like the wizard's. */
+export const UI_NAMESPACE = "ui";
+
+/** The kit's catalogs (de, en), with identical keys (locales.test.ts). */
+export const uiResources = { de: uiDe, en: uiEn } as const;

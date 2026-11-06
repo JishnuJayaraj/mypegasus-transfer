@@ -1,7 +1,15 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { json, mockApi, problem, regions, renderApp, staffUsers } from "./test-utils";
+import {
+  chooseRowAction,
+  json,
+  mockApi,
+  problem,
+  regions,
+  renderApp,
+  staffUsers,
+} from "./test-utils";
 
 // Org administration (Q126): the global admin's staff accounts, org roles and regions. The
 // navigation shows them to the global admin only; the API refuses everyone else.
@@ -97,12 +105,14 @@ describe("/admin/staff", () => {
         json(account(body as object)),
     });
     renderApp("/admin/staff", api);
-    await userEvent.click(await screen.findByRole("button", { name: "Bernd Beratung bearbeiten" }));
+    await chooseRowAction("Bernd Beratung", "Bearbeiten");
     const roles = within(
       (await screen.findByRole("heading", { name: "Organisationsrollen" })).closest("section")!,
     );
     const add = roles.getByRole("button", { name: "Rolle hinzufügen" });
+    // Authorised but blocked: the prerequisite as text (ui-patterns.md, C1).
     expect(add).toBeDisabled();
+    expect(add).toHaveAccessibleDescription("Erst eine Region wählen.");
     await userEvent.selectOptions(
       roles.getByLabelText("Region (Niederlassung)"),
       await roles.findByRole("option", { name: "Niederlassung Süd (SUED)" }),
@@ -128,7 +138,7 @@ describe("/admin/staff", () => {
           : json(account({ deactivatedAt: "2026-10-20T08:00:00.000000Z" })),
     });
     renderApp("/admin/staff", api);
-    await userEvent.click(await screen.findByRole("button", { name: "Bernd Beratung bearbeiten" }));
+    await chooseRowAction("Bernd Beratung", "Bearbeiten");
     await userEvent.click(await screen.findByRole("button", { name: "Konto deaktivieren" }));
     expect(screen.getByText("Bernd Beratung wirklich deaktivieren?")).toBeInTheDocument();
     expect(calls.some((c) => c.key.endsWith("/deactivation"))).toBe(false);
@@ -138,6 +148,63 @@ describe("/admin/staff", () => {
     await userEvent.click(screen.getByRole("button", { name: "Konto deaktivieren" }));
     await userEvent.click(screen.getByRole("button", { name: "Konto deaktivieren" }));
     expect(await screen.findByText("Konto deaktiviert")).toBeInTheDocument();
+  });
+});
+
+describe("/admin/staff side panel (ui-patterns.md, C4)", () => {
+  it("asks before discarding an edited account; Escape keeps the input", async () => {
+    renderApp("/admin/staff", setup().api);
+    await chooseRowAction("Bernd Beratung", "Bearbeiten");
+    const panel = await screen.findByRole("dialog", { name: "Bernd Beratung" });
+    const name = within(panel).getByLabelText("Name");
+    await userEvent.type(name, " Neu");
+    await userEvent.keyboard("{Escape}");
+    expect(
+      await screen.findByRole("alertdialog", { name: "Änderungen verwerfen?" }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Weiter bearbeiten" })).toHaveFocus(),
+    );
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(name).toHaveValue("Bernd Beratung Neu");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(await screen.findByRole("button", { name: "Verwerfen" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(localStorage.length + sessionStorage.length).toBe(0);
+  });
+
+  it("closes an unchanged account without asking", async () => {
+    renderApp("/admin/staff", setup().api);
+    await chooseRowAction("Bernd Beratung", "Bearbeiten");
+    const panel = await screen.findByRole("dialog", { name: "Bernd Beratung" });
+    await userEvent.click(within(panel).getByLabelText("Name"));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("offers no edit action for a deactivated account", async () => {
+    const { api } = setup({
+      "GET /api/v1/staff-users": () =>
+        json({
+          items: [
+            account(),
+            account({
+              id: "00000000-0000-4000-8000-000000000008",
+              displayName: "Dora Deaktiviert",
+              deactivatedAt: "2026-10-20T08:00:00.000000Z",
+            }),
+          ],
+          nextCursor: null,
+        }),
+    });
+    renderApp("/admin/staff", api);
+    expect(await screen.findByRole("cell", { name: "Dora Deaktiviert" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Aktionen für Bernd Beratung" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Aktionen für Dora Deaktiviert" }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -160,7 +227,7 @@ describe("/admin/regions", () => {
         body: { code: "OST", name: "Niederlassung Ost" },
       }),
     );
-    await userEvent.click(await screen.findByRole("button", { name: "NORD bearbeiten" }));
+    await chooseRowAction("NORD", "Bearbeiten");
     const name = screen.getByLabelText("Name");
     await userEvent.clear(name);
     await userEvent.type(name, "Nord");

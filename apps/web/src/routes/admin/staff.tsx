@@ -8,23 +8,30 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { CreateStaffUserInput } from "@transfer/domain";
 import {
+  ActionButton,
+  Add,
   Button,
   ButtonSet,
   Checkbox,
+  DataTable,
+  EmptyState,
   Form,
   InlineNotification,
   PageHeader,
+  Section,
   Select,
   SelectItem,
-  SimpleTable,
+  SidePanel,
   Stack,
   Tag,
   TextInput,
   useToast,
+  type DataColumn,
 } from "@transfer/ui";
-import { useState, type FormEvent } from "react";
+import { useCallback, useLayoutEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { regionsQuery, staffAccountsQuery, useApi } from "../../api";
+import { usePanelNavigationGuard } from "../../components/panel-guard";
 import { RouteError } from "../../components/route-error";
 import { usePageTitle } from "../../page-title";
 
@@ -43,23 +50,23 @@ export const Route = createFileRoute("/admin/staff")({
   errorComponent: RouteError,
 });
 
-const columns = [
-  "displayName",
-  "email",
-  "orgRoles",
-  "mayCreateProjects",
-  "state",
-  "actions",
-] as const;
-
 /** The code of a refusal, or "failed". */
 const codeOf = (error: unknown) =>
   error instanceof ApiProblemError ? (error.problem.errors?.[0]?.code ?? "failed") : "failed";
 
 /**
+ * Reports a form's unsaved state to the panel that holds it (ui-patterns.md, C4); a layout effect,
+ * so an Escape right after typing already sees it.
+ */
+function useReportDirty(dirty: boolean, onDirtyChange: (dirty: boolean) => void) {
+  useLayoutEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange]);
+}
+
+/**
  * Staff accounts (Q7, Q126): only the global admin creates and changes them, grants org roles
  * (admin global, the regional roles per region), sets "may create projects" and deactivates them.
- * Accounts are never deleted (Q59). The API refuses everyone else.
+ * Accounts are never deleted (Q59). The API refuses everyone else. A new or the chosen account
+ * opens in a side panel.
  */
 function StaffPage() {
   const { t } = useTranslation();
@@ -69,65 +76,138 @@ function StaffPage() {
   const regions = useQuery(regionsQuery(api));
   const regionLabel = (id: string | null) =>
     regions.data?.find((region) => region.id === id)?.code ?? "";
-  // "new", an account's id, or no form.
+  // "new", an account's id, or no panel; the focus returns to the row's menu.
   const [editing, setEditing] = useState<string | null>(null);
+  const [launcher, setLauncher] = useState<HTMLElement | null>(null);
+  // The panel's forms that have unsaved input.
+  const [dirtyParts, setDirtyParts] = useState<ReadonlySet<string>>(new Set());
+  const dirty = editing !== null && dirtyParts.size > 0;
+  const pendingNavigation = usePanelNavigationGuard(dirty);
+  const setPart = useCallback(
+    (part: string, on: boolean) =>
+      setDirtyParts((current) => {
+        if (current.has(part) === on) return current;
+        const next = new Set(current);
+        if (on) next.add(part);
+        else next.delete(part);
+        return next;
+      }),
+    [],
+  );
+  const accountDirty = useCallback((on: boolean) => setPart("account", on), [setPart]);
+  const rolesDirty = useCallback((on: boolean) => setPart("roles", on), [setPart]);
+  const close = () => {
+    setEditing(null);
+    setDirtyParts(new Set());
+  };
   const accounts = query.data.pages.flatMap((page) => page.items);
-  const rows = accounts.map((account) => ({
-    id: account.id,
-    displayName: account.displayName,
-    email: account.email,
-    orgRoles: (
-      <>
-        {account.orgRoles.map((grant) => (
+  const columns: DataColumn<Account>[] = [
+    {
+      key: "displayName",
+      header: t("adminStaff.columns.displayName"),
+      render: (account) => account.displayName,
+      sortValue: (account) => account.displayName,
+      alwaysVisible: true,
+    },
+    {
+      key: "email",
+      header: t("adminStaff.columns.email"),
+      render: (account) => account.email,
+      sortValue: (account) => account.email,
+    },
+    {
+      key: "orgRoles",
+      header: t("adminStaff.columns.orgRoles"),
+      render: (account) =>
+        account.orgRoles.map((grant) => (
           <Tag key={`${grant.role}:${grant.regionId}`} type="gray" size="sm">
             {[t(`session.roles.${grant.role}`), regionLabel(grant.regionId)]
               .filter(Boolean)
               .join(" · ")}
           </Tag>
-        ))}
-      </>
-    ),
-    mayCreateProjects: account.mayCreateProjects ? t("adminStaff.yes") : t("adminStaff.no"),
-    state: account.deactivatedAt ? t("adminStaff.deactivated") : t("adminStaff.active"),
-    actions: !account.deactivatedAt && (
-      <Button kind="ghost" size="sm" onClick={() => setEditing(account.id)}>
-        {t("adminStaff.edit", { name: account.displayName })}
-      </Button>
-    ),
-  }));
+        )),
+    },
+    {
+      key: "mayCreateProjects",
+      header: t("adminStaff.columns.mayCreateProjects"),
+      render: (account) => (account.mayCreateProjects ? t("adminStaff.yes") : t("adminStaff.no")),
+      sortValue: (account) => (account.mayCreateProjects ? 0 : 1),
+    },
+    {
+      key: "state",
+      header: t("adminStaff.columns.state"),
+      render: (account) =>
+        account.deactivatedAt ? t("adminStaff.deactivated") : t("adminStaff.active"),
+      sortValue: (account) => (account.deactivatedAt ? 1 : 0),
+    },
+  ];
   const chosen = accounts.find((account) => account.id === editing);
   return (
     <>
-      <PageHeader title={t("adminStaff.title")} />
-      <SimpleTable
+      <PageHeader
         title={t("adminStaff.title")}
-        columns={columns.map((key) => ({ key, header: t(`adminStaff.columns.${key}`) }))}
-        rows={rows}
-        emptyState={t("adminStaff.empty")}
+        primaryAction={
+          <Button
+            renderIcon={Add}
+            onClick={() => {
+              setLauncher(null);
+              setEditing("new");
+            }}
+          >
+            {t("adminStaff.create")}
+          </Button>
+        }
       />
-      {query.hasNextPage && (
-        <Button
-          className="tp-load-more"
-          kind="tertiary"
-          disabled={query.isFetchingNextPage}
-          onClick={() => query.fetchNextPage()}
-        >
-          {t("projects.loadMore")}
-        </Button>
-      )}
-      {editing === null && (
-        <Button className="tp-load-more" onClick={() => setEditing("new")}>
-          {t("adminStaff.create")}
-        </Button>
-      )}
-      {editing === "new" && <AccountForm key="new" onDone={() => setEditing(null)} />}
-      {chosen && (
-        <Stack gap={7} key={chosen.id}>
-          <AccountForm account={chosen} onDone={() => setEditing(null)} />
-          <OrgRoles account={chosen} />
-          <Deactivation account={chosen} onDone={() => setEditing(null)} />
-        </Stack>
-      )}
+      <DataTable
+        title={t("adminStaff.title")}
+        items={accounts}
+        columns={columns}
+        rowLabel={(account) => account.displayName}
+        // A deactivated account can't be changed (Q59).
+        rowActions={(account) =>
+          account.deactivatedAt
+            ? []
+            : [
+                {
+                  label: t("adminStaff.editAction"),
+                  onClick: (trigger) => {
+                    setLauncher(trigger);
+                    setEditing(account.id);
+                  },
+                },
+              ]
+        }
+        loadMore={
+          query.hasNextPage
+            ? { onClick: () => void query.fetchNextPage(), pending: query.isFetchingNextPage }
+            : undefined
+        }
+        emptyState={
+          <EmptyState
+            variant="noData"
+            title={t("adminStaff.empty")}
+            description={t("adminStaff.emptyText")}
+          />
+        }
+      />
+      <SidePanel
+        open={editing === "new" || chosen !== undefined}
+        title={chosen ? chosen.displayName : t("adminStaff.create")}
+        label={t("adminStaff.title")}
+        dirty={dirty}
+        onClose={close}
+        pendingNavigation={pendingNavigation}
+        returnFocusTo={launcher}
+      >
+        {editing === "new" && <AccountForm key="new" onDone={close} onDirtyChange={accountDirty} />}
+        {chosen && (
+          <Stack gap={7} key={chosen.id}>
+            <AccountForm account={chosen} onDone={close} onDirtyChange={accountDirty} />
+            <OrgRoles account={chosen} onDirtyChange={rolesDirty} />
+            <Deactivation account={chosen} onDone={close} />
+          </Stack>
+        )}
+      </SidePanel>
     </>
   );
 }
@@ -139,7 +219,15 @@ function useRefresh() {
 }
 
 /** A new account, or the name, email and project-creation flag of an existing one. */
-function AccountForm({ account, onDone }: { account?: Account; onDone: () => void }) {
+function AccountForm({
+  account,
+  onDone,
+  onDirtyChange,
+}: {
+  account?: Account;
+  onDone: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const refresh = useRefresh();
@@ -149,6 +237,12 @@ function AccountForm({ account, onDone }: { account?: Account; onDone: () => voi
   const [mayCreateProjects, setMayCreateProjects] = useState(account?.mayCreateProjects ?? false);
   const [invalid, setInvalid] = useState<ReadonlySet<string>>(new Set());
   const [refusal, setRefusal] = useState<string | null>(null);
+  useReportDirty(
+    displayName !== (account?.displayName ?? "") ||
+      email !== (account?.email ?? "") ||
+      mayCreateProjects !== (account?.mayCreateProjects ?? false),
+    onDirtyChange,
+  );
   const save = useMutation({
     mutationFn: async () => {
       if (!account) {
@@ -186,7 +280,6 @@ function AccountForm({ account, onDone }: { account?: Account; onDone: () => voi
   return (
     <Form className="tp-form" onSubmit={submit} noValidate aria-label={t("adminStaff.account")}>
       <Stack gap={6}>
-        <h2>{account ? account.displayName : t("adminStaff.create")}</h2>
         {refusal && (
           <InlineNotification
             kind="error"
@@ -220,21 +313,25 @@ function AccountForm({ account, onDone }: { account?: Account; onDone: () => voi
           checked={mayCreateProjects}
           onChange={(_, { checked }) => setMayCreateProjects(checked)}
         />
-        <ButtonSet>
-          <Button kind="secondary" onClick={onDone}>
-            {account ? t("adminStaff.close") : t("projectForm.cancel")}
-          </Button>
+        {/* Closing is the panel's (×, Escape), which asks before discarding (C4). */}
+        <div>
           <Button type="submit" disabled={save.isPending}>
             {account ? t("adminStaff.save") : t("adminStaff.create")}
           </Button>
-        </ButtonSet>
+        </div>
       </Stack>
     </Form>
   );
 }
 
 /** The account's org roles as one set: removed and added here, saved together (PUT). */
-function OrgRoles({ account }: { account: Account }) {
+function OrgRoles({
+  account,
+  onDirtyChange,
+}: {
+  account: Account;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const refresh = useRefresh();
@@ -247,6 +344,17 @@ function OrgRoles({ account }: { account: Account }) {
   const key = (grant: Grant) => `${grant.role}:${grant.regionId ?? ""}`;
   const candidate: Grant | null =
     role === "admin" ? { role, regionId: null } : regionId ? { role, regionId } : null;
+  const saved = new Set(account.orgRoles.map(key));
+  useReportDirty(
+    grants.length !== saved.size || grants.some((grant) => !saved.has(key(grant))),
+    onDirtyChange,
+  );
+  // Authorised but not yet possible: the prerequisite next to the button (ui-patterns.md, C1).
+  const addBlocked = !candidate
+    ? t("adminStaff.chooseRegionFirst")
+    : grants.some((g) => key(g) === key(candidate))
+      ? t("adminStaff.roleExists")
+      : null;
   const save = useMutation({
     mutationFn: () =>
       api.PUT("/api/v1/staff-users/{staffUserId}/org-roles", {
@@ -267,34 +375,35 @@ function OrgRoles({ account }: { account: Account }) {
       .join(" · ");
   };
   return (
-    <section aria-labelledby="staff-org-roles" className="tp-section tp-form">
-      <h2 id="staff-org-roles">{t("adminStaff.orgRoles")}</h2>
-      {refusal && (
-        <InlineNotification
-          kind="error"
-          title={t(`adminStaff.errors.${refusal}`, { defaultValue: t("adminStaff.errors.failed") })}
-          onClose={() => setRefusal(null)}
-        />
-      )}
-      {grants.length === 0 ? (
-        <p>{t("adminStaff.noOrgRoles")}</p>
-      ) : (
-        <ul>
-          {grants.map((grant) => (
-            <li key={key(grant)}>
-              {label(grant)}{" "}
-              <Button
-                kind="ghost"
-                size="sm"
-                onClick={() => setGrants(grants.filter((g) => key(g) !== key(grant)))}
-              >
-                {t("adminStaff.removeRole", { role: label(grant) })}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="tp-bulk-actions">
+    <Section title={t("adminStaff.orgRoles")} level={3}>
+      <Stack gap={5}>
+        {refusal && (
+          <InlineNotification
+            kind="error"
+            title={t(`adminStaff.errors.${refusal}`, {
+              defaultValue: t("adminStaff.errors.failed"),
+            })}
+            onClose={() => setRefusal(null)}
+          />
+        )}
+        {grants.length === 0 ? (
+          <p>{t("adminStaff.noOrgRoles")}</p>
+        ) : (
+          <ul>
+            {grants.map((grant) => (
+              <li key={key(grant)}>
+                {label(grant)}{" "}
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  onClick={() => setGrants(grants.filter((g) => key(g) !== key(grant)))}
+                >
+                  {t("adminStaff.removeRole", { role: label(grant) })}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
         <Select
           id="staff-org-role"
           labelText={t("adminStaff.role")}
@@ -322,18 +431,20 @@ function OrgRoles({ account }: { account: Account }) {
             ))}
           </Select>
         )}
-        <Button
+        <ActionButton
           kind="tertiary"
-          disabled={!candidate || grants.some((g) => key(g) === key(candidate))}
+          unavailableReason={addBlocked}
           onClick={() => candidate && setGrants([...grants, candidate])}
         >
           {t("adminStaff.addRole")}
-        </Button>
-      </div>
-      <Button disabled={save.isPending} onClick={() => save.mutate()}>
-        {t("adminStaff.saveRoles")}
-      </Button>
-    </section>
+        </ActionButton>
+        <div>
+          <Button disabled={save.isPending} onClick={() => save.mutate()}>
+            {t("adminStaff.saveRoles")}
+          </Button>
+        </div>
+      </Stack>
+    </Section>
   );
 }
 
@@ -365,8 +476,7 @@ function Deactivation({ account, onDone }: { account: Account; onDone: () => voi
     },
   });
   return (
-    <section aria-labelledby="staff-deactivation" className="tp-section tp-form">
-      <h2 id="staff-deactivation">{t("adminStaff.deactivation")}</h2>
+    <Section title={t("adminStaff.deactivation")} level={3}>
       {refusal && (
         <InlineNotification
           kind="error"
@@ -400,6 +510,6 @@ function Deactivation({ account, onDone }: { account: Account; onDone: () => voi
           {t("adminStaff.deactivate")}
         </Button>
       )}
-    </section>
+    </Section>
   );
 }

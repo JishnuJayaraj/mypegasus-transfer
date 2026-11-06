@@ -1,5 +1,6 @@
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
-import { render } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { createApiClient } from "@transfer/api-client";
 import { createQueryClient } from "./api";
 import { createAppRouter } from "./router";
@@ -201,3 +202,15 @@ export const worklistItem = (
 
 /** The work list's answer at 10:42 Berlin time. */
 export const worklist = (items: object[]) => ({ generatedAt: "2026-10-22T08:42:00.000Z", items });
+
+/**
+ * Chooses an action in a row's overflow menu (DataTable, ui-patterns.md). Carbon keeps a floating
+ * menu invisible until placed, which jsdom never does, so the item is found through the menu the
+ * button controls; the e2e opens it for real.
+ */
+export async function chooseRowAction(rowName: string, action: string) {
+  const button = await screen.findByRole("button", { name: `Aktionen für ${rowName}` });
+  await userEvent.click(button);
+  const menu = document.getElementById(button.getAttribute("aria-controls")!)!;
+  await userEvent.click(within(menu).getByText(action));
+}

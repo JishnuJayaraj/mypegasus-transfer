@@ -299,15 +299,6 @@ export function PortalShell(props: PortalShellProps) {
   );
 }
 
-export function PageHeader({ title, actions }: { title: string; actions?: ReactNode }) {
-  return (
-    <div className="tp-page-header">
-      <h1>{title}</h1>
-      {actions}
-    </div>
-  );
-}
-
 /** Sets the document title: the parts, most specific first, then the product name. */
 export function useDocumentTitle(productName: string, ...parts: (string | undefined)[]) {
   const title = [parts.filter(Boolean).join(" · "), productName].filter(Boolean).join(" – ");

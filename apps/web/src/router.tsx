@@ -1,6 +1,7 @@
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import type { ApiClient } from "@transfer/api-client";
+import { PageSkeleton } from "@transfer/ui";
 import { I18nextProvider } from "react-i18next";
 import { ApiContext } from "./api";
 import { i18n } from "./i18n";
@@ -31,6 +32,8 @@ export function createAppRouter(context: Omit<RouterContext, "session">, history
     defaultPreload: "intent",
     // Data freshness is TanStack Query's job; the router always asks it.
     defaultPreloadStaleTime: 0,
+    // A route still loading shows the skeleton of a page, not a blank screen (ui-patterns.md).
+    defaultPendingComponent: () => <PageSkeleton />,
     Wrap: ({ children }) => (
       <I18nextProvider i18n={i18n}>
         <ApiContext value={context.api}>

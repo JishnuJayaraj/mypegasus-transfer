@@ -2,7 +2,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { createLink } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import type { WorklistFilter } from "@transfer/domain";
-import { formatDate, Link, SimpleTable } from "@transfer/ui";
+import { formatDate, Link, Loading, SimpleTable } from "@transfer/ui";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { dashboardQuery, entryWavesQuery, useApi } from "../api";
@@ -51,7 +51,7 @@ export function ProjectDashboard({ projectId, taTg }: { projectId: string; taTg:
     return <p role="alert">{t("worklist.tooLarge")}</p>;
   }
   if (query.isError) return <p role="alert">{t("dashboard.failed")}</p>;
-  if (!query.data) return <p aria-live="polite">{t("worklist.loading")}</p>;
+  if (!query.data) return <Loading label={t("worklist.loading")} />;
   const { counts, scope } = query.data;
   return (
     <section aria-labelledby="project-dashboard" className="tp-section">

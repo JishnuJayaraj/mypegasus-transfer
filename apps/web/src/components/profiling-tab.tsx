@@ -7,6 +7,7 @@ import {
   formatDate,
   formatTimestamp,
   InlineNotification,
+  Loading,
   Modal,
   parseDisplayDate,
   RadioButton,
@@ -54,7 +55,7 @@ export function ProfilingTab({ detail, projectId }: { detail: Detail; projectId:
   const { t } = useTranslation();
   const api = useApi();
   const query = useQuery(participationProfilingQuery(api, detail.id));
-  if (query.isPending) return <p aria-live="polite">{t("profiling.loading")}</p>;
+  if (query.isPending) return <Loading label={t("profiling.loading")} />;
   if (query.isError) {
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return <p role="alert">{t(forbidden ? "profiling.forbidden" : "profiling.failed")}</p>;

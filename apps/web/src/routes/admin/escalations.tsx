@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ApiProblemError } from "@transfer/api-client";
-import { PageHeader, SimpleTable } from "@transfer/ui";
+import { EmptyState, PageHeader, SimpleTable, TableSkeleton } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { escalationsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
@@ -23,11 +23,42 @@ function EscalationsPage() {
   const { t } = useTranslation();
   usePageTitle(t("escalations.title"));
   const query = useQuery(escalationsQuery(useApi()));
+  const header = <PageHeader title={t("escalations.title")} />;
   if (query.error instanceof ApiProblemError && query.error.status === 403) {
-    return <p role="alert">{t("escalations.forbidden")}</p>;
+    return (
+      <>
+        {header}
+        <EmptyState variant="forbidden" title={t("escalations.forbidden")} />
+      </>
+    );
   }
-  if (query.isError) return <p role="alert">{t("escalations.failed")}</p>;
-  if (!query.data) return <p aria-live="polite">{t("escalations.loading")}</p>;
+  if (query.isError) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          variant="error"
+          title={t("escalations.failed")}
+          onRetry={() => void query.refetch()}
+        />
+      </>
+    );
+  }
+  if (!query.data) {
+    return (
+      <>
+        {header}
+        <TableSkeleton
+          label={t("escalations.loading")}
+          headers={[
+            t("escalations.columns.project"),
+            t("escalations.columns.leads"),
+            ...types.map((type) => t(`escalations.types.${type}`)),
+          ]}
+        />
+      </>
+    );
+  }
   const cell = (row: (typeof query.data.rows)[number], type: (typeof types)[number]) => {
     const found = row.counts.find((c) => c.type === type);
     if (!found) return "–";
@@ -38,7 +69,7 @@ function EscalationsPage() {
   };
   return (
     <>
-      <PageHeader title={t("escalations.title")} />
+      {header}
       <p>{t("escalations.intro")}</p>
       <SimpleTable
         title={t("escalations.title")}

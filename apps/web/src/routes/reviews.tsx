@@ -5,6 +5,7 @@ import {
   Button,
   formatDate,
   InlineNotification,
+  Loading,
   Modal,
   PageHeader,
   SimpleTable,
@@ -59,7 +60,7 @@ function ReviewsPage() {
     return <p role="alert">{t("reviews.forbidden")}</p>;
   }
   if (query.isError) return <p role="alert">{t("reviews.failed")}</p>;
-  if (!query.data) return <p aria-live="polite">{t("reviews.loading")}</p>;
+  if (!query.data) return <Loading label={t("reviews.loading")} />;
 
   async function decide(item: Item, decision: Decision) {
     setBusy(true);

@@ -1,0 +1,44 @@
+{
+  "loading": "Loading …",
+  "pageHeader": {
+    "breadcrumb": "Breadcrumb",
+    "actions": "Actions"
+  },
+  "emptyState": {
+    "resetFilters": "Reset filters",
+    "retry": "Try again"
+  },
+  "sidePanel": {
+    "close": "Close",
+    "discardTitle": "Discard changes?",
+    "discardText": "Your input in this panel has not been saved yet.",
+    "discard": "Discard",
+    "keep": "Keep editing"
+  },
+  "relativeDate": {
+    "today": "today",
+    "dueToday": "due today",
+    "inDays_one": "in {{count}} day",
+    "inDays_other": "in {{count}} days",
+    "daysAgo_one": "{{count}} day ago",
+    "daysAgo_other": "{{count}} days ago",
+    "overdue_one": "overdue for {{count}} day",
+    "overdue_other": "overdue for {{count}} days"
+  },
+  "dataTable": {
+    "rowActions": "Actions for {{name}}",
+    "selectRow": "Select {{name}}",
+    "selectAll": "Select all rows",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "cancelSelection": "Clear selection",
+    "columns": "Columns",
+    "columnsLegend": "Shown columns",
+    "showMore": "Show more",
+    "shownOf": "{{shown}} of {{count}} shown",
+    "sortBy": "Sort by {{column}}",
+    "sortedAscending": "sorted ascending",
+    "sortedDescending": "sorted descending",
+    "actionsColumn": "Actions"
+  }
+}

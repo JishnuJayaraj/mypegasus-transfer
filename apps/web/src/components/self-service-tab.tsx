@@ -7,7 +7,7 @@ import {
   type SensitiveField,
 } from "@transfer/domain";
 import { SELF_SERVICE_NAMESPACE } from "@transfer/self-service-ui";
-import { Button, formatTimestamp, InlineNotification, Stack } from "@transfer/ui";
+import { Button, formatTimestamp, InlineNotification, Loading, Stack } from "@transfer/ui";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { participationSelfServiceQuery, useApi } from "../api";
@@ -38,7 +38,7 @@ export function SelfServiceTab({
   const start = detail.capabilities.startAssistedMode && (
     <StartAssistedMode projectId={projectId} participationId={detail.id} label={startLabel} />
   );
-  if (query.isPending) return <p>{t("participant.selfService.loading")}</p>;
+  if (query.isPending) return <Loading label={t("participant.selfService.loading")} />;
   if (query.isError) {
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return (

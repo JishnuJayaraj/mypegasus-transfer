@@ -165,21 +165,22 @@ export function AgenturSettings({ projectId }: { projectId: string }) {
         }))}
         rows={rows}
         emptyState={t("overrides.empty")}
+        footer={
+          may &&
+          editing === null && (
+            <Button onClick={() => setEditing("new")}>{t("overrides.add")}</Button>
+          )
+        }
       />
-      {may &&
-        (editing === null ? (
-          <Button className="tp-load-more" onClick={() => setEditing("new")}>
-            {t("overrides.add")}
-          </Button>
-        ) : (
-          <AgenturSettingForm
-            key={editing}
-            projectId={projectId}
-            config={config}
-            scoped={config.override.agenturSettings.find((s) => s.agenturKey === editing)}
-            onDone={() => setEditing(null)}
-          />
-        ))}
+      {may && editing !== null && (
+        <AgenturSettingForm
+          key={editing}
+          projectId={projectId}
+          config={config}
+          scoped={config.override.agenturSettings.find((s) => s.agenturKey === editing)}
+          onDone={() => setEditing(null)}
+        />
+      )}
       <Relaxations projectId={projectId} />
     </section>
   );

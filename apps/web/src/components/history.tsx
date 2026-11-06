@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
-import { Button, formatDate, formatTimestamp, SimpleTable } from "@transfer/ui";
+import { Button, formatDate, formatTimestamp, Loading, SimpleTable } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { entryWavesQuery, participationHistoryQuery, useApi } from "../api";
 import { useSelfServiceLabel } from "./self-service-tab";
@@ -40,7 +40,7 @@ export function HistoryTab({
     const status = query.error instanceof ApiProblemError ? query.error.status : null;
     return <p role="alert">{status === 403 ? t("history.forbidden") : t("history.failed")}</p>;
   }
-  if (!query.data) return <p aria-live="polite">{t("history.loading")}</p>;
+  if (!query.data) return <Loading label={t("history.loading")} />;
 
   /** A code's label where one exists, else the code itself. */
   const coded = (prefix: string, code: string) =>
@@ -296,17 +296,18 @@ export function HistoryTab({
           by: by(entry),
         }))}
         emptyState={t("history.empty")}
+        footer={
+          query.hasNextPage && (
+            <Button
+              kind="tertiary"
+              disabled={query.isFetchingNextPage}
+              onClick={() => void query.fetchNextPage()}
+            >
+              {t("history.more")}
+            </Button>
+          )
+        }
       />
-      {query.hasNextPage && (
-        <Button
-          className="tp-load-more"
-          kind="tertiary"
-          disabled={query.isFetchingNextPage}
-          onClick={() => void query.fetchNextPage()}
-        >
-          {t("history.more")}
-        </Button>
-      )}
     </section>
   );
 }

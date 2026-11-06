@@ -593,7 +593,9 @@
     "assign": "Zuweisen ({{count}})",
     "assigned_one": "{{count}} Teilnehmende zugewiesen",
     "assigned_other": "{{count}} Teilnehmende zugewiesen",
-    "assignFailed": "Die Zuweisung ist fehlgeschlagen. Nur Personen mit der Rolle Beratung im Projekt können zugewiesen werden."
+    "assignFailed": "Die Zuweisung ist fehlgeschlagen. Nur Personen mit der Rolle Beratung im Projekt können zugewiesen werden.",
+    "emptyTitle": "Noch keine Teilnehmenden",
+    "forbiddenWho": "Die Liste sehen die Projektleitung, das Backoffice und die Beratung des Projekts (diese nur mit ihren Zuweisungen)."
   },
   "activation": {
     "status": {
@@ -1278,7 +1280,11 @@
       "region_not_found": "Diese Region gibt es nicht.",
       "staff_user_unchanged": "Es gibt keine Änderung.",
       "failed": "Die Änderung ist fehlgeschlagen."
-    }
+    },
+    "editAction": "Bearbeiten",
+    "chooseRegionFirst": "Erst eine Region wählen.",
+    "roleExists": "Das Konto hat diese Rolle schon.",
+    "emptyText": "Konten legt die globale Administration an; die erste Anmeldung mit der E-Mail-Adresse verknüpft das Unternehmenskonto."
   },
   "adminRegions": {
     "title": "Regionen",
@@ -1297,7 +1303,9 @@
       "region_code_taken": "Dieses Kürzel ist schon vergeben.",
       "region_unchanged": "Es gibt keine Änderung.",
       "failed": "Die Region konnte nicht gespeichert werden."
-    }
+    },
+    "editAction": "Bearbeiten",
+    "emptyText": "Projekte gehören zu einer Region (Niederlassung). Legen Sie die erste Region an."
   },
   "worklist": {
     "loading": "Wird geladen…",
@@ -1973,7 +1981,6 @@
       "cancel": "Abbrechen"
     },
     "page": {
-      "back": "Zurück zu den Terminen von {{project}}",
       "details": "Termin",
       "facts": {
         "kind": "Art",

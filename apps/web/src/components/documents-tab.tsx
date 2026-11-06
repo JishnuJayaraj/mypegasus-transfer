@@ -20,6 +20,7 @@ import {
   FileUploaderButton,
   formatTimestamp,
   InlineNotification,
+  Loading,
   Modal,
   Select,
   SelectItem,
@@ -79,7 +80,7 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
     projectId: detail.projectId,
   });
 
-  if (query.isPending) return <p>{t("participant.documents.loading")}</p>;
+  if (query.isPending) return <Loading label={t("participant.documents.loading")} />;
   if (query.isError) {
     return (
       <InlineNotification

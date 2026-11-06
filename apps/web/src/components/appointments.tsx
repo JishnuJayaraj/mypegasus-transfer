@@ -18,6 +18,7 @@ import {
   formatDate,
   InlineNotification,
   Link,
+  Loading,
   parseDisplayDate,
   Select,
   SelectItem,
@@ -110,7 +111,7 @@ export function AppointmentsTab({ projectId, taTg }: { projectId: string; taTg: 
     const forbidden = query.error instanceof ApiProblemError && query.error.status === 403;
     return <p role="alert">{t(forbidden ? "appointments.forbidden" : "appointments.failed")}</p>;
   }
-  if (!query.data) return <p aria-live="polite">{t("appointments.loading")}</p>;
+  if (!query.data) return <Loading label={t("appointments.loading")} />;
   const capabilities = query.data.pages[0]!.capabilities;
   const items = query.data.pages.flatMap((page) => page.items);
   return (
@@ -181,17 +182,18 @@ export function AppointmentsTab({ projectId, taTg }: { projectId: string; taTg: 
           ),
         }))}
         emptyState={t("appointments.empty")}
+        footer={
+          query.hasNextPage && (
+            <Button
+              kind="tertiary"
+              disabled={query.isFetchingNextPage}
+              onClick={() => void query.fetchNextPage()}
+            >
+              {t("appointments.loadMore")}
+            </Button>
+          )
+        }
       />
-      {query.hasNextPage && (
-        <Button
-          className="tp-load-more"
-          kind="tertiary"
-          disabled={query.isFetchingNextPage}
-          onClick={() => void query.fetchNextPage()}
-        >
-          {t("appointments.loadMore")}
-        </Button>
-      )}
     </section>
   );
 }
