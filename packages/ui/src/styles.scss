@@ -478,6 +478,11 @@ body {
   }
 }
 
+// A row that opens its object on click; its link stays the keyboard's way.
+.tp-data-table-row-link {
+  cursor: pointer;
+}
+
 .tp-column-chooser {
   display: flex;
   flex-wrap: wrap;
@@ -559,12 +564,69 @@ body {
   }
 }
 
-// The work list's filter bar and search (Slice 5).
-.tp-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-  gap: $spacing-05;
-  margin-block: $spacing-05;
+// The work list (ui-patterns.md; Slice 6b): quick views, active filters, cells with two lines.
+.tp-quick-views,
+.tp-filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-03;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tp-filter-tags .cds--tag {
+  margin: 0;
+}
+
+.tp-filter-group {
+  legend {
+    @include type.type-style("heading-compact-01");
+
+    margin-block-end: $spacing-05;
+  }
+}
+
+// The toolbar's count line, at the start of the toolbar ("142 Teilnehmende · Stand 09:41").
+.tp-worklist-count {
+  @include type.type-style("body-compact-01");
+
+  flex: 1 1 auto;
+  align-self: center;
+  padding-inline: $spacing-05;
+  color: theme.$text-secondary;
+}
+
+.tp-two-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-secondary-line {
+  @include type.type-style("helper-text-01");
+
+  color: theme.$text-secondary;
+}
+
+.tp-status-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-02;
+
+  .cds--tag {
+    margin: 0;
+  }
+}
+
+.tp-next-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  .cds--btn--ghost {
+    min-block-size: auto;
+    padding-inline: 0;
+  }
 }
 
 // Label/value pairs, such as a participant's data (Slice 2, PR 2h-1).

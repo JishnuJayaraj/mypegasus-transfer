@@ -2,7 +2,6 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { ApiProblemError, type components } from "@transfer/api-client";
 import { invitationTemplates } from "@transfer/domain";
 import {
-  Button,
   formatTimestamp,
   InlineNotification,
   Modal,
@@ -55,23 +54,24 @@ export function BulkInvite({
   projectId,
   selected,
   onSent,
+  onClose,
 }: {
   projectId: string;
+  /** The rows selected when the dialog was opened. */
   selected: ListItem[];
   onSent: () => void;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const [open, setOpen] = useState(false);
   const [appointmentId, setAppointmentId] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   // When the dialog was rendered first: the public cutoffs are compared with it.
   const [shownAt] = useState(() => Date.now());
   const appointments = useInfiniteQuery({
     ...projectAppointmentsQuery(api, projectId, "upcoming"),
-    enabled: open,
   });
   // Appointments the participant can still book from the portal.
   const choices = (appointments.data?.pages.flatMap((page) => page.items) ?? []).filter(
@@ -100,7 +100,7 @@ export function BulkInvite({
     },
   });
   const close = () => {
-    setOpen(false);
+    onClose();
     setResult(null);
     setAppointmentId("");
     send.reset();
@@ -129,88 +129,85 @@ export function BulkInvite({
         : (send.error.problem.errors?.[0]?.code ?? "failed")
       : "failed";
   return (
-    <>
-      <div className="tp-bulk-actions">
-        <Button kind="secondary" disabled={permitted.length === 0} onClick={() => setOpen(true)}>
-          {t("invitations.open", { count: permitted.length })}
-        </Button>
-      </div>
-      <Modal
-        open={open}
-        modalHeading={t("invitations.title")}
-        primaryButtonText={result ? t("invitations.close") : t("invitations.send")}
-        secondaryButtonText={t("invitations.cancel")}
-        primaryButtonDisabled={!result && (send.isPending || appointmentId === "")}
-        onRequestSubmit={() => (result ? close() : send.mutate())}
-        onRequestClose={close}
-        size="sm"
-      >
-        <Stack gap={5}>
-          {send.isError && (
-            <InlineNotification
-              kind="error"
-              title={t(`invitations.errors.${problem}` as never, {
-                defaultValue: t("invitations.errors.failed"),
+    <Modal
+      open
+      modalHeading={t("invitations.title")}
+      primaryButtonText={result ? t("invitations.close") : t("invitations.send")}
+      secondaryButtonText={t("invitations.cancel")}
+      primaryButtonDisabled={!result && (send.isPending || appointmentId === "")}
+      onRequestSubmit={() => (result ? close() : send.mutate())}
+      onRequestClose={close}
+      size="sm"
+    >
+      <Stack gap={5}>
+        {/* C1: how many of the selection the action reaches (ui-patterns.md). */}
+        {!result && (
+          <p>{t("worklist.batch.applies", { count: permitted.length, total: selected.length })}</p>
+        )}
+        {send.isError && (
+          <InlineNotification
+            kind="error"
+            title={t(`invitations.errors.${problem}` as never, {
+              defaultValue: t("invitations.errors.failed"),
+            })}
+            hideCloseButton
+            lowContrast
+          />
+        )}
+        {result ? (
+          <div aria-live="polite">
+            <p>
+              {t("invitations.result.queued", {
+                count: result.queued.length,
+                email: result.queued.filter((q) => q.channel === "email").length,
+                sms: result.queued.filter((q) => q.channel === "sms").length,
               })}
-              hideCloseButton
-              lowContrast
-            />
-          )}
-          {result ? (
-            <div aria-live="polite">
-              <p>
-                {t("invitations.result.queued", {
-                  count: result.queued.length,
-                  email: result.queued.filter((q) => q.channel === "email").length,
-                  sms: result.queued.filter((q) => q.channel === "sms").length,
-                })}
-              </p>
-              <ul className="tp-list">
-                {result.notDeliverable.length > 0 && (
-                  <li>
-                    {t("invitations.counts.notDeliverable", {
-                      count: result.notDeliverable.length,
-                    })}
-                  </li>
-                )}
-                {skipped.map(([code, count]) => (
-                  <li key={code}>{t(`invitations.skips.${code}` as never, { count })}</li>
+            </p>
+            <ul className="tp-list">
+              {result.notDeliverable.length > 0 && (
+                <li>
+                  {t("invitations.counts.notDeliverable", {
+                    count: result.notDeliverable.length,
+                  })}
+                </li>
+              )}
+              {skipped.map(([code, count]) => (
+                <li key={code}>{t(`invitations.skips.${code}` as never, { count })}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <>
+            <Select
+              id="invitation-appointment"
+              labelText={t("invitations.appointment")}
+              value={appointmentId}
+              onChange={(event) => setAppointmentId(event.target.value)}
+              disabled={appointments.isPending}
+            >
+              <SelectItem value="" text={t("invitations.choose")} />
+              {choices.map((item) => (
+                <SelectItem
+                  key={item.id}
+                  value={item.id}
+                  text={`${t(`appointments.kinds.${item.kind}`)}, ${formatTimestamp(item.startsAt)}${item.title ? ` – ${item.title}` : ""}`}
+                />
+              ))}
+            </Select>
+            {appointments.isSuccess && choices.length === 0 && <p>{t("invitations.none")}</p>}
+            <ul className="tp-list" aria-label={t("invitations.countsLabel")}>
+              {lines
+                .filter(([, count]) => count > 0)
+                .map(([text]) => (
+                  <li key={text}>{text}</li>
                 ))}
-              </ul>
-            </div>
-          ) : (
-            <>
-              <Select
-                id="invitation-appointment"
-                labelText={t("invitations.appointment")}
-                value={appointmentId}
-                onChange={(event) => setAppointmentId(event.target.value)}
-                disabled={appointments.isPending}
-              >
-                <SelectItem value="" text={t("invitations.choose")} />
-                {choices.map((item) => (
-                  <SelectItem
-                    key={item.id}
-                    value={item.id}
-                    text={`${t(`appointments.kinds.${item.kind}`)}, ${formatTimestamp(item.startsAt)}${item.title ? ` – ${item.title}` : ""}`}
-                  />
-                ))}
-              </Select>
-              {appointments.isSuccess && choices.length === 0 && <p>{t("invitations.none")}</p>}
-              <ul className="tp-list" aria-label={t("invitations.countsLabel")}>
-                {lines
-                  .filter(([, count]) => count > 0)
-                  .map(([text]) => (
-                    <li key={text}>{text}</li>
-                  ))}
-              </ul>
-              <p>{t("invitations.rulesNote")}</p>
-              <p>{t("invitations.previewIntro")}</p>
-              <Preview />
-            </>
-          )}
-        </Stack>
-      </Modal>
-    </>
+            </ul>
+            <p>{t("invitations.rulesNote")}</p>
+            <p>{t("invitations.previewIntro")}</p>
+            <Preview />
+          </>
+        )}
+      </Stack>
+    </Modal>
   );
 }

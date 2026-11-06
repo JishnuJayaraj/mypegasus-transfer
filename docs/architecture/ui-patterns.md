@@ -49,7 +49,8 @@ primitives, following the Carbon for IBM Products patterns without depending on
 - **C2. "Nächster Schritt".** `nextStep(item)` in `packages/domain/src/worklist/` picks one item
   per row by tier (overdue; undated or escalated work; upcoming deadlines; participant actions;
   nothing open "–"), then by date, then by the existing kind order. The tiers are a product rule
-  in process-and-lifecycle.md's work-list section (added with the work list's PR, 6b-3).
+  in process-and-lifecycle.md ("The work list's next step and default order"); the work list's
+  default sort (`urgencyOrder`) uses them.
 - **C3. Parallel tracks.** The main status, the profiling track and the DSV track run
   concurrently (process-and-lifecycle.md). They are shown as **three separate status tags or
   summaries**, never one linear progress indicator that implies an order between profiling and the

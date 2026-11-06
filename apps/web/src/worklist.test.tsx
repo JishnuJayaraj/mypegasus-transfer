@@ -1,18 +1,27 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { funnelFilters, projectFunnel } from "@transfer/domain";
+import { forgetWorklistMemory } from "./components/worklist-state";
+import { quickViews, sameFilter, tileViews } from "./components/worklist-views";
 import { describe, expect, it, vi } from "vitest";
 import { documentNavigation } from "./components/documents-tab";
 import {
+  chooseBatchAction,
+  consultant,
   json,
   mockApi,
   problem,
   project,
   renderApp,
+  setWorklistFilter,
+  shownPersonnelNumbers,
   staffUsers,
+  team,
   unpinnedConfig,
   worklist,
   worklistItem,
+  worklistRow,
+  worklistSection,
 } from "./test-utils";
 
 // Slice 5 (data-protection.md, the work list and the dashboard): the "Übersicht" and
@@ -123,21 +132,16 @@ function setup(routes: Parameters<typeof mockApi>[0] = {}, at = "?tab=participan
 
 const list = () => within(screen.getByRole("region", { name: "Teilnehmende" }));
 /** Waits for the work list's section, then queries in it. */
-const ready = async () => within(await screen.findByRole("region", { name: "Teilnehmende" }));
-const personnelNumbers = () =>
-  list()
-    .queryAllByRole("link")
-    .map((link) => link.textContent)
-    .filter((text) => text?.startsWith("BSP-"));
+const ready = worklistSection;
+/** The shown rows' Personalnummern, in the order of the default sort unless a test sorts. */
+const personnelNumbers = () => shownPersonnelNumbers().toSorted();
 
 describe("Übersicht", () => {
   it("shows the tiles, and each number opens the work list with the same filter", async () => {
     const { router } = setup({}, "");
-    const tile = await screen.findByRole("link", { name: "1 Frist in 14 Tagen" });
+    const tile = await screen.findByRole("link", { name: "1 In den nächsten 14 Tagen" });
     expect(screen.getByRole("link", { name: "3 Teilnehmende" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "1 mit offenen Angaben oder Unterlagen" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "1 Angaben/Unterlagen fehlen" })).toBeInTheDocument();
     await userEvent.click(tile);
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
@@ -145,7 +149,7 @@ describe("Übersicht", () => {
         deadlineState: "upcoming",
       }),
     );
-    expect(await (await ready()).findByText("1 Treffer", { exact: false })).toBeInTheDocument();
+    expect(await (await ready()).findByText(/^1 Treffer · 3 Teilnehmende/)).toBeInTheDocument();
     expect(personnelNumbers()).toEqual(["BSP-0001"]);
   });
 
@@ -190,10 +194,14 @@ describe("Übersicht", () => {
       expect(router.state.location.search).toEqual({ tab: "participants", agentur: "open" }),
     );
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
-    const row = screen.getByRole("link", { name: "BSP-0002" }).closest("tr")!;
+    const row = await worklistRow("BSP-0002");
+    // The Agentur column is in the chooser (the plan of Slice 6b, D7).
+    await userEvent.click(list().getByRole("button", { name: "Spalten" }));
+    await userEvent.click(list().getByRole("checkbox", { name: "Agentur" }));
     expect(within(row).getByText("TL 407 eskaliert (seit 15.10.2026)")).toBeInTheDocument();
     expect(within(row).getByText(/beispielstadt-nord/)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Agentur" })).toHaveValue("open");
+    // The filter shows as an active tag, and in the panel.
+    expect(list().getByText("Agentur: Offen")).toBeInTheDocument();
   });
 
   it("says when the viewer may not see it", async () => {
@@ -207,13 +215,17 @@ describe("Übersicht", () => {
 describe("Teilnehmende", () => {
   it("shows what is open, the most urgent deadline and the portal", async () => {
     setup();
-    const row = (await (await ready()).findByRole("link", { name: "BSP-0001" })).closest("tr")!;
-    expect(within(row).getByText(/^2 offen/)).toBeInTheDocument();
-    expect(within(row).getByText("Mobilnummer fehlt")).toBeInTheDocument();
+    const row = await worklistRow("BSP-0001");
+    // The next step and how many more are open (C2): the upcoming deadline before the actions.
+    const step = within(row).getByText("+2 weitere").closest("td")!;
+    await userEvent.click(within(step).getByRole("button", { name: "+2 weitere" }));
+    expect(within(step).getByText("Mobilnummer fehlt")).toBeInTheDocument();
     expect(
       within(row).getByRole("cell", { name: "TG-Beginn: in 8 Tagen · 30.10.2026" }),
     ).toBeInTheDocument();
-    const other = list().getByRole("link", { name: "BSP-0002" }).closest("tr")!;
+    await userEvent.click(list().getByRole("button", { name: "Spalten" }));
+    await userEvent.click(list().getByRole("checkbox", { name: "Portal" }));
+    const other = await worklistRow("BSP-0002");
     expect(
       within(other).getByRole("cell", {
         name: "Datenschutzhinweis: seit 21 Tagen überfällig · 01.10.2026",
@@ -221,27 +233,31 @@ describe("Teilnehmende", () => {
     ).toBeInTheDocument();
     expect(within(other).getByRole("cell", { name: "Einwilligung fehlt" })).toBeInTheDocument();
     // Without a dated deadline the ASU orientation, never as overdue (process-and-lifecycle.md, dates).
-    const orientation = list().getByRole("link", { name: "BSP-0003" }).closest("tr")!;
+    const orientation = await worklistRow("BSP-0003");
+    // Its only open item, so also its next step.
     expect(
-      within(orientation).getByRole("cell", {
+      within(orientation).getAllByRole("cell", {
         name: "Orientierung 31.12.2026 – Kenntnisdatum klären",
       }),
-    ).toBeInTheDocument();
+    ).toHaveLength(2);
   });
 
   it("shows the most urgent appointment item, else the next booking, and filters by Termine", async () => {
     const { router } = setup();
-    const missed = (await (await ready()).findByRole("link", { name: "BSP-0002" })).closest("tr")!;
+    await worklistRow("BSP-0002");
+    await userEvent.click(list().getByRole("button", { name: "Spalten" }));
+    await userEvent.click(list().getByRole("checkbox", { name: "Termin" }));
+    const missed = await worklistRow("BSP-0002");
     expect(
       within(missed).getByRole("cell", {
         name: "Nicht erschienen Beratungstermin vom 20.10.2026 +1 weitere",
       }),
     ).toBeInTheDocument();
-    const next = list().getByRole("link", { name: "BSP-0003" }).closest("tr")!;
+    const next = await worklistRow("BSP-0003");
     expect(
       within(next).getByRole("cell", { name: "Infoveranstaltung am 27.10.2026, 09:00 Uhr" }),
     ).toBeInTheDocument();
-    await userEvent.selectOptions(list().getByLabelText("Termine"), "upcoming");
+    await setWorklistFilter("Termine", "upcoming");
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
         tab: "participants",
@@ -249,15 +265,15 @@ describe("Teilnehmende", () => {
       }),
     );
     expect(personnelNumbers()).toEqual(["BSP-0003"]);
-    await userEvent.selectOptions(list().getByLabelText("Termine"), "to_resolve");
+    await setWorklistFilter("Termine", "to_resolve");
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
   });
 
   it("keeps the code filters in the route's search params, both ways", async () => {
     const { router } = setup({}, "?tab=participants&status=informed");
-    expect(await (await ready()).findByLabelText("Status")).toHaveValue("informed");
+    expect(await (await ready()).findByText("Status: Informiert")).toBeInTheDocument();
     await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0001", "BSP-0003"]));
-    await userEvent.selectOptions(list().getByLabelText("Offene Punkte"), "rejected_documents");
+    await setWorklistFilter("Offene Punkte", "rejected_documents");
     await waitFor(() =>
       expect(router.state.location.search).toEqual({
         tab: "participants",
@@ -266,11 +282,23 @@ describe("Teilnehmende", () => {
       }),
     );
     expect(personnelNumbers()).toEqual(["BSP-0001"]);
-    await userEvent.click(list().getByRole("button", { name: "Filter zurücksetzen" }));
+    // Each active filter is a tag that removes it.
+    await userEvent.click(
+      list().getByRole("button", {
+        name: "Filter entfernen: Offene Punkte: Abgelehnte Unterlagen",
+      }),
+    );
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: "participants", status: "informed" }),
+    );
+    await userEvent.click(list().getByRole("button", { name: "Filter (1)" }));
+    const panel = await screen.findByRole("dialog", { name: "Filter" });
+    expect(within(panel).getByLabelText("Status")).toHaveValue("informed");
+    await userEvent.click(within(panel).getByRole("button", { name: "Filter zurücksetzen" }));
     await waitFor(() => expect(router.state.location.search).toEqual({ tab: "participants" }));
   });
 
-  it("while loading, shows no empty state and disables the search and select-all", async () => {
+  it("while loading, shows a skeleton with the headers and no empty state, search or selection", async () => {
     const gate: { release?: () => void } = {};
     const pending = new Promise<void>((resolve) => (gate.release = resolve));
     setup({
@@ -280,18 +308,28 @@ describe("Teilnehmende", () => {
       },
     });
     expect(await screen.findByText("Wird geladen…")).toBeInTheDocument();
-    expect(screen.getByLabelText("Name oder Personalnummer suchen")).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Alle Treffer auswählen" })).toBeNull();
+    const skeleton = screen.getByRole("table");
+    expect(
+      within(skeleton)
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent),
+    ).toEqual(["Teilnehmende", "Status", "Nächster Schritt", "Frist", "Beratung", "Welle"]);
+    expect(screen.queryByRole("searchbox", { name: "Name oder Personalnummer suchen" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "Alle Zeilen auswählen" })).toBeNull();
     expect(screen.queryByText(/Es gibt noch keine Teilnehmenden/)).toBeNull();
     expect(screen.queryByText(/Keine Teilnehmenden entsprechen/)).toBeNull();
     gate.release!();
-    expect(await screen.findByRole("button", { name: "Alle Treffer auswählen" })).toBeEnabled();
-    expect(screen.getByLabelText("Name oder Personalnummer suchen")).toBeEnabled();
+    expect(await screen.findByRole("checkbox", { name: "Alle Zeilen auswählen" })).toBeEnabled();
+    expect(
+      screen.getByRole("searchbox", { name: "Name oder Personalnummer suchen" }),
+    ).toBeEnabled();
   });
 
   it("searches names in memory: folded, never in the URL, a query key, a request or storage", async () => {
     const { router, queryClient, calls } = setup();
-    const search = await screen.findByLabelText("Name oder Personalnummer suchen");
+    const search = await screen.findByRole("searchbox", {
+      name: "Name oder Personalnummer suchen",
+    });
     await waitFor(() => expect(search).toBeEnabled());
     expect(search).toHaveAttribute("autocomplete", "off");
     await userEvent.type(search, "GROSSER jur");
@@ -323,12 +361,16 @@ describe("Teilnehmende", () => {
         }),
     });
     await userEvent.click(
-      await (await ready()).findByRole("button", { name: "Alle Treffer auswählen" }),
+      await (await ready()).findByRole("checkbox", { name: "Alle Zeilen auswählen" }),
     );
-    await userEvent.selectOptions(list().getByLabelText("Eintrittswelle"), wave.id);
-    await userEvent.click(list().getByRole("button", { name: "Eintrittswelle zuweisen (3)" }));
-    await screen.findByRole("alert");
-    const section = screen.getByRole("region", { name: "Eintrittswelle zuweisen" });
+    await chooseBatchAction("Welle zuweisen");
+    const panel = await screen.findByRole("dialog", { name: "Welle zuweisen" });
+    await userEvent.selectOptions(within(panel).getByLabelText("Eintrittswelle"), wave.id);
+    await userEvent.click(
+      within(panel).getByRole("button", { name: "Eintrittswelle zuweisen (3)" }),
+    );
+    await within(panel).findByText("Keine Zuweisung vorgenommen");
+    const section = panel.querySelector(".cds--modal-content > div")!;
     expect(section.textContent).toMatch(
       /^(error icon)?Keine Zuweisung vorgenommen.*Diese Teilnehmenden verhindern die Zuweisung:.*BSP-0002: Die Person hat individuelle Vertragsdaten/,
     );
@@ -343,8 +385,12 @@ describe("Teilnehmende", () => {
       [`POST ${path}/entry-wave-assignments`]: () => json({ assigned: 1, unchanged: 0 }),
     });
     await userEvent.click(await (await ready()).findByLabelText("BSP-0003 auswählen"));
-    await userEvent.selectOptions(list().getByLabelText("Eintrittswelle"), wave.id);
-    await userEvent.click(list().getByRole("button", { name: "Eintrittswelle zuweisen (1)" }));
+    await chooseBatchAction("Welle zuweisen");
+    const panel = await screen.findByRole("dialog", { name: "Welle zuweisen" });
+    await userEvent.selectOptions(within(panel).getByLabelText("Eintrittswelle"), wave.id);
+    await userEvent.click(
+      within(panel).getByRole("button", { name: "Eintrittswelle zuweisen (1)" }),
+    );
     expect(await screen.findByText("1 zugewiesen, 0 unverändert")).toBeInTheDocument();
     await waitFor(() =>
       expect(calls.filter((c) => c.key === `GET ${path}/worklist`)).toHaveLength(2),
@@ -381,12 +427,12 @@ describe("Teilnehmende", () => {
     ).closest<HTMLElement>("[role=alert]")!;
     fail = false;
     await userEvent.click(within(alert).getByRole("button", { name: "Erneut versuchen" }));
-    expect(await section.findByRole("link", { name: "BSP-0001" })).toBeInTheDocument();
+    expect(await section.findByText("BSP-0001")).toBeInTheDocument();
   });
 
   it("shows the three tracks as separate status tags (C3)", async () => {
     setup();
-    const row = (await (await ready()).findByRole("link", { name: "BSP-0001" })).closest("tr")!;
+    const row = await worklistRow("BSP-0001");
     const tags = [...row.querySelectorAll(".tp-status-tag")].map((tag) => tag.textContent);
     expect(tags).toHaveLength(3);
     expect(tags[0]).toBe("Informiert");
@@ -459,8 +505,10 @@ describe("Kug 200b erzeugen (data-protection.md, generated forms and exports)", 
     });
     const section = await ready();
     expect(await section.findByText("Kug 200b offen (angeboten am 02.11.2026)")).toBeVisible();
-    await userEvent.click(section.getByRole("button", { name: "Alle Treffer auswählen" }));
-    await userEvent.click(section.getByRole("button", { name: "Kug 200b erzeugen" }));
+    await userEvent.click(section.getByRole("checkbox", { name: "Alle Zeilen auswählen" }));
+    await chooseBatchAction("Kug 200b erzeugen");
+    const panel = await screen.findByRole("dialog", { name: "Kug 200b erzeugen" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Kug 200b erzeugen" }));
     const result = await screen.findByTestId("kug200b-bulk-result");
     expect(result).toHaveTextContent("2 Kug 200b erzeugt.");
     expect(result).toHaveTextContent("Neumann, Lea: 11 Rentenversicherungsnummer");
@@ -488,12 +536,255 @@ describe("Kug 200b erzeugen (data-protection.md, generated forms and exports)", 
         }),
     });
     const section = await ready();
-    await userEvent.click(await section.findByRole("button", { name: "Alle Treffer auswählen" }));
-    await userEvent.click(section.getByRole("button", { name: "Kug 200b erzeugen" }));
+    await userEvent.click(await section.findByRole("checkbox", { name: "Alle Zeilen auswählen" }));
+    await chooseBatchAction("Kug 200b erzeugen");
+    const panel = await screen.findByRole("dialog", { name: "Kug 200b erzeugen" });
+    await userEvent.click(within(panel).getByRole("button", { name: "Kug 200b erzeugen" }));
     expect(
       await screen.findByText(
         "Die Kug 200b konnten nicht erzeugt werden; es wurde keiner erzeugt.",
       ),
     ).toBeVisible();
+  });
+});
+
+describe("the work list's order, views and columns (ui-patterns.md; the plan of Slice 6b, D5–D8)", () => {
+  it("opens in the next step's order, sorts by a header into the URL, and a reload keeps it", async () => {
+    const { router } = setup();
+    await worklistRow("BSP-0002");
+    // Overdue first (BSP-0002), then the undated orientation (BSP-0003), then the upcoming
+    // deadline (BSP-0001): process-and-lifecycle.md, the work list's next step.
+    expect(shownPersonnelNumbers()).toEqual(["BSP-0002", "BSP-0003", "BSP-0001"]);
+    await userEvent.click(list().getByRole("button", { name: /Teilnehmende/ }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: "participants", sort: "name" }),
+    );
+    // Beispiel, Größer, Muster.
+    expect(shownPersonnelNumbers()).toEqual(["BSP-0003", "BSP-0001", "BSP-0002"]);
+    await userEvent.click(list().getByRole("button", { name: /Teilnehmende/ }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({ tab: "participants", sort: "-name" }),
+    );
+    cleanup();
+    setup({}, "?tab=participants&sort=-name");
+    await worklistRow("BSP-0002");
+    expect(shownPersonnelNumbers()).toEqual(["BSP-0002", "BSP-0001", "BSP-0003"]);
+  });
+
+  it("drops an unknown sort code, so a stale link still opens", async () => {
+    setup({}, "?tab=participants&sort=lastName");
+    await worklistRow("BSP-0002");
+    expect(shownPersonnelNumbers()).toEqual(["BSP-0002", "BSP-0003", "BSP-0001"]);
+  });
+
+  it("renders no bulk control without a selection, then only the actions the capabilities allow", async () => {
+    setup();
+    await worklistRow("BSP-0001");
+    for (const label of [
+      "Berater zuweisen",
+      "Welle zuweisen",
+      "Erinnern",
+      "Einladen",
+      "Kug 200b erzeugen",
+      "Aktivierung drucken",
+    ]) {
+      expect(screen.queryByRole("button", { name: label })).not.toBeInTheDocument();
+    }
+    await userEvent.click(screen.getByRole("checkbox", { name: "BSP-0001 auswählen" }));
+    const bar = within(screen.getByText("1 ausgewählt").closest(".cds--batch-actions")!);
+    // The PL may assign consultants (the team's capability) and waves (the rows'), nothing else.
+    expect(
+      bar
+        .getAllByRole("button")
+        .map((b) => b.textContent)
+        .filter((text) => text !== "Auswahl aufheben"),
+    ).toEqual(["Berater zuweisen", "Welle zuweisen"]);
+  });
+
+  it("offers no selection when the capabilities allow no batch action", async () => {
+    setup({
+      [`GET ${path}/worklist`]: () =>
+        json(
+          worklist(items.map((item) => ({ ...item, capabilities: worklistItem().capabilities }))),
+        ),
+      [`GET ${path}/members`]: () =>
+        json({ ...team, capabilities: { ...team.capabilities, assignParticipations: false } }),
+    });
+    await worklistRow("BSP-0001");
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("shows six columns in ta_tg, more through the chooser, kept in memory only", async () => {
+    setup();
+    await worklistRow("BSP-0001");
+    const headers = () =>
+      within(list().getByRole("table"))
+        .getAllByRole("columnheader")
+        .map((h) => h.textContent?.replace(/^Nach .* sortieren/, ""))
+        .filter((text) => text && text !== "Alle Zeilen auswählen");
+    expect(headers()).toEqual([
+      "Teilnehmende",
+      "Status",
+      "Nächster Schritt",
+      "Frist",
+      "Beratung",
+      "Welle",
+      "Aktionen",
+    ]);
+    await userEvent.click(list().getByRole("button", { name: "Spalten" }));
+    await userEvent.click(list().getByRole("checkbox", { name: "Portal" }));
+    expect(headers()).toContain("Portal");
+    expect(JSON.stringify({ ...localStorage, ...sessionStorage })).not.toMatch(/portal/i);
+    expect(window.location.href).not.toMatch(/portal|column/i);
+    // Another tab and back keeps the choice (memory); a reload restores the defaults.
+    await userEvent.click(screen.getByRole("tab", { name: "Termine" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Teilnehmende" }));
+    await worklistRow("BSP-0001");
+    expect(headers()).toContain("Portal");
+    cleanup();
+    forgetWorklistMemory();
+    setup();
+    await worklistRow("BSP-0001");
+    expect(headers()).not.toContain("Portal");
+  });
+
+  it("keeps the search term in memory for the way back, never in the URL", async () => {
+    const { router } = setup();
+    const search = await screen.findByRole("searchbox", {
+      name: "Name oder Personalnummer suchen",
+    });
+    await userEvent.type(search, "muster");
+    await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
+    await userEvent.click(screen.getByRole("tab", { name: "Termine" }));
+    await userEvent.click(screen.getByRole("tab", { name: "Teilnehmende" }));
+    await waitFor(() => expect(personnelNumbers()).toEqual(["BSP-0002"]));
+    expect(screen.getByRole("searchbox", { name: "Name oder Personalnummer suchen" })).toHaveValue(
+      "muster",
+    );
+    expect(router.state.location.href).not.toMatch(/muster/i);
+  });
+
+  it("opens the participant on a row click", async () => {
+    const { router } = setup();
+    const row = await worklistRow("BSP-0003");
+    await userEvent.click(within(row).getAllByRole("cell")[3]!);
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(
+        `/projects/${project.id}/participations/${id(3)}`,
+      ),
+    );
+  });
+
+  it("shows the quick views with their counts; one replaces the filters, a count of 0 stays", async () => {
+    const { router } = setup({}, "?tab=participants&status=informed");
+    await worklistRow("BSP-0001");
+    const views = within(list().getByRole("list", { name: "Schnellansichten" }));
+    // The PL of the project: the PL's views, without "Mir zugewiesen" (not a consultant).
+    expect(views.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Alle (3)",
+      "Überfällig (1)",
+      "In den nächsten 14 Tagen (1)",
+      "Angaben/Unterlagen fehlen (1)",
+      "Hinweise (0)",
+      "Termine zu klären (1)",
+      "Ohne Beratung (3)",
+    ]);
+    expect(views.getByRole("button", { name: "Alle (3)" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    await userEvent.click(views.getByRole("button", { name: "Überfällig (1)" }));
+    await waitFor(() =>
+      expect(router.state.location.search).toEqual({
+        tab: "participants",
+        deadlineState: "overdue",
+      }),
+    );
+    expect(views.getByRole("button", { name: "Überfällig (1)" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(personnelNumbers()).toEqual(["BSP-0002"]);
+    await userEvent.click(views.getByRole("button", { name: "Hinweise (0)" }));
+    expect(
+      await list().findByText("Keine Teilnehmenden entsprechen der Suche und den Filtern."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a consultant who is not the PL only the views for everyone", async () => {
+    setup({
+      "GET /api/v1/me": () => json({ ...staffUsers[1], id: consultant.id }),
+    });
+    await worklistRow("BSP-0001");
+    const views = within(list().getByRole("list", { name: "Schnellansichten" }));
+    expect(views.getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Alle (3)",
+      "Überfällig (1)",
+      "In den nächsten 14 Tagen (1)",
+      "Angaben/Unterlagen fehlen (1)",
+      "Hinweise (0)",
+    ]);
+    expect(
+      list().getByText(/3 Ihrer zugewiesenen Teilnehmenden · Stand 10:42/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("quick views and dashboard tiles (the plan of Slice 6b, D6)", () => {
+  const pl = { staffUserId: consultant.id, projectLead: true, backOffice: false, consultant: true };
+
+  it("selects exactly D6's filters, by role", () => {
+    expect(quickViews(pl)).toEqual([
+      { key: "all", filter: {} },
+      { key: "overdue", filter: { deadlineState: "overdue" } },
+      { key: "upcoming", filter: { deadlineState: "upcoming" } },
+      { key: "actions", filter: { actions: "any" } },
+      { key: "flags", filter: { flag: "any" } },
+      { key: "appointmentsToResolve", filter: { appointment: "to_resolve" } },
+      { key: "noConsultant", filter: { consultant: "none" } },
+      { key: "mine", filter: { consultant: consultant.id } },
+    ]);
+    const backOffice = { ...pl, projectLead: false, backOffice: true, consultant: false };
+    expect(quickViews(backOffice).map((v) => v.key)).toEqual([
+      "all",
+      "overdue",
+      "upcoming",
+      "actions",
+      "flags",
+      "noConsultant",
+    ]);
+  });
+
+  it("gives each tile that is a quick view the quick view's filter and label", () => {
+    const tiles = funnelFilters({ type: "ta_tg", waves: [wave] }).tiles;
+    const views = quickViews(pl);
+    const pairs = Object.entries(tileViews).map(([tile, view]) => ({
+      tile,
+      equal: sameFilter(
+        tiles.find((entry) => entry.key === tile)!.filter,
+        views.find((entry) => entry.key === view)!.filter,
+      ),
+    }));
+    expect(pairs).toEqual([
+      { tile: "deadline_overdue", equal: true },
+      { tile: "deadline_upcoming", equal: true },
+      { tile: "open_actions", equal: true },
+      { tile: "flags", equal: true },
+      { tile: "appointments_to_resolve", equal: true },
+    ]);
+    // Every tile with a quick view's filter is paired, except "Teilnehmende" ({}).
+    const sharing = tiles.flatMap((tile) => {
+      const view = views.find((entry) => sameFilter(entry.filter, tile.filter));
+      return view && view.key !== "all" ? [[tile.key, view.key]] : [];
+    });
+    expect(Object.fromEntries(sharing)).toEqual(tileViews);
+  });
+
+  it("compares filters as sets of conditions", () => {
+    expect(
+      sameFilter({ status: "informed", flag: "any" }, { flag: "any", status: "informed" }),
+    ).toBe(true);
+    expect(sameFilter({ status: "informed" }, { status: "contacted" })).toBe(false);
+    expect(sameFilter({ status: "informed" }, {})).toBe(false);
   });
 });

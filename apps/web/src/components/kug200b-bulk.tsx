@@ -21,6 +21,7 @@ export function BulkKug200b({
   onGenerated,
 }: {
   projectId: string;
+  /** The rows selected when the panel was opened. */
   selected: Item[];
   onGenerated: () => void;
 }) {
@@ -71,23 +72,32 @@ export function BulkKug200b({
   const open = result?.generations.filter((g) => g.checklist.length > 0) ?? [];
   return (
     <Stack gap={4}>
-      <div className="tp-bulk-actions">
-        <Button
-          size="md"
-          kind="tertiary"
-          disabled={selected.length === 0 || tooMany || notAllowed > 0 || generate.isPending}
-          onClick={() => generate.mutate()}
-        >
-          {t("worklist.kug200b.generate")}
-        </Button>
-        <span className="tp-hint">
-          {tooMany
-            ? t("worklist.kug200b.tooMany")
-            : notAllowed > 0
-              ? t("worklist.kug200b.notAllowed", { count: notAllowed })
-              : t("worklist.kug200b.hint")}
-        </span>
-      </div>
+      {/* C1: what the generation covers, or why it can't run, next to the button. */}
+      <p>
+        {t("worklist.batch.applies", {
+          count: selected.length - notAllowed,
+          total: selected.length,
+        })}
+      </p>
+      <p className="tp-hint" id="kug200b-bulk-hint">
+        {tooMany
+          ? t("worklist.kug200b.tooMany")
+          : notAllowed > 0
+            ? t("worklist.kug200b.notAllowed", { count: notAllowed })
+            : t("worklist.kug200b.hint")}
+      </p>
+      {!result && (
+        <div>
+          <Button
+            size="md"
+            aria-describedby="kug200b-bulk-hint"
+            disabled={selected.length === 0 || tooMany || notAllowed > 0 || generate.isPending}
+            onClick={() => generate.mutate()}
+          >
+            {t("worklist.kug200b.generate")}
+          </Button>
+        </div>
+      )}
       {failed && (
         <InlineNotification
           kind="error"
@@ -125,9 +135,6 @@ export function BulkKug200b({
                 onClick={() => print.mutate(result.generations.map((g) => g.documentId))}
               >
                 {t("worklist.kug200b.print")}
-              </Button>
-              <Button kind="ghost" size="md" onClick={() => setResult(undefined)}>
-                {t("worklist.kug200b.close")}
               </Button>
             </div>
           </Stack>

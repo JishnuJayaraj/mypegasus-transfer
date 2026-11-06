@@ -10,6 +10,10 @@ import {
   unpinnedConfig,
   worklist,
   worklistItem,
+  chooseBatchAction,
+  setWorklistFilter,
+  showWorklistColumn,
+  worklistRow,
 } from "./test-utils";
 
 vi.mock("qrcode", () => ({
@@ -74,17 +78,24 @@ function setup(code: "none" | "printed" | "open" = "none") {
 describe("activation-code staff views", () => {
   it("shows activation and notice state, filters in the snapshot, and prints an ephemeral letter", async () => {
     const calls = setup();
+    await worklistRow("BSP-0001");
+    // Both columns are in the chooser (the plan of Slice 6b, D7).
+    await showWorklistColumn("Aktivierung");
+    await userEvent.click(screen.getByLabelText("Datenschutzhinweis", { selector: "input" }));
     expect(await screen.findByRole("cell", { name: "Kein Code" })).toBeInTheDocument();
     expect(screen.getByRole("cell", { name: "Fällig bis 15.11.2026" })).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Aktivierungsstatus"), "printed");
+    await setWorklistFilter("Aktivierungsstatus", "printed");
     expect(
       await screen.findByText("Keine Teilnehmenden entsprechen der Suche und den Filtern."),
     ).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText("Aktivierungsstatus"), "none");
+    await setWorklistFilter("Aktivierungsstatus", "none");
     expect(await screen.findByRole("cell", { name: "Kein Code" })).toBeInTheDocument();
     expect(calls.filter((call) => call.key === `GET ${path}/worklist`)).toHaveLength(1);
     await userEvent.click(screen.getByLabelText("BSP-0001 auswählen"));
-    await userEvent.click(screen.getByRole("button", { name: "Aktivierungsbriefe drucken" }));
+    await chooseBatchAction("Aktivierung drucken");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Aktivierungsbriefe drucken" }),
+    );
     expect(await screen.findByText("0123-4567-89AB")).toBeInTheDocument();
     expect(
       screen.getByText((_, element) =>
@@ -108,9 +119,10 @@ describe("activation-code staff views", () => {
 
   it("requires conscious confirmation before reissuing an open code", async () => {
     setup("open");
-    await screen.findByRole("cell", { name: "Code offen" });
+    await worklistRow("BSP-0001");
     await userEvent.click(screen.getByLabelText("BSP-0001 auswählen"));
-    const issue = screen.getByRole("button", { name: "Aktivierungsblätter drucken" });
+    await chooseBatchAction("Aktivierung drucken");
+    const issue = await screen.findByRole("button", { name: "Aktivierungsblätter drucken" });
     expect(issue).toBeDisabled();
     await userEvent.click(
       screen.getByLabelText("Offene Codes widerrufen und bewusst neu ausstellen"),
@@ -120,9 +132,12 @@ describe("activation-code staff views", () => {
 
   it("records an ID-checked event handover for a printed sheet", async () => {
     const calls = setup();
-    await screen.findByRole("cell", { name: "BSP-0001" });
+    await worklistRow("BSP-0001");
     await userEvent.click(screen.getByLabelText("BSP-0001 auswählen"));
-    await userEvent.click(screen.getByRole("button", { name: "Aktivierungsblätter drucken" }));
+    await chooseBatchAction("Aktivierung drucken");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Aktivierungsblätter drucken" }),
+    );
     const view = await screen.findByRole("region", { name: "Aktivierungsblätter und Übergabe" });
     await userEvent.click(within(view).getByRole("button", { name: "Ausweis geprüft, übergeben" }));
     await waitFor(() =>

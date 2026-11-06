@@ -242,6 +242,28 @@ with profiling** (round 4). So a participation has:
   `to_resolve` (`notice_undelivered` ∪ `needs_resolution` ∪ `attendance_conflict`) or one kind; the
   dashboard's tiles "Termine überfällig" and "Termine zu klären" and its group "Termine" count the
   distinct participations each value matches in the same snapshot.
+- **The work list's next step and default order** (Slice 6b; `nextStep`, `openSteps`,
+  `urgencyOrder`, `packages/domain/src/worklist/next-step.ts`): the column "Nächster Schritt"
+  names one item per row out of everything the row already carries; it reads, never changes a
+  status. The items are ranked by tier:
+
+  | Tier | Items | Within the tier |
+  |---|---|---|
+  | 1 Overdue | overdue deadlines; every appointment item (`overdue` and `to_resolve` alike) | oldest date first (an appointment item by its Berlin date) |
+  | 2 Undated or escalated work that must not wait for a date | case items (`evidence_invalidated` "Nachweis ungültig", `kug200b_offer_open`, `kug200b_withdrawal_ba_notice`, `knowledge_date_missing`), Agentur items, lifecycle flags | oldest date first; then the undated ones (flags, and `knowledge_date_missing`, whose date is an orientation) |
+  | 3 Upcoming deadlines (the 14-day horizon) | upcoming deadlines | nearest first |
+  | 4 Participant actions | rejected uploads, then missing documents, then missing fields | the row's order |
+
+  A tie keeps the existing kind order: the source (deadline, appointment item, case item, Agentur
+  item, flag) and within it its kind's enum order (`DeadlineKind`, `AppointmentItemKind`, …). An
+  undated item is never ranked below a dated one of a lower tier. Nothing open is "–". The column
+  shows the item's label, for tiers 1 and 3 its relative and absolute date, and "+n weitere" with
+  the number of the row's other open items. **The default order** of the work list (in the
+  browser, over the snapshot; the API keeps its own deterministic order) uses the same ranking on
+  each row's next step, then the most open items, then the last name in German order (none last),
+  then the snapshot's order; so the first row is the most urgent *step*, not only the nearest date.
+  A sortable column header overrides it; the sort is a code in the URL (`sort`). Slice 7 adds its
+  DSV items to a tier in its own PR.
 
 ### Main status
 

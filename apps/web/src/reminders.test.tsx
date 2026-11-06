@@ -11,6 +11,8 @@ import {
   unpinnedConfig,
   worklist,
   worklistItem,
+  chooseBatchAction,
+  showWorklistColumn,
 } from "./test-utils";
 
 // Reminders in the staff app (data-protection.md, reminders): "Erinnern" with the counts from the
@@ -99,8 +101,8 @@ describe("'Erinnern' in the work list", () => {
           201,
         ),
     });
-    await user.click(await screen.findByRole("button", { name: "Alle Treffer auswählen" }));
-    await user.click(screen.getByRole("button", { name: "Erinnern (7)" }));
+    await user.click(await screen.findByLabelText("Alle Zeilen auswählen"));
+    await chooseBatchAction("Erinnern");
     const dialog = await screen.findByRole("dialog");
     const counts = within(dialog).getByRole("list", { name: "Ausgewählte Teilnehmende" });
     expect(
@@ -146,8 +148,10 @@ describe("'Erinnern' in the work list", () => {
   it("shows the latest reminder in the column 'Erinnert'", async () => {
     setup(rows);
     const row = (await screen.findByText("BSP-0004")).closest("tr")!;
+    // "Erinnert" is in the column chooser (the plan of Slice 6b, D7).
+    await showWorklistColumn("Erinnert");
     expect(within(row).getByText("20.10.2026 (gesendet)")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Erinnert" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /Erinnert/ })).toBeInTheDocument();
   });
 
   it("says nothing was sent when the service is unavailable", async () => {
@@ -158,8 +162,8 @@ describe("'Erinnern' in the work list", () => {
           errors: [{ pointer: "", code: "delivery_unavailable", detail: "x" }],
         }),
     });
-    await user.click(await screen.findByRole("button", { name: "Alle Treffer auswählen" }));
-    await user.click(screen.getByRole("button", { name: "Erinnern (1)" }));
+    await user.click(await screen.findByLabelText("Alle Zeilen auswählen"));
+    await chooseBatchAction("Erinnern");
     await user.click(
       within(await screen.findByRole("dialog")).getByRole("button", { name: "Senden" }),
     );
@@ -413,8 +417,8 @@ describe("'Zu Termin einladen' in the work list (data-protection.md, invitations
           201,
         ),
     });
-    await user.click(await screen.findByRole("button", { name: "Alle Treffer auswählen" }));
-    await user.click(screen.getByRole("button", { name: "Zu Termin einladen (3)" }));
+    await user.click(await screen.findByLabelText("Alle Zeilen auswählen"));
+    await chooseBatchAction("Einladen");
     const dialog = await screen.findByRole("dialog", { name: "Zu Termin einladen" });
     const counts = within(dialog).getByRole("list", { name: "Ausgewählte Teilnehmende" });
     expect(
@@ -461,8 +465,8 @@ describe("'Zu Termin einladen' in the work list (data-protection.md, invitations
           errors: [{ pointer: "", code: "appointment_full", detail: "x" }],
         }),
     });
-    await user.click(await screen.findByRole("button", { name: "Alle Treffer auswählen" }));
-    await user.click(screen.getByRole("button", { name: "Zu Termin einladen (1)" }));
+    await user.click(await screen.findByLabelText("Alle Zeilen auswählen"));
+    await chooseBatchAction("Einladen");
     const dialog = await screen.findByRole("dialog", { name: "Zu Termin einladen" });
     await user.selectOptions(await within(dialog).findByLabelText("Termin"), appointmentId);
     await user.click(within(dialog).getByRole("button", { name: "Einladen" }));

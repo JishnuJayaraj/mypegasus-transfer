@@ -1,11 +1,15 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, createLink } from "@tanstack/react-router";
 import { WorklistFilter } from "@transfer/domain";
 import {
   Add,
   Button,
   formatDate,
+  InlineNotification,
+  Link,
   PageHeader,
+  SidePanel,
+  Stack,
   SimpleTable,
   Tab,
   TabList,
@@ -22,13 +26,17 @@ import {
   projectQuery,
   projectTeamQuery,
   useApi,
+  worklistQuery,
 } from "../../api";
 import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
 import { AgenturTab } from "../../components/agentur-tab";
 import { ImportSection } from "../../components/import-section";
 import { Kug200aHeader } from "../../components/kug200a-header";
+import { ManualParticipationForm } from "../../components/manual-participation-form";
+import { usePanelNavigationGuard } from "../../components/panel-guard";
 import { Participants } from "../../components/participants";
+import { parseSortCode } from "../../components/worklist-state";
 import { ProjectDashboard } from "../../components/project-dashboard";
 import { AppointmentsTab } from "../../components/appointments";
 import { ProjectRegion } from "../../components/project-region";
@@ -37,17 +45,19 @@ import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
 import { usePageTitle } from "../../page-title";
 
+const RouterLink = createLink(Link);
+
 /**
  * The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Termine", "Einrichtung", "Team" and, in a
  * `ta_tg` project, "Agentur" (the Kug 200b batches, last so the others keep their place).
  */
 const tabs = [undefined, "participants", "appointments", "setup", "team", "agentur"] as const;
 type ProjectTab = Exclude<(typeof tabs)[number], undefined>;
-export type ProjectSearch = WorklistFilter & { tab?: ProjectTab };
+export type ProjectSearch = WorklistFilter & { tab?: ProjectTab; sort?: string };
 
 /**
- * The tab and the work list's code filters (data-protection.md, the work list): an unknown tab,
- * key or value is dropped, so a stale link still opens. Never a name or a search term.
+ * The tab, the work list's code filters and its sort (data-protection.md, the work list): an
+ * unknown tab, key or value is dropped, so a stale link still opens. Never a name or a search term.
  */
 function projectSearch(search: Record<string, unknown>): ProjectSearch {
   const tab = tabs.find((value) => value !== undefined && value === search.tab);
@@ -57,7 +67,8 @@ function projectSearch(search: Record<string, unknown>): ProjectSearch {
       return parsed.success && parsed.data !== undefined ? [[key, parsed.data]] : [];
     }),
   ) as WorklistFilter;
-  return { ...filter, ...(tab && { tab }) };
+  const sort = parseSortCode(search.sort);
+  return { ...filter, ...(tab && { tab }), ...(sort && { sort }) };
 }
 
 export const Route = createFileRoute("/projects/$projectId")({
@@ -78,7 +89,7 @@ export const Route = createFileRoute("/projects/$projectId")({
 function ProjectPage() {
   const { t } = useTranslation();
   const { projectId } = Route.useParams();
-  const { tab, ...filter } = Route.useSearch();
+  const { tab, sort, ...filter } = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: project } = useSuspenseQuery(projectQuery(useApi(), projectId));
   const taTg = project.type === "ta_tg";
@@ -90,16 +101,70 @@ function ProjectPage() {
     agentur: t("projectDetail.agentur"),
   } satisfies Record<ProjectTab, string>;
   usePageTitle(tab ? tabLabels[tab] : t("projectDetail.overview"), project.name);
+  // Manual creation is one import row (process-and-lifecycle.md, import and manual creation):
+  // offered with the import's capability, as the page's primary action; the import beside it.
+  const { data: config } = useSuspenseQuery(projectConfigQuery(useApi(), projectId));
+  const mayImport = config.capabilities.importParticipations;
+  const [adding, setAdding] = useState(false);
+  const [created, setCreated] = useState<string | null>(null);
   return (
     <>
-      <PageHeader title={project.name} />
-      <p>
-        {[
-          project.customerName,
-          t(`projects.types.${project.type}`),
-          t(`projects.statuses.${project.status}`),
-        ].join(" · ")}
-      </p>
+      <PageHeader
+        title={project.name}
+        primaryAction={
+          mayImport && (
+            <Button
+              renderIcon={Add}
+              onClick={() => {
+                setCreated(null);
+                setAdding(true);
+              }}
+            >
+              {t("manual.add")}
+            </Button>
+          )
+        }
+        menuActions={
+          mayImport
+            ? [
+                {
+                  label: t("manual.import"),
+                  onClick: () =>
+                    void navigate({ search: { tab: "setup" }, hash: "project-import" }),
+                },
+              ]
+            : []
+        }
+      />
+      {mayImport && (
+        <AddParticipant
+          projectId={projectId}
+          open={adding}
+          onClose={() => setAdding(false)}
+          onCreated={(id) => {
+            setAdding(false);
+            setCreated(id);
+            void navigate({ search: { tab: "participants" } });
+          }}
+        />
+      )}
+      {created && (
+        <Stack gap={3}>
+          <InlineNotification
+            kind="success"
+            title={t("manual.created")}
+            onClose={() => setCreated(null)}
+          />
+          <p>
+            <RouterLink
+              to="/projects/$projectId/participations/$participationId"
+              params={{ projectId, participationId: created }}
+            >
+              {t("manual.openCreated")}
+            </RouterLink>
+          </p>
+        </Stack>
+      )}
       <ProjectRegion projectId={projectId} />
       <Tabs
         selectedIndex={tabs.indexOf(tab)}
@@ -127,8 +192,16 @@ function ProjectPage() {
                 projectId={projectId}
                 taTg={taTg}
                 filter={filter}
-                onFilterChange={(next) =>
-                  void navigate({ search: { ...next, tab: "participants" }, replace: true })
+                sort={sort}
+                onChange={(next) =>
+                  void navigate({
+                    search: {
+                      ...next.filter,
+                      tab: "participants",
+                      ...(next.sort && { sort: next.sort }),
+                    },
+                    replace: true,
+                  })
                 }
               />
             )}
@@ -158,6 +231,52 @@ function ProjectPage() {
         </TabPanels>
       </Tabs>
     </>
+  );
+}
+
+/** "Teilnehmende hinzufügen": the manual creation in a side panel (ui-patterns.md, C4). */
+function AddParticipant({
+  projectId,
+  open,
+  onClose,
+  onCreated,
+}: {
+  projectId: string;
+  open: boolean;
+  onClose: () => void;
+  onCreated: (participationId: string) => void;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  const queryClient = useQueryClient();
+  const showToast = useToast();
+  const [dirty, setDirty] = useState(false);
+  const pendingNavigation = usePanelNavigationGuard(open && dirty);
+  return (
+    <SidePanel
+      open={open}
+      title={t("manual.title")}
+      dirty={dirty}
+      onClose={() => {
+        setDirty(false);
+        onClose();
+      }}
+      pendingNavigation={pendingNavigation}
+    >
+      <ManualParticipationForm
+        projectId={projectId}
+        onDirtyChange={setDirty}
+        onCreated={async (detail) => {
+          setDirty(false);
+          onCreated(detail.id);
+          showToast({ title: t("manual.created") });
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: worklistQuery(api, projectId).queryKey }),
+            queryClient.invalidateQueries({ queryKey: entryWavesQuery(api, projectId).queryKey }),
+          ]);
+        }}
+      />
+    </SidePanel>
   );
 }
 

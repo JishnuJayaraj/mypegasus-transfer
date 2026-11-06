@@ -1,4 +1,3 @@
-import { TableBatchAction } from "@carbon/react";
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -127,11 +126,7 @@ describe("DataTable", () => {
           selection={{
             selected,
             onChange: setSelected,
-            batchActions: (
-              <TableBatchAction onClick={() => remind([...selected])}>
-                {"Erinnern"}
-              </TableBatchAction>
-            ),
+            batchActions: [{ label: "Erinnern", onClick: () => remind([...selected]) }],
           }}
         />
       );
@@ -234,7 +229,115 @@ describe("DataTable", () => {
         emptyState="leer"
       />,
     );
-    expect(screen.getByRole("region", { name: "Konten" })).toHaveAttribute("tabindex", "0");
+    // A group, not a landmark: the page's own section names the list.
+    expect(screen.getByRole("group", { name: "Konten" })).toHaveAttribute("tabindex", "0");
     expect(screen.getByRole("table", { name: "Konten" })).toBeInTheDocument();
+  });
+
+  it("shows four batch actions as buttons and the others under 'Weitere Aktionen'", async () => {
+    const chosen = vi.fn<(label: string, trigger: HTMLElement | null) => void>();
+    const labels = ["Eins", "Zwei", "Drei", "Vier", "Fünf", "Sechs"];
+    renderUi(
+      <DataTable
+        title="Konten"
+        items={rows}
+        columns={columns}
+        rowLabel={(r) => r.name}
+        emptyState="leer"
+        selection={{
+          selected: new Set(["1"]),
+          onChange: () => {},
+          batchActions: labels.map((label) => ({
+            label,
+            onClick: (trigger) => chosen(label, trigger),
+          })),
+        }}
+      />,
+    );
+    for (const label of labels.slice(0, 4)) {
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    }
+    expect(screen.queryByRole("button", { name: "Fünf" })).not.toBeInTheDocument();
+    const more = screen.getByRole("button", { name: "Weitere Aktionen" });
+    await userEvent.click(screen.getByRole("button", { name: "Zwei" }));
+    expect(chosen).toHaveBeenLastCalledWith("Zwei", screen.getByRole("button", { name: "Zwei" }));
+    await userEvent.click(more);
+    const menu = document.getElementById(more.getAttribute("aria-controls")!)!;
+    await userEvent.click(within(menu).getByText("Sechs"));
+    expect(chosen).toHaveBeenLastCalledWith("Sechs", expect.anything());
+  });
+
+  it("opens a row on a click outside its controls; the controls keep their own", async () => {
+    const opened = vi.fn<(id: string) => void>();
+    renderUi(
+      <DataTable
+        title="Konten"
+        items={rows}
+        columns={[
+          ...columns,
+          { key: "link", header: "Link", render: (r) => <a href={`#${r.id}`}>{r.code}</a> },
+        ]}
+        rowLabel={(r) => r.name}
+        emptyState="leer"
+        selection={{ selected: new Set(), onChange: () => {}, batchActions: [] }}
+        onRowClick={(row) => opened(row.id)}
+      />,
+    );
+    await userEvent.click(screen.getByRole("cell", { name: "Adler" }));
+    expect(opened).toHaveBeenCalledWith("2");
+    await userEvent.click(screen.getByRole("checkbox", { name: "Zander auswählen" }));
+    await userEvent.click(screen.getByRole("link", { name: "A" }));
+    expect(opened).toHaveBeenCalledOnce();
+  });
+
+  it("takes the hidden columns and the rows shown from its owner", async () => {
+    const hidden = vi.fn<(hidden: ReadonlySet<string>) => void>();
+    const limit = vi.fn<(limit: number) => void>();
+    renderUi(
+      <DataTable
+        title="Konten"
+        items={rows}
+        columns={columns}
+        rowLabel={(r) => r.name}
+        emptyState="leer"
+        columnChooser
+        hiddenColumns={new Set(["code"])}
+        onHiddenColumnsChange={hidden}
+        pageSize={1}
+        limit={2}
+        onLimitChange={limit}
+      />,
+    );
+    expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
+      expect.stringContaining("Name"),
+      expect.stringContaining("Anzahl"),
+      "Notiz",
+    ]);
+    expect(names()).toHaveLength(2);
+    await userEvent.click(screen.getByRole("button", { name: "Weitere anzeigen" }));
+    expect(limit).toHaveBeenCalledWith(3);
+    await userEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "Code" }));
+    expect(hidden).toHaveBeenCalledWith(new Set());
+  });
+
+  it("keeps the toolbar above the empty state, without the table's own controls", () => {
+    renderUi(
+      <DataTable
+        title="Konten"
+        items={[]}
+        columns={columns}
+        rowLabel={(r) => r.name}
+        emptyState="Keine Treffer"
+        columnChooser
+        selection={{ selected: new Set(["1"]), onChange: () => {}, batchActions: [] }}
+        toolbar={<input aria-label="Suchen" />}
+      />,
+    );
+    expect(screen.getByRole("textbox", { name: "Suchen" })).toBeInTheDocument();
+    expect(screen.getByText("Keine Treffer")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Spalten" })).not.toBeInTheDocument();
+    expect(screen.queryByText("1 ausgewählt")).not.toBeInTheDocument();
   });
 });

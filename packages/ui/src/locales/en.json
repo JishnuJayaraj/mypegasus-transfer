@@ -39,6 +39,7 @@
     "sortBy": "Sort by {{column}}",
     "sortedAscending": "sorted ascending",
     "sortedDescending": "sorted descending",
-    "actionsColumn": "Actions"
+    "actionsColumn": "Actions",
+    "moreActions": "More actions"
   }
 }

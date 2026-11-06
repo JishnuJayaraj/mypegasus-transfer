@@ -70,16 +70,18 @@ export function BulkRemind({
   projectId,
   selected,
   onSent,
+  onClose,
 }: {
   projectId: string;
+  /** The rows selected when the dialog was opened. */
   selected: ListItem[];
   onSent: () => void;
+  onClose: () => void;
 }) {
   const { t } = useTranslation();
   const api = useApi();
   const queryClient = useQueryClient();
   const showToast = useToast();
-  const [open, setOpen] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const permitted = selected.filter(
     ({ capabilities: { remind } }) => remind.allowed || remind.code !== null,
@@ -101,7 +103,7 @@ export function BulkRemind({
     },
   });
   const close = () => {
-    setOpen(false);
+    onClose();
     setResult(null);
     send.reset();
   };
@@ -134,68 +136,70 @@ export function BulkRemind({
       )
     : [];
   return (
-    <>
-      <div className="tp-bulk-actions">
-        <Button kind="secondary" disabled={permitted.length === 0} onClick={() => setOpen(true)}>
-          {t("reminders.open", { count: permitted.length })}
-        </Button>
-      </div>
-      <Modal
-        open={open}
-        modalHeading={t("reminders.title")}
-        primaryButtonText={result ? t("reminders.close") : t("reminders.send")}
-        secondaryButtonText={t("reminders.cancel")}
-        primaryButtonDisabled={!result && (send.isPending || counts.email + counts.sms === 0)}
-        onRequestSubmit={() => (result ? close() : send.mutate())}
-        onRequestClose={close}
-        size="sm"
-      >
-        <Stack gap={5}>
-          {send.isError && (
-            <InlineNotification
-              kind="error"
-              title={
-                send.error instanceof ApiProblemError && send.error.status === 503
-                  ? t("reminders.unavailable")
-                  : t("reminders.failed")
-              }
-              hideCloseButton
-              lowContrast
-            />
-          )}
-          {result ? (
-            <div aria-live="polite">
-              <p>
-                {t("reminders.result.queued", {
-                  count: result.queued.length,
-                  email: result.queued.filter((q) => q.channel === "email").length,
-                  sms: result.queued.filter((q) => q.channel === "sms").length,
-                })}
-              </p>
-              {resultLines.length > 0 && (
-                <ul className="tp-list">
-                  {resultLines.map(([code, count]) => (
-                    <li key={code}>{t(`reminders.result.${code}` as never, { count })}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <>
-              <ul className="tp-list" aria-label={t("reminders.countsLabel")}>
-                {lines
-                  .filter(([, count]) => count > 0)
-                  .map(([text]) => (
-                    <li key={text}>{text}</li>
-                  ))}
+    <Modal
+      open
+      modalHeading={t("reminders.title")}
+      primaryButtonText={result ? t("reminders.close") : t("reminders.send")}
+      secondaryButtonText={t("reminders.cancel")}
+      primaryButtonDisabled={!result && (send.isPending || counts.email + counts.sms === 0)}
+      onRequestSubmit={() => (result ? close() : send.mutate())}
+      onRequestClose={close}
+      size="sm"
+    >
+      <Stack gap={5}>
+        {/* C1: how many of the selection the action reaches (ui-patterns.md). */}
+        {!result && (
+          <p>
+            {t("worklist.batch.applies", {
+              count: counts.email + counts.sms,
+              total: selected.length,
+            })}
+          </p>
+        )}
+        {send.isError && (
+          <InlineNotification
+            kind="error"
+            title={
+              send.error instanceof ApiProblemError && send.error.status === 503
+                ? t("reminders.unavailable")
+                : t("reminders.failed")
+            }
+            hideCloseButton
+            lowContrast
+          />
+        )}
+        {result ? (
+          <div aria-live="polite">
+            <p>
+              {t("reminders.result.queued", {
+                count: result.queued.length,
+                email: result.queued.filter((q) => q.channel === "email").length,
+                sms: result.queued.filter((q) => q.channel === "sms").length,
+              })}
+            </p>
+            {resultLines.length > 0 && (
+              <ul className="tp-list">
+                {resultLines.map(([code, count]) => (
+                  <li key={code}>{t(`reminders.result.${code}` as never, { count })}</li>
+                ))}
               </ul>
-              <p>{t("reminders.previewIntro")}</p>
-              <Preview />
-            </>
-          )}
-        </Stack>
-      </Modal>
-    </>
+            )}
+          </div>
+        ) : (
+          <>
+            <ul className="tp-list" aria-label={t("reminders.countsLabel")}>
+              {lines
+                .filter(([, count]) => count > 0)
+                .map(([text]) => (
+                  <li key={text}>{text}</li>
+                ))}
+            </ul>
+            <p>{t("reminders.previewIntro")}</p>
+            <Preview />
+          </>
+        )}
+      </Stack>
+    </Modal>
   );
 }
 
