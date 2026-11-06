@@ -65,11 +65,12 @@ Findings this slice fixes (from the owner's review, 2026-11-06, checked against 
   ("participant signed, not fully executed"), a track to the participant page and several
   document actions; Slice 8 adds the whole TG participant file. Building their screens on the new
   patterns is cheaper than retrofitting. The order:
-  1. Merge this plan and Slice 7's plan (PR #104) — both are docs; neither blocks the other.
+  1. This plan and Slice 7's plan (PR #104) are merged (2026-11-06).
   2. 6b-1 (shell) and 6b-2 (UI kit) next, in parallel with Slice 7's backend PRs (schema, status
      functions, guards, jobs, API), which need no UI.
-  3. 6b-3 (work list) before Slice 7's first web PR, so the DSV list and the DSV quick views are
-     built once on the new table.
+  3. 6b-3 (work list) before 7-4 (the DSV work list, bulk generation, the cutoff cases), so the
+     DSV list and its quick view are built once on the new table. The other Slice 7 PRs use
+     6b-2's components for their web parts once merged; none waits for 6b-4 to 6b-6.
   4. 6b-4, 6b-5 and 6b-6 alongside the rest of Slice 7; 6b-5 before Slice 7's participant-page PR
      if they collide, else Slice 7 adds its track card to the new overview afterwards.
   The deeper polish (D9) waits for later.
