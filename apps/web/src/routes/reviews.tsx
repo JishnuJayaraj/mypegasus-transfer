@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { reviewsQuery, useApi } from "../api";
 import { RouteError } from "../components/route-error";
 import { SELF_SERVICE_NAMESPACE } from "@transfer/self-service-ui";
+import { usePageTitle } from "../page-title";
 
 export const Route = createFileRoute("/reviews")({
   component: ReviewsPage,
@@ -47,6 +48,7 @@ function messageOf(error: unknown): string {
  */
 function ReviewsPage() {
   const { t } = useTranslation();
+  usePageTitle(t("reviews.title"));
   const api = useApi();
   const queryClient = useQueryClient();
   const query = useQuery(reviewsQuery(api));

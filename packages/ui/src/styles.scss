@@ -14,6 +14,8 @@
   $theme: themes.$g10
 );
 // Root tokens the components rely on: layer colours and the layout sizes (heights, padding).
+// Theme zones: the header is a `g100` band over the `g10` content (UX foundation plan, D3).
+@use "@carbon/react/scss/zone";
 @use "@carbon/react/scss/layer";
 @use "@carbon/react/scss/layout";
 @use "@carbon/react/scss/spacing" as *;
@@ -45,14 +47,122 @@ body {
   color: theme.$text-primary;
 }
 
-// Layout uses CSS logical properties only, so RTL works (CLAUDE.md conventions).
-.tp-content {
-  padding-block: $spacing-07;
-  padding-inline: $spacing-07;
+// One type scale for page headings, whatever component they sit in (UX foundation plan,
+// principle 6). `:where` keeps it as weak as an element selector, so a Carbon component's own
+// heading class (a modal's title, say) still wins.
+:where(.tp-content, .tp-portal-content) {
+  h1 {
+    @include type.type-style("heading-04");
+  }
 
-  @media (min-width: 66rem) {
+  h2 {
+    @include type.type-style("heading-03");
+  }
+
+  h3 {
+    @include type.type-style("heading-02");
+  }
+}
+
+// Layout uses CSS logical properties only, so RTL works (CLAUDE.md conventions).
+// The staff shell: without navigation (login) the content takes the full width; with it, the
+// rail (3rem) sits beside the content from 66rem, the pinned navigation (16rem) pushes it, and
+// below 66rem the navigation is an overlay.
+.tp-content {
+  min-inline-size: 0;
+  padding-block: $spacing-07;
+  padding-inline: $spacing-05;
+
+  @media (min-width: 42rem) {
+    padding-inline: $spacing-07;
+  }
+}
+
+// The offset is the shell's alone: Carbon's sibling rules would offset the content by 3rem at any
+// width and by 16rem whenever the rail expands on hover. (Same specificity, declared later.)
+.tp-shell > .cds--content.tp-content {
+  margin-inline-start: 0;
+}
+
+@media (min-width: 66rem) {
+  .tp-shell--nav > .cds--content.tp-content {
+    margin-inline-start: 3rem;
+  }
+
+  .tp-shell--nav-pinned > .cds--content.tp-content {
     margin-inline-start: 16rem;
   }
+}
+
+// Content max-width, centred: 1280px is the preferred layout, wider screens don't stretch lines.
+.tp-content-inner {
+  max-inline-size: 99rem;
+  margin-inline: auto;
+}
+
+.tp-product-mark {
+  flex: none;
+  margin-inline-end: $spacing-03;
+}
+
+.tp-product-name {
+  white-space: nowrap;
+}
+
+// "Arbeit" and "Verwaltung": a label over each group of side navigation links. In the collapsed
+// rail the label is hidden visually (it still names the group) and a line separates the groups.
+.tp-nav-group {
+  padding-block-start: $spacing-05;
+
+  & + & {
+    border-block-start: 1px solid theme.$border-subtle;
+  }
+}
+
+.tp-nav-group-label {
+  @include type.type-style("label-01");
+
+  display: block;
+  padding-block-end: $spacing-03;
+  padding-inline: $spacing-05;
+  color: theme.$text-secondary;
+  white-space: nowrap;
+}
+
+.cds--side-nav--rail:not(.cds--side-nav--expanded) .tp-nav-group-label {
+  position: absolute;
+  overflow: hidden;
+  clip-path: inset(50%);
+  inline-size: 1px;
+  block-size: 1px;
+  white-space: nowrap;
+}
+
+// The user menu's panel: who is logged in, "Abmelden" and, in development, the user switcher.
+.tp-header-panel > section {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-05;
+  padding: $spacing-05;
+  overflow-y: auto;
+  max-block-size: calc(100vh - 3rem);
+}
+
+.tp-user-name {
+  @include type.type-style("heading-compact-02");
+
+  overflow-wrap: anywhere;
+}
+
+.tp-user-roles {
+  @include type.type-style("body-compact-01");
+
+  color: theme.$text-secondary;
+}
+
+.tp-header-panel .cds--btn {
+  inline-size: 100%;
+  max-inline-size: none;
 }
 
 // Participant portal: mobile-first, one column.
@@ -68,20 +178,15 @@ body {
 
 .tp-page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: $spacing-05;
   margin-block-end: $spacing-06;
 
   h1 {
-    @include type.type-style("heading-04");
+    overflow-wrap: anywhere;
   }
-}
-
-.tp-header-info {
-  display: flex;
-  align-items: center;
-  padding-inline: $spacing-05;
-  color: theme.$text-primary;
 }
 
 .tp-empty-state {
@@ -201,11 +306,6 @@ body {
   background: theme.$layer-01;
   overflow-wrap: anywhere;
 
-  h3 {
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
   .cds--btn {
     inline-size: 100%;
     max-inline-size: 20rem;
@@ -244,8 +344,6 @@ body {
 }
 
 .tp-user-list {
-  padding-block: $spacing-03;
-
   .cds--btn {
     inline-size: 100%;
     max-inline-size: none;
@@ -262,14 +360,18 @@ body {
   font-size: 0.75rem;
 }
 
-// The staff login page and the header's text actions (Slice 3, PR 3b).
+// The staff login page (Slice 3, PR 3b): a centred card, no navigation beside it.
 .tp-login {
   max-inline-size: 36rem;
-}
+  margin-block-start: $spacing-07;
+  margin-inline: auto;
+  padding: $spacing-07 $spacing-06;
+  background: theme.$layer-01;
 
-.tp-header-action.cds--btn {
-  align-self: stretch;
-  min-block-size: 100%;
+  @media (max-width: 42rem) {
+    margin-block-start: 0;
+    padding: $spacing-05;
+  }
 }
 
 .tp-print-controls {
@@ -332,17 +434,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: $spacing-06;
-
-  h2 {
-    @include type.type-style("heading-03");
-  }
 }
 
 // "Unterlagen" (Slice 4b): a section per type, its documents as a list of cards.
-.tp-documents h2 {
-  @include type.type-style("heading-03");
-}
-
 .tp-document-list {
   display: flex;
   flex-direction: column;
@@ -421,7 +515,8 @@ body {
     display: none !important;
   }
 
-  .tp-content {
+  .tp-content,
+  .tp-shell > .cds--content.tp-content {
     padding: 0;
     margin: 0;
   }

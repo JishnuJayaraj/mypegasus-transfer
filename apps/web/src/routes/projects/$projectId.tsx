@@ -35,6 +35,7 @@ import { ProjectRegion } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
 import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
+import { usePageTitle } from "../../page-title";
 
 /**
  * The tabs: "Übersicht" (no `tab`), "Teilnehmende", "Termine", "Einrichtung", "Team" and, in a
@@ -81,6 +82,14 @@ function ProjectPage() {
   const navigate = Route.useNavigate();
   const { data: project } = useSuspenseQuery(projectQuery(useApi(), projectId));
   const taTg = project.type === "ta_tg";
+  const tabLabels = {
+    participants: t("projectDetail.participants"),
+    appointments: t("projectDetail.appointments"),
+    setup: t("projectDetail.setup"),
+    team: t("team.title"),
+    agentur: t("projectDetail.agentur"),
+  } satisfies Record<ProjectTab, string>;
+  usePageTitle(tab ? tabLabels[tab] : t("projectDetail.overview"), project.name);
   return (
     <>
       <PageHeader title={project.name} />
@@ -101,11 +110,11 @@ function ProjectPage() {
       >
         <TabList aria-label={t("projectDetail.tabs")}>
           <Tab>{t("projectDetail.overview")}</Tab>
-          <Tab>{t("projectDetail.participants")}</Tab>
-          <Tab>{t("projectDetail.appointments")}</Tab>
-          <Tab>{t("projectDetail.setup")}</Tab>
-          <Tab>{t("team.title")}</Tab>
-          {taTg && <Tab>{t("projectDetail.agentur")}</Tab>}
+          <Tab>{tabLabels.participants}</Tab>
+          <Tab>{tabLabels.appointments}</Tab>
+          <Tab>{tabLabels.setup}</Tab>
+          <Tab>{tabLabels.team}</Tab>
+          {taTg && <Tab>{tabLabels.agentur}</Tab>}
         </TabList>
         {/* Each tab loads its data only when shown. */}
         <TabPanels>

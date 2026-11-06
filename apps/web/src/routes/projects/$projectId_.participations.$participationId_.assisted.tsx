@@ -12,6 +12,7 @@ import {
   useApi,
 } from "../../api";
 import { AssistedBanner, assistedSource } from "../../components/assisted-mode";
+import { usePageTitle } from "../../page-title";
 
 const RouterLink = createLink(Link);
 
@@ -42,6 +43,7 @@ function AssistedPage() {
   const { assistedModeId, how, step } = Route.useSearch();
   const navigate = Route.useNavigate();
   const { data: detail } = useSuspenseQuery(participationQuery(api, participationId));
+  usePageTitle(t("app.pageTitles.assisted"));
   const source = useMemo(
     () => assistedSource(api, participationId, assistedModeId),
     [api, participationId, assistedModeId],

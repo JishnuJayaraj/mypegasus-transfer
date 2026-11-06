@@ -1,13 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { ApiProblemError } from "@transfer/api-client";
-import {
-  Button,
-  HeaderGlobalAction,
-  HeaderPanel,
-  InlineNotification,
-  UserAvatar,
-} from "@transfer/ui";
+import { Button, InlineNotification } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { staffUsersQuery, useApi } from "../api";
@@ -70,37 +64,36 @@ export function DevUserList({
   );
 }
 
-/** The header's dev switcher: change the user without logging out first. */
-export function DevUserSwitcher({ activeUserId }: { activeUserId: string | undefined }) {
+/**
+ * The user menu's dev switcher: change the user without logging out first. Renders nothing
+ * unless the dev routes answer (AUTH_MODE=dev), so it never shows with OIDC.
+ */
+export function DevUserSwitcher({
+  activeUserId,
+  onSwitched,
+}: {
+  activeUserId: string | undefined;
+  /** After the switch, e.g. to close the user menu. */
+  onSwitched: () => void;
+}) {
   const { t } = useTranslation();
-  const users = useQuery(staffUsersQuery(useApi()));
+  const users = useQuery({ ...staffUsersQuery(useApi()), retry: false });
   const queryClient = useQueryClient();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
 
   if (!users.data) return null;
 
   return (
-    <>
-      <HeaderGlobalAction
-        aria-label={t("session.switcher")}
-        aria-expanded={open}
-        isActive={open}
-        tooltipAlignment="end"
-        onClick={() => setOpen(!open)}
-      >
-        <UserAvatar size={20} />
-      </HeaderGlobalAction>
-      <HeaderPanel expanded={open} onHeaderPanelFocus={() => {}}>
-        <DevUserList
-          activeUserId={activeUserId}
-          onLoggedIn={async () => {
-            setOpen(false);
-            await queryClient.invalidateQueries();
-            await router.invalidate();
-          }}
-        />
-      </HeaderPanel>
-    </>
+    <div>
+      <p className="tp-user-roles">{t("session.switcher")}</p>
+      <DevUserList
+        activeUserId={activeUserId}
+        onLoggedIn={async () => {
+          onSwitched();
+          await queryClient.invalidateQueries();
+          await router.invalidate();
+        }}
+      />
+    </div>
   );
 }

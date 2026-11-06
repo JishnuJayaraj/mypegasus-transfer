@@ -6,8 +6,6 @@ export {
   ComboBox,
   FileUploaderButton,
   Form,
-  HeaderGlobalAction,
-  HeaderPanel,
   InlineNotification,
   Link,
   Loading,
@@ -28,10 +26,29 @@ export {
   TextArea,
   TextInput,
 } from "@carbon/react";
-export { Add, UserAvatar } from "@carbon/icons-react";
+export {
+  Add,
+  Folder,
+  Location,
+  Logout,
+  TaskApproved,
+  UserAvatar,
+  UserMultiple,
+  WarningAlt,
+} from "@carbon/icons-react";
 export { formatDate, formatTimestamp, parseDisplayDate } from "./dates";
 export { DateField } from "./fields";
 export { createI18n, syncDocumentLanguage } from "./i18n";
-export { AppShell, PageHeader, PortalShell } from "./shell";
+export {
+  AppShell,
+  HeaderPanelAction,
+  PageHeader,
+  PortalShell,
+  ProductMark,
+  SideNavGroup,
+  useDocumentTitle,
+  useMediaQuery,
+  WIDE_QUERY,
+} from "./shell";
 export { SimpleTable, type TableColumn } from "./table";
 export { ToastProvider, useToast } from "./toast";

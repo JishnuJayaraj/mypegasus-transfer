@@ -45,6 +45,7 @@ import { BaReportingTasks } from "../../components/ba-reporting-tasks";
 import { SelfServiceTab } from "../../components/self-service-tab";
 import { useConsultants } from "../../components/team";
 import type de from "../../locales/de/translation.json";
+import { usePageTitle } from "../../page-title";
 
 type Detail = components["schemas"]["ParticipationDetail"];
 type FieldKey = keyof typeof de.participant.fields;
@@ -130,6 +131,8 @@ function ParticipationPage() {
   const navigate = Route.useNavigate();
   const api = useApi();
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
+  // The page, not the person: no name in the title (data-protection.md, page titles).
+  usePageTitle(t("participant.title"), project.name);
   const { data: detail } = useSuspenseQuery(participationQuery(api, participationId));
   // The loader refuses a participant of another project; the cache can't change that later.
   if (detail.projectId !== projectId) {

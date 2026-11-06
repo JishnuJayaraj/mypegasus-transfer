@@ -5,6 +5,7 @@ import { PageHeader, SimpleTable } from "@transfer/ui";
 import { useTranslation } from "react-i18next";
 import { escalationsQuery, useApi } from "../../api";
 import { RouteError } from "../../components/route-error";
+import { usePageTitle } from "../../page-title";
 
 export const Route = createFileRoute("/admin/escalations")({
   component: EscalationsPage,
@@ -20,6 +21,7 @@ const types = ["tl407_not_submitted", "profiling_compliance"] as const;
  */
 function EscalationsPage() {
   const { t } = useTranslation();
+  usePageTitle(t("escalations.title"));
   const query = useQuery(escalationsQuery(useApi()));
   if (query.error instanceof ApiProblemError && query.error.status === 403) {
     return <p role="alert">{t("escalations.forbidden")}</p>;

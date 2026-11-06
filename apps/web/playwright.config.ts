@@ -19,6 +19,13 @@ export default defineConfig({
     // Cloud sessions ship an older Chromium than this Playwright expects (spike S2).
     launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined },
   },
+  projects: [
+    // The suite on Desktop Chrome (1280×720).
+    { name: "desktop", testIgnore: "shell.spec.ts" },
+    // The shell smoke test at 1440, 768 and 375px (UX foundation plan, D10): each test sets
+    // its viewport; 375px stands in for 400 % zoom of a 1280px window.
+    { name: "shell", testMatch: "shell.spec.ts" },
+  ],
   webServer: {
     command: "node ../api/dist/server.js",
     url: `${origin}/api/v1/health`,

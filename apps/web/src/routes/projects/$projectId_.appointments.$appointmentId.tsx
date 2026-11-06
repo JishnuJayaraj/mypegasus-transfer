@@ -43,6 +43,7 @@ import {
   useAttendanceLabel,
 } from "../../components/attendance";
 import { RouteError } from "../../components/route-error";
+import { usePageTitle } from "../../page-title";
 
 type CancelReason = NonNullable<components["schemas"]["AppointmentCancelInput"]["reason"]>;
 const cancelReasons: CancelReason[] = [
@@ -104,6 +105,7 @@ function AppointmentPage() {
   const seats = useSeats();
   const hostName = useHostName(projectId);
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
+  usePageTitle(t("app.pageTitles.appointment"), project.name);
   const { data: appointment } = useSuspenseQuery(appointmentQuery(api, appointmentId));
   const waves = useQuery({ ...entryWavesQuery(api, projectId), enabled: project.type === "ta_tg" });
   const [editing, setEditing] = useState(false);
