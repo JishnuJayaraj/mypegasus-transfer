@@ -109,6 +109,27 @@ export type DsvRead = {
 const utc = (column: unknown) =>
   sql<string>`to_char(${column} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`;
 
+/** Whether a generation can still be handed out (process-and-lifecycle.md, the DSV: generation as built). */
+const stale = (snapshot: DsvRead, generation: DsvRead["generations"][number], today: IsoDate) =>
+  dsvGenerationProblem(
+    generation,
+    {
+      sourceToken: snapshot.sourceToken,
+      waveSigningDeadline: snapshot.wave?.signingDeadline ?? null,
+    },
+    today,
+  ) !== null;
+
+/** `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the latest current generation. */
+const generatedFact = (snapshot: DsvRead, today: IsoDate) =>
+  dsvGeneratedFact(
+    snapshot.generations.map((generation) => ({
+      generatedOn: generation.generatedOn,
+      generatedAt: new Date(generation.generatedAt),
+      current: !stale(snapshot, generation, today),
+    })),
+  );
+
 export function dsvService(deps: DsvDeps) {
   const { db, release, registry } = deps;
   const company = loadOrganisation(configDirs(deps.configDir).organisation).transfergesellschaft;
@@ -219,43 +240,25 @@ export function dsvService(deps: DsvDeps) {
   }
 
   /** Why no DSV can be generated now: the state's blockers and the template's approval. */
-  function blockers(read: DsvRead) {
+  function blockers(snapshot: DsvRead) {
     const found = dsvGenerationBlockers({
-      projectType: read.projectType,
-      projectStatus: read.projectStatus,
-      status: read.status,
-      dsvStatus: read.dsvStatus,
-      entryWaveId: read.wave?.id ?? null,
-      tgStart: read.source.tgStart,
-      tgEnd: read.source.tgEnd,
-      templateVersion: read.source.templateVersion,
+      projectType: snapshot.projectType,
+      projectStatus: snapshot.projectStatus,
+      status: snapshot.status,
+      dsvStatus: snapshot.dsvStatus,
+      entryWaveId: snapshot.wave?.id ?? null,
+      tgStart: snapshot.source.tgStart,
+      tgEnd: snapshot.source.tgEnd,
+      templateVersion: snapshot.source.templateVersion,
     });
     const unapproved =
-      read.templateApproved === null
-        ? read.templateVersion !== null
-        : !dsvTemplateUsable({ approvedForLive: read.templateApproved }, deps.production);
+      snapshot.templateApproved === null
+        ? snapshot.templateVersion !== null
+        : !dsvTemplateUsable({ approvedForLive: snapshot.templateApproved }, deps.production);
     return unapproved && !found.includes("not_ta_tg")
       ? [...found, "dsv_template_not_approved" as const]
       : found;
   }
-
-  /** Whether a generation can still be handed out (process-and-lifecycle.md, the DSV: generation as built). */
-  const stale = (read: DsvRead, generation: DsvRead["generations"][number], today: IsoDate) =>
-    dsvGenerationProblem(
-      generation,
-      { sourceToken: read.sourceToken, waveSigningDeadline: read.wave?.signingDeadline ?? null },
-      today,
-    ) !== null;
-
-  /** `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the latest current generation. */
-  const generatedFact = (read: DsvRead, today: IsoDate) =>
-    dsvGeneratedFact(
-      read.generations.map((generation) => ({
-        generatedOn: generation.generatedOn,
-        generatedAt: new Date(generation.generatedAt),
-        current: !stale(read, generation, today),
-      })),
-    );
 
   /**
    * Generates the DSV: the state and deadline checked on the snapshot (the function checks both

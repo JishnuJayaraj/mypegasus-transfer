@@ -247,35 +247,35 @@ describe("the tab DSV", () => {
   });
 });
 
-describe("the project's DSV-Vorlage", () => {
-  const template = (overrides: object = {}) => ({
-    version: null,
-    fixed: false,
-    versions: [{ version: "v1", approvedForLive: false }],
-    capabilities: { pin: true },
-    ...overrides,
+const template = (overrides: object = {}) => ({
+  version: null,
+  fixed: false,
+  versions: [{ version: "v1", approvedForLive: false }],
+  capabilities: { pin: true },
+  ...overrides,
+});
+
+function setupProject(first: object, routes: Parameters<typeof mockApi>[0] = {}) {
+  let current = first;
+  const mock = mockApi({
+    "GET /api/v1/me": () => json(staffUsers[1]),
+    "GET /api/v1/dev/staff-users": () => json(staffUsers),
+    [`GET ${projectPath}`]: () => json(ta),
+    [`GET ${projectPath}/entry-waves`]: () => json({ items: [], nextCursor: null }),
+    [`GET ${projectPath}/config`]: () => json(unpinnedConfig),
+    "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
+    [`GET ${projectPath}/dsv-template`]: () => json(current),
+    [`PUT ${projectPath}/dsv-template`]: () => {
+      current = template({ version: "v1" });
+      return json(current);
+    },
+    ...routes,
   });
+  renderApp(`/projects/${project.id}?tab=setup`, mock.api);
+  return mock;
+}
 
-  function setupProject(first: object, routes: Parameters<typeof mockApi>[0] = {}) {
-    let current = first;
-    const mock = mockApi({
-      "GET /api/v1/me": () => json(staffUsers[1]),
-      "GET /api/v1/dev/staff-users": () => json(staffUsers),
-      [`GET ${projectPath}`]: () => json(ta),
-      [`GET ${projectPath}/entry-waves`]: () => json({ items: [], nextCursor: null }),
-      [`GET ${projectPath}/config`]: () => json(unpinnedConfig),
-      "GET /api/v1/config/templates": () => json({ items: [], nextCursor: null }),
-      [`GET ${projectPath}/dsv-template`]: () => json(current),
-      [`PUT ${projectPath}/dsv-template`]: () => {
-        current = template({ version: "v1" });
-        return json(current);
-      },
-      ...routes,
-    });
-    renderApp(`/projects/${project.id}?tab=setup`, mock.api);
-    return mock;
-  }
-
+describe("the project's DSV-Vorlage", () => {
   it("lets the PL pin a version, said to be a sample", async () => {
     const { calls } = setupProject(template());
     const section = await card("DSV-Vorlage");

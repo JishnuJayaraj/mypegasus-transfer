@@ -151,9 +151,10 @@ describe("dsvDeadline", () => {
     ).toEqual({ ok: true, deadline: "2091-03-20" });
   });
 
+  const explicit = (date: string, more = {}) =>
+    dsvDeadline({ kind: "explicit", date }, { ...context, ...more });
+
   it("keeps today ≤ deadline ≤ latest entry and ≤ TG start, inclusive, failing closed", () => {
-    const explicit = (date: string, more = {}) =>
-      dsvDeadline({ kind: "explicit", date }, { ...context, ...more });
     expect(explicit("2091-03-01").ok).toBe(true);
     expect(explicit("2091-04-01").ok).toBe(true);
     for (const outcome of [
@@ -293,9 +294,10 @@ describe("templates and the pin", () => {
   });
 });
 
+const at = (iso: string) => new Date(iso);
+
 describe("dsvGeneratedFact (process-and-lifecycle.md, the DSV: generation as built)", () => {
   it("is the latest current generation, by its Berlin day and instant", () => {
-    const at = (iso: string) => new Date(iso);
     expect(dsvGeneratedFact([])).toBeUndefined();
     expect(
       dsvGeneratedFact([

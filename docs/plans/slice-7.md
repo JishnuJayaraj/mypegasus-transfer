@@ -408,6 +408,11 @@ archives this plan.
 PRs. If a PR passes about 1,500 lines while building, the plan says so and the owner decides on a
 split, as in Slice 6.
 
+**7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
+docs, of which about 260 are the six document functions recreated unchanged with `document_type`
+(0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether
+to split it.
+
 ## Design
 
 ### Domain (`packages/domain`, no I/O, no system time)
