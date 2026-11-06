@@ -1,6 +1,6 @@
 # Slice 6b — UX foundation (staff app and portal)
 
-Status: **revised** after the owner's review of 2026-11-06: Q221–Q225 answered (the
+Status: **done** 2026-11-06 (6b-1 to 6b-6: #106, #107, #108, #109, #111, #110); archived, its rules in `architecture/ui-patterns.md`. Was **revised** after the owner's review of 2026-11-06: Q221–Q225 answered (the
 owner's decisions, recorded in D2, D3, D4, D7, D9 and D10), the quick views, the dashboard's
 empty text and the back-office task corrected, and the contracts C1–C6 added. 6b-1 and 6b-2 may
 start; 6b-3 waits for D6/C2 as written here, 6b-4 for the dashboard text in 6b-4. Sequencing with
@@ -429,7 +429,7 @@ D9, a re-theme beyond D3, Carbon v12.
 
 ## Questions (open-questions.md)
 
-Answered by the owner on 2026-11-06 ([the answers](../decisions/2026-11-06-answers-ux-foundation.md)), recorded as `accepted`: Q221 product
+Answered by the owner on 2026-11-06 ([the answers](../../decisions/2026-11-06-answers-ux-foundation.md)), recorded as `accepted`: Q221 product
 identity (D4), Q222 thin Carbon wrappers (D2), Q223 column preferences in memory (D7), Q224
 "Meine Aufgaben" later in its own scope (D9), Q225 1280px preferred, reflow required (D10).
 Q223 keeps a 🔒 for the DPO check before any persistent storage.

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect, expectAccessible, expectWithinBudget, test } from "./helpers";
 import { worklistParticipations } from "./participants";
 
-// The work list (docs/architecture/ui-patterns.md; UX foundation plan, 6b-3): the next step's
+// The work list (docs/architecture/ui-patterns.md): the next step's
 // order, quick views, the filter panel, the column chooser in memory, the batch bar only with a
 // selection, and the way back from a participant (C6). Each test brings its own project (created
 // through the staff API) and participations (owner fixtures), so no other spec's rows change its

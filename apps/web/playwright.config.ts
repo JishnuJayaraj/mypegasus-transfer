@@ -30,7 +30,7 @@ export default defineConfig({
       testIgnore: ["shell.spec.ts", "projects.spec.ts"],
       dependencies: ["project-count"],
     },
-    // The shell smoke test at 1440, 768 and 375px (UX foundation plan, D10): each test sets
+    // The shell smoke test at 1440, 768 and 375px (ui-patterns.md, tables and reflow): each test sets
     // its viewport; 375px stands in for 400 % zoom of a 1280px window.
     { name: "shell", testMatch: "shell.spec.ts" },
   ],

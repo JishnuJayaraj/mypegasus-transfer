@@ -43,7 +43,7 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /**
- * The placeholder product mark (D4 of the UX foundation plan): a neutral shape in the text
+ * The placeholder product mark (ui-patterns.md, theme and identity): a neutral shape in the text
  * colour, decorative next to the product name. Final branding replaces this and the favicon only.
  */
 export function ProductMark() {

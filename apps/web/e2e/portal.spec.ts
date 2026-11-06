@@ -2,7 +2,7 @@ import { choosePortalLanguage, expect, expectAccessible, test } from "./helpers"
 
 // AC-18: the portal (built, served by the API at /portal/) renders in German and switches to
 // English with <html lang> in its header. The web and portal SPAs are separate builds; this suite
-// drives both over HTTP only. The start page shows no API status (slice 6b, AC 13).
+// drives both over HTTP only. The start page shows no API status (ui-patterns.md, the portal).
 test("portal: German by default, switch to English in the header, no API status", async ({
   page,
 }) => {

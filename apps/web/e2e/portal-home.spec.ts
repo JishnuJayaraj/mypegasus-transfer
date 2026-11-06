@@ -10,10 +10,10 @@ import {
 } from "./helpers";
 import { activatedParticipant, loggedInAsOwner } from "./participants";
 
-// The portal's start page and header (slice 6b, the portal; ui-patterns.md, C5): logged out one
+// The portal's start page and header (ui-patterns.md, the portal and C5): logged out one
 // choice between "Anmelden" and the activation code; logged in the checklist with its progress
 // from GET /portal/progress, the next appointment and the areas; "Mein Konto" with the channels
-// and "Abmelden"; the language switch and the account menu in the header. AC 13: the start page
+// and "Abmelden"; the language switch and the account menu in the header. The start page
 // makes no request to a sensitive-field endpoint. Screenshots at 1440, 768, 375 and 320px and
 // the zoom check (200 % and 400 % of a 1280×720 window) go to docs/screenshots/6b-6/. Synthetic
 // data only.
@@ -151,7 +151,7 @@ test("portal start page logged in: checklist, next appointment, areas, Mein Kont
     ).ok(),
   ).toBe(true);
 
-  // AC 13: every request the start page makes, none to a sensitive-field endpoint.
+  // Every request the start page makes, none to a sensitive-field endpoint (data-protection.md).
   const requested: string[] = [];
   portal.on("request", (request) => {
     const { pathname } = new URL(request.url());
@@ -241,7 +241,7 @@ test("portal start page logged in: checklist, next appointment, areas, Mein Kont
   await portal.screenshot({ path: shot("home-en-375"), fullPage: true });
   await choosePortalLanguage(portal, "Deutsch");
 
-  // The zoom check (D10): a 1280×720 window at 200 % is 640×360 CSS px, at 400 % 320×180.
+  // The zoom check (ui-patterns.md, tables and reflow): a 1280×720 window at 200 % is 640×360 CSS px, at 400 % 320×180.
   for (const [zoom, width, height] of [
     [200, 640, 360],
     [400, 320, 180],

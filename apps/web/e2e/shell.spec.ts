@@ -2,8 +2,8 @@ import type { Page } from "@playwright/test";
 import { seedProjectIds, seedStaffUserIds } from "@transfer/db";
 import { expect, expectAccessible, test } from "./helpers";
 
-// The staff shell at the widths below the preferred 1280px layout (UX foundation plan, D10 and
-// 6b-1): the project "shell" in playwright.config.ts runs only this file. 375px stands in for
+// The staff shell at the widths below the preferred 1280px layout (ui-patterns.md, tables and
+// reflow): the project "shell" in playwright.config.ts runs only this file. 375px stands in for
 // 400 % zoom of a 1280px window (WCAG 1.4.10 Reflow); 1440px covers the login page and the rail.
 // Read-only on the seeded synthetic data, so it runs beside the other specs.
 

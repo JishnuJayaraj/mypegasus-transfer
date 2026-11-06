@@ -6,6 +6,14 @@ missing here is added here in the PR that needs it. The components live in `pack
 primitives, following the Carbon for IBM Products patterns without depending on
 `@carbon/ibm-products` (Q222). A wrapper is built only when a screen needs it.
 
+## Theme and identity
+
+Carbon's `Theme` zones: `g100` for the header band (staff app and portal), `g10` for the content,
+Carbon's interactive blue as the accent (Q221). The name comes from i18n ("Transferplattform",
+"Teilnehmerportal"); the mark is a neutral placeholder SVG (`ProductMark`) with a self-hosted
+favicon. Final branding swaps the mark and the favicon only. Dark mode for the content is later
+(roadmap, Slice 6b's deferred items).
+
 ## Principles
 
 1. **One job per screen, three things that matter.** Every screen states its job in the plan of
@@ -85,7 +93,7 @@ primitives, following the Carbon for IBM Products patterns without depending on
 | A list loading | `TableSkeleton headers` | With the real column headers; announced through a hidden status. |
 | A small part loading | `Loading label` | Replaces the loose "Wird geladen…" paragraphs. |
 | Nothing to show | `EmptyState variant` | `noData` (what this is, why it is empty, the next step as `action`), `noMatches` (with `onResetFilters`: "Filter zurücksetzen"), `forbidden` (who may see it), `error` (with `onRetry`: "Erneut versuchen"). Forbidden and error are alerts. |
-| An interactive list | `DataTable` | Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (a named `group`, the only thing that scrolls sideways, D10), selection with a batch bar of its own rendered only with a selection (`batchActions`: four buttons, the rest under "Weitere Aktionen", each told its button for the focus return), a row overflow menu (`rowActions`), `onRowClick` (a click outside the row's controls; the row's link stays the keyboard's way), a column chooser (`columnChooser`, `hiddenColumns` to keep the choice in memory across a navigation), "Weitere anzeigen" over the loaded rows (`pageSize`, `limit`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. Without rows the empty state replaces the table, under the `toolbar` (a search or filter that found nothing stays changeable). |
+| An interactive list | `DataTable` | Sortable headers (`sortValue`; text in German order, empty values last), a sticky header inside its own scroll container (a named `group`, the only thing that scrolls sideways; tables and reflow, below), selection with a batch bar of its own rendered only with a selection (`batchActions`: four buttons, the rest under "Weitere Aktionen", each told its button for the focus return), a row overflow menu (`rowActions`), `onRowClick` (a click outside the row's controls; the row's link stays the keyboard's way), a column chooser (`columnChooser`, `hiddenColumns` to keep the choice in memory across a navigation), "Weitere anzeigen" over the loaded rows (`pageSize`, `limit`) or the next cursor page (`loadMore`). Controlled `sort` for a sort kept in the URL. Without rows the empty state replaces the table, under the `toolbar` (a search or filter that found nothing stays changeable). |
 | A small read-only table | `SimpleTable` | Its `footer` holds "Mehr laden" of a cursor list or the list's add action. `hideTitle` when the page or card heading already names it (the table keeps the name for assistive technology). |
 | A task over the page (form, filters, bulk action) | `SidePanel` | Below. |
 | An action that may be blocked | `ActionButton unavailableReason` | C1. |
@@ -102,6 +110,26 @@ tags, the toolbar with the count line ("142 Teilnehmende · Stand 09:41", "12 Tr
 filtered), the search and "Filter" (a side panel with the filters in groups, applied at once).
 The default order is the domain's (C2); a header sort is a code in the URL. Row click opens the
 object; the way back restores the view (C6).
+
+The work list's quick views (`apps/web/src/components/worklist-views.ts`): each is exactly one
+existing `WorklistFilter` with its predicate unchanged (`packages/domain/src/worklist/filter.ts`),
+and its label says what that predicate selects, never more. A quick view and the dashboard tile
+with the same filter share one i18n key (`tileLabelKey`; a unit test asserts equal filters).
+
+| Quick view | Filter | Selects exactly | Shown to |
+|---|---|---|---|
+| Alle | `{}` | the viewer's whole list scope (an assigned consultant: "Ihre zugewiesenen Teilnehmenden") | everyone with the work list |
+| Überfällig | `deadlineState: overdue` | at least one listed deadline whose date has passed | everyone |
+| In den nächsten 14 Tagen | `deadlineState: upcoming` | at least one deadline from today to 14 calendar days ahead (Q78) | everyone |
+| Angaben/Unterlagen fehlen | `actions: any` | a missing participant field or document, or a rejected upload | everyone |
+| Hinweise | `flag: any` | at least one lifecycle flag | everyone |
+| Termine zu klären | `appointment: to_resolve` | appointment items needing resolution | PL (the only resolver, data-protection.md) |
+| Ohne Beratung | `consultant: none` | no assigned consultant | PL and back office |
+| Mir zugewiesen | `consultant: <own id>` | assigned to the viewer | a PL who is also a consultant of the project |
+
+The default columns are six (seven in `ta_tg`, with *Welle*); the others are in the column chooser,
+whose choice stays in memory only (Q223): never browser storage or the URL, until a DPO check
+allows per-user storage. A new list adds its quick view the same way (Slice 7's DSV view).
 
 ### The dashboard
 
@@ -148,11 +176,16 @@ edit forms open in one side panel (C4). The open items, deadlines and appointmen
 work list's row of the participation (no API of its own); a viewer without the work list sees the
 page without them and is told why.
 
-The timeline (D12, stage 1) is inline SVG styled by CSS classes (no inline `<style>`, CSP) without
+The timeline (stage 1) is inline SVG styled by CSS classes (no inline `<style>`, CSP) without
 a chart library: the TG period as a bar, a "heute" line, one shape per kind (circle, diamond,
 square; red for an overdue deadline) with a legend in text. Each marker is a link that the
 keyboard reaches, with a tooltip on hover and focus (Escape hides it). Below the graphic the same
 events as a list, which is the accessible equivalent; below 30rem only the list shows.
+Stage 2 (Slice 8) adds leave, qualification measures and coaching as bars, each kind with its own
+colour **and** shape or pattern and a text label. Every event kind passes the field-level access
+matrix (data-protection.md) like any other field, and an absence's reason is shown only where its
+data class allows it (a sensitive category needs its own decision). A project-level view of the
+waves waits for the deferred items.
 
 ### Side panel
 
@@ -170,7 +203,7 @@ The focus starts in the first field (not on ×, whose tooltip would swallow the 
 returns on close to `returnFocusTo` or else to what had it at opening; a row action gets its
 menu's trigger for that (`RowAction.onClick(trigger)`), since the menu item is gone by then.
 
-### Tables and reflow (D10)
+### Tables and reflow (Q225)
 
 1280px is the preferred layout, not a cutoff: at 400% zoom of a 1280px window (320 CSS px) forms,
 filters, side panels and dialogs are one column and fully usable without two-dimensional

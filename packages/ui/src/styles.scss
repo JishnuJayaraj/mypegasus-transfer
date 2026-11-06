@@ -14,7 +14,7 @@
   $theme: themes.$g10
 );
 // Root tokens the components rely on: layer colours and the layout sizes (heights, padding).
-// Theme zones: the header is a `g100` band over the `g10` content (UX foundation plan, D3).
+// Theme zones: the header is a `g100` band over the `g10` content (ui-patterns.md, theme and identity).
 @use "@carbon/react/scss/zone";
 @use "@carbon/react/scss/layer";
 @use "@carbon/react/scss/layout";
@@ -56,7 +56,7 @@ body {
   color: theme.$text-primary;
 }
 
-// One type scale for page headings, whatever component they sit in (UX foundation plan,
+// One type scale for page headings, whatever component they sit in (ui-patterns.md,
 // principle 6). `:where` keeps it as weak as an element selector, so a Carbon component's own
 // heading class (a modal's title, say) still wins.
 :where(.tp-content, .tp-portal-content) {

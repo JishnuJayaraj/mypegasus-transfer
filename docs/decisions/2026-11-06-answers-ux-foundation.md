@@ -1,6 +1,6 @@
 # Decisions — 2026-11-06, the UX foundation (Slice 6b, Q221–Q225)
 
-The product owner reviewed [the Slice 6b plan](../plans/slice-6b.md) and answered its five
+The product owner reviewed [the Slice 6b plan](../plans/archive/slice-6b.md) and answered its five
 questions. They were first drafted as Q210–Q214, which Slice 7 (PR #104) already uses for DSV and
 retention decisions; they are renumbered Q221–Q225 and Slice 7's rows are unchanged. All five are
 `accepted` for development on synthetic data; Q223 keeps a 🔒 for the DPO check before any
