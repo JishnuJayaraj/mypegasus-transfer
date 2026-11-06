@@ -122,12 +122,24 @@ describe("the portal home with login (ADR-0007, Q123)", () => {
     );
   });
 
-  it("links an active participant to their channels", async () => {
-    renderPortal("/portal/", { "GET /api/v1/portal/me": () => json(me) });
-    expect(await screen.findByRole("link", { name: "Kontaktwege verwalten" })).toHaveAttribute(
+  it("shows an active participant their channels on Mein Konto, linked to manage them", async () => {
+    renderPortal("/portal/account", { "GET /api/v1/portal/me": () => json(me) });
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Mein Konto" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/E-Mail e…@example.org, bestätigt am 21.10.2026/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Kontaktwege verwalten" })).toHaveAttribute(
       "href",
       "/portal/channels",
     );
+  });
+
+  it("asks to log in again on Mein Konto without a session", async () => {
+    renderPortal("/portal/account", {
+      "GET /api/v1/portal/me": () => problem(401, "unauthenticated"),
+    });
+    expect(await screen.findByText(/Ihre Sitzung ist abgelaufen/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Anmelden" })).toHaveAttribute("href", "/portal/login");
   });
 });
 
@@ -154,7 +166,7 @@ describe("the consent v2 offer (data-protection.md, consent v2)", () => {
       await screen.findByText("Danke, Ihre Einwilligung ist gespeichert."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: /Neue Einwilligung/ })).toBeNull();
-    expect(calls.at(-1)).toEqual({
+    expect(calls.filter((call) => call.path !== "/api/v1/portal/me").at(-1)).toEqual({
       path: `/api/v1/portal/channels/${emailId}/consent-upgrade`,
       body: { consent: true, consentVersion: "portal-contact-consent:v2", language: "de" },
     });
@@ -171,6 +183,9 @@ describe("the consent v2 offer (data-protection.md, consent v2)", () => {
     await user.click(within(offer).getByRole("button", { name: "Later" }));
     expect(screen.queryByRole("region", { name: "New consent for this contact" })).toBeNull();
     expect(screen.getByText(/e…@example.org/)).toBeInTheDocument();
-    expect(calls.map((call) => call.path)).toEqual(["/api/v1/portal/channels"]);
+    // the header asks who is logged in; nothing else but the channels
+    expect(calls.map((call) => call.path).filter((path) => path !== "/api/v1/portal/me")).toEqual([
+      "/api/v1/portal/channels",
+    ]);
   });
 });

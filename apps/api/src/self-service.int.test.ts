@@ -17,6 +17,7 @@ import {
   ParticipationDetail,
   ParticipationSelfService,
   PortalConsents,
+  PortalProgress,
   PortalSelfService,
   PortalSelfServiceWrite,
 } from "@transfer/domain";
@@ -257,6 +258,50 @@ describe("GET /portal/self-service (Q140)", () => {
 
   it("needs an active session", async () => {
     await expectProblem(await portal().get("/self-service"), 401, "unauthenticated");
+  });
+});
+
+describe("GET /portal/progress (the portal home's checklist)", () => {
+  it("counts the notice and the wizard's pages with a required field, and carries no value", async () => {
+    const { browser } = await activated();
+    const progress = async () => {
+      const res = await browser.get("/progress");
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("no-store");
+      return readJson(res, PortalProgress);
+    };
+    const before = await progress();
+    const body = answered.at(-1)!;
+    const wizard = await state(browser);
+    expect(before.tasks).toEqual([
+      { kind: "notice", done: false },
+      ...wizard.pages
+        .filter((page) => page.fields.some((field) => field.required))
+        .map((page) => ({ kind: "section", page: page.page, done: page.complete })),
+    ]);
+    // contact holds the required address already; the base has no required upload
+    expect(before.tasks).toContainEqual({ kind: "section", page: "contact", done: true });
+    expect(before.optional).toEqual(["documents"]);
+    for (const value of ["Musterweg", "Berlin", "0171", "Erika", "Beispiel", "1970"]) {
+      expect(body).not.toContain(value);
+    }
+
+    expect((await acknowledge(browser)).status).toBe(204);
+    const written = await browser.put("/self-service/pages/personal", {
+      revision: 0,
+      values: { gender: "female", maritalStatus: "single" },
+    });
+    expect(written.status).toBe(200);
+    const after = await progress();
+    expect(after.tasks.slice(0, 2)).toEqual([
+      { kind: "notice", done: true },
+      { kind: "section", page: "personal", done: true },
+    ]);
+    expect(after.tasks).toHaveLength(before.tasks.length);
+  });
+
+  it("needs an active session", async () => {
+    await expectProblem(await portal().get("/progress"), 401, "unauthenticated");
   });
 });
 

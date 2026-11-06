@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect, expectAccessible, test } from "./helpers";
 import { worklistParticipations } from "./participants";
 
-// The participant page (docs/architecture/ui-patterns.md; UX foundation plan, 6b-5): the header
+// The participant page (docs/architecture/ui-patterns.md): the header
 // with its breadcrumb back to the work list as it was left (C6), the three tracks as separate tags
 // and summaries (C3), "Offen", the timeline with its keyboard path and its list (D12), and an edit
 // form in a side panel that keeps its input on Escape (C4). Each width passes axe without a

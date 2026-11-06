@@ -30,6 +30,10 @@ export {
 } from "@carbon/react";
 export {
   Add,
+  ArrowRight,
+  Calendar,
+  CheckmarkFilled,
+  CircleDash,
   ChevronDown,
   ChevronUp,
   Edit,
@@ -38,6 +42,7 @@ export {
   Location,
   Logout,
   TaskApproved,
+  Translate,
   UserAvatar,
   UserMultiple,
   WarningAlt,

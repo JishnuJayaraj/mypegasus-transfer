@@ -16,6 +16,7 @@ import {
   PortalAppointments,
   PortalBookingResult,
   PortalMe,
+  PortalProgress,
   ReminderPage,
 } from "@transfer/domain";
 import { randomUUID } from "node:crypto";
@@ -270,6 +271,47 @@ describe("GET /portal/appointments and the participant's booking", () => {
     expect(cancelled).toEqual([
       expect.objectContaining({ appointmentId: event.id, cancelledBy: "organizer" }),
     ]);
+  });
+});
+
+/** The appointment tasks of the participant's start page. */
+async function appointmentTasks(browser: ReturnType<typeof portal>) {
+  const res = await browser.get("/progress");
+  expect(res.status).toBe(200);
+  const { tasks } = await readJson(res, PortalProgress);
+  return tasks.filter((task) => task.kind === "appointment");
+}
+
+describe("GET /portal/progress: the invitations", () => {
+  it("counts an invitation until it is booked, then as done; another participant has none", async () => {
+    const erika = await activated();
+    const other = await activated();
+    const event = await appointment();
+    const cancelled = await appointment({
+      title: "Abgesagt",
+      startsAt: hours(72),
+      endsAt: hours(73),
+    });
+    expect((await invite(event.id, [erika.participationId])).status).toBe(201);
+    expect((await invite(cancelled.id, [erika.participationId])).status).toBe(201);
+    const cancel = await post(`/appointments/${cancelled.id}/cancellation`, {
+      reason: "organiser_unavailable",
+    });
+    expect(cancel.status).toBe(200);
+
+    // the cancelled invitation is no task any more
+    expect(await appointmentTasks(erika.browser)).toEqual([
+      { kind: "appointment", appointmentId: event.id, appointmentKind: "info_event", done: false },
+    ]);
+    expect(await appointmentTasks(other.browser)).toEqual([]);
+
+    expect((await erika.browser.post(`/appointments/${event.id}/booking`, {})).status).toBe(201);
+    expect(await appointmentTasks(erika.browser)).toEqual([
+      { kind: "appointment", appointmentId: event.id, appointmentKind: "info_event", done: true },
+    ]);
+    // no detail of the appointment
+    const res = await erika.browser.get("/progress");
+    expect(await res.text()).not.toMatch(/Infoveranstaltung|Kantine|startsAt/);
   });
 });
 

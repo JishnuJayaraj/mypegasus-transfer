@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as ActivateRouteImport } from './routes/activate'
 import { Route as AppointmentsRouteImport } from './routes/appointments'
 import { Route as ChannelsRouteImport } from './routes/channels'
@@ -21,6 +22,11 @@ import { Route as NoticeArt14VersionRouteImport } from './routes/notice.art14.$v
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ActivateRoute = ActivateRouteImport.update({
@@ -61,6 +67,7 @@ const NoticeArt14VersionRoute = NoticeArt14VersionRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/activate': typeof ActivateRoute
   '/appointments': typeof AppointmentsRoute
   '/channels': typeof ChannelsRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/activate': typeof ActivateRoute
   '/appointments': typeof AppointmentsRoute
   '/channels': typeof ChannelsRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRoute
   '/activate': typeof ActivateRoute
   '/appointments': typeof AppointmentsRoute
   '/channels': typeof ChannelsRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/activate'
     | '/appointments'
     | '/channels'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/account'
     | '/activate'
     | '/appointments'
     | '/channels'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/activate'
     | '/appointments'
     | '/channels'
@@ -125,6 +137,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRoute
   ActivateRoute: typeof ActivateRoute
   AppointmentsRoute: typeof AppointmentsRoute
   ChannelsRoute: typeof ChannelsRoute
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/activate': {
@@ -197,6 +217,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRoute,
   ActivateRoute: ActivateRoute,
   AppointmentsRoute: AppointmentsRoute,
   ChannelsRoute: ChannelsRoute,

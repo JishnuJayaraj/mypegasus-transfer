@@ -1,6 +1,6 @@
 import type { APIRequestContext } from "@playwright/test";
 import { seedProjectIds } from "@transfer/db";
-import { expect, expectAccessible, test } from "./helpers";
+import { choosePortalLanguage, expect, expectAccessible, test } from "./helpers";
 import { activatedParticipant } from "./participants";
 
 // Self-service (data-protection.md, self-service; regional-variation.md, "Self-service wizard"): an
@@ -116,9 +116,9 @@ test("portal: the self-service wizard saves pages, resumes and shows the progres
   await expectAccessible(page);
 
   // English, then the consents.
-  await page.getByLabel("Sprache").selectOption("en");
+  await choosePortalLanguage(page, "English");
   await expect(page.getByRole("heading", { level: 1, name: "Overview" })).toBeVisible();
-  await page.getByLabel("Language").selectOption("de");
+  await choosePortalLanguage(page, "Deutsch");
   await page.goto("/portal/consents");
   await expect(
     page.getByRole("heading", { name: "Kontakt über das Teilnehmerportal" }),

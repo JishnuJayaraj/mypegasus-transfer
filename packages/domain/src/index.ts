@@ -653,6 +653,14 @@ export {
 } from "./portal/contact";
 export { portalLimits } from "./portal/limits";
 export {
+  PortalProgress,
+  portalProgress,
+  progressCount,
+  PortalTask,
+  type PortalInvitationFact,
+  type PortalProgressInput,
+} from "./portal/progress";
+export {
   PortalStepUp,
   SensitiveStepUpMethod,
   StepUpBirthDateInput,

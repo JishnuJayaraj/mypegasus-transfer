@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { json, mockApi, problem, project, renderApp, staffUsers } from "./test-utils";
 
-// The staff shell (UX foundation plan, 6b-1). jsdom has no layout and its matchMedia never
+// The staff shell (ui-patterns.md). jsdom has no layout and its matchMedia never
 // matches, so these run the narrow layout (overlay navigation); the rail is covered by the e2e
 // shell project at its widths.
 

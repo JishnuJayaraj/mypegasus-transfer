@@ -108,10 +108,23 @@ nav, responsive menu, breadcrumbs, product mark), a UI kit (page header with act
 tags, designed loading/empty/error states, an interactive table), the work list (urgency sort,
 quick views, filter panel, six default columns, batch bar), the project page and dashboard ("Heute
 zu tun" first), the participant overview, and the portal home ("Das fehlt noch"). No lifecycle
-or access changes; one new domain read rule (`nextStep`). Plan: [`plans/slice-6b.md`](plans/slice-6b.md) (revised); Q221–Q225 (accepted).
-Later UX polish (dark mode, saved views, "Meine Aufgaben", shortcuts, the timeline's Slice 8
-stage, Carbon v12) is listed in its
-D9 for Slice 9 or v1.1.
+or access changes; one new domain read rule (`nextStep`). Plan: [`plans/archive/slice-6b.md`](plans/archive/slice-6b.md); Q221–Q225 (accepted).
+**Done** 2026-11-06 (PRs 6b-1 to 6b-6: #106, #107, #108, #109, #111, #110): plan archived in
+[`plans/archive/slice-6b.md`](plans/archive/slice-6b.md); its rules live in
+`architecture/ui-patterns.md` (theme, principles, contracts C1–C6, the patterns, the quick views,
+reflow, the portal), `domain/process-and-lifecycle.md` (the next step's tiers) and
+`domain/data-protection.md` (the work list's memory, the portal's checklist); one new endpoint,
+`GET /portal/progress` (value-free, for C5).
+Still open from Slice 6b: the D11 usability walkthrough (30 minutes, one PL and one consultant, on
+synthetic data; the four tasks and the findings table are in PR #108), and a manual zoom check in
+real Chrome (each PR emulated it in Chromium).
+Not in Slice 6b (its D9), for Slice 9 hardening or v1.1, placed by the owner: content dark mode;
+server-side saved views; persistent column preferences after a DPO check (Q223); the
+cross-project staff start page "Meine Aufgaben" with its own API and access model (Q224);
+keyboard shortcuts and a command palette; a density setting; visual regression screenshots; the
+Carbon v12 upgrade (its own PR, `packages/ui` only); the participant timeline's stage 2 (Slice 8)
+and a project-level view of the waves; aligning the wizard's page progress (Q140) with the
+start page's task count (C5).
 
 ## Slice 7 — DSV (F8)
 DSV track: generation, three-party signatures (`dsvFullyExecuted`), original tracking, list of

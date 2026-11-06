@@ -34,7 +34,9 @@ describe("portal catalogs", () => {
 
   it("have every key the code uses", () => {
     expect(used.length).toBeGreaterThan(5);
-    expect(used.filter((key) => !flatten(de).includes(key))).toEqual([]);
+    // a plural key exists as its forms (`_one`, `_other`)
+    const keys = new Set(flatten(de).map((key) => key.replace(/_(one|other)$/, "")));
+    expect(used.filter((key) => !keys.has(key))).toEqual([]);
   });
 
   it("have no empty texts", () => {

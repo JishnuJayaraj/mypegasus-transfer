@@ -7812,6 +7812,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The portal home's checklist: the participant's tasks with a done flag and the optional pages; no value */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tasks */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PortalProgress"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/self-service/pages/{page}": {
         parameters: {
             query?: never;
@@ -16275,6 +16320,33 @@ export interface components {
             key: string;
             /** @enum {string} */
             reason: "missing" | "not_accepted";
+        };
+        PortalProgress: {
+            tasks: components["schemas"]["PortalTask"][];
+            optional: components["schemas"]["SelfServicePage"][];
+        };
+        PortalTask: {
+            /** @enum {string} */
+            kind: "notice";
+            done: boolean;
+        } | {
+            /** @enum {string} */
+            kind: "section";
+            page: components["schemas"]["SelfServicePage"];
+            done: boolean;
+        } | {
+            /** @enum {string} */
+            kind: "upload";
+            /** @enum {string} */
+            documentType: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form";
+            done: boolean;
+        } | {
+            /** @enum {string} */
+            kind: "appointment";
+            /** Format: uuid */
+            appointmentId: string;
+            appointmentKind: components["schemas"]["AppointmentKind"];
+            done: boolean;
         };
         PortalSelfServiceWrite: {
             revision: number;

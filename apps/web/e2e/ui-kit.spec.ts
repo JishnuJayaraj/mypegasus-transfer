@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { expect, expectAccessible, test } from "./helpers";
 import { activatedParticipant } from "./participants";
 
-// The UI kit's first consumers (docs/architecture/ui-patterns.md; UX foundation plan, 6b-2): the
+// The UI kit's first consumers (docs/architecture/ui-patterns.md): the
 // appointment page's header, the work list's status tags, relative dates and empty states, and
 // the admin pages' data table and side panel, each with axe at 1440, 768, 375 and 320px (D10).
 // Synthetic data only; the suite fails on any CSP violation. Screenshots go to

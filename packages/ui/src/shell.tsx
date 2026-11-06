@@ -43,7 +43,7 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /**
- * The placeholder product mark (D4 of the UX foundation plan): a neutral shape in the text
+ * The placeholder product mark (ui-patterns.md, theme and identity): a neutral shape in the text
  * colour, decorative next to the product name. Final branding replaces this and the favicon only.
  */
 export function ProductMark() {
@@ -203,8 +203,11 @@ interface HeaderPanelActionProps {
   /** The button's accessible name (and tooltip). */
   label: string;
   icon: ReactNode;
-  /** The panel's content; as a function it gets `close` (e.g. after a choice in the panel). */
-  children: ReactNode | ((close: () => void) => ReactNode);
+  /**
+   * The panel's content; as a function it gets `close` (e.g. after a choice in the panel), which
+   * returns the focus to the button unless `returnFocus: false` (a link that leaves the page).
+   */
+  children: ReactNode | ((close: (options?: { returnFocus?: boolean }) => void) => ReactNode);
 }
 
 /**
@@ -214,15 +217,24 @@ interface HeaderPanelActionProps {
  */
 export function HeaderPanelAction({ label, icon, children }: HeaderPanelActionProps) {
   const [open, setOpen] = useState(false);
-  const button = useRef<HTMLButtonElement>(null);
+  // The button as state (a callback ref), so `close` can return the focus to it.
+  const [button, setButton] = useState<HTMLButtonElement | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  // `close` for the panel's content, with the focus back on the button.
+  const closeAndReturn = useCallback(
+    ({ returnFocus = true }: { returnFocus?: boolean } = {}) => {
+      setOpen(false);
+      if (returnFocus) button?.focus();
+    },
+    [button],
+  );
 
   useEffect(() => {
     const node = panel.current;
     if (!open || !node) return;
     const outside = (target: EventTarget | null) =>
-      !(target instanceof Node) || !(node.contains(target) || button.current?.contains(target));
+      !(target instanceof Node) || !(node.contains(target) || button?.contains(target));
     const onPointerDown = (event: PointerEvent) => {
       if (outside(event.target)) setOpen(false);
     };
@@ -230,7 +242,7 @@ export function HeaderPanelAction({ label, icon, children }: HeaderPanelActionPr
       if (event.key !== "Escape") return;
       event.stopPropagation();
       setOpen(false);
-      button.current?.focus();
+      button?.focus();
     };
     const onFocusOut = (event: FocusEvent) => {
       if (event.relatedTarget && outside(event.relatedTarget)) setOpen(false);
@@ -243,12 +255,12 @@ export function HeaderPanelAction({ label, icon, children }: HeaderPanelActionPr
       node.removeEventListener("keydown", onKeyDown);
       node.removeEventListener("focusout", onFocusOut);
     };
-  }, [open]);
+  }, [open, button]);
 
   return (
     <>
       <HeaderGlobalAction
-        ref={button}
+        ref={setButton}
         aria-label={label}
         aria-expanded={open}
         aria-controls={panelId}
@@ -266,7 +278,7 @@ export function HeaderPanelAction({ label, icon, children }: HeaderPanelActionPr
       >
         {open && (
           <section id={panelId} aria-label={label}>
-            {typeof children === "function" ? children(() => setOpen(false)) : children}
+            {typeof children === "function" ? children(closeAndReturn) : children}
           </section>
         )}
       </HeaderPanel>
@@ -279,19 +291,28 @@ interface PortalShellProps {
   skipToContentLabel: string;
   /** Where the product name links to (the portal's start page). */
   homeHref: string;
+  /** Header global actions: the language switch and, logged in, the account menu. */
+  actions?: ReactNode;
   children: ReactNode;
 }
 
-/** Participant portal shell (mobile-first): a header and the content, no side navigation. */
+/**
+ * Participant portal shell (mobile-first): the dark header of the staff shell with the product
+ * name and the header actions, and the content; no side navigation.
+ */
 export function PortalShell(props: PortalShellProps) {
   return (
     <>
-      <Header aria-label={props.productName}>
-        <SkipToContent>{props.skipToContentLabel}</SkipToContent>
-        <HeaderName href={props.homeHref} prefix="">
-          {props.productName}
-        </HeaderName>
-      </Header>
+      <Theme theme="g100">
+        <Header aria-label={props.productName}>
+          <SkipToContent>{props.skipToContentLabel}</SkipToContent>
+          <HeaderName href={props.homeHref} prefix="">
+            <ProductMark />
+            <span className="tp-product-name">{props.productName}</span>
+          </HeaderName>
+          {props.actions && <HeaderGlobalBar>{props.actions}</HeaderGlobalBar>}
+        </Header>
+      </Theme>
       <Content id="main-content" className="tp-portal-content">
         {props.children}
       </Content>
