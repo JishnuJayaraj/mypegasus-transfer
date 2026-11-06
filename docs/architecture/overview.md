@@ -241,7 +241,7 @@ in their payloads. Queue: **pg-boss** on the existing Postgres (ADR-0011).
   `tab` names a tab, never its position (`projectTabs`). Each tab loads its data only while shown,
   and no panel repeats its tab's label as a heading (ui-patterns.md, principle 6).
 - The page header (PR 6b-4): the breadcrumb "Projekte", the project's name as the one `h1`, the
-  customer, type and status as tags, the region as the metadata line (`useRegionText`). Its
+  customer, type and status as tags, the region as the metadata line (`RegionText`). Its
   primary action is "Teilnehmende hinzufügen" (the manual creation in a side panel, with the
   import's capability), and "Datei importieren" is in its "Aktionen" (it opens "Einrichtung" at
   `#project-import`).

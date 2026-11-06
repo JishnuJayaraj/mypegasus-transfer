@@ -42,7 +42,7 @@ import { Participants } from "../../components/participants";
 import { parseSortCode } from "../../components/worklist-state";
 import { ProjectDashboard } from "../../components/project-dashboard";
 import { AppointmentsTab } from "../../components/appointments";
-import { ProjectRegion, useRegionText } from "../../components/project-region";
+import { ProjectRegion, RegionText } from "../../components/project-region";
 import { ProjectSetup } from "../../components/project-setup";
 import { ProjectTeam } from "../../components/team";
 import { RouteError } from "../../components/route-error";
@@ -115,7 +115,6 @@ function ProjectPage() {
   const label = (value: ProjectTab | undefined) =>
     value ? tabLabels[value] : t("projectDetail.overview");
   usePageTitle(label(shownTabs[selected]), project.name);
-  const region = useRegionText(projectId);
   // Manual creation is one import row (process-and-lifecycle.md, import and manual creation):
   // offered with the import's capability, as the page's primary action; the import beside it.
   const { data: config } = useSuspenseQuery(projectConfigQuery(useApi(), projectId));
@@ -176,7 +175,7 @@ function ProjectPage() {
             <StatusTag family="project" code={project.status} />
           </>
         }
-        metadata={region}
+        metadata={<RegionText projectId={projectId} />}
         primaryAction={
           mayImport && (
             <Button

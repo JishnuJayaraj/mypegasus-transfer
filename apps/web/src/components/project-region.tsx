@@ -7,9 +7,14 @@ import { projectConfigQuery, projectQuery, regionsQuery, useApi } from "../api";
 
 /**
  * The project's region as one line of text ("Region: Niederlassung Nord (NORD)"), for the page
- * header's metadata (Q126: everyone who sees the project sees its region).
+ * header's metadata (Q126: everyone who sees the project sees its region). A component of its own,
+ * so the regions arriving re-render only this text, never the page and its open tab.
  */
-export function useRegionText(projectId: string): string | undefined {
+export function RegionText({ projectId }: { projectId: string }) {
+  return <>{useRegionText(projectId)}</>;
+}
+
+function useRegionText(projectId: string): string | undefined {
   const { t } = useTranslation();
   const api = useApi();
   const { data: project } = useSuspenseQuery(projectQuery(api, projectId));
