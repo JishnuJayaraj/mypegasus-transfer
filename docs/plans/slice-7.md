@@ -2,7 +2,9 @@
 
 Status: **revised after the product review of 2026-11-06, awaiting the product owner's approval**
 (plan PR #104, [the review](../reviews/2026-11-06-pr-104-product-review.md) of `48ebac6`). This
-revision carries the review's corrections: per-class deletion with the evidence-only phase only where
+revision carries the review's corrections (and the second review's of the same day: holds on
+affected records only, the external offer before its scans, corrected facts recorded at approval,
+wrong signature dates superseded): per-class deletion with the evidence-only phase only where
 it applies and the DSV facts that survive the scans; every subject reference pseudonymised; the
 retention job's own database role; the signature dates kept after a quarantine's lift; the deadline
 chosen before the paper is generated; an owned clarification for signed DSVs that never entered; the
@@ -72,15 +74,20 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
   (`409 source_changed`, `dsv_generation_stale`). A `dsv_offer` row (the paper, its deadline, by/at)
   is written in the status transaction (`offer_dsv`, through `apply_status_change`). The PL or back
   office declines an open offer with the offer and status version read. Expiry stays the sweep's.
-- **D5. External paper** (Q211, accepted): a DSV the platform didn't generate (e.g. handed out before
-  the project used the app) is recorded without a fabricated generation or a re-signing. The offer
-  records `origin: external_paper`, the deadline printed on it and the template wording's identity as
-  far as known (`external_unknown` when not ours); the guard `dsv_generated` is defined as "the
-  offered paper is recorded": a current generation, or an accepted external paper. Its scan's review
-  confirms, by code, that the parties, the TG start and end and the deadline on the paper equal the
-  recorded ones (`terms_mismatch` otherwise, then the PL resolves with a new offer or a contractual
-  amendment) and records the actual signature dates. Generated-paper rules (staleness) don't apply;
-  a change of the effective dates while the external offer is open is refused as for any open offer
+- **D5. External paper: the offer's metadata first, the scans after** (Q211, accepted; the second
+  review, spec 1): a DSV the platform didn't generate (e.g. handed out before the project used the
+  app) is recorded without a fabricated generation or a re-signing, in two steps with no circular
+  dependency. **First** the PL or back office records the external offer from the paper in hand:
+  `origin: external_paper`, the deadline, TG start and end and the parties as printed, and the
+  wording's identity as far as known (`external_unknown` when not ours); the printed deadline passes
+  `offer_deadline_valid`, the printed dates must equal the effective ones (`terms_mismatch`). For an
+  external offer the guard `dsv_generated` reads "the offered paper's metadata is recorded" (the same
+  request records it), so `not_offered → dsv_offered` needs no scan. **Then** scans are uploaded
+  against that open offer as for a generated paper (D6); their review confirms, by code, that the paper
+  matches the recorded metadata (`terms_mismatch` otherwise: the PL records a new offer or a
+  contractual amendment) and records the actual signature dates. The signature and full-execution
+  facts need accepted scans exactly as D6 and D7 say. Generated-paper staleness doesn't apply; a change
+  of the effective dates while the external offer is open is refused as for any open offer
   (`dsv_offer_open`).
 - **D6. The participant's signature** (`dsv_offered → dsv_signed`; PRD F8): back office or the PL
   uploads a `dsv_signed_scan` of the open offer's paper (the scan names the offer), with the dates on
@@ -107,8 +114,27 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
   TG start but lifted after the scheduled run fails the scheduled entry (the snapshot rule) and still
   qualifies for the reconciliation. "Nachweis ungültig" for an invalidated DSV scan clears only when a
   counting scan of the **same offer**, accepted after the approval, again supports each fact the
-  invalidated one supported **with its date**. The status stays; nothing restores an invalidation; an
-  entry already made is never repaired.
+  invalidated one supported **with its date** (the replacement of a wrong file). A wrong **date** on a
+  correct paper is D8a's. The status stays; nothing restores an invalidation; an entry already made is
+  never repaired.
+- **D8a. A wrong signature date is superseded, never edited** (the second review, spec 3; Q88's
+  document target, `dsv_signed_scan` and `dsv_cancellation`, PL or back office): the confirmed
+  signatures of a scan are rows of their own (`dsv_scan_signature`: scan, kind, actual date, recorded
+  at). The PL or back office (who reads the scan) requests a correction of one signature's date on an
+  accepted scan, giving the truthful date as the paper shows it, a reason code and the documented
+  source (Q209's rules); the regional operations manager of the region approves (four eyes, never the
+  requester). The approval appends a **linked replacement row** for that signature on **every**
+  accepted scan of the same offer that shows it (so `dsvSignedOn` and the packet keep agreeing,
+  `signature_date_mismatch` never arises from a correction), with the corrected date as its actual date
+  and the approval instant as its recording instant (`correction_id`); the original row stays,
+  `superseded_by`, and the history shows the correction without dates. The facts read the current rows:
+  `validOn` the corrected actual date, `recordedAt` the later of the scan's acceptance and the approval,
+  so no scheduled run before the approval ever counts the corrected date. The corrected date isn't in
+  the future and keeps the paper's own order (`receivedOn` not before the participant's corrected date).
+  Past snapshots, statuses and an entry made stay; when the corrected dates no longer support a status
+  already recorded (e.g. a packet now completed after the TG start), the PL sees "Nachweis ungültig"
+  and resolves it through the reconciliation rules or the entry clarification, never a repair. No
+  general field editor: `dsvSignedOn` has no field target.
 - **D9. The original is tracked on the contract** (`dsv_contract`, one per signed offer; PRD F8):
   `originalLocation` (controlled, `paper_personnel_file`, Q110), `originalReceivedOn`,
   `sentToCustomerOn`; by the PL or back office, audited, changed only against the value read
@@ -201,10 +227,17 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
   `withdrawnOn` only for a manual withdrawal (a system withdrawal's date is derived, Rules), not in the
   future and not before the cancellation's validity where D10 applies. A correction changes the field
   and the facts read from then on, never a past snapshot, a status or an entry made. It is independent
-  of retention and ships before the pilot. **The other field rows stay deferred** (proposed: with
-  retention activation, Slice 9): identity by person-data writes and re-import, `tgStart`/`tgEnd` by
-  dates and amendments, `tgEntryDate` by the reconciliation rules, `dsvSignedOn` by a document
-  correction of its scan (D8), `profilingSessions` by Slice 6's session records.
+  of retention and ships before the pilot. **A corrected fact is recorded at its approval** (the second
+  review, spec 2): `tl407_facts` (redefined) gives `profilingDone` with `validOn` the corrected date and
+  `recordedAt` the later of the original completion's instant, the TL 407 scan's availability and the
+  correction's approval; the status service, the sweep and the reconciliation read it there. A
+  regression test keeps a historical snapshot unchanged: a scheduled run before the approval still
+  sees the original fact (or none), the corrected date counts only for runs after the approval or a
+  reconciliation, and no recorded audit event or status changes. **The other field rows stay
+  deferred** (proposed: with retention activation, Slice 9): identity by person-data writes and
+  re-import, `tgStart`/`tgEnd` by dates and amendments, `tgEntryDate` by the reconciliation rules,
+  `dsvSignedOn` by D8a's signature-date supersession, `profilingSessions` by Slice 6's session
+  records.
 
 ### Retention (ADR-0008; data-protection.md, retention and deletion)
 
@@ -242,22 +275,35 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
   months after exit leaves the `personnel_file` data readable and writable as before for its own
   remaining period. Holds suspend only the records they scope (D23). **The evidence-only phase**
   (`evidence_set_since`, Q64) starts only when it applies: the participation has an evidence set
-  (Transfer-KuG received, i.e. it entered the TG, or funding `known_yes`, D22) **and** every class
+  (it entered the TG, a conservative trigger, or funding `known_yes`, D22) **and** every class
   outside the evidence set has been deleted; from then a trigger refuses writes to its rows and
   ordinary reads are refused (evidence-only access is break-glass, not built, so activation stays off,
-  D18). A participation with funding `known_no` and no Transfer-KuG has no evidence set: when its last
+  D18). A participation with funding `known_no` that never entered the TG has no evidence set: when its last
   class is due, it is erased (D24). Funding `unknown` blocks every deletion that depends on it
   (`funding_unknown`): the participation-record items of a non-signer and the decision between the
   evidence-only phase and erasure; `personnel_file` and `health_record` don't depend on it.
 - **D22. Funding is a recorded fact** (Q217, accepted): per participation `funded110`: `known_yes`,
   `known_no` or `unknown` (default `unknown`), recorded by back office with the documented source and
-  audited; Transfer-KuG received is derived from the entry. The settlement dates (project fields, back
-  office, Q52) are required only where they apply: `kugFinalSettlementDate` when any participation
-  entered the TG, `measure110SettlementDate` when any has `known_yes`; a project with an `unknown`
-  blocks stage two (`funding_unknown`). No fictitious date is asked for.
-- **D23. Legal holds** (Q218, accepted provisionally): the PL or back office places a hold at once on a
-  scope (the participation, a class, or a record), with a reason code (`litigation`,
-  `authority_request`, `documented_dispute`, `dpo_instruction`) and the documented source; a regional
+  audited. **TG entry is a conservative retention trigger, never proof of Transfer-KuG** (the second
+  review): a participation that entered the TG keeps an evidence set because it *may* have received
+  Transfer-KuG; nothing in the app records or claims that Transfer-KuG was claimed, granted or paid
+  (KuG billing is outside the MVP), so employment entry and actual funding or payment facts stay
+  distinct fields, and no view, export or report says "received Transfer-KuG" from the entry. The
+  settlement dates (project fields, back office, Q52) are required only where they apply:
+  `kugFinalSettlementDate` when any participation entered the TG (the same conservative trigger),
+  `measure110SettlementDate` when any has `known_yes`; a project with an `unknown` blocks stage two
+  (`funding_unknown`). No fictitious date is asked for.
+- **D23. Legal holds on the affected records only** (Q218, accepted provisionally; data-protection.md,
+  retention: a hold never keeps the whole profile; the second review): the PL or back office places a
+  hold at once on **selected records or classes of one participation** (e.g. the DSV scans and
+  `dsv_contract`, the reminder log, one document), never on a participation as a whole
+  (`hold_scope_too_broad`: no "all classes" scope), each hold with a reason code (`litigation`,
+  `authority_request`, `documented_dispute`, `dpo_instruction`) and the documented basis (the source
+  line, required). The job skips exactly the held rows; every other due row of the participation, of
+  the same class too where only records are held, is deleted as usual. An erasure (D25) with a hold
+  outstanding deletes everything due and keeps only the held rows and the participation row they
+  reference (statuses and ids, no identity unless identity itself is held); the erasure completes when
+  the last hold is released. A regional
   operations manager of the region who didn't place it releases it against a documented legal or DPO
   instruction (the source line, required). Audited, never a secret kept usable (Q122). Live deletion
   stays off until the hold administration is confirmed (D18).
@@ -300,8 +346,10 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
 - **D28. Required scenarios**, each an integration test in its PR (agent-workflow.md §3):
   - a re-offer's paper prints its own deadline; a generation made before a date, address or deadline
     change is stale and can't be offered; a production generation from `dsv:v1` is refused (7-1, 7-2a);
-  - an external paper is recorded without a generation, and its review refuses different terms
-    (7-2a, 7-2b);
+  - an external offer is recorded from its metadata before any scan exists; its scan is uploaded
+    against that offer afterwards, and its review refuses different terms (7-2a, 7-2b);
+  - a wrong participant date is superseded on every scan of the offer at once, recorded at the
+    approval; a run before the approval keeps the original fact (7-8);
   - a scan of an earlier offer's paper can't sign the open offer; receiver and dates are never
     defaulted (7-2b);
   - a complete packet quarantined and lifted after the TG start's run keeps its signature date:
@@ -313,7 +361,11 @@ participation, ADR-0002) and the data catalog (`retentionPeriods`, every class `
     clarification is open (7-4, 7-5);
   - a clarification of a reconciliation stays on the PL's list through a reply until the manager
     resolves it; an escalation stays open (7-6);
-  - a corrected `profilingDoneOn` changes the facts read later and no past snapshot (7-8);
+  - a corrected `profilingDoneOn` is recorded at the approval by `tl407_facts`: a scheduled run before
+    the approval keeps the original snapshot, a later run or a reconciliation uses the corrected date
+    (7-8);
+  - a hold on the DSV scans keeps them while the rest of the personnel file is deleted when due; a
+    whole-participation hold is refused (7-7b);
   - `transfer_app` can't execute a retention function; `transfer_retention` can't execute an ordinary
     one or write a table; with the role but no open run the triggers refuse (7-7a);
   - with every period `unset` or activation off the job deletes nothing; with synthetic periods and
@@ -346,7 +398,7 @@ archives this plan.
 | 7-4 | Work list, cutoff and the entry clarification (D2's bulk, D12, D13): "DSV unterschrieben, nicht vollständig", bulk generation, the cutoff cases' actions and tile, `dsv_signed_not_entered_at_cutoff`, `entry_clarification` with escalation and instruction | 7-3 | ~1,500 | `record_form_generation` (1–100), `record_audit_event` |
 | 7-5 | Cancellation and withdrawal (D10, D11): cancellation scans (catalog 10), `dsvCancellation`, the withdrawal and end-reason routes, `after_planned_start`, the customer notice | 7-3 | ~1,400 | `apply_status_change`, `add_document`, `review_document`, `current_document_policy`, `record_audit_event` |
 | 7-6 | Reconciliation, review, reply and resolution (D15, D16) | 7-3 | ~1,500 | `apply_status_change`, `record_audit_event` |
-| 7-8 | Date corrections (D17): field targets `profilingDoneOn` and `withdrawnOn` | 7-5 | ~900 | `request_evidence_correction`, `decide_evidence_correction` (DROP/CREATE: the field and value), `record_audit_event` |
+| 7-8 | Date corrections (D8a, D17): field targets `profilingDoneOn` and `withdrawnOn`, the DSV signature-date supersession, facts recorded at the approval | 7-3, 7-5 | ~1,400 | `request_evidence_correction`, `decide_evidence_correction` (DROP/CREATE: the field, the value, the signature), `tl407_facts`, `dsv_facts`, `record_audit_event` |
 | 7-9 | Manual contact statuses (Q215): `imported → contacted`, `contacted ↔ unreachable` with the existing edges, guards and audit | — | ~500 | — (the route calls `change_participation_status`) |
 | 7-7a | Retention framework (D18–D20, D22): the domain rules and activation gate, `transfer_retention` and the trigger path, the job process and CLI, access credentials, working copies, orphaned objects, `FileStorage.list`, settlement dates, the funding fact | 7-3 | ~1,500 | `update_project` (settlement dates), every immutability trigger function (the retention path), `record_audit_event` |
 | 7-7b | Stage one per class (D21, D23, D24): the class deletions, the retained DSV facts, legal holds (place, release), the evidence-only phase | 7-7a | ~1,500 | `record_audit_event`; one new trigger function on the participant tables instead of redefining each writer |
@@ -392,16 +444,16 @@ split, as in Slice 6.
 | `project` | 7-1 | adds `dsv_template_version` | internal / project data | `project_master` |
 | `document` (`dsv_form`), `form_generation` | 7-1 | the generated DSV; its source token, the deadline and its kind | highly confidential / `employment_contract` | `form_working_copy` (Q179) |
 | `dsv_offer` | 7-2a | participation, origin, the generation (generated) or none (external), the template version or `external_unknown`, `offer_deadline`, offered by/at, the status event; its end (`signed`, `declined`, `expired`, at) | internal / `case_internal` | `participation_record` (Q219, the retained facts of D24) |
-| `document` (`dsv_signed_scan`) | 7-2b, 7-3 | adds `dsv_offer_id`, the confirmed signatures with their actual dates, `received_by`, `received_on`, the terms confirmation for external paper | highly confidential / `employment_contract` | `personnel_file` (catalog) |
+| `document` (`dsv_signed_scan`), `dsv_scan_signature` | 7-2b, 7-3 (+7-8) | adds `dsv_offer_id`, `received_by`, `received_on`, the terms confirmation for external paper; one signature row per confirmed signature (kind, actual date, recorded at; from 7-8 `superseded_by`, `correction_id`) | highly confidential / `employment_contract` | `personnel_file` (catalog) |
 | `dsv_contract` | 7-3 | the signed offer; the retained facts of D24 (signature dates, `fully_executed_on`, acceptance days and role kinds); the original's location, received and sent dates | internal / `case_internal` | `participation_record` (the location deleted with `personnel_file`) |
 | `entry_clarification` | 7-4 | participation, opened (the day after the planned start), the PL's pending code and source, escalation, the manager's instruction code and source, closed when the status left `informed` | internal / `case_internal` (sources as Q209) | `participation_record` |
 | `document` (`dsv_cancellation`), `dsv_customer_notice` | 7-5 | the contract cancelled, the confirmed signatures; the notice date, by/at | highly confidential / `employment_contract`; internal / `case_internal` | `personnel_file`; `participation_record` |
 | `tg_entry_reconciliation` | 7-6 | participation, effective date, the evidence ids and dates, the confirmation, by/at; the review's states with codes, sources and actors | internal / `case_internal` (the review: `review` stream) | `participation_record` |
-| `evidence_correction` | 7-8 | adds the field target (`field_key`, the corrected date, the original) | internal / `case_internal` | the field's class (`participation_record`) |
+| `evidence_correction` | 7-8 | adds the field target (`field_key`, the corrected date, the original) and the signature target (the offer, the signature kind, the corrected date) | internal / `case_internal` | the field's class (`participation_record`) |
 | `participation` | 7-7a, 7-7b | adds `funded110` (`known_yes`, `known_no`, `unknown`; source, by/at) and `evidence_set_since` (nullable; an upgrade test from the previous migration) | internal / `case_internal` | `participation_record` |
 | `project` | 7-7a | adds `kug_final_settlement_date`, `measure110_settlement_date` | internal / project data | `project_master` |
 | `retention_run` | 7-7a | the run, open/closed, counts per class, stage and outcome; no subject | internal | `reference_data` |
-| `legal_hold` | 7-7b | participation, scope, reason code, source, placed and released by/at | confidential / `case_internal` for its holders | kept while active, then as `audit_log` (Q219) |
+| `legal_hold` | 7-7b | participation, the held classes or record ids (never all), reason code, documented basis, placed and released by/at | confidential / `case_internal` for its holders | kept while active, then as `audit_log` (Q219) |
 | `audit_event` | 7-7c | pseudonymised references and detail values; no new column needed (the references are uuids without FKs) | internal | `audit_log` |
 
 Enum values are added in their PR's generated migration and compared as text in that migration run.
@@ -423,9 +475,11 @@ Enum values are added in their PR's generated migration and compared as text in 
   `withdrawn` from `dsv_signed`; `record_customer_notice`; the routes call `change_participation_status`
   and `correct_end_reason`.
 - 7-6: `reconcile_tg_entry`, `review_reconciliation`, `reply_reconciliation_clarification`.
-- 7-8: `request_evidence_correction` / `decide_evidence_correction` with the field target; the decision
-  writes `profiling_done_on` or `withdrawn_on` (the one path besides the status function, refused for
-  any other column).
+- 7-8: `request_evidence_correction` / `decide_evidence_correction` with the field and signature
+  targets; the decision writes `profiling_done_on` or `withdrawn_on` with its correction's instant (the
+  one path besides the status function, refused for any other column), or appends the replacement
+  signature rows; `tl407_facts` and `dsv_facts` read the corrected values with the approval as the
+  recording instant.
 - 7-7a: `retention_open_run`, `retention_close_run`, `retention_purge_credentials`,
   `retention_purge_working_copy`; `set_settlement_dates`, `set_funding_status` (back office); each
   immutability trigger gains the retention path of D19.
@@ -457,7 +511,8 @@ Enum values are added in their PR's generated migration and compared as text in 
 - 7-6: `GET`/`POST /participations/{id}/tg-entry-reconciliation`, `POST /reconciliations/{id}/review`,
   `POST /reconciliations/{id}/reply`; `GET /reviews` gains `reconciliations` and `clarifications`
   (no participant id or name, by schema).
-- 7-8: `POST .../evidence-corrections` gains `correct_field { field, value }`.
+- 7-8: `POST .../evidence-corrections` gains `correct_field { field, value }` and
+  `supersede_dsv_signature { offerId, signature, signedOn }`.
 - 7-9: `POST /participations/{id}/contact-status` (`{ to, statusVersion }`).
 - 7-7a/b: `PUT /projects/{id}/settlement-dates`, `PUT /participations/{id}/funding`,
   `POST /participations/{id}/legal-holds`, `POST /legal-holds/{id}/release`.
@@ -556,7 +611,9 @@ Enum values are added in their PR's generated migration and compared as text in 
    latest entry date. Another case after the cutoff is escalated; the manager records "Rechtsrat
    eingeholt"; the case stays open until Q220 provides its outcome.
 7. **Mistake:** a wrong `profilingDoneOn` blocks an entry; the PL requests a correction with the
-   signature date of the TL 407, the manager approves, the next run enters the participation.
+   signature date of the TL 407, the manager approves; the missed start is reconciled (the corrected
+   fact is recorded at the approval, after the run). Back office typed the participant's DSV date as
+   14.04. instead of 14.03.: a signature-date correction, approved, supersedes it on both scans.
 8. **Retention:** `pnpm jobs:retention --dry-run` lists every class `period_unset` and activation off;
    nothing is deleted.
 
@@ -575,8 +632,9 @@ Enum values are added in their PR's generated migration and compared as text in 
 
 **7-2a**
 - An offer from a current generation takes its deadline; a stale generation or a changed source value
-  `409`; an external paper is recorded with its printed deadline and terms and passes `dsv_generated`
-  without a generation; the database refuses `dsv_offered` without either; decline as built.
+  `409`; an external offer is recorded from its metadata alone (no scan exists yet), its printed dates
+  equal to the effective ones (`terms_mismatch`), and passes `dsv_generated` without a generation; the
+  database refuses `dsv_offered` without either; decline as built.
 
 **7-2b**
 - The scan names the open offer (another offer's paper refused); dates in the future, `receivedOn`
@@ -613,9 +671,14 @@ Enum values are added in their PR's generated migration and compared as text in 
   no reversal; the queue carries no participant name or id (schema test); e2e reconciliation → review.
 
 **7-8**
-- Field corrections of `profilingDoneOn` and `withdrawnOn` only, by the PL, approved by another user of
-  the region; the rules of D17 at their boundaries; the next facts read the corrected value, a past
-  snapshot and the status don't change; the history shows the field, never a value.
+- Field corrections of `profilingDoneOn` and `withdrawnOn` only, by the PL, approved by the region's
+  manager; the rules of D17 at their boundaries; `tl407_facts` records the corrected fact at the
+  approval, with the snapshot regression of D28; the status doesn't change; the history shows the
+  field, never a value.
+- DSV signature-date supersession (D8a): requested by the PL or back office, approved by the region's
+  manager; the replacement rows on every scan of the offer showing the signature, the originals kept
+  and linked; facts recorded at the approval; "Nachweis ungültig" when a recorded status loses its
+  support.
 
 **7-9**
 - The manual contact statuses with the existing edges, guards (`before_cutoff`) and audit; the roles of
@@ -633,7 +696,8 @@ Enum values are added in their PR's generated migration and compared as text in 
 **7-7b**
 - `health_record` deleted while `personnel_file` stays readable and writable; a non-signer's personnel
   file on day 91; `unknown` funding keeps the participation-record items; a held record kept, its
-  neighbours deleted; a hold released only by another regional manager with a source; the
+  neighbours and the unheld classes deleted; a hold without selected records or classes, or naming the
+  whole participation, refused; a hold released only by another regional manager with a source; the
   evidence-only phase only when it applies (then writes refused by the trigger and ordinary reads
   refused); the retained DSV facts of D24 survive the scans' deletion.
 
@@ -674,5 +738,5 @@ Q80, Q88, Q97, Q110, Q122, Q141, Q145, Q156, Q166, Q179.
 (Q220); the cancellation's legal verification (Q46, Q213); the confirmed retention periods, hold
 administration and evidence-only access before any live deletion (Q3, Q24, Q77, Q218, Q219, D18).
 
-**Block part of a PR:** none. Every PR builds on an accepted reading or a fail-safe gate; Q220 keeps the
+**Block part of a PR:** none (the second review keeps Q220 open behind its pilot gate, its clarification flow accepted for development). Every PR builds on an accepted reading or a fail-safe gate; Q220 keeps the
 entry clarification open-ended (7-4) and the retention activation stays off (7-7a–c).

@@ -45,3 +45,32 @@ legal, works-council or Agentur confirmation.
 | Q217 — Funding | Use known yes / known no / unknown. Unknown blocks dependent deletion; don't assert everyone was funded or require fictitious settlement dates. |
 | Q218 — Holds | Provisional: the PL or back office place scoped holds at once; a different regional operations manager releases them against documented legal/DPO instructions. Live deletion requires confirmed, usable hold administration. |
 | Q219 — Retention/access | Accept the provisional classes with the retained-fact mapping. Keep activation disabled until evidence-only access and the maintenance rules are complete. |
+
+## Second review
+
+Reviewed 2026-11-06, head `5ff12ed`. The previous retention findings (phase timing, surviving DSV
+facts, pseudonymisation, the dedicated job role) are addressed.
+
+**Standards.** Before 7-7b: restrict legal holds to affected records. D23 permitted a
+whole-participation hold, conflicting with the existing "never the whole profile" rule. Use selected
+records or classes with a documented basis; unrelated due data must still be deleted.
+
+**Spec.**
+1. Before 7-2a: remove the external-paper circular dependency (an accepted external scan was
+   required to create the offer, while uploading the scan required an open offer). Record the
+   external offer's metadata first; require accepted scans for the signature and full-execution
+   facts afterwards.
+2. Before 7-8: timestamp corrected facts at approval. Update `tl407_facts` explicitly: a corrected
+   `profilingDoneOn` has `recordedAt` no earlier than the correction's approval (the reader used the
+   original completion event and the scan's availability). Add a regression proving historical
+   snapshots remain unchanged.
+3. Before 7-3: define the recovery from a wrong signature date. The plan required matching
+   replacement dates while claiming a scan correction fixes `dsvSignedOn`. Specify an approved,
+   linked replacement that can establish truthful corrected dates, preserving the original history
+   and advancing the recording instant. A general field editor is unnecessary.
+
+**Decisions carried forward.**
+- Q220 may remain open behind its pilot gate; the owned clarification and escalation flow is
+  acceptable for development.
+- TG entry may be a conservative retention trigger, but must not be described as proof that
+  Transfer-KuG was received. Keep employment entry and actual funding or payment facts distinct.
