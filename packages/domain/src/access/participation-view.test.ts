@@ -233,6 +233,7 @@ describe("participationDetail", () => {
         startAssistedMode: true,
         viewProfiling: true,
         viewAsu: true,
+        viewDsv: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });
