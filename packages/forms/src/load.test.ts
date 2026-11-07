@@ -139,6 +139,27 @@ describe("the DSV template (ADR-0009, the DSV template)", () => {
   });
 });
 
+describe("ownTemplateVersions", () => {
+  it("lists a template's versions in their order, each with its approval", () => {
+    const dir = copy(formsDir);
+    for (const version of ["v2", "v10"]) {
+      cpSync(new URL("own/dsv/v1/", dir), new URL(`own/dsv/${version}/`, dir), {
+        recursive: true,
+      });
+    }
+    writeFileSync(
+      new URL("own/dsv/v10/template.json", dir),
+      JSON.stringify({ approvedForLive: true, note: "synthetic test copy" }),
+    );
+    writeFileSync(new URL("manifest.json", dir), renderFormsManifest(dir));
+    expect(ownTemplateVersions("dsv", dir)).toEqual([
+      { version: "v1", approvedForLive: false },
+      { version: "v2", approvedForLive: false },
+      { version: "v10", approvedForLive: true },
+    ]);
+  });
+});
+
 describe("loadFont", () => {
   it("loads the subset and refuses a changed file", () => {
     expect(loadFont().byteLength).toBeGreaterThan(10_000);
