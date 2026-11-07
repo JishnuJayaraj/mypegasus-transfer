@@ -136,7 +136,11 @@ export function dsvRoutes(deps: Deps) {
       offers: read.offers.map((offer) => ({
         ...offer,
         capabilities: {
-          decline: read.dsvStatus === "dsv_offered" && offer.endedAs === null,
+          decline:
+            read.projectStatus === "active" &&
+            read.status === "informed" &&
+            read.dsvStatus === "dsv_offered" &&
+            offer.endedAs === null,
         },
       })),
       template:
