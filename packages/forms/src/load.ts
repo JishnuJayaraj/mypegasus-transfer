@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { FieldMap, FormCode, FormVersionManifest, type HtmlTemplate } from "@transfer/domain";
-import { FormSource, FormsManifest } from "./manifest";
+import { FormSource, FormsManifest, OwnTemplateMeta } from "./manifest";
 
 // Node only (reads files): exported as `@transfer/forms/load`. The registry (ADR-0009):
 // `templates/ba/<formCode>/<version>/` holds the BA's unchanged `blank.pdf`, its `source.json`
@@ -104,10 +104,13 @@ export function buildFormsManifest(dir = formsDir): FormsManifest {
     }),
     templates: listOwnTemplates(dir).map((ref) => {
       const folder = templateFolder(ref, dir);
+      const metaFile = new URL("template.json", folder);
+      const meta = existsSync(metaFile) ? OwnTemplateMeta.parse(readJson(metaFile)) : null;
+      const names = meta ? [...templateFiles, "template.json"] : templateFiles;
       const files = Object.fromEntries(
-        templateFiles.map((file) => [file, sha256Hex(readFileSync(new URL(file, folder)))]),
+        names.map((file) => [file, sha256Hex(readFileSync(new URL(file, folder)))]),
       );
-      return { ref, files };
+      return meta ? { ref, files, approvedForLive: meta.approvedForLive } : { ref, files };
     }),
   };
 }
@@ -137,6 +140,23 @@ export function loadOwnTemplate(ref: string, dir = formsDir): HtmlTemplate {
     return content.toString("utf8");
   }) as [string, string, string];
   return { index, header, footer };
+}
+
+/**
+ * The versions of one own template (`dsv` → `["v1", …]`) with whether each is approved for live
+ * use, from the committed manifest; a template without `template.json` counts as not approved.
+ */
+export function ownTemplateVersions(
+  name: string,
+  dir = formsDir,
+): { version: string; approvedForLive: boolean }[] {
+  return loadFormsManifest(dir)
+    .templates.filter((template) => template.ref.startsWith(`${name}:`))
+    .map((template) => ({
+      version: template.ref.slice(name.length + 1),
+      approvedForLive: template.approvedForLive ?? false,
+    }))
+    .toSorted((a, b) => Number(a.version.slice(1)) - Number(b.version.slice(1)));
 }
 
 /** The embedded Noto Sans subset (OFL), checked against its `source.json`. */

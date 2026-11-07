@@ -192,6 +192,7 @@ const options = {
     startAssistedMode: true,
     viewProfiling: true,
     viewAsu: true,
+    viewDsv: true,
   },
   refusals: { assignEntryWave: null, setParticipationDates: null },
 } as const;
@@ -232,6 +233,7 @@ describe("participationDetail", () => {
         startAssistedMode: true,
         viewProfiling: true,
         viewAsu: true,
+        viewDsv: true,
       },
       refusals: { assignEntryWave: null, setParticipationDates: null },
     });

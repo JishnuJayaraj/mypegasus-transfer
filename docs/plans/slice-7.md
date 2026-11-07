@@ -1,16 +1,16 @@
 # Slice 7 — DSV (F8)
 
-Status: **revised after the product review of 2026-11-06, awaiting the product owner's approval**
-(plan PR #104, [the review](../reviews/2026-11-06-pr-104-product-review.md) of `48ebac6`). This
-revision carries the review's corrections (and the second review's of the same day: holds on
+Status: **approved by the product owner for implementation on synthetic data** (2026-11-06, as
+present at `4063466`: plan PR #104 with its two product reviews; Q210–Q219 as recorded, Q220
+open). Existing pilot gates and live-deletion restrictions remain in force.
+This revision carries the review's corrections (and the second review's of the same day: holds on
 affected records only, the external offer before its scans, corrected facts recorded at approval,
 wrong signature dates superseded): per-class deletion with the evidence-only phase only where
 it applies and the DSV facts that survive the scans; every subject reference pseudonymised; the
 retention job's own database role; the signature dates kept after a quarantine's lift; the deadline
 chosen before the paper is generated; an owned clarification for signed DSVs that never entered; the
 date corrections the pilot workflow needs. The review's answers to Q210–Q219 are recorded in their
-rows; Q220 is new. Nothing is built before approval. This is not an external DPO, legal,
-works-council or Agentur confirmation.
+rows; Q220 is new. This is not an external DPO, legal, works-council or Agentur confirmation.
 
 Roadmap: the DSV track (generation, three-party signatures and `dsvFullyExecuted`, original
 tracking), the list "participant signed, not fully executed", the admission cutoff and the system
@@ -408,6 +408,11 @@ archives this plan.
 PRs. If a PR passes about 1,500 lines while building, the plan says so and the owner decides on a
 split, as in Slice 6.
 
+**7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
+docs, of which about 260 are the six document functions recreated unchanged with `document_type`
+(0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether
+to split it.
+
 ## Design
 
 ### Domain (`packages/domain`, no I/O, no system time)
@@ -462,7 +467,8 @@ Enum values are added in their PR's generated migration and compared as text in 
 
 - 7-1: `record_form_generation` takes the DSV, its deadline and source token (`dsv_offer_open`,
   `dsv_not_generatable`, `offer_deadline_invalid`, `dsv_template_not_approved`, `source_changed`);
-  `pin_dsv_template` (`template_pinned`); `dsv_generation_current` (internal).
+  the pin through `update_project`'s `p_dsv_template_version` (`template_pinned`; as built);
+  `dsv_source_token` (internal) and `dsv_generation_current`.
 - 7-2a: `offer_dsv(p_context, p_participation_id, p_generation_id, p_external jsonb,
   p_expected_status_version)` → the participation, the generation `FOR SHARE`, `apply_status_change`
   (internal), the `dsv_offer` row; `decline_dsv_offer`; `apply_status_change` checks `dsv_offered`.
@@ -522,7 +528,7 @@ Enum values are added in their PR's generated migration and compared as text in 
 
 | Event | PR | Stream | Shows |
 |---|---|---|---|
-| `form_generated` (form `dsv`), `dsv_template_pinned` (project-level) | 7-1 | `dsv` | form, version, deadline kind |
+| `dsv_form_generated` (as built: its own type, since a projection is per type and `form_generated` is in `case`; Q226), `dsv_template_pinned` (project-level) | 7-1 | `dsv` | template version, deadline kind |
 | `status_changed` (DSV track) | 7-2a | `dsv` | as built; the offer's origin |
 | `document_added`, `document_reviewed`, `document_quarantined`, `document_quarantine_lifted` (DSV types) | 7-2b, 7-5 | `dsv` | type, decision, reason, the confirmed signature kinds |
 | `dsv_original_recorded` | 7-3 | `dsv` | the field, the location code |

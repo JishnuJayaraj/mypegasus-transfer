@@ -24,6 +24,7 @@ import {
   mayRecordBaReport,
   mayRequestCorrection,
   mayViewAsu,
+  mayWorkDsv,
   mayViewProfiling,
   ParticipationListQuery,
   participationDatesCapability,
@@ -293,6 +294,7 @@ export function participationRoutes(deps: Deps) {
           startAssistedMode: placementAgenturCapability(p.status, permitted("startAssistedMode")),
           viewProfiling: mayViewProfiling(subject, target).ok,
           viewAsu: snapshot.project.type === "ta_tg" && mayViewAsu(subject, target).ok,
+          viewDsv: snapshot.project.type === "ta_tg" && mayWorkDsv(subject, target).ok,
         },
         refusals: {
           assignEntryWave: assignment.refusal,

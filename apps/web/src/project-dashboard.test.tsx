@@ -196,6 +196,7 @@ describe("the project page", () => {
       "Agentur",
       "Eintrittswellen",
       "Kopf der Kug 200a",
+      "DSV-Vorlage",
       "Import",
     ]);
     expect(anchors.getByRole("link", { name: "Import" }).getAttribute("href")).toMatch(

@@ -286,6 +286,7 @@ describe("mayPerformOperation (Q60, Q80)", () => {
       qualification_certificate: "PL",
       tl407_form: "",
       kug200b_form: "",
+      dsv_form: "",
     });
   });
 

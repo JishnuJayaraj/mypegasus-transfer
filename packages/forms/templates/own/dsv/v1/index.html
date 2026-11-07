@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dreiseitiger Vertrag (Muster)</title>
+    <style>
+      @page {
+        size: A4;
+      }
+      body {
+        font-family: "Noto Sans", "DejaVu Sans", "Liberation Sans", sans-serif;
+        font-size: 10pt;
+        line-height: 1.4;
+        color: #000;
+        margin: 0;
+        /* a word longer than its line breaks anywhere rather than run off the page */
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      /* repeated on every printed page */
+      .watermark {
+        position: fixed;
+        inset-block-start: 45%;
+        inset-inline: 0;
+        text-align: center;
+        font-size: 24pt;
+        font-weight: bold;
+        color: rgba(0, 0, 0, 0.12);
+        transform: rotate(-30deg);
+        pointer-events: none;
+        white-space: nowrap;
+      }
+      h1 {
+        font-size: 14pt;
+        margin: 0 0 1mm;
+      }
+      .subtitle {
+        margin: 0 0 6mm;
+      }
+      h2 {
+        font-size: 11pt;
+        margin: 5mm 0 1.5mm;
+        break-after: avoid;
+      }
+      table.parties {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin: 0 0 4mm;
+      }
+      table.parties th,
+      table.parties td {
+        border: 0.5pt solid #000;
+        padding: 1.5mm 2mm;
+        text-align: start;
+        vertical-align: top;
+        overflow-wrap: anywhere;
+      }
+      table.parties th {
+        width: 32%;
+        font-weight: normal;
+      }
+      p {
+        margin: 0 0 2mm;
+      }
+      .blank {
+        display: inline-block;
+        min-inline-size: 45mm;
+        border-block-end: 0.5pt solid #000;
+        block-size: 1.1em;
+        vertical-align: bottom;
+      }
+      .deadline {
+        border: 1pt solid #000;
+        padding: 2mm 3mm;
+        margin: 4mm 0;
+        break-inside: avoid;
+      }
+      .signatures {
+        break-inside: avoid;
+        margin-block-start: 8mm;
+      }
+      .signature {
+        display: grid;
+        grid-template-columns: 40mm 1fr;
+        column-gap: 6mm;
+        margin-block-start: 10mm;
+        break-inside: avoid;
+      }
+      .line {
+        border-block-start: 0.5pt solid #000;
+        padding-block-start: 1mm;
+        font-size: 8pt;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="watermark" aria-hidden="true">MUSTER – NICHT ZUR VERWENDUNG</div>
+    <h1>Dreiseitiger Vertrag</h1>
+    <p class="subtitle">
+      über die Beendigung des Arbeitsverhältnisses und die Begründung eines befristeten
+      Arbeitsverhältnisses in einer betriebsorganisatorisch eigenständigen Einheit (Muster)
+    </p>
+
+    <h2>Vertragsparteien</h2>
+    <table class="parties">
+      <tbody>
+        <tr>
+          <th scope="row">Arbeitnehmer·in</th>
+          <td>{{participant}}<br />geboren am {{birthDate}}<br />Anschrift: {{address}}</td>
+        </tr>
+        <tr>
+          <th scope="row">Bisheriger Arbeitgeber</th>
+          <td>{{customer}}</td>
+        </tr>
+        <tr>
+          <th scope="row">Transfergesellschaft</th>
+          <td>{{company}}<br />{{companyAddress}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>§ 1 Beendigung des bisherigen Arbeitsverhältnisses</h2>
+    <p>
+      Das Arbeitsverhältnis zwischen der Arbeitnehmerin bzw. dem Arbeitnehmer und dem bisherigen
+      Arbeitgeber endet mit Ablauf des Tages vor dem Beginn nach § 2. (Mustertext, nicht geprüft.)
+    </p>
+
+    <h2>§ 2 Befristetes Arbeitsverhältnis in der Transfergesellschaft</h2>
+    <p>
+      Die Transfergesellschaft stellt die Arbeitnehmerin bzw. den Arbeitnehmer für die Zeit vom
+      <strong>{{tgStart}}</strong> bis zum <strong>{{tgEnd}}</strong> befristet ein. (Mustertext,
+      nicht geprüft.)
+    </p>
+
+    <h2>§ 3 Annahme des Angebots</h2>
+    <div class="deadline">
+      <p>
+        Dieses Angebot kann bis einschließlich <strong>{{offerDeadline}}</strong> durch Unterschrift
+        auf diesem Papier angenommen werden.
+      </p>
+    </div>
+    <p>
+      Der Vertrag bedarf der Schriftform (§ 623 BGB): er wird auf Papier eigenhändig unterschrieben.
+    </p>
+
+    <section class="signatures">
+      <h2>Unterschriften</h2>
+      <div class="signature">
+        <div class="line">Ort, Datum</div>
+        <div class="line">Arbeitnehmer·in</div>
+      </div>
+      <div class="signature">
+        <div class="line">Ort, Datum</div>
+        <div class="line">Bisheriger Arbeitgeber</div>
+      </div>
+      <div class="signature">
+        <div class="line">Ort, Datum</div>
+        <div class="line">Transfergesellschaft</div>
+      </div>
+    </section>
+  </body>
+</html>

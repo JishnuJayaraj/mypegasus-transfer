@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AsuProofKind, AttestationSource } from "../asu/model";
 import { DocumentType } from "../documents/catalog";
+import { DsvTemplateVersion } from "../dsv/generation";
 import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
 import { AuditStream } from "../access/decide";
@@ -233,6 +234,10 @@ export const AuditEventType = z.enum([
   // their functions
   "evidence_correction_requested",
   "evidence_correction_decided",
+  // Slice 7, the DSV's generation (process-and-lifecycle.md, the DSV), written only by
+  // `record_form_generation` and `update_project`
+  "dsv_form_generated",
+  "dsv_template_pinned",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -353,6 +358,8 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "exception_evidence_recorded",
   "evidence_correction_requested",
   "evidence_correction_decided",
+  "dsv_form_generated",
+  "dsv_template_pinned",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1537,6 +1544,28 @@ export const AuditEvent = z.discriminatedUnion("type", [
       action: CorrectionAction,
       reason: CorrectionReason,
       decision: z.enum(["approved", "rejected"]),
+    }),
+  }),
+  /**
+   * A DSV generated as a working copy (process-and-lifecycle.md, the DSV: generation): the document,
+   * the template version and how its deadline was chosen; never a value it prints.
+   */
+  event("dsv_form_generated", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      documentId: z.uuid(),
+      templateVersion: DsvTemplateVersion,
+      deadlineKind: z.enum(["wave", "explicit"]),
+    }),
+  }),
+  /** The project's DSV template version pinned by its PL (ADR-0009, the DSV template). */
+  event("dsv_template_pinned", {
+    ...ofProject,
+    actor: staffActor,
+    details: z.strictObject({
+      templateVersion: DsvTemplateVersion,
+      previousVersion: DsvTemplateVersion.optional(),
     }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */

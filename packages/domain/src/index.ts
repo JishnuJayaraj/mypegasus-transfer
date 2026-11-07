@@ -1240,3 +1240,39 @@ export {
   type ApprovedInvalidation,
   type RecoveryFacts,
 } from "./corrections/recovery";
+export {
+  DsvDeadlineChoice,
+  dsvDeadline,
+  dsvGenerationBlockers,
+  DsvGenerationInput,
+  dsvGenerationProblem,
+  dsvPinProblem,
+  dsvSourceCanonical,
+  DsvSourceToken,
+  dsvTemplateRef,
+  dsvTemplateUsable,
+  DsvTemplateVersion,
+  isDsvReoffer,
+  validateDsvSource,
+  type DsvDeadlineContext,
+  type DsvDeadlineKind,
+  type DsvDeadlineProblem,
+  type DsvGenerationBlocker,
+  type DsvGenerationRecord,
+  type DsvGenerationState,
+  type DsvSource,
+  type DsvValidation,
+  type DsvValueKey,
+} from "./dsv/generation";
+export { dsvValues, renderDsv, type DsvDocument } from "./dsv/render";
+export { mayPinDsvTemplate, mayWorkDsv } from "./dsv/access";
+export { dsvGeneratedFact } from "./dsv/generation";
+export {
+  DsvChecklistItem,
+  DsvGenerationRequest,
+  DsvGenerationResult,
+  DsvGenerationView,
+  DsvTemplatePinInput,
+  DsvTemplateView,
+  DsvView,
+} from "./dsv/api";

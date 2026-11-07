@@ -32,6 +32,7 @@ import {
 import { StartAssistedMode } from "../../components/assisted-mode";
 import { AsuTab } from "../../components/asu-tab";
 import { DocumentsTab } from "../../components/documents-tab";
+import { DsvTab } from "../../components/dsv-tab";
 import { HistoryTab } from "../../components/history";
 import { BulkInvite } from "../../components/invitations";
 import type { StepTarget } from "../../components/open-steps";
@@ -56,7 +57,8 @@ const RouterLink = createLink(Link);
 
 /**
  * The tab shown: the overview, "Selbstauskunft" (e.g. after assisted mode ended), "Profiling" (for
- * the PL and the assigned consultant), "Arbeitsuche" (`ta_tg`, the case readers), "Unterlagen",
+ * the PL and the assigned consultant), "Arbeitsuche" (`ta_tg`, the case readers), "DSV" (`ta_tg`,
+ * the PL and back office), "Unterlagen",
  * "Termine", "Nachrichten" or "Verlauf".
  */
 const tabs = [
@@ -64,6 +66,7 @@ const tabs = [
   "self-service",
   "profiling",
   "asu",
+  "dsv",
   "documents",
   "appointments",
   "messages",
@@ -75,6 +78,7 @@ const tabLabels = {
   "self-service": "selfService",
   profiling: "profiling",
   asu: "asu",
+  dsv: "dsv",
   documents: "documents",
   appointments: "appointments",
   messages: "messages",
@@ -171,7 +175,8 @@ function ParticipationPage() {
   const shown = tabs.filter(
     (key) =>
       (key !== "profiling" || detail.capabilities.viewProfiling) &&
-      (key !== "asu" || detail.capabilities.viewAsu),
+      (key !== "asu" || detail.capabilities.viewAsu) &&
+      (key !== "dsv" || detail.capabilities.viewDsv),
   );
   const current = shown.includes(tab) ? tab : undefined;
 
@@ -256,6 +261,9 @@ function ParticipationPage() {
       // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung).
       case "asu":
         return <AsuTab detail={detail} />;
+      // The DSV (process-and-lifecycle.md, the DSV): the PL and back office in `ta_tg`.
+      case "dsv":
+        return <DsvTab participationId={participationId} />;
       case "documents":
         return <DocumentsTab detail={detail} />;
       // The bookings (data-protection.md, appointments).

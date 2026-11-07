@@ -35,6 +35,7 @@ import { EntryWaveForm } from "../../components/entry-wave-form";
 import { AgenturSettings } from "../../components/agentur-settings";
 import { AgenturTab } from "../../components/agentur-tab";
 import { ImportSection } from "../../components/import-section";
+import { DsvTemplateCard } from "../../components/dsv-template";
 import { Kug200aHeader } from "../../components/kug200a-header";
 import { ManualParticipationForm } from "../../components/manual-participation-form";
 import { usePanelNavigationGuard } from "../../components/panel-guard";
@@ -257,7 +258,7 @@ function ProjectPage() {
 /**
  * "Einrichtung" as cards (the plan of Slice 6b, 6b-4): Projekt (status, region change, blockers,
  * activation), Agentur (pins and Agentur-specific settings), Wellen (in `ta_only` only why there
- * are none), Kug 200a-Kopf (`ta_tg`) and Import (`project-import`, the target of "Datei importieren"). An anchor list beside them on
+ * are none), Kug 200a-Kopf and DSV-Vorlage (`ta_tg`) and Import (`project-import`, the target of "Datei importieren"). An anchor list beside them on
  * wide screens; below 66rem the cards simply follow each other.
  */
 function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean }) {
@@ -266,7 +267,12 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
     { id: "setup-project", label: t("setup.project") },
     { id: "setup-agentur", label: t("setup.agenturTitle") },
     { id: "setup-waves", label: t("projectDetail.waves") },
-    ...(taTg ? [{ id: "setup-kug200a", label: t("kug200aHeader.title") }] : []),
+    ...(taTg
+      ? [
+          { id: "setup-kug200a", label: t("kug200aHeader.title") },
+          { id: "setup-dsv", label: t("dsvTemplate.title") },
+        ]
+      : []),
     { id: "project-import", label: t("import.title") },
   ];
   return (
@@ -300,6 +306,7 @@ function ProjectSetupTab({ projectId, taTg }: { projectId: string; taTg: boolean
           <>
             <EntryWaves projectId={projectId} />
             <Kug200aHeader projectId={projectId} />
+            <DsvTemplateCard projectId={projectId} />
           </>
         ) : (
           <Card id="setup-waves" title={t("projectDetail.waves")}>

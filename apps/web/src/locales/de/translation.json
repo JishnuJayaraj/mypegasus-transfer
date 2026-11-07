@@ -987,7 +987,8 @@
       "history": "Verlauf",
       "appointments": "Termine",
       "profiling": "Profiling",
-      "asu": "Arbeitsuche"
+      "asu": "Arbeitsuche",
+      "dsv": "DSV"
     },
     "selfService": {
       "loading": "Die Selbstauskunft wird geladen …",
@@ -1845,7 +1846,8 @@
       "ba_report_recorded": "BA-Meldung erledigt",
       "exception_evidence_recorded": "Nachweis zur Ausnahme erfasst",
       "evidence_correction_requested": "Korrektur beantragt",
-      "evidence_correction_decided": "Korrektur entschieden"
+      "evidence_correction_decided": "Korrektur entschieden",
+      "dsv_form_generated": "DSV erzeugt"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1925,6 +1927,11 @@
     "session": "{{action}}: {{date}}",
     "form": "Fassung {{version}}",
     "formWithAnlage": "Fassung {{version}}, mit Anlage",
+    "dsvForm": "Vorlage {{version}}, {{deadline}}",
+    "dsvDeadlineKinds": {
+      "wave": "Frist der Welle",
+      "explicit": "eigene Frist"
+    },
     "scanReviewed": "{{type}}: {{decision}} ({{origin}}, Fassung {{version}})",
     "scanRejected": "{{type}}: {{decision}} ({{origin}})",
     "origins": {
@@ -3374,6 +3381,112 @@
         "correction_unchanged": "Das Meldedatum ist schon so erfasst.",
         "source_invalid": "Bitte die Quelle in einer Zeile angeben."
       }
+    }
+  },
+  "dsv": {
+    "loading": "Der DSV wird geladen …",
+    "failed": "Der DSV konnte nicht geladen werden.",
+    "state": {
+      "title": "Stand",
+      "track": "DSV",
+      "template": "Vorlage {{version}}",
+      "sample": "Vorlage {{version}} – Muster, nicht für den Live-Betrieb freigegeben",
+      "noTemplate": "Noch keine DSV-Vorlage festgelegt (Einrichtung des Projekts).",
+      "generated": "Aktueller Vertrag erzeugt am {{date}}.",
+      "notGenerated": "Kein aktueller Vertrag erzeugt.",
+      "paper": "Der DSV wird auf Papier eigenhändig unterschrieben (§ 623 BGB); hier wird nichts unterschrieben."
+    },
+    "generate": {
+      "title": "Vertrag erzeugen",
+      "bounds": "Die Frist liegt zwischen heute und dem {{latest}} (spätester Eintritt, TG-Beginn).",
+      "deadline": "Frist für die Unterschrift",
+      "wave": "Unterschriftsfrist der Welle, {{date}}",
+      "explicit": "Frist eingeben",
+      "date": "Frist (TT.MM.JJJJ)",
+      "dateInvalid": "Bitte ein Datum TT.MM.JJJJ eingeben.",
+      "reoffer": "Ein erneutes Angebot braucht eine eigene Frist.",
+      "again": "Ein aktueller Vertrag vom {{date}} liegt vor: ihn öffnen und ausdrucken. Neu erzeugen nur, wenn ein anderes Papier gebraucht wird.",
+      "chooseDeadline": "Erst eine Frist wählen.",
+      "enterDate": "Erst die Frist eingeben.",
+      "action": "Erzeugen"
+    },
+    "deadlineKinds": {
+      "wave": "Frist der Welle",
+      "explicit": "eigene Frist"
+    },
+    "checklist": {
+      "intro": "Vor dem Druck: diese Angaben fehlen und werden von Hand eingetragen.",
+      "item": "{{label}}: fehlt – von Hand eintragen",
+      "none": "Alle Angaben sind vorhanden; nichts ist von Hand einzutragen.",
+      "noneShort": "–",
+      "keys": {
+        "firstName": "Vorname",
+        "lastName": "Nachname",
+        "birthDate": "Geburtsdatum",
+        "address": "Anschrift",
+        "customerName": "Bisheriger Arbeitgeber",
+        "transfergesellschaft": "Transfergesellschaft"
+      }
+    },
+    "generations": {
+      "title": "Erzeugte Verträge",
+      "columns": {
+        "generatedAt": "Erzeugt am",
+        "template": "Vorlage",
+        "deadline": "Frist",
+        "checklist": "Von Hand",
+        "state": "Stand",
+        "actions": "Aktionen"
+      },
+      "current": "aktuell",
+      "stale": "veraltet",
+      "open": "Öffnen",
+      "openAt": "Öffnen: Vertrag vom {{at}}",
+      "empty": "Noch kein Vertrag erzeugt. Mit „Erzeugen“ entsteht der Vertrag zum Ausdrucken."
+    },
+    "messages": {
+      "generated": "Der Vertrag wurde erzeugt (Frist {{deadline}}).",
+      "conflict": "Die Angaben haben sich inzwischen geändert. Bitte die Ansicht prüfen und erneut erzeugen.",
+      "forbidden": "Sie dürfen den DSV nicht erzeugen.",
+      "failed": "Das hat nicht geklappt. Bitte erneut versuchen."
+    },
+    "codes": {
+      "not_ta_tg": "Nur in Projekten mit Transfergesellschaft.",
+      "project_not_active": "Erst das Projekt aktivieren.",
+      "participation_closed": "Die Teilnahme ist beendet.",
+      "no_entry_wave": "Erst eine Welle zuordnen.",
+      "tg_dates_missing": "Erst Beginn und Ende in der Transfergesellschaft festlegen.",
+      "dsv_template_not_pinned": "Erst die DSV-Vorlage des Projekts festlegen (Einrichtung).",
+      "dsv_template_not_approved": "Die DSV-Vorlage ist nicht für den Live-Betrieb freigegeben.",
+      "dsv_offer_open": "Ein Angebot ist offen: den erzeugten Vertrag öffnen statt neu erzeugen.",
+      "dsv_already_signed": "Der DSV ist unterschrieben.",
+      "dsv_not_generatable": "Der Vertrag kann jetzt nicht erzeugt werden.",
+      "explicit_deadline_required": "Ein erneutes Angebot braucht eine eigene Frist.",
+      "wave_deadline_missing": "Die Welle hat keine Unterschriftsfrist: bitte eine Frist eingeben.",
+      "offer_deadline_invalid": "Die Frist muss zwischen heute und dem spätesten Eintritt liegen und darf nicht nach dem TG-Beginn liegen.",
+      "character_unsupported": "Eine Angabe enthält Zeichen, die der Vertrag nicht drucken kann."
+    }
+  },
+  "dsvTemplate": {
+    "title": "DSV-Vorlage",
+    "loading": "Die DSV-Vorlage wird geladen …",
+    "failed": "Die DSV-Vorlage konnte nicht geladen werden.",
+    "forbidden": "Die DSV-Vorlage sehen die Projektleitung und das Back Office.",
+    "none": "Noch keine Vorlage festgelegt: ohne sie kann kein DSV erzeugt werden.",
+    "current": "Festgelegt: {{version}}.",
+    "fixed": "Festgelegt: {{version}}. Seit dem ersten erzeugten DSV unveränderlich.",
+    "sample": "{{version}} (Muster, nicht für den Live-Betrieb freigegeben)",
+    "version": "Vorlage",
+    "choose": "Bitte wählen",
+    "chooseFirst": "Erst eine andere Vorlage wählen.",
+    "pin": "Festlegen",
+    "pinned": "Die DSV-Vorlage ist festgelegt.",
+    "hint": "Die Vorlage gilt für alle DSV des Projekts; nach dem ersten erzeugten DSV ist sie fest.",
+    "codes": {
+      "template_pinned": "Die Vorlage ist seit dem ersten erzeugten DSV fest.",
+      "template_unknown": "Diese Vorlage gibt es nicht.",
+      "project_unchanged": "Diese Vorlage ist bereits festgelegt.",
+      "not_ta_tg": "Nur in Projekten mit Transfergesellschaft."
     }
   }
 }

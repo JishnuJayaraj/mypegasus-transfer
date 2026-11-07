@@ -184,6 +184,12 @@ export function HistoryTab({
         return t(details.anlage === true ? "history.formWithAnlage" : "history.form", {
           version: (text(details.formVersion) ?? "").replace("-", "/"),
         });
+      // The DSV's generation by its template version and how its deadline was chosen.
+      case "dsv_form_generated":
+        return t("history.dsvForm", {
+          version: text(details.templateVersion) ?? "",
+          deadline: coded("history.dsvDeadlineKinds", text(details.deadlineKind) ?? ""),
+        });
       case "placement_agentur_set":
         return arrow(text(details.previousAgenturKey), text(details.agenturKey) ?? "");
       // The ASU record (process-and-lifecycle.md, Arbeitsuchendmeldung and dates): codes and dates, never the BA-Kundennummer or the knowledge date.

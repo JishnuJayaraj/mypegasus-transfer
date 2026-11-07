@@ -61,3 +61,19 @@ describe("workingCopyExpiry (data-protection.md, generated forms; Q179)", () => 
     });
   });
 });
+
+describe("the DSV's working copy (data-protection.md, generated forms)", () => {
+  it("is a form_working_copy and expires as one: 30 days after a newer DSV, 90 when abandoned", async () => {
+    const { documentTypeEntry } = await import("../documents/catalog");
+    expect(documentTypeEntry("dsv_form").retentionClass).toBe("form_working_copy");
+    expect(workingCopyExpiry(generated)).toMatchObject({ trigger: "abandoned", afterDays: 90 });
+    const reoffered = { ...generated, supersededAt: at("2091-03-20T09:00:00Z") };
+    expect(workingCopyExpiry(reoffered)).toEqual({
+      kind: "due",
+      trigger: "superseded",
+      from: reoffered.supersededAt,
+      afterDays: 30,
+    });
+    expect(workingCopyExpiry({ ...reoffered, legalHold: true })).toEqual({ kind: "held" });
+  });
+});

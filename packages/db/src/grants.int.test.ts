@@ -87,6 +87,7 @@ const statusFunctions = [
   "assign_entry_wave",
   "request_profiling_exception",
   "decide_profiling_exception",
+  "dsv_generation_current",
   "revoke_profiling_exception",
   "correct_end_reason",
   "record_audit_event",
@@ -321,6 +322,7 @@ const helpers = [
   "close_assisted_mode",
   "end_assisted_modes_of_session",
   "document_staff_roles",
+  "dsv_source_token",
   "current_document_policy",
   "lock_document_actor",
   "reminder_requester_allowed",
@@ -1022,9 +1024,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 to 7 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 8 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 61 },
+      { n: 73 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });

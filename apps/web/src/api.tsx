@@ -168,6 +168,28 @@ export const participationAsuQuery = (api: ApiClient, participationId: string) =
       ),
   });
 
+export const participationDsvQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "dsv"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/dsv", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
+export const projectDsvTemplateQuery = (api: ApiClient, projectId: string) =>
+  queryOptions({
+    queryKey: ["projects", projectId, "dsv-template"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/projects/{projectId}/dsv-template", {
+          params: { path: { projectId } },
+        }),
+      ),
+  });
+
 export const participationSelfServiceQuery = (api: ApiClient, participationId: string) =>
   queryOptions({
     queryKey: ["participations", participationId, "self-service"],

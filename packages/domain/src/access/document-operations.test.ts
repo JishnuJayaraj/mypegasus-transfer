@@ -31,7 +31,8 @@ cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
 qualification_certificate    yes   yes   yes  unass yes  role role role role
 tl407_form                   actor actor actor actor actor actor actor actor actor
-kug200b_form                 actor actor actor actor actor actor actor actor actor`;
+kug200b_form                 actor actor actor actor actor actor actor actor actor
+dsv_form                     actor actor actor actor actor actor actor actor actor`;
 
 const review = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
@@ -44,7 +45,8 @@ cv                           actor actor yes  unass yes  role role role role
 participant_upload           actor actor yes  unass yes  role role role role
 qualification_certificate    actor actor yes  unass yes  role role role role
 tl407_form                   actor actor actor actor actor actor actor actor actor
-kug200b_form                 actor actor actor actor actor actor actor actor actor`;
+kug200b_form                 actor actor actor actor actor actor actor actor actor
+dsv_form                     actor actor actor actor actor actor actor actor actor`;
 
 const remove = `
 tl407_signed_scan            actor actor role role  yes  role role role role
@@ -57,7 +59,8 @@ cv                           yes   yes   yes  unass yes  role role role role
 participant_upload           yes   yes   yes  unass yes  role role role role
 qualification_certificate    yes   yes   yes  unass yes  role role role role
 tl407_form                   imm   imm   imm  imm   imm  imm  imm  imm  imm
-kug200b_form                 imm   imm   imm  imm   imm  imm  imm  imm  imm`;
+kug200b_form                 imm   imm   imm  imm   imm  imm  imm  imm  imm
+dsv_form                     imm   imm   imm  imm   imm  imm  imm  imm  imm`;
 
 const codes: Record<string, string> = {
   yes: "ok",

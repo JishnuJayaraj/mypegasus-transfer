@@ -41,6 +41,16 @@
       }
     },
     {
+      "ref": "dsv:v1",
+      "files": {
+        "index.html": "1a6af5139fb7c85e10f63c6bf0fcf2fbbdf60a3c875e0a3e543ef11c596ebcc7",
+        "header.html": "e55f4d013188806c396a5d844f332545cd0a9444994bfd8cdea9f82629d8b1f5",
+        "footer.html": "a8e3ece7dd6f53bcee7c464e7b94fa6f7be2590c308558e6c4b05ce41da33301",
+        "template.json": "eaccc37faf625daf98f07ceed2cb516638c265985ea18790d6ed90f8064578f1"
+      },
+      "approvedForLive": false
+    },
+    {
       "ref": "sammelliste-kug200b:v1",
       "files": {
         "index.html": "ecf4e0da5f3321e6337166a8cc7d7dc207873cd6bee6f75e291e52df735bf287",

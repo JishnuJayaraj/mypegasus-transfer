@@ -314,8 +314,15 @@ export const project = pgTable(
     tKugNumber: text("t_kug_number"),
     employerBetriebsnummer: text("employer_betriebsnummer"),
     employerEconomicClass: text("employer_economic_class"),
+    /**
+     * The DSV template version the project prints (ADR-0009, the DSV template): pinned
+     * by the PL (`update_project`, audited `dsv_template_pinned`) while no DSV of the project was
+     * generated, fixed from the first generation. Null until pinned: no DSV can be generated.
+     */
+    dsvTemplateVersion: text("dsv_template_version"),
   },
   (t) => [
+    check("project_dsv_template_version", sql`${t.dsvTemplateVersion} ~ '^v[1-9][0-9]{0,3}$'`),
     check(
       "project_t_kug_number",
       sql`${t.tKugNumber} ~ '^[0-9A-Za-z][0-9A-Za-z./-]{0,29}$' and ${t.tKugNumber} !~* '^TK-'`,
@@ -492,7 +499,10 @@ export const attendanceConflictResolution = pgEnum(
 );
 export const missedResolution = pgEnum("missed_resolution", values(MissedResolution));
 export const jobboerseChoice = pgEnum("jobboerse_choice", values(JobboerseChoice));
-export const formCode = pgEnum("form_code", values(FormCode));
+// The BA's forms and our own DSV (process-and-lifecycle.md, the DSV: generation), which only
+// `form_generation` names.
+export const formCode = pgEnum("form_code", [...values(FormCode), "dsv"]);
+export const dsvDeadlineKind = pgEnum("dsv_deadline_kind", ["wave", "explicit"]);
 export const scanOrigin = pgEnum("scan_origin", values(ScanOrigin));
 export const asuChannel = pgEnum("asu_channel", values(AsuChannel));
 export const asuProofKind = pgEnum("asu_proof_kind", values(AsuProofKind));
@@ -2047,8 +2057,16 @@ export const formGeneration = pgTable(
     baContactConsent: boolean("ba_contact_consent"),
     confirmedWarnings: text("confirmed_warnings").array().notNull(),
     anlage: boolean("anlage").notNull(),
-    /** A Kug 200b's handwriting checklist, `[{code, key}]` (Q197 (8)); null for the TL 407. */
+    /**
+     * A Kug 200b's or DSV's handwriting checklist, `[{code, key}]` (Q197 (8)); null for the TL 407.
+     */
     checklist: jsonb("checklist"),
+    /**
+     * A DSV's offer deadline as printed and how it was chosen (data-protection.md, generated forms): the wave's signing
+     * deadline the dialog showed, or an explicit date; null for the BA forms.
+     */
+    offerDeadline: dateColumn("offer_deadline"),
+    deadlineKind: dsvDeadlineKind("deadline_kind"),
     generatedBy: uuid("generated_by")
       .notNull()
       .references(() => staffUser.id),
@@ -2061,7 +2079,17 @@ export const formGeneration = pgTable(
       foreignColumns: [participation.id, participation.projectId],
     }),
     index("form_generation_participation_idx").on(t.participationId, t.formCode, t.generatedAt),
-    check("form_generation_form_version", sql`${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$'`),
+    // A BA form's version as printed; the DSV's template version (`dsv` compared as text: the value
+    // is added in the same migration run).
+    check(
+      "form_generation_form_version",
+      sql`case when ${t.formCode}::text = 'dsv' then ${t.formVersion} ~ '^v[1-9][0-9]{0,3}$' else ${t.formVersion} ~ '^(0[1-9]|1[0-2])-[0-9]{4}$' end`,
+    ),
+    // A DSV prints its deadline and keeps a checklist; it has no declaration, warning or Anlage.
+    check(
+      "form_generation_dsv",
+      sql`(${t.formCode}::text = 'dsv') = (${t.offerDeadline} is not null) and (${t.offerDeadline} is null) = (${t.deadlineKind} is null) and (${t.formCode}::text <> 'dsv' or ${t.checklist} is not null and ${t.jobboerseChoice} is null and ${t.baContactConsent} is null and cardinality(${t.confirmedWarnings}) = 0 and not ${t.anlage})`,
+    ),
     check(
       "form_generation_revisions",
       sql`${t.profileRevision} >= 0 and ${t.profilingRevision} >= 0 and ${t.assessmentRevision} >= 0 and ${t.unemploymentRevision} >= 0`,
@@ -2072,7 +2100,7 @@ export const formGeneration = pgTable(
     // checklist (data-protection.md, generated forms).
     check(
       "form_generation_kug200b",
-      sql`(${t.formCode} = 'kug200b') = (${t.checklist} is not null) and (${t.formCode} <> 'kug200b' or ${t.jobboerseChoice} is null and ${t.baContactConsent} is null and cardinality(${t.confirmedWarnings}) = 0 and not ${t.anlage})`,
+      sql`(${t.formCode}::text in ('kug200b', 'dsv')) = (${t.checklist} is not null) and (${t.formCode} <> 'kug200b' or ${t.jobboerseChoice} is null and ${t.baContactConsent} is null and cardinality(${t.confirmedWarnings}) = 0 and not ${t.anlage})`,
     ),
     // The target of a scan's composite FK (data-protection.md, signed scans).
     unique("form_generation_scan_target").on(t.documentId, t.participationId, t.formCode),

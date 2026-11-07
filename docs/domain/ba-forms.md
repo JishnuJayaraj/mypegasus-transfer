@@ -284,3 +284,28 @@ Kug 200b offer.
   export link (`kug200b_print`), never stored as one file.
 - **The review** checks the completed paper: 16 and 17 ticked, the mandatory information
   completed (also what the checklist named), signed, and the date in field 19 (Q185).
+
+## The DSV as built (Slice 7, PR 7-1)
+
+The DSV is no BA form but **our own versioned template** (ADR-0009, own documents; readings Q226):
+`packages/forms/templates/own/dsv/v<n>/` (`index.html`, `header.html`, `footer.html` and
+`template.json` with `approvedForLive`), rendered by Gotenberg behind `PdfRenderer.renderHtml`.
+
+- **`dsv:v1` is the synthetic development sample** (`approvedForLive: false`), stamped "Muster –
+  nicht zur Verwendung" in the header, the footer and as a watermark on every page. Its wording is
+  placeholder text, not reviewed (Q210 is a pilot gate). Approved wording is a new version with
+  `approvedForLive: true` from a reviewed source; with `NODE_ENV=production` an unapproved version
+  is refused (`dsv_template_not_approved`).
+- **The project pins one version** (`project.dsv_template_version`, the PL, "DSV-Vorlage" on
+  "Einrichtung"); fixed from the project's first generation. The DSV is contractual, per project,
+  never an Agentur setting.
+- **Only the variable parts are filled** (`renderDsv`): the participant's name, birth date and
+  address, the customer (the project's customer name), the Transfergesellschaft from the
+  organisation configuration, the effective TG start and end, the offer deadline (`TT.MM.JJJJ`),
+  and three signature blocks with "Ort, Datum" lines for the hand. Every value is HTML-escaped; a
+  long unbroken value wraps in its cell; a blank birth date or address prints a line and is on
+  the handwriting checklist (Q197); a character outside the font's printable ranges refuses the
+  generation (`character_unsupported`, by key, never the value).
+- The Gotenberg contract test (`packages/adapters/src/pdf/dsv.test.ts`, CI's service) renders the
+  template and reads every variable part back (`Ł`, `ğ`), the deadline and the stamp on each page,
+  HTML in a name as text, and unbroken runs inside the page.

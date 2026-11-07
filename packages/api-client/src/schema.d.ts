@@ -12035,6 +12035,342 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/dsv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The tab DSV (the PL and back office): the track, the pinned template, the deadline's choices and bounds, the source token, what a generation would leave for the hand, why none can be generated now, the generations with their currency, and dsvGenerated; never a value the paper prints */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The DSV as the viewer may work it */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/dsv/generations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate the DSV (the PL or back office) with the deadline chosen first: the wave's signing deadline as shown (a first offer) or an explicit date; stored encrypted as a working copy with its source token and deadline, audited dsv_form_generated. Signed on paper; no e-signature
+         * @description Refusals:
+         *     - `409 source_changed` at `/expectedSourceToken`: a printed value or the wave's deadline moved since the tab was read (also when found at the record).
+         *     - `422` at `/deadline`: `explicit_deadline_required` (a re-offer), `wave_deadline_missing`, `offer_deadline_invalid` (not today ≤ deadline ≤ the latest entry date and ≤ the TG start).
+         *     - `422` (pointer empty): `not_ta_tg`, `project_not_active`, `participation_closed`, `no_entry_wave`, `tg_dates_missing`, `dsv_template_not_pinned`, `dsv_template_not_approved` (production only), `dsv_offer_open` (the paper is reopened, not regenerated), `dsv_already_signed`, `dsv_not_generatable`, `character_unsupported`.
+         *     - `503 pdf_unavailable` or `storage_unavailable`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvGenerationRequest"];
+                };
+            };
+            responses: {
+                /** @description Generated: the document, its deadline and checklist */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvGenerationResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{projectId}/dsv-template": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The project's DSV template (the PL and back office): the pinned version, the versions with their approval for live use, and whether the pin is fixed (from the first generation) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The project's DSV template */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvTemplateView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /**
+         * Pin the project's DSV template version (the PL; ta_tg): while no DSV of the project was generated, audited dsv_template_pinned
+         * @description Refusals:
+         *     - `422` at `/version`: `template_unknown` (not in the form registry).
+         *     - `422`: `not_ta_tg`, `template_pinned` (fixed from the first generation), `project_unchanged`.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvTemplatePinInput"];
+                };
+            };
+            responses: {
+                /** @description Pinned */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvTemplateView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exports/{kind}": {
         parameters: {
             query?: never;
@@ -14758,6 +15094,7 @@ export interface components {
                 startAssistedMode: boolean;
                 viewProfiling: boolean;
                 viewAsu: boolean;
+                viewDsv: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
@@ -15575,7 +15912,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -16290,7 +16627,7 @@ export interface components {
             sensitive: boolean;
             complete: boolean;
             fields: components["schemas"]["SelfServiceField"][];
-            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form")[];
+            documentTypes?: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form")[];
         };
         /** @enum {string} */
         SelfServicePage: "personal" | "contact" | "ba_details" | "education" | "work_history" | "languages_mobility" | "job_wish" | "health" | "further" | "documents";
@@ -16338,7 +16675,7 @@ export interface components {
             /** @enum {string} */
             kind: "upload";
             /** @enum {string} */
-            documentType: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form";
+            documentType: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form";
             done: boolean;
         } | {
             /** @enum {string} */
@@ -16754,14 +17091,14 @@ export interface components {
         };
         DocumentList: {
             documents: components["schemas"]["Document"][];
-            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form")[];
+            addableTypes: ("tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form")[];
             limits: components["schemas"]["DocumentLimits"];
         };
         Document: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form";
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form";
             /** @enum {string} */
             mediaType: "application/pdf" | "image/jpeg" | "image/png";
             sizeBytes: number;
@@ -16816,7 +17153,7 @@ export interface components {
         };
         DocumentUploadInput: {
             /** @enum {string} */
-            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form";
+            type: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form";
             fileName: string;
             /** @description The file, base64; decoded at most 10 MB */
             content: string;
@@ -17737,6 +18074,136 @@ export interface components {
         Kug200bBulkInput: {
             participationIds: string[];
         };
+        DsvView: {
+            /** Format: uuid */
+            participationId: string;
+            /** @enum {string} */
+            track: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
+            template: {
+                version: string;
+                approvedForLive: boolean;
+            } | null;
+            deadline: {
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                waveSigningDeadline: string | null;
+                explicitRequired: boolean;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                latestEntryDate: string | null;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                tgStart: string | null;
+            };
+            sourceToken: string | null;
+            checklist: components["schemas"]["DsvChecklistItem"][];
+            blockers: ("not_ta_tg" | "project_not_active" | "participation_closed" | "no_entry_wave" | "tg_dates_missing" | "dsv_template_not_pinned" | "dsv_template_not_approved" | "dsv_offer_open" | "dsv_already_signed")[];
+            generations: components["schemas"]["DsvGenerationView"][];
+            facts: {
+                dsvGenerated: {
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    validOn: string;
+                    /**
+                     * Format: date-time
+                     * @description UTC timestamp (ISO 8601)
+                     */
+                    recordedAt: string;
+                } | null;
+            };
+            capabilities: {
+                generate: boolean;
+            };
+        };
+        DsvChecklistItem: {
+            /** @enum {string} */
+            code: "required_blank";
+            /** @enum {string} */
+            key: "firstName" | "lastName" | "birthDate" | "address" | "customerName" | "transfergesellschaft";
+        };
+        DsvGenerationView: {
+            /** Format: uuid */
+            documentId: string;
+            /**
+             * Format: date-time
+             * @description UTC timestamp (ISO 8601)
+             */
+            generatedAt: string;
+            templateVersion: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            offerDeadline: string;
+            /** @enum {string} */
+            deadlineKind: "wave" | "explicit";
+            checklist: components["schemas"]["DsvChecklistItem"][];
+            stale: boolean;
+            capabilities: {
+                open: boolean;
+            };
+        };
+        DsvGenerationResult: {
+            /** Format: uuid */
+            documentId: string;
+            templateVersion: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            offerDeadline: string;
+            checklist: components["schemas"]["DsvChecklistItem"][];
+        };
+        DsvGenerationRequest: {
+            deadline: {
+                /** @enum {string} */
+                kind: "wave";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                shown: string;
+            } | {
+                /** @enum {string} */
+                kind: "explicit";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                date: string;
+            };
+            expectedSourceToken: string;
+        };
+        DsvTemplateView: {
+            version: string | null;
+            fixed: boolean;
+            versions: {
+                version: string;
+                approvedForLive: boolean;
+            }[];
+            capabilities: {
+                pin: boolean;
+            };
+        };
+        DsvTemplatePinInput: {
+            version: string;
+        };
         ExportLink: {
             url: string;
             /**
@@ -18048,7 +18515,7 @@ export interface components {
                 targetKind: components["schemas"]["CorrectionTargetKind"];
                 action: components["schemas"]["CorrectionAction"];
                 /** @enum {string|null} */
-                documentType: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | null;
+                documentType: "tl407_signed_scan" | "kug200b_signed_scan" | "dsv_signed_scan" | "dsv_cancellation" | "asu_proof" | "profiling_exception_evidence" | "cv" | "participant_upload" | "qualification_certificate" | "tl407_form" | "kug200b_form" | "dsv_form" | null;
                 /** @enum {string|null} */
                 reportingKind: "later_entry" | "planned_end_changed" | "early_exit" | null;
                 wrongPerson: boolean | null;

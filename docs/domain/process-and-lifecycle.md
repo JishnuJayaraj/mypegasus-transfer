@@ -546,6 +546,18 @@ stateDiagram-v2
   Guards). If neither
   exists, the offer can't be recorded until the PL enters one. `dsv_expired` happens the day
   after.
+- **Generation as built** (Slice 7, PR 7-1; readings Q226): the DSV is our own template, pinned
+  per project ("DSV-Vorlage", the PL; fixed from the project's first generation). The PL or back
+  office generates it on the tab "DSV" for an open participation of an active `ta_tg` project in a
+  wave with both effective TG dates while the track is `not_offered`, `dsv_declined` or
+  `dsv_expired` (`dsv_offer_open` once offered: its paper is reopened, not regenerated). **The
+  deadline is chosen before generation:** the wave's `signingDeadline` as the dialog showed it
+  (first offer only) or an explicit date (a re-offer), with the guard's rule `offer_deadline_valid`
+  (today ≤ deadline ≤ `latestEntryDate`, ≤ the effective TG start), and printed on the paper. The
+  generation stores a **source token** over every printed value; it is **stale** once a printed
+  value changes, its deadline passes, or (for the wave's deadline) the wave's deadline moves.
+  `dsvGenerated` is the latest current generation (valid from its Berlin day, recorded at its
+  instant). The paper is signed by hand; nothing in the app signs.
 - **Withdrawal after `dsv_signed`** *(verify, Q46)*: before TG start, main status → `withdrawn`
   only with an uploaded cancellation document signed by all three parties. The PL confirms, and
   a customer notification flag is set. After TG start it is a normal TG exit.
