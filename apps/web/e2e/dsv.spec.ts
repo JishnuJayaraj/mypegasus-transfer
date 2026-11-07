@@ -198,6 +198,7 @@ test("slice 7-1: the PL pins the DSV template, generates the DSV with the wave's
   await papers.getByRole("button", { name: "Angebot erfassen", exact: true }).click();
   const offers = page.getByRole("region", { name: "Angebote", exact: true });
   await expect(offers).toContainText("Erzeugtes Papier");
+  await expect(page.getByText("DSV: Angeboten", { exact: true })).toHaveCount(2);
   await expect(offers.getByRole("button", { name: "Abgelehnt erfassen" })).toBeVisible();
   await expectAccessible(page);
   const offerScreenshots = fileURLToPath(

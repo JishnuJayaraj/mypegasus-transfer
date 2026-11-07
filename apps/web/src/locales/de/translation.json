@@ -3481,7 +3481,9 @@
       "declined": "Abgelehnt",
       "expired": "Abgelaufen",
       "decline": "Abgelehnt erfassen",
-      "recorded": "Angebot erfasst."
+      "recorded": "Angebot erfasst.",
+      "completeDates": "Erst alle drei Angaben vom Papier als gültige Daten eingeben.",
+      "externalFailed": "Angebot konnte nicht erfasst werden. Angaben und aktuellen Stand prüfen."
     }
   },
   "dsvTemplate": {

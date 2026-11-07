@@ -329,3 +329,39 @@ it("offers the selected generation with the displayed status version", async () 
     statusVersion: 3,
   });
 });
+
+it("records external paper in a panel with required dates and draft protection", async () => {
+  const { calls } = setup(view(), {
+    [`POST ${detailPath}/dsv/offers`]: () => json(view(), 201),
+  });
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Papierangebot ohne Erzeugung erfassen" }),
+  );
+  const panel = within(
+    screen.getByRole("dialog", { name: "Papierangebot ohne Erzeugung erfassen" }),
+  );
+  expect(panel.getByRole("button", { name: "Angebot erfassen" })).toBeDisabled();
+  expect(
+    panel.getByText("Erst alle drei Angaben vom Papier als gültige Daten eingeben."),
+  ).toBeVisible();
+  await userEvent.type(panel.getByLabelText(/Aufgedruckte Angebotsfrist/), "15.02.2091");
+  await userEvent.keyboard("{Escape}");
+  expect(await screen.findByText("Änderungen verwerfen?")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Weiter bearbeiten" }));
+  await userEvent.type(panel.getByLabelText(/Aufgedruckter TG-Beginn/), "01.03.2091");
+  await userEvent.type(panel.getByLabelText(/Aufgedrucktes TG-Ende/), "29.02.2092");
+  await userEvent.click(panel.getByRole("button", { name: "Angebot erfassen" }));
+  await waitFor(() =>
+    expect(calls).toContainEqual({
+      key: `POST ${detailPath}/dsv/offers`,
+      body: {
+        external: {
+          deadline: "2091-02-15",
+          printedTgStart: "2091-03-01",
+          printedTgEnd: "2092-02-29",
+        },
+        statusVersion: 3,
+      },
+    }),
+  );
+});

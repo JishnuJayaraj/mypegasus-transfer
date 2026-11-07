@@ -14,13 +14,15 @@ import {
   RadioButton,
   RadioButtonGroup,
   SimpleTable,
+  SidePanel,
   Stack,
   StatusTag,
   Tag,
 } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { participationDsvQuery, useApi } from "../api";
+import { participationDsvQuery, participationQuery, worklistQuery, useApi } from "../api";
+import { usePanelNavigationGuard } from "./panel-guard";
 import { documentNavigation } from "./documents-tab";
 
 // The tab "DSV" (process-and-lifecycle.md, the DSV: generation; data-protection.md, generated
@@ -100,9 +102,25 @@ export function DsvTab({ participationId }: { participationId: string }) {
     }
   }
 
+  async function refreshStatus() {
+    const detailQuery = participationQuery(api, participationId);
+    const detail = queryClient.getQueryData(detailQuery.queryKey);
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: detailQuery.queryKey }),
+      ...(detail
+        ? [
+            queryClient.invalidateQueries({
+              queryKey: worklistQuery(api, detail.projectId).queryKey,
+            }),
+          ]
+        : []),
+    ]);
+  }
+
   async function offer(
     generationId?: string,
     external?: { deadline: string; printedTgStart: string; printedTgEnd: string },
+    statusVersion = view.statusVersion,
   ) {
     setBusy(true);
     try {
@@ -110,16 +128,18 @@ export function DsvTab({ participationId }: { participationId: string }) {
         await api.POST("/api/v1/participations/{participationId}/dsv/offers", {
           params: { path },
           body: generationId
-            ? { generationId, statusVersion: view.statusVersion }
-            : { external: external!, statusVersion: view.statusVersion },
+            ? { generationId, statusVersion }
+            : { external: external!, statusVersion },
         }),
       );
       setMessage({ kind: "success", text: t("dsv.offers.recorded") });
+      return true;
     } catch (error) {
       setMessage({ kind: "error", text: failure(error) });
+      return false;
     } finally {
       setBusy(false);
-      await queryClient.invalidateQueries({ queryKey: dsvQuery.queryKey });
+      await refreshStatus();
     }
   }
   async function decline(offerId: string, statusVersion: number) {
@@ -136,7 +156,7 @@ export function DsvTab({ participationId }: { participationId: string }) {
       setMessage({ kind: "error", text: failure(error) });
     } finally {
       setBusy(false);
-      await queryClient.invalidateQueries({ queryKey: dsvQuery.queryKey });
+      await refreshStatus();
     }
   }
 
@@ -211,9 +231,12 @@ export function DsvTab({ participationId }: { participationId: string }) {
               )}
             </div>
           ))}
-          {view.capabilities.offer && (
-            <ExternalOffer busy={busy} onOffer={(external) => offer(undefined, external)} />
-          )}
+          <ExternalOffer
+            busy={busy}
+            available={view.capabilities.offer}
+            statusVersion={view.statusVersion}
+            onOffer={(external, version) => offer(undefined, external, version)}
+          />
         </Stack>
       </Card>
       <Card title={t("dsv.generations.title")} level={3}>
@@ -243,7 +266,7 @@ export function DsvTab({ participationId }: { participationId: string }) {
                 {view.capabilities.offer && !generation.stale && (
                   <Button
                     disabled={busy}
-                    kind="tertiary"
+                    kind="secondary"
                     size="sm"
                     onClick={() => void offer(generation.generationId)}
                   >
@@ -252,7 +275,7 @@ export function DsvTab({ participationId }: { participationId: string }) {
                 )}
                 {generation.capabilities.open ? (
                   <Button
-                    kind="ghost"
+                    kind="secondary"
                     size="sm"
                     aria-label={t("dsv.generations.openAt", {
                       at: formatTimestamp(generation.generatedAt),
@@ -424,45 +447,79 @@ function ChecklistText({ checklist, short }: { checklist: Checklist; short?: boo
   );
 }
 
+type ExternalPaper = { deadline: string; printedTgStart: string; printedTgEnd: string };
 function ExternalOffer({
   busy,
+  available,
+  statusVersion,
   onOffer,
 }: {
   busy: boolean;
-  onOffer: (external: {
-    deadline: string;
-    printedTgStart: string;
-    printedTgEnd: string;
-  }) => Promise<void>;
+  available: boolean;
+  statusVersion: number;
+  onOffer: (external: ExternalPaper, version: number) => Promise<boolean>;
 }) {
   const { t } = useTranslation();
+  const [version, setVersion] = useState<number | null>(null);
   const [values, setValues] = useState({ deadline: "", printedTgStart: "", printedTgEnd: "" });
+  const [failed, setFailed] = useState(false);
+  const dirty = Object.values(values).some(Boolean);
+  const pendingNavigation = usePanelNavigationGuard(version !== null && dirty);
   const parsed = Object.fromEntries(
     Object.entries(values).map(([key, value]) => {
       const result = parseDisplayDate(value);
       return [key, result.ok ? result.value : null];
     }),
   );
+  const close = () => {
+    setVersion(null);
+    setValues({ deadline: "", printedTgStart: "", printedTgEnd: "" });
+    setFailed(false);
+  };
+  async function submit() {
+    if (await onOffer(parsed as ExternalPaper, version!)) close();
+    else setFailed(true);
+  }
   return (
-    <Stack gap={3}>
-      <p>{t("dsv.offers.externalHint")}</p>
-      {(["deadline", "printedTgStart", "printedTgEnd"] as const).map((key) => (
-        <DateField
-          key={key}
-          id={`dsv-external-${key}`}
-          labelText={t(`dsv.offers.${key}`)}
-          onChange={(value) => setValues((before) => ({ ...before, [key]: value }))}
-        />
-      ))}
-      <Button
-        disabled={busy || Object.values(parsed).some((value) => !value)}
-        kind="tertiary"
-        onClick={() =>
-          void onOffer(parsed as { deadline: string; printedTgStart: string; printedTgEnd: string })
-        }
+    <>
+      {available && (
+        <Button disabled={busy} kind="tertiary" onClick={() => setVersion(statusVersion)}>
+          {t("dsv.offers.externalAction")}
+        </Button>
+      )}
+      <SidePanel
+        open={version !== null}
+        title={t("dsv.offers.externalAction")}
+        dirty={dirty}
+        onClose={close}
+        pendingNavigation={pendingNavigation}
       >
-        {t("dsv.offers.externalAction")}
-      </Button>
-    </Stack>
+        {version !== null && (
+          <Stack gap={4}>
+            <p>{t("dsv.offers.externalHint")}</p>
+            {failed && (
+              <InlineNotification kind="error" title={t("dsv.offers.externalFailed")} lowContrast />
+            )}
+            {(["deadline", "printedTgStart", "printedTgEnd"] as const).map((key) => (
+              <DateField
+                key={key}
+                id={`dsv-external-${key}`}
+                labelText={t(`dsv.offers.${key}`)}
+                onChange={(value) => setValues((before) => ({ ...before, [key]: value }))}
+              />
+            ))}
+            <ActionButton
+              disabled={busy}
+              unavailableReason={
+                Object.values(parsed).some((value) => !value) ? t("dsv.offers.completeDates") : null
+              }
+              onClick={() => void submit()}
+            >
+              {t("dsv.offers.offer")}
+            </ActionButton>
+          </Stack>
+        )}
+      </SidePanel>
+    </>
   );
 }

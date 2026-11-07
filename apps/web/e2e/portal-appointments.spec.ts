@@ -103,7 +103,11 @@ test("appointments: the PL invites, the participant books and cancels in the por
   await choosePortalLanguage(portal, "English");
   await portal.getByRole("link", { name: "Appointments", exact: true }).click();
   await expect(portal.getByRole("region", { name: "Invitations" })).toBeVisible();
-  await expect(portal.getByRole("button", { name: "Book" })).toBeVisible();
+  await expect(
+    portal
+      .getByRole("region", { name: "Invitations" })
+      .getByRole("button", { name: "Book", exact: true }),
+  ).toBeVisible();
   expect(await fitsWidth(portal)).toBe(true);
   await expectAccessible(portal);
   await portal.screenshot({
