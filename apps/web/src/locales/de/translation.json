@@ -3465,6 +3465,23 @@
       "wave_deadline_missing": "Die Welle hat keine Unterschriftsfrist: bitte eine Frist eingeben.",
       "offer_deadline_invalid": "Die Frist muss zwischen heute und dem spätesten Eintritt liegen und darf nicht nach dem TG-Beginn liegen.",
       "character_unsupported": "Eine Angabe enthält Zeichen, die der Vertrag nicht drucken kann."
+    },
+    "offers": {
+      "title": "Angebote",
+      "offer": "Angebot erfassen",
+      "externalAction": "Papierangebot ohne Erzeugung erfassen",
+      "externalHint": "Die Angaben vom ausgehändigten Papier übernehmen. Scans werden anschließend erfasst.",
+      "deadline": "Aufgedruckte Angebotsfrist",
+      "printedTgStart": "Aufgedruckter TG-Beginn",
+      "printedTgEnd": "Aufgedrucktes TG-Ende",
+      "generated": "Erzeugtes Papier",
+      "external_paper": "Externes Papier",
+      "open": "Offen",
+      "signed": "Unterschrieben",
+      "declined": "Abgelehnt",
+      "expired": "Abgelaufen",
+      "decline": "Abgelehnt erfassen",
+      "recorded": "Angebot erfasst."
     }
   },
   "dsvTemplate": {

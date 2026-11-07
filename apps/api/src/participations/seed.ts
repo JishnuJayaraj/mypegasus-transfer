@@ -1,6 +1,7 @@
 import { ManualClock, scheduledAt } from "@transfer/adapters";
 import {
   eq,
+  sql,
   inArray,
   participation,
   profilingExceptionRequest,
@@ -161,8 +162,17 @@ const informed = (participationId: string): Step[] => [
   move(consultant, participationId, "main", "imported", "contacted"),
   move(consultant, participationId, "main", "contacted", "informed"),
 ];
-const offer = (participationId: string) =>
-  move(backOffice, participationId, "dsv", "not_offered", "dsv_offered");
+const offer = (participationId: string): Step => ({
+  on: D1,
+  run: async (_service, db) =>
+    db.execute(sql`select offer_dsv(
+    row('user', ${seedStaffUserIds.backOffice}::uuid, null, null, null, null, null)::audit_context,
+    p.id, null, jsonb_build_object('deadline', w.signing_deadline,
+      'printedTgStart', coalesce(p.tg_start, w.default_tg_start),
+      'printedTgEnd', coalesce(p.tg_end, w.default_tg_end)), p.status_version)
+    from participation p join project_entry_wave w on w.id = p.entry_wave_id
+    where p.id = ${participationId}::uuid`),
+});
 const sign = (participationId: string) =>
   move(backOffice, participationId, "dsv", "dsv_offered", "dsv_signed");
 const profiling = (participationId: string, ...path: string[]): Step[] =>

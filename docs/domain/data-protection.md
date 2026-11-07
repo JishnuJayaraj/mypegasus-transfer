@@ -1437,3 +1437,8 @@ Implementation:
 9. **Exports**: no Steuer-ID, SV-Nummer or IBAN in the payroll export unless back office
    explicitly requests it. That request is logged.
 10. **DPIA (DSFA)** must be completed before any real data is used (Q25).
+
+DSV offer metadata (`dsv_offer`) is internal case data, class `participation_record`, scoped by
+`project_id` and participation. The PL and back office read and record it through the DSV
+endpoints; external offers store printed TG dates and wording identity `external_unknown`, with
+no scan required at offer time. The generated paper remains a logged, encrypted working copy.

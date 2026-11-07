@@ -9,6 +9,8 @@ import {
   DsvTemplatePinInput,
   DsvTemplateView,
   DsvView,
+  DsvOfferRequest,
+  DsvDeclineRequest,
   mayPinDsvTemplate,
   mayWorkDsv,
   type DocumentTarget,
@@ -130,6 +132,13 @@ export function dsvRoutes(deps: Deps) {
     return {
       participationId: target.participationId,
       track: read.dsvStatus,
+      statusVersion: read.statusVersion,
+      offers: read.offers.map((offer) => ({
+        ...offer,
+        capabilities: {
+          decline: read.dsvStatus === "dsv_offered" && offer.endedAs === null,
+        },
+      })),
       template:
         read.templateVersion === null
           ? null
@@ -147,6 +156,7 @@ export function dsvRoutes(deps: Deps) {
       checklist: read.validation.checklist,
       blockers,
       generations: read.generations.map((generation) => ({
+        generationId: generation.generationId,
         documentId: generation.documentId,
         generatedAt: generation.generatedAt,
         templateVersion: generation.templateVersion as DsvTemplateVersion,
@@ -179,7 +189,14 @@ export function dsvRoutes(deps: Deps) {
             }
           : null,
       },
-      capabilities: { generate: read.projectType === "ta_tg" && blockers.length === 0 },
+      capabilities: {
+        generate: read.projectType === "ta_tg" && blockers.length === 0,
+        offer:
+          read.projectType === "ta_tg" &&
+          read.projectStatus === "active" &&
+          read.status === "informed" &&
+          ["not_offered", "dsv_declined", "dsv_expired"].includes(read.dsvStatus),
+      },
     };
   }
 
@@ -269,6 +286,89 @@ export function dsvRoutes(deps: Deps) {
       if (!outcome.ok) return refused(c, outcome.refusal) as never;
       c.header("Cache-Control", "no-store");
       return c.json(outcome.result, 201);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/dsv/offers",
+      tags: ["participations"],
+      summary: "Record the offered generated or external paper (PL and back office)",
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: DsvOfferRequest } } },
+      },
+      responses: {
+        201: json(DsvView, "The recorded offer"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      const input = c.req.valid("json");
+      try {
+        await db.execute(sql`select offer_dsv(${context(c)}, ${participationId}::uuid,
+        ${"generationId" in input ? input.generationId : null}::uuid,
+        ${"external" in input ? JSON.stringify(input.external) : null}::jsonb,
+        ${input.statusVersion}::integer)`);
+      } catch (error) {
+        return offerRefusal(c, error) as never;
+      }
+      return c.json(
+        viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        201,
+      );
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/dsv/offers/{offerId}/decline",
+      tags: ["participations"],
+      summary: "Record that the participant declined this offer",
+      middleware,
+      request: {
+        params: ParticipationParams.extend({ offerId: z.uuid() }),
+        body: { required: true, content: { "application/json": { schema: DsvDeclineRequest } } },
+      },
+      responses: {
+        200: json(DsvView, "The declined offer"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId, offerId } = c.req.valid("param");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      try {
+        await db.execute(sql`select decline_dsv_offer(${context(c)}, ${participationId}::uuid,
+        ${offerId}::uuid, ${c.req.valid("json").statusVersion}::integer)`);
+      } catch (error) {
+        return offerRefusal(c, error) as never;
+      }
+      return c.json(
+        viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        200,
+      );
     },
   );
 
@@ -396,4 +496,29 @@ export function dsvRoutes(deps: Deps) {
   );
 
   return router;
+}
+
+function offerRefusal(c: Context<AppEnv>, error: unknown) {
+  const code = functionRefusal(error);
+  if (code === "actor_not_allowed") return problem(c, "forbidden");
+  if (code === "offer_not_found" || code === "generation_not_found") return problem(c, "not-found");
+  if (code === "stale_status" || code === "source_changed")
+    return problem(c, "conflict", {
+      errors: [{ pointer: "", code, detail: "Read the tab again" }],
+    });
+  if (
+    code &&
+    [
+      "dsv_generation_stale",
+      "offer_deadline_invalid",
+      "terms_mismatch",
+      "invalid_transition",
+      "track_inactive",
+      "project_not_active",
+      "wave_required",
+      "dsv_template_not_approved",
+    ].includes(code)
+  )
+    return domainProblem(c, [code]);
+  throw error;
 }

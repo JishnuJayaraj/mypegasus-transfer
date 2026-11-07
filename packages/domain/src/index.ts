@@ -1269,6 +1269,8 @@ export { mayPinDsvTemplate, mayWorkDsv } from "./dsv/access";
 export { dsvGeneratedFact } from "./dsv/generation";
 export {
   DsvChecklistItem,
+  DsvOfferRequest,
+  DsvDeclineRequest,
   DsvGenerationRequest,
   DsvGenerationResult,
   DsvGenerationView,

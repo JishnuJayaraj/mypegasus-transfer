@@ -69,8 +69,28 @@ export type Change = {
   scheduledAt?: string;
 };
 
-export function changeStatus(client: Pick<Client, "query">, id: string, change: Change) {
+export async function changeStatus(client: Pick<Client, "query">, id: string, change: Change) {
   const { from, context = pl, ...rest } = change;
+  if (change.field === "dsv_status" && change.to === "dsv_offered" && !change.effectiveDate) {
+    const { rows } = await client.query(
+      `select p.status_version, coalesce(p.tg_start, w.default_tg_start)::text as start,
+      coalesce(p.tg_end, w.default_tg_end)::text as finish, w.signing_deadline::text as deadline
+      from participation p left join project_entry_wave w on w.id = p.entry_wave_id where p.id = $1`,
+      [id],
+    );
+    const paper = rows[0];
+    return call(client, "offer_dsv", {
+      context,
+      participationId: id,
+      generationId: null,
+      external: JSON.stringify({
+        deadline: change.offerDeadline ?? (from === "not_offered" ? paper.deadline : null),
+        printedTgStart: paper.start,
+        printedTgEnd: paper.finish,
+      }),
+      expectedStatusVersion: paper.status_version,
+    });
+  }
   return call(client, "change_participation_status", {
     id,
     expectedFrom: from,

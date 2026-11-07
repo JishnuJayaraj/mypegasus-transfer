@@ -395,7 +395,7 @@ describe("change_participation_status (AC-16)", () => {
       const informed = await informedParticipation(app, { entryWaveId: waveId });
       const offer = { field: "dsv_status", from: "not_offered", to: "dsv_offered" } as const;
       await changeStatus(app, informed, offer);
-      expect(await row(informed)).toMatchObject({ offer_deadline: null });
+      expect(await row(informed)).toMatchObject({ offer_deadline: "2027-02-15" });
       await changeStatus(app, informed, {
         field: "dsv_status",
         from: "dsv_offered",
@@ -405,7 +405,7 @@ describe("change_participation_status (AC-16)", () => {
       });
       const reOffer = { field: "dsv_status", from: "dsv_expired", to: "dsv_offered" } as const;
       await expect(changeStatus(app, informed, reOffer)).rejects.toMatchObject(
-        failsWith("offer_deadline_required"),
+        failsWith("offer_deadline_invalid"),
       );
       await changeStatus(app, informed, { ...reOffer, offerDeadline: "2027-02-28" });
       expect(await row(informed)).toMatchObject({
@@ -421,7 +421,7 @@ describe("change_participation_status (AC-16)", () => {
       ]);
       const noDeadline = await informedParticipation(app, { entryWaveId: waveId });
       await expect(changeStatus(app, noDeadline, offer)).rejects.toMatchObject(
-        failsWith("offer_deadline_required"),
+        failsWith("offer_deadline_invalid"),
       );
     });
 

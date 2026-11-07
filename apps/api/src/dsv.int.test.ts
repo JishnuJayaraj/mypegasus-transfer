@@ -376,3 +376,90 @@ describe("NODE_ENV=production", () => {
     expect(rows.rows[0].n).toBe(0);
   });
 });
+
+const offer = (id: string, body: object, as: string = projectLead) =>
+  request("POST", `/participations/${id}/dsv/offers`, as, body);
+
+describe("DSV offers", () => {
+  it("records external paper before scans, then declines exactly that offer", async () => {
+    const id = await participant();
+    const before = await view(id);
+    const external = {
+      deadline: w1.signingDeadline,
+      printedTgStart: w1.defaultTgStart,
+      printedTgEnd: w1.defaultTgEnd,
+    };
+    const res = await offer(id, { external, statusVersion: before.statusVersion });
+    expect(res.status).toBe(201);
+    const recorded = await readJson(res, DsvView);
+    expect(recorded.track).toBe("dsv_offered");
+    expect(recorded.offers).toHaveLength(1);
+    expect(recorded.offers[0]).toMatchObject({ origin: "external_paper", endedAs: null });
+    expect((await offer(id, { external, statusVersion: before.statusVersion })).status).toBe(409);
+    const declined = await request(
+      "POST",
+      `/participations/${id}/dsv/offers/${recorded.offers[0]!.id}/decline`,
+      backOffice,
+      { statusVersion: recorded.statusVersion },
+    );
+    expect(declined.status).toBe(200);
+    expect((await readJson(declined, DsvView)).offers[0]!.endedAs).toBe("declined");
+  });
+
+  it("refuses mismatching external terms and a consultant", async () => {
+    const id = await participant();
+    const body = {
+      statusVersion: (await view(id)).statusVersion,
+      external: {
+        deadline: w1.signingDeadline,
+        printedTgStart: "2099-01-01",
+        printedTgEnd: w1.defaultTgEnd,
+      },
+    };
+    expect(await codesOf(await offer(id, body), 422)).toContain(":terms_mismatch");
+    expect((await offer(id, body, consultant)).status).toBe(403);
+    expect((await view(id)).offers).toHaveLength(0);
+  });
+
+  it("uses the generated paper's deadline and rejects changed sources", async () => {
+    await pin();
+    const id = await participant();
+    const generated = await readJson(await generate(id), DsvGenerationResult);
+    const { rows } = await sql(`select id from form_generation where document_id = $1`, [
+      generated.documentId,
+    ]);
+    const before = await view(id);
+    await sql(
+      `update participant_identity set last_name = 'Beispiel' where participation_id = $1`,
+      [id],
+    );
+    expect(
+      (await offer(id, { generationId: rows[0].id, statusVersion: before.statusVersion })).status,
+    ).toBe(409);
+    const next = await readJson(await generate(id), DsvGenerationResult);
+    const gen = await sql(`select id from form_generation where document_id = $1`, [
+      next.documentId,
+    ]);
+    const res = await offer(id, {
+      generationId: gen.rows[0].id,
+      statusVersion: before.statusVersion,
+    });
+    expect(res.status).toBe(201);
+    expect((await readJson(res, DsvView)).offers[0]!.offerDeadline).toBe(generated.offerDeadline);
+  });
+});
+
+it("refuses a DSV offered status without its offered paper in the database", async () => {
+  const other = await participant();
+  await expect(
+    call(owner.$client, "change_participation_status", {
+      id: other,
+      field: "dsv_status",
+      expectedFrom: "not_offered",
+      to: "dsv_offered",
+      context: pl,
+      offerDeadline: w1.signingDeadline,
+    }),
+  ).rejects.toThrow("dsv_offer_missing");
+  expect((await view(other)).track).toBe("not_offered");
+});

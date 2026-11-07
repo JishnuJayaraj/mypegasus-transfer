@@ -44,6 +44,7 @@ export const DsvChecklistItem = z
 /** A generated DSV: the working copy, its deadline and whether it can still be handed out. */
 export const DsvGenerationView = z
   .strictObject({
+    generationId: z.uuid(),
     documentId: z.uuid(),
     generatedAt: instant,
     templateVersion: DsvTemplateVersion,
@@ -60,6 +61,17 @@ export const DsvView = z
   .strictObject({
     participationId: z.uuid(),
     track: DsvStatus,
+    statusVersion: z.number().int().nonnegative(),
+    offers: z.array(
+      z.strictObject({
+        id: z.uuid(),
+        origin: z.enum(["generated", "external_paper"]),
+        offerDeadline: isoDate,
+        offeredAt: instant,
+        endedAs: z.enum(["signed", "declined", "expired"]).nullable(),
+        capabilities: z.strictObject({ decline: z.boolean() }),
+      }),
+    ),
     /** The project's pinned template version and whether its wording is approved for live use. */
     template: z
       .strictObject({ version: DsvTemplateVersion, approvedForLive: z.boolean() })
@@ -83,7 +95,7 @@ export const DsvView = z
     facts: z.strictObject({
       dsvGenerated: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
     }),
-    capabilities: z.strictObject({ generate: z.boolean() }),
+    capabilities: z.strictObject({ generate: z.boolean(), offer: z.boolean() }),
   })
   .meta({ id: "DsvView" });
 export type DsvView = z.infer<typeof DsvView>;
@@ -121,3 +133,20 @@ export const DsvTemplateView = z
   })
   .meta({ id: "DsvTemplateView" });
 export type DsvTemplateView = z.infer<typeof DsvTemplateView>;
+
+export const DsvOfferRequest = z
+  .union([
+    z.strictObject({ generationId: z.uuid(), statusVersion: z.number().int().nonnegative() }),
+    z.strictObject({
+      external: z.strictObject({
+        deadline: isoDate,
+        printedTgStart: isoDate,
+        printedTgEnd: isoDate,
+      }),
+      statusVersion: z.number().int().nonnegative(),
+    }),
+  ])
+  .meta({ id: "DsvOfferRequest" });
+export const DsvDeclineRequest = z
+  .strictObject({ statusVersion: z.number().int().nonnegative() })
+  .meta({ id: "DsvDeclineRequest" });

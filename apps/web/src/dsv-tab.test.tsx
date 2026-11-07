@@ -70,6 +70,7 @@ const detail = {
 };
 
 const generation = (stale: boolean) => ({
+  generationId: documentId,
   documentId,
   generatedAt: "2091-02-01T09:00:00.000000Z",
   templateVersion: "v1",
@@ -83,6 +84,8 @@ const generation = (stale: boolean) => ({
 const view = (overrides: object = {}) => ({
   participationId,
   track: "not_offered",
+  statusVersion: 3,
+  offers: [],
   template: { version: "v1", approvedForLive: false },
   deadline: {
     waveSigningDeadline: "2091-02-15",
@@ -95,7 +98,7 @@ const view = (overrides: object = {}) => ({
   blockers: [],
   generations: [],
   facts: { dsvGenerated: null },
-  capabilities: { generate: true },
+  capabilities: { generate: true, offer: true },
   ...overrides,
 });
 
@@ -309,5 +312,19 @@ describe("the project's DSV-Vorlage", () => {
     expect(
       await section.findByText("Die DSV-Vorlage sehen die Projektleitung und das Back Office."),
     ).toBeVisible();
+  });
+});
+
+it("offers the selected generation with the displayed status version", async () => {
+  const { calls } = setup(view({ generations: [generation(false)] }), {
+    [`POST ${detailPath}/dsv/offers`]: () => json(view(), 201),
+  });
+  await userEvent.click(await screen.findByRole("button", { name: "Angebot erfassen" }));
+  await waitFor(() =>
+    expect(calls.some((call) => call.key === `POST ${detailPath}/dsv/offers`)).toBe(true),
+  );
+  expect(calls.find((call) => call.key === `POST ${detailPath}/dsv/offers`)?.body).toEqual({
+    generationId: documentId,
+    statusVersion: 3,
   });
 });

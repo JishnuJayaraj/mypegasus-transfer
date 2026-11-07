@@ -14809,6 +14809,75 @@
               "dsv_expired"
             ]
           },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "generated",
+                    "external_paper"
+                  ]
+                },
+                "offerDeadline": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "offeredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "UTC timestamp (ISO 8601)"
+                },
+                "endedAs": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "signed",
+                    "declined",
+                    "expired",
+                    null
+                  ]
+                },
+                "capabilities": {
+                  "type": "object",
+                  "properties": {
+                    "decline": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "decline"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "origin",
+                "offerDeadline",
+                "offeredAt",
+                "endedAs",
+                "capabilities"
+              ],
+              "additionalProperties": false
+            }
+          },
           "template": {
             "type": [
               "object",
@@ -14953,10 +15022,14 @@
             "properties": {
               "generate": {
                 "type": "boolean"
+              },
+              "offer": {
+                "type": "boolean"
               }
             },
             "required": [
-              "generate"
+              "generate",
+              "offer"
             ],
             "additionalProperties": false
           }
@@ -14964,6 +15037,8 @@
         "required": [
           "participationId",
           "track",
+          "statusVersion",
+          "offers",
           "template",
           "deadline",
           "sourceToken",
@@ -15005,6 +15080,10 @@
       "DsvGenerationView": {
         "type": "object",
         "properties": {
+          "generationId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "documentId": {
             "type": "string",
             "format": "uuid"
@@ -15056,6 +15135,7 @@
           }
         },
         "required": [
+          "generationId",
           "documentId",
           "generatedAt",
           "templateVersion",
@@ -15164,6 +15244,90 @@
         "required": [
           "deadline",
           "expectedSourceToken"
+        ],
+        "additionalProperties": false
+      },
+      "DsvOfferRequest": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "generationId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "statusVersion": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "generationId",
+              "statusVersion"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "external": {
+                "type": "object",
+                "properties": {
+                  "deadline": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "printedTgStart": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "printedTgEnd": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "required": [
+                  "deadline",
+                  "printedTgStart",
+                  "printedTgEnd"
+                ],
+                "additionalProperties": false
+              },
+              "statusVersion": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "external",
+              "statusVersion"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "DsvDeclineRequest": {
+        "type": "object",
+        "properties": {
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "statusVersion"
         ],
         "additionalProperties": false
       },
@@ -29468,6 +29632,217 @@
           },
           "503": {
             "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/offers": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record the offered generated or external paper (PL and back office)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvOfferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The recorded offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/offers/{offerId}/decline": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record that the participant declined this offer",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "offerId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvDeclineRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The declined offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {

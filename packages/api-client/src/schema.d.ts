@@ -12221,6 +12221,199 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/dsv/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record the offered generated or external paper (PL and back office) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvOfferRequest"];
+                };
+            };
+            responses: {
+                /** @description The recorded offer */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/dsv/offers/{offerId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record that the participant declined this offer */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                    offerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvDeclineRequest"];
+                };
+            };
+            responses: {
+                /** @description The declined offer */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{projectId}/dsv-template": {
         parameters: {
             query?: never;
@@ -18079,6 +18272,29 @@ export interface components {
             participationId: string;
             /** @enum {string} */
             track: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
+            statusVersion: number;
+            offers: {
+                /** Format: uuid */
+                id: string;
+                /** @enum {string} */
+                origin: "generated" | "external_paper";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                offerDeadline: string;
+                /**
+                 * Format: date-time
+                 * @description UTC timestamp (ISO 8601)
+                 */
+                offeredAt: string;
+                /** @enum {string|null} */
+                endedAs: "signed" | "declined" | "expired" | null;
+                capabilities: {
+                    decline: boolean;
+                };
+            }[];
             template: {
                 version: string;
                 approvedForLive: boolean;
@@ -18125,6 +18341,7 @@ export interface components {
             };
             capabilities: {
                 generate: boolean;
+                offer: boolean;
             };
         };
         DsvChecklistItem: {
@@ -18134,6 +18351,8 @@ export interface components {
             key: "firstName" | "lastName" | "birthDate" | "address" | "customerName" | "transfergesellschaft";
         };
         DsvGenerationView: {
+            /** Format: uuid */
+            generationId: string;
             /** Format: uuid */
             documentId: string;
             /**
@@ -18189,6 +18408,36 @@ export interface components {
                 date: string;
             };
             expectedSourceToken: string;
+        };
+        DsvOfferRequest: {
+            /** Format: uuid */
+            generationId: string;
+            statusVersion: number;
+        } | {
+            external: {
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                deadline: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                printedTgStart: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                printedTgEnd: string;
+            };
+            statusVersion: number;
+        };
+        DsvDeclineRequest: {
+            statusVersion: number;
         };
         DsvTemplateView: {
             version: string | null;

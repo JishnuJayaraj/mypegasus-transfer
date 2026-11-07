@@ -100,6 +100,46 @@ export function DsvTab({ participationId }: { participationId: string }) {
     }
   }
 
+  async function offer(
+    generationId?: string,
+    external?: { deadline: string; printedTgStart: string; printedTgEnd: string },
+  ) {
+    setBusy(true);
+    try {
+      ok(
+        await api.POST("/api/v1/participations/{participationId}/dsv/offers", {
+          params: { path },
+          body: generationId
+            ? { generationId, statusVersion: view.statusVersion }
+            : { external: external!, statusVersion: view.statusVersion },
+        }),
+      );
+      setMessage({ kind: "success", text: t("dsv.offers.recorded") });
+    } catch (error) {
+      setMessage({ kind: "error", text: failure(error) });
+    } finally {
+      setBusy(false);
+      await queryClient.invalidateQueries({ queryKey: dsvQuery.queryKey });
+    }
+  }
+  async function decline(offerId: string, statusVersion: number) {
+    setBusy(true);
+    try {
+      ok(
+        await api.POST("/api/v1/participations/{participationId}/dsv/offers/{offerId}/decline", {
+          params: { path: { ...path, offerId } },
+          body: { statusVersion },
+        }),
+      );
+      setMessage({ kind: "success", text: t("dsv.offers.declined") });
+    } catch (error) {
+      setMessage({ kind: "error", text: failure(error) });
+    } finally {
+      setBusy(false);
+      await queryClient.invalidateQueries({ queryKey: dsvQuery.queryKey });
+    }
+  }
+
   /** Opens a document through the logged opening (a link valid 60 s). */
   async function open(documentId: string) {
     setMessage(undefined);
@@ -152,6 +192,30 @@ export function DsvTab({ participationId }: { participationId: string }) {
       {view.track !== "dsv_signed" && (
         <GenerateCard view={view} busy={busy} onGenerate={generate} />
       )}
+      <Card title={t("dsv.offers.title")} level={3}>
+        <Stack gap={4}>
+          {view.offers.map((item) => (
+            <div key={item.id}>
+              <p>
+                {t(`dsv.offers.${item.origin}`)} {" · "} {formatDate(item.offerDeadline)} {" · "}
+                {item.endedAs ? t(`dsv.offers.${item.endedAs}`) : t("dsv.offers.open")}
+              </p>
+              {item.capabilities.decline && (
+                <Button
+                  disabled={busy}
+                  kind="tertiary"
+                  onClick={() => void decline(item.id, view.statusVersion)}
+                >
+                  {t("dsv.offers.decline")}
+                </Button>
+              )}
+            </div>
+          ))}
+          {view.capabilities.offer && (
+            <ExternalOffer busy={busy} onOffer={(external) => offer(undefined, external)} />
+          )}
+        </Stack>
+      </Card>
       <Card title={t("dsv.generations.title")} level={3}>
         <SimpleTable
           title={t("dsv.generations.title")}
@@ -174,19 +238,33 @@ export function DsvTab({ participationId }: { participationId: string }) {
                 {t("dsv.generations.current")}
               </Tag>
             ),
-            actions: generation.capabilities.open ? (
-              <Button
-                kind="ghost"
-                size="sm"
-                aria-label={t("dsv.generations.openAt", {
-                  at: formatTimestamp(generation.generatedAt),
-                })}
-                onClick={() => void open(generation.documentId)}
-              >
-                {t("dsv.generations.open")}
-              </Button>
-            ) : (
-              "—"
+            actions: (
+              <div className="tp-inline-actions">
+                {view.capabilities.offer && !generation.stale && (
+                  <Button
+                    disabled={busy}
+                    kind="tertiary"
+                    size="sm"
+                    onClick={() => void offer(generation.generationId)}
+                  >
+                    {t("dsv.offers.offer")}
+                  </Button>
+                )}
+                {generation.capabilities.open ? (
+                  <Button
+                    kind="ghost"
+                    size="sm"
+                    aria-label={t("dsv.generations.openAt", {
+                      at: formatTimestamp(generation.generatedAt),
+                    })}
+                    onClick={() => void open(generation.documentId)}
+                  >
+                    {t("dsv.generations.open")}
+                  </Button>
+                ) : (
+                  "—"
+                )}
+              </div>
             ),
           }))}
           emptyState={t("dsv.generations.empty")}
@@ -342,6 +420,49 @@ function ChecklistText({ checklist, short }: { checklist: Checklist; short?: boo
           <li key={label}>{t("dsv.checklist.item", { label })}</li>
         ))}
       </ul>
+    </Stack>
+  );
+}
+
+function ExternalOffer({
+  busy,
+  onOffer,
+}: {
+  busy: boolean;
+  onOffer: (external: {
+    deadline: string;
+    printedTgStart: string;
+    printedTgEnd: string;
+  }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [values, setValues] = useState({ deadline: "", printedTgStart: "", printedTgEnd: "" });
+  const parsed = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => {
+      const result = parseDisplayDate(value);
+      return [key, result.ok ? result.value : null];
+    }),
+  );
+  return (
+    <Stack gap={3}>
+      <p>{t("dsv.offers.externalHint")}</p>
+      {(["deadline", "printedTgStart", "printedTgEnd"] as const).map((key) => (
+        <DateField
+          key={key}
+          id={`dsv-external-${key}`}
+          labelText={t(`dsv.offers.${key}`)}
+          onChange={(value) => setValues((before) => ({ ...before, [key]: value }))}
+        />
+      ))}
+      <Button
+        disabled={busy || Object.values(parsed).some((value) => !value)}
+        kind="tertiary"
+        onClick={() =>
+          void onOffer(parsed as { deadline: string; printedTgStart: string; printedTgEnd: string })
+        }
+      >
+        {t("dsv.offers.externalAction")}
+      </Button>
     </Stack>
   );
 }

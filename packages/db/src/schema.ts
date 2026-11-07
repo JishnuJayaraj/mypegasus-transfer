@@ -3437,6 +3437,30 @@ export const importColumnMapping = pgTable(
   ],
 );
 
+/** The paper offered for signature (process-and-lifecycle.md, DSV offers). */
+export const dsvOffer = pgTable("dsv_offer", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => project.id),
+  participationId: uuid("participation_id")
+    .notNull()
+    .references(() => participation.id),
+  generationId: uuid("generation_id").references(() => formGeneration.id),
+  origin: text("origin").notNull(),
+  templateVersion: text("template_version").notNull(),
+  offerDeadline: dateColumn("offer_deadline").notNull(),
+  printedTgStart: dateColumn("printed_tg_start").notNull(),
+  printedTgEnd: dateColumn("printed_tg_end").notNull(),
+  offeredBy: uuid("offered_by")
+    .notNull()
+    .references(() => staffUser.id),
+  offeredAt: timestamp("offered_at", { withTimezone: true }).notNull().defaultNow(),
+  statusEventId: uuid("status_event_id"),
+  endedAs: text("ended_as"),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+});
+
 export const tables = [
   staffUser,
   region,
@@ -3476,6 +3500,7 @@ export const tables = [
   document,
   documentLink,
   formGeneration,
+  dsvOffer,
   signedDeclaration,
   asuRecord,
   asuRegistration,
