@@ -22,6 +22,7 @@ const projectPath = `/api/v1/projects/${project.id}`;
 const participationId = "00000000-0000-4000-a000-000000000001";
 const detailPath = `/api/v1/participations/${participationId}`;
 const documentId = "00000000-0000-4000-a000-0000000000d1";
+const generationId = "00000000-0000-4000-a000-0000000000f1";
 const token = "a".repeat(64);
 
 const detail = {
@@ -70,7 +71,7 @@ const detail = {
 };
 
 const generation = (stale: boolean) => ({
-  generationId: documentId,
+  generationId,
   documentId,
   generatedAt: "2091-02-01T09:00:00.000000Z",
   templateVersion: "v1",
@@ -324,7 +325,7 @@ it("offers the selected generation with the displayed status version", async () 
     expect(calls.some((call) => call.key === `POST ${detailPath}/dsv/offers`)).toBe(true),
   );
   expect(calls.find((call) => call.key === `POST ${detailPath}/dsv/offers`)?.body).toEqual({
-    generationId: documentId,
+    generationId,
     statusVersion: 3,
   });
 });
