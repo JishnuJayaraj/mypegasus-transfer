@@ -88,11 +88,20 @@ beforeEach(async () => {
     ] as const) {
       await service.changeStatus(consultant, { participationId: id, track: "main", from, to });
     }
+    // Historical synthetic paper; these 2025 cases predate the offer endpoint's current-day bounds.
+    await owner.query(
+      `insert into dsv_offer(project_id, participation_id, origin, template_version,
+      offer_deadline, printed_tg_start, printed_tg_end, offered_by)
+      values ($1, $2, 'external_paper', 'external_unknown', '2025-02-14', '2025-03-03',
+        '2026-02-27', $3)`,
+      [lagerSued, id, seedStaffUserIds.backOffice],
+    );
     await service.changeStatus(backOffice, {
       participationId: id,
       track: "dsv",
       from: "not_offered",
       to: "dsv_offered",
+      offerDeadline: "2025-02-14",
     });
   }
   await service.changeStatus(backOffice, {

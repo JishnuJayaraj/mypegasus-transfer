@@ -88,6 +88,8 @@ const statusFunctions = [
   "request_profiling_exception",
   "decide_profiling_exception",
   "dsv_generation_current",
+  "offer_dsv",
+  "decline_dsv_offer",
   "revoke_profiling_exception",
   "correct_end_reason",
   "record_audit_event",

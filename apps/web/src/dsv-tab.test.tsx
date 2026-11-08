@@ -22,6 +22,7 @@ const projectPath = `/api/v1/projects/${project.id}`;
 const participationId = "00000000-0000-4000-a000-000000000001";
 const detailPath = `/api/v1/participations/${participationId}`;
 const documentId = "00000000-0000-4000-a000-0000000000d1";
+const generationId = "00000000-0000-4000-a000-0000000000f1";
 const token = "a".repeat(64);
 
 const detail = {
@@ -70,6 +71,7 @@ const detail = {
 };
 
 const generation = (stale: boolean) => ({
+  generationId,
   documentId,
   generatedAt: "2091-02-01T09:00:00.000000Z",
   templateVersion: "v1",
@@ -83,6 +85,8 @@ const generation = (stale: boolean) => ({
 const view = (overrides: object = {}) => ({
   participationId,
   track: "not_offered",
+  statusVersion: 3,
+  offers: [],
   template: { version: "v1", approvedForLive: false },
   deadline: {
     waveSigningDeadline: "2091-02-15",
@@ -95,7 +99,7 @@ const view = (overrides: object = {}) => ({
   blockers: [],
   generations: [],
   facts: { dsvGenerated: null },
-  capabilities: { generate: true },
+  capabilities: { generate: true, offer: true },
   ...overrides,
 });
 
@@ -310,4 +314,54 @@ describe("the project's DSV-Vorlage", () => {
       await section.findByText("Die DSV-Vorlage sehen die Projektleitung und das Back Office."),
     ).toBeVisible();
   });
+});
+
+it("offers the selected generation with the displayed status version", async () => {
+  const { calls } = setup(view({ generations: [generation(false)] }), {
+    [`POST ${detailPath}/dsv/offers`]: () => json(view(), 201),
+  });
+  await userEvent.click(await screen.findByRole("button", { name: "Angebot erfassen" }));
+  await waitFor(() =>
+    expect(calls.some((call) => call.key === `POST ${detailPath}/dsv/offers`)).toBe(true),
+  );
+  expect(calls.find((call) => call.key === `POST ${detailPath}/dsv/offers`)?.body).toEqual({
+    generationId,
+    statusVersion: 3,
+  });
+});
+
+it("records external paper in a panel with required dates and draft protection", async () => {
+  const { calls } = setup(view(), {
+    [`POST ${detailPath}/dsv/offers`]: () => json(view(), 201),
+  });
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Papierangebot ohne Erzeugung erfassen" }),
+  );
+  const panel = within(
+    screen.getByRole("dialog", { name: "Papierangebot ohne Erzeugung erfassen" }),
+  );
+  expect(panel.getByRole("button", { name: "Angebot erfassen" })).toBeDisabled();
+  expect(
+    panel.getByText("Erst alle drei Angaben vom Papier als gültige Daten eingeben."),
+  ).toBeVisible();
+  await userEvent.type(panel.getByLabelText(/Aufgedruckte Angebotsfrist/), "15.02.2091");
+  await userEvent.keyboard("{Escape}");
+  expect(await screen.findByText("Änderungen verwerfen?")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Weiter bearbeiten" }));
+  await userEvent.type(panel.getByLabelText(/Aufgedruckter TG-Beginn/), "01.03.2091");
+  await userEvent.type(panel.getByLabelText(/Aufgedrucktes TG-Ende/), "29.02.2092");
+  await userEvent.click(panel.getByRole("button", { name: "Angebot erfassen" }));
+  await waitFor(() =>
+    expect(calls).toContainEqual({
+      key: `POST ${detailPath}/dsv/offers`,
+      body: {
+        external: {
+          deadline: "2091-02-15",
+          printedTgStart: "2091-03-01",
+          printedTgEnd: "2092-02-29",
+        },
+        statusVersion: 3,
+      },
+    }),
+  );
 });

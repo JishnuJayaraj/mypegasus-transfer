@@ -1222,3 +1222,14 @@ Participant. The customer is **not a user in the MVP**: it receives a monthly ex
 PL (Q47). Access is role × project, plus assignment for profilers. A person can hold **several
 project roles** in one project and different roles in different projects; permissions are the
 union, and sensitive access still needs the participant assignment *(assumed, Q61)*.
+
+### DSV offers as built (7-2a)
+
+The PL or back office records the exact paper offered: a current generated DSV (its generation
+id and printed deadline) or external paper's deadline and printed TG dates. External paper needs
+no scan to record the offer; its terms must match the effective TG dates. Signature evidence is
+recorded separately. Both actions compare the displayed status version under the participation
+lock. An offer and its audited status change commit together; the database refuses an offered
+status without the paper's offer record. Decline names the offer and status version; expiry and
+signature transitions close that same offer. A generation preceding an ended offer cannot be
+reused for a re-offer.

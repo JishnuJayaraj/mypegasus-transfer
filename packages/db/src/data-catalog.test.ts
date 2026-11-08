@@ -103,6 +103,7 @@ describe("data catalog", () => {
       document: entry("by_document_type", "confidential", true),
       document_link: entry("access_credential", "internal", true),
       // Slice 6 (Q179): a generated form's provenance, its tombstone when the file goes.
+      dsv_offer: entry("participation_record", "internal", true),
       form_generation: entry("form_working_copy", "confidential", true),
       // Slice 6 (Q193): the declarations of an accepted signed form.
       signed_declaration: entry("participation_record", "confidential", true),

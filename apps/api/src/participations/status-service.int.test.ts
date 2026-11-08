@@ -1,6 +1,6 @@
 import { ManualClock } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds, seedWaves } from "@transfer/db";
-import { resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
+import { changeStatus, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
 import type { DatedFact, GuardFacts } from "@transfer/domain";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { dbGuardFacts, failClosedFacts, type GuardFactsProvider } from "./guard-facts";
@@ -159,13 +159,7 @@ describe("status changes", () => {
 
   it("applies a change the guards allow with recorded facts", async () => {
     const id = await informed({ wave: true });
-    const withDsv = createStatusService({ db, clock, facts: withFacts({ dsvGenerated: fact }) });
-    await withDsv.changeStatus(backOffice, {
-      participationId: id,
-      track: "dsv",
-      from: "not_offered",
-      to: "dsv_offered",
-    });
+    await changeStatus(owner, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
     expect(await state(id)).toMatchObject({ dsv_status: "dsv_offered" });
   });
 
@@ -198,12 +192,7 @@ describe("status changes", () => {
       profilingDone: fact,
     };
     const entering = createStatusService({ db, clock, facts: withFacts(facts) });
-    await entering.changeStatus(backOffice, {
-      participationId: id,
-      track: "dsv",
-      from: "not_offered",
-      to: "dsv_offered",
-    });
+    await changeStatus(owner, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
     await entering.changeStatus(backOffice, {
       participationId: id,
       track: "dsv",
@@ -239,10 +228,8 @@ describe("status changes", () => {
       profilingDone: fact,
     };
     const entering = createStatusService({ db, clock, facts: withFacts(facts) });
-    for (const [from, to] of [
-      ["not_offered", "dsv_offered"],
-      ["dsv_offered", "dsv_signed"],
-    ] as const) {
+    await changeStatus(owner, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
+    for (const [from, to] of [["dsv_offered", "dsv_signed"]] as const) {
       await entering.changeStatus(backOffice, { participationId: id, track: "dsv", from, to });
     }
     clock.set(new Date("2091-03-01T09:00:00Z")); // W1's TG start, after the 04:15 run time
@@ -545,6 +532,12 @@ describe("end-reason correction", () => {
   });
 });
 
+const offered = async () => {
+  const id = await informed({ wave: true });
+  await changeStatus(owner, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
+  return id;
+};
+
 describe("effective dates (round 18)", () => {
   const facts = {
     dsvGenerated: fact,
@@ -555,16 +548,6 @@ describe("effective dates (round 18)", () => {
     tl407Signed: fact,
   };
   const dated = createStatusService({ db, clock, facts: withFacts(facts) });
-  const offered = async () => {
-    const id = await informed({ wave: true });
-    await dated.changeStatus(backOffice, {
-      participationId: id,
-      track: "dsv",
-      from: "not_offered",
-      to: "dsv_offered",
-    });
-    return id;
-  };
 
   it("refuses a date on a transition where it means nothing", async () => {
     const id = await informed();

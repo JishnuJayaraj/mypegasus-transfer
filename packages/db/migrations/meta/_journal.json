@@ -638,6 +638,20 @@
       "when": 1794007327586,
       "tag": "0090_dsv_generation_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1794080080472,
+      "tag": "0091_dsv_offers",
+      "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1794080095944,
+      "tag": "0092_dsv_offer_functions",
+      "breakpoints": true
     }
   ]
 }

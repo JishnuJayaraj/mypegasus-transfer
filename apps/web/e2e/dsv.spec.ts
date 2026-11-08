@@ -194,4 +194,19 @@ test("slice 7-1: the PL pins the DSV template, generates the DSV with the wave's
   const again = page.waitForEvent("download");
   await papers.getByRole("button", { name: /^Öffnen: Vertrag vom/ }).click();
   expect((await again).suggestedFilename()).toMatch(/^dsv-\d{4}-\d{2}-\d{2}\.pdf$/);
+  // The exact generated paper becomes an offer; the participant can decline it.
+  await papers.getByRole("button", { name: "Angebot erfassen", exact: true }).click();
+  const offers = page.getByRole("region", { name: "Angebote", exact: true });
+  await expect(offers).toContainText("Erzeugtes Papier");
+  await expect(page.getByText("DSV: Angeboten", { exact: true })).toHaveCount(2);
+  await expect(offers.getByRole("button", { name: "Abgelehnt erfassen" })).toBeVisible();
+  await expectAccessible(page);
+  const offerScreenshots = fileURLToPath(
+    new URL("../../../docs/screenshots/7-2a/", import.meta.url),
+  );
+  mkdirSync(offerScreenshots, { recursive: true });
+  await page.screenshot({ path: `${offerScreenshots}offered-1440.png`, fullPage: true });
+  await offers.getByRole("button", { name: "Abgelehnt erfassen" }).click();
+  await expect(offers.getByRole("button", { name: "Abgelehnt erfassen" })).toHaveCount(0);
+  await expect(offers).toContainText("Abgelehnt");
 });

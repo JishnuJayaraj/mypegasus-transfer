@@ -79,6 +79,14 @@ export type DsvRead = {
   projectStatus: ProjectStatus;
   status: MainStatus;
   dsvStatus: DsvStatus;
+  statusVersion: number;
+  offers: {
+    id: string;
+    origin: "generated" | "external_paper";
+    offerDeadline: string;
+    offeredAt: string;
+    endedAs: "signed" | "declined" | "expired" | null;
+  }[];
   wave: {
     id: string;
     signingDeadline: IsoDate | null;
@@ -93,6 +101,7 @@ export type DsvRead = {
   sourceToken: string;
   validation: DsvValidation;
   generations: {
+    generationId: string;
     documentId: string;
     generatedAt: string;
     generatedOn: IsoDate;
@@ -102,6 +111,7 @@ export type DsvRead = {
     checklist: DsvValidation["checklist"];
     sourceToken: string;
     purged: boolean;
+    endedAfter: boolean;
   }[];
 };
 
@@ -111,6 +121,7 @@ const utc = (column: unknown) =>
 
 /** Whether a generation can still be handed out (process-and-lifecycle.md, the DSV: generation as built). */
 const stale = (snapshot: DsvRead, generation: DsvRead["generations"][number], today: IsoDate) =>
+  generation.endedAfter ||
   dsvGenerationProblem(
     generation,
     {
@@ -152,6 +163,7 @@ export function dsvService(deps: DsvDeps) {
             projectId: participation.projectId,
             status: participation.status,
             dsvStatus: participation.dsvStatus,
+            statusVersion: participation.statusVersion,
             tgStart: participation.tgStart,
             tgEnd: participation.tgEnd,
             offerDeadline: participation.offerDeadline,
@@ -190,6 +202,7 @@ export function dsvService(deps: DsvDeps) {
         };
         const generations = await tx
           .select({
+            generationId: formGeneration.id,
             documentId: formGeneration.documentId,
             generatedAt: utc(formGeneration.generatedAt),
             generatedOn: sql<string>`(${formGeneration.generatedAt} at time zone 'Europe/Berlin')::date::text`,
@@ -198,6 +211,7 @@ export function dsvService(deps: DsvDeps) {
             deadlineKind: formGeneration.deadlineKind,
             checklist: formGeneration.checklist,
             sourceToken: formGeneration.sourceToken,
+            endedAfter: sql<boolean>`exists (select from dsv_offer o where o.participation_id = form_generation.participation_id and o.ended_at >= form_generation.generated_at)`,
             purged: sql<boolean>`${document.deletedAt} is not null`,
           })
           .from(formGeneration)
@@ -215,6 +229,13 @@ export function dsvService(deps: DsvDeps) {
           projectStatus: found!.projectStatus,
           status: found!.status,
           dsvStatus: found!.dsvStatus,
+          statusVersion: found!.statusVersion,
+          offers: (
+            await tx.execute<DsvRead["offers"][number]>(sql`select id, origin,
+            offer_deadline::text as "offerDeadline", ${utc(sql`offered_at`)} as "offeredAt",
+            ended_as as "endedAs" from dsv_offer where participation_id = ${participationId}::uuid
+            order by offered_at desc, id`)
+          ).rows,
           wave: found!.wave && {
             id: found!.wave.id,
             signingDeadline: found!.wave.signingDeadline,
