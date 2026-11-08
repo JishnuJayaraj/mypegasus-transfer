@@ -463,3 +463,87 @@ it("refuses a DSV offered status without its offered paper in the database", asy
   ).rejects.toThrow("dsv_offer_missing");
   expect((await view(other)).track).toBe("not_offered");
 });
+
+it("uploads, reviews and signs the open offered paper; enforces visibility, roles and stale versions", async () => {
+  const id = await participant();
+  const initial = await view(id);
+  const offered = await request("POST", `/participations/${id}/dsv/offers`, backOffice, {
+    external: { deadline: "2091-02-15", printedTgStart: "2091-03-01", printedTgEnd: "2092-02-29" },
+    statusVersion: initial.statusVersion,
+  });
+  expect(offered.status).toBe(201);
+  const offerView = await readJson(offered, DsvView);
+  const body = {
+    offerId: offerView.offers[0]!.id,
+    receivedBy: backOffice,
+    receivedOn: "2026-01-02",
+    signatures: { participant: "2026-01-01" },
+    file: {
+      fileName: "synthetic.pdf",
+      content: Buffer.from("%PDF-1.4\nsynthetic\n%%EOF").toString("base64"),
+    },
+  };
+  await expectProblem(
+    await request("POST", `/participations/${id}/dsv/scans`, consultant, body),
+    403,
+    "forbidden",
+  );
+  await expectProblem(
+    await request("POST", `/participations/${randomUUID()}/dsv/scans`, backOffice, body),
+    404,
+    "not-found",
+  );
+  await expectProblem(
+    await request("POST", `/participations/${id}/dsv/scans`, backOffice, {
+      ...body,
+      offerId: randomUUID(),
+    }),
+    404,
+    "not-found",
+  );
+  const upload = await request("POST", `/participations/${id}/dsv/scans`, backOffice, body);
+  expect(upload.status).toBe(201);
+  const scan = (await upload.json()) as { id: string };
+  const signed = () =>
+    request("POST", `/participations/${id}/dsv/signed`, backOffice, {
+      scanId: scan.id,
+      statusVersion: offerView.statusVersion,
+    });
+  await expectProblem(await signed(), 422, "domain-error");
+  await expectProblem(
+    await request("POST", `/documents/${scan.id}/dsv-review`, consultant, {
+      decision: "accepted",
+      dsv: { signatures: body.signatures, termsConfirmed: true },
+    }),
+    404,
+    "not-found",
+  );
+  await expectProblem(
+    await request("POST", `/documents/${scan.id}/dsv-review`, projectLead, {
+      decision: "accepted",
+      dsv: { signatures: body.signatures, termsConfirmed: false },
+    }),
+    422,
+    "domain-error",
+  );
+  expect(
+    (
+      await request("POST", `/documents/${scan.id}/dsv-review`, projectLead, {
+        decision: "accepted",
+        dsv: { signatures: body.signatures, termsConfirmed: true },
+      })
+    ).status,
+  ).toBe(200);
+  await expectProblem(
+    await request("POST", `/participations/${id}/dsv/signed`, backOffice, {
+      scanId: scan.id,
+      statusVersion: initial.statusVersion,
+    }),
+    409,
+    "conflict",
+  );
+  expect((await signed()).status).toBe(200);
+  expect((await view(id)).track).toBe("dsv_signed");
+  const { rows } = await db.$client.query("select signed_on::text from dsv_facts($1)", [[id]]);
+  expect(rows[0].signed_on).toBe("2026-01-01");
+});

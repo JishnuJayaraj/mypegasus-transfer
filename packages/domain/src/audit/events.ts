@@ -621,6 +621,8 @@ const documentReviewed = event("document_reviewed", {
     decision: z.enum(["accepted", "rejected"]),
     origin: ScanOrigin.optional(),
     formVersion: FormVersion.optional(),
+    termsConfirmed: z.boolean().optional(),
+    signatureKinds: z.array(z.enum(["participant", "customer", "transfergesellschaft"])).optional(),
   }),
 }).superRefine(({ reasonCode, details }, ctx) => {
   if ((details.decision === "rejected") !== (reasonCode !== null)) issue(ctx, "reason_mismatch");

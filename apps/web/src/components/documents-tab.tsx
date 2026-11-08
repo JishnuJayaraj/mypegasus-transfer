@@ -93,7 +93,9 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
   }
   const { documents, limits } = query.data;
   // Signed scans are added and reviewed on the tab "Profiling" with their origin and record.
-  const addableTypes = query.data.addableTypes.filter((type) => !isScanType(type));
+  const addableTypes = query.data.addableTypes.filter(
+    (type) => !isScanType(type) && type !== "dsv_signed_scan",
+  );
   const typeLabel = (type: DocumentType) => ts(`documents.types.${type}`);
 
   /** Runs an action; afterwards the list is read again (capabilities change with it). */
@@ -107,7 +109,7 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
       setMessage({ kind: "error", text: messageOf(error) });
     } finally {
       setBusy(false);
-      await queryClient.invalidateQueries({ queryKey: listQuery.queryKey });
+      await queryClient.invalidateQueries({ queryKey: ["participations", detail.id] });
       // The missing items of the tab "Selbstauskunft" count the documents.
       await queryClient.invalidateQueries({
         queryKey: ["participations", detail.id, "self-service"],
@@ -212,28 +214,30 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
               {t("participant.documents.open")}
             </Button>
           )}
-          {capabilities.review && !isScanType(document.type) && (
-            <>
-              <Button
-                kind="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => void review(document)}
-                aria-label={t("participant.documents.acceptLabel", { name })}
-              >
-                {t("participant.documents.accept")}
-              </Button>
-              <Button
-                kind="ghost"
-                size="sm"
-                disabled={busy}
-                onClick={() => setRejecting(document)}
-                aria-label={t("participant.documents.rejectLabel", { name })}
-              >
-                {t("participant.documents.reject")}
-              </Button>
-            </>
-          )}
+          {capabilities.review &&
+            !isScanType(document.type) &&
+            document.type !== "dsv_signed_scan" && (
+              <>
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => void review(document)}
+                  aria-label={t("participant.documents.acceptLabel", { name })}
+                >
+                  {t("participant.documents.accept")}
+                </Button>
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => setRejecting(document)}
+                  aria-label={t("participant.documents.rejectLabel", { name })}
+                >
+                  {t("participant.documents.reject")}
+                </Button>
+              </>
+            )}
           {capabilities.requestCorrection &&
             correction.button({ kind: "document", id: document.id, label: name })}
           {capabilities.delete && (

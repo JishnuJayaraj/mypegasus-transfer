@@ -23,7 +23,7 @@ import { accessModes, accessProfiles, sample } from "./profiles";
 const add = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor yes  unass yes  role role role role
-dsv_signed_scan              actor actor role role  und  und  role role role
+dsv_signed_scan              actor actor role role  yes  yes  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
 asu_proof                    actor actor yes  unass yes  role role role role
 profiling_exception_evidence actor actor yes  unass yes  role role role role
@@ -37,7 +37,7 @@ dsv_form                     actor actor actor actor actor actor actor actor act
 const review = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor yes  unass yes  role role role role
-dsv_signed_scan              actor actor role role  und  und  role role role
+dsv_signed_scan              actor actor role role  yes  yes  role role role
 dsv_cancellation             actor actor role role  und  und  role role role
 asu_proof                    actor actor yes  unass role role role role role
 profiling_exception_evidence actor actor yes  unass role role role role role
@@ -51,7 +51,7 @@ dsv_form                     actor actor actor actor actor actor actor actor act
 const remove = `
 tl407_signed_scan            actor actor role role  yes  role role role role
 kug200b_signed_scan          actor actor role role  yes  role role role role
-dsv_signed_scan              imm   imm   imm  imm   imm  imm  imm  imm  imm
+dsv_signed_scan              actor actor role role  yes  role role role role
 dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
 asu_proof                    actor actor role role  yes  role role role role
 profiling_exception_evidence actor actor role role  yes  role role role role
@@ -136,7 +136,9 @@ describe("document operations by mode", () => {
       expect(result(checks.add!(subject, "cv", other))).toBe("mode_not_allowed");
     }
     expect(result(checks.add!(backOffice, "cv", accessModes.assisted))).toBe("role_not_allowed");
-    expect(result(checks.add!(pl, "dsv_signed_scan", accessModes.assisted))).toBe("undecided Q65");
+    expect(result(checks.add!(pl, "dsv_signed_scan", accessModes.assisted))).toBe(
+      "mode_not_allowed",
+    );
     expect(result(checks.add!(pl, "kug200b_signed_scan", accessModes.assisted))).toBe(
       "mode_not_allowed",
     );
@@ -153,9 +155,9 @@ describe("document operations by mode", () => {
         "mode_not_allowed",
       );
     }
-    // Signed documents are never deleted, in any mode (retention job only).
+    // Deleting a signed scan before review still requires normal mode.
     expect(result(checks.delete!(pl, "dsv_signed_scan", accessModes.break_glass))).toBe(
-      "immutable",
+      "mode_not_allowed",
     );
   });
 

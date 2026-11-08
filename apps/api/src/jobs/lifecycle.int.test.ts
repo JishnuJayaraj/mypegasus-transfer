@@ -1,3 +1,4 @@
+import { acceptedDsvScan } from "@transfer/db/testing";
 import { ManualClock, scheduledAt } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds } from "@transfer/db";
 import { activateAsOwner, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
@@ -104,6 +105,7 @@ beforeEach(async () => {
       offerDeadline: "2025-02-14",
     });
   }
+  await acceptedDsvScan(db.$client, b);
   await service.changeStatus(backOffice, {
     participationId: b,
     track: "dsv",

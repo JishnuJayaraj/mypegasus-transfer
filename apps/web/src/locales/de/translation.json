@@ -3484,6 +3484,48 @@
       "recorded": "Angebot erfasst.",
       "completeDates": "Erst alle drei Angaben vom Papier als gültige Daten eingeben.",
       "externalFailed": "Angebot konnte nicht erfasst werden. Angaben und aktuellen Stand prüfen."
+    },
+    "scans": {
+      "title": "Unterschriebene Scans",
+      "upload": "Scan hochladen",
+      "review": "Prüfen",
+      "reject": "Ablehnen",
+      "quarantine": "Unter Quarantäne stellen",
+      "delete": "Löschen",
+      "signed": "Als unterschrieben erfassen",
+      "lift": "Quarantäne aufheben",
+      "open": "Öffnen",
+      "receivedOn": "Entgegengenommen am",
+      "receiver": "Entgegengenommen von",
+      "participant": "Unterschrift Teilnehmer·in",
+      "customer": "Unterschrift Kunde",
+      "transfergesellschaft": "Unterschrift Transfergesellschaft",
+      "choose": "Bitte wählen",
+      "file": "Datei wählen",
+      "empty": "Noch kein Scan vorhanden. Erfassen Sie ein Angebot und laden Sie das zurückgegebene Papier hoch.",
+      "failed": "Speichern nicht möglich. Prüfen Sie die Angaben und den aktuellen Stand. Ihre Eingaben bleiben erhalten.",
+      "evidenceRequired": "Ein geprüfter Scan dieses Angebots mit bestätigter Teilnehmerunterschrift ist erforderlich.",
+      "datesHint": "Tragen Sie die tatsächlichen Unterschriftsdaten auf dem Papier ein. Fehlende Unterschriften bleiben leer.",
+      "terms": "Das externe Papier stimmt mit den erfassten Angebotsbedingungen überein.",
+      "reason": "Grund",
+      "complete": "Bitte die erforderlichen Angaben vollständig und gültig eintragen.",
+      "save": "Speichern",
+      "signHint": "Die bestätigte Teilnehmerunterschrift dieses Scans als unterschrieben erfassen.",
+      "quarantined": "Quarantäne",
+      "states": {
+        "unreviewed": "Ungeprüft",
+        "accepted": "Angenommen",
+        "rejected": "Abgelehnt"
+      },
+      "reasons": {
+        "unreadable": "Unleserlich",
+        "wrong_document": "Falsches Dokument",
+        "incomplete": "Unvollständig",
+        "wrong_person": "Falsche Person",
+        "wrong_file": "Falsche Datei",
+        "suspected_wrong_person": "Verdacht: falsche Person",
+        "suspected_wrong_acceptance": "Verdacht: irrtümliche Annahme"
+      }
     }
   },
   "dsvTemplate": {

@@ -25,6 +25,7 @@ describe("uploadableDocumentTypes (Q142, Q184, Q186, Q194)", () => {
     expect(uploadableDocumentTypes).toEqual([
       "tl407_signed_scan",
       "kug200b_signed_scan",
+      "dsv_signed_scan",
       "asu_proof",
       "profiling_exception_evidence",
       ...own,
@@ -68,7 +69,9 @@ describe("addableDocumentTypes", () => {
     expect(addableDocumentTypes(subject("project_lead"), target, accessModes.assisted)).toEqual(
       own,
     );
-    expect(addableDocumentTypes(subject("back_office"), target, accessModes.normal)).toEqual([]);
+    expect(addableDocumentTypes(subject("back_office"), target, accessModes.normal)).toEqual([
+      "dsv_signed_scan",
+    ]);
     expect(addableDocumentTypes(subject("participant"), target, accessModes.assisted)).toEqual([]);
   });
 });

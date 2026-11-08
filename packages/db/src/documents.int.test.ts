@@ -257,6 +257,7 @@ describe("document_type_policy", () => {
       { catalog_version: 6, n: 11 },
       { catalog_version: 7, n: 11 },
       { catalog_version: 8, n: 12 },
+      { catalog_version: 9, n: 12 },
     ]);
   });
 });
@@ -277,7 +278,7 @@ describe("add_document (Q146)", () => {
       ),
     ).toEqual({
       type: "cv",
-      catalog_version: 8,
+      catalog_version: 9,
       retention_class: "personnel_file",
       file_name: FILE_NAME,
       added_by: "participant",
@@ -397,7 +398,7 @@ describe("add_document (Q146)", () => {
         type: "dsv_signed_scan",
         fileName: null,
       }),
-    ).rejects.toMatchObject(failsWith("document_type_not_supported"));
+    ).rejects.toMatchObject(failsWith("invalid_argument"));
     await expect(byParticipant(p, { fileName: "a\u0007b.pdf" })).rejects.toMatchObject(
       failsWith("invalid_argument"),
     );

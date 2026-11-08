@@ -21,7 +21,7 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(8);
+    expect(documentTypeCatalog.version).toBe(9);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
@@ -62,6 +62,7 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
           "kug200b_form",
           "kug200b_signed_scan",
           "dsv_form",
+          "dsv_signed_scan",
         ].includes(t.type),
     );
     for (const entry of others) {
@@ -177,5 +178,13 @@ describe("document-type catalog version 6 (Q179, Q184)", () => {
       documentTypeEntry("tl407_signed_scan").operations,
     );
     expect("back_office" in documentTypeEntry("kug200b_signed_scan").roles).toBe(false);
+  });
+});
+
+it("grants DSV scan operations to PL and back office, deletion only to PL", () => {
+  expect(documentTypeEntry("dsv_signed_scan").operations).toEqual({
+    add: ["project_lead", "back_office"],
+    review: ["project_lead", "back_office"],
+    delete: ["project_lead"],
   });
 });

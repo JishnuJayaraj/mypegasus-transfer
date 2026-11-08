@@ -114,7 +114,14 @@ export const auditProjection: {
   document_added: shown("case", { details: ["documentType", "source"] }),
   document_reviewed: shown("case", {
     reason: true,
-    details: ["documentType", "decision", "origin", "formVersion"],
+    details: [
+      "documentType",
+      "decision",
+      "origin",
+      "formVersion",
+      "signatureKinds",
+      "termsConfirmed",
+    ],
   }),
   document_deleted: shown("case", { reason: true, details: ["documentType"] }),
   document_upload_rejected: security,

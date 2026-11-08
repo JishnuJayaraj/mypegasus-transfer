@@ -2,6 +2,7 @@ import { ScannerUnavailable } from "@transfer/adapters";
 import { and, asc, document, eq, inArray, isNull, sql, transactionWithClient } from "@transfer/db";
 import {
   detectFileType,
+  dsvScanProblems,
   documentCapabilities,
   documentDeleteReasons,
   documentFileName,
@@ -153,6 +154,7 @@ function refused(c: Context<AppEnv>, error: unknown) {
     case "actor_not_allowed":
     case "invalid_actor":
       return problem(c, "forbidden");
+    case "offer_not_found":
     case "document_not_found":
       return problem(c, "not-found");
     case "upload_rate_limited":
@@ -160,6 +162,12 @@ function refused(c: Context<AppEnv>, error: unknown) {
       return problem(c, "too-many-requests", {
         errors: [{ pointer: "", code: "rate_limited", detail: "Please try again later" }],
       });
+    case "source_changed":
+      return problem(c, "conflict");
+    case "receiver_required":
+    case "received_in_future":
+    case "received_before_signature":
+    case "terms_mismatch":
     case "participation_closed":
     case "document_type_not_supported":
     case "document_limit":
@@ -302,6 +310,16 @@ export function documentService(deps: Deps) {
     }
     const permission = mayAddDocument(actor.subject, type, actor.target, actor.mode);
     if (!permission.ok) return denied(c, permission);
+    if ((type === "dsv_signed_scan") !== (input.dsv !== undefined))
+      return domainProblem(c, ["scan_required"]);
+    if (input.dsv) {
+      const issues = dsvScanProblems(input.dsv, clock.today());
+      if (issues.length) return domainProblem(c, issues);
+      const { rows: offers } = await db.execute(
+        sql`select id from dsv_offer where id = ${input.dsv.offerId}::uuid and participation_id = ${participationId}::uuid`,
+      );
+      if (!offers.length) return problem(c, "not-found");
+    }
     const origin = scanUploadProblems(type, input);
     if (origin.length > 0) return domainProblem(c, origin);
     if (!files) return storageUnavailable(c);
@@ -375,7 +393,8 @@ export function documentService(deps: Deps) {
           p_wrapped_key => ${Buffer.from(sealed.wrappedKey)}::bytea,
           p_token_hash => ${actor.tokenHash}::text,
           p_scan_origin => ${input.origin ?? null}::scan_origin,
-          p_generation_document_id => ${input.generationDocumentId ?? null}::uuid) as result`);
+          p_generation_document_id => ${input.generationDocumentId ?? null}::uuid,
+          p_dsv => ${input.dsv ? JSON.stringify(input.dsv) : null}::jsonb) as result`);
       } catch (error) {
         await files.storage.delete(objectKey(id)).catch((cleanup: unknown) => {
           logger.error(
@@ -437,6 +456,8 @@ export function documentService(deps: Deps) {
     // A signed scan's acceptance takes its form's record (data-protection.md, signed scans): the
     // TL 407's `scan`, the Kug 200b's `kug200bScan`; nothing else does.
     const accepted = input.decision === "accepted";
+    if ((row.type === "dsv_signed_scan" && accepted) !== (input.dsv !== undefined))
+      return domainProblem(c, ["scan_required"]);
     const tl407 = row.type === "tl407_signed_scan" && accepted;
     const kug200b = row.type === "kug200b_signed_scan" && accepted;
     if (tl407 !== (scan !== undefined)) {
@@ -474,7 +495,8 @@ export function documentService(deps: Deps) {
         p_countersigned_on => ${scan?.profilerSignedOn ?? null}::date,
         p_confirmations => ${scan || kug200bScan ? `{${(scan ?? kug200bScan)!.confirmations.join(",")}}` : null}::text[],
         p_form_version => ${scan?.formVersion ?? kug200bScan?.formVersion ?? null}::text,
-        p_declarations => ${scan ? JSON.stringify(scan.declarations) : null}::jsonb) as result`);
+        p_declarations => ${scan ? JSON.stringify(scan.declarations) : null}::jsonb,
+        p_dsv => ${input.dsv ? JSON.stringify(input.dsv) : null}::jsonb) as result`);
     } catch (error) {
       return refused(c, error);
     }

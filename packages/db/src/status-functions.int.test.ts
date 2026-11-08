@@ -1,3 +1,4 @@
+import { acceptedDsvScan } from "./testing";
 import { Client } from "pg";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { seedProjectIds, seedStaffUserIds } from "./seed";
@@ -48,6 +49,7 @@ async function signedParticipation() {
   const waveId = await createWave(owner);
   const id = await informedParticipation(app, { entryWaveId: waveId });
   await changeStatus(app, id, { field: "dsv_status", from: "not_offered", to: "dsv_offered" });
+  await acceptedDsvScan(app, id);
   await changeStatus(app, id, { field: "dsv_status", from: "dsv_offered", to: "dsv_signed" });
   return id;
 }

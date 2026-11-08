@@ -207,7 +207,7 @@ describe("record_form_generation: the DSV", () => {
       deadline_kind: "wave",
       checklist: [],
       type: "dsv_form",
-      catalog_version: 8,
+      catalog_version: 9,
       retention_class: "form_working_copy",
     });
     const audit = await owner.query(

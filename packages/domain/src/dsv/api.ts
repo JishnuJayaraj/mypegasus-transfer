@@ -1,3 +1,5 @@
+import { DocumentView } from "../documents/api";
+import { DsvScanMetadata } from "./scans";
 import { z } from "zod";
 import { isoDate } from "../iso-date";
 import { DsvStatus } from "../lifecycle/enums";
@@ -62,6 +64,10 @@ export const DsvView = z
     participationId: z.uuid(),
     track: DsvStatus,
     statusVersion: z.number().int().nonnegative(),
+    scans: z.array(
+      z.strictObject({ document: DocumentView, metadata: DsvScanMetadata, counting: z.boolean() }),
+    ),
+    receivers: z.array(z.strictObject({ id: z.uuid(), name: z.string() })),
     offers: z.array(
       z.strictObject({
         id: z.uuid(),
@@ -94,8 +100,14 @@ export const DsvView = z
     /** `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the current generation's Berlin day and instant; null when none. */
     facts: z.strictObject({
       dsvGenerated: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
+      dsvScanReceived: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
     }),
-    capabilities: z.strictObject({ generate: z.boolean(), offer: z.boolean() }),
+    capabilities: z.strictObject({
+      generate: z.boolean(),
+      offer: z.boolean(),
+      uploadScan: z.boolean(),
+      sign: z.boolean(),
+    }),
   })
   .meta({ id: "DsvView" });
 export type DsvView = z.infer<typeof DsvView>;

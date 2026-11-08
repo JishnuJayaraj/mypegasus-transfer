@@ -1406,3 +1406,16 @@ Migrations:
 - A value added with `ALTER TYPE … ADD VALUE` can't be used in the same transaction, and the
   Drizzle migrator runs all pending migrations in one transaction (`packages/db/src/migrate.ts`).
   So `CHECK`s and functions compare `event_type::text` with the new value's string (0024, 0030).
+
+#### DSV scan evidence (7-2b)
+
+Migrations 0093–0094 add nullable receipt/offer metadata to existing documents and the
+`dsv_scan_signature` table without changing existing rows. Catalog 9 enables DSV scan operations.
+`add_document` and `review_document` are dropped/recreated with optional DSV arguments and their
+grants restored; existing calls retain their behavior. Only these functions write scan metadata
+and confirmed signatures. Review and signing share the participation lock with offer changes,
+quarantine, lift and deletion. `sign_dsv` checks the exact scan and status version;
+`apply_status_change` also checks counting evidence, so the ordinary status function cannot
+bypass the documentary guard. `dsv_facts` returns actual signature dates and advances recording
+instants on lift. The history function routes DSV document events to the DSV stream while
+preserving other document projections. Full-execution guards remain for 7-3.

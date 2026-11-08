@@ -1,3 +1,4 @@
+import { DsvScanMetadata, DsvSignatures } from "../dsv/scans";
 import { z } from "zod";
 import { DocumentType, documentTypeCatalog } from "./catalog";
 import { DocumentMediaType } from "./files";
@@ -35,6 +36,7 @@ export type DocumentSource = z.infer<typeof DocumentSource>;
  */
 export const DocumentUploadInput = z
   .strictObject({
+    dsv: DsvScanMetadata.optional(),
     type: DocumentType,
     fileName: z.string().min(1).max(1000),
     content: z.base64().meta({ description: "The file, base64; decoded at most 10 MB" }),
@@ -120,6 +122,9 @@ export type DocumentOpening = z.infer<typeof DocumentOpening>;
  */
 export const DocumentReviewInput = z
   .strictObject({
+    dsv: z
+      .strictObject({ signatures: DsvSignatures, termsConfirmed: z.boolean().optional() })
+      .optional(),
     decision: z.enum(["accepted", "rejected"]),
     reasonCode: DocumentReviewReason.optional(),
     scan: ScanReview.optional(),

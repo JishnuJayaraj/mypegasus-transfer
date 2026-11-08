@@ -78,7 +78,7 @@ const recorded = (validOn: IsoDate): DatedFact => ({
   recordedAt: new Date(`${validOn}T09:00:00Z`),
 });
 const before = recorded("2091-01-25");
-const dsvDocuments = { dsvGenerated: before, dsvScanReceived: before };
+const dsvDocuments = { dsvGenerated: before };
 const entryFacts = { ...dsvDocuments, dsvFullyExecuted: before, asuRegisteredWithProof: before };
 /**
  * Valid before the TG start but recorded after its scheduled run: the late documentary evidence
@@ -173,8 +173,22 @@ const offer = (participationId: string): Step => ({
     from participation p join project_entry_wave w on w.id = p.entry_wave_id
     where p.id = ${participationId}::uuid`),
 });
-const sign = (participationId: string) =>
-  move(backOffice, participationId, "dsv", "dsv_offered", "dsv_signed");
+const sign = (participationId: string): Step => ({
+  on: D1,
+  run: async (service, db) => {
+    await db.execute(sql`do $seed$ declare v_id uuid := gen_random_uuid(); o public.dsv_offer; c public.audit_context := row('user', '00000000-0000-4000-8000-000000000003'::uuid, null, null, null, null, null)::audit_context; begin
+  select * into o from public.dsv_offer where participation_id = ${sql.raw("'" + participationId + "'::uuid")} and ended_as is null;
+  perform public.add_document(c,o.participation_id,v_id,'dsv_signed_scan','application/pdf',100,repeat('a',64),null,repeat('b',16),decode(repeat('00',60),'hex'),p_dsv=>jsonb_build_object('offerId',o.id,'receivedBy',(c).staff_user_id,'receivedOn',(now() at time zone 'Europe/Berlin')::date,'signatures',jsonb_build_object('participant',(now() at time zone 'Europe/Berlin')::date)));
+  perform public.review_document(c,v_id,'accepted',null,p_dsv=>jsonb_build_object('signatures',jsonb_build_object('participant',(now() at time zone 'Europe/Berlin')::date),'termsConfirmed',true));
+  end $seed$`);
+    return service.changeStatus(backOffice, {
+      participationId,
+      track: "dsv",
+      from: "dsv_offered",
+      to: "dsv_signed",
+    });
+  },
+});
 const profiling = (participationId: string, ...path: string[]): Step[] =>
   path.slice(1).map((to, i) => move(consultant, participationId, "profiling", path[i]!, to));
 const doneOn = { effectiveDate: D1 };

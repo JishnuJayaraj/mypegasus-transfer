@@ -83,6 +83,8 @@ const generation = (stale: boolean) => ({
 });
 
 const view = (overrides: object = {}) => ({
+  scans: [],
+  receivers: [],
   participationId,
   track: "not_offered",
   statusVersion: 3,
@@ -99,7 +101,7 @@ const view = (overrides: object = {}) => ({
   blockers: [],
   generations: [],
   facts: { dsvGenerated: null },
-  capabilities: { generate: true, offer: true },
+  capabilities: { generate: true, offer: true, uploadScan: true, sign: true },
   ...overrides,
 });
 
@@ -364,4 +366,50 @@ it("records external paper in a panel with required dates and draft protection",
       },
     }),
   );
+});
+
+it("keeps scan receipt blank and preserves the draft after closing and a refused upload", async () => {
+  const { calls } = setup(
+    view({
+      track: "dsv_offered",
+      capabilities: { generate: false, offer: false, uploadScan: true, sign: true },
+      offers: [
+        {
+          id: generationId,
+          origin: "external_paper",
+          offerDeadline: "2091-02-15",
+          offeredAt: "2026-01-01T10:00:00Z",
+          endedAs: null,
+          capabilities: { decline: true },
+        },
+      ],
+      receivers: [{ id: staffUsers[1]!.id, name: "Projektleitung" }],
+    }),
+    { [`POST ${detailPath}/dsv/scans`]: () => problem(409, "conflict") },
+  );
+  await userEvent.click(await screen.findByRole("button", { name: "Scan hochladen" }));
+  const panel = within(screen.getByRole("dialog"));
+  expect(panel.getByLabelText("Entgegengenommen von")).toHaveValue("");
+  expect(panel.getByLabelText(/Entgegengenommen am/)).toHaveValue("");
+  expect(panel.getByLabelText(/Unterschrift Teilnehmer/)).toHaveValue("");
+  await userEvent.type(panel.getByLabelText(/Entgegengenommen am/), "02.01.2026");
+  await userEvent.keyboard("{Escape}");
+  expect(
+    await screen.findByRole("alertdialog", { name: "Änderungen verwerfen?" }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Weiter bearbeiten" }));
+  expect(panel.getByLabelText(/Entgegengenommen am/)).toHaveValue("02.01.2026");
+  await userEvent.selectOptions(panel.getByLabelText("Entgegengenommen von"), staffUsers[1]!.id);
+  const input = screen.getByRole("dialog").querySelector<HTMLInputElement>('input[type="file"]')!;
+  await userEvent.upload(
+    input,
+    new File(["%PDF synthetic"], "synthetic.pdf", { type: "application/pdf" }),
+  );
+  await userEvent.click(panel.getByRole("button", { name: "Speichern" }));
+  await waitFor(() =>
+    expect(calls.some((call) => call.key === `POST ${detailPath}/dsv/scans`)).toBe(true),
+  );
+  expect(panel.getByLabelText(/Entgegengenommen am/)).toHaveValue("02.01.2026");
+  expect(panel.getByLabelText("Entgegengenommen von")).toHaveValue(staffUsers[1]!.id);
+  expect(screen.getByRole("dialog")).toBeVisible();
 });
