@@ -263,6 +263,12 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // "Kunde informiert am" of a cancellation-based withdrawal: the day, by/at (Q46).
+  dsv_customer_notice: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   dsv_offer: {
     retentionClass: "participation_record",
     dataClass: "internal",
@@ -954,6 +960,7 @@ const withoutFields = new Set([
   "dsv_contract",
   "entry_clarification",
   "entry_clarification_step",
+  "dsv_customer_notice",
   "dsv_scan_signature",
   // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
   // declarations to the BA).

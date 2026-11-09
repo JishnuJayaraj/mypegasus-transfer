@@ -39,6 +39,7 @@ import type { AsuDueDate } from "../dates";
 import { kug200bItems, type Kug200bOfferFacts } from "../asu/kug200b";
 import { isoDate } from "../iso-date";
 import { entryClarificationOpenedOn } from "../dsv/clarification";
+import { dsvCustomerNoticeDue } from "../dsv/cancellation";
 import { effectiveTgStart } from "../lifecycle/waves";
 import { AgenturItem, agenturItems, type Tl407WorkFacts } from "../profiling/submissions";
 
@@ -85,7 +86,9 @@ export const WorklistCapabilities = z.strictObject({
  * corrections); `dsv_not_fully_executed` from the day the participant signed, while the DSV track
  * is `dsv_signed`, the participation `informed` and no counting complete packet exists (the
  * item, the filter and the dashboard tile count the same participations); `entry_clarification`
- * from the day after the planned TG start for a signed DSV still `informed` (`dsv/clarification.ts`).
+ * from the day after the planned TG start for a signed DSV still `informed` (`dsv/clarification.ts`);
+ * `dsv_customer_notice` from the withdrawal of a signed DSV until the customer notice is recorded
+ * (`dsv/cancellation.ts`), the one DSV item a terminal participation keeps.
  */
 export const WorklistCaseItem = z
   .strictObject({
@@ -98,6 +101,11 @@ export const WorklistCaseItem = z
       "dsv_not_fully_executed",
       /** The entry clarification: from the day after the planned start, until entry. */
       "entry_clarification",
+      /**
+       * "Kunde informieren": a signed DSV withdrawn on its cancellation, dated by the withdrawal,
+       * until the PL records the notice (`dsvCustomerNoticeDue`).
+       */
+      "dsv_customer_notice",
     ]),
     date: isoDate,
   })
@@ -184,6 +192,8 @@ export type WorklistFacts = Pick<
      * became (`entryClarificationActions`).
      */
     unresolvedClarificationOpenedOn?: IsoDate | null;
+    /** The withdrawal's day and the recorded customer notice (`dsvCustomerNoticeDue`). */
+    customerNotice?: { withdrawnOn: IsoDate | null; notifiedOn: IsoDate | null };
   };
   appointments: {
     bookings: readonly AppointmentItemBooking[];
@@ -220,7 +230,7 @@ export type WorklistViewer = {
   worksDsv: boolean;
 };
 
-/** The two DSV case items of a `ta_tg` participation . */
+/** The DSV case items of a `ta_tg` participation. */
 function dsvCaseItems(
   facts: WorklistFacts,
   snapshot: ParticipationSnapshot,
@@ -247,6 +257,10 @@ function dsvCaseItems(
       today,
     });
   if (openedOn !== null) items.push({ kind: "entry_clarification", date: openedOn });
+  const noticeDue = facts.dsv.customerNotice
+    ? dsvCustomerNoticeDue({ status, dsvStatus, ...facts.dsv.customerNotice })
+    : null;
+  if (noticeDue !== null) items.push({ kind: "dsv_customer_notice", date: noticeDue });
   return items;
 }
 

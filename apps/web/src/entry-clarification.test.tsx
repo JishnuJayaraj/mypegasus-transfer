@@ -84,13 +84,22 @@ const dsv = {
   blockers: ["dsv_already_signed"],
   generations: [],
   contract: null,
-  facts: { dsvGenerated: null, dsvScanReceived: null, dsvFullyExecuted: null },
+  facts: {
+    dsvGenerated: null,
+    dsvScanReceived: null,
+    dsvFullyExecuted: null,
+    dsvCancellation: null,
+  },
+  cancellations: [],
+  customerNotice: null,
   capabilities: {
     generate: false,
     offer: false,
     uploadScan: false,
     sign: false,
     recordOriginal: false,
+    uploadCancellation: false,
+    recordCustomerNotice: false,
   },
 };
 

@@ -101,8 +101,13 @@ export function stepTarget(step: OpenStep): StepTarget {
     case "case":
       // The ASU record holds the knowledge date and the Kug 200b offer (asu-tab.tsx); an
       // invalidated evidence document is replaced among the documents; the signed DSV's packet and
-      // its entry clarification are worked on the tab "DSV".
-      if (step.kind === "dsv_not_fully_executed" || step.kind === "entry_clarification") {
+      // its entry clarification and the customer notice of its cancellation are worked on the tab
+      // "DSV".
+      if (
+        step.kind === "dsv_not_fully_executed" ||
+        step.kind === "entry_clarification" ||
+        step.kind === "dsv_customer_notice"
+      ) {
         return { tab: "dsv" };
       }
       return step.kind === "evidence_invalidated" ? { tab: "documents" } : { tab: "asu" };
@@ -113,8 +118,15 @@ export function stepTarget(step: OpenStep): StepTarget {
           ? { tab: "asu" }
           : { tab: "profiling" };
     case "flag":
-      // A signed DSV that never entered is clarified on the tab "DSV" (process-and-lifecycle.md, the cutoff cases).
-      if (step.kind === "dsv_signed_not_entered_at_cutoff") return { tab: "dsv" };
+      // A signed DSV that never entered is clarified on the tab "DSV", where a signed DSV with a
+      // declined profiling is cancelled before the planned start too (process-and-lifecycle.md,
+      // the cutoff cases; the withdrawal itself is "Zurückziehen" in the page header).
+      if (
+        step.kind === "dsv_signed_not_entered_at_cutoff" ||
+        step.kind === "conflict_dsv_signed_profiling_declined"
+      ) {
+        return { tab: "dsv" };
+      }
       return datesFlags.has(step.kind) ? { anchor: "participant-dates" } : { tab: "profiling" };
     case "action":
       return step.action.kind === "document" ? { tab: "documents" } : { tab: "self-service" };

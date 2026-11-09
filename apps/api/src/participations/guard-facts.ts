@@ -82,6 +82,32 @@ async function tl407Facts(tx: Transaction, participationIds: readonly string[]) 
 }
 
 /**
+ * The counting cancellation of each participation's signed DSV (process-and-lifecycle.md, the
+ * cancellation): the earliest recorded one, valid on its latest actual signature, recorded when it
+ * counted (a quarantine's lift moves only the recording). By participation id.
+ */
+export async function cancellationFacts(
+  tx: Pick<Transaction, "execute">,
+  participationIds: readonly string[],
+): Promise<Map<string, DatedFact>> {
+  if (participationIds.length === 0) return new Map();
+  const { rows } = await tx.execute<{
+    participation_id: string;
+    valid_on: string;
+    recorded_at: string;
+  }>(sql`select distinct on (participation_id) participation_id, valid_on::text,
+      ${utcText("recorded_at")} as recorded_at
+    from dsv_cancellation_facts(${`{${participationIds.join(",")}}`}::uuid[])
+    order by participation_id, recorded_at, document_id`);
+  return new Map(
+    rows.map((row) => [
+      row.participation_id,
+      { validOn: row.valid_on, recordedAt: new Date(row.recorded_at) },
+    ]),
+  );
+}
+
+/**
  * The evidence record a request names (data-protection.md, exception evidence; Q94, Q194): of
  * this participation and still usable (`exception_evidence_usable`), valid from the BA's
  * confirmation date or, for documents, the day it was recorded; a BA confirmation also gives
@@ -165,7 +191,8 @@ function approvalFact(
  * that are neither quarantined nor invalidated, and `asuRegisteredWithProof` from the ASU record
  * (`asuRegisteredSince`: a usable proof, recorded when the complete registration-with-proof was),
  * each with the database instant its complete fact was recorded at, a request's evidence record,
- * and the approved exception while its evidence counts (`approvalFact`). The DSV's signature and complete packet come from `dsv_facts`; the cancellation stays fail closed until it is recorded.
+ * and the approved exception while its evidence counts (`approvalFact`). The DSV's signature and
+ * complete packet come from `dsv_facts`, its cancellation from `dsv_cancellation_facts`.
  */
 export const dbGuardFacts: GuardFactsProvider = {
   facts: async (tx, input) => (await dbGuardFacts.many!(tx, [input]))[0]!,
@@ -201,6 +228,7 @@ export const dbGuardFacts: GuardFactsProvider = {
         { validOn: row.executed_on, recordedAt: new Date(row.recorded_at) },
       ]),
     );
+    const cancellations = await cancellationFacts(tx, ids);
     const evidence = await approvalEvidence(
       tx,
       inputs
@@ -224,6 +252,9 @@ export const dbGuardFacts: GuardFactsProvider = {
           dsvFullyExecuted: packetById.get(input.participationId)!,
         }),
         ...(registered && { asuRegisteredWithProof: registered }),
+        ...(cancellations.has(input.participationId) && {
+          dsvCancellation: cancellations.get(input.participationId)!,
+        }),
       });
     }
     return all;

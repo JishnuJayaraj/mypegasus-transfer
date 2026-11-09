@@ -84,6 +84,8 @@ const statusFunctions = [
   "dsv_facts",
   "sign_dsv",
   "record_dsv_original",
+  "dsv_cancellation_facts",
+  "record_customer_notice",
   // Slice 7, PR 7-4: the entry clarification
   "record_entry_clarification",
   "escalate_entry_clarification",
@@ -1040,9 +1042,9 @@ describe("transfer_app and assisted_mode", () => {
 // role never selects the wrapped key or the content hash and has no privilege on the links.
 describe("transfer_app and the document tables", () => {
   it("selects the policy and the document metadata", async () => {
-    // Catalog versions 2 to 9 (packages/domain/src/documents/catalog.ts).
+    // Catalog versions 2 to 10 (packages/domain/src/documents/catalog.ts).
     expect((await app.query("select count(*)::int as n from document_type_policy")).rows).toEqual([
-      { n: 85 },
+      { n: 97 },
     ]);
     expect((await app.query("select id, type, file_name, key_id from document")).rows).toEqual([]);
   });

@@ -24,7 +24,7 @@ const add = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor yes  unass yes  role role role role
 dsv_signed_scan              actor actor role role  yes  yes  role role role
-dsv_cancellation             actor actor role role  und  und  role role role
+dsv_cancellation             actor actor role role  yes  yes  role role role
 asu_proof                    actor actor yes  unass yes  role role role role
 profiling_exception_evidence actor actor yes  unass yes  role role role role
 cv                           yes   yes   yes  unass yes  role role role role
@@ -38,7 +38,7 @@ const review = `
 tl407_signed_scan            actor actor yes  unass yes  role role role role
 kug200b_signed_scan          actor actor yes  unass yes  role role role role
 dsv_signed_scan              actor actor role role  yes  yes  role role role
-dsv_cancellation             actor actor role role  und  und  role role role
+dsv_cancellation             actor actor role role  yes  yes  role role role
 asu_proof                    actor actor yes  unass role role role role role
 profiling_exception_evidence actor actor yes  unass role role role role role
 cv                           actor actor yes  unass yes  role role role role
@@ -52,7 +52,7 @@ const remove = `
 tl407_signed_scan            actor actor role role  yes  role role role role
 kug200b_signed_scan          actor actor role role  yes  role role role role
 dsv_signed_scan              actor actor role role  yes  role role role role
-dsv_cancellation             imm   imm   imm  imm   imm  imm  imm  imm  imm
+dsv_cancellation             actor actor role role  yes  role role role role
 asu_proof                    actor actor role role  yes  role role role role
 profiling_exception_evidence actor actor role role  yes  role role role role
 cv                           yes   yes   yes  unass yes  role role role role

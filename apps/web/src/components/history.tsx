@@ -192,6 +192,9 @@ export function HistoryTab({
         return coded("entryClarification.instructionCodes", text(details.instructionCode) ?? "");
       case "entry_clarification_requested":
         return coded("entryClarification.requestCodes", text(details.requestCode) ?? "");
+      // "Kunde informiert am" of a cancellation-based withdrawal: the day.
+      case "dsv_customer_notified":
+        return t("history.customerNotified", { date: formatDate(text(details.notifiedOn)) });
       case "dsv_form_generated":
         return t("history.dsvForm", {
           version: text(details.templateVersion) ?? "",

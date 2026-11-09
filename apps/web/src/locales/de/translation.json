@@ -1114,7 +1114,45 @@
       "notice": "Datenschutzhinweis übergeben",
       "remind": "Erinnern",
       "invite": "Zu Termin einladen",
-      "assisted": "Assistierte Erfassung starten"
+      "assisted": "Assistierte Erfassung starten",
+      "withdraw": "Zurückziehen",
+      "correctEndReason": "Grund korrigieren"
+    },
+    "withdrawal": {
+      "title": "Zurückziehen",
+      "hint": "Die Teilnahme endet vor dem Eintritt in die Transfergesellschaft. Grund und Datum werden nicht vorbelegt; das Datum darf nicht in der Zukunft liegen.",
+      "reason": "Grund",
+      "date": "Zurückgezogen am (TT.MM.JJJJ)",
+      "cancellation": "Der von allen drei Parteien unterschriebene Aufhebungsvertrag ist gültig ab {{date}}. Das Datum des Rückzugs darf nicht davor liegen.",
+      "noCancellation": "Die DSV ist unterschrieben: Zurückziehen ist nur mit einem geprüften Aufhebungsvertrag möglich (Tab „DSV“).",
+      "confirm": "Ich bestätige: Der Aufhebungsvertrag liegt vor und hebt die unterschriebene DSV vor dem geplanten Beginn auf.",
+      "complete": "Bitte Grund und gültiges Datum angeben und, bei unterschriebener DSV, bestätigen.",
+      "save": "Zurückziehen",
+      "refusals": {
+        "dsv_cancellation_missing": "Die DSV ist unterschrieben. Zurückziehen ist erst mit einem geprüften, von allen drei Parteien unterschriebenen Aufhebungsvertrag möglich (Tab „DSV“).",
+        "after_planned_start": "Der geplante Beginn ist überschritten: Zurückziehen ist nicht mehr möglich. Der Fall wird über „Eintritt klären“ im Tab „DSV“ bearbeitet.",
+        "tg_start_missing": "Ohne geplanten TG-Beginn ist ein Rückzug mit unterschriebener DSV nicht möglich."
+      },
+      "errors": {
+        "failed": "Speichern nicht möglich. Bitte die Angaben prüfen.",
+        "stale": "Die Teilnahme wurde inzwischen geändert. Bitte neu laden.",
+        "withdrawal_after_dsv_signed": "Bei unterschriebener DSV sind ein gültiger Aufhebungsvertrag und Ihre Bestätigung nötig.",
+        "effective_date_before_cancellation": "Das Datum liegt vor der Gültigkeit des Aufhebungsvertrags.",
+        "effective_date_in_future": "Das Datum liegt in der Zukunft.",
+        "after_planned_start": "Der geplante Beginn ist überschritten; bitte „Eintritt klären“ im Tab „DSV“.",
+        "dsv_cancellation_missing": "Es liegt kein geprüfter Aufhebungsvertrag vor.",
+        "tg_start_missing": "Es ist kein geplanter TG-Beginn erfasst.",
+        "reason_unchanged": "Der Grund ist unverändert.",
+        "reason_wrong_phase": "Dieser Grund passt nicht zu dieser Beendigung."
+      }
+    },
+    "endReason": {
+      "title": "Grund korrigieren",
+      "current": "Bisheriger Grund: {{reason}}",
+      "currentSystem": "Bisheriger Grund (vom System ermittelt): {{reason}}. Er bleibt als weiterer Grund erhalten.",
+      "reason": "Neuer Grund",
+      "stillApplies": "Der bisherige Grund trifft ebenfalls zu (bleibt als weiterer Grund erhalten).",
+      "save": "Grund korrigieren"
     },
     "anchors": {
       "participant-stand": "Stand",
@@ -1525,7 +1563,8 @@
       "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren (eingegangen am {{date}})",
       "evidence_invalidated": "Nachweis ungültig (seit {{date}})",
       "dsv_not_fully_executed": "DSV nicht vollständig unterschrieben (Teilnehmende unterschrieben am {{date}})",
-      "entry_clarification": "Eintritt klären (geplanter Beginn überschritten seit {{date}})"
+      "entry_clarification": "Eintritt klären (geplanter Beginn überschritten seit {{date}})",
+      "dsv_customer_notice": "Kunde informieren (zurückgezogen am {{date}})"
     },
     "kug200b": {
       "generate": "Kug 200b erzeugen",
@@ -1599,7 +1638,8 @@
       "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren",
       "evidence_invalidated": "Nachweis ungültig",
       "dsv_not_fully_executed": "DSV: unterschrieben, nicht vollständig",
-      "entry_clarification": "Eintritt klären"
+      "entry_clarification": "Eintritt klären",
+      "dsv_customer_notice": "Kunde informieren"
     },
     "dsv": {
       "hint": "Für die ausgewählten Teilnehmenden (höchstens 100) mit einer Frist – alle oder keiner.",
@@ -1892,7 +1932,8 @@
       "entry_clarification_recorded": "Eintritt: Klärung dokumentiert",
       "entry_clarification_escalated": "Eintritt: an die Regionale Betriebsleitung eskaliert",
       "entry_clarification_instructed": "Eintritt: Weisung erfasst",
-      "entry_clarification_requested": "Eintritt: Rückfrage an die Projektleitung"
+      "entry_clarification_requested": "Eintritt: Rückfrage an die Projektleitung",
+      "dsv_customer_notified": "Kunde über die Aufhebung informiert"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1973,6 +2014,7 @@
     "form": "Fassung {{version}}",
     "formWithAnlage": "Fassung {{version}}, mit Anlage",
     "dsvForm": "Vorlage {{version}}, {{deadline}}",
+    "customerNotified": "Kunde informiert am {{date}}",
     "dsvDeadlineKinds": {
       "wave": "Frist der Welle",
       "explicit": "eigene Frist"
@@ -3599,6 +3641,29 @@
       },
       "locations": {
         "paper_personnel_file": "In der Personalakte (Papier)"
+      }
+    },
+    "cancellation": {
+      "title": "Aufhebungsvertrag",
+      "hint": "Vor dem geplanten Beginn heben die Teilnehmerin oder der Teilnehmer, der Kunde und die Transfergesellschaft den unterschriebenen Vertrag auf Papier auf. Laden Sie den Scan hoch; bei der Prüfung bestätigen Sie alle drei Unterschriften mit ihrem Datum. Danach kann die Projektleitung zurückziehen.",
+      "upload": "Aufhebungsvertrag hochladen",
+      "empty": "Noch kein Aufhebungsvertrag vorhanden.",
+      "counting": "Aufhebungsvertrag gültig ab {{date}} (letzte der drei Unterschriften).",
+      "datesHint": "Tragen Sie die tatsächlichen Unterschriftsdaten auf dem Aufhebungsvertrag ein. Angenommen wird er nur mit allen drei Unterschriften."
+    },
+    "customerNotice": {
+      "title": "Kunde informieren",
+      "withdrawnOn": "Auf den Aufhebungsvertrag zurückgezogen am {{date}}.",
+      "due": "Der Kunde ist noch nicht über die Aufhebung informiert.",
+      "notifiedOn": "Kunde informiert am {{date}}.",
+      "record": "Kunde informiert am …",
+      "date": "Kunde informiert am (TT.MM.JJJJ)",
+      "hint": "Einmalig. Nicht in der Zukunft und nicht vor dem Rückzug.",
+      "errors": {
+        "failed": "Speichern nicht möglich. Bitte erneut versuchen.",
+        "date_in_future": "Das Datum liegt in der Zukunft.",
+        "notice_before_withdrawal": "Das Datum liegt vor dem Rückzug.",
+        "notice_recorded": "Die Information des Kunden ist bereits erfasst."
       }
     },
     "scans": {

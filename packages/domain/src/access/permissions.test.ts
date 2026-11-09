@@ -188,6 +188,7 @@ const operations: Record<OperationKind, string> = {
   escalateEntryClarification: "PL",
   recordClarificationInstruction: "ROM",
   requestEntryClarificationReply: "ROM",
+  recordCustomerNotice: "PL",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {

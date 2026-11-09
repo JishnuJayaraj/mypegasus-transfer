@@ -10,7 +10,8 @@ import {
   DatesPrecondition,
   DsvAmendmentKind,
 } from "./projects/participation-dates";
-import { DsvStatus, MainStatus, ProfilingStatus } from "./lifecycle/enums";
+import { DsvStatus, EndReason, MainStatus, ProfilingStatus } from "./lifecycle/enums";
+import { WithdrawRefusal } from "./lifecycle/withdrawal";
 import { ActivationStatus } from "./activation/status";
 import { PrivacyNoticeState } from "./privacy/notice-state";
 import { AgenturKey } from "./projects/agentur-settings";
@@ -170,6 +171,17 @@ export const ParticipationDetail = z
      */
     dsvSignedOn: recorded(isoDate),
     dsvFullyExecutedOn: recorded(isoDate),
+    /**
+     * The counting cancellation's validity (process-and-lifecycle.md, the cancellation), for a
+     * viewer of the tab "DSV": the earliest effective date of a withdrawal of the signed DSV.
+     */
+    dsvCancellationValidOn: recorded(isoDate),
+    /**
+     * The primary end reason and who chose it, for the PL who may correct it (Q72); absent for
+     * anyone else (`deceased` is confidential, Q66).
+     */
+    endReason: recorded(EndReason),
+    endReasonSource: recorded(z.enum(["user", "system"])),
     /** The version a status-dependent write compares (compare-and-set). */
     statusVersion: z.int().min(0),
     entryWave: z
@@ -256,11 +268,16 @@ export const ParticipationDetail = z
       viewAsu: z.boolean(),
       /** The tab "DSV" (`ta_tg`): the PL and back office (`employment_contract`). */
       viewDsv: z.boolean(),
+      /** "Zurückziehen" (the PL; process-and-lifecycle.md, manual withdrawal). */
+      withdraw: z.boolean(),
+      /** "Grund korrigieren" (the PL, a recorded end reason; Q72). */
+      correctEndReason: z.boolean(),
     }),
     /** Why a capability is closed: the missing permission first, then the domain's first rule. */
     refusals: z.strictObject({
       assignEntryWave: AssignEntryWaveRefusal.nullable(),
       setParticipationDates: SetParticipationDatesRefusal.nullable(),
+      withdraw: WithdrawRefusal.nullable(),
     }),
   })
   .meta({ id: "ParticipationDetail" });

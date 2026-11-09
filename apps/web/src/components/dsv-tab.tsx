@@ -1,6 +1,7 @@
 import { DsvContract } from "./dsv-contract";
 import { EntryClarification } from "./entry-clarification";
 import { DsvScans } from "./dsv-scans";
+import { DsvCustomerNotice } from "./dsv-customer-notice";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
@@ -244,8 +245,13 @@ export function DsvTab({ participationId }: { participationId: string }) {
       </Card>
       {/* A signed DSV that has not entered after its planned start: shown only then. */}
       {view.track === "dsv_signed" && <EntryClarification participationId={participationId} />}
+      <DsvCustomerNotice view={view} />
       <DsvScans view={view} onOpen={open} />
       <DsvContract view={view} />
+      {/* The cancellation of the signed contract (process-and-lifecycle.md, the cancellation). */}
+      {(view.track === "dsv_signed" || view.cancellations.length > 0) && (
+        <DsvScans view={view} onOpen={open} paper="cancellation" />
+      )}
       <Card title={t("dsv.generations.title")} level={3}>
         <SimpleTable
           title={t("dsv.generations.title")}

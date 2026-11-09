@@ -104,6 +104,20 @@ export const DsvView = z
     scans: z.array(
       z.strictObject({ document: DocumentView, metadata: DsvScanMetadata, counting: z.boolean() }),
     ),
+    /**
+     * The cancellations of the signed contract (process-and-lifecycle.md, the cancellation; Q46
+     * verify): uploaded against the signed offer, each with its metadata and whether it counts.
+     */
+    cancellations: z.array(
+      z.strictObject({ document: DocumentView, metadata: DsvScanMetadata, counting: z.boolean() }),
+    ),
+    /**
+     * The customer notice of a cancellation-based withdrawal: due since the withdrawal until "Kunde
+     * informiert am" is recorded; null when none applies.
+     */
+    customerNotice: z
+      .strictObject({ dueSince: isoDate, notifiedOn: isoDate.nullable() })
+      .nullable(),
     receivers: z.array(z.strictObject({ id: z.uuid(), name: z.string() })),
     offers: z.array(
       z.strictObject({
@@ -145,6 +159,8 @@ export const DsvView = z
       dsvScanReceived: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
       /** The complete packet: valid on the latest actual date, recorded when its scan counted. */
       dsvFullyExecuted: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
+      /** The counting cancellation: valid on its latest actual signature, recorded when it counted. */
+      dsvCancellation: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
     }),
     capabilities: z.strictObject({
       generate: z.boolean(),
@@ -152,6 +168,10 @@ export const DsvView = z
       uploadScan: z.boolean(),
       sign: z.boolean(),
       recordOriginal: z.boolean(),
+      /** "Aufhebungsvertrag hochladen": a signed DSV of an `informed` participation. */
+      uploadCancellation: z.boolean(),
+      /** "Kunde informiert am": the PL, while the notice is due. */
+      recordCustomerNotice: z.boolean(),
     }),
   })
   .meta({ id: "DsvView" });

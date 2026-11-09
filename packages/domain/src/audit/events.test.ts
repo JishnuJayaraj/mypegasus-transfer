@@ -149,6 +149,7 @@ describe("audit event types (ADR-0002)", () => {
       "entry_clarification_escalated",
       "entry_clarification_instructed",
       "entry_clarification_requested",
+      "dsv_customer_notified",
     ]);
   });
 
@@ -266,6 +267,7 @@ describe("audit event types (ADR-0002)", () => {
       "entry_clarification_escalated",
       "entry_clarification_instructed",
       "entry_clarification_requested",
+      "dsv_customer_notified",
     ]);
   });
 
@@ -913,6 +915,7 @@ describe("the other event types", () => {
       "entry_clarification_requested",
       { details: { clarificationId: otherId, requestCode: "date_unclear" } },
     ],
+    ["dsv_customer_notified", { details: { notifiedOn: "2026-03-06" } }],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -1390,6 +1393,7 @@ describe("the other event types", () => {
       "entry_clarification_requested",
       { details: { clarificationId: otherId, requestCode: "awaiting_asu_proof" } },
     ],
+    ["dsv_customer_notified", { details: { notifiedOn: "06.03.2026" } }],
     [
       "dsv_form_generated",
       {

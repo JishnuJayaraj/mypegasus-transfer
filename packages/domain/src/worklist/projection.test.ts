@@ -207,6 +207,23 @@ describe("worklistProjection", () => {
     ).toEqual([]);
   });
 
+  it("asks the customer notice of a signed DSV withdrawn on its cancellation, until recorded (Q46)", () => {
+    const withdrawn = snapshot({ current: state("withdrawn", "profiling_done", "dsv_signed") });
+    const row = (dsv: WorklistFacts["dsv"], worksDsv = true, current = withdrawn) =>
+      worklistProjection(facts({ dsv }), current, project, "2027-03-10", now, viewer({ worksDsv }))
+        .caseItems;
+    const base = { signedOn: "2027-02-20", fullyExecuted: true };
+    const due = { ...base, customerNotice: { withdrawnOn: "2027-03-04", notifiedOn: null } };
+    expect(row(due)).toEqual([{ kind: "dsv_customer_notice", date: "2027-03-04" }]);
+    expect(
+      row({ ...base, customerNotice: { withdrawnOn: "2027-03-04", notifiedOn: "2027-03-05" } }),
+    ).toEqual([]);
+    expect(row(due, false)).toEqual([]);
+    expect(row(base)).toEqual([]);
+    const unsigned = snapshot({ current: state("withdrawn", "profiling_done", "dsv_offered") });
+    expect(row(due, true, unsigned)).toEqual([]);
+  });
+
   it("offers the DSV bulk generation to the viewer who may, in an open ta_tg participation", () => {
     const s = snapshot({ wave: null });
     const row = (v: Partial<WorklistViewer>, p: WorklistProject = project) =>

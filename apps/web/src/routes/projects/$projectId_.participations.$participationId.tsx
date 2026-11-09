@@ -1,3 +1,8 @@
+import {
+  EndReasonDialog,
+  WithdrawDialog,
+  withdrawOffered,
+} from "../../components/participation-ending";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import {
   createFileRoute,
@@ -149,7 +154,9 @@ function ParticipationPage() {
   // viewer without the work list (403) sees the page without them.
   const worklist = useQuery(worklistQuery(api, projectId));
   const [panel, setPanel] = useState<OverviewPanel | null>(null);
-  const [dialog, setDialog] = useState<"remind" | "invite" | "assisted" | null>(null);
+  const [dialog, setDialog] = useState<
+    "remind" | "invite" | "assisted" | "withdraw" | "endReason" | null
+  >(null);
   const [printed, setPrinted] = useState<RecoveryPrinted | null>(null);
   const fromList = useRouterState({ select: (state) => state.location.state.worklistSearch });
   // The loader refuses a participant of another project; the cache can't change that later.
@@ -219,6 +226,24 @@ function ParticipationPage() {
       : []),
     ...(detail.capabilities.startAssistedMode
       ? [{ label: t("participant.actions.assisted"), onClick: () => setDialog("assisted") }]
+      : []),
+    // process-and-lifecycle.md, manual withdrawal and the end reason (Q72), by capability.
+    ...(detail.capabilities.correctEndReason
+      ? [
+          {
+            label: t("participant.actions.correctEndReason"),
+            onClick: () => setDialog("endReason"),
+          },
+        ]
+      : []),
+    ...(withdrawOffered(detail)
+      ? [
+          {
+            label: t("participant.actions.withdraw"),
+            onClick: () => setDialog("withdraw"),
+            danger: true,
+          },
+        ]
       : []),
   ];
   const metadata = [
@@ -354,6 +379,10 @@ function ParticipationPage() {
           onSent={() => undefined}
           onClose={() => setDialog(null)}
         />
+      )}
+      {dialog === "withdraw" && <WithdrawDialog detail={detail} onClose={() => setDialog(null)} />}
+      {dialog === "endReason" && (
+        <EndReasonDialog detail={detail} onClose={() => setDialog(null)} />
       )}
       {/* Mounted only while open: the tab "Selbstauskunft" has its own. */}
       {dialog === "assisted" && (

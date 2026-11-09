@@ -3,6 +3,7 @@ import { and, asc, document, eq, inArray, isNull, sql, transactionWithClient } f
 import {
   detectFileType,
   dsvScanProblems,
+  dsvCancellationReviewProblem,
   documentCapabilities,
   documentDeleteReasons,
   documentFileName,
@@ -144,6 +145,9 @@ function denied(c: Context<AppEnv>, permission: Exclude<DocumentPermission, { ok
 }
 
 /** A refusal of the document functions as its problem, or rethrown. */
+/** The DSV papers uploaded with their offer, signatures and receipt (process-and-lifecycle.md, the DSV). */
+const dsvPaper: ReadonlySet<string> = new Set(["dsv_signed_scan", "dsv_cancellation"]);
+
 function refused(c: Context<AppEnv>, error: unknown) {
   const code = functionRefusal(error);
   switch (code) {
@@ -182,6 +186,8 @@ function refused(c: Context<AppEnv>, error: unknown) {
     case "delete_reason_not_allowed":
     case "signature_in_future":
     case "signature_before_generation":
+    case "cancellation_not_open":
+    case "cancellation_signatures_missing":
       return domainProblem(c, [code]);
     case "generation_not_found":
       return domainProblem(c, [{ code, field: "generationDocumentId" }]);
@@ -311,7 +317,7 @@ export function documentService(deps: Deps) {
     }
     const permission = mayAddDocument(actor.subject, type, actor.target, actor.mode);
     if (!permission.ok) return denied(c, permission);
-    if ((type === "dsv_signed_scan") !== (input.dsv !== undefined))
+    if (dsvPaper.has(type) !== (input.dsv !== undefined))
       return domainProblem(c, ["scan_required"]);
     if (input.dsv) {
       const issues = dsvScanProblems(input.dsv, clock.today());
@@ -457,8 +463,17 @@ export function documentService(deps: Deps) {
     // A signed scan's acceptance takes its form's record (data-protection.md, signed scans): the
     // TL 407's `scan`, the Kug 200b's `kug200bScan`; nothing else does.
     const accepted = input.decision === "accepted";
-    if ((row.type === "dsv_signed_scan" && accepted) !== (input.dsv !== undefined))
+    if ((dsvPaper.has(row.type) && accepted) !== (input.dsv !== undefined))
       return domainProblem(c, ["scan_required"]);
+    // The cancellation (process-and-lifecycle.md, the cancellation): the three parties' signatures,
+    // no terms to confirm (those are the offer's).
+    if (row.type === "dsv_cancellation" && input.dsv) {
+      if (input.dsv.termsConfirmed !== undefined) {
+        return domainProblem(c, [{ code: "terms_not_applicable", field: "dsv/termsConfirmed" }]);
+      }
+      const missing = dsvCancellationReviewProblem(input.dsv.signatures);
+      if (missing) return domainProblem(c, [{ code: missing, field: "dsv/signatures" }]);
+    }
     const tl407 = row.type === "tl407_signed_scan" && accepted;
     const kug200b = row.type === "kug200b_signed_scan" && accepted;
     if (tl407 !== (scan !== undefined)) {

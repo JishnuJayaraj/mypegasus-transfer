@@ -27,8 +27,24 @@ type Action = "review" | "reject" | "quarantine" | "delete" | "signed";
 type Target = { kind: "upload"; offerId: string } | { kind: Action; scan: Scan; version: number };
 const kinds = ["participant", "customer", "transfergesellschaft"] as const;
 
-export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) => Promise<void> }) {
+/**
+ * The signed paper of the tab "DSV": the participant's scans of the offer (`scan`) or the
+ * cancellation of the signed contract (`cancellation`; process-and-lifecycle.md, the cancellation,
+ * Q46 verify): uploaded with the dates on the paper and its receipt, nothing preset; reviewed by
+ * confirming each signature (the cancellation needs all three); quarantine and deletion as built.
+ */
+export function DsvScans({
+  view,
+  onOpen,
+  paper = "scan",
+}: {
+  view: View;
+  onOpen: (id: string) => Promise<void>;
+  paper?: "scan" | "cancellation";
+}) {
   const { t } = useTranslation();
+  const cancellation = paper === "cancellation";
+  const list = cancellation ? view.cancellations : view.scans;
   const api = useApi();
   const cache = useQueryClient();
   const [target, setTarget] = useState<Target | null>(null);
@@ -64,10 +80,16 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
   const signatures = Object.fromEntries(
     kinds.filter((k) => parsed[k]).map((k) => [k, parsed[k]!]),
   ) as Record<string, string>;
-  // The open offer takes the participant's paper; the signed offer the countersigned original.
-  const offer =
-    view.offers.find((o) => o.endedAs === null) ??
-    (view.track === "dsv_signed" ? view.offers.find((o) => o.endedAs === "signed") : undefined);
+  // The open offer takes the participant's paper; the signed offer the countersigned original
+  // and the cancellation of the signed contract.
+  const signedOffer =
+    view.track === "dsv_signed" ? view.offers.find((o) => o.endedAs === "signed") : undefined;
+  const offer = cancellation
+    ? signedOffer
+    : (view.offers.find((o) => o.endedAs === null) ?? signedOffer);
+  const mayUpload = cancellation
+    ? view.capabilities.uploadCancellation
+    : view.capabilities.uploadScan;
   const documentPath = (scan: Scan) => ({
     participationId: view.participationId,
     documentId: scan.document.id,
@@ -99,18 +121,22 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
   async function submit() {
     if (!target) return;
     if (target.kind === "upload") {
-      await perform(async () =>
-        api.POST("/api/v1/participations/{participationId}/dsv/scans", {
-          params: { path: { participationId: view.participationId } },
-          body: {
-            offerId: target.offerId,
-            receivedBy: receiver,
-            receivedOn: parsed.receivedOn!,
-            signatures,
-            file: { fileName: file!.name, content: await readFileAsBase64(file!) },
-          },
-        }),
-      );
+      await perform(async () => {
+        const body = {
+          offerId: target.offerId,
+          receivedBy: receiver,
+          receivedOn: parsed.receivedOn!,
+          signatures,
+          file: { fileName: file!.name, content: await readFileAsBase64(file!) },
+        };
+        const params = { path: { participationId: view.participationId } };
+        return cancellation
+          ? api.POST("/api/v1/participations/{participationId}/dsv/cancellation-scans", {
+              params,
+              body,
+            })
+          : api.POST("/api/v1/participations/{participationId}/dsv/scans", { params, body });
+      });
       return;
     }
     const path = documentPath(target.scan);
@@ -120,7 +146,11 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
           params: { path },
           body:
             target.kind === "review"
-              ? { decision: "accepted", dsv: { signatures, termsConfirmed: terms } }
+              ? {
+                  decision: "accepted",
+                  // The cancellation confirms its three signatures; the terms are the offer's.
+                  dsv: cancellation ? { signatures } : { signatures, termsConfirmed: terms },
+                }
               : { decision: "rejected", reasonCode: reason as "unreadable" },
         }),
       );
@@ -147,12 +177,14 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
   }
   const needsDates = target?.kind === "upload" || target?.kind === "review";
   const external =
+    !cancellation &&
     target?.kind === "review" &&
     view.offers.find((o) => o.id === target.scan.metadata.offerId)?.origin === "external_paper";
   const invalid =
     (needsDates && kinds.some((k) => dates[k] && !parsed[k])) ||
     (target?.kind === "upload" && (!file || !receiver || !parsed.receivedOn)) ||
     (external && !terms) ||
+    (cancellation && target?.kind === "review" && kinds.some((k) => !parsed[k])) ||
     (target && ["reject", "quarantine", "delete"].includes(target.kind) && !reason);
   const reasons =
     target?.kind === "reject"
@@ -161,18 +193,26 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
         ? ["wrong_person", "wrong_file"]
         : ["suspected_wrong_person", "suspected_wrong_acceptance"];
   return (
-    <Card title={t("dsv.scans.title")} level={3}>
+    <Card title={t(cancellation ? "dsv.cancellation.title" : "dsv.scans.title")} level={3}>
       <Stack gap={4}>
         {error && !target && (
           <InlineNotification kind="error" title={t("dsv.scans.failed")} lowContrast />
         )}
-        {offer && view.capabilities.uploadScan && (
+        {cancellation && <p>{t("dsv.cancellation.hint")}</p>}
+        {cancellation && view.facts.dsvCancellation && (
+          <p>
+            {t("dsv.cancellation.counting", {
+              date: formatDate(view.facts.dsvCancellation.validOn),
+            })}
+          </p>
+        )}
+        {offer && mayUpload && (
           <Button kind="tertiary" onClick={() => setTarget({ kind: "upload", offerId: offer.id })}>
-            {t("dsv.scans.upload")}
+            {t(cancellation ? "dsv.cancellation.upload" : "dsv.scans.upload")}
           </Button>
         )}
-        {!view.scans.length && <p>{t("dsv.scans.empty")}</p>}
-        {view.scans.map((scan) => (
+        {!list.length && <p>{t(cancellation ? "dsv.cancellation.empty" : "dsv.scans.empty")}</p>}
+        {list.map((scan) => (
           <Stack key={scan.document.id} gap={3}>
             <p>
               {t("dsv.scans.receivedOn")}
@@ -200,7 +240,7 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
               {(["review", "reject", "quarantine", "delete", "signed"] as const)
                 .filter((action) =>
                   action === "signed"
-                    ? view.capabilities.sign
+                    ? !cancellation && view.capabilities.sign
                     : action === "reject"
                       ? scan.document.capabilities.review
                       : scan.document.capabilities[action],
@@ -244,7 +284,11 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
       </Stack>
       <SidePanel
         open={target !== null}
-        title={t(`dsv.scans.${target?.kind ?? "upload"}`)}
+        title={
+          cancellation && (target?.kind ?? "upload") === "upload"
+            ? t("dsv.cancellation.upload")
+            : t(`dsv.scans.${target?.kind ?? "upload"}`)
+        }
         dirty={dirty}
         onClose={close}
         pendingNavigation={navigation}
@@ -280,7 +324,7 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
             )}
             {needsDates && (
               <>
-                <p>{t("dsv.scans.datesHint")}</p>
+                <p>{t(cancellation ? "dsv.cancellation.datesHint" : "dsv.scans.datesHint")}</p>
                 {kinds.map((k) => (
                   <DateField
                     key={k}

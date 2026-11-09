@@ -513,7 +513,7 @@ describe("staff (Q146)", () => {
       const list = await readJson(await staffRequest(user, "GET", path()), DocumentList);
       expect(list).toMatchObject({
         documents: [],
-        addableTypes: user === "backOffice" ? ["dsv_signed_scan"] : [],
+        addableTypes: user === "backOffice" ? ["dsv_signed_scan", "dsv_cancellation"] : [],
       });
       await expectProblem(await staffRequest(user, "POST", path(), upload(PDF)), 403, "forbidden");
       await expectProblem(

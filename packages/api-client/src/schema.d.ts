@@ -2488,6 +2488,210 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/withdrawal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Withdraw the participation (the PL; process-and-lifecycle.md, manual withdrawal): from imported, contacted, unreachable or informed, with a pre_tg reason, the effective date and the status version read; a signed DSV only on its counting cancellation, with the PL's confirmation, on or before the effective TG start. Returns the participation
+         * @description Refusals:
+         *     - `409 stale_status`: the participation changed since its status version was read.
+         *     - `422` at `/endReason`: `reason_wrong_phase` (not a pre_tg reason), `reason_not_storable` (special category).
+         *     - `422` at `/effectiveDate`: `effective_date_in_future`, `effective_date_before_cancellation` (a signed DSV).
+         *     - `422`: `withdrawal_after_dsv_signed` (a signed DSV without a counting cancellation valid today or without the confirmation), `after_planned_start` (the entry clarification applies), `tg_start_missing`, `dsv_cancellation_missing`, `no_edge` (a status that can't be withdrawn), `project_not_active`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WithdrawalRequest"];
+                };
+            };
+            responses: {
+                /** @description The withdrawn participation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationDetail"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/end-reason": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Correct the primary end reason (the PL; Q72) against the reason read, without reopening the terminal status; a system-derived reason moves to the secondary list, a PL's earlier reason only when confirmed. Returns the participation
+         * @description Refusals:
+         *     - `409 stale_value`: the recorded reason is not the one read.
+         *     - `422`: `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged`.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EndReasonCorrectionRequest"];
+                };
+            };
+            responses: {
+                /** @description The participation with its corrected reason */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParticipationDetail"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/placement-agentur": {
         parameters: {
             query?: never;
@@ -8897,7 +9101,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Review a DSV scan and confirm the external paper terms */
+        /** Review a DSV scan (confirming the external paper's terms) or a DSV cancellation (the three parties' signatures, catalog version 10) */
         post: {
             parameters: {
                 query?: never;
@@ -12762,6 +12966,246 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/dsv/cancellation-scans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload the cancellation of the signed contract (the PL or back office; process-and-lifecycle.md, the cancellation): against the signed offer, with the dates on the paper per signature, the receiver and the day received; nothing defaulted. Signed on paper; no e-signature
+         * @description Refusals:
+         *     - `404`: an offer of another participation.
+         *     - `409 source_changed`: the offer isn't the signed one.
+         *     - `422`: `cancellation_not_open` (not `informed` on a signed DSV), `signature_in_future`, `received_in_future`, `received_before_signature`, `receiver_required`, and the upload's own codes.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        offerId: string;
+                        signatures: {
+                            /**
+                             * Format: date
+                             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                             * @example 2027-03-01
+                             */
+                            participant?: string;
+                            /**
+                             * Format: date
+                             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                             * @example 2027-03-01
+                             */
+                            customer?: string;
+                            /**
+                             * Format: date
+                             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                             * @example 2027-03-01
+                             */
+                            transfergesellschaft?: string;
+                        };
+                        /** Format: uuid */
+                        receivedBy: string;
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        receivedOn: string;
+                        file: {
+                            /** @description The file, base64; decoded at most 10 MB */
+                            content: string;
+                            fileName: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Uploaded */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Document"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/dsv/customer-notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record "Kunde informiert am" for a cancellation-based withdrawal (the PL; Q46): once, not in the future, not before the withdrawal; audited dsv_customer_notified with the day. The customer's data whitelist is unchanged
+         * @description Refusals:
+         *     - `403`: anyone but the project's PL.
+         *     - `422` at `/notifiedOn`: `date_in_future`, `notice_before_withdrawal`.
+         *     - `422`: `notice_not_due` (no withdrawal on a signed DSV), `notice_recorded` (once).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvCustomerNoticeRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/dsv/signed": {
         parameters: {
             query?: never;
@@ -16174,6 +16618,16 @@ export interface components {
              * @example 2027-03-01
              */
             dsvFullyExecutedOn?: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            dsvCancellationValidOn?: string | null;
+            /** @enum {string|null} */
+            endReason?: "declined_profiling" | "declined_dsv" | "no_response" | "never_contacted" | "not_informed" | "placed_direct" | "self_employed" | "retirement" | "other_measure" | "deceased" | "other" | "placed_permanent" | "placed_fixed_term" | "apprenticeship_or_study" | "max_duration_reached" | "own_termination_without_job" | "terminated_by_tg" | "long_term_illness_reduced_earning_capacity" | null;
+            /** @enum {string|null} */
+            endReasonSource?: "user" | "system" | null;
             statusVersion: number;
             entryWave: {
                 /** Format: uuid */
@@ -16310,12 +16764,16 @@ export interface components {
                 viewProfiling: boolean;
                 viewAsu: boolean;
                 viewDsv: boolean;
+                withdraw: boolean;
+                correctEndReason: boolean;
             };
             refusals: {
                 /** @enum {string|null} */
                 assignEntryWave: "forbidden" | "not_ta_tg" | "status_not_open" | "dsv_already_offered" | "individual_dates_set" | "no_other_wave" | null;
                 /** @enum {string|null} */
                 setParticipationDates: "forbidden" | "not_ta_tg" | "wave_required" | "latest_entry_date_missing" | "participation_closed" | "dsv_offer_open" | null;
+                /** @enum {string|null} */
+                withdraw: "forbidden" | "project_not_active" | "status_not_withdrawable" | "dsv_cancellation_missing" | "after_planned_start" | "tg_start_missing" | null;
             };
         };
         PlacementAgenturChoice: {
@@ -16478,6 +16936,25 @@ export interface components {
                 retrievable: boolean;
             };
         };
+        WithdrawalRequest: {
+            /** @enum {string} */
+            endReason: "declined_profiling" | "declined_dsv" | "no_response" | "never_contacted" | "not_informed" | "placed_direct" | "self_employed" | "retirement" | "other_measure" | "deceased" | "other" | "placed_permanent" | "placed_fixed_term" | "apprenticeship_or_study" | "max_duration_reached" | "own_termination_without_job" | "terminated_by_tg" | "long_term_illness_reduced_earning_capacity";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            effectiveDate: string;
+            statusVersion: number;
+            confirmed?: boolean;
+        };
+        EndReasonCorrectionRequest: {
+            /** @enum {string} */
+            endReason: "declined_profiling" | "declined_dsv" | "no_response" | "never_contacted" | "not_informed" | "placed_direct" | "self_employed" | "retirement" | "other_measure" | "deceased" | "other" | "placed_permanent" | "placed_fixed_term" | "apprenticeship_or_study" | "max_duration_reached" | "own_termination_without_job" | "terminated_by_tg" | "long_term_illness_reduced_earning_capacity";
+            /** @enum {string} */
+            expected: "declined_profiling" | "declined_dsv" | "no_response" | "never_contacted" | "not_informed" | "placed_direct" | "self_employed" | "retirement" | "other_measure" | "deceased" | "other" | "placed_permanent" | "placed_fixed_term" | "apprenticeship_or_study" | "max_duration_reached" | "own_termination_without_job" | "terminated_by_tg" | "long_term_illness_reduced_earning_capacity";
+            previousStillApplies?: boolean;
+        };
         SetPlacementAgenturInput: {
             agenturKey: string;
         };
@@ -16528,7 +17005,7 @@ export interface components {
             deadlineState?: components["schemas"]["DeadlineState"];
             flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "dsv_signed_not_entered_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any" | "cutoff_case";
             /** @enum {string} */
-            caseItem?: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification";
+            caseItem?: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification" | "dsv_customer_notice";
             portal?: components["schemas"]["PortalReach"];
             appointment?: components["schemas"]["AppointmentFilter"];
             /** @enum {string} */
@@ -16612,7 +17089,7 @@ export interface components {
         };
         WorklistCaseItem: {
             /** @enum {string} */
-            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification";
+            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification" | "dsv_customer_notice";
             /**
              * Format: date
              * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
@@ -17130,7 +17607,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested" | "dsv_customer_notified";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -19389,6 +19866,56 @@ export interface components {
                 };
                 counting: boolean;
             }[];
+            cancellations: {
+                document: components["schemas"]["Document"];
+                metadata: {
+                    /** Format: uuid */
+                    offerId: string;
+                    signatures: {
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        participant?: string;
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        customer?: string;
+                        /**
+                         * Format: date
+                         * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                         * @example 2027-03-01
+                         */
+                        transfergesellschaft?: string;
+                    };
+                    /** Format: uuid */
+                    receivedBy: string;
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    receivedOn: string;
+                };
+                counting: boolean;
+            }[];
+            customerNotice: {
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                dueSince: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                notifiedOn: string | null;
+            } | null;
             receivers: {
                 /** Format: uuid */
                 id: string;
@@ -19486,6 +20013,19 @@ export interface components {
                      */
                     recordedAt: string;
                 } | null;
+                dsvCancellation: {
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    validOn: string;
+                    /**
+                     * Format: date-time
+                     * @description UTC timestamp (ISO 8601)
+                     */
+                    recordedAt: string;
+                } | null;
             };
             capabilities: {
                 generate: boolean;
@@ -19493,6 +20033,8 @@ export interface components {
                 uploadScan: boolean;
                 sign: boolean;
                 recordOriginal: boolean;
+                uploadCancellation: boolean;
+                recordCustomerNotice: boolean;
             };
         };
         DsvChecklistItem: {
@@ -19672,6 +20214,14 @@ export interface components {
         };
         DsvDeclineRequest: {
             statusVersion: number;
+        };
+        DsvCustomerNoticeRequest: {
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            notifiedOn: string;
         };
         DsvOriginalRequest: {
             /** @enum {string} */
