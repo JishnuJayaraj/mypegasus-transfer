@@ -242,7 +242,7 @@ export function DsvTab({ participationId }: { participationId: string }) {
           />
         </Stack>
       </Card>
-      {/* A signed DSV that has not entered after its planned start (D12): shown only then. */}
+      {/* A signed DSV that has not entered after its planned start: shown only then. */}
       {view.track === "dsv_signed" && <EntryClarification participationId={participationId} />}
       <DsvScans view={view} onOpen={open} />
       <DsvContract view={view} />
@@ -373,7 +373,13 @@ function GenerateCard(props: {
             name="dsv-deadline"
             orientation="vertical"
             valueSelected={choice ?? ""}
-            onChange={(value) => setChoice(value as Choice)}
+            onChange={(value) => {
+              // The date field starts blank on every choice: a date typed before can't linger
+              // unseen and be submitted.
+              setChoice(value as Choice);
+              setTyped("");
+              setShownInvalid(false);
+            }}
           >
             {[
               ...(waveOffered

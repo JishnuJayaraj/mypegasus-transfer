@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useApi } from "../api";
 
-// "DSV erzeugen" on the work list (process-and-lifecycle.md, the DSV: generation as built; D2): the
+// "DSV erzeugen" on the work list (process-and-lifecycle.md, the DSV: generation as built): the
 // PL or back office generates the DSV for 1–100 selected participations with one deadline, all or
 // nothing. The deadline is chosen first (the wave's signing deadline when every selected row is a
 // first offer of one wave, else a date entered; nothing preset). Each paper prints the values
@@ -143,7 +143,13 @@ export function BulkDsv({
             name="dsv-bulk-deadline"
             orientation="vertical"
             valueSelected={choice ?? ""}
-            onChange={(value) => setChoice(value as Choice)}
+            onChange={(value) => {
+              // The date field starts blank on every choice: a date typed before can't linger
+              // unseen and be submitted.
+              setChoice(value as Choice);
+              setTyped("");
+              setShownInvalid(false);
+            }}
           >
             {[
               ...(waveDeadline

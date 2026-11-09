@@ -366,7 +366,7 @@ const advisory = (client: Client) =>
     )
     .then((r) => r.rows.map((row) => row.mode as string));
 
-describe("a bulk generation (D2, D26)", () => {
+describe("a bulk generation (bulk generation)", () => {
   it("takes the project's exclusive lock and audits the batch size, one transaction for all", async () => {
     await pin("v1");
     const [a, b] = [await participation(), await participation()];

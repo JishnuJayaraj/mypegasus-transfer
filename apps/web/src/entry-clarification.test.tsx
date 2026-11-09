@@ -94,24 +94,22 @@ const dsv = {
   },
 };
 
-type Clarification = {
-  id: string;
-  openedOn: string;
-  pending: { code: string; source: string; recordedOn: string } | null;
-  escalatedOn: string | null;
-  instruction: { code: string; source: string; recordedOn: string } | null;
-};
-const state = (over: Partial<Clarification> | null, actions: object = {}, can = {}) => ({
+type Step = { kind: string; code: string; source: string; on: string };
+const stepOf = (kind: string, code: string, source: string, on = "2026-11-03"): Step => ({
+  kind,
+  code,
+  source,
+  on,
+});
+const noted = stepOf("recorded", "awaiting_asu_proof", "Akte 12, Vermerk vom 3.4.");
+const state = (
+  clarification: { stage: string; revision: number; steps: Step[]; openedOn?: string } | null,
+  actions: object = {},
+  can = {},
+) => ({
   participationId,
   statusVersion: 5,
-  clarification: over && {
-    id: clarificationId,
-    openedOn: "2026-11-02",
-    pending: null,
-    escalatedOn: null,
-    instruction: null,
-    ...over,
-  },
+  clarification: clarification && { id: clarificationId, openedOn: "2026-11-02", ...clarification },
   actions: {
     open: true,
     openedOn: "2026-11-02",
@@ -138,13 +136,7 @@ function setup(first: object, routes: Parameters<typeof mockApi>[0] = {}) {
     [`GET ${detailPath}/entry-clarification`]: () => json(current),
     [`POST ${detailPath}/entry-clarification`]: () => {
       current = state(
-        {
-          pending: {
-            code: "awaiting_asu_proof",
-            source: "Akte 12, Vermerk vom 3.4.",
-            recordedOn: "2026-11-03",
-          },
-        },
+        { stage: "documented", revision: 1, steps: [noted] },
         { escalate: true },
         { escalate: true },
       );
@@ -153,8 +145,12 @@ function setup(first: object, routes: Parameters<typeof mockApi>[0] = {}) {
     [`POST ${detailPath}/entry-clarification/escalation`]: () => {
       current = state(
         {
-          pending: { code: "awaiting_asu_proof", source: "Akte 12", recordedOn: "2026-11-03" },
-          escalatedOn: "2026-11-04",
+          stage: "escalated",
+          revision: 2,
+          steps: [
+            noted,
+            stepOf("escalated", "awaiting_asu_proof", "Akte 12, Vermerk vom 3.4.", "2026-11-04"),
+          ],
         },
         { recordPending: false, instruct: true },
       );
@@ -188,11 +184,18 @@ describe("Eintritt klären on the tab DSV", () => {
     await userEvent.type(panel.getByLabelText(/^Quelle/), "Akte 12, Vermerk vom 3.4.");
     await userEvent.click(save);
     expect(
-      await panel.findByText(/Nachweis der Arbeitsuchendmeldung steht aus – Quelle: Akte 12/),
+      (
+        await panel.findAllByText(/Nachweis der Arbeitsuchendmeldung steht aus – Quelle: Akte 12/)
+      )[0],
     ).toBeVisible();
     expect(calls).toContainEqual({
       key: `POST ${detailPath}/entry-clarification`,
-      body: { code: "awaiting_asu_proof", source: "Akte 12, Vermerk vom 3.4.", statusVersion: 5 },
+      body: {
+        code: "awaiting_asu_proof",
+        source: "Akte 12, Vermerk vom 3.4.",
+        statusVersion: 5,
+        revision: 0,
+      },
     });
     // The escalation is now possible, after the dialog's confirmation.
     await userEvent.click(
@@ -203,7 +206,7 @@ describe("Eintritt klären on the tab DSV", () => {
     await waitFor(() =>
       expect(calls).toContainEqual({
         key: `POST ${detailPath}/entry-clarification/escalation`,
-        body: { statusVersion: 5 },
+        body: { statusVersion: 5, revision: 1 },
       }),
     );
     expect(await panel.findByText(/Eskaliert am 04.11.2026/)).toBeVisible();
@@ -228,13 +231,13 @@ describe("Eintritt klären on the tab DSV", () => {
     setup(
       state(
         {
-          pending: { code: "awaiting_legal_advice", source: "Anfrage", recordedOn: "2026-11-03" },
-          escalatedOn: "2026-11-04",
-          instruction: {
-            code: "dpo_instruction",
-            source: "DSB-Vermerk 7",
-            recordedOn: "2026-11-05",
-          },
+          stage: "instructed",
+          revision: 3,
+          steps: [
+            stepOf("recorded", "awaiting_legal_advice", "Anfrage"),
+            stepOf("escalated", "awaiting_legal_advice", "Anfrage", "2026-11-04"),
+            stepOf("instructed", "dpo_instruction", "DSB-Vermerk 7", "2026-11-05"),
+          ],
         },
         { recordPending: false },
         { record: false },
@@ -242,12 +245,76 @@ describe("Eintritt klären on the tab DSV", () => {
     );
     const panel = await card();
     expect(
-      panel.getByText(/Weisung der Datenschutzbeauftragten – Quelle: DSB-Vermerk 7/),
+      panel.getByText(/Weisung der Datenschutzbeauftragten – Quelle: DSB-Vermerk 7 \(erfasst/),
     ).toBeVisible();
+    expect(panel.getByTestId("entry-clarification-history").children).toHaveLength(3);
     expect(panel.queryByRole("button", { name: "Erfassen" })).toBeNull();
     expect(
       panel.queryByRole("button", { name: "An die Regionale Betriebsleitung eskalieren" }),
     ).toBeNull();
+  });
+
+  it("shows the manager's request, takes the PL's reply as a new note and escalates again", async () => {
+    const returned = state(
+      {
+        stage: "returned",
+        revision: 3,
+        steps: [
+          noted,
+          stepOf("escalated", "awaiting_asu_proof", "Akte 12, Vermerk vom 3.4.", "2026-11-04"),
+          stepOf("requested", "date_unclear", "Datum der Unterschrift unklar", "2026-11-05"),
+        ],
+      },
+      { recordPending: true, escalate: false },
+    );
+    const { calls } = setup(returned);
+    const panel = await card();
+    expect(panel.getByText("Rückfrage der Regionalen Betriebsleitung")).toBeVisible();
+    expect(panel.getByText(/Datum unklar – Quelle: Datum der Unterschrift unklar/)).toBeVisible();
+    // The history keeps every step, the escalation of the old note included.
+    expect(panel.getByTestId("entry-clarification-history").children).toHaveLength(3);
+    // No escalation of the old note: the reply comes first.
+    expect(
+      panel.queryByRole("button", { name: "An die Regionale Betriebsleitung eskalieren" }),
+    ).toBeNull();
+    await userEvent.selectOptions(
+      panel.getByLabelText("Antwort: Was steht jetzt aus?"),
+      "Rechtsrat steht aus",
+    );
+    await userEvent.type(panel.getByLabelText(/^Quelle/), "Antwort der PL");
+    await userEvent.click(panel.getByRole("button", { name: "Antworten" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `POST ${detailPath}/entry-clarification`,
+        body: {
+          code: "awaiting_legal_advice",
+          source: "Antwort der PL",
+          statusVersion: 5,
+          revision: 3,
+        },
+      }),
+    );
+  });
+
+  it("keeps an unresolved case on the tab when the planned start moved on", async () => {
+    setup(
+      state(
+        {
+          stage: "escalated",
+          revision: 2,
+          openedOn: "2026-11-02",
+          steps: [
+            noted,
+            stepOf("escalated", "awaiting_asu_proof", "Akte 12, Vermerk vom 3.4.", "2026-11-04"),
+          ],
+        },
+        // The start lies ahead again: nothing is derived, the case is carried.
+        { recordPending: false, instruct: true, reconciliation: false },
+      ),
+    );
+    const panel = await card();
+    expect(panel.getByText(/offen seit 02.11.2026/)).toBeVisible();
+    expect(panel.getByText("Die Weisung der Regionalen Betriebsleitung steht aus.")).toBeVisible();
   });
 
   it("reloads the case on a stale status version", async () => {
@@ -263,7 +330,7 @@ describe("Eintritt klären on the tab DSV", () => {
     await userEvent.click(panel.getByRole("button", { name: "Erfassen" }));
     expect(
       await screen.findByText(
-        "Die Teilnahme hat sich inzwischen geändert. Der Fall wurde neu geladen.",
+        "Der Fall hat sich inzwischen geändert (eine andere Bearbeitung oder die Teilnahme). Er wurde neu geladen; bitte prüfen und erneut versuchen.",
       ),
     ).toBeVisible();
     await waitFor(() =>
@@ -289,10 +356,13 @@ const item = (over: object = {}) => ({
   tgStart: "2026-11-01",
   openedOn: "2026-11-02",
   escalatedOn: "2026-11-04",
-  pendingCode: "awaiting_asu_proof",
-  pendingSource: "Akte 12, Vermerk vom 3.4.",
+  revision: 2,
+  steps: [
+    noted,
+    stepOf("escalated", "awaiting_asu_proof", "Akte 12, Vermerk vom 3.4.", "2026-11-04"),
+  ],
   statusVersion: 5,
-  capabilities: { instruct: true },
+  capabilities: { answer: true },
   ...over,
 });
 
@@ -320,7 +390,9 @@ describe("the escalated clarifications in Freigaben", () => {
     });
     const table = await screen.findByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
     expect(table).toHaveTextContent("Restrukturierung Werk Nord");
-    expect(table).toHaveTextContent("Nachweis der Arbeitsuchendmeldung steht aus");
+    // The steps so far, with their sources.
+    expect(table).toHaveTextContent("Dokumentiert – Nachweis der Arbeitsuchendmeldung steht aus");
+    expect(table).toHaveTextContent("Eskaliert – Nachweis der Arbeitsuchendmeldung steht aus");
     expect(table).toHaveTextContent("Akte 12, Vermerk vom 3.4.");
     expect(table).not.toHaveTextContent("Beispiel");
     await userEvent.click(within(table).getByRole("button", { name: /Weisung erfassen/ }));
@@ -337,24 +409,59 @@ describe("the escalated clarifications in Freigaben", () => {
           code: "legal_advice_obtained",
           source: "Rechtsrat Kanzlei, Az. 77",
           statusVersion: 5,
+          revision: 2,
         },
       }),
     );
     expect(await screen.findByText("Die Weisung wurde erfasst.")).toBeVisible();
   });
 
+  it("asks the PL again in its own dialog with a request code, against the revision shown", async () => {
+    const { calls } = reviews([item()], {
+      [`POST /api/v1/entry-clarifications/${clarificationId}/request`]: () =>
+        new Response(null, { status: 204 }),
+    });
+    const table = await screen.findByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
+    await userEvent.click(within(table).getByRole("button", { name: /Rückfrage an die PL/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Rückfrage an die Projektleitung" });
+    // Its own codes, never the instruction's.
+    expect(within(dialog).queryByRole("option", { name: "Rechtsrat liegt vor" })).toBeNull();
+    await userEvent.selectOptions(
+      within(dialog).getByLabelText("Grund der Rückfrage"),
+      "Datum unklar",
+    );
+    await userEvent.type(within(dialog).getByLabelText(/^Quelle/), "Datum fehlt im Scan");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Erfassen" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `POST /api/v1/entry-clarifications/${clarificationId}/request`,
+        body: {
+          code: "date_unclear",
+          source: "Datum fehlt im Scan",
+          statusVersion: 5,
+          revision: 2,
+        },
+      }),
+    );
+    expect(
+      await screen.findByText(
+        "Die Rückfrage wurde erfasst; der Fall liegt wieder bei der Projektleitung.",
+      ),
+    ).toBeVisible();
+  });
+
   it("offers the person who escalated no instruction", async () => {
-    reviews([item({ capabilities: { instruct: false } })]);
+    reviews([item({ capabilities: { answer: false } })]);
     const table = await screen.findByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
     expect(within(table).queryByRole("button", { name: /Weisung erfassen/ })).toBeNull();
     expect(table).toHaveTextContent("Von Ihnen eskaliert");
   });
 
-  it("says when a case is gone, and when the version moved", async () => {
+  it("says when the case moved since it was shown (another answer or tab)", async () => {
     reviews([item()], {
       [`POST /api/v1/entry-clarifications/${clarificationId}/instruction`]: () =>
         problem(409, "conflict", {
-          errors: [{ pointer: "/statusVersion", code: "stale_status_version", detail: "x" }],
+          errors: [{ pointer: "/revision", code: "stale_clarification", detail: "x" }],
         }),
     });
     const table = await screen.findByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
@@ -368,7 +475,7 @@ describe("the escalated clarifications in Freigaben", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "Erfassen" }));
     expect(
       await screen.findByText(
-        "Die Teilnahme hat sich inzwischen geändert. Die Liste wurde neu geladen.",
+        "Der Fall hat sich inzwischen geändert. Die Liste wurde neu geladen.",
       ),
     ).toBeVisible();
   });

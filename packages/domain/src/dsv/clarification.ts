@@ -12,7 +12,7 @@ import type { ProjectType } from "../project";
 // No edge exists for a cancellation or termination after the planned start; nothing is invented
 // for the legal outcomes (Q220). No I/O, no system time.
 
-/** What the PL documents as pending (D12). */
+/** What the PL documents as pending. */
 export const EntryPendingCode = z
   .enum([
     "awaiting_countersignature",
@@ -23,7 +23,7 @@ export const EntryPendingCode = z
   .meta({ id: "EntryPendingCode" });
 export type EntryPendingCode = z.infer<typeof EntryPendingCode>;
 
-/** What the region's manager instructs after an escalation (D12). */
+/** What the region's manager instructs after an escalation. */
 export const EntryInstructionCode = z
   .enum([
     "legal_advice_obtained",
@@ -34,20 +34,33 @@ export const EntryInstructionCode = z
   .meta({ id: "EntryInstructionCode" });
 export type EntryInstructionCode = z.infer<typeof EntryInstructionCode>;
 
+/** Why the manager asks the PL again instead of instructing. */
+export const EntryRequestCode = z
+  .enum(["evidence_unclear", "date_unclear", "other_documented"])
+  .meta({ id: "EntryRequestCode" });
+export type EntryRequestCode = z.infer<typeof EntryRequestCode>;
+
 const statusVersion = z.number().int().nonnegative();
+/**
+ * The clarification's own revision the caller read: 0 while nothing is recorded, then the number of
+ * steps. Every write compares it under the lock (`409 stale_clarification`), so two tabs never
+ * overwrite each other's note and an escalation names exactly the note its PL saw.
+ */
+const revision = z.number().int().nonnegative();
 
 /**
  * `POST /participations/{id}/entry-clarification`: the PL's pending code with its documented
- * source (one line, Q209's rules), against the status version read (`409 stale_status_version`).
+ * source (one line, Q209's rules), against the status version and the clarification's revision
+ * read. After the manager's request this is the PL's reply.
  */
 export const EntryClarificationPendingRequest = z
-  .strictObject({ code: EntryPendingCode, source: CorrectionSource, statusVersion })
+  .strictObject({ code: EntryPendingCode, source: CorrectionSource, statusVersion, revision })
   .meta({ id: "EntryClarificationPendingRequest" });
 export type EntryClarificationPendingRequest = z.infer<typeof EntryClarificationPendingRequest>;
 
-/** `POST /participations/{id}/entry-clarification/escalation`. */
+/** `POST /participations/{id}/entry-clarification/escalation`: names the revision confirmed. */
 export const EntryClarificationEscalationRequest = z
-  .strictObject({ statusVersion })
+  .strictObject({ statusVersion, revision })
   .meta({ id: "EntryClarificationEscalationRequest" });
 export type EntryClarificationEscalationRequest = z.infer<
   typeof EntryClarificationEscalationRequest
@@ -55,17 +68,34 @@ export type EntryClarificationEscalationRequest = z.infer<
 
 /** `POST /entry-clarifications/{id}/instruction`: the region's manager. */
 export const EntryClarificationInstructionRequest = z
-  .strictObject({ code: EntryInstructionCode, source: CorrectionSource, statusVersion })
+  .strictObject({ code: EntryInstructionCode, source: CorrectionSource, statusVersion, revision })
   .meta({ id: "EntryClarificationInstructionRequest" });
 export type EntryClarificationInstructionRequest = z.infer<
   typeof EntryClarificationInstructionRequest
 >;
 
-/** What the recorded clarification has so far (the row's state, no values). */
+/** `POST /entry-clarifications/{id}/request`: the manager asks the PL again; no status changes. */
+export const EntryClarificationRequestRequest = z
+  .strictObject({ code: EntryRequestCode, source: CorrectionSource, statusVersion, revision })
+  .meta({ id: "EntryClarificationRequestRequest" });
+export type EntryClarificationRequestRequest = z.infer<typeof EntryClarificationRequestRequest>;
+
+/**
+ * Where a recorded clarification stands: `documented` (the PL's note, which they may replace),
+ * `escalated` (with the manager), `returned` (the manager asked the PL again; the PL replies by
+ * recording again, then escalates again) and `instructed` (the manager's word; nothing follows on
+ * the row).
+ */
+export const EntryClarificationStage = z
+  .enum(["documented", "escalated", "returned", "instructed"])
+  .meta({ id: "EntryClarificationStage" });
+export type EntryClarificationStage = z.infer<typeof EntryClarificationStage>;
+
+/** What the recorded clarification has so far (the row's stage, no values). */
 export type EntryClarificationRecord = {
-  pending: boolean;
-  escalated: boolean;
-  instructed: boolean;
+  stage: EntryClarificationStage;
+  /** The day after the planned start the case opened for. */
+  openedOn: IsoDate;
 };
 
 export type EntryClarificationInput = {
@@ -80,6 +110,7 @@ export type EntryClarificationInput = {
   /** Whether today's entry run completed (a new start is then tomorrow at the earliest). */
   entryRunCompletedToday: boolean;
   facts: GuardFacts;
+  /** The unresolved case of the participation, or its latest, whatever its planned start was. */
   clarification: EntryClarificationRecord | null;
 };
 
@@ -112,28 +143,32 @@ function heldOnTgStart(facts: GuardFacts, tgStart: IsoDate): boolean {
 export type EntryClarificationActions = {
   open: boolean;
   openedOn: IsoDate | null;
-  /** The reconciliation (D15) is possible: every fact held on the TG start. */
+  /** The reconciliation is possible: every fact held on the TG start. */
   reconciliation: boolean;
   /** A new start date with its amendment: the latest entry date still allows one. */
   newStartDate: boolean;
-  /** The PL documents what is pending: until the case is escalated. */
+  /** The PL documents or replies: until the case is escalated, and after the manager's request. */
   recordPending: boolean;
-  /** The PL escalates a documented case, once. */
+  /** The PL escalates a documented case. */
   escalate: boolean;
-  /** The region's manager records the instruction, once, after the escalation. */
+  /** The region's manager instructs or asks the PL again, while the case is with them. */
   instruct: boolean;
 };
 
 /**
- * Which legitimate path is open now (D12): each only when its guard passes. The amendment and
- * the dates rules of a new start are checked by the dates operation itself; here only the latest
- * entry date and today's run bound it. The recorded case stays open after an instruction.
+ * Which legitimate path is open now: each only when its guard passes. The amendment and the dates
+ * rules of a new start are checked by the dates operation itself; here only the latest entry date
+ * and today's run bound it. A case is open from the day after the planned start and stays open
+ * until the participation leaves `informed`; an unresolved case also stays open, and actionable,
+ * when the planned start moved on. The recorded case stays open after an instruction.
  */
 export function entryClarificationActions(
   input: EntryClarificationInput,
 ): EntryClarificationActions {
-  const openedOn = entryClarificationOpenedOn(input);
-  if (openedOn === null || input.tgStart === null) {
+  const { clarification: row, tgStart, latestEntryDate, today } = input;
+  const derived = entryClarificationOpenedOn(input);
+  const carried = row !== null && row.stage !== "instructed" && input.status === "informed";
+  if (derived === null && !carried) {
     return {
       open: false,
       openedOn: null,
@@ -144,31 +179,38 @@ export function entryClarificationActions(
       instruct: false,
     };
   }
-  const { clarification: row, latestEntryDate, today } = input;
   const earliest = input.entryRunCompletedToday ? addDays(today, 1) : today;
   return {
     open: true,
-    openedOn,
-    reconciliation: heldOnTgStart(input.facts, input.tgStart),
+    openedOn: carried ? row.openedOn : derived,
+    reconciliation: derived !== null && tgStart !== null && heldOnTgStart(input.facts, tgStart),
     newStartDate: latestEntryDate !== null && earliest <= latestEntryDate,
-    recordPending: !row?.escalated,
-    escalate: row?.pending === true && !row.escalated,
-    instruct: row?.escalated === true && !row.instructed,
+    recordPending: row === null || row.stage === "documented" || row.stage === "returned",
+    escalate: row?.stage === "documented",
+    instruct: row?.stage === "escalated",
   };
 }
 
-/** A recorded clarification as the PL and the manager read it (the source is `case_internal`). */
+/** One step of a clarification, in order: what was recorded, by which code, on which Berlin day. */
+export const EntryClarificationStep = z
+  .strictObject({
+    kind: z.enum(["recorded", "escalated", "requested", "instructed"]),
+    code: z.union([EntryPendingCode, EntryRequestCode, EntryInstructionCode]),
+    /** The documented source line (`case_internal`). */
+    source: z.string(),
+    on: isoDate,
+  })
+  .meta({ id: "EntryClarificationStep" });
+export type EntryClarificationStep = z.infer<typeof EntryClarificationStep>;
+
+/** A recorded clarification as the PL and the manager read it: every step is kept. */
 export const EntryClarificationView = z
   .strictObject({
     id: z.uuid(),
     openedOn: isoDate,
-    pending: z
-      .strictObject({ code: EntryPendingCode, source: z.string(), recordedOn: isoDate })
-      .nullable(),
-    escalatedOn: isoDate.nullable(),
-    instruction: z
-      .strictObject({ code: EntryInstructionCode, source: z.string(), recordedOn: isoDate })
-      .nullable(),
+    stage: EntryClarificationStage,
+    revision,
+    steps: z.array(EntryClarificationStep),
   })
   .meta({ id: "EntryClarificationView" });
 export type EntryClarificationView = z.infer<typeof EntryClarificationView>;
@@ -178,7 +220,10 @@ export const EntryClarificationState = z
   .strictObject({
     participationId: z.uuid(),
     statusVersion,
-    /** Null until the PL documents something; the case item exists without it. */
+    /**
+     * Null until the PL documents something (the case item exists without it); else the unresolved
+     * case, or the latest, whatever planned start it opened for.
+     */
     clarification: EntryClarificationView.nullable(),
     actions: z.strictObject({
       open: z.boolean(),
@@ -196,23 +241,24 @@ export const EntryClarificationState = z
 export type EntryClarificationState = z.infer<typeof EntryClarificationState>;
 
 /**
- * An escalated clarification in "Freigaben": the project, the dates and the code; no name and no
- * participation id (the instruction names the clarification).
+ * An escalated clarification in "Freigaben": the project, the dates, the steps so far and the
+ * revision to answer; no name and no participation id (the answer names the clarification).
  */
 export const EntryClarificationReviewItem = z
   .strictObject({
     id: z.uuid(),
     projectId: z.uuid(),
     projectName: z.string(),
+    /** The planned start the case opened for. */
     tgStart: isoDate,
     openedOn: isoDate,
     escalatedOn: isoDate,
-    pendingCode: EntryPendingCode,
-    /** The PL's documented source line (`case_internal`), shown to the manager only. */
-    pendingSource: z.string(),
-    /** The participation's status version the instruction is recorded against. */
+    revision,
+    steps: z.array(EntryClarificationStep),
+    /** The participation's status version the answer is recorded against. */
     statusVersion,
-    capabilities: z.strictObject({ instruct: z.boolean() }),
+    /** Never the person who escalated; the same for an instruction and for a request. */
+    capabilities: z.strictObject({ answer: z.boolean() }),
   })
   .meta({ id: "EntryClarificationReviewItem" });
 export type EntryClarificationReviewItem = z.infer<typeof EntryClarificationReviewItem>;

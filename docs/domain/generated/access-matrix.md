@@ -945,6 +945,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `entry_clarification_recorded` | `case` | no | no | `pendingCode` |
 | `entry_clarification_escalated` | `case` | no | no | `pendingCode` |
 | `entry_clarification_instructed` | `case` | no | no | `instructionCode` |
+| `entry_clarification_requested` | `case` | no | no | `requestCode` |
 
 ## Aggregates
 

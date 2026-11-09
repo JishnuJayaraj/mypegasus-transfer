@@ -13384,11 +13384,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record the instruction of an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a code with a documented source, once, against the status version "Freigaben" showed. The case stays open: the instruction changes no status
+         * Record the instruction of an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a code with a documented source, once, against the status version and the revision "Freigaben" showed. Answerable while the participation is informed, whatever its planned start became; the case stays open: the instruction changes no status
          * @description Refusals:
-         *     - `404` for a clarification outside the viewer's regions; `403` for any other role, and for the person who escalated.
-         *     - `409 stale_status_version` at `/statusVersion`.
-         *     - `422`: `clarification_not_open`, `not_escalated`, `already_instructed`.
+         *     - `404` for a clarification the viewer can't see (outside their regions, or unknown); `403` for a visible one the viewer may not answer: any other role, and the person who escalated.
+         *     - `409` at `/statusVersion` (`stale_status_version`) or `/revision` (`stale_clarification`): read "Freigaben" again.
+         *     - `422`: `clarification_not_open` (the participation left informed), `not_escalated`, `already_instructed`.
          */
         post: {
             parameters: {
@@ -13402,6 +13402,106 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["EntryClarificationInstructionRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entry-clarifications/{clarificationId}/request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the PL again about an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a request code with a documented source. The case returns to the PL, who replies by documenting again and escalates again; every step is kept and no status changes
+         * @description Refusals:
+         *     - `404` for a clarification the viewer can't see (outside their regions, or unknown); `403` for a visible one the viewer may not answer: any other role, and the person who escalated.
+         *     - `409` at `/statusVersion` (`stale_status_version`) or `/revision` (`stale_clarification`): read "Freigaben" again.
+         *     - `422`: `clarification_not_open` (the participation left informed), `not_escalated`, `already_instructed`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    clarificationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EntryClarificationRequestRequest"];
                 };
             };
             responses: {
@@ -17030,7 +17130,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed" | "entry_clarification_requested";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -19643,49 +19743,51 @@ export interface components {
              * @example 2027-03-01
              */
             openedOn: string;
-            pending: {
-                code: components["schemas"]["EntryPendingCode"];
-                source: string;
-                /**
-                 * Format: date
-                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-                 * @example 2027-03-01
-                 */
-                recordedOn: string;
-            } | null;
+            stage: components["schemas"]["EntryClarificationStage"];
+            revision: number;
+            steps: components["schemas"]["EntryClarificationStep"][];
+        } | null;
+        /** @enum {string} */
+        EntryClarificationStage: "documented" | "escalated" | "returned" | "instructed";
+        EntryClarificationStep: {
+            /** @enum {string} */
+            kind: "recorded" | "escalated" | "requested" | "instructed";
+            code: components["schemas"]["EntryPendingCode"] | components["schemas"]["EntryRequestCode"] | components["schemas"]["EntryInstructionCode"];
+            source: string;
             /**
              * Format: date
              * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
              * @example 2027-03-01
              */
-            escalatedOn: string | null;
-            instruction: {
-                code: components["schemas"]["EntryInstructionCode"];
-                source: string;
-                /**
-                 * Format: date
-                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
-                 * @example 2027-03-01
-                 */
-                recordedOn: string;
-            } | null;
-        } | null;
+            on: string;
+        };
         /** @enum {string} */
         EntryPendingCode: "awaiting_countersignature" | "awaiting_asu_proof" | "awaiting_profiling" | "awaiting_legal_advice";
+        /** @enum {string} */
+        EntryRequestCode: "evidence_unclear" | "date_unclear" | "other_documented";
         /** @enum {string} */
         EntryInstructionCode: "legal_advice_obtained" | "dpo_instruction" | "authority_or_court_decision" | "parties_agreement";
         EntryClarificationPendingRequest: {
             code: components["schemas"]["EntryPendingCode"];
             source: string;
             statusVersion: number;
+            revision: number;
         };
         EntryClarificationEscalationRequest: {
             statusVersion: number;
+            revision: number;
         };
         EntryClarificationInstructionRequest: {
             code: components["schemas"]["EntryInstructionCode"];
             source: string;
             statusVersion: number;
+            revision: number;
+        };
+        EntryClarificationRequestRequest: {
+            code: components["schemas"]["EntryRequestCode"];
+            source: string;
+            statusVersion: number;
+            revision: number;
         };
         ExportLink: {
             url: string;
@@ -20052,11 +20154,11 @@ export interface components {
              * @example 2027-03-01
              */
             escalatedOn: string;
-            pendingCode: components["schemas"]["EntryPendingCode"];
-            pendingSource: string;
+            revision: number;
+            steps: components["schemas"]["EntryClarificationStep"][];
             statusVersion: number;
             capabilities: {
-                instruct: boolean;
+                answer: boolean;
             };
         };
         EvidenceCorrectionRequested: {

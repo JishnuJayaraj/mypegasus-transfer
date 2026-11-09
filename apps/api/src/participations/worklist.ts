@@ -315,7 +315,7 @@ export async function loadWorklist(
 type DsvListFacts = { signedOn: string | null; fullyExecuted: boolean };
 
 /**
- * The signed DSV's work list facts (D2): the participant's signature day (the contract's, set once
+ * The signed DSV's work list facts: the participant's signature day (the contract's, set once
  * at signing, else the counting scan's) and whether a counting complete packet exists now. Read in
  * the work list's snapshot, so the item, the filter and the tile count the same participations.
  */

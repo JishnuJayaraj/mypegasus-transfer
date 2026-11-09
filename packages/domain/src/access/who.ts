@@ -39,6 +39,7 @@ function sampleOperation(kind: OperationKind, correction: EvidenceCorrectionTarg
     case "approveEvidenceCorrection":
     case "decideRelaxation":
     case "recordClarificationInstruction":
+    case "requestEntryClarificationReply":
       return { kind, requestedBy: "staff-other" };
     case "reviewReconciliation":
     case "reviewBreakGlass":

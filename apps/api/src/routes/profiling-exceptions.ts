@@ -336,7 +336,7 @@ export function profilingExceptionRoutes(deps: Deps) {
         {
           items: await reviewItemsOf(db, subject),
           corrections: await correctionReviewItemsOf(db, subject),
-          clarifications: await clarificationReviewItemsOf(db, subject, clock.today()),
+          clarifications: await clarificationReviewItemsOf(db, subject),
         },
         200,
       ) as never;

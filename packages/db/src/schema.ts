@@ -3536,6 +3536,10 @@ export const entryClarification = pgTable(
       .notNull()
       .references(() => participation.id),
     openedOn: dateColumn("opened_on").notNull(),
+    /** `documented`, `escalated`, `returned` (the manager asked the PL again) or `instructed`. */
+    stage: text("stage").notNull().default("documented"),
+    /** The number of steps; every write compares the one the caller read under the lock. */
+    revision: integer("revision").notNull().default(0),
     pendingCode: text("pending_code"),
     pendingSource: text("pending_source"),
     pendingRecordedAt: instant("pending_recorded_at"),
@@ -3560,20 +3564,64 @@ export const entryClarification = pgTable(
       sql`(${t.pendingCode} is null or ${t.pendingCode} in ('awaiting_countersignature', 'awaiting_asu_proof', 'awaiting_profiling', 'awaiting_legal_advice'))
         and (${t.instructionCode} is null or ${t.instructionCode} in ('legal_advice_obtained', 'dpo_instruction', 'authority_or_court_decision', 'parties_agreement'))`,
     ),
-    // Each step needs the one before, and a documented source goes with its code.
+    // Each stage holds what it needs: a note before an escalation, an escalation before an
+    // instruction; a documented source goes with its code.
     check(
       "entry_clarification_steps",
       sql`((${t.pendingCode} is null) = (${t.pendingSource} is null))
         and ((${t.instructionCode} is null) = (${t.instructionSource} is null))
-        and (${t.escalatedAt} is null or ${t.pendingCode} is not null)
-        and (${t.instructionCode} is null or ${t.escalatedAt} is not null)
         and ((${t.instructionCode} is null) = (${t.instructionAt} is null))
         and ((${t.instructionCode} is null) = (${t.instructionBy} is null))
-        and ((${t.escalatedAt} is null) = (${t.escalatedBy} is null))`,
+        and ((${t.escalatedAt} is null) = (${t.escalatedBy} is null))
+        and ${t.stage} in ('documented', 'escalated', 'returned', 'instructed')
+        and (${t.stage} <> 'documented' or (${t.pendingCode} is not null and ${t.escalatedAt} is null and ${t.instructionCode} is null))
+        and (${t.stage} <> 'returned' or (${t.pendingCode} is not null and ${t.escalatedAt} is null and ${t.instructionCode} is null))
+        and (${t.stage} <> 'escalated' or (${t.pendingCode} is not null and ${t.escalatedAt} is not null and ${t.instructionCode} is null))
+        and (${t.stage} <> 'instructed' or (${t.escalatedAt} is not null and ${t.instructionCode} is not null))`,
     ),
+    // At most one unresolved case per participation, however its planned start moved.
+    uniqueIndex("entry_clarification_one_unresolved")
+      .on(t.participationId)
+      .where(sql`${t.stage} <> 'instructed'`),
     check(
       "entry_clarification_sources",
       sql`char_length(coalesce(${t.pendingSource}, '')) <= 200 and char_length(coalesce(${t.instructionSource}, '')) <= 200`,
+    ),
+  ],
+);
+
+/**
+ * Every step of an entry clarification, in order (the PL's notes and replies, the escalations, the
+ * manager's requests and instructions): the history the row's current columns summarise. Written
+ * only by the clarification's functions, with the same documented sources (`case_internal`).
+ */
+export const entryClarificationStep = pgTable(
+  "entry_clarification_step",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    clarificationId: uuid("clarification_id")
+      .notNull()
+      .references(() => entryClarification.id),
+    seq: integer("seq").notNull(),
+    kind: text("kind").notNull(),
+    code: text("code").notNull(),
+    source: text("source").notNull(),
+    by: uuid("by")
+      .notNull()
+      .references(() => staffUser.id),
+    at: instant("at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("entry_clarification_step_seq").on(t.clarificationId, t.seq),
+    check(
+      "entry_clarification_step_kind",
+      sql`${t.kind} in ('recorded', 'escalated', 'requested', 'instructed') and ${t.seq} >= 1 and char_length(${t.source}) between 1 and 200`,
     ),
   ],
 );
@@ -3621,6 +3669,7 @@ export const tables = [
   dsvScanSignature,
   dsvContract,
   entryClarification,
+  entryClarificationStep,
   signedDeclaration,
   asuRecord,
   asuRegistration,

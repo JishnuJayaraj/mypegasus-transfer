@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AsuProofKind, AttestationSource } from "../asu/model";
 import { DocumentType } from "../documents/catalog";
-import { EntryInstructionCode, EntryPendingCode } from "../dsv/clarification";
+import { EntryInstructionCode, EntryPendingCode, EntryRequestCode } from "../dsv/clarification";
 import { DsvTemplateVersion } from "../dsv/generation";
 import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
@@ -247,6 +247,7 @@ export const AuditEventType = z.enum([
   "entry_clarification_recorded",
   "entry_clarification_escalated",
   "entry_clarification_instructed",
+  "entry_clarification_requested",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -373,6 +374,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "entry_clarification_recorded",
   "entry_clarification_escalated",
   "entry_clarification_instructed",
+  "entry_clarification_requested",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1617,6 +1619,12 @@ export const AuditEvent = z.discriminatedUnion("type", [
       clarificationId: z.uuid(),
       instructionCode: EntryInstructionCode,
     }),
+  }),
+  /** The manager asked the PL again: the request code only, never the source. */
+  event("entry_clarification_requested", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ clarificationId: z.uuid(), requestCode: EntryRequestCode }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

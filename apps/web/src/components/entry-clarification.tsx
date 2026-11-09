@@ -23,15 +23,21 @@ import { entryClarificationQuery, useApi } from "../api";
 
 // "Eintritt klären" on the tab "DSV" (process-and-lifecycle.md, the entry clarification; Q214, Q220
 // open): a signed DSV that has not entered after its planned TG start. The PL documents what is
-// pending (a code and one source line), escalates to the regional operations manager, and sees the
-// legitimate paths whose guards pass now. It changes no status; the case closes when the
-// participation leaves `informed`. Every button by its capability; the API checks each again.
-// German only.
+// pending (a code and one source line), escalates the note they saw to the regional operations
+// manager, replies when the manager asks again, and sees the legitimate paths whose guards pass
+// now. It changes no status; the case stays until the participation leaves `informed`, also when
+// the planned start moved on. Every write names the revision read; every step is listed. Every
+// button by its capability; the API checks each again. German only.
 
 type State = components["schemas"]["EntryClarificationState"];
+type Step = NonNullable<State["clarification"]>["steps"][number];
 
 const codeOf = (error: unknown) =>
   error instanceof ApiProblemError ? error.problem.errors?.[0]?.code : undefined;
+
+/** The latest step of a kind, or undefined. */
+const latest = (steps: readonly Step[], kind: Step["kind"]) =>
+  steps.findLast((step) => step.kind === kind);
 
 export function EntryClarification({ participationId }: { participationId: string }) {
   const { t } = useTranslation();
@@ -66,6 +72,7 @@ export function EntryClarification({ participationId }: { participationId: strin
   const write = useMutation({
     mutationFn: async (action: "record" | "escalate") => {
       const state = query.data!;
+      const revision = state.clarification?.revision ?? 0;
       if (action === "record") {
         const { error } = await api.POST(
           "/api/v1/participations/{participationId}/entry-clarification",
@@ -75,6 +82,7 @@ export function EntryClarification({ participationId }: { participationId: strin
               code: code as components["schemas"]["EntryPendingCode"],
               source,
               statusVersion: state.statusVersion,
+              revision,
             },
           },
         );
@@ -85,7 +93,7 @@ export function EntryClarification({ participationId }: { participationId: strin
         "/api/v1/participations/{participationId}/entry-clarification/escalation",
         {
           params: { path: { participationId } },
-          body: { statusVersion: state.statusVersion },
+          body: { statusVersion: state.statusVersion, revision },
         },
       );
       if (error) throw error;
@@ -118,9 +126,16 @@ export function EntryClarification({ participationId }: { participationId: strin
   if (query.isError) return <p role="alert">{t("entryClarification.failed")}</p>;
   const state: State = query.data;
   const { actions, clarification } = state;
-  // The case exists only from the day after the planned start, until the participation enters.
+  // The case exists from the day after the planned start, until the participation enters; an
+  // unresolved one stays when the start moved on.
   if (!actions.open) return null;
 
+  const steps = clarification?.steps ?? [];
+  const note = latest(steps, "recorded");
+  const request = latest(steps, "requested");
+  const escalation = latest(steps, "escalated");
+  const instruction = latest(steps, "instructed");
+  const stage = clarification?.stage;
   const normalised = normaliseCorrectionSource(source);
   const sourceValid = normalised !== null && normalised.length <= correctionSourceMaxLength;
   const recordReason =
@@ -129,9 +144,8 @@ export function EntryClarification({ participationId }: { participationId: strin
       : !sourceValid
         ? t("entryClarification.pending.enterSource")
         : null;
-  const pendingLabel = (value: string) => t(`entryClarification.pendingCodes.${value}` as never);
-  const instructionLabel = (value: string) =>
-    t(`entryClarification.instructionCodes.${value}` as never);
+  const label = (prefix: string, value: string) =>
+    t(`entryClarification.${prefix}.${value}` as never);
   const noPath = !actions.reconciliation && !actions.newStartDate;
 
   return (
@@ -147,6 +161,20 @@ export function EntryClarification({ participationId }: { participationId: strin
             lowContrast
           />
         )}
+        {stage === "returned" && request && (
+          <InlineNotification
+            kind="warning"
+            role="status"
+            hideCloseButton
+            lowContrast
+            title={t("entryClarification.returned.title")}
+            subtitle={t("entryClarification.returned.body", {
+              code: label("requestCodes", request.code),
+              source: request.source,
+              date: formatDate(request.on),
+            })}
+          />
+        )}
         <section aria-labelledby="entry-paths">
           <h4 id="entry-paths">{t("entryClarification.paths.title")}</h4>
           <ul className="tp-list">
@@ -159,11 +187,11 @@ export function EntryClarification({ participationId }: { participationId: strin
           <h4 id="entry-pending">{t("entryClarification.pending.title")}</h4>
           <Stack gap={4}>
             <p>
-              {clarification?.pending
+              {note
                 ? t("entryClarification.pending.recorded", {
-                    code: pendingLabel(clarification.pending.code),
-                    source: clarification.pending.source,
-                    date: formatDate(clarification.pending.recordedOn),
+                    code: label("pendingCodes", note.code),
+                    source: note.source,
+                    date: formatDate(note.on),
                   })
                 : t("entryClarification.pending.none")}
             </p>
@@ -171,13 +199,17 @@ export function EntryClarification({ participationId }: { participationId: strin
               <>
                 <Select
                   id="entry-pending-code"
-                  labelText={t("entryClarification.pending.code")}
+                  labelText={t(
+                    stage === "returned"
+                      ? "entryClarification.pending.replyCode"
+                      : "entryClarification.pending.code",
+                  )}
                   value={code}
                   onChange={(event) => setCode(event.target.value)}
                 >
                   <SelectItem value="" text="" />
                   {EntryPendingCode.options.map((option) => (
-                    <SelectItem key={option} value={option} text={pendingLabel(option)} />
+                    <SelectItem key={option} value={option} text={label("pendingCodes", option)} />
                   ))}
                 </Select>
                 <TextInput
@@ -202,7 +234,11 @@ export function EntryClarification({ participationId }: { participationId: strin
                       else write.mutate("record");
                     }}
                   >
-                    {t("entryClarification.pending.save")}
+                    {t(
+                      stage === "returned"
+                        ? "entryClarification.pending.reply"
+                        : "entryClarification.pending.save",
+                    )}
                   </ActionButton>
                 </div>
               </>
@@ -213,9 +249,9 @@ export function EntryClarification({ participationId }: { participationId: strin
           <h4 id="entry-escalation">{t("entryClarification.escalation.title")}</h4>
           <Stack gap={4}>
             <p>
-              {clarification?.escalatedOn
+              {stage === "escalated" || stage === "instructed"
                 ? t("entryClarification.escalation.done", {
-                    date: formatDate(clarification.escalatedOn),
+                    date: formatDate(escalation!.on),
                   })
                 : t("entryClarification.escalation.not")}
             </p>
@@ -231,25 +267,53 @@ export function EntryClarification({ participationId }: { participationId: strin
                 </ActionButton>
               </div>
             ) : (
-              !clarification?.escalatedOn &&
+              (stage === undefined || stage === "returned") &&
               state.capabilities.record && (
                 <p className="tp-hint">{t("entryClarification.escalation.needsPending")}</p>
               )
             )}
           </Stack>
         </section>
-        {clarification?.escalatedOn && (
+        {stage === "escalated" && (
+          <section aria-labelledby="entry-instruction">
+            <h4 id="entry-instruction">{t("entryClarification.instruction.title")}</h4>
+            <p>{t("entryClarification.instruction.waiting")}</p>
+          </section>
+        )}
+        {stage === "instructed" && instruction && (
           <section aria-labelledby="entry-instruction">
             <h4 id="entry-instruction">{t("entryClarification.instruction.title")}</h4>
             <p>
-              {clarification.instruction
-                ? t("entryClarification.instruction.recorded", {
-                    code: instructionLabel(clarification.instruction.code),
-                    source: clarification.instruction.source,
-                    date: formatDate(clarification.instruction.recordedOn),
-                  })
-                : t("entryClarification.instruction.waiting")}
+              {t("entryClarification.instruction.recorded", {
+                code: label("instructionCodes", instruction.code),
+                source: instruction.source,
+                date: formatDate(instruction.on),
+              })}
             </p>
+          </section>
+        )}
+        {steps.length > 0 && (
+          <section aria-labelledby="entry-history">
+            <h4 id="entry-history">{t("entryClarification.history.title")}</h4>
+            <ol className="tp-list" data-testid="entry-clarification-history">
+              {steps.map((step, index) => (
+                <li key={index}>
+                  {t("entryClarification.history.step", {
+                    date: formatDate(step.on),
+                    kind: t(`entryClarification.history.kinds.${step.kind}`),
+                    code: label(
+                      step.kind === "requested"
+                        ? "requestCodes"
+                        : step.kind === "instructed"
+                          ? "instructionCodes"
+                          : "pendingCodes",
+                      step.code,
+                    ),
+                    source: step.source,
+                  })}
+                </li>
+              ))}
+            </ol>
           </section>
         )}
       </Stack>
@@ -263,7 +327,18 @@ export function EntryClarification({ participationId }: { participationId: strin
         onRequestClose={() => setConfirming(false)}
         onRequestSubmit={() => write.mutate("escalate")}
       >
-        <p>{t("entryClarification.escalation.dialogBody")}</p>
+        <Stack gap={3}>
+          <p>{t("entryClarification.escalation.dialogBody")}</p>
+          {note && (
+            <p>
+              {t("entryClarification.pending.recorded", {
+                code: label("pendingCodes", note.code),
+                source: note.source,
+                date: formatDate(note.on),
+              })}
+            </p>
+          )}
+        </Stack>
       </Modal>
     </Card>
   );

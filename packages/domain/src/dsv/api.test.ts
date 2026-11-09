@@ -6,7 +6,7 @@ const items = (count: number) =>
   Array.from({ length: count }, (_, i) => ({ participationId: id(i + 1) }));
 const deadline = { kind: "explicit", date: "2027-02-01" } as const;
 
-describe("DsvBulkGenerationRequest (D2)", () => {
+describe("DsvBulkGenerationRequest", () => {
   it("takes 1 to 100 participations with one deadline", () => {
     expect(dsvBulkMax).toBe(100);
     expect(DsvBulkGenerationRequest.safeParse({ deadline, items: items(1) }).success).toBe(true);

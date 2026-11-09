@@ -1327,21 +1327,27 @@ profiling (that flag stays) and gives no cutoff warning before the cutoff. It li
 where the entry clarification is worked on. The dashboard tile "Klärungsfälle Stichtag"
 (`flag=cutoff_case`) counts the four flags the cutoff leaves to the PL.
 
-**The entry clarification** (D12; Q214, Q220 open). From the day after the effective planned TG
-start, a signed DSV that is still `informed` is a case owned by the project's PL (the item "Eintritt
-klären"); it stays until the participation leaves `informed` and changes no status. The tab "DSV"
-offers the paths whose guards pass: the reconciliation when the complete packet, the ASU proof and
-the profiling (or the approved exception) were valid on the planned start (its route follows in 7-6),
-and a new start date with its amendment while the wave's latest entry date allows one. The PL
+**The entry clarification** (Q214, Q220 open). From the day after the effective planned TG start, a
+signed DSV that is still `informed` is a case owned by the project's PL (the item "Eintritt klären");
+it stays until the participation leaves `informed` and changes no status. There is one unresolved
+case per participation, found by the participation and not by the current start date: when the
+planned start moves on, an unresolved case stays on the tab, in "Freigaben" and actionable. The tab
+"DSV" offers the paths whose guards pass: the reconciliation when the complete packet, the ASU proof
+and the profiling (or the approved exception) were valid on the planned start (its route follows in
+7-6), and a new start date with its amendment while the wave's latest entry date allows one. The PL
 documents what is pending (`awaiting_countersignature`, `awaiting_asu_proof`, `awaiting_profiling`,
 `awaiting_legal_advice`) with a documented source line (`record_entry_clarification`; a second record
-replaces the first until the case is escalated), then may escalate once
-(`escalate_entry_clarification`; a recorded code is needed). The regional operations manager of the
-project's region records the instruction (`legal_advice_obtained`, `dpo_instruction`,
-`authority_or_court_decision`, `parties_agreement`) with a documented source in "Freigaben"
-(`record_clarification_instruction`, once, never the PL who escalated); it changes nothing else.
-All three compare the participation's status version read. The audit events
-`entry_clarification_recorded`, `_escalated` and `_instructed` are in the history's `case` stream
-with the code only, never the source. Which legal outcomes exist for such a contract is Q220: no edge
-exists for a cancellation or termination after the planned start, and nothing is invented.
+replaces the note until the case is escalated), then escalates the note they saw
+(`escalate_entry_clarification`). The regional operations manager of the project's region either
+records the instruction (`legal_advice_obtained`, `dpo_instruction`, `authority_or_court_decision`,
+`parties_agreement`; once, never the PL who escalated; the case then stays open) or asks the PL again
+(`request_entry_clarification_reply`, with `evidence_unclear`, `date_unclear` or `other_documented`
+and a source line): the case returns to the PL, who replies by documenting again and escalates again.
+Every step is kept (`entry_clarification_step`) and shown to the PL and the manager. Every write
+compares the participation's status version and the clarification's own revision it read
+(`stale_status_version`, `stale_clarification`, the first record included), under the lock. The audit
+events `entry_clarification_recorded`, `_escalated`, `_requested` and `_instructed` are in the
+history's `case` stream with the code only, never the source. Which legal outcomes exist for such a
+contract is Q220: no edge exists for a cancellation or termination after the planned start, and
+nothing is invented.
 

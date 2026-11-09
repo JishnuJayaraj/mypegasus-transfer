@@ -172,7 +172,7 @@ export const DsvGenerationResult = z
   .meta({ id: "DsvGenerationResult" });
 export type DsvGenerationResult = z.infer<typeof DsvGenerationResult>;
 
-/** The most DSV one bulk generation takes (D2). */
+/** The most DSV one bulk generation takes . */
 export const dsvBulkMax = 100;
 
 /**

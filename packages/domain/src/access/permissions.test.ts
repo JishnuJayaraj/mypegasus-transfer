@@ -187,6 +187,7 @@ const operations: Record<OperationKind, string> = {
   recordEntryClarification: "PL",
   escalateEntryClarification: "PL",
   recordClarificationInstruction: "ROM",
+  requestEntryClarificationReply: "ROM",
 };
 
 const operation = (kind: OperationKind, other = "staff-other"): Operation => {
@@ -195,6 +196,7 @@ const operation = (kind: OperationKind, other = "staff-other"): Operation => {
     case "approveEvidenceCorrection":
     case "decideRelaxation":
     case "recordClarificationInstruction":
+    case "requestEntryClarificationReply":
       return { kind, requestedBy: other };
     case "reviewReconciliation":
     case "reviewBreakGlass":
@@ -248,6 +250,7 @@ describe("mayPerformOperation (Q60, Q80)", () => {
       "approveEvidenceCorrection",
       "decideRelaxation", // never the requester (regional-variation.md, rule relaxations)
       "recordClarificationInstruction", // never the PL who escalated
+      "requestEntryClarificationReply",
     ] as const) {
       expect([kind, result(mayPerformOperation(rom, operation(kind, "staff-r"), target))]).toEqual([
         kind,

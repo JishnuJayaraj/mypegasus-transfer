@@ -6,8 +6,7 @@ import { createDb, seedRegionIds, seedStaffUserIds } from "@transfer/db";
 import { activateAsOwner, testDatabaseUrls } from "@transfer/db/testing";
 import { expect, expectAccessible, test } from "./helpers";
 
-// The signed DSV on the work list (process-and-lifecycle.md, the entry clarification; D2, D12,
-// D13): the PL filters "DSV: unterschrieben, nicht vollständig" and sees the item, the filter and
+// The signed DSV on the work list (process-and-lifecycle.md, the entry clarification): the PL filters "DSV: unterschrieben, nicht vollständig" and sees the item, the filter and
 // the tile agree, generates two DSV in one call, documents what is pending on a signed DSV that
 // has not entered, and escalates it; the regional operations manager records the instruction in
 // "Freigaben" (never the PL), and the case stays open. The project is this test's own (created
@@ -193,7 +192,7 @@ test("filter and tile agree; bulk DSV; documenting, escalating and the manager's
     .selectOption({ label: "Nachweis der Arbeitsuchendmeldung steht aus" });
   await card.getByLabel(/^Quelle/).fill("Akte 12, Vermerk vom 3.4.");
   await card.getByRole("button", { name: "Erfassen" }).click();
-  await expect(card.getByText(/Quelle: Akte 12, Vermerk vom 3.4./)).toBeVisible();
+  await expect(card.getByText(/Quelle: Akte 12, Vermerk vom 3.4./).first()).toBeVisible();
   await card.getByRole("button", { name: "An die Regionale Betriebsleitung eskalieren" }).click();
   await page
     .getByRole("dialog", { name: "Fall eskalieren" })
@@ -203,16 +202,43 @@ test("filter and tile agree; bulk DSV; documenting, escalating and the manager's
   await expectAccessible(page);
   await shot(page, "entry-clarification-escalated");
 
-  // The manager records the instruction; the case stays open and nothing changed.
+  // The manager asks the PL again; the PL replies and escalates again.
   await session(page, baseURL!, regionalOperationsManager);
   await page.goto("/reviews");
-  const table = page.getByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
+  let table = page.getByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
   await expect(table).toContainText("E2E DSV Arbeitsliste");
   await expect(table).toContainText("Akte 12, Vermerk vom 3.4.");
   await expect(table).not.toContainText("Gegenzeichnung");
   await shot(page, "reviews-clarification");
+  await table.getByRole("button", { name: /Rückfrage an die PL/ }).click();
+  let dialog = page.getByRole("dialog", { name: "Rückfrage an die Projektleitung" });
+  await dialog.getByLabel("Grund der Rückfrage").selectOption({ label: "Datum unklar" });
+  await dialog.getByLabel(/^Quelle/).fill("Datum der Unterschrift fehlt");
+  await dialog.getByRole("button", { name: "Erfassen" }).click();
+  await expect(page.getByText(/Die Rückfrage wurde erfasst/)).toBeVisible();
+  await expect(table.getByRole("button", { name: /Weisung erfassen/ })).toBeHidden();
+  await session(page, baseURL!, projectLead);
+  await page.goto(`/projects/${projectId}/participations/${signedId}?tab=dsv`);
+  await expect(card.getByText("Rückfrage der Regionalen Betriebsleitung")).toBeVisible();
+  await shot(page, "entry-clarification-returned");
+  await card
+    .getByLabel("Antwort: Was steht jetzt aus?")
+    .selectOption({ label: "Rechtsrat steht aus" });
+  await card.getByLabel(/^Quelle/).fill("Datum nachgereicht, Rechtsrat angefragt");
+  await card.getByRole("button", { name: "Antworten" }).click();
+  await card.getByRole("button", { name: "An die Regionale Betriebsleitung eskalieren" }).click();
+  await page
+    .getByRole("dialog", { name: "Fall eskalieren" })
+    .getByRole("button", { name: "Eskalieren" })
+    .click();
+  await expect(card.getByTestId("entry-clarification-history").locator("li")).toHaveCount(5);
+
+  // The manager records the instruction; the case stays open and nothing changed.
+  await session(page, baseURL!, regionalOperationsManager);
+  await page.goto("/reviews");
+  table = page.getByRole("table", { name: "Eskalierte Klärungen zum Eintritt" });
   await table.getByRole("button", { name: /Weisung erfassen/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Weisung erfassen" });
+  dialog = page.getByRole("dialog", { name: "Weisung erfassen" });
   await dialog.getByLabel("Weisung").selectOption({ label: "Rechtsrat liegt vor" });
   await dialog.getByLabel(/^Quelle/).fill("Rechtsrat Kanzlei, Az. 77");
   await dialog.getByRole("button", { name: "Erfassen" }).click();

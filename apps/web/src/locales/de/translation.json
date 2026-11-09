@@ -1891,7 +1891,8 @@
       "dsv_original_recorded": "Original der DSV erfasst",
       "entry_clarification_recorded": "Eintritt: Klärung dokumentiert",
       "entry_clarification_escalated": "Eintritt: an die Regionale Betriebsleitung eskaliert",
-      "entry_clarification_instructed": "Eintritt: Weisung erfasst"
+      "entry_clarification_instructed": "Eintritt: Weisung erfasst",
+      "entry_clarification_requested": "Eintritt: Rückfrage an die Projektleitung"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -3373,21 +3374,28 @@
         "project": "Projekt",
         "tgStart": "Geplanter Beginn",
         "escalatedOn": "Eskaliert am",
-        "pending": "Was aussteht",
-        "source": "Quelle",
+        "history": "Verlauf",
         "actions": "Aktionen"
       },
       "item": "{{project}}, geplanter Beginn {{date}}",
       "instruct": "Weisung erfassen",
       "ownEscalation": "Von Ihnen eskaliert",
       "dialog": {
-        "title": "Weisung erfassen",
-        "code": "Weisung",
+        "instruction": {
+          "title": "Weisung erfassen",
+          "code": "Weisung",
+          "choose": "Erst die Weisung wählen.",
+          "final": "Die Weisung wird gespeichert und kann nicht geändert werden. Sie ändert keinen Status: Der Fall bleibt offen."
+        },
+        "request": {
+          "title": "Rückfrage an die Projektleitung",
+          "code": "Grund der Rückfrage",
+          "choose": "Erst den Grund wählen.",
+          "final": "Der Fall geht mit Ihrer Rückfrage an die Projektleitung zurück, die den Stand erneut dokumentiert und wieder eskaliert. Der Verlauf bleibt erhalten, kein Status ändert sich."
+        },
         "source": "Quelle (eine Zeile, höchstens 200 Zeichen, ohne Namen oder Gesundheitsangaben)",
         "confirm": "Erfassen",
         "cancel": "Abbrechen",
-        "final": "Die Weisung wird gespeichert und kann nicht geändert werden. Sie ändert keinen Status: Der Fall bleibt offen.",
-        "choose": "Erst die Weisung wählen.",
         "enterSource": "Erst die Quelle angeben."
       },
       "messages": {
@@ -3395,13 +3403,16 @@
         "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
         "forbidden": "Sie dürfen diese Weisung nicht erfassen.",
         "notFound": "Den Fall gibt es nicht mehr. Die Liste wurde neu geladen.",
-        "conflict": "Die Teilnahme hat sich inzwischen geändert. Die Liste wurde neu geladen.",
+        "conflict": "Der Fall hat sich inzwischen geändert. Die Liste wurde neu geladen.",
         "codes": {
           "clarification_not_open": "Der Fall ist nicht mehr offen. Die Liste wurde neu geladen.",
           "not_escalated": "Der Fall ist nicht eskaliert.",
-          "already_instructed": "Die Weisung ist schon erfasst."
-        }
-      }
+          "already_instructed": "Die Weisung ist schon erfasst.",
+          "stale_clarification": "Der Fall hat sich inzwischen geändert. Die Liste wurde neu geladen."
+        },
+        "requested": "Die Rückfrage wurde erfasst; der Fall liegt wieder bei der Projektleitung."
+      },
+      "request": "Rückfrage an die PL"
     }
   },
   "corrections": {
@@ -3676,7 +3687,9 @@
       "sourceInvalid": "Bitte eine Quelle in einer Zeile angeben.",
       "choose": "Erst wählen, was aussteht.",
       "enterSource": "Erst die Quelle angeben.",
-      "save": "Erfassen"
+      "save": "Erfassen",
+      "replyCode": "Antwort: Was steht jetzt aus?",
+      "reply": "Antworten"
     },
     "escalation": {
       "title": "Eskalation",
@@ -3710,7 +3723,7 @@
     "messages": {
       "recorded": "Der Stand wurde dokumentiert.",
       "escalated": "Der Fall wurde eskaliert.",
-      "conflict": "Die Teilnahme hat sich inzwischen geändert. Der Fall wurde neu geladen.",
+      "conflict": "Der Fall hat sich inzwischen geändert (eine andere Bearbeitung oder die Teilnahme). Er wurde neu geladen; bitte prüfen und erneut versuchen.",
       "forbidden": "Das dürfen Sie nicht.",
       "failed": "Das hat nicht geklappt. Bitte erneut versuchen."
     },
@@ -3721,7 +3734,27 @@
       "already_escalated": "Der Fall ist schon eskaliert.",
       "not_escalated": "Der Fall ist noch nicht eskaliert.",
       "already_instructed": "Die Weisung ist schon erfasst.",
-      "invalid_argument": "Die Eingabe ist ungültig."
+      "invalid_argument": "Die Eingabe ist ungültig.",
+      "stale_clarification": "Der Fall hat sich inzwischen geändert und wurde neu geladen."
+    },
+    "requestCodes": {
+      "evidence_unclear": "Nachweis unklar",
+      "date_unclear": "Datum unklar",
+      "other_documented": "Anderer dokumentierter Grund"
+    },
+    "returned": {
+      "title": "Rückfrage der Regionalen Betriebsleitung",
+      "body": "{{code}} – Quelle: {{source}} (am {{date}}). Bitte den Stand erneut dokumentieren und danach wieder eskalieren."
+    },
+    "history": {
+      "title": "Verlauf",
+      "step": "{{date}}: {{kind}} – {{code}} (Quelle: {{source}})",
+      "kinds": {
+        "recorded": "Dokumentiert",
+        "escalated": "Eskaliert",
+        "requested": "Rückfrage",
+        "instructed": "Weisung"
+      }
     }
   }
 }

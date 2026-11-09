@@ -231,6 +231,7 @@ export const auditProjection: {
   entry_clarification_recorded: shown("case", { details: ["pendingCode"] }),
   entry_clarification_escalated: shown("case", { details: ["pendingCode"] }),
   entry_clarification_instructed: shown("case", { details: ["instructionCode"] }),
+  entry_clarification_requested: shown("case", { details: ["requestCode"] }),
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "decision"],
   }),

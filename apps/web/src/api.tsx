@@ -288,7 +288,7 @@ export const reviewsQuery = (api: ApiClient) =>
 
 /**
  * The entry clarification of a signed DSV that has not entered (the PL and back office): its
- * state, the recorded pending code and the legitimate paths now (D12).
+ * state, the recorded pending code and the legitimate paths now.
  */
 export const entryClarificationQuery = (api: ApiClient, participationId: string) =>
   queryOptions({

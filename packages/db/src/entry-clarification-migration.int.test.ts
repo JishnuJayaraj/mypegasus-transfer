@@ -76,6 +76,7 @@ it("keeps the generations and their events and replaces the generation function 
     "record_entry_clarification",
     "escalate_entry_clarification",
     "record_clarification_instruction",
+    "request_entry_clarification_reply",
   ]) {
     const { rows } = await q(
       `select has_function_privilege('transfer_app', p.oid, 'execute') as app,
@@ -103,5 +104,6 @@ it("keeps the generations and their events and replaces the generation function 
     { type: "entry_clarification_escalated", stream: "case", detail_keys: ["pendingCode"] },
     { type: "entry_clarification_instructed", stream: "case", detail_keys: ["instructionCode"] },
     { type: "entry_clarification_recorded", stream: "case", detail_keys: ["pendingCode"] },
+    { type: "entry_clarification_requested", stream: "case", detail_keys: ["requestCode"] },
   ]);
 });

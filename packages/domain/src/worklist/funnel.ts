@@ -74,7 +74,7 @@ export function funnelFilters(project: FunnelProject): Record<DashboardGroup, En
       { key: "appointments_overdue", filter: { appointment: "overdue" } },
       { key: "appointments_to_resolve", filter: { appointment: "to_resolve" } },
       { key: "agentur_open", filter: { agentur: "open" } },
-      // A signed DSV nobody completed (D2) and the cases the Stichtag leaves to the PL (D13).
+      // A signed DSV nobody completed, and the cases the Stichtag leaves to the PL (process-and-lifecycle.md, the cutoff cases).
       ...(taTg
         ? [
             {

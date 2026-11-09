@@ -190,6 +190,8 @@ export function HistoryTab({
         return coded("entryClarification.pendingCodes", text(details.pendingCode) ?? "");
       case "entry_clarification_instructed":
         return coded("entryClarification.instructionCodes", text(details.instructionCode) ?? "");
+      case "entry_clarification_requested":
+        return coded("entryClarification.requestCodes", text(details.requestCode) ?? "");
       case "dsv_form_generated":
         return t("history.dsvForm", {
           version: text(details.templateVersion) ?? "",

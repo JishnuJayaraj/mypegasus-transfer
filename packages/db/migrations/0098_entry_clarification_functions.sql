@@ -298,7 +298,7 @@ LANGUAGE sql STABLE SET search_path = pg_catalog, public, pg_temp AS $$
 $$;
 --> statement-breakpoint
 
--- The PL documents what is pending on a signed DSV that has not entered (Q214, D12): one of four
+-- The PL documents what is pending on a signed DSV that has not entered (Q214): one of four
 -- codes with a documented source (Q209's rules: NFC, one line, 1 to 200 characters), against the
 -- status version read (`stale_status_version`). The clarification must be open
 -- (`clarification_not_open`); one row per participation and planned start, so a second record

@@ -569,7 +569,7 @@ const open = async () => {
   return screen.findByRole("dialog", { name: "DSV erzeugen" });
 };
 
-describe("DSV erzeugen (process-and-lifecycle.md, the DSV: generation as built; D2)", () => {
+describe("DSV erzeugen (process-and-lifecycle.md, the DSV: generation as built)", () => {
   const dsvItems = [
     worklistItem({
       id: id(4),
@@ -658,6 +658,27 @@ describe("DSV erzeugen (process-and-lifecycle.md, the DSV: generation as built; 
     });
   });
 
+  it("never submits a date typed before the choice changed: the field is blank again and the button waits for a date", async () => {
+    const { calls } = setup({
+      [`GET ${path}/worklist`]: () => json(worklist(dsvItems)),
+      [`POST ${path}/dsv/generations`]: () =>
+        json({ generations: [generated(4, []), generated(5, [])] }, 201),
+    });
+    const panel = await open();
+    await userEvent.click(within(panel).getByRole("radio", { name: "Frist eingeben" }));
+    await userEvent.type(within(panel).getByLabelText("Frist (TT.MM.JJJJ)"), "20.02.2091");
+    await userEvent.click(
+      within(panel).getByRole("radio", { name: /Unterschriftsfrist der Welle/ }),
+    );
+    await userEvent.click(within(panel).getByRole("radio", { name: "Frist eingeben" }));
+    expect(within(panel).getByLabelText("Frist (TT.MM.JJJJ)")).toHaveValue("");
+    const button = within(panel).getByRole("button", { name: "Erzeugen" });
+    expect(button).toBeDisabled();
+    expect(within(panel).getByText("Erst die Frist eingeben.")).toBeVisible();
+    await userEvent.click(button);
+    expect(calls.some((call) => call.key === `POST ${path}/dsv/generations`)).toBe(false);
+  });
+
   it("says that nothing was generated, naming each refused row with its reason", async () => {
     setup({
       [`GET ${path}/worklist`]: () => json(worklist(dsvItems)),
@@ -704,7 +725,7 @@ describe("DSV erzeugen (process-and-lifecycle.md, the DSV: generation as built; 
   });
 });
 
-describe("the signed DSV in the filters and items (D2, D12, D13)", () => {
+describe("the signed DSV in the filters and items (the DSV work list and the entry clarification)", () => {
   it("names the items and filters by 'DSV: unterschrieben, nicht vollständig'", async () => {
     const signed = worklistItem({
       id: id(4),

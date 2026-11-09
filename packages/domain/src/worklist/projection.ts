@@ -94,9 +94,9 @@ export const WorklistCaseItem = z
       "kug200b_offer_open",
       "kug200b_withdrawal_ba_notice",
       "evidence_invalidated",
-      /** A signed DSV that is not fully executed yet, dated by `dsvSignedOn` (D2, 7-4). */
+      /** A signed DSV that is not fully executed yet, dated by `dsvSignedOn` . */
       "dsv_not_fully_executed",
-      /** The entry clarification of D12: from the day after the planned start, until entry. */
+      /** The entry clarification: from the day after the planned start, until entry. */
       "entry_clarification",
     ]),
     date: isoDate,
@@ -211,7 +211,7 @@ export type WorklistViewer = {
   worksDsv: boolean;
 };
 
-/** The two DSV case items of a `ta_tg` participation (D2, D12). */
+/** The two DSV case items of a `ta_tg` participation . */
 function dsvCaseItems(
   facts: WorklistFacts,
   snapshot: ParticipationSnapshot,

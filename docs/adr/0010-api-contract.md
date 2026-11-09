@@ -804,14 +804,19 @@ participation's related queries and the project's work list/dashboard.
   `422` with every item's codes (the single generation's), `409 source_changed` for a moved wave
   deadline, `404` for a participation outside the project, `503` without recording anything.
 - `GET`/`POST /participations/{id}/entry-clarification` and `POST .../entry-clarification/escalation`
-  (the PL; `GET` also back office): `EntryClarificationState` with `statusVersion`, the recorded
-  case, the `actions` open now and the viewer's `capabilities`; `409 stale_status_version` at
-  `/statusVersion`, `422 clarification_not_open | clarification_escalated | clarification_not_documented
-  | already_escalated`.
-- `POST /entry-clarifications/{id}/instruction` (the region's manager): `204`; `403` for any other
-  role and for the person who escalated, `404` outside the viewer's regions, `422 not_escalated |
+  (the PL; `GET` also back office): `EntryClarificationState` with `statusVersion`, the unresolved
+  case (`stage`, `revision`, every `step`), the `actions` open now and the viewer's `capabilities`.
+  Every write carries `statusVersion` and the `revision` read (0 for the first record): `409
+  stale_status_version` at `/statusVersion`, `409 stale_clarification` at `/revision`; `422
+  clarification_not_open | clarification_escalated | clarification_not_documented |
+  already_escalated`. After the manager's request the PL's reply is the same `POST`.
+- `POST /entry-clarifications/{id}/instruction` and `POST /entry-clarifications/{id}/request` (the
+  region's manager; the request body takes `request` codes `evidence_unclear | date_unclear |
+  other_documented`): `204`. Visibility before permission: `404` for a clarification the viewer can't
+  see (outside their regions, or unknown), `403` for a visible one they may not answer (another role,
+  the person who escalated); `409` at `/statusVersion` or `/revision`; `422 not_escalated |
   already_instructed | clarification_not_open`.
-- `GET /reviews` gains `clarifications` (no participation id, name or file); `WorklistItem` gains
+- `GET /reviews` gains `clarifications` (every step, the revision, no participation id, name or file); `WorklistItem` gains
   `capabilities.generateDsv` and the case items `dsv_not_fully_executed` and `entry_clarification`;
   `WorklistFilter` gains `caseItem` and `flag=cutoff_case`; the dashboard gains the tiles
   `dsv_not_fully_executed` and `cutoff_cases`.

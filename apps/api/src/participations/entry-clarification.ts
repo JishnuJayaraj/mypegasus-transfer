@@ -10,11 +10,13 @@ import {
 } from "@transfer/db";
 import {
   entryClarificationActions,
+  addDays,
   entryClarificationOpenedOn,
   mayPerformOperation,
   maySeeReview,
   mayWorkDsv,
   type EntryClarificationRecord,
+  type EntryClarificationStep,
   type EntryClarificationReviewItem,
   type EntryClarificationState,
   type StaffUser,
@@ -26,9 +28,11 @@ import type { GuardFactsProvider } from "./guard-facts";
 
 // The entry clarification of a signed DSV that has not entered (process-and-lifecycle.md, the entry
 // clarification): the state the PL reads and the escalated cases "Freigaben" lists. Reads only; the
-// writes are `record_entry_clarification`, `escalate_entry_clarification` and
-// `record_clarification_instruction`. The documented sources are `case_internal`: the PL who wrote
-// one and the manager who instructs read it, nobody else, and no log or history carries it.
+// writes are `record_entry_clarification`, `escalate_entry_clarification`,
+// `record_clarification_instruction` and `request_entry_clarification_reply`. The documented
+// sources are `case_internal`: the PL who wrote one and the manager who answers read it, nobody
+// else, and no log or history carries it. An unresolved case is found by its participation, not by
+// its planned start: moving the start never hides it while the participation is `informed`.
 
 export type ClarificationDeps = { db: Database; clock: Clock; facts: GuardFactsProvider };
 
@@ -39,14 +43,24 @@ export type ClarificationResult =
 type Row = {
   id: string;
   opened_on: string;
-  pending_code: string | null;
-  pending_source: string | null;
-  pending_on: string | null;
-  escalated_on: string | null;
-  instruction_code: string | null;
-  instruction_source: string | null;
-  instruction_on: string | null;
+  stage: EntryClarificationRecord["stage"];
+  revision: number;
 };
+
+type StepRow = {
+  kind: EntryClarificationStep["kind"];
+  code: EntryClarificationStep["code"];
+  source: string;
+  on: string;
+};
+
+/** The steps of a clarification in order, each with its Berlin day. */
+async function stepsOf(tx: Pick<Database, "execute">, clarificationId: string) {
+  const { rows } = await tx.execute<StepRow>(sql`
+    select kind, code, source, to_char(at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as "on"
+    from entry_clarification_step where clarification_id = ${clarificationId}::uuid order by seq`);
+  return rows;
+}
 
 /**
  * One participation's clarification state in one snapshot: undefined-visibility is a 404, no DSV
@@ -100,22 +114,16 @@ export async function loadClarification(
         tgStart,
         today,
       });
+      // The unresolved case, whatever planned start it opened for; else the instructed one of the
+      // current start (a case that ended with its start is not shown against a new one).
       const { rows } = await tx.execute<Row>(sql`
-        select id, opened_on::text, pending_code, pending_source,
-          to_char(pending_recorded_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as pending_on,
-          to_char(escalated_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as escalated_on,
-          instruction_code, instruction_source,
-          to_char(instruction_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as instruction_on
-        from entry_clarification
+        select id, opened_on::text, stage, revision from entry_clarification
         where participation_id = ${participationId}::uuid
-          and ${openedOn}::date is not null and opened_on = ${openedOn}::date`);
+          and (stage <> 'instructed' or opened_on = ${openedOn}::date)
+        order by (stage <> 'instructed') desc, opened_on desc limit 1`);
       const recorded = rows[0];
       const record: EntryClarificationRecord | null = recorded
-        ? {
-            pending: recorded.pending_code !== null,
-            escalated: recorded.escalated_on !== null,
-            instructed: recorded.instruction_code !== null,
-          }
+        ? { stage: recorded.stage, openedOn: recorded.opened_on }
         : null;
       const actions = entryClarificationActions({
         projectType: row.type,
@@ -147,23 +155,9 @@ export async function loadClarification(
             ? {
                 id: recorded.id,
                 openedOn: recorded.opened_on,
-                pending:
-                  recorded.pending_code === null
-                    ? null
-                    : {
-                        code: recorded.pending_code as never,
-                        source: recorded.pending_source!,
-                        recordedOn: recorded.pending_on!,
-                      },
-                escalatedOn: recorded.escalated_on,
-                instruction:
-                  recorded.instruction_code === null
-                    ? null
-                    : {
-                        code: recorded.instruction_code as never,
-                        source: recorded.instruction_source!,
-                        recordedOn: recorded.instruction_on!,
-                      },
+                stage: recorded.stage,
+                revision: recorded.revision,
+                steps: await stepsOf(tx, recorded.id),
               }
             : null,
           actions,
@@ -187,7 +181,6 @@ export async function loadClarification(
 export async function clarificationReviewItemsOf(
   db: Database,
   subject: Subject,
-  today: string,
 ): Promise<EntryClarificationReviewItem[]> {
   const { rows } = await db.execute<{
     id: string;
@@ -195,40 +188,36 @@ export async function clarificationReviewItemsOf(
     project_name: string;
     region_id: string | null;
     participation_id: string;
-    tg_start: string;
     opened_on: string;
     escalated_on: string;
     escalated_by: string;
-    pending_code: EntryClarificationReviewItem["pendingCode"];
-    pending_source: string;
+    revision: number;
     status_version: number;
   }>(sql`select c.id, c.project_id, pr.name as project_name, pr.region_id, c.participation_id,
-      (c.opened_on - 1)::text as tg_start, c.opened_on::text as opened_on,
+      c.opened_on::text as opened_on,
       to_char(c.escalated_at at time zone 'Europe/Berlin', 'YYYY-MM-DD') as escalated_on,
-      c.escalated_by, c.pending_code, c.pending_source, p.status_version
+      c.escalated_by, c.revision, p.status_version
     from entry_clarification c
     join project pr on pr.id = c.project_id
     join participation p on p.id = c.participation_id
-    left join project_entry_wave w on w.id = p.entry_wave_id
-    where c.escalated_at is not null and c.instruction_code is null
-      and pr.type = 'ta_tg' and p.status = 'informed' and p.dsv_status = 'dsv_signed'
-      and c.opened_on = coalesce(p.tg_start, w.default_tg_start) + 1
-      and ${today}::date > coalesce(p.tg_start, w.default_tg_start)
+    where c.stage = 'escalated' and p.status = 'informed'
     order by c.escalated_at, c.id`);
-  return rows
-    .filter((row) => maySeeReview(subject, { regionId: row.region_id }))
-    .map((row) => ({
+  const visible = rows.filter((row) => maySeeReview(subject, { regionId: row.region_id }));
+  const items: EntryClarificationReviewItem[] = [];
+  for (const row of visible) {
+    items.push({
       id: row.id,
       projectId: row.project_id,
       projectName: row.project_name,
-      tgStart: row.tg_start,
+      // The planned start the case opened for: the day before.
+      tgStart: addDays(row.opened_on, -1),
       openedOn: row.opened_on,
       escalatedOn: row.escalated_on,
-      pendingCode: row.pending_code,
-      pendingSource: row.pending_source,
+      revision: row.revision,
+      steps: await stepsOf(db, row.id),
       statusVersion: row.status_version,
       capabilities: {
-        instruct: mayPerformOperation(
+        answer: mayPerformOperation(
           subject,
           { kind: "recordClarificationInstruction", requestedBy: row.escalated_by },
           {
@@ -238,5 +227,7 @@ export async function clarificationReviewItemsOf(
           },
         ).ok,
       },
-    }));
+    });
+  }
+  return items;
 }

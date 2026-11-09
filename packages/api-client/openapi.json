@@ -6288,7 +6288,8 @@
           "dsv_original_recorded",
           "entry_clarification_recorded",
           "entry_clarification_escalated",
-          "entry_clarification_instructed"
+          "entry_clarification_instructed",
+          "entry_clarification_requested"
         ]
       },
       "HistoryActor": {
@@ -16125,80 +16126,80 @@
               "2027-03-01"
             ]
           },
-          "pending": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "code": {
-                "$ref": "#/components/schemas/EntryPendingCode"
-              },
-              "source": {
-                "type": "string"
-              },
-              "recordedOn": {
-                "type": "string",
-                "format": "date",
-                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-                "examples": [
-                  "2027-03-01"
-                ]
-              }
-            },
-            "required": [
-              "code",
-              "source",
-              "recordedOn"
-            ],
-            "additionalProperties": false
+          "stage": {
+            "$ref": "#/components/schemas/EntryClarificationStage"
           },
-          "escalatedOn": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date",
-            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-            "examples": [
-              "2027-03-01"
-            ]
+          "revision": {
+            "type": "integer",
+            "minimum": 0
           },
-          "instruction": {
-            "type": [
-              "object",
-              "null"
-            ],
-            "properties": {
-              "code": {
-                "$ref": "#/components/schemas/EntryInstructionCode"
-              },
-              "source": {
-                "type": "string"
-              },
-              "recordedOn": {
-                "type": "string",
-                "format": "date",
-                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
-                "examples": [
-                  "2027-03-01"
-                ]
-              }
-            },
-            "required": [
-              "code",
-              "source",
-              "recordedOn"
-            ],
-            "additionalProperties": false
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryClarificationStep"
+            }
           }
         },
         "required": [
           "id",
           "openedOn",
-          "pending",
-          "escalatedOn",
-          "instruction"
+          "stage",
+          "revision",
+          "steps"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationStage": {
+        "type": "string",
+        "enum": [
+          "documented",
+          "escalated",
+          "returned",
+          "instructed"
+        ]
+      },
+      "EntryClarificationStep": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "recorded",
+              "escalated",
+              "requested",
+              "instructed"
+            ]
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntryPendingCode"
+              },
+              {
+                "$ref": "#/components/schemas/EntryRequestCode"
+              },
+              {
+                "$ref": "#/components/schemas/EntryInstructionCode"
+              }
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "on": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "code",
+          "source",
+          "on"
         ],
         "additionalProperties": false
       },
@@ -16209,6 +16210,14 @@
           "awaiting_asu_proof",
           "awaiting_profiling",
           "awaiting_legal_advice"
+        ]
+      },
+      "EntryRequestCode": {
+        "type": "string",
+        "enum": [
+          "evidence_unclear",
+          "date_unclear",
+          "other_documented"
         ]
       },
       "EntryInstructionCode": {
@@ -16233,12 +16242,17 @@
           "statusVersion": {
             "type": "integer",
             "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
           "code",
           "source",
-          "statusVersion"
+          "statusVersion",
+          "revision"
         ],
         "additionalProperties": false
       },
@@ -16248,10 +16262,15 @@
           "statusVersion": {
             "type": "integer",
             "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
-          "statusVersion"
+          "statusVersion",
+          "revision"
         ],
         "additionalProperties": false
       },
@@ -16268,12 +16287,44 @@
           "statusVersion": {
             "type": "integer",
             "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": [
           "code",
           "source",
-          "statusVersion"
+          "statusVersion",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationRequestRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/EntryRequestCode"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "statusVersion",
+          "revision"
         ],
         "additionalProperties": false
       },
@@ -17513,11 +17564,15 @@
               "2027-03-01"
             ]
           },
-          "pendingCode": {
-            "$ref": "#/components/schemas/EntryPendingCode"
+          "revision": {
+            "type": "integer",
+            "minimum": 0
           },
-          "pendingSource": {
-            "type": "string"
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryClarificationStep"
+            }
           },
           "statusVersion": {
             "type": "integer",
@@ -17526,12 +17581,12 @@
           "capabilities": {
             "type": "object",
             "properties": {
-              "instruct": {
+              "answer": {
                 "type": "boolean"
               }
             },
             "required": [
-              "instruct"
+              "answer"
             ],
             "additionalProperties": false
           }
@@ -17543,8 +17598,8 @@
           "tgStart",
           "openedOn",
           "escalatedOn",
-          "pendingCode",
-          "pendingSource",
+          "revision",
+          "steps",
           "statusVersion",
           "capabilities"
         ],
@@ -31871,8 +31926,8 @@
         "tags": [
           "participations"
         ],
-        "summary": "Record the instruction of an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a code with a documented source, once, against the status version \"Freigaben\" showed. The case stays open: the instruction changes no status",
-        "description": "Refusals:\n- `404` for a clarification outside the viewer's regions; `403` for any other role, and for the person who escalated.\n- `409 stale_status_version` at `/statusVersion`.\n- `422`: `clarification_not_open`, `not_escalated`, `already_instructed`.",
+        "summary": "Record the instruction of an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a code with a documented source, once, against the status version and the revision \"Freigaben\" showed. Answerable while the participation is informed, whatever its planned start became; the case stays open: the instruction changes no status",
+        "description": "Refusals:\n- `404` for a clarification the viewer can't see (outside their regions, or unknown); `403` for a visible one the viewer may not answer: any other role, and the person who escalated.\n- `409` at `/statusVersion` (`stale_status_version`) or `/revision` (`stale_clarification`): read \"Freigaben\" again.\n- `422`: `clarification_not_open` (the participation left informed), `not_escalated`, `already_instructed`.",
         "parameters": [
           {
             "schema": {
@@ -31890,6 +31945,101 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EntryClarificationInstructionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entry-clarifications/{clarificationId}/request": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Ask the PL again about an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a request code with a documented source. The case returns to the PL, who replies by documenting again and escalates again; every step is kept and no status changes",
+        "description": "Refusals:\n- `404` for a clarification the viewer can't see (outside their regions, or unknown); `403` for a visible one the viewer may not answer: any other role, and the person who escalated.\n- `409` at `/statusVersion` (`stale_status_version`) or `/revision` (`stale_clarification`): read \"Freigaben\" again.\n- `422`: `clarification_not_open` (the participation left informed), `not_escalated`, `already_instructed`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clarificationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryClarificationRequestRequest"
               }
             }
           }

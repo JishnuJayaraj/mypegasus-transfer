@@ -473,7 +473,7 @@ export function dsvService(deps: DsvDeps) {
   type BatchRefusal = { index: number; refusal: DsvRefusal };
 
   /**
-   * Generates 1 to 100 DSV with one deadline, all or nothing (D2): every item is checked first and
+   * Generates 1 to 100 DSV with one deadline, all or nothing: every item is checked first and
    * a single refusal refuses the batch, nothing rendered; then every paper is rendered and stored
    * and all are recorded in one transaction in participation id order under the project's
    * exclusive lock (`p_batch_size`). Any failure deletes every stored object.

@@ -71,10 +71,11 @@ export const OperationKind = z.enum([
   "setPlacementAgentur",
   // Slice 4a: the wizard on the participant's behalf (Q136, ADR-0007)
   "startAssistedMode",
-  // Slice 7: the entry clarification of a signed DSV that has not entered (D12)
+  // Slice 7: the entry clarification of a signed DSV that has not entered
   "recordEntryClarification",
   "escalateEntryClarification",
   "recordClarificationInstruction",
+  "requestEntryClarificationReply",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -87,6 +88,7 @@ export type Operation =
         | "approveEvidenceCorrection"
         | "decideRelaxation"
         | "recordClarificationInstruction"
+        | "requestEntryClarificationReply"
         | "reviewReconciliation"
         | "reviewBreakGlass"
         | "requestEvidenceCorrection"
@@ -98,7 +100,8 @@ export type Operation =
         | "decideProfilingException"
         | "approveEvidenceCorrection"
         | "decideRelaxation"
-        | "recordClarificationInstruction";
+        | "recordClarificationInstruction"
+        | "requestEntryClarificationReply";
       /** The instruction's `requestedBy` is the PL who escalated: never the same person. */
       requestedBy: string;
     }
@@ -172,6 +175,7 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   recordEntryClarification: ["project_lead"],
   escalateEntryClarification: ["project_lead"],
   recordClarificationInstruction: ["regional_operations_manager"],
+  requestEntryClarificationReply: ["regional_operations_manager"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

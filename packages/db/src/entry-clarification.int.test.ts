@@ -87,30 +87,60 @@ const events = async (id: string) =>
     )
   ).rows;
 
-const record = (id: string, v: number, over: Record<string, unknown> = {}) =>
+/** The revision of the participation's unresolved clarification, or 0 while there is none. */
+const revisionOf = async (id: string): Promise<number> =>
+  (
+    await owner.query(
+      "select coalesce(max(revision) filter (where stage <> 'instructed'), 0)::int as r from entry_clarification where participation_id = $1",
+      [id],
+    )
+  ).rows[0].r;
+const revisionOfCase = async (clarificationId: string): Promise<number> =>
+  (await owner.query("select revision from entry_clarification where id = $1", [clarificationId]))
+    .rows[0].revision;
+const record = async (id: string, v: number, over: Record<string, unknown> = {}) =>
   call<string>(app, "record_entry_clarification", {
     context: pl,
     participationId: id,
     code: "awaiting_asu_proof",
     source,
     statusVersion: v,
+    expectedRevision: await revisionOf(id),
     ...over,
   });
-const escalate = (id: string, v: number, context = pl) =>
+const escalate = async (id: string, v: number, context = pl, over: Record<string, unknown> = {}) =>
   call<string>(app, "escalate_entry_clarification", {
     context,
     participationId: id,
     statusVersion: v,
-  });
-const instruct = (clarificationId: string, v: number, over: Record<string, unknown> = {}) =>
-  call<string>(app, "record_clarification_instruction", {
-    context: manager,
-    clarificationId,
-    code: "legal_advice_obtained",
-    source: "Rechtsrat der Kanzlei, Az. 77",
-    statusVersion: v,
+    expectedRevision: await revisionOf(id),
     ...over,
   });
+const instruct = async (
+  clarificationId: string,
+  v: number,
+  over: Record<string, unknown> = {},
+  fn = "record_clarification_instruction",
+) =>
+  call<string>(app, fn, {
+    context: manager,
+    clarificationId,
+    code: fn === "record_clarification_instruction" ? "legal_advice_obtained" : "date_unclear",
+    source: "Rechtsrat der Kanzlei, Az. 77",
+    statusVersion: v,
+    expectedRevision:
+      "expectedRevision" in over ? undefined : await revisionOfCase(clarificationId),
+    ...over,
+  });
+const ask = (clarificationId: string, v: number, over: Record<string, unknown> = {}) =>
+  instruct(clarificationId, v, over, "request_entry_clarification_reply");
+const stepsOf = async (id: string) =>
+  (
+    await owner.query(
+      "select seq, kind, code, source from entry_clarification_step where participation_id = $1 order by clarification_id, seq",
+      [id],
+    )
+  ).rows;
 
 describe("record_entry_clarification", () => {
   it("records the PL's pending code with its source; the history gets the code only", async () => {
@@ -194,16 +224,55 @@ describe("record_entry_clarification", () => {
     ]);
   });
 
-  it("takes a second clarification for a new planned start, keeping the first", async () => {
+  it("reuses the unresolved case when the planned start moved", async () => {
     const { id } = await signedPastStart();
     const first = await record(id, await version(id));
     await owner.query(
       "update participation set offer_deadline = berlin_today() - 20, tg_start = berlin_today() - 2 where id = $1",
       [id],
     );
+    // Still the same unresolved case: its note is replaced, never a second case beside it.
+    expect(await record(id, await version(id))).toBe(first);
+    expect(await rows(id)).toHaveLength(1);
+  });
+
+  it("opens a second clarification only for a new planned start after an instruction; the first stays", async () => {
+    const { id } = await signedPastStart();
+    const first = await record(id, await version(id));
+    await escalate(id, await version(id));
+    await instruct(first, await version(id));
+    // The instructed case ended with its planned start: the same start opens nothing new ...
+    await expect(record(id, await version(id))).rejects.toMatchObject(
+      failsWith("already_instructed"),
+    );
+    // ... a new start that passes without entry opens a second clarification.
+    await owner.query(
+      "update participation set offer_deadline = berlin_today() - 20, tg_start = berlin_today() - 3 where id = $1",
+      [id],
+    );
     const second = await record(id, await version(id));
     expect(second).not.toBe(first);
     expect(await rows(id)).toHaveLength(2);
+  });
+
+  it("refuses a second tab's note against a revision it didn't read, the first record included", async () => {
+    const { id } = await signedPastStart();
+    const version0 = await version(id);
+    // Both tabs read an empty case (revision 0); the first saves, the second is stale.
+    await record(id, version0, { expectedRevision: 0 });
+    await expect(
+      record(id, version0, { expectedRevision: 0, source: "Anderer Vermerk" }),
+    ).rejects.toMatchObject(failsWith("stale_clarification"));
+    // A tab that read revision 1 saves its replacement; the other tab, still at 1, is stale.
+    await record(id, version0, { expectedRevision: 1, source: "Erster Ersatz" });
+    await expect(
+      record(id, version0, { expectedRevision: 1, source: "Zweiter Ersatz" }),
+    ).rejects.toMatchObject(failsWith("stale_clarification"));
+    expect((await rows(id))[0]).toMatchObject({ pending_source: "Erster Ersatz", revision: 2 });
+    expect((await stepsOf(id)).map((s) => [s.seq, s.kind, s.source])).toEqual([
+      [1, "recorded", source],
+      [2, "recorded", "Erster Ersatz"],
+    ]);
   });
 
   it.each([
@@ -404,7 +473,7 @@ describe("record_clarification_instruction", () => {
       failsWith("not_escalated"),
     );
     await escalate(f.id, await version(f.id));
-    await expect(instruct(randomUUID(), 0)).rejects.toMatchObject(
+    await expect(instruct(randomUUID(), 0, { expectedRevision: 0 })).rejects.toMatchObject(
       failsWith("clarification_not_found"),
     );
     await expect(
@@ -415,15 +484,146 @@ describe("record_clarification_instruction", () => {
     );
   });
 
-  it("is refused once the clarification is not open: a new start moved the planned date", async () => {
+  it("stays actionable when a new start moved the planned date; it ends with the status", async () => {
     const { id, clarification } = await escalated();
     await owner.query(
       "update participation set offer_deadline = berlin_today() - 20, tg_start = berlin_today() + 5 where id = $1",
       [id],
     );
-    await expect(instruct(clarification, await version(id))).rejects.toMatchObject(
-      failsWith("clarification_not_open"),
+    // The participation is still informed: the unresolved escalation can be answered.
+    expect(
+      (await owner.query("select entry_clarification_opened_on($1) as day", [id])).rows[0].day,
+    ).toBeNull();
+    expect(await instruct(clarification, await version(id))).toBe(clarification);
+    expect((await rows(id))[0].stage).toBe("instructed");
+  });
+
+  it("is refused once the participation left informed", async () => {
+    const { id, clarification } = await escalated();
+    await owner.query("alter table participation disable trigger user");
+    try {
+      await owner.query(
+        "update participation set status = 'contacted', dsv_status = 'not_offered', profiling_status = 'not_started' where id = $1",
+        [id],
+      );
+      await expect(instruct(clarification, await version(id))).rejects.toMatchObject(
+        failsWith("clarification_not_open"),
+      );
+    } finally {
+      await owner.query(
+        "update participation set status = 'informed', dsv_status = 'dsv_signed' where id = $1",
+        [id],
+      );
+      await owner.query("alter table participation enable trigger user");
+    }
+  });
+
+  it("is refused against a revision it didn't read", async () => {
+    const { id, clarification } = await escalated();
+    await expect(
+      instruct(clarification, await version(id), {
+        expectedRevision: (await revisionOfCase(clarification)) - 1,
+      }),
+    ).rejects.toMatchObject(failsWith("stale_clarification"));
+  });
+});
+
+describe("asking the PL again (request_entry_clarification_reply)", () => {
+  it("returns the case to the PL, who replies and escalates again; every step stays", async () => {
+    const { id, clarification } = await escalated();
+    const before = (
+      await owner.query("select status, dsv_status from participation where id=$1", [id])
+    ).rows[0];
+    expect(await ask(clarification, await version(id))).toBe(clarification);
+    expect((await rows(id))[0]).toMatchObject({ stage: "returned", escalated_at: null });
+    // Back with the PL: they can't escalate the old note, or be answered by the manager.
+    await expect(escalate(id, await version(id))).rejects.toMatchObject(
+      failsWith("clarification_not_documented"),
     );
+    await expect(instruct(clarification, await version(id))).rejects.toMatchObject(
+      failsWith("not_escalated"),
+    );
+    // The reply is a new note; it can be escalated, and the manager continues.
+    await record(id, await version(id), {
+      code: "awaiting_legal_advice",
+      source: "Antwort der PL",
+    });
+    expect((await rows(id))[0].stage).toBe("documented");
+    await escalate(id, await version(id));
+    await instruct(clarification, await version(id));
+    expect((await stepsOf(id)).map((s) => [s.seq, s.kind, s.code])).toEqual([
+      [1, "recorded", "awaiting_asu_proof"],
+      [2, "escalated", "awaiting_asu_proof"],
+      [3, "requested", "date_unclear"],
+      [4, "recorded", "awaiting_legal_advice"],
+      [5, "escalated", "awaiting_legal_advice"],
+      [6, "instructed", "legal_advice_obtained"],
+    ]);
+    expect((await events(id)).map((e) => e.type)).toEqual([
+      "entry_clarification_recorded",
+      "entry_clarification_escalated",
+      "entry_clarification_requested",
+      "entry_clarification_recorded",
+      "entry_clarification_escalated",
+      "entry_clarification_instructed",
+    ]);
+    // The status never moved.
+    expect(
+      (await owner.query("select status, dsv_status from participation where id=$1", [id])).rows[0],
+    ).toEqual(before);
+    // The source of the request is in the steps, never in an event.
+    expect(JSON.stringify((await events(id))[2]!.details)).not.toContain("Rechtsrat");
+  });
+
+  it("is the region's manager's, never the PL's nor the person who escalated, and once per escalation", async () => {
+    const { id, clarification } = await escalated();
+    for (const context of [pl, backOffice, consultant]) {
+      await expect(ask(clarification, await version(id), { context })).rejects.toMatchObject(
+        failsWith("actor_not_allowed"),
+      );
+    }
+    await owner.query(
+      "insert into staff_org_role (staff_user_id, role, region_id) values ($1, 'regional_operations_manager', $2)",
+      [seedStaffUserIds.projectLead, seedRegionIds.nord],
+    );
+    await expect(ask(clarification, await version(id), { context: pl })).rejects.toMatchObject(
+      failsWith("same_person_instruction"),
+    );
+    await ask(clarification, await version(id));
+    await expect(ask(clarification, await version(id))).rejects.toMatchObject(
+      failsWith("not_escalated"),
+    );
+  });
+
+  it("takes only its own codes, a source and the revision read", async () => {
+    const { id, clarification } = await escalated();
+    await expect(
+      ask(clarification, await version(id), { code: "legal_advice_obtained" }),
+    ).rejects.toMatchObject(failsWith("invalid_argument"));
+    await expect(ask(clarification, await version(id), { source: "  " })).rejects.toMatchObject(
+      failsWith("invalid_argument"),
+    );
+    await expect(
+      ask(clarification, await version(id), {
+        expectedRevision: (await revisionOfCase(clarification)) + 1,
+      }),
+    ).rejects.toMatchObject(failsWith("stale_clarification"));
+  });
+});
+
+describe("escalating the note the PL saw", () => {
+  it("refuses an escalation of a note another tab replaced meanwhile", async () => {
+    const { id } = await signedPastStart();
+    await record(id, await version(id));
+    const seen = await revisionOf(id);
+    // Another tab replaces the note after this PL read it.
+    await record(id, await version(id), { source: "Ersetzt" });
+    await expect(
+      escalate(id, await version(id), pl, { expectedRevision: seen }),
+    ).rejects.toMatchObject(failsWith("stale_clarification"));
+    expect((await rows(id))[0].stage).toBe("documented");
+    await escalate(id, await version(id));
+    expect((await stepsOf(id)).at(-1)).toMatchObject({ kind: "escalated", source: "Ersetzt" });
   });
 });
 

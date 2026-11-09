@@ -331,7 +331,7 @@ async function signedDsv(daysAgo: number, signedOn = "2091-01-02") {
   return id;
 }
 
-describe("the signed DSV in the work list and the dashboard (D2, D12, D13)", () => {
+describe("the signed DSV in the work list and the dashboard (the DSV work list and the entry clarification)", () => {
   it("lists 'DSV nicht vollständig unterschrieben' dated by the signature day; item, filter and tile are one count", async () => {
     const open = await signedDsv(2);
     await person(werkNord, { entryWaveId: w1.id }); // not signed

@@ -201,7 +201,7 @@ export const ReviewQueue = z
   .object({
     items: z.array(ReviewItem),
     corrections: z.array(CorrectionReviewItem),
-    /** The escalated entry clarifications awaiting the manager's instruction (D12). */
+    /** The escalated entry clarifications awaiting the manager's instruction. */
     clarifications: z.array(EntryClarificationReviewItem),
   })
   .meta({ id: "ReviewQueue" });

@@ -1449,3 +1449,14 @@ parameter, its check, the lock and the detail). `record_audit_event` refuses the
 `audit_event_projection` know them. The lock order ends participation rows → documents → `dsv_offer` →
 `dsv_contract` → `entry_clarification`.
 
+Migrations 0099–0100 add the clarification's rounds: `entry_clarification` gains `stage` and `revision`
+(its check constraints now state what each stage holds, and a unique index allows one unresolved case
+per participation), `entry_clarification_step` keeps every step (select-only for `transfer_app`), and
+the rows of 0098 are backfilled as the first steps of their history. `record_entry_clarification`,
+`escalate_entry_clarification` and `record_clarification_instruction` are dropped and created again
+with `p_expected_revision` (compared under the lock, `stale_clarification`), they act on the
+participation's unresolved case whatever its planned start became, and the manager's two answers
+(`record_clarification_instruction`, `request_entry_clarification_reply`) share the internal
+`answer_entry_clarification` under the exclusive project lock. `record_audit_event` refuses
+`entry_clarification_requested` (its diff against 0098 is the list).
+

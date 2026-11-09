@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import type { GuardFacts } from "../lifecycle/guards";
 import {
+  EntryClarificationEscalationRequest,
   EntryClarificationInstructionRequest,
+  EntryClarificationRequestRequest,
   EntryClarificationPendingRequest,
   EntryInstructionCode,
   EntryPendingCode,
   entryClarificationActions,
   entryClarificationOpenedOn,
   type EntryClarificationInput,
+  type EntryClarificationRecord,
 } from "./clarification";
 
 // The entry clarification (process-and-lifecycle.md, the entry clarification): opens the day after
@@ -104,49 +107,71 @@ describe("entryClarificationActions", () => {
     expect(entryClarificationActions(input({ latestEntryDate: null })).newStartDate).toBe(false);
   });
 
-  it("lets the PL document what is pending until the case is escalated", () => {
-    expect(entryClarificationActions(input()).recordPending).toBe(true);
-    const recorded = input({
-      clarification: { pending: true, escalated: false, instructed: false },
-    });
-    expect(entryClarificationActions(recorded).recordPending).toBe(true);
-    const escalated = input({
-      clarification: { pending: true, escalated: true, instructed: false },
-    });
-    expect(entryClarificationActions(escalated).recordPending).toBe(false);
-    const instructed = input({
-      clarification: { pending: true, escalated: true, instructed: true },
-    });
-    expect(entryClarificationActions(instructed).recordPending).toBe(false);
+  const row = (stage: EntryClarificationRecord["stage"], openedOn = "2027-04-02") => ({
+    stage,
+    openedOn,
   });
 
-  it("escalates only a documented case, once", () => {
-    expect(entryClarificationActions(input()).escalate).toBe(false);
-    const recorded = input({
-      clarification: { pending: true, escalated: false, instructed: false },
-    });
-    expect(entryClarificationActions(recorded).escalate).toBe(true);
-    const escalated = input({
-      clarification: { pending: true, escalated: true, instructed: false },
-    });
-    expect(entryClarificationActions(escalated).escalate).toBe(false);
+  it("lets the PL document, or reply, until the case is escalated", () => {
+    const at = (clarification: EntryClarificationRecord | null) =>
+      entryClarificationActions(input({ clarification })).recordPending;
+    expect([null, row("documented"), row("returned")].map(at)).toEqual([true, true, true]);
+    expect([row("escalated"), row("instructed")].map(at)).toEqual([false, false]);
   });
 
-  it("asks the manager for an instruction only after the escalation, once", () => {
-    const recorded = input({
-      clarification: { pending: true, escalated: false, instructed: false },
-    });
-    expect(entryClarificationActions(recorded).instruct).toBe(false);
-    const escalated = input({
-      clarification: { pending: true, escalated: true, instructed: false },
-    });
-    expect(entryClarificationActions(escalated).instruct).toBe(true);
-    const instructed = input({
-      clarification: { pending: true, escalated: true, instructed: true },
-    });
-    expect(entryClarificationActions(instructed).instruct).toBe(false);
-    // The case stays open after the instruction: neither may enter or end the participation.
-    expect(entryClarificationActions(instructed).open).toBe(true);
+  it("escalates only a documented case, again after a reply", () => {
+    const at = (clarification: EntryClarificationRecord | null) =>
+      entryClarificationActions(input({ clarification })).escalate;
+    expect(at(null)).toBe(false);
+    expect(at(row("documented"))).toBe(true);
+    // The manager's request returns it: the PL replies first, which documents it again.
+    expect([row("returned"), row("escalated"), row("instructed")].map(at)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("asks the manager for an answer only while the case is with them", () => {
+    const at = (clarification: EntryClarificationRecord | null) =>
+      entryClarificationActions(input({ clarification })).instruct;
+    expect([null, row("documented"), row("returned"), row("instructed")].map(at)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+    expect(at(row("escalated"))).toBe(true);
+    // The case stays open after an instruction: neither may enter or end the participation.
+    expect(entryClarificationActions(input({ clarification: row("instructed") })).open).toBe(true);
+  });
+
+  it("keeps an unresolved case open and actionable when the planned start moved on", () => {
+    // The start moved to the future: nothing is derived, but the escalation is still unresolved.
+    const moved = input({ tgStart: "2027-05-20", latestEntryDate: "2027-06-30" });
+    expect(entryClarificationActions(moved).open).toBe(false);
+    for (const stage of ["documented", "escalated", "returned"] as const) {
+      const actions = entryClarificationActions({
+        ...moved,
+        clarification: row(stage, "2027-04-02"),
+      });
+      expect([stage, actions.open, actions.openedOn]).toEqual([stage, true, "2027-04-02"]);
+      // Not a guard of the new start: the reconciliation needs a passed start.
+      expect(actions.reconciliation).toBe(false);
+    }
+    const escalated = entryClarificationActions({ ...moved, clarification: row("escalated") });
+    expect(escalated.instruct).toBe(true);
+    // An instructed case ends with its start, and a case closes with the status.
+    expect(entryClarificationActions({ ...moved, clarification: row("instructed") }).open).toBe(
+      false,
+    );
+    expect(
+      entryClarificationActions({
+        ...moved,
+        status: "active_in_tg",
+        clarification: row("escalated"),
+      }).open,
+    ).toBe(false);
   });
 });
 
@@ -168,8 +193,12 @@ describe("the requests", () => {
       code: "awaiting_asu_proof",
       source: "Akte 12, Vermerk vom 3.4.",
       statusVersion: 3,
+      revision: 0,
     };
     expect(EntryClarificationPendingRequest.safeParse(ok).success).toBe(true);
+    expect(EntryClarificationPendingRequest.safeParse({ ...ok, revision: undefined }).success).toBe(
+      false,
+    );
     expect(EntryClarificationPendingRequest.safeParse({ ...ok, source: "  " }).success).toBe(false);
     expect(
       EntryClarificationPendingRequest.safeParse({ ...ok, source: "x".repeat(201) }).success,
@@ -185,14 +214,37 @@ describe("the requests", () => {
         code: "dpo_instruction",
         source: "DSB-Vermerk 7",
         statusVersion: 3,
+        revision: 2,
       }).success,
     ).toBe(true);
+    // Every write names the revision it read; none is defaulted.
+    expect(EntryClarificationEscalationRequest.safeParse({ statusVersion: 3 }).success).toBe(false);
+    expect(
+      EntryClarificationEscalationRequest.safeParse({ statusVersion: 3, revision: 1 }).success,
+    ).toBe(true);
+    expect(
+      EntryClarificationRequestRequest.safeParse({
+        code: "date_unclear",
+        source: "Datum unklar",
+        statusVersion: 3,
+        revision: 2,
+      }).success,
+    ).toBe(true);
+    expect(
+      EntryClarificationRequestRequest.safeParse({
+        code: "dpo_instruction",
+        source: "x",
+        statusVersion: 3,
+        revision: 2,
+      }).success,
+    ).toBe(false);
     // The instruction takes no pending code, and the pending request no instruction code.
     expect(
       EntryClarificationInstructionRequest.safeParse({
         code: "awaiting_asu_proof",
         source: "x",
         statusVersion: 3,
+        revision: 2,
       }).success,
     ).toBe(false);
   });

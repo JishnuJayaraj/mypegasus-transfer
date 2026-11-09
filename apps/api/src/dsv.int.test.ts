@@ -700,7 +700,7 @@ const bulk = (ids: string[], deadline: unknown = wave, as: string = projectLead)
 const generations = async () =>
   Number((await sql("select count(*) as n from form_generation")).rows[0].n);
 
-describe("POST /projects/{id}/dsv/generations (bulk, D2)", () => {
+describe("POST /projects/{id}/dsv/generations (bulk generation)", () => {
   /** The stored objects the batch added (the storage outlives the tests). */
   let before: string[] = [];
   beforeEach(() => {

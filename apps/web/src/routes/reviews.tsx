@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
   EntryInstructionCode,
+  EntryRequestCode,
   correctionSourceMaxLength,
   normaliseCorrectionSource,
 } from "@transfer/domain";
@@ -375,9 +376,10 @@ function clarificationMessage(error: unknown): string {
 
 /**
  * The escalated entry clarifications (process-and-lifecycle.md, the entry clarification): per case
- * the project, the planned start, the PL's code and documented source, never a name or the
- * participation. "Weisung erfassen" records the manager's instruction (a code and one source
- * line) against the status version shown; it changes no status and the case stays open. Never the
+ * the project, the planned start it opened for, the steps so far with their documented sources,
+ * never a name or the participation. "Weisung erfassen" records the manager's instruction and
+ * "Rückfrage an die PL" asks the PL again (a code and one source line each), against the status
+ * version and the revision shown; neither changes a status and the case stays open. Never the
  * PL's, nor the person who escalated; the API checks it again.
  */
 function ClarificationQueue(props: {
@@ -387,7 +389,7 @@ function ClarificationQueue(props: {
   const { t } = useTranslation();
   const api = useApi();
   // The dialog keeps the case it opened for: a refreshed queue never changes it.
-  const [dialog, setDialog] = useState<Clarification>();
+  const [dialog, setDialog] = useState<{ item: Clarification; mode: "instruction" | "request" }>();
   const [code, setCode] = useState("");
   const [source, setSource] = useState("");
   const [shownInvalid, setShownInvalid] = useState(false);
@@ -405,8 +407,23 @@ function ClarificationQueue(props: {
     setSource("");
     setShownInvalid(false);
   };
+  const stepText = (step: Clarification["steps"][number]) =>
+    t("entryClarification.history.step", {
+      date: formatDate(step.on),
+      kind: t(`entryClarification.history.kinds.${step.kind}`),
+      code: t(
+        `entryClarification.${
+          step.kind === "requested"
+            ? "requestCodes"
+            : step.kind === "instructed"
+              ? "instructionCodes"
+              : "pendingCodes"
+        }.${step.code}` as never,
+      ),
+      source: step.source,
+    });
 
-  async function record(item: Clarification) {
+  async function record({ item, mode }: NonNullable<typeof dialog>) {
     if (code === "" || !sourceValid) {
       setShownInvalid(true);
       return;
@@ -414,19 +431,27 @@ function ClarificationQueue(props: {
     setBusy(true);
     let result: { kind: "success" | "error"; text: string };
     try {
-      const { error } = await api.POST(
-        "/api/v1/entry-clarifications/{clarificationId}/instruction",
-        {
-          params: { path: { clarificationId: item.id } },
-          body: {
-            code: code as components["schemas"]["EntryInstructionCode"],
-            source,
-            statusVersion: item.statusVersion,
-          },
-        },
-      );
+      const params = { params: { path: { clarificationId: item.id } } };
+      const common = { source, statusVersion: item.statusVersion, revision: item.revision };
+      const { error } =
+        mode === "instruction"
+          ? await api.POST("/api/v1/entry-clarifications/{clarificationId}/instruction", {
+              ...params,
+              body: { ...common, code: code as components["schemas"]["EntryInstructionCode"] },
+            })
+          : await api.POST("/api/v1/entry-clarifications/{clarificationId}/request", {
+              ...params,
+              body: { ...common, code: code as components["schemas"]["EntryRequestCode"] },
+            });
       if (error) throw error;
-      result = { kind: "success", text: t("reviews.clarifications.messages.instructed") };
+      result = {
+        kind: "success",
+        text: t(
+          mode === "instruction"
+            ? "reviews.clarifications.messages.instructed"
+            : "reviews.clarifications.messages.requested",
+        ),
+      };
     } catch (error) {
       result = {
         kind: "error",
@@ -441,30 +466,52 @@ function ClarificationQueue(props: {
     await props.onDecided(result);
   }
 
+  const options =
+    dialog?.mode === "request" ? EntryRequestCode.options : EntryInstructionCode.options;
+  const optionLabel = (option: string) =>
+    t(
+      `entryClarification.${dialog?.mode === "request" ? "requestCodes" : "instructionCodes"}.${option}` as never,
+    );
   return (
     <>
       <SimpleTable
         title={t("reviews.clarifications.listTitle")}
-        columns={(
-          ["project", "tgStart", "escalatedOn", "pending", "source", "actions"] as const
-        ).map((key) => ({ key, header: t(`reviews.clarifications.columns.${key}`) }))}
+        columns={(["project", "tgStart", "escalatedOn", "history", "actions"] as const).map(
+          (key) => ({ key, header: t(`reviews.clarifications.columns.${key}`) }),
+        )}
         rows={props.clarifications.map((item) => ({
           id: item.id,
           project: item.projectName,
           tgStart: formatDate(item.tgStart),
           escalatedOn: formatDate(item.escalatedOn),
-          pending: t(`entryClarification.pendingCodes.${item.pendingCode}`),
-          source: item.pendingSource,
-          actions: item.capabilities.instruct ? (
-            <Button
-              kind="ghost"
-              size="sm"
-              disabled={busy}
-              aria-label={`${t("reviews.clarifications.instruct")}: ${label(item)}`}
-              onClick={() => setDialog(item)}
-            >
-              {t("reviews.clarifications.instruct")}
-            </Button>
+          history: (
+            <ol className="tp-list">
+              {item.steps.map((step, index) => (
+                <li key={index}>{stepText(step)}</li>
+              ))}
+            </ol>
+          ),
+          actions: item.capabilities.answer ? (
+            <>
+              <Button
+                kind="ghost"
+                size="sm"
+                disabled={busy}
+                aria-label={`${t("reviews.clarifications.instruct")}: ${label(item)}`}
+                onClick={() => setDialog({ item, mode: "instruction" })}
+              >
+                {t("reviews.clarifications.instruct")}
+              </Button>
+              <Button
+                kind="ghost"
+                size="sm"
+                disabled={busy}
+                aria-label={`${t("reviews.clarifications.request")}: ${label(item)}`}
+                onClick={() => setDialog({ item, mode: "request" })}
+              >
+                {t("reviews.clarifications.request")}
+              </Button>
+            </>
           ) : (
             t("reviews.clarifications.ownEscalation")
           ),
@@ -472,10 +519,10 @@ function ClarificationQueue(props: {
         emptyState={t("reviews.clarifications.empty")}
       />
       <Modal
-        key={dialog?.id ?? "none"}
+        key={dialog ? `${dialog.mode}-${dialog.item.id}-${dialog.item.revision}` : "none"}
         open={dialog !== undefined}
         size="sm"
-        modalHeading={t("reviews.clarifications.dialog.title")}
+        modalHeading={dialog ? t(`reviews.clarifications.dialog.${dialog.mode}.title`) : ""}
         primaryButtonText={t("reviews.clarifications.dialog.confirm")}
         secondaryButtonText={t("reviews.clarifications.dialog.cancel")}
         primaryButtonDisabled={busy}
@@ -484,26 +531,22 @@ function ClarificationQueue(props: {
       >
         {dialog && (
           <Stack gap={4}>
-            <p>{label(dialog)}</p>
+            <p>{label(dialog.item)}</p>
             <Select
-              id="clarification-instruction-code"
-              labelText={t("reviews.clarifications.dialog.code")}
+              id="clarification-answer-code"
+              labelText={t(`reviews.clarifications.dialog.${dialog.mode}.code`)}
               value={code}
               invalid={shownInvalid && code === ""}
-              invalidText={t("reviews.clarifications.dialog.choose")}
+              invalidText={t(`reviews.clarifications.dialog.${dialog.mode}.choose`)}
               onChange={(event) => setCode(event.target.value)}
             >
               <SelectItem value="" text="" />
-              {EntryInstructionCode.options.map((option) => (
-                <SelectItem
-                  key={option}
-                  value={option}
-                  text={t(`entryClarification.instructionCodes.${option}`)}
-                />
+              {options.map((option) => (
+                <SelectItem key={option} value={option} text={optionLabel(option)} />
               ))}
             </Select>
             <TextInput
-              id="clarification-instruction-source"
+              id="clarification-answer-source"
               labelText={t("reviews.clarifications.dialog.source")}
               value={source}
               maxLength={correctionSourceMaxLength}
@@ -511,7 +554,7 @@ function ClarificationQueue(props: {
               invalidText={t("reviews.clarifications.dialog.enterSource")}
               onChange={(event) => setSource(event.target.value)}
             />
-            <p>{t("reviews.clarifications.dialog.final")}</p>
+            <p>{t(`reviews.clarifications.dialog.${dialog.mode}.final`)}</p>
           </Stack>
         )}
       </Modal>

@@ -113,7 +113,7 @@ export function stepTarget(step: OpenStep): StepTarget {
           ? { tab: "asu" }
           : { tab: "profiling" };
     case "flag":
-      // A signed DSV that never entered is clarified on the tab "DSV" (D13).
+      // A signed DSV that never entered is clarified on the tab "DSV" (process-and-lifecycle.md, the cutoff cases).
       if (step.kind === "dsv_signed_not_entered_at_cutoff") return { tab: "dsv" };
       return datesFlags.has(step.kind) ? { anchor: "participant-dates" } : { tab: "profiling" };
     case "action":
