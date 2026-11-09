@@ -380,7 +380,7 @@ describe("the signed DSV in the work list and the dashboard (the DSV work list a
     expect(asConsultant.caseItems).toEqual([]);
     expect(asConsultant.capabilities.generateDsv).toBe(false);
     const board = await readJson(await dashboard(as(consultant)), ProjectDashboard);
-    expect(board.counts.tiles.find((t) => t.key === "dsv_not_fully_executed")?.count).toBe(0);
+    expect(board.counts.tiles.find((t) => t.key === "dsv_not_fully_executed")).toBeUndefined();
   });
 
   it("flags a signed DSV that never entered from the day after the latest entry date, with its tile", async () => {

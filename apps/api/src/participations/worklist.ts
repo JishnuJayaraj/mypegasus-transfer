@@ -74,6 +74,8 @@ export type WorklistResult =
       scope: "project" | "assigned";
       generatedAt: string;
       project: WorklistProject;
+      /** `mayWorkDsv` in a `ta_tg` project: the DSV case items and tile are the viewer's. */
+      worksDsv: boolean;
       items: WorklistItem[];
     };
 
@@ -241,7 +243,11 @@ export async function loadWorklist(
                 endDate,
                 knowledgeDate,
               }),
-              dsv: dsvFacts.get(p.id) ?? { signedOn: null, fullyExecuted: false },
+              dsv: dsvFacts.get(p.id) ?? {
+                signedOn: null,
+                fullyExecuted: false,
+                unresolvedClarificationOpenedOn: null,
+              },
               kug200b: {
                 channel: asuStates.get(p.id)!.channel,
                 offeredOn: offers.get(p.id)!.offeredOn,
@@ -305,6 +311,7 @@ export async function loadWorklist(
         scope: scope.kind === "all" ? ("project" as const) : ("assigned" as const),
         generatedAt: now.toISOString(),
         project: worklistProject,
+        worksDsv,
         items,
       };
     },
@@ -312,7 +319,11 @@ export async function loadWorklist(
   );
 }
 
-type DsvListFacts = { signedOn: string | null; fullyExecuted: boolean };
+type DsvListFacts = {
+  signedOn: string | null;
+  fullyExecuted: boolean;
+  unresolvedClarificationOpenedOn: string | null;
+};
 
 /**
  * The signed DSV's work list facts: the participant's signature day (the contract's, set once
@@ -327,22 +338,27 @@ async function dsvStatesOf(db: Pick<Database, "execute">, ids: readonly string[]
     participation_id: string;
     signed_on: string | null;
     fully_executed: boolean;
+    unresolved_opened_on: string | null;
   }>(sql`
     with f as (select * from dsv_facts(${list}::uuid[])),
     agg as (select participation_id, min(signed_on) as signed_on,
         bool_or(executed_on is not null) as executed from f group by participation_id)
     select p.id as participation_id,
       coalesce(c.participant_signed_on, a.signed_on)::text as signed_on,
-      coalesce(a.executed, false) as fully_executed
+      coalesce(a.executed, false) as fully_executed,
+      u.opened_on::text as unresolved_opened_on
     from participation p
     left join lateral (select participant_signed_on from dsv_contract
       where participation_id = p.id order by created_at desc limit 1) c on true
     left join agg a on a.participation_id = p.id
-    where p.id = any(${list}::uuid[]) and p.dsv_status = 'dsv_signed'`);
+    left join entry_clarification u on u.participation_id = p.id and u.stage <> 'instructed'
+    where p.id = any(${list}::uuid[])
+      and (p.dsv_status = 'dsv_signed' or u.id is not null)`);
   for (const row of rows) {
     result.set(row.participation_id, {
       signedOn: row.signed_on,
       fullyExecuted: row.fully_executed,
+      unresolvedClarificationOpenedOn: row.unresolved_opened_on,
     });
   }
   return result;

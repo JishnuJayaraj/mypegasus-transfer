@@ -175,7 +175,16 @@ export type WorklistFacts = Pick<
    * The signed DSV's facts: the participant's signature day (the contract's, else the counting
    * scan's) and whether a counting complete packet exists now.
    */
-  dsv: { signedOn: IsoDate | null; fullyExecuted: boolean };
+  dsv: {
+    signedOn: IsoDate | null;
+    fullyExecuted: boolean;
+    /**
+     * The day the participation's unresolved entry clarification opened, if one is recorded: it
+     * stays open, and on the list, while the participation is `informed`, whatever its planned start
+     * became (`entryClarificationActions`).
+     */
+    unresolvedClarificationOpenedOn?: IsoDate | null;
+  };
   appointments: {
     bookings: readonly AppointmentItemBooking[];
     notices: readonly AppointmentItemNotice[];
@@ -224,13 +233,19 @@ function dsvCaseItems(
   if (dsvStatus === "dsv_signed" && status === "informed" && !facts.dsv.fullyExecuted) {
     items.push({ kind: "dsv_not_fully_executed", date: facts.dsv.signedOn ?? today });
   }
-  const openedOn = entryClarificationOpenedOn({
-    projectType: project.type,
-    status,
-    dsvStatus,
-    tgStart: effectiveTgStart(snapshot.participation, snapshot.wave),
-    today,
-  });
+  // An unresolved recorded case first, as the card reads it (`entryClarificationActions`): a
+  // moved planned start never takes it off the list while the participation is `informed`.
+  const carried =
+    status === "informed" ? (facts.dsv.unresolvedClarificationOpenedOn ?? null) : null;
+  const openedOn =
+    carried ??
+    entryClarificationOpenedOn({
+      projectType: project.type,
+      status,
+      dsvStatus,
+      tgStart: effectiveTgStart(snapshot.participation, snapshot.wave),
+      today,
+    });
   if (openedOn !== null) items.push({ kind: "entry_clarification", date: openedOn });
   return items;
 }

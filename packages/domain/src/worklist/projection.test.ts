@@ -178,6 +178,35 @@ describe("worklistProjection", () => {
     ).toEqual([]);
   });
 
+  it("keeps an unresolved entry clarification on the list after the planned start moved, while informed", () => {
+    const signed = state("informed", "profiling_done", "dsv_signed");
+    // The planned start moved to after today: no case would open for it, the recorded one stays.
+    const s = snapshot({
+      current: signed,
+      wave: { ...wave, defaultTgStart: "2027-04-01", latestEntryDate: "2027-04-30" },
+    });
+    const dsv = {
+      signedOn: "2027-02-20",
+      fullyExecuted: true,
+      unresolvedClarificationOpenedOn: "2027-03-02",
+    };
+    const row = (current = s) =>
+      worklistProjection(facts({ dsv }), current, project, "2027-03-10", now, viewer()).caseItems;
+    expect(row()).toEqual([{ kind: "entry_clarification", date: "2027-03-02" }]);
+    const entered = snapshot({ current: { ...signed, status: "active_in_tg" }, wave: s.wave });
+    expect(row(entered)).toEqual([]);
+    expect(
+      worklistProjection(
+        facts({ dsv: { ...dsv, unresolvedClarificationOpenedOn: null } }),
+        s,
+        project,
+        "2027-03-10",
+        now,
+        viewer(),
+      ).caseItems,
+    ).toEqual([]);
+  });
+
   it("offers the DSV bulk generation to the viewer who may, in an open ta_tg participation", () => {
     const s = snapshot({ wave: null });
     const row = (v: Partial<WorklistViewer>, p: WorklistProject = project) =>

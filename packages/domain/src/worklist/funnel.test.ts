@@ -162,11 +162,11 @@ describe("matchesWorklistFilter", () => {
   });
 });
 
-const keys = (type: "ta_tg" | "ta_only") =>
-  projectFunnel(items, { type, waves: [] }).tiles.map((t) => t.key);
+const keys = (type: "ta_tg" | "ta_only", worksDsv = true) =>
+  projectFunnel(items, { type, waves: [], worksDsv }).tiles.map((t) => t.key);
 
 describe("projectFunnel", () => {
-  const project = { type: "ta_tg" as const, waves: [{ id: waveId }] };
+  const project = { type: "ta_tg" as const, waves: [{ id: waveId }], worksDsv: true };
 
   it("every count equals its filter's result in the same items", () => {
     const counts = projectFunnel(items, project);
@@ -204,6 +204,11 @@ describe("projectFunnel", () => {
     expect(keys("ta_tg")).toContain("dsv_not_fully_executed");
     expect(keys("ta_only")).not.toContain("dsv_not_fully_executed");
     expect(keys("ta_only")).toContain("cutoff_cases");
+  });
+
+  it("leaves the DSV tile out for a viewer who doesn't work the DSV (no count of 0 that isn't one)", () => {
+    expect(keys("ta_tg", false)).not.toContain("dsv_not_fully_executed");
+    expect(keys("ta_tg", false)).toContain("cutoff_cases");
   });
 
   it("the tile, the filter and the item are one predicate over one snapshot", () => {

@@ -70,8 +70,11 @@ export function worklistRoutes(deps: Deps) {
       const result = await snapshot(c, c.req.valid("param").projectId);
       if (result.kind !== "ok") return refused(c, result);
       c.header("Cache-Control", "private, no-store");
-      const { scope, generatedAt, project, items } = result;
-      return c.json({ scope, generatedAt, counts: projectFunnel(items, project) }, 200);
+      const { scope, generatedAt, project, worksDsv, items } = result;
+      return c.json(
+        { scope, generatedAt, counts: projectFunnel(items, { ...project, worksDsv }) },
+        200,
+      );
     },
   );
 

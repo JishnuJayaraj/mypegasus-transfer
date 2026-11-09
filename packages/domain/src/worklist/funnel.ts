@@ -49,7 +49,15 @@ export const ProjectDashboard = z
   .meta({ id: "ProjectDashboard" });
 export type ProjectDashboard = z.infer<typeof ProjectDashboard>;
 
-export type FunnelProject = { type: ProjectType; waves: readonly { id: string }[] };
+export type FunnelProject = {
+  type: ProjectType;
+  waves: readonly { id: string }[];
+  /**
+   * Whether the viewer works the DSV (`mayWorkDsv`: the PL and back office). Only they see the DSV
+   * case items, so only they get the tile: anyone else would read a count of 0 that isn't one.
+   */
+  worksDsv?: boolean;
+};
 
 type Entry = { key: string; filter: WorklistFilter };
 const each = <T extends string>(values: readonly T[], filter: (value: T) => WorklistFilter) =>
@@ -75,7 +83,7 @@ export function funnelFilters(project: FunnelProject): Record<DashboardGroup, En
       { key: "appointments_to_resolve", filter: { appointment: "to_resolve" } },
       { key: "agentur_open", filter: { agentur: "open" } },
       // A signed DSV nobody completed, and the cases the Stichtag leaves to the PL (process-and-lifecycle.md, the cutoff cases).
-      ...(taTg
+      ...(taTg && project.worksDsv === true
         ? [
             {
               key: "dsv_not_fully_executed",

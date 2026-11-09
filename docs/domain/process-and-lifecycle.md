@@ -1308,8 +1308,8 @@ packet has the case item "DSV nicht vollständig unterschrieben", dated by the p
 day (`dsvSignedOn`: the contract's, else the counting scan's). The filter "DSV: unterschrieben, nicht
 vollständig" (`caseItem=dsv_not_fully_executed`), the dashboard tile of the same name and the item
 count the same participations: the filter and the tile are `matchesWorklistFilter` over the one
-snapshot. Only the PL and back office see the DSV items and the bulk action (the packet is the
-employment contract's, `mayWorkDsv`).
+snapshot. Only the PL and back office see the DSV items, the tile and the bulk action (the packet is
+the employment contract's, `mayWorkDsv`); anyone else gets no tile rather than a count of 0.
 
 **Bulk generation.** The PL or back office generates the DSV for 1 to 100 selected participations of
 one project with one deadline, all or nothing (`POST /projects/{id}/dsv/generations`). Every item is
@@ -1331,7 +1331,8 @@ where the entry clarification is worked on. The dashboard tile "Klärungsfälle 
 signed DSV that is still `informed` is a case owned by the project's PL (the item "Eintritt klären");
 it stays until the participation leaves `informed` and changes no status. There is one unresolved
 case per participation, found by the participation and not by the current start date: when the
-planned start moves on, an unresolved case stays on the tab, in "Freigaben" and actionable. The tab
+planned start moves on, an unresolved case stays on the tab, on the work list (dated by the day it
+opened), in "Freigaben" and actionable. The tab
 "DSV" offers the paths whose guards pass: the reconciliation when the complete packet, the ASU proof
 and the profiling (or the approved exception) were valid on the planned start (its route follows in
 7-6), and a new start date with its amendment while the wave's latest entry date allows one. The PL

@@ -338,9 +338,21 @@ describe("the manager's instruction in Freigaben", () => {
     expect(moved.clarification).toMatchObject({ id: clarificationId, stage: "escalated" });
     const [item] = (await queue()).clarifications;
     expect(item).toMatchObject({ id: clarificationId, capabilities: { answer: true } });
+    // The work list keeps "Eintritt klären" as the card does, dated by the day the case opened.
+    const listed = async () => {
+      const res = await request("GET", `/projects/${werkNord}/worklist`, projectLead);
+      const { items } = (await res.json()) as {
+        items: { id: string; caseItems: { kind: string; date: string }[] }[];
+      };
+      return items
+        .find((row) => row.id === id)!
+        .caseItems.filter((c) => c.kind === "entry_clarification");
+    };
+    expect(await listed()).toEqual([{ kind: "entry_clarification", date: moved.actions.openedOn }]);
     expect(await instruct(clarificationId, version).then((r) => r.status)).toBe(204);
     // Instructed, it ended with its start: the card closes while the start lies ahead.
     expect((await state(id)).actions.open).toBe(false);
+    expect(await listed()).toEqual([]);
   });
 
   it("lists the escalated case without a name or id, and the manager records the instruction", async () => {
