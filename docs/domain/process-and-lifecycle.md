@@ -1300,3 +1300,48 @@ code only. It is tracking, not a guard (Q71).
 **"Nachweis ungültig" for a DSV scan.** An approved invalidation of a DSV scan stays unresolved until a
 counting scan of the same offer, accepted after the approval, shows every signature the invalidated
 scan showed, with the same actual date.
+
+### DSV work list, bulk generation, cutoff cases and the entry clarification as built (7-4)
+
+**The work list item.** A `dsv_signed` participation that is `informed` and has no counting complete
+packet has the case item "DSV nicht vollständig unterschrieben", dated by the participant's signature
+day (`dsvSignedOn`: the contract's, else the counting scan's). The filter "DSV: unterschrieben, nicht
+vollständig" (`caseItem=dsv_not_fully_executed`), the dashboard tile of the same name and the item
+count the same participations: the filter and the tile are `matchesWorklistFilter` over the one
+snapshot. Only the PL and back office see the DSV items and the bulk action (the packet is the
+employment contract's, `mayWorkDsv`).
+
+**Bulk generation.** The PL or back office generates the DSV for 1 to 100 selected participations of
+one project with one deadline, all or nothing (`POST /projects/{id}/dsv/generations`). Every item is
+checked as a single generation is; one refusal refuses the batch and names the item's position,
+never an id. Then every paper is rendered and stored and all are recorded in one transaction in
+participation id order under the project's exclusive lock (`record_form_generation` takes
+`p_batch_size`; the audit event carries `batchSize`); a failure at the record or in storage removes
+every stored paper. The deadline is chosen first: the wave's signing deadline only when every
+selected row is a first offer of one wave, else a date entered.
+
+**The cutoff cases.** The flag `dsv_signed_not_entered_at_cutoff` is raised for an `informed`
+participation with a signed DSV from the day after the wave's latest entry date; it is informational
+and the system never withdraws a signed DSV. It is not raised for the conflict with a declined
+profiling (that flag stays) and gives no cutoff warning before the cutoff. It links to the tab "DSV"
+where the entry clarification is worked on. The dashboard tile "Klärungsfälle Stichtag"
+(`flag=cutoff_case`) counts the four flags the cutoff leaves to the PL.
+
+**The entry clarification** (D12; Q214, Q220 open). From the day after the effective planned TG
+start, a signed DSV that is still `informed` is a case owned by the project's PL (the item "Eintritt
+klären"); it stays until the participation leaves `informed` and changes no status. The tab "DSV"
+offers the paths whose guards pass: the reconciliation when the complete packet, the ASU proof and
+the profiling (or the approved exception) were valid on the planned start (its route follows in 7-6),
+and a new start date with its amendment while the wave's latest entry date allows one. The PL
+documents what is pending (`awaiting_countersignature`, `awaiting_asu_proof`, `awaiting_profiling`,
+`awaiting_legal_advice`) with a documented source line (`record_entry_clarification`; a second record
+replaces the first until the case is escalated), then may escalate once
+(`escalate_entry_clarification`; a recorded code is needed). The regional operations manager of the
+project's region records the instruction (`legal_advice_obtained`, `dpo_instruction`,
+`authority_or_court_decision`, `parties_agreement`) with a documented source in "Freigaben"
+(`record_clarification_instruction`, once, never the PL who escalated); it changes nothing else.
+All three compare the participation's status version read. The audit events
+`entry_clarification_recorded`, `_escalated` and `_instructed` are in the history's `case` stream
+with the code only, never the source. Which legal outcomes exist for such a contract is Q220: no edge
+exists for a cancellation or termination after the planned start, and nothing is invented.
+

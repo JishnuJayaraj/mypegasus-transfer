@@ -162,10 +162,23 @@ export const LifecycleFlag = z.enum([
   "conflict_dsv_signed_profiling_declined",
   "dsv_never_offered",
   "informed_without_wave_at_cutoff",
+  "dsv_signed_not_entered_at_cutoff",
   "profiling_exception_deadline_missed",
   "profiling_declined_after_entry",
 ]);
 export type LifecycleFlag = z.infer<typeof LifecycleFlag>;
+
+/**
+ * The cases the final admission cutoff leaves to the PL (process-and-lifecycle.md, system
+ * withdrawal at the final admission cutoff; Q214): flags, never a status change. Each links to the
+ * actions that resolve it; the dashboard tile "Klärungsfälle Stichtag" counts them.
+ */
+export const cutoffCaseFlags: ReadonlySet<LifecycleFlag> = new Set<LifecycleFlag>([
+  "conflict_dsv_signed_profiling_declined",
+  "dsv_never_offered",
+  "informed_without_wave_at_cutoff",
+  "dsv_signed_not_entered_at_cutoff",
+]);
 
 export const ProjectFlag = z.enum(["latest_entry_date_missing"]);
 export type ProjectFlag = z.infer<typeof ProjectFlag>;

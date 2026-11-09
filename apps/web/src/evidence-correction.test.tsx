@@ -241,7 +241,8 @@ describe("Freigaben: corrections", () => {
           orgRoles: [{ role: "regional_operations_manager", regionId: "r-1" }],
         }),
       "GET /api/v1/dev/staff-users": () => json(staffUsers),
-      "GET /api/v1/reviews": () => json({ items: [], corrections: [correction] }),
+      "GET /api/v1/reviews": () =>
+        json({ items: [], corrections: [correction], clarifications: [] }),
       [`POST ${decisionPath}`]: decision,
     });
     renderApp("/reviews", api);

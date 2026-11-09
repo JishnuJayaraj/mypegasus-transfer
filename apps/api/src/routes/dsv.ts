@@ -3,6 +3,8 @@ import { createPdfRenderer } from "@transfer/adapters";
 import { participation, eq, sql } from "@transfer/db";
 import {
   documentCapabilities,
+  DsvBulkGenerationRequest,
+  DsvBulkGenerationResult,
   DsvGenerationRequest,
   DsvGenerationResult,
   dsvPinProblem,
@@ -25,7 +27,7 @@ import { projectAccess } from "../access";
 import { createRouter, json, type AppEnv, type Deps } from "../context";
 import { functionRefusal } from "../database-errors";
 import { documentService, type DocumentActor, storageUnavailable } from "../documents/service";
-import { dsvService, type DsvRead, type DsvRefusal } from "../forms/dsv";
+import { dsvService, type DsvBatchRefusal, type DsvRead, type DsvRefusal } from "../forms/dsv";
 import { formRegistry } from "../forms/registry";
 import type { StaffSubject } from "../participations/subjects";
 import { domainProblem, problem, problemResponses } from "../problem";
@@ -76,6 +78,53 @@ function refused(c: Context<AppEnv>, refusal: DsvRefusal) {
   if (code === "offer_deadline_invalid") return domainProblem(c, [{ code, field: "deadline" }]);
   if (code !== undefined && domainCodes.has(code)) return domainProblem(c, [code]);
   throw refusal.error;
+}
+
+/**
+ * A refused batch as one problem, the position of each item in its pointer (`/items/3`): the
+ * domain refusals first (422, all of them), else the stale ones (409), else the first other
+ * failure. No participation id, name or value is named.
+ */
+function refusedBatch(c: Context<AppEnv>, refusals: readonly DsvBatchRefusal[]) {
+  const domain = refusals.flatMap(({ index, refusal }) => {
+    if (refusal.kind === "domain") {
+      return refusal.codes.map(({ code, field }) => ({
+        pointer: `/items/${index}${field ? `/${field}` : ""}`,
+        code,
+        detail: "Refused by a domain rule",
+      }));
+    }
+    if (refusal.kind !== "function") return [];
+    const code = functionRefusal(refusal.error);
+    if (code === "offer_deadline_invalid") {
+      return [{ pointer: `/items/${index}/deadline`, code, detail: "Refused by a domain rule" }];
+    }
+    return code !== undefined && domainCodes.has(code)
+      ? [{ pointer: `/items/${index}`, code, detail: "Refused by a domain rule" }]
+      : [];
+  });
+  if (domain.length > 0) return problem(c, "domain-error", { errors: domain });
+  const stale = refusals.filter(({ refusal }) => refusal.kind === "stale");
+  const changed = refusals.filter(
+    ({ refusal }) =>
+      refusal.kind === "function" && functionRefusal(refusal.error) === "source_changed",
+  );
+  if (stale.length + changed.length > 0) {
+    return problem(c, "conflict", {
+      errors: [...stale, ...changed].map(({ index }) => ({
+        pointer: `/items/${index}`,
+        code: "source_changed",
+        detail: "Read the selection again",
+      })),
+    });
+  }
+  const first = refusals[0]!.refusal;
+  if (first.kind === "function") {
+    const code = functionRefusal(first.error);
+    if (code === "actor_not_allowed") return problem(c, "forbidden");
+    throw first.error;
+  }
+  return refused(c, first);
 }
 
 export function dsvRoutes(deps: Deps) {
@@ -345,6 +394,95 @@ export function dsvRoutes(deps: Deps) {
       if (!outcome.ok) return refused(c, outcome.refusal) as never;
       c.header("Cache-Control", "no-store");
       return c.json(outcome.result, 201);
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/projects/{projectId}/dsv/generations",
+      tags: ["projects"],
+      summary:
+        "Generate the DSV of 1 to 100 participations of the project with one deadline, all or nothing (the PL or back office): every item is checked first, then every paper is rendered and stored and all are recorded in one transaction under the project's exclusive lock; any refusal records none",
+      description: [
+        "Each item is checked as a single generation is; the refusal names the item's position in the pointer (`/items/3`, `/items/3/deadline`) and never an id or a value:",
+        "- `422`: the single generation's codes (`dsv_offer_open`, `no_entry_wave`, `tg_dates_missing`, `dsv_template_not_pinned`, `explicit_deadline_required`, `offer_deadline_invalid`, `dsv_already_signed`, ...), for every item that can't be generated.",
+        "- `409 source_changed`: a wave's deadline moved since the dialog showed it (`wave` choice) or a printed value moved while recording.",
+        "- `404`: a participation that isn't in the project or isn't visible. `503 pdf_unavailable` or `storage_unavailable`; nothing is recorded and every stored paper is removed.",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ProjectParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: DsvBulkGenerationRequest } },
+        },
+      },
+      responses: {
+        201: json(DsvBulkGenerationResult, "Generated: one document per participation, in order"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const { projectId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const { subject, visible, regionId } = await projectAccess(db, sessionUser(c), projectId);
+      if (!visible) return problem(c, "not-found") as never;
+      if (!mayWorkDsv(subject, { projectId, regionId, participationId: null }).ok) {
+        return problem(c, "forbidden") as never;
+      }
+      const ids = input.items.map((item) => item.participationId);
+      // A participation of another project, or that doesn't exist, is not found: the whole batch.
+      const known = await db
+        .select({ id: participation.id })
+        .from(participation)
+        .where(
+          sql`${participation.projectId} = ${projectId}::uuid and ${participation.id} = any(${sql.param(ids)}::uuid[])`,
+        );
+      if (known.length !== ids.length) return problem(c, "not-found") as never;
+      const outcome = await service.generateBatch(ids, input.deadline, clock.today(), context(c));
+      logger.info(
+        {
+          requestId: c.get("requestId"),
+          projectId,
+          formCode: "dsv",
+          count: ids.length,
+          deadlineKind: input.deadline.kind,
+          outcome: outcome.ok
+            ? "generated"
+            : (outcome.refusals
+                .map(({ refusal }) =>
+                  refusal.kind === "function"
+                    ? (functionRefusal(refusal.error) ?? "failed")
+                    : refusal.kind === "unavailable"
+                      ? refusal.code
+                      : refusal.kind === "stale"
+                        ? "source_changed"
+                        : "refused",
+                )
+                .find(() => true) ?? "refused"),
+        },
+        "form generation batch",
+      );
+      if (!outcome.ok) return refusedBatch(c, outcome.refusals) as never;
+      c.header("Cache-Control", "no-store");
+      return c.json(
+        {
+          generations: outcome.results.map(({ participationId, result }) => ({
+            participationId,
+            ...result,
+          })),
+        },
+        201,
+      );
     },
   );
 

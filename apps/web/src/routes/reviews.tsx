@@ -2,14 +2,22 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { ApiProblemError, type components } from "@transfer/api-client";
 import {
+  EntryInstructionCode,
+  correctionSourceMaxLength,
+  normaliseCorrectionSource,
+} from "@transfer/domain";
+import {
   Button,
   formatDate,
   InlineNotification,
   Loading,
   Modal,
   PageHeader,
+  Select,
+  SelectItem,
   SimpleTable,
   Stack,
+  TextInput,
 } from "@transfer/ui";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -98,7 +106,7 @@ function ReviewsPage() {
       reason: t(`history.reasons.${item.reason}`),
       date: formatDate(item.requestedOn),
     });
-  const { items, corrections } = query.data;
+  const { items, corrections, clarifications } = query.data;
   return (
     <>
       <PageHeader title={t("reviews.title")} />
@@ -159,6 +167,13 @@ function ReviewsPage() {
         />
         <CorrectionQueue
           corrections={corrections}
+          onDecided={async (result) => {
+            setMessage(result);
+            await queryClient.invalidateQueries({ queryKey: reviewsQuery(api).queryKey });
+          }}
+        />
+        <ClarificationQueue
+          clarifications={clarifications}
           onDecided={async (result) => {
             setMessage(result);
             await queryClient.invalidateQueries({ queryKey: reviewsQuery(api).queryKey });
@@ -339,6 +354,164 @@ function CorrectionQueue(props: {
             )}
             <p>{t("reviews.corrections.dialog.noStatus")}</p>
             <p>{t("reviews.corrections.dialog.final")}</p>
+          </Stack>
+        )}
+      </Modal>
+    </>
+  );
+}
+
+type Clarification = components["schemas"]["ReviewQueue"]["clarifications"][number];
+
+/** A clarification refusal's message key: its status or first code. */
+function clarificationMessage(error: unknown): string {
+  if (!(error instanceof ApiProblemError)) return "failed";
+  if (error.status === 403) return "forbidden";
+  if (error.status === 404) return "notFound";
+  if (error.status === 409) return "conflict";
+  const code = error.problem.errors?.[0]?.code;
+  return error.status === 422 && code ? `codes.${code}` : "failed";
+}
+
+/**
+ * The escalated entry clarifications (process-and-lifecycle.md, the entry clarification): per case
+ * the project, the planned start, the PL's code and documented source, never a name or the
+ * participation. "Weisung erfassen" records the manager's instruction (a code and one source
+ * line) against the status version shown; it changes no status and the case stays open. Never the
+ * PL's, nor the person who escalated; the API checks it again.
+ */
+function ClarificationQueue(props: {
+  clarifications: Clarification[];
+  onDecided: (message: { kind: "success" | "error"; text: string }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const api = useApi();
+  // The dialog keeps the case it opened for: a refreshed queue never changes it.
+  const [dialog, setDialog] = useState<Clarification>();
+  const [code, setCode] = useState("");
+  const [source, setSource] = useState("");
+  const [shownInvalid, setShownInvalid] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const label = (item: Clarification) =>
+    t("reviews.clarifications.item", {
+      project: item.projectName,
+      date: formatDate(item.tgStart),
+    });
+  const normalised = normaliseCorrectionSource(source);
+  const sourceValid = normalised !== null && normalised.length <= correctionSourceMaxLength;
+  const close = () => {
+    setDialog(undefined);
+    setCode("");
+    setSource("");
+    setShownInvalid(false);
+  };
+
+  async function record(item: Clarification) {
+    if (code === "" || !sourceValid) {
+      setShownInvalid(true);
+      return;
+    }
+    setBusy(true);
+    let result: { kind: "success" | "error"; text: string };
+    try {
+      const { error } = await api.POST(
+        "/api/v1/entry-clarifications/{clarificationId}/instruction",
+        {
+          params: { path: { clarificationId: item.id } },
+          body: {
+            code: code as components["schemas"]["EntryInstructionCode"],
+            source,
+            statusVersion: item.statusVersion,
+          },
+        },
+      );
+      if (error) throw error;
+      result = { kind: "success", text: t("reviews.clarifications.messages.instructed") };
+    } catch (error) {
+      result = {
+        kind: "error",
+        text: t(`reviews.clarifications.messages.${clarificationMessage(error)}` as never, {
+          defaultValue: t("reviews.clarifications.messages.failed"),
+        }),
+      };
+    } finally {
+      setBusy(false);
+      close();
+    }
+    await props.onDecided(result);
+  }
+
+  return (
+    <>
+      <SimpleTable
+        title={t("reviews.clarifications.listTitle")}
+        columns={(
+          ["project", "tgStart", "escalatedOn", "pending", "source", "actions"] as const
+        ).map((key) => ({ key, header: t(`reviews.clarifications.columns.${key}`) }))}
+        rows={props.clarifications.map((item) => ({
+          id: item.id,
+          project: item.projectName,
+          tgStart: formatDate(item.tgStart),
+          escalatedOn: formatDate(item.escalatedOn),
+          pending: t(`entryClarification.pendingCodes.${item.pendingCode}`),
+          source: item.pendingSource,
+          actions: item.capabilities.instruct ? (
+            <Button
+              kind="ghost"
+              size="sm"
+              disabled={busy}
+              aria-label={`${t("reviews.clarifications.instruct")}: ${label(item)}`}
+              onClick={() => setDialog(item)}
+            >
+              {t("reviews.clarifications.instruct")}
+            </Button>
+          ) : (
+            t("reviews.clarifications.ownEscalation")
+          ),
+        }))}
+        emptyState={t("reviews.clarifications.empty")}
+      />
+      <Modal
+        key={dialog?.id ?? "none"}
+        open={dialog !== undefined}
+        size="sm"
+        modalHeading={t("reviews.clarifications.dialog.title")}
+        primaryButtonText={t("reviews.clarifications.dialog.confirm")}
+        secondaryButtonText={t("reviews.clarifications.dialog.cancel")}
+        primaryButtonDisabled={busy}
+        onRequestClose={close}
+        onRequestSubmit={() => dialog && void record(dialog)}
+      >
+        {dialog && (
+          <Stack gap={4}>
+            <p>{label(dialog)}</p>
+            <Select
+              id="clarification-instruction-code"
+              labelText={t("reviews.clarifications.dialog.code")}
+              value={code}
+              invalid={shownInvalid && code === ""}
+              invalidText={t("reviews.clarifications.dialog.choose")}
+              onChange={(event) => setCode(event.target.value)}
+            >
+              <SelectItem value="" text="" />
+              {EntryInstructionCode.options.map((option) => (
+                <SelectItem
+                  key={option}
+                  value={option}
+                  text={t(`entryClarification.instructionCodes.${option}`)}
+                />
+              ))}
+            </Select>
+            <TextInput
+              id="clarification-instruction-source"
+              labelText={t("reviews.clarifications.dialog.source")}
+              value={source}
+              maxLength={correctionSourceMaxLength}
+              invalid={shownInvalid && !sourceValid}
+              invalidText={t("reviews.clarifications.dialog.enterSource")}
+              onChange={(event) => setSource(event.target.value)}
+            />
+            <p>{t("reviews.clarifications.dialog.final")}</p>
           </Stack>
         )}
       </Modal>

@@ -286,6 +286,21 @@ export const reviewsQuery = (api: ApiClient) =>
     queryFn: () => unwrap(api.GET("/api/v1/reviews")),
   });
 
+/**
+ * The entry clarification of a signed DSV that has not entered (the PL and back office): its
+ * state, the recorded pending code and the legitimate paths now (D12).
+ */
+export const entryClarificationQuery = (api: ApiClient, participationId: string) =>
+  queryOptions({
+    queryKey: ["participations", participationId, "entry-clarification"],
+    queryFn: () =>
+      unwrap(
+        api.GET("/api/v1/participations/{participationId}/entry-clarification", {
+          params: { path: { participationId } },
+        }),
+      ),
+  });
+
 /** The staff accounts with their org roles (the global admin), page by page. */
 export const staffAccountsQuery = (api: ApiClient) =>
   infiniteQueryOptions({

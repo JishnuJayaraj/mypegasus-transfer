@@ -51,6 +51,7 @@ import { useTranslation } from "react-i18next";
 import { entryWavesQuery, useApi, worklistQuery } from "../api";
 import { ActivationPrintView, NoticePrintView } from "./activation-print-view";
 import { BulkInvite } from "./invitations";
+import { BulkDsv } from "./dsv-bulk";
 import { BulkKug200b } from "./kug200b-bulk";
 import { usePanelNavigationGuard } from "./panel-guard";
 import { BulkRemind } from "./reminders";
@@ -93,7 +94,7 @@ type PrintState =
   | { kind: "notice"; items: PrivacyNoticePrintItem[] };
 
 /** The batch actions in their order (the plan of Slice 6b, D8). */
-const batchKinds = ["assign", "wave", "remind", "invite", "kug200b", "activation"] as const;
+const batchKinds = ["assign", "wave", "remind", "invite", "kug200b", "dsv", "activation"] as const;
 type BatchKind = (typeof batchKinds)[number];
 /** An open batch action: the rows selected when it was opened, and what opened it. */
 type Batch = { kind: BatchKind; items: ListItem[]; trigger: HTMLElement | null };
@@ -115,6 +116,8 @@ const rowMay: Record<BatchKind, (item: ListItem, mayAssign: boolean) => boolean>
   invite: (item) => item.capabilities.invite.allowed,
   // "Kug 200b erzeugen" (data-protection.md, generated forms): the PL of a ta_tg project.
   kug200b: (item) => item.capabilities.generateKug200b,
+  // "DSV erzeugen" (process-and-lifecycle.md, the DSV: generation): the PL and back office of a ta_tg project.
+  dsv: (item) => item.capabilities.generateDsv,
   activation: (item) =>
     item.capabilities.issueActivationCode || item.capabilities.providePrivacyNotice,
 };
@@ -934,6 +937,17 @@ function BatchPanel({
       {kind === "kug200b" && (
         <BulkKug200b
           projectId={projectId}
+          selected={items}
+          onGenerated={() => {
+            onApplied();
+            onRefresh();
+          }}
+        />
+      )}
+      {kind === "dsv" && (
+        <BulkDsv
+          projectId={projectId}
+          waves={waves}
           selected={items}
           onGenerated={() => {
             onApplied();

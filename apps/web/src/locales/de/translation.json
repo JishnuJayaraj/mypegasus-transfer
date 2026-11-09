@@ -1432,7 +1432,9 @@
       "agentur": "Agentur",
       "titleActive": "Filter ({{count}})",
       "done_one": "{{count}} Treffer anzeigen",
-      "done_other": "{{count}} Treffer anzeigen"
+      "done_other": "{{count}} Treffer anzeigen",
+      "caseItem": "Offene Arbeit",
+      "cutoffCase": "Klärungsfall Stichtag"
     },
     "actionsFilter": {
       "any": "Mit offenen Angaben oder Unterlagen",
@@ -1472,7 +1474,8 @@
       "tg_start_missed": "TG-Beginn verpasst",
       "cutoff_warning": "Stichtag naht",
       "cutoff_final_reminder": "Stichtag in 3 Tagen",
-      "profiling_exception_deadline_missed": "Profiling-Frist verpasst"
+      "profiling_exception_deadline_missed": "Profiling-Frist verpasst",
+      "dsv_signed_not_entered_at_cutoff": "DSV unterschrieben, nicht eingetreten"
     },
     "portal": {
       "reachable": "Erreichbar",
@@ -1520,7 +1523,9 @@
     "caseItems": {
       "kug200b_offer_open": "Kug 200b offen (angeboten am {{date}})",
       "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren (eingegangen am {{date}})",
-      "evidence_invalidated": "Nachweis ungültig (seit {{date}})"
+      "evidence_invalidated": "Nachweis ungültig (seit {{date}})",
+      "dsv_not_fully_executed": "DSV nicht vollständig unterschrieben (Teilnehmende unterschrieben am {{date}})",
+      "entry_clarification": "Eintritt klären (geplanter Beginn überschritten seit {{date}})"
     },
     "kug200b": {
       "generate": "Kug 200b erzeugen",
@@ -1585,7 +1590,40 @@
       "invite": "Einladen",
       "kug200b": "Kug 200b erzeugen",
       "activation": "Aktivierung drucken",
-      "applies": "Betrifft {{count}} von {{total}} ausgewählten Teilnehmenden."
+      "applies": "Betrifft {{count}} von {{total}} ausgewählten Teilnehmenden.",
+      "dsv": "DSV erzeugen"
+    },
+    "caseItemFilter": {
+      "knowledge_date_missing": "Kenntnisdatum klären",
+      "kug200b_offer_open": "Kug 200b offen",
+      "kug200b_withdrawal_ba_notice": "Widerruf Kug 200b: BA informieren",
+      "evidence_invalidated": "Nachweis ungültig",
+      "dsv_not_fully_executed": "DSV: unterschrieben, nicht vollständig",
+      "entry_clarification": "Eintritt klären"
+    },
+    "dsv": {
+      "hint": "Für die ausgewählten Teilnehmenden (höchstens 100) mit einer Frist – alle oder keiner.",
+      "tooMany": "Höchstens 100 auf einmal.",
+      "notAllowed": "Für {{count}} der Ausgewählten kann kein DSV erzeugt werden.",
+      "deadline": "Frist für die Unterschrift",
+      "wave": "Unterschriftsfrist der Welle, {{date}}",
+      "explicit": "Frist eingeben",
+      "date": "Frist (TT.MM.JJJJ)",
+      "dateInvalid": "Bitte ein Datum TT.MM.JJJJ eingeben.",
+      "chooseDeadline": "Erst eine Frist wählen.",
+      "enterDate": "Erst die Frist eingeben.",
+      "generate": "Erzeugen",
+      "done_one": "{{count}} DSV erzeugt. Zum Ausdrucken den Vertrag je Teilnehmende im Reiter „DSV“ öffnen.",
+      "done_other": "{{count}} DSV erzeugt. Zum Ausdrucken den Vertrag je Teilnehmende im Reiter „DSV“ öffnen.",
+      "checklist": "Vor dem Druck von Hand zu ergänzen:",
+      "noChecklist": "Alle Pflichtangaben sind vorbefüllt.",
+      "row": "{{name}}: {{items}}",
+      "failed": "Die DSV konnten nicht erzeugt werden; es wurde keiner erzeugt.",
+      "refused": "Es wurde keiner erzeugt. Nicht möglich für:",
+      "refusedRow": "{{name}}: {{reason}}",
+      "refusedGeneral": "Es wurde keiner erzeugt: {{reason}}",
+      "conflict": "Die Angaben haben sich inzwischen geändert. Es wurde keiner erzeugt; bitte die Liste prüfen und erneut versuchen.",
+      "unavailable": "Der Vertrag kann gerade nicht erzeugt werden; es wurde keiner erzeugt. Bitte später erneut versuchen."
     }
   },
   "dashboard": {
@@ -1606,7 +1644,9 @@
       "participations": "Teilnehmende",
       "not_reachable": "nicht erreichbar",
       "appointments_overdue": "Termine überfällig",
-      "agentur_open": "Agentur offen"
+      "agentur_open": "Agentur offen",
+      "dsv_not_fully_executed": "DSV: unterschrieben, nicht vollständig",
+      "cutoff_cases": "Klärungsfälle Stichtag"
     },
     "groups": {
       "statuses": "Status",
@@ -1848,7 +1888,10 @@
       "evidence_correction_requested": "Korrektur beantragt",
       "evidence_correction_decided": "Korrektur entschieden",
       "dsv_form_generated": "DSV erzeugt",
-      "dsv_original_recorded": "Original der DSV erfasst"
+      "dsv_original_recorded": "Original der DSV erfasst",
+      "entry_clarification_recorded": "Eintritt: Klärung dokumentiert",
+      "entry_clarification_escalated": "Eintritt: an die Regionale Betriebsleitung eskaliert",
+      "entry_clarification_instructed": "Eintritt: Weisung erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -1959,7 +2002,8 @@
     },
     "baReported": "{{kind}}: gemeldet am {{date}}",
     "baNotRequired": "{{kind}}: nicht erforderlich ({{reason}})",
-    "correction": "{{target}} {{action}} ({{reason}})"
+    "correction": "{{target}} {{action}} ({{reason}})",
+    "entryPending": "{{code}}"
   },
   "appointments": {
     "title": "Termine",
@@ -3235,7 +3279,7 @@
     "loading": "Die Freigaben werden geladen …",
     "failed": "Die Freigaben konnten nicht geladen werden.",
     "forbidden": "Die Freigaben sind der Regionalen Betriebsleitung vorbehalten.",
-    "intro": "Beantragte Ausnahmen vom Profiling und Korrekturen von Nachweisen in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Quelle, Daten und ob der Nachweis vorliegt – keine Namen, keine Nachweise selbst und keine korrigierten Werte. Eigene Anträge entscheidet eine andere Person.",
+    "intro": "Beantragte Ausnahmen vom Profiling, Korrekturen von Nachweisen und eskalierte Klärungen zum Eintritt in den Projekten Ihrer Region. Angezeigt werden Projekt, Grund, Quelle, Daten und ob der Nachweis vorliegt – keine Namen, keine Nachweise selbst und keine korrigierten Werte. Eigene Anträge entscheidet eine andere Person.",
     "listTitle": "Beantragte Ausnahmen",
     "empty": "Keine offenen Anträge.",
     "columns": {
@@ -3319,6 +3363,43 @@
         "codes": {
           "source_changed": "Die Korrektur ist schon entschieden. Die Liste wurde neu geladen.",
           "target_corrected": "Der Nachweis ist inzwischen schon korrigiert."
+        }
+      }
+    },
+    "clarifications": {
+      "listTitle": "Eskalierte Klärungen zum Eintritt",
+      "empty": "Keine offenen Klärungen.",
+      "columns": {
+        "project": "Projekt",
+        "tgStart": "Geplanter Beginn",
+        "escalatedOn": "Eskaliert am",
+        "pending": "Was aussteht",
+        "source": "Quelle",
+        "actions": "Aktionen"
+      },
+      "item": "{{project}}, geplanter Beginn {{date}}",
+      "instruct": "Weisung erfassen",
+      "ownEscalation": "Von Ihnen eskaliert",
+      "dialog": {
+        "title": "Weisung erfassen",
+        "code": "Weisung",
+        "source": "Quelle (eine Zeile, höchstens 200 Zeichen, ohne Namen oder Gesundheitsangaben)",
+        "confirm": "Erfassen",
+        "cancel": "Abbrechen",
+        "final": "Die Weisung wird gespeichert und kann nicht geändert werden. Sie ändert keinen Status: Der Fall bleibt offen.",
+        "choose": "Erst die Weisung wählen.",
+        "enterSource": "Erst die Quelle angeben."
+      },
+      "messages": {
+        "instructed": "Die Weisung wurde erfasst.",
+        "failed": "Das hat nicht geklappt. Bitte erneut versuchen.",
+        "forbidden": "Sie dürfen diese Weisung nicht erfassen.",
+        "notFound": "Den Fall gibt es nicht mehr. Die Liste wurde neu geladen.",
+        "conflict": "Die Teilnahme hat sich inzwischen geändert. Die Liste wurde neu geladen.",
+        "codes": {
+          "clarification_not_open": "Der Fall ist nicht mehr offen. Die Liste wurde neu geladen.",
+          "not_escalated": "Der Fall ist nicht eskaliert.",
+          "already_instructed": "Die Weisung ist schon erfasst."
         }
       }
     }
@@ -3505,7 +3586,9 @@
         "originalReceivedOn": "Original eingegangen am",
         "sentToCustomerOn": "An Kunden gesendet am"
       },
-      "locations": { "paper_personnel_file": "In der Personalakte (Papier)" }
+      "locations": {
+        "paper_personnel_file": "In der Personalakte (Papier)"
+      }
     },
     "scans": {
       "title": "Unterschriebene Scans",
@@ -3570,6 +3653,75 @@
       "template_unknown": "Diese Vorlage gibt es nicht.",
       "project_unchanged": "Diese Vorlage ist bereits festgelegt.",
       "not_ta_tg": "Nur in Projekten mit Transfergesellschaft."
+    }
+  },
+  "entryClarification": {
+    "title": "Eintritt klären",
+    "loading": "Der Fall wird geladen …",
+    "failed": "Der Fall konnte nicht geladen werden.",
+    "intro": "Die DSV ist unterschrieben, die Teilnahme ist aber nicht zum geplanten Beginn in die Transfergesellschaft eingetreten (offen seit {{date}}). Der Fall gehört der Projektleitung und bleibt offen, bis die Teilnahme nicht mehr „informiert“ ist. Er ändert keinen Status; ein Rücktritt oder eine Beendigung nach dem geplanten Beginn ist hier nicht vorgesehen (offene Frage Q220).",
+    "paths": {
+      "title": "Mögliche Wege",
+      "reconciliation": "Abstimmung des Eintritts: Alle Voraussetzungen lagen zum geplanten Beginn vor. Die Abstimmung wird in einer späteren Version angeboten.",
+      "newStart": "Neuer Beginn mit Nachtrag: Der späteste Eintritt der Welle lässt noch einen neuen Beginn zu. Der Nachtrag muss vollständig unterschrieben sein.",
+      "newStartLink": "Zu den Terminen der Teilnahme",
+      "none": "Zurzeit erfüllt kein Weg seine Voraussetzungen. Dokumentieren Sie, was aussteht, und eskalieren Sie bei Bedarf."
+    },
+    "pending": {
+      "title": "Was aussteht",
+      "none": "Noch nichts dokumentiert.",
+      "recorded": "{{code}} – Quelle: {{source}} (erfasst am {{date}})",
+      "code": "Was steht aus?",
+      "source": "Quelle (eine Zeile, höchstens 200 Zeichen, ohne Namen oder Gesundheitsangaben)",
+      "sourceInvalid": "Bitte eine Quelle in einer Zeile angeben.",
+      "choose": "Erst wählen, was aussteht.",
+      "enterSource": "Erst die Quelle angeben.",
+      "save": "Erfassen"
+    },
+    "escalation": {
+      "title": "Eskalation",
+      "button": "An die Regionale Betriebsleitung eskalieren",
+      "needsPending": "Erst dokumentieren, was aussteht.",
+      "done": "Eskaliert am {{date}}. Die Regionale Betriebsleitung erfasst eine Weisung unter „Freigaben“; der Fall bleibt offen.",
+      "not": "Nicht eskaliert.",
+      "dialogTitle": "Fall eskalieren",
+      "dialogBody": "Der Fall geht mit dem dokumentierten Stand an die Regionale Betriebsleitung. Danach lässt sich der Stand nicht mehr ändern, bis die Weisung vorliegt.",
+      "confirm": "Eskalieren",
+      "cancel": "Abbrechen"
+    },
+    "instruction": {
+      "title": "Weisung",
+      "waiting": "Die Weisung der Regionalen Betriebsleitung steht aus.",
+      "recorded": "{{code}} – Quelle: {{source}} (erfasst am {{date}})",
+      "none": "Keine Weisung."
+    },
+    "pendingCodes": {
+      "awaiting_countersignature": "Gegenzeichnung steht aus",
+      "awaiting_asu_proof": "Nachweis der Arbeitsuchendmeldung steht aus",
+      "awaiting_profiling": "Profiling steht aus",
+      "awaiting_legal_advice": "Rechtsrat steht aus"
+    },
+    "instructionCodes": {
+      "legal_advice_obtained": "Rechtsrat liegt vor",
+      "dpo_instruction": "Weisung der Datenschutzbeauftragten",
+      "authority_or_court_decision": "Entscheidung einer Behörde oder eines Gerichts",
+      "parties_agreement": "Einigung der Vertragsparteien"
+    },
+    "messages": {
+      "recorded": "Der Stand wurde dokumentiert.",
+      "escalated": "Der Fall wurde eskaliert.",
+      "conflict": "Die Teilnahme hat sich inzwischen geändert. Der Fall wurde neu geladen.",
+      "forbidden": "Das dürfen Sie nicht.",
+      "failed": "Das hat nicht geklappt. Bitte erneut versuchen."
+    },
+    "codes": {
+      "clarification_not_open": "Der Fall ist nicht (mehr) offen.",
+      "clarification_escalated": "Der Fall ist eskaliert: Jetzt folgt die Weisung der Regionalen Betriebsleitung.",
+      "clarification_not_documented": "Erst dokumentieren, was aussteht.",
+      "already_escalated": "Der Fall ist schon eskaliert.",
+      "not_escalated": "Der Fall ist noch nicht eskaliert.",
+      "already_instructed": "Die Weisung ist schon erfasst.",
+      "invalid_argument": "Die Eingabe ist ungültig."
     }
   }
 }

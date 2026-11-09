@@ -5,6 +5,7 @@ import {
   worklistMaxRows,
   worklistProjection,
   type WorklistFacts,
+  type WorklistProject,
   type WorklistViewer,
 } from "./projection";
 
@@ -28,6 +29,7 @@ const facts = (overrides: Partial<WorklistFacts> = {}): WorklistFacts => ({
   lastReminder: null,
   asuDueDate: null,
   evidenceInvalidatedSince: null,
+  dsv: { signedOn: null, fullyExecuted: false },
   kug200b: { channel: null, offeredOn: null, signed: false, declinedOn: null, withdrawals: [] },
   appointments: { bookings: [], notices: [], closedAt: null },
   agentur: {
@@ -45,6 +47,7 @@ const viewer = (overrides: Partial<WorklistViewer> = {}): WorklistViewer => ({
   may: () => true,
   remind: true,
   generatesKug200b: false,
+  worksDsv: true,
   ...overrides,
 });
 const project = {
@@ -115,6 +118,80 @@ describe("worklistProjection", () => {
     expect(row.status).toBe(s.current.status);
   });
 
+  it("lists a signed DSV that is not fully executed, dated by its signature day (process-and-lifecycle.md, the work list)", () => {
+    const signed = state("informed", "not_started", "dsv_signed");
+    const s = snapshot({ current: signed, wave: null });
+    const row = (dsv: WorklistFacts["dsv"], current = s) =>
+      worklistProjection(facts({ dsv }), current, project, "2027-03-10", now, viewer());
+    expect(row({ signedOn: "2027-03-02", fullyExecuted: false }).caseItems).toEqual([
+      { kind: "dsv_not_fully_executed", date: "2027-03-02" },
+    ]);
+    // Fully executed, entered, not signed: no item.
+    expect(row({ signedOn: "2027-03-02", fullyExecuted: true }).caseItems).toEqual([]);
+    const entered = snapshot({ current: state("active_in_tg", "not_started", "dsv_signed") });
+    expect(row({ signedOn: "2027-03-02", fullyExecuted: false }, entered).caseItems).toEqual([]);
+    const offered = snapshot({ current: state("informed", "not_started", "dsv_offered") });
+    expect(row({ signedOn: null, fullyExecuted: false }, offered).caseItems).toEqual([]);
+    const taOnly = { ...project, type: "ta_only" as const };
+    expect(
+      worklistProjection(
+        facts({ dsv: { signedOn: "2027-03-02", fullyExecuted: false } }),
+        s,
+        taOnly,
+        "2027-03-10",
+        now,
+        viewer(),
+      ).caseItems,
+    ).toEqual([]);
+  });
+
+  it("shows the DSV case items only to a viewer who works the DSV (the packet is the contract's)", () => {
+    const signed = state("informed", "profiling_done", "dsv_signed");
+    const s = snapshot({
+      current: signed,
+      wave: { ...wave, defaultTgStart: "2027-03-01", latestEntryDate: "2027-04-30" },
+    });
+    const dsv = { signedOn: "2027-02-20", fullyExecuted: false };
+    const row = (worksDsv: boolean) =>
+      worklistProjection(facts({ dsv }), s, project, "2027-03-10", now, viewer({ worksDsv }))
+        .caseItems;
+    expect(row(true).map((c) => c.kind)).toEqual(["dsv_not_fully_executed", "entry_clarification"]);
+    expect(row(false)).toEqual([]);
+  });
+
+  it("opens the entry clarification the day after the planned start of a signed DSV still informed", () => {
+    const signed = state("informed", "profiling_done", "dsv_signed");
+    const s = snapshot({
+      current: signed,
+      wave: { ...wave, defaultTgStart: "2027-03-08", latestEntryDate: "2027-04-30" },
+    });
+    const dsv = { signedOn: "2027-02-20", fullyExecuted: true };
+    const row = (today: string) =>
+      worklistProjection(facts({ dsv }), s, project, today, now, viewer()).caseItems;
+    expect(row("2027-03-08")).toEqual([]);
+    expect(row("2027-03-09")).toEqual([{ kind: "entry_clarification", date: "2027-03-09" }]);
+    // It stays, without a deadline, until the participation leaves informed.
+    expect(row("2027-06-01")).toEqual([{ kind: "entry_clarification", date: "2027-03-09" }]);
+    const entered = snapshot({ current: { ...signed, status: "active_in_tg" }, wave: s.wave });
+    expect(
+      worklistProjection(facts({ dsv }), entered, project, "2027-06-01", now, viewer()).caseItems,
+    ).toEqual([]);
+  });
+
+  it("offers the DSV bulk generation to the viewer who may, in an open ta_tg participation", () => {
+    const s = snapshot({ wave: null });
+    const row = (v: Partial<WorklistViewer>, p: WorklistProject = project) =>
+      worklistProjection(facts(), s, p, "2027-03-10", now, viewer(v)).capabilities.generateDsv;
+    expect(row({ worksDsv: true })).toBe(true);
+    expect(row({ worksDsv: false })).toBe(false);
+    expect(row({ worksDsv: true }, { ...project, type: "ta_only" })).toBe(false);
+    const closed = snapshot({ current: state("withdrawn") });
+    expect(
+      worklistProjection(facts(), closed, project, "2027-03-10", now, viewer({ worksDsv: true }))
+        .capabilities.generateDsv,
+    ).toBe(false);
+  });
+
   it("projects statuses, listable person fields, actions, deadlines, flags, portal and capabilities", () => {
     const s = snapshot({ wave: null });
     expect(worklistProjection(facts(), s, project, "2027-03-10", now, viewer())).toEqual({
@@ -146,6 +223,7 @@ describe("worklistProjection", () => {
         remind: { allowed: false, code: "no_channel", channel: null },
         invite: { allowed: true, channel: null },
         generateKug200b: false,
+        generateDsv: true,
       },
     });
   });

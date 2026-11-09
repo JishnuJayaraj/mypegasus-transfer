@@ -1,4 +1,5 @@
 import { DsvContract } from "./dsv-contract";
+import { EntryClarification } from "./entry-clarification";
 import { DsvScans } from "./dsv-scans";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiProblemError, type components } from "@transfer/api-client";
@@ -241,6 +242,8 @@ export function DsvTab({ participationId }: { participationId: string }) {
           />
         </Stack>
       </Card>
+      {/* A signed DSV that has not entered after its planned start (D12): shown only then. */}
+      {view.track === "dsv_signed" && <EntryClarification participationId={participationId} />}
       <DsvScans view={view} onOpen={open} />
       <DsvContract view={view} />
       <Card title={t("dsv.generations.title")} level={3}>

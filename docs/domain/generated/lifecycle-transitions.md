@@ -107,6 +107,9 @@ their slices (3, 5, 7).
 | `providePrivacyNotice` | PL, Back office | — |
 | `setPlacementAgentur` | PL, Back office | — |
 | `startAssistedMode` | Consultant/profiler (assigned), PL, Back office | — |
+| `recordEntryClarification` | PL | — |
+| `escalateEntryClarification` | PL | — |
+| `recordClarificationInstruction` | Regional operations manager | — |
 
 `requestEvidenceCorrection` (`request_evidence_correction`) by target, from the
 correction-authority table (round 12, Q88), not from who may open a document; requesting grants

@@ -84,6 +84,10 @@ const statusFunctions = [
   "dsv_facts",
   "sign_dsv",
   "record_dsv_original",
+  // Slice 7, PR 7-4: the entry clarification
+  "record_entry_clarification",
+  "escalate_entry_clarification",
+  "record_clarification_instruction",
   "lock_participation",
   "create_participation",
   "change_participation_status",
@@ -263,6 +267,7 @@ const helpers = [
   "assert_dsv_participant_date",
   "dsv_role_kind",
   "sync_dsv_contract",
+  "entry_clarification_opened_on",
   "assert_context",
   "write_audit_event",
   "end_reason_fits",

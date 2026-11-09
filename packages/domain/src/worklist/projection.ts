@@ -38,6 +38,8 @@ import { Deadline, deadlinesOf, remainingFlags } from "./deadlines";
 import type { AsuDueDate } from "../dates";
 import { kug200bItems, type Kug200bOfferFacts } from "../asu/kug200b";
 import { isoDate } from "../iso-date";
+import { entryClarificationOpenedOn } from "../dsv/clarification";
+import { effectiveTgStart } from "../lifecycle/waves";
 import { AgenturItem, agenturItems, type Tl407WorkFacts } from "../profiling/submissions";
 
 // The work list (data-protection.md, the work list and the dashboard): one projection of a
@@ -65,6 +67,12 @@ export const WorklistCapabilities = z.strictObject({
    * participation of a `ta_tg` project; the generation's own checks follow.
    */
   generateKug200b: z.boolean(),
+  /**
+   * "DSV erzeugen" for the selected rows (process-and-lifecycle.md, the DSV: generation as
+   * built): the PL or back office, for an open participation of a `ta_tg` project; each row's own
+   * blockers follow at the request, all or nothing.
+   */
+  generateDsv: z.boolean(),
 });
 
 /**
@@ -74,7 +82,10 @@ export const WorklistCapabilities = z.strictObject({
  * `kug200b_withdrawal_ba_notice` with the withdrawal's date of receipt (`kug200bItems`);
  * `evidence_invalidated` ("Nachweis ungültig") from the approval of the oldest invalidation that
  * nothing has replaced yet: the status that rested on it stays (data-protection.md, evidence
- * corrections).
+ * corrections); `dsv_not_fully_executed` from the day the participant signed, while the DSV track
+ * is `dsv_signed`, the participation `informed` and no counting complete packet exists (the
+ * item, the filter and the dashboard tile count the same participations); `entry_clarification`
+ * from the day after the planned TG start for a signed DSV still `informed` (`dsv/clarification.ts`).
  */
 export const WorklistCaseItem = z
   .strictObject({
@@ -83,6 +94,10 @@ export const WorklistCaseItem = z
       "kug200b_offer_open",
       "kug200b_withdrawal_ba_notice",
       "evidence_invalidated",
+      /** A signed DSV that is not fully executed yet, dated by `dsvSignedOn` (D2, 7-4). */
+      "dsv_not_fully_executed",
+      /** The entry clarification of D12: from the day after the planned start, until entry. */
+      "entry_clarification",
     ]),
     date: isoDate,
   })
@@ -156,6 +171,11 @@ export type WorklistFacts = Pick<
    * without a later valid one of its type, an ASU registration without a later current one).
    */
   evidenceInvalidatedSince: IsoDate | null;
+  /**
+   * The signed DSV's facts: the participant's signature day (the contract's, else the counting
+   * scan's) and whether a counting complete packet exists now.
+   */
+  dsv: { signedOn: IsoDate | null; fullyExecuted: boolean };
   appointments: {
     bookings: readonly AppointmentItemBooking[];
     notices: readonly AppointmentItemNotice[];
@@ -175,13 +195,45 @@ export type WorklistViewer = {
   knows: (key: string) => boolean;
   /** The operation's permission; the domain's preconditions follow. */
   may: (
-    operation: Exclude<keyof WorklistItem["capabilities"], "remind" | "invite" | "generateKug200b">,
+    operation: Exclude<
+      keyof WorklistItem["capabilities"],
+      "remind" | "invite" | "generateKug200b" | "generateDsv"
+    >,
   ) => boolean;
   /** `mayRemind` in an active project; the reminder rules follow. */
   remind: boolean;
   /** `mayGenerateKug200bBulk`: the PL. */
   generatesKug200b: boolean;
+  /**
+   * `mayWorkDsv`: the PL or back office, who read the employment contract. Only they see the DSV
+   * case items (the packet's state is the contract's) and may generate.
+   */
+  worksDsv: boolean;
 };
+
+/** The two DSV case items of a `ta_tg` participation (D2, D12). */
+function dsvCaseItems(
+  facts: WorklistFacts,
+  snapshot: ParticipationSnapshot,
+  project: WorklistProject,
+  today: IsoDate,
+): WorklistCaseItem[] {
+  const { status, dsvStatus } = snapshot.current;
+  if (project.type !== "ta_tg") return [];
+  const items: WorklistCaseItem[] = [];
+  if (dsvStatus === "dsv_signed" && status === "informed" && !facts.dsv.fullyExecuted) {
+    items.push({ kind: "dsv_not_fully_executed", date: facts.dsv.signedOn ?? today });
+  }
+  const openedOn = entryClarificationOpenedOn({
+    projectType: project.type,
+    status,
+    dsvStatus,
+    tgStart: effectiveTgStart(snapshot.participation, snapshot.wave),
+    today,
+  });
+  if (openedOn !== null) items.push({ kind: "entry_clarification", date: openedOn });
+  return items;
+}
 
 /**
  * One participation's row. A terminal participation asks nothing more of the participant: it has
@@ -262,6 +314,7 @@ export function worklistProjection(
       ...(facts.evidenceInvalidatedSince === null
         ? []
         : [{ kind: "evidence_invalidated" as const, date: facts.evidenceInvalidatedSince }]),
+      ...(viewer.worksDsv ? dsvCaseItems(facts, snapshot, project, today) : []),
     ],
     agenturItems: agenturItems(snapshot, project.type, facts.agentur, today),
     flags: remainingFlags(lifecycleFlags(snapshot, project, today)),
@@ -289,6 +342,7 @@ export function worklistProjection(
         channel: viewer.remind ? (chooseChannel(facts.channels)?.kind ?? null) : null,
       },
       generateKug200b: viewer.generatesKug200b && project.type === "ta_tg" && !closed,
+      generateDsv: viewer.worksDsv && project.type === "ta_tg" && !closed,
     },
   };
 }

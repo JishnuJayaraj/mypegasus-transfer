@@ -13,6 +13,7 @@ import {
   PortalReach,
   ProfilingStatus,
   remainingFlags,
+  WorklistCaseItem,
   type WorklistFilter,
 } from "@transfer/domain";
 import {
@@ -44,7 +45,10 @@ type FilterKey = keyof WorklistFilter;
  * (the participant's actions) sits with the statuses.
  */
 const groups: { key: keyof typeof de.worklist.filterGroups; filters: FilterKey[] }[] = [
-  { key: "status", filters: ["status", "profilingStatus", "dsvStatus", "flag", "actions"] },
+  {
+    key: "status",
+    filters: ["status", "profilingStatus", "dsvStatus", "flag", "caseItem", "actions"],
+  },
   { key: "dates", filters: ["deadlineKind", "deadlineState", "appointment"] },
   { key: "responsibility", filters: ["consultant", "wave"] },
   { key: "reach", filters: ["portal", "activation", "notice", "agentur"] },
@@ -95,8 +99,15 @@ function useFilterOptions({
       case "flag":
         return [
           { value: "any", text: t("worklist.filters.anyFlag") },
+          ...(taTg ? [{ value: "cutoff_case", text: t("worklist.filters.cutoffCase") }] : []),
           ...codes(remainingFlags(LifecycleFlag.options), (v) => label("flags", v)),
         ];
+      case "caseItem":
+        return taTg
+          ? codes(WorklistCaseItem.shape.kind.options, (v) =>
+              t(`worklist.caseItemFilter.${v}` as never),
+            )
+          : null;
       case "portal":
         return codes(PortalReach.options, (v) => label("portal", v));
       case "appointment":

@@ -12317,6 +12317,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{projectId}/dsv/generations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate the DSV of 1 to 100 participations of the project with one deadline, all or nothing (the PL or back office): every item is checked first, then every paper is rendered and stored and all are recorded in one transaction under the project's exclusive lock; any refusal records none
+         * @description Each item is checked as a single generation is; the refusal names the item's position in the pointer (`/items/3`, `/items/3/deadline`) and never an id or a value:
+         *     - `422`: the single generation's codes (`dsv_offer_open`, `no_entry_wave`, `tg_dates_missing`, `dsv_template_not_pinned`, `explicit_deadline_required`, `offer_deadline_invalid`, `dsv_already_signed`, ...), for every item that can't be generated.
+         *     - `409 source_changed`: a wave's deadline moved since the dialog showed it (`wave` choice) or a printed value moved while recording.
+         *     - `404`: a participation that isn't in the project or isn't visible. `503 pdf_unavailable` or `storage_unavailable`; nothing is recorded and every stored paper is removed.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    projectId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvBulkGenerationRequest"];
+                };
+            };
+            responses: {
+                /** @description Generated: one document per participation, in order */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvBulkGenerationResult"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Service unavailable */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/participations/{participationId}/dsv/offers": {
         parameters: {
             query?: never;
@@ -12997,6 +13108,366 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/entry-clarification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The entry clarification of a signed DSV that has not entered (the PL and back office): whether it is open (from the day after the planned TG start, until the participation leaves informed), the PL's recorded pending code and documented source, the escalation, the manager's instruction, which legitimate paths are open now and the viewer's capabilities */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The clarification as the viewer may work it */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EntryClarificationState"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Document what is pending on a signed DSV that has not entered (the project's PL): one of four codes with a documented source (one line, at most 200 characters), against the status version read; a second record replaces the first until the case is escalated. Audited by the code only
+         * @description Refusals:
+         *     - `409 stale_status_version` at `/statusVersion`: the participation changed since it was read.
+         *     - `422`: `clarification_not_open` (not signed, entered, or before the day after the planned start), `clarification_escalated` (only the manager's instruction follows).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EntryClarificationPendingRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded: the clarification now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EntryClarificationState"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/participations/{participationId}/entry-clarification/escalation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Escalate a documented entry clarification to the regional operations manager of the project's region (the project's PL), once: the manager records an instruction; neither may enter or end the participation by it
+         * @description Refusals:
+         *     - `409 stale_status_version` at `/statusVersion`.
+         *     - `422`: `clarification_not_open`, `clarification_not_documented` (record the pending code first), `already_escalated`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EntryClarificationEscalationRequest"];
+                };
+            };
+            responses: {
+                /** @description Escalated: the clarification now */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EntryClarificationState"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/entry-clarifications/{clarificationId}/instruction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the instruction of an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a code with a documented source, once, against the status version "Freigaben" showed. The case stays open: the instruction changes no status
+         * @description Refusals:
+         *     - `404` for a clarification outside the viewer's regions; `403` for any other role, and for the person who escalated.
+         *     - `409 stale_status_version` at `/statusVersion`.
+         *     - `422`: `clarification_not_open`, `not_escalated`, `already_instructed`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    clarificationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EntryClarificationInstructionRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -14465,7 +14936,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; no name, case data, evidence content or corrected value */
+        /** The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; no name, case data, evidence content or corrected value */
         get: {
             parameters: {
                 query?: never;
@@ -15955,7 +16426,9 @@ export interface components {
             actions?: "any" | "fields" | "documents" | "rejected_documents" | "none";
             deadlineKind?: components["schemas"]["DeadlineKind"];
             deadlineState?: components["schemas"]["DeadlineState"];
-            flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any";
+            flag?: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "dsv_signed_not_entered_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry") | "any" | "cutoff_case";
+            /** @enum {string} */
+            caseItem?: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification";
             portal?: components["schemas"]["PortalReach"];
             appointment?: components["schemas"]["AppointmentFilter"];
             /** @enum {string} */
@@ -15999,7 +16472,7 @@ export interface components {
             deadlines: components["schemas"]["Deadline"][];
             caseItems: components["schemas"]["WorklistCaseItem"][];
             agenturItems: components["schemas"]["AgenturItem"][];
-            flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
+            flags: ("tg_start_missed" | "cutoff_warning" | "cutoff_final_reminder" | "conflict_dsv_signed_profiling_declined" | "dsv_never_offered" | "informed_without_wave_at_cutoff" | "dsv_signed_not_entered_at_cutoff" | "profiling_exception_deadline_missed" | "profiling_declined_after_entry")[];
             portal: components["schemas"]["PortalReach"];
             reminder: components["schemas"]["WorklistReminder"];
             appointments: components["schemas"]["WorklistAppointments"];
@@ -16016,6 +16489,7 @@ export interface components {
                     channel: "email" | "sms" | null;
                 };
                 generateKug200b: boolean;
+                generateDsv: boolean;
             };
         };
         ParticipantAction: {
@@ -16038,7 +16512,7 @@ export interface components {
         };
         WorklistCaseItem: {
             /** @enum {string} */
-            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated";
+            kind: "knowledge_date_missing" | "kug200b_offer_open" | "kug200b_withdrawal_ba_notice" | "evidence_invalidated" | "dsv_not_fully_executed" | "entry_clarification";
             /**
              * Format: date
              * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
@@ -16556,7 +17030,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded" | "entry_clarification_recorded" | "entry_clarification_escalated" | "entry_clarification_instructed";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -19028,6 +19502,47 @@ export interface components {
             };
             expectedSourceToken: string;
         };
+        DsvBulkGenerationResult: {
+            generations: {
+                /** Format: uuid */
+                participationId: string;
+                /** Format: uuid */
+                documentId: string;
+                templateVersion: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                offerDeadline: string;
+                checklist: components["schemas"]["DsvChecklistItem"][];
+            }[];
+        };
+        DsvBulkGenerationRequest: {
+            deadline: {
+                /** @enum {string} */
+                kind: "wave";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                shown: string;
+            } | {
+                /** @enum {string} */
+                kind: "explicit";
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                date: string;
+            };
+            items: {
+                /** Format: uuid */
+                participationId: string;
+            }[];
+        };
         DsvOfferRequest: {
             /** Format: uuid */
             generationId: string;
@@ -19094,6 +19609,83 @@ export interface components {
         };
         DsvTemplatePinInput: {
             version: string;
+        };
+        EntryClarificationState: {
+            /** Format: uuid */
+            participationId: string;
+            statusVersion: number;
+            clarification: components["schemas"]["EntryClarificationView"];
+            actions: {
+                open: boolean;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                openedOn: string | null;
+                reconciliation: boolean;
+                newStartDate: boolean;
+                recordPending: boolean;
+                escalate: boolean;
+                instruct: boolean;
+            };
+            capabilities: {
+                record: boolean;
+                escalate: boolean;
+            };
+        };
+        EntryClarificationView: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            openedOn: string;
+            pending: {
+                code: components["schemas"]["EntryPendingCode"];
+                source: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                recordedOn: string;
+            } | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            escalatedOn: string | null;
+            instruction: {
+                code: components["schemas"]["EntryInstructionCode"];
+                source: string;
+                /**
+                 * Format: date
+                 * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                 * @example 2027-03-01
+                 */
+                recordedOn: string;
+            } | null;
+        } | null;
+        /** @enum {string} */
+        EntryPendingCode: "awaiting_countersignature" | "awaiting_asu_proof" | "awaiting_profiling" | "awaiting_legal_advice";
+        /** @enum {string} */
+        EntryInstructionCode: "legal_advice_obtained" | "dpo_instruction" | "authority_or_court_decision" | "parties_agreement";
+        EntryClarificationPendingRequest: {
+            code: components["schemas"]["EntryPendingCode"];
+            source: string;
+            statusVersion: number;
+        };
+        EntryClarificationEscalationRequest: {
+            statusVersion: number;
+        };
+        EntryClarificationInstructionRequest: {
+            code: components["schemas"]["EntryInstructionCode"];
+            source: string;
+            statusVersion: number;
         };
         ExportLink: {
             url: string;
@@ -19428,6 +20020,7 @@ export interface components {
                     decide: boolean;
                 };
             }[];
+            clarifications: components["schemas"]["EntryClarificationReviewItem"][];
         };
         /** @enum {string} */
         CorrectionTargetKind: "document" | "asu_registration" | "ba_reporting_task";
@@ -19435,6 +20028,37 @@ export interface components {
         CorrectionAction: "invalidate" | "supersede";
         /** @enum {string} */
         CorrectionReason: "ba_legal_reference" | "data_subject_rectification" | "corrected_source_document" | "documented_internal_error";
+        EntryClarificationReviewItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projectId: string;
+            projectName: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tgStart: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            openedOn: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            escalatedOn: string;
+            pendingCode: components["schemas"]["EntryPendingCode"];
+            pendingSource: string;
+            statusVersion: number;
+            capabilities: {
+                instruct: boolean;
+            };
+        };
         EvidenceCorrectionRequested: {
             /** Format: uuid */
             correctionId: string;

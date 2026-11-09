@@ -1432,3 +1432,20 @@ the participant date is compared; a rejection is allowed after the offer ended).
 `record_dsv_original` is granted. `record_audit_event` refuses `dsv_original_recorded`. The lock
 order is participation → documents → `dsv_offer` → `dsv_contract`. The migration backfills a
 contract for every offer already signed (no packet is invented).
+
+#### The entry clarification and the bulk generation (7-4)
+
+Migrations 0097–0098 add `entry_clarification` (select-only for `transfer_app`; one row per
+participation and planned start; each step needs the one before, by check constraints) and three
+functions: `record_entry_clarification` and `escalate_entry_clarification` under the shared project
+lock (`lock_participation`, the PL by `document_staff_roles`), and `record_clarification_instruction`
+under the exclusive one (the region's `regional_operations_manager`, never the person who
+escalated). `entry_clarification_opened_on` is an internal helper without a grant.
+`record_form_generation` is dropped and created again with `p_batch_size` (1 to 100, DSV only): a
+batch takes the project's exclusive lock before any participation row, its calls run in participation
+id order in one transaction, and the audit event carries `batchSize` (the diff against 0090 is that
+parameter, its check, the lock and the detail). `record_audit_event` refuses the three new events
+(its diff against 0096 is the list), and `audit_event_lifecycle_has_participation` and
+`audit_event_projection` know them. The lock order ends participation rows → documents → `dsv_offer` →
+`dsv_contract` → `entry_clarification`.
+

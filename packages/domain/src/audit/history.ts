@@ -227,6 +227,10 @@ export const auditProjection: {
   dsv_template_pinned: projectLevel,
   // The original of the signed DSV: the field and the location code, never a date.
   dsv_original_recorded: shown("dsv", { details: ["field", "location"] }),
+  // The entry clarification: the codes, never the documented source.
+  entry_clarification_recorded: shown("case", { details: ["pendingCode"] }),
+  entry_clarification_escalated: shown("case", { details: ["pendingCode"] }),
+  entry_clarification_instructed: shown("case", { details: ["instructionCode"] }),
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "decision"],
   }),

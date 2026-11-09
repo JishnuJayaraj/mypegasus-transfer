@@ -3517,6 +3517,67 @@ export const dsvContract = pgTable("dsv_contract", {
   createdAt: instant("created_at").notNull().defaultNow(),
 });
 
+/**
+ * The entry clarification of a signed DSV that has not entered after its planned start
+ * (process-and-lifecycle.md, the entry clarification): one row per participation and planned start
+ * (`opened_on`, the day after it), written by its functions only. The PL's pending code and
+ * documented source, the escalation to the region's manager and the manager's instruction. The row
+ * is closed when the participation leaves `informed` (derived; no column to write). The sources are
+ * `case_internal`: never in the history or a log.
+ */
+export const entryClarification = pgTable(
+  "entry_clarification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    openedOn: dateColumn("opened_on").notNull(),
+    pendingCode: text("pending_code"),
+    pendingSource: text("pending_source"),
+    pendingRecordedAt: instant("pending_recorded_at"),
+    pendingRecordedBy: uuid("pending_recorded_by").references(() => staffUser.id),
+    escalatedAt: instant("escalated_at"),
+    escalatedBy: uuid("escalated_by").references(() => staffUser.id),
+    instructionCode: text("instruction_code"),
+    instructionSource: text("instruction_source"),
+    instructionAt: instant("instruction_at"),
+    instructionBy: uuid("instruction_by").references(() => staffUser.id),
+    createdAt: instant("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("entry_clarification_once").on(t.participationId, t.openedOn),
+    foreignKey({
+      name: "entry_clarification_participation_project_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check(
+      "entry_clarification_codes",
+      sql`(${t.pendingCode} is null or ${t.pendingCode} in ('awaiting_countersignature', 'awaiting_asu_proof', 'awaiting_profiling', 'awaiting_legal_advice'))
+        and (${t.instructionCode} is null or ${t.instructionCode} in ('legal_advice_obtained', 'dpo_instruction', 'authority_or_court_decision', 'parties_agreement'))`,
+    ),
+    // Each step needs the one before, and a documented source goes with its code.
+    check(
+      "entry_clarification_steps",
+      sql`((${t.pendingCode} is null) = (${t.pendingSource} is null))
+        and ((${t.instructionCode} is null) = (${t.instructionSource} is null))
+        and (${t.escalatedAt} is null or ${t.pendingCode} is not null)
+        and (${t.instructionCode} is null or ${t.escalatedAt} is not null)
+        and ((${t.instructionCode} is null) = (${t.instructionAt} is null))
+        and ((${t.instructionCode} is null) = (${t.instructionBy} is null))
+        and ((${t.escalatedAt} is null) = (${t.escalatedBy} is null))`,
+    ),
+    check(
+      "entry_clarification_sources",
+      sql`char_length(coalesce(${t.pendingSource}, '')) <= 200 and char_length(coalesce(${t.instructionSource}, '')) <= 200`,
+    ),
+  ],
+);
+
 export const tables = [
   staffUser,
   region,
@@ -3559,6 +3620,7 @@ export const tables = [
   dsvOffer,
   dsvScanSignature,
   dsvContract,
+  entryClarification,
   signedDeclaration,
   asuRecord,
   asuRegistration,

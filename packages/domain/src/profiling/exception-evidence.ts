@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CorrectionReviewItem } from "../corrections/model";
+import { EntryClarificationReviewItem } from "../dsv/clarification";
 import type { Subject } from "../access/decide";
 import { isoDate, type IsoDate } from "../iso-date";
 import { ProfilingExceptionReason, ProfilingExceptionStatus } from "../lifecycle/enums";
@@ -195,9 +196,14 @@ export const ReviewItem = z.object({
 });
 export type ReviewItem = z.infer<typeof ReviewItem>;
 
-/** "Freigaben": the pending profiling exceptions and evidence corrections, each oldest first. */
+/** "Freigaben": the pending profiling exceptions, evidence corrections and escalated entry clarifications, each oldest first. */
 export const ReviewQueue = z
-  .object({ items: z.array(ReviewItem), corrections: z.array(CorrectionReviewItem) })
+  .object({
+    items: z.array(ReviewItem),
+    corrections: z.array(CorrectionReviewItem),
+    /** The escalated entry clarifications awaiting the manager's instruction (D12). */
+    clarifications: z.array(EntryClarificationReviewItem),
+  })
   .meta({ id: "ReviewQueue" });
 
 /** Who has the queue "Freigaben": a regional operations manager (Q80). */

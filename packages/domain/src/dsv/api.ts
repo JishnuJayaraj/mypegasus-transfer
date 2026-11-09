@@ -172,6 +172,43 @@ export const DsvGenerationResult = z
   .meta({ id: "DsvGenerationResult" });
 export type DsvGenerationResult = z.infer<typeof DsvGenerationResult>;
 
+/** The most DSV one bulk generation takes (D2). */
+export const dsvBulkMax = 100;
+
+/**
+ * `POST /projects/{id}/dsv/generations`: 1 to 100 participations of the project with one deadline,
+ * all or nothing. Each paper prints the values current at the call (the function compares them
+ * again under the lock); a participation that can't be generated refuses the whole batch with its
+ * position. `wave`'s `shown` is compared with each participation's wave deadline.
+ */
+export const DsvBulkGenerationRequest = z
+  .strictObject({
+    deadline: DsvDeadlineChoice,
+    items: z
+      .array(z.strictObject({ participationId: z.uuid() }))
+      .min(1)
+      .max(dsvBulkMax),
+  })
+  .refine(
+    (value) => new Set(value.items.map((i) => i.participationId)).size === value.items.length,
+    {
+      message: "participation_duplicated",
+      path: ["items"],
+    },
+  )
+  .meta({ id: "DsvBulkGenerationRequest" });
+export type DsvBulkGenerationRequest = z.infer<typeof DsvBulkGenerationRequest>;
+
+/** The generations of a batch, in the request's order. */
+export const DsvBulkGenerationResult = z
+  .strictObject({
+    generations: z.array(
+      z.strictObject({ participationId: z.uuid(), ...DsvGenerationResult.shape }),
+    ),
+  })
+  .meta({ id: "DsvBulkGenerationResult" });
+export type DsvBulkGenerationResult = z.infer<typeof DsvBulkGenerationResult>;
+
 /** `PUT /projects/{id}/dsv-template` (the PL). */
 export const DsvTemplatePinInput = z
   .strictObject({ version: DsvTemplateVersion })

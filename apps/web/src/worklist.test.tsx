@@ -562,6 +562,179 @@ describe("Kug 200b erzeugen (data-protection.md, generated forms and exports)", 
   });
 });
 
+const open = async () => {
+  const section = await ready();
+  await userEvent.click(await section.findByRole("checkbox", { name: "Alle Zeilen auswählen" }));
+  await chooseBatchAction("DSV erzeugen");
+  return screen.findByRole("dialog", { name: "DSV erzeugen" });
+};
+
+describe("DSV erzeugen (process-and-lifecycle.md, the DSV: generation as built; D2)", () => {
+  const dsvItems = [
+    worklistItem({
+      id: id(4),
+      personnelNumber: "BSP-0004",
+      lastName: "Neumann",
+      firstName: "Lea",
+      entryWaveId: wave.id,
+      dsvStatus: "not_offered",
+      capabilities: { ...capable, generateDsv: true },
+    }),
+    worklistItem({
+      id: id(5),
+      personnelNumber: "BSP-0005",
+      lastName: "Arslan",
+      firstName: "Deniz",
+      entryWaveId: wave.id,
+      dsvStatus: "not_offered",
+      capabilities: { ...capable, generateDsv: true },
+    }),
+  ];
+  const generated = (n: number, checklist: object[]) => ({
+    participationId: id(n),
+    documentId: id(n + 40),
+    templateVersion: "v1",
+    offerDeadline: wave.signingDeadline,
+    checklist,
+  });
+
+  it("chooses one deadline first, generates for the selection and lists what stays for the hand", async () => {
+    const { calls } = setup({
+      [`GET ${path}/worklist`]: () => json(worklist(dsvItems)),
+      [`POST ${path}/dsv/generations`]: () =>
+        json(
+          {
+            generations: [
+              generated(4, [{ code: "required_blank", key: "address" }]),
+              generated(5, []),
+            ],
+          },
+          201,
+        ),
+    });
+    const panel = await open();
+    const button = within(panel).getByRole("button", { name: "Erzeugen" });
+    // Nothing preset: the button names its prerequisite (C1).
+    expect(button).toBeDisabled();
+    expect(within(panel).getByText("Erst eine Frist wählen.")).toBeVisible();
+    await userEvent.click(
+      within(panel).getByRole("radio", {
+        name: `Unterschriftsfrist der Welle, ${new Date(wave.signingDeadline).toLocaleDateString("de-DE", { timeZone: "UTC", day: "2-digit", month: "2-digit", year: "numeric" })}`,
+      }),
+    );
+    await userEvent.click(button);
+    const result = await screen.findByTestId("dsv-bulk-result");
+    expect(result).toHaveTextContent("2 DSV erzeugt.");
+    expect(result).toHaveTextContent("Neumann, Lea: Anschrift");
+    expect(calls).toContainEqual({
+      key: `POST ${path}/dsv/generations`,
+      body: {
+        deadline: { kind: "wave", shown: wave.signingDeadline },
+        items: [{ participationId: id(4) }, { participationId: id(5) }],
+      },
+    });
+  });
+
+  it("takes an explicit date, required before it is sent, when the rows don't share a wave deadline", async () => {
+    const mixed = [dsvItems[0]!, { ...dsvItems[1]!, entryWaveId: null }];
+    const { calls } = setup({
+      [`GET ${path}/worklist`]: () => json(worklist(mixed)),
+      [`POST ${path}/dsv/generations`]: () =>
+        json({ generations: [generated(4, []), generated(5, [])] }, 201),
+    });
+    const panel = await open();
+    expect(within(panel).queryByRole("radio", { name: /Unterschriftsfrist der Welle/ })).toBeNull();
+    await userEvent.click(within(panel).getByRole("radio", { name: "Frist eingeben" }));
+    expect(within(panel).getByText("Erst die Frist eingeben.")).toBeVisible();
+    await userEvent.type(within(panel).getByLabelText("Frist (TT.MM.JJJJ)"), "20.02.2091");
+    await userEvent.click(within(panel).getByRole("button", { name: "Erzeugen" }));
+    await screen.findByTestId("dsv-bulk-result");
+    expect(calls).toContainEqual({
+      key: `POST ${path}/dsv/generations`,
+      body: {
+        deadline: { kind: "explicit", date: "2091-02-20" },
+        items: [{ participationId: id(4) }, { participationId: id(5) }],
+      },
+    });
+  });
+
+  it("says that nothing was generated, naming each refused row with its reason", async () => {
+    setup({
+      [`GET ${path}/worklist`]: () => json(worklist(dsvItems)),
+      [`POST ${path}/dsv/generations`]: () =>
+        problem(422, "domain-error", {
+          errors: [{ pointer: "/items/1", code: "dsv_offer_open", detail: "x" }],
+        }),
+    });
+    const panel = await open();
+    await userEvent.click(within(panel).getByRole("radio", { name: "Frist eingeben" }));
+    await userEvent.type(within(panel).getByLabelText("Frist (TT.MM.JJJJ)"), "20.02.2091");
+    await userEvent.click(within(panel).getByRole("button", { name: "Erzeugen" }));
+    const alert = (await screen.findByText("Es wurde keiner erzeugt. Nicht möglich für:")).closest(
+      "[role=alert]",
+    )!;
+    expect(alert).toHaveTextContent(
+      "Arslan, Deniz: Ein Angebot ist offen: den erzeugten Vertrag öffnen statt neu erzeugen.",
+    );
+    expect(screen.queryByTestId("dsv-bulk-result")).toBeNull();
+  });
+
+  it("offers nothing to a viewer whose rows can't be generated", async () => {
+    setup({
+      [`GET ${path}/worklist`]: () =>
+        json(
+          worklist(
+            dsvItems.map((item) => ({
+              ...item,
+              capabilities: { ...item.capabilities, generateDsv: false },
+            })),
+          ),
+        ),
+    });
+    const section = await ready();
+    await userEvent.click(await section.findByRole("checkbox", { name: "Alle Zeilen auswählen" }));
+    // The bar offers the wave assignment, whose capability the rows keep, but not the DSV.
+    const bar = await waitFor(() => {
+      const element = document.querySelector<HTMLElement>(".cds--batch-actions");
+      if (!element) throw new Error("No batch bar");
+      return element;
+    });
+    expect(within(bar).getByRole("button", { name: "Welle zuweisen" })).toBeVisible();
+    expect(within(bar).queryByText("DSV erzeugen")).toBeNull();
+  });
+});
+
+describe("the signed DSV in the filters and items (D2, D12, D13)", () => {
+  it("names the items and filters by 'DSV: unterschrieben, nicht vollständig'", async () => {
+    const signed = worklistItem({
+      id: id(4),
+      personnelNumber: "BSP-0004",
+      lastName: "Neumann",
+      firstName: "Lea",
+      dsvStatus: "dsv_signed",
+      caseItems: [
+        { kind: "dsv_not_fully_executed", date: "2026-10-02" },
+        { kind: "entry_clarification", date: "2026-11-02" },
+      ],
+      flags: ["dsv_signed_not_entered_at_cutoff"],
+      capabilities: capable,
+    });
+    const other = worklistItem({ id: id(5), personnelNumber: "BSP-0005", capabilities: capable });
+    setup(
+      { [`GET ${path}/worklist`]: () => json(worklist([signed, other])) },
+      "?tab=participants&caseItem=dsv_not_fully_executed",
+    );
+    const row = await worklistRow("BSP-0004");
+    expect(row).toHaveTextContent(
+      "DSV nicht vollständig unterschrieben (Teilnehmende unterschrieben am 02.10.2026)",
+    );
+    expect(list().queryByText("BSP-0005")).toBeNull();
+    expect(
+      screen.getAllByText(/Offene Arbeit: DSV: unterschrieben, nicht vollständig/).length,
+    ).toBeGreaterThan(0);
+  });
+});
+
 describe("the work list's order, views and columns (ui-patterns.md; the plan of Slice 6b, D5–D8)", () => {
   it("opens in the next step's order, sorts by a header into the URL, and a reload keeps it", async () => {
     const { router } = setup();
