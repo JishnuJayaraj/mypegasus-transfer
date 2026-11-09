@@ -1470,3 +1470,18 @@ moves.
 
 The counting rule preserves actual dates through quarantine lifts; see
 [DSV scans and participant signature](process-and-lifecycle.md#dsv-scans-and-participant-signature-as-built-7-2b).
+
+### The entry clarification (Slice 7, PR 7-4)
+
+`entry_clarification` and its steps `entry_clarification_step` are internal case data
+(`participation_record`, `project_id` on the row, scoped to the participation), written only by
+`record_entry_clarification`, `escalate_entry_clarification`, `record_clarification_instruction` and
+`request_entry_clarification_reply`; the runtime role selects them. It holds the PL's pending code
+and the manager's instruction code, each with a documented source: one line of at most 200
+characters under Q209's rules, `case_internal`, shown to the PL who wrote it, the PL and back office
+reading the tab and the manager who instructs (in "Freigaben", where the queue names the project and
+dates but no participant and no participation id). The sources never reach the history, an audit
+event, a log or a job payload. The PL and back office see the work list's DSV items and the bulk
+generation; a consultant sees neither. The queue "Freigaben" lists an escalated case to the regional
+operations managers of the project's region only.
+

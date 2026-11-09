@@ -49,7 +49,13 @@ export function StepLabel({ step, today }: { step: OpenStep; today: string }) {
 }
 
 /** A tab of the participant page that resolves an item. */
-export type ParticipantTab = "self-service" | "profiling" | "asu" | "documents" | "appointments";
+export type ParticipantTab =
+  | "self-service"
+  | "profiling"
+  | "asu"
+  | "dsv"
+  | "documents"
+  | "appointments";
 
 /** The overview's cards an item can point to (their `Card id`). */
 export type OverviewAnchor =
@@ -94,7 +100,11 @@ export function stepTarget(step: OpenStep): StepTarget {
       return { tab: "appointments" };
     case "case":
       // The ASU record holds the knowledge date and the Kug 200b offer (asu-tab.tsx); an
-      // invalidated evidence document is replaced among the documents.
+      // invalidated evidence document is replaced among the documents; the signed DSV's packet and
+      // its entry clarification are worked on the tab "DSV".
+      if (step.kind === "dsv_not_fully_executed" || step.kind === "entry_clarification") {
+        return { tab: "dsv" };
+      }
       return step.kind === "evidence_invalidated" ? { tab: "documents" } : { tab: "asu" };
     case "agentur":
       return step.kind === "ba_report_pending"
@@ -103,6 +113,8 @@ export function stepTarget(step: OpenStep): StepTarget {
           ? { tab: "asu" }
           : { tab: "profiling" };
     case "flag":
+      // A signed DSV that never entered is clarified on the tab "DSV" (process-and-lifecycle.md, the cutoff cases).
+      if (step.kind === "dsv_signed_not_entered_at_cutoff") return { tab: "dsv" };
       return datesFlags.has(step.kind) ? { anchor: "participant-dates" } : { tab: "profiling" };
     case "action":
       return step.action.kind === "document" ? { tab: "documents" } : { tab: "self-service" };

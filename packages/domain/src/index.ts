@@ -1275,6 +1275,9 @@ export {
   DsvOriginalLocation,
   DsvOriginalRequest,
   DsvDeclineRequest,
+  DsvBulkGenerationRequest,
+  DsvBulkGenerationResult,
+  dsvBulkMax,
   DsvGenerationRequest,
   DsvGenerationResult,
   DsvGenerationView,
@@ -1284,6 +1287,25 @@ export {
 } from "./dsv/api";
 
 export { DsvSignatures, DsvScanMetadata, dsvScanProblems } from "./dsv/scans";
+export {
+  EntryClarificationEscalationRequest,
+  EntryClarificationInstructionRequest,
+  EntryClarificationPendingRequest,
+  EntryClarificationRequestRequest,
+  EntryClarificationReviewItem,
+  EntryClarificationStage,
+  EntryClarificationStep,
+  EntryRequestCode,
+  EntryClarificationState,
+  EntryClarificationView,
+  EntryInstructionCode,
+  EntryPendingCode,
+  entryClarificationActions,
+  entryClarificationOpenedOn,
+  type EntryClarificationActions,
+  type EntryClarificationInput,
+  type EntryClarificationRecord,
+} from "./dsv/clarification";
 export {
   dsvPacketFact,
   dsvSignatureDateProblem,

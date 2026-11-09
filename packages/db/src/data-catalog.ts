@@ -248,6 +248,21 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "internal",
     holdsParticipantData: true,
   },
+  // The entry clarification of a signed DSV that has not entered: the PL's pending code and
+  // documented source, the escalation and the manager's instruction. The sources are one line each,
+  // `case_internal`, never in the history or a log.
+  entry_clarification: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
+  // Every step of an entry clarification (the PL's notes and replies, the manager's requests and
+  // instructions), each with its one documented source line: `case_internal`.
+  entry_clarification_step: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   dsv_offer: {
     retentionClass: "participation_record",
     dataClass: "internal",
@@ -937,6 +952,8 @@ const withoutFields = new Set([
   // The offered paper's provenance, deadline and printed terms (process-and-lifecycle.md, DSV offers).
   "dsv_offer",
   "dsv_contract",
+  "entry_clarification",
+  "entry_clarification_step",
   "dsv_scan_signature",
   // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
   // declarations to the BA).

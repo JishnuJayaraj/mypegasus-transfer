@@ -301,6 +301,131 @@ describe("GET /projects/{id}/worklist", () => {
   }, 30_000);
 });
 
+/**
+ * A signed DSV (an external paper offer, signed, with its contract) of an informed participation
+ * whose planned TG start lies `daysAgo` days before the clock, as the owner (a fixture).
+ */
+async function signedDsv(daysAgo: number, signedOn = "2091-01-02") {
+  const id = await person(werkNord, {
+    entryWaveId: w1.id,
+    dsvStatus: "dsv_signed",
+    tgStart: new Date(Date.parse(`2091-02-05T00:00:00Z`) - daysAgo * 86_400_000)
+      .toISOString()
+      .slice(0, 10),
+    offerDeadline: "2090-01-01",
+  });
+  const {
+    rows: [offer],
+  } = await owner.$client.query(
+    `insert into dsv_offer (project_id, participation_id, origin, template_version, offer_deadline,
+       printed_tg_start, printed_tg_end, offered_by, ended_as, ended_at)
+     values ($1, $2, 'external_paper', 'external_unknown', '2090-01-01', $3, '2092-02-29', $4, 'signed', now())
+     returning id`,
+    [werkNord, id, w1.defaultTgStart, projectLead],
+  );
+  await owner.$client.query(
+    `insert into dsv_contract (project_id, participation_id, dsv_offer_id, participant_signed_on)
+     values ($1, $2, $3, $4)`,
+    [werkNord, id, offer.id, signedOn],
+  );
+  return id;
+}
+
+describe("the signed DSV in the work list and the dashboard (the DSV work list and the entry clarification)", () => {
+  it("lists 'DSV nicht vollständig unterschrieben' dated by the signature day; item, filter and tile are one count", async () => {
+    const open = await signedDsv(2);
+    await person(werkNord, { entryWaveId: w1.id }); // not signed
+    const { items } = await readJson(await worklist(), Worklist);
+    const row = items.find((item) => item.id === open)!;
+    expect(row.caseItems).toEqual([
+      { kind: "dsv_not_fully_executed", date: "2091-01-02" },
+      { kind: "entry_clarification", date: "2091-02-04" },
+    ]);
+    expect(row.capabilities.generateDsv).toBe(true);
+    const board = await readJson(await dashboard(), ProjectDashboard);
+    const tile = board.counts.tiles.find((t) => t.key === "dsv_not_fully_executed")!;
+    expect(tile.filter).toEqual({ caseItem: "dsv_not_fully_executed" });
+    const byItem = items.filter((item) =>
+      item.caseItems.some((c) => c.kind === "dsv_not_fully_executed"),
+    );
+    expect(byItem.map((item) => item.id)).toEqual([open]);
+    expect(tile.count).toBe(byItem.length);
+    expect(
+      items.filter((item) => matchesWorklistFilter(item, tile.filter)).map((i) => i.id),
+    ).toEqual([open]);
+  });
+
+  it("opens the entry clarification the day after the planned start, not on it", async () => {
+    const onTheDay = await signedDsv(0);
+    const dayAfter = await signedDsv(1);
+    const { items } = await readJson(await worklist(), Worklist);
+    const kinds = (id: string) =>
+      items.find((item) => item.id === id)!.caseItems.map((c) => c.kind);
+    expect(kinds(onTheDay)).toEqual(["dsv_not_fully_executed"]);
+    expect(kinds(dayAfter)).toEqual(["dsv_not_fully_executed", "entry_clarification"]);
+  });
+
+  it("shows the DSV items to the PL and back office only, and counts what each sees", async () => {
+    const id = await signedDsv(3);
+    await assign([id]);
+    const seen = async (viewer: string) => {
+      const { items } = await readJson(await worklist(as(viewer)), Worklist);
+      return items.find((item) => item.id === id)!;
+    };
+    expect((await seen(backOffice)).caseItems.map((c) => c.kind)).toEqual([
+      "dsv_not_fully_executed",
+      "entry_clarification",
+    ]);
+    const asConsultant = await seen(consultant);
+    expect(asConsultant.caseItems).toEqual([]);
+    expect(asConsultant.capabilities.generateDsv).toBe(false);
+    const board = await readJson(await dashboard(as(consultant)), ProjectDashboard);
+    expect(board.counts.tiles.find((t) => t.key === "dsv_not_fully_executed")).toBeUndefined();
+  });
+
+  it("flags a signed DSV that never entered from the day after the latest entry date, with its tile", async () => {
+    const id = await signedDsv(40);
+    const clean = await person(werkNord, { entryWaveId: w1.id });
+    clock.set(new Date("2091-03-16T10:00:00Z"));
+    try {
+      const { items } = await readJson(await worklist(), Worklist);
+      expect(items.find((item) => item.id === id)!.flags).toContain(
+        "dsv_signed_not_entered_at_cutoff",
+      );
+      expect(items.find((item) => item.id === clean)!.flags).not.toContain(
+        "dsv_signed_not_entered_at_cutoff",
+      );
+      const board = await readJson(await dashboard(), ProjectDashboard);
+      const tile = board.counts.tiles.find((t) => t.key === "cutoff_cases")!;
+      expect(tile.filter).toEqual({ flag: "cutoff_case" });
+      expect(tile.count).toBe(
+        items.filter((item) => matchesWorklistFilter(item, tile.filter)).length,
+      );
+      expect(tile.count).toBeGreaterThanOrEqual(1);
+      // The flag is a finding, never a status change: the system withdrew nobody.
+      expect(
+        (await owner.select().from(participation).where(eq(participation.id, id)))[0]?.status,
+      ).toBe("informed");
+      expect(
+        board.counts.flags.find((f) => f.key === "dsv_signed_not_entered_at_cutoff")?.count,
+      ).toBe(1);
+    } finally {
+      clock.set(new Date("2091-02-05T10:00:00Z"));
+    }
+  });
+
+  it("filters by case item and cutoff case: one predicate for the list and the tile", async () => {
+    const id = await signedDsv(2);
+    await person();
+    const { items } = await readJson(await worklist(), Worklist);
+    const ids = (filter: Parameters<typeof matchesWorklistFilter>[1]) =>
+      items.filter((item) => matchesWorklistFilter(item, filter)).map((item) => item.id);
+    expect(ids({ caseItem: "entry_clarification" })).toEqual([id]);
+    expect(ids({ caseItem: "evidence_invalidated" })).toEqual([]);
+    expect(ids({ caseItem: "dsv_not_fully_executed", status: "informed" })).toEqual([id]);
+  });
+});
+
 describe("GET /projects/{id}/dashboard", () => {
   it("counts exactly the snapshot's participations by the same filters", async () => {
     await person(werkNord, { entryWaveId: w1.id });

@@ -145,6 +145,10 @@ describe("audit event types (ADR-0002)", () => {
       "dsv_form_generated",
       "dsv_template_pinned",
       "dsv_original_recorded",
+      "entry_clarification_recorded",
+      "entry_clarification_escalated",
+      "entry_clarification_instructed",
+      "entry_clarification_requested",
     ]);
   });
 
@@ -258,6 +262,10 @@ describe("audit event types (ADR-0002)", () => {
       "dsv_form_generated",
       "dsv_template_pinned",
       "dsv_original_recorded",
+      "entry_clarification_recorded",
+      "entry_clarification_escalated",
+      "entry_clarification_instructed",
+      "entry_clarification_requested",
     ]);
   });
 
@@ -878,6 +886,33 @@ describe("the other event types", () => {
       { details: { field: "originalLocation", location: "paper_personnel_file" } },
     ],
     ["dsv_original_recorded", { details: { field: "sentToCustomerOn" } }],
+    [
+      "dsv_form_generated",
+      {
+        details: {
+          documentId: otherId,
+          templateVersion: "v1",
+          deadlineKind: "explicit",
+          batchSize: 100,
+        },
+      },
+    ],
+    [
+      "entry_clarification_recorded",
+      { details: { clarificationId: otherId, pendingCode: "awaiting_asu_proof" } },
+    ],
+    [
+      "entry_clarification_escalated",
+      { details: { clarificationId: otherId, pendingCode: "awaiting_legal_advice" } },
+    ],
+    [
+      "entry_clarification_instructed",
+      { details: { clarificationId: otherId, instructionCode: "dpo_instruction" } },
+    ],
+    [
+      "entry_clarification_requested",
+      { details: { clarificationId: otherId, requestCode: "date_unclear" } },
+    ],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -1329,6 +1364,43 @@ describe("the other event types", () => {
     // A date or a free value is never in the event.
     ["dsv_original_recorded", { details: { field: "sentToCustomerOn", value: "2091-03-12" } }],
     ["dsv_original_recorded", { details: { field: "originalLocation", location: "attic" } }],
+    // The documented source never enters the event, nor a code of the other kind.
+    [
+      "entry_clarification_recorded",
+      {
+        details: { clarificationId: otherId, pendingCode: "awaiting_asu_proof", source: "Akte 1" },
+      },
+    ],
+    [
+      "entry_clarification_recorded",
+      { details: { clarificationId: otherId, pendingCode: "dpo_instruction" } },
+    ],
+    [
+      "entry_clarification_instructed",
+      { details: { clarificationId: otherId, instructionCode: "awaiting_asu_proof" } },
+    ],
+    [
+      "entry_clarification_escalated",
+      {
+        participationId: null,
+        details: { clarificationId: otherId, pendingCode: "awaiting_profiling" },
+      },
+    ],
+    [
+      "entry_clarification_requested",
+      { details: { clarificationId: otherId, requestCode: "awaiting_asu_proof" } },
+    ],
+    [
+      "dsv_form_generated",
+      {
+        details: {
+          documentId: otherId,
+          templateVersion: "v1",
+          deadlineKind: "wave",
+          batchSize: 101,
+        },
+      },
+    ],
   ])("reject an invalid %s", (type, fields) => {
     expect(AuditEvent.safeParse({ ...base, type, ...fields }).success).toBe(false);
   });

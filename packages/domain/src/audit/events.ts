@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AsuProofKind, AttestationSource } from "../asu/model";
 import { DocumentType } from "../documents/catalog";
+import { EntryInstructionCode, EntryPendingCode, EntryRequestCode } from "../dsv/clarification";
 import { DsvTemplateVersion } from "../dsv/generation";
 import { FormCode, FormVersion } from "../forms/field-map";
 import { AccessCategory, ParticipantDataField, valueDataClass } from "../fields/catalog";
@@ -241,6 +242,12 @@ export const AuditEventType = z.enum([
   // The original of a signed DSV (process-and-lifecycle.md, the DSV original), written only by
   // `record_dsv_original`
   "dsv_original_recorded",
+  // The entry clarification of a signed DSV that has not entered (process-and-lifecycle.md, the
+  // entry clarification), written only by its functions; codes, never the documented source
+  "entry_clarification_recorded",
+  "entry_clarification_escalated",
+  "entry_clarification_instructed",
+  "entry_clarification_requested",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -364,6 +371,10 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "dsv_form_generated",
   "dsv_template_pinned",
   "dsv_original_recorded",
+  "entry_clarification_recorded",
+  "entry_clarification_escalated",
+  "entry_clarification_instructed",
+  "entry_clarification_requested",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1563,6 +1574,8 @@ export const AuditEvent = z.discriminatedUnion("type", [
       documentId: z.uuid(),
       templateVersion: DsvTemplateVersion,
       deadlineKind: z.enum(["wave", "explicit"]),
+      /** Present on a bulk generation: how many DSV were generated in the one call (1 to 100). */
+      batchSize: z.number().int().min(1).max(100).optional(),
     }),
   }),
   /** The project's DSV template version pinned by its PL (ADR-0009, the DSV template). */
@@ -1582,6 +1595,36 @@ export const AuditEvent = z.discriminatedUnion("type", [
       field: z.enum(["originalLocation", "originalReceivedOn", "sentToCustomerOn"]),
       location: z.enum(["paper_personnel_file"]).optional(),
     }),
+  }),
+  /**
+   * The PL documented what is pending on a signed DSV that has not entered, or changed it before
+   * escalating: the pending code only, never the documented source (`case_internal`).
+   */
+  event("entry_clarification_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ clarificationId: z.uuid(), pendingCode: EntryPendingCode }),
+  }),
+  /** The PL escalated the case to the region's manager: the pending code it rests on. */
+  event("entry_clarification_escalated", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ clarificationId: z.uuid(), pendingCode: EntryPendingCode }),
+  }),
+  /** The region's manager recorded the instruction: its code, never the documented source. */
+  event("entry_clarification_instructed", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      clarificationId: z.uuid(),
+      instructionCode: EntryInstructionCode,
+    }),
+  }),
+  /** The manager asked the PL again: the request code only, never the source. */
+  event("entry_clarification_requested", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ clarificationId: z.uuid(), requestCode: EntryRequestCode }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */
   event("asu_confirmation_recorded", {

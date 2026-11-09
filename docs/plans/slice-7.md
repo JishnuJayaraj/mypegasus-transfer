@@ -408,6 +408,11 @@ archives this plan.
 PRs. If a PR passes about 1,500 lines while building, the plan says so and the owner decides on a
 split, as in Slice 6.
 
+**7-4 as built:** the plan's functions and routes, with `p_batch_size` as the one parameter added to
+`record_form_generation`; the readings the plan left open are Q228 (assumed). The clarification's
+closing is derived (no column), the review queue carries the PL's source line for the manager, and the
+reconciliation path is named on the card without a button until 7-6.
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether

@@ -148,7 +148,7 @@ export function lifecycleFlags(
   today: IsoDate,
 ): LifecycleFlag[] {
   const flags: LifecycleFlag[] = [];
-  const { status, profilingStatus } = s.current;
+  const { status, profilingStatus, dsvStatus } = s.current;
   const tgStart = effectiveTgStart(s.participation, s.wave);
   if (status === "informed" && tgStart !== null && tgStart < today) flags.push("tg_start_missed");
 
@@ -156,6 +156,16 @@ export function lifecycleFlags(
   if (latest !== null && today > latest) {
     const outcome = cutoffOutcome(s);
     if (outcome?.kind === "flag") flags.push(outcome.flag);
+    // A signed DSV that never entered (process-and-lifecycle.md, signed DSV not entered): informational,
+    // never a withdrawal. The conflict with a declined profiling is flagged above instead; and
+    // before the cutoff the participation may still enter, so it raises no cutoff warning either.
+    if (
+      status === "informed" &&
+      dsvStatus === "dsv_signed" &&
+      profilingStatus !== "profiling_declined"
+    ) {
+      flags.push("dsv_signed_not_entered_at_cutoff");
+    }
   } else if (latest !== null && cutoffOutcome(atCutoff(s))) {
     const cutoff = addDays(latest, 1);
     if (today >= addDays(cutoff, -cutoffWarningDays)) flags.push("cutoff_warning");

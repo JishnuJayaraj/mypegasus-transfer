@@ -65,6 +65,12 @@ const items: WorklistItem[] = [
     privacyNoticeState: { state: "due", dueOn: "2027-04-02", providedAt: null },
     portal: "reachable",
     appointments: { next: null, items: [appointmentItem("notice_undelivered", 4)] },
+    // Two case items and a cutoff flag: one participation each time.
+    caseItems: [
+      { kind: "dsv_not_fully_executed", date: "2027-03-02" },
+      { kind: "entry_clarification", date: "2027-04-02" },
+    ],
+    flags: ["dsv_signed_not_entered_at_cutoff"],
   }),
   item({
     id: id(4),
@@ -127,8 +133,18 @@ describe("matchesWorklistFilter", () => {
 
   it("a flag or any flag, and the portal", () => {
     expect(ids({ flag: "dsv_never_offered" })).toEqual([id(2)]);
-    expect(ids({ flag: "any" })).toEqual([id(2)]);
+    expect(ids({ flag: "any" })).toEqual([id(2), id(3)]);
+    expect(ids({ flag: "dsv_signed_not_entered_at_cutoff" })).toEqual([id(3)]);
+    // The cutoff cases: the four flags the Stichtag raises, informational and actionable.
+    expect(ids({ flag: "cutoff_case" })).toEqual([id(2), id(3)]);
     expect(ids({ portal: "reachable" })).toEqual([id(3)]);
+  });
+
+  it("a case item kind, one participation however many items", () => {
+    expect(ids({ caseItem: "dsv_not_fully_executed" })).toEqual([id(3)]);
+    expect(ids({ caseItem: "entry_clarification" })).toEqual([id(3)]);
+    expect(ids({ caseItem: "evidence_invalidated" })).toEqual([]);
+    expect(ids({ caseItem: "entry_clarification", status: "informed" })).toEqual([]);
   });
 
   it("the appointments: upcoming, overdue, to resolve, each kind", () => {
@@ -146,8 +162,11 @@ describe("matchesWorklistFilter", () => {
   });
 });
 
+const keys = (type: "ta_tg" | "ta_only", worksDsv = true) =>
+  projectFunnel(items, { type, waves: [], worksDsv }).tiles.map((t) => t.key);
+
 describe("projectFunnel", () => {
-  const project = { type: "ta_tg" as const, waves: [{ id: waveId }] };
+  const project = { type: "ta_tg" as const, waves: [{ id: waveId }], worksDsv: true };
 
   it("every count equals its filter's result in the same items", () => {
     const counts = projectFunnel(items, project);
@@ -171,12 +190,37 @@ describe("projectFunnel", () => {
       open_actions: 2,
       deadline_upcoming: 2,
       deadline_overdue: 1,
-      flags: 1,
+      flags: 2,
       not_reachable: 2,
       appointments_overdue: 2,
       appointments_to_resolve: 2,
       agentur_open: 2,
+      dsv_not_fully_executed: 1,
+      cutoff_cases: 2,
     });
+  });
+
+  it("counts the DSV tile only in ta_tg, the cutoff cases everywhere", () => {
+    expect(keys("ta_tg")).toContain("dsv_not_fully_executed");
+    expect(keys("ta_only")).not.toContain("dsv_not_fully_executed");
+    expect(keys("ta_only")).toContain("cutoff_cases");
+  });
+
+  it("leaves the DSV tile out for a viewer who doesn't work the DSV (no count of 0 that isn't one)", () => {
+    expect(keys("ta_tg", false)).not.toContain("dsv_not_fully_executed");
+    expect(keys("ta_tg", false)).toContain("cutoff_cases");
+  });
+
+  it("the tile, the filter and the item are one predicate over one snapshot", () => {
+    const tile = projectFunnel(items, project).tiles.find(
+      (t) => t.key === "dsv_not_fully_executed",
+    )!;
+    expect(tile.filter).toEqual({ caseItem: "dsv_not_fully_executed" });
+    const byItem = items.filter((row) =>
+      row.caseItems.some((c) => c.kind === "dsv_not_fully_executed"),
+    );
+    expect(tile.count).toBe(byItem.length);
+    expect(ids(tile.filter)).toEqual(byItem.map((row) => row.id));
   });
 
   it("has the waves and ohne Welle, the DSV track and every deadline kind × state in ta_tg", () => {
@@ -188,6 +232,7 @@ describe("projectFunnel", () => {
       "conflict_dsv_signed_profiling_declined",
       "dsv_never_offered",
       "informed_without_wave_at_cutoff",
+      "dsv_signed_not_entered_at_cutoff",
       "profiling_declined_after_entry",
     ]);
   });

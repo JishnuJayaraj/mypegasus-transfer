@@ -66,7 +66,8 @@ describe("vocabulary (plan 5.2)", () => {
       LifecycleFlag,
       words`tg_start_missed cutoff_warning cutoff_final_reminder
             conflict_dsv_signed_profiling_declined dsv_never_offered
-            informed_without_wave_at_cutoff profiling_exception_deadline_missed
+            informed_without_wave_at_cutoff dsv_signed_not_entered_at_cutoff
+            profiling_exception_deadline_missed
             profiling_declined_after_entry`,
     ],
     ["ProjectFlag", ProjectFlag, words`latest_entry_date_missing`],

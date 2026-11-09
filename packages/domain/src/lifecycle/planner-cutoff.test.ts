@@ -228,3 +228,43 @@ describe("cutoff warnings (Q78)", () => {
     expect(flagsOn("2027-05-01", state("informed"))).toEqual(["dsv_never_offered"]);
   });
 });
+
+const signed = (profiling: ProfilingStatus = "profiling_done") =>
+  state("informed", profiling, "dsv_signed");
+
+describe("a signed DSV that has not entered at the cutoff (Q214)", () => {
+  it("raises no flag, no warning, until the day after the latest entry date", () => {
+    expect(flagsOn("2027-04-17", signed())).toEqual([]);
+    expect(flagsOn("2027-04-30", signed())).toEqual([]);
+  });
+
+  it("is flagged from the day after the latest entry date, informationally", () => {
+    expect(flagsOn("2027-05-01", signed())).toEqual(["dsv_signed_not_entered_at_cutoff"]);
+    expect(flagsOn("2027-06-15", signed())).toEqual(["dsv_signed_not_entered_at_cutoff"]);
+  });
+
+  it("is never withdrawn by the system, whatever the profiling", () => {
+    for (const profiling of ProfilingStatus.options) {
+      const s = snapshot({ current: signed(profiling), wave: noStart });
+      expect(planSystemTransitions(s, project, window(null, "2027-05-01")).changes).toEqual([]);
+    }
+  });
+
+  it("leaves the conflict with a declined profiling to its own flag", () => {
+    expect(flagsOn("2027-05-01", signed("profiling_declined"))).toEqual([
+      "conflict_dsv_signed_profiling_declined",
+    ]);
+  });
+
+  it("does not apply once entered, or to another track state", () => {
+    const entered = state("active_in_tg", "profiling_done", "dsv_signed");
+    expect(flagsOn("2027-05-01", entered)).toEqual([]);
+    expect(flagsOn("2027-05-01", state("informed", "profiling_done", "dsv_offered"))).toEqual([]);
+  });
+
+  it("does not apply without a latest entry date (Q70)", () => {
+    const s = snapshot({ current: signed(), wave: { ...noStart, latestEntryDate: null } });
+    const open = { type: "ta_tg", waves: [{ ...noStart, latestEntryDate: null }] } as const;
+    expect(lifecycleFlags(s, open, "2027-06-15")).toEqual([]);
+  });
+});

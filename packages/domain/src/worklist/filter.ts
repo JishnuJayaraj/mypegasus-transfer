@@ -1,11 +1,17 @@
 import { z } from "zod";
 import { ActivationCodeState } from "../activation/status";
-import { DsvStatus, LifecycleFlag, MainStatus, ProfilingStatus } from "../lifecycle/enums";
+import {
+  cutoffCaseFlags,
+  DsvStatus,
+  LifecycleFlag,
+  MainStatus,
+  ProfilingStatus,
+} from "../lifecycle/enums";
 import { PrivacyNoticeState } from "../privacy/notice-state";
 import { AppointmentFilter, matchesAppointmentFilter } from "./appointments";
 import { DeadlineKind, DeadlineState } from "./deadlines";
 import { PortalReach } from "../reminders/model";
-import type { WorklistItem } from "./projection";
+import { WorklistCaseItem, type WorklistItem } from "./projection";
 import { AgenturItemKind } from "../profiling/submissions";
 
 /** Work with the Agentur: `open` for any item, else one kind. */
@@ -37,8 +43,10 @@ export const WorklistFilter = z
     actions: ActionsFilter.optional(),
     deadlineKind: DeadlineKind.optional(),
     deadlineState: DeadlineState.optional(),
-    /** One flag, or `any` flag. */
-    flag: z.union([LifecycleFlag, z.literal("any")]).optional(),
+    /** One flag, `any` flag, or a `cutoff_case` (the flags the Stichtag leaves to the PL). */
+    flag: z.union([LifecycleFlag, z.literal("any"), z.literal("cutoff_case")]).optional(),
+    /** A case item of the row ("DSV: unterschrieben, nicht vollständig", "Eintritt klären"). */
+    caseItem: WorklistCaseItem.shape.kind.optional(),
     portal: PortalReach.optional(),
     appointment: AppointmentFilter.optional(),
     agentur: AgenturFilter.optional(),
@@ -63,6 +71,12 @@ function matchesActions(item: WorklistItem, filter: ActionsFilter): boolean {
     case "rejected_documents":
       return actions.some((action) => action.state === "rejected");
   }
+}
+
+function matchesFlag(item: WorklistItem, flag: NonNullable<WorklistFilter["flag"]>): boolean {
+  if (flag === "any") return item.flags.length > 0;
+  if (flag === "cutoff_case") return item.flags.some((f) => cutoffCaseFlags.has(f));
+  return item.flags.includes(flag);
 }
 
 /**
@@ -92,7 +106,8 @@ export function matchesWorklistFilter(item: WorklistItem, filter: WorklistFilter
     (filter.activation === undefined || activationOf(item) === filter.activation) &&
     (filter.notice === undefined || item.privacyNoticeState.state === filter.notice) &&
     (filter.actions === undefined || matchesActions(item, filter.actions)) &&
-    (flag === undefined || (flag === "any" ? item.flags.length > 0 : item.flags.includes(flag))) &&
+    (flag === undefined || matchesFlag(item, flag)) &&
+    (filter.caseItem === undefined || item.caseItems.some((c) => c.kind === filter.caseItem)) &&
     (filter.portal === undefined || item.portal === filter.portal) &&
     (filter.appointment === undefined ||
       matchesAppointmentFilter(item.appointments, filter.appointment)) &&

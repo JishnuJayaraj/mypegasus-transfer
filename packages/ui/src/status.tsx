@@ -69,6 +69,7 @@ const tones: { [F in StatusFamily]: Record<StatusCodes[F], StatusTone> } = {
     conflict_dsv_signed_profiling_declined: "danger",
     dsv_never_offered: "warning",
     informed_without_wave_at_cutoff: "warning",
+    dsv_signed_not_entered_at_cutoff: "warning",
     profiling_exception_deadline_missed: "danger",
     profiling_declined_after_entry: "warning",
   },

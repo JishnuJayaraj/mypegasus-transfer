@@ -282,16 +282,23 @@ export function dsvService(deps: DsvDeps) {
   }
 
   /**
-   * Generates the DSV: the state and deadline checked on the snapshot (the function checks both
-   * again under the lock), the expected token compared, the template rendered, the file stored
-   * encrypted, then recorded; a refused record deletes the stored object.
+   * Checks one generation on a snapshot: the state, the deadline, the expected token (when the
+   * caller has one) and the printed values; the function checks the state and deadline again
+   * under the lock.
    */
-  async function generate(
+  async function check(
     participationId: string,
-    input: { deadline: DsvDeadlineChoice; expectedSourceToken: string },
+    input: { deadline: DsvDeadlineChoice; expectedSourceToken?: string },
     today: IsoDate,
-    context: SQL,
-  ): Promise<{ ok: true; result: DsvGenerationResult } | { ok: false; refusal: DsvRefusal }> {
+  ): Promise<
+    | {
+        ok: true;
+        current: DsvRead;
+        offerDeadline: IsoDate;
+        deadlineKind: DsvDeadlineChoice["kind"];
+      }
+    | { ok: false; refusal: DsvRefusal }
+  > {
     let current: DsvRead;
     try {
       current = await read(participationId);
@@ -319,7 +326,10 @@ export function dsvService(deps: DsvDeps) {
         refusal: { kind: "domain", codes: [{ code: deadline.problem, field: "deadline" }] },
       };
     }
-    if (input.expectedSourceToken !== current.sourceToken) {
+    if (
+      input.expectedSourceToken !== undefined &&
+      input.expectedSourceToken !== current.sourceToken
+    ) {
       return { ok: false, refusal: { kind: "stale" } };
     }
     if (current.validation.errors.length > 0) {
@@ -334,8 +344,30 @@ export function dsvService(deps: DsvDeps) {
         },
       };
     }
+    return {
+      ok: true,
+      current,
+      offerDeadline: deadline.deadline,
+      deadlineKind: input.deadline.kind,
+    };
+  }
+
+  type Checked = Extract<Awaited<ReturnType<typeof check>>, { ok: true }>;
+  type Sealed = {
+    documentId: string;
+    size: number;
+    sha256: string;
+    seal: ReturnType<typeof encryptDocument>;
+  };
+
+  /** Renders the paper and stores it encrypted; an unavailable renderer or storage is a refusal. */
+  async function seal(
+    participationId: string,
+    checked: Checked,
+  ): Promise<{ ok: true; sealed: Sealed } | { ok: false; refusal: DsvRefusal }> {
     const files = deps.files;
     if (!files) return { ok: false, refusal: { kind: "unavailable", code: "storage_unavailable" } };
+    const { current } = checked;
     const version = current.templateVersion!;
     let content: Uint8Array;
     try {
@@ -346,53 +378,161 @@ export function dsvService(deps: DsvDeps) {
           company,
           tgStart: current.source.tgStart!,
           tgEnd: current.source.tgEnd!,
-          offerDeadline: deadline.deadline,
+          offerDeadline: checked.offerDeadline,
         }),
       );
     } catch {
       return { ok: false, refusal: { kind: "unavailable", code: "pdf_unavailable" } };
     }
     const documentId = randomUUID();
-    const seal = encryptDocument(
+    const sealed = encryptDocument(
       documentKey,
       { documentId, participationId, type: "dsv_form" },
       content,
     );
     try {
-      await files.storage.put(objectKey(documentId), seal.object);
+      await files.storage.put(objectKey(documentId), sealed.object);
     } catch {
       return { ok: false, refusal: { kind: "unavailable", code: "storage_unavailable" } };
     }
-    const checklist = current.validation.checklist;
-    try {
-      await transactionWithClient(db, (tx) =>
-        tx.execute(sql`select record_form_generation(
+    return {
+      ok: true,
+      sealed: {
+        documentId,
+        size: content.length,
+        sha256: createHash("sha256").update(content).digest("hex"),
+        seal: sealed,
+      },
+    };
+  }
+
+  /** The function call that records one generation; `batchSize` for a bulk generation. */
+  function recordGeneration(
+    tx: Pick<Database, "execute">,
+    participationId: string,
+    checked: Checked,
+    stored: Sealed,
+    context: SQL,
+    batchSize: number | null,
+  ) {
+    const { current } = checked;
+    return tx.execute(sql`select record_form_generation(
           p_context => ${context}, p_participation_id => ${participationId}::uuid,
-          p_generation_id => ${randomUUID()}::uuid, p_document_id => ${documentId}::uuid,
-          p_form_code => 'dsv'::form_code, p_form_version => ${version},
+          p_generation_id => ${randomUUID()}::uuid, p_document_id => ${stored.documentId}::uuid,
+          p_form_code => 'dsv'::form_code, p_form_version => ${current.templateVersion!},
           p_sources => ${JSON.stringify({ profile: current.profileRevision, profiling: 0, assessment: 0, unemployment: 0 })}::jsonb,
           p_person => ${JSON.stringify(current.person)}::jsonb, p_source_token => ${current.sourceToken},
           p_organisation_sha256 => ${organisationSha256}, p_declarations => null::jsonb,
           p_confirmed_warnings => '{}'::text[], p_anlage => false,
-          p_size_bytes => ${content.length}::integer,
-          p_content_sha256 => ${createHash("sha256").update(content).digest("hex")},
-          p_key_id => ${seal.keyId}, p_wrapped_key => ${Buffer.from(seal.wrappedKey)}::bytea,
-          p_checklist => ${JSON.stringify(checklist)}::jsonb, p_employer_sha256 => null::text,
-          p_offer_deadline => ${deadline.deadline}::date,
-          p_deadline_kind => ${input.deadline.kind}::dsv_deadline_kind) as result`),
+          p_size_bytes => ${stored.size}::integer,
+          p_content_sha256 => ${stored.sha256},
+          p_key_id => ${stored.seal.keyId}, p_wrapped_key => ${Buffer.from(stored.seal.wrappedKey)}::bytea,
+          p_checklist => ${JSON.stringify(current.validation.checklist)}::jsonb, p_employer_sha256 => null::text,
+          p_offer_deadline => ${checked.offerDeadline}::date,
+          p_deadline_kind => ${checked.deadlineKind}::dsv_deadline_kind,
+          p_batch_size => ${batchSize}::integer) as result`);
+  }
+
+  const resultOf = (checked: Checked, stored: Sealed): DsvGenerationResult => ({
+    documentId: stored.documentId,
+    templateVersion: checked.current.templateVersion! as DsvGenerationResult["templateVersion"],
+    offerDeadline: checked.offerDeadline,
+    checklist: checked.current.validation.checklist,
+  });
+
+  const forget = (ids: readonly string[]) =>
+    Promise.all(ids.map((id) => deps.files?.storage.delete(objectKey(id)).catch(() => undefined)));
+
+  /**
+   * Generates the DSV: the state and deadline checked on the snapshot (the function checks both
+   * again under the lock), the expected token compared, the template rendered, the file stored
+   * encrypted, then recorded; a refused record deletes the stored object.
+   */
+  async function generate(
+    participationId: string,
+    input: { deadline: DsvDeadlineChoice; expectedSourceToken: string },
+    today: IsoDate,
+    context: SQL,
+  ): Promise<{ ok: true; result: DsvGenerationResult } | { ok: false; refusal: DsvRefusal }> {
+    const checked = await check(participationId, input, today);
+    if (!checked.ok) return checked;
+    const stored = await seal(participationId, checked);
+    if (!stored.ok) return stored;
+    try {
+      await transactionWithClient(db, (tx) =>
+        recordGeneration(tx, participationId, checked, stored.sealed, context, null),
       );
     } catch (error) {
-      await files.storage.delete(objectKey(documentId)).catch(() => undefined);
+      await forget([stored.sealed.documentId]);
       return { ok: false, refusal: { kind: "function", error } };
+    }
+    return { ok: true, result: resultOf(checked, stored.sealed) };
+  }
+
+  /** A batch's refusals, each with the position of its item in the request. */
+  type BatchRefusal = { index: number; refusal: DsvRefusal };
+
+  /**
+   * Generates 1 to 100 DSV with one deadline, all or nothing: every item is checked first and
+   * a single refusal refuses the batch, nothing rendered; then every paper is rendered and stored
+   * and all are recorded in one transaction in participation id order under the project's
+   * exclusive lock (`p_batch_size`). Any failure deletes every stored object.
+   */
+  async function generateBatch(
+    participationIds: readonly string[],
+    deadline: DsvDeadlineChoice,
+    today: IsoDate,
+    context: SQL,
+  ): Promise<
+    | { ok: true; results: { participationId: string; result: DsvGenerationResult }[] }
+    | { ok: false; refusals: BatchRefusal[] }
+  > {
+    const checks: Checked[] = [];
+    const refusals: BatchRefusal[] = [];
+    for (const [index, participationId] of participationIds.entries()) {
+      const checked = await check(participationId, { deadline }, today);
+      if (checked.ok) checks.push(checked);
+      else refusals.push({ index, refusal: checked.refusal });
+    }
+    if (refusals.length > 0) return { ok: false, refusals };
+    // Papers render and store in the request's order; the records follow in id order.
+    const stored: Sealed[] = [];
+    for (const [index, checked] of checks.entries()) {
+      const sealed = await seal(participationIds[index]!, checked);
+      if (!sealed.ok) {
+        await forget(stored.map((entry) => entry.documentId));
+        return { ok: false, refusals: [{ index, refusal: sealed.refusal }] };
+      }
+      stored.push(sealed.sealed);
+    }
+    const order = participationIds
+      .map((participationId, index) => ({ participationId, index }))
+      .toSorted((a, b) => a.participationId.localeCompare(b.participationId));
+    let at = 0;
+    try {
+      await transactionWithClient(db, async (tx) => {
+        for (const { participationId, index } of order) {
+          at = index;
+          await recordGeneration(
+            tx,
+            participationId,
+            checks[index]!,
+            stored[index]!,
+            context,
+            order.length,
+          );
+        }
+      });
+    } catch (error) {
+      await forget(stored.map((entry) => entry.documentId));
+      return { ok: false, refusals: [{ index: at, refusal: { kind: "function", error } }] };
     }
     return {
       ok: true,
-      result: {
-        documentId,
-        templateVersion: version as DsvGenerationResult["templateVersion"],
-        offerDeadline: deadline.deadline,
-        checklist,
-      },
+      results: participationIds.map((participationId, index) => ({
+        participationId,
+        result: resultOf(checks[index]!, stored[index]!),
+      })),
     };
   }
 
@@ -411,8 +551,11 @@ export function dsvService(deps: DsvDeps) {
     stale,
     generatedFact,
     generate,
+    generateBatch,
     pinFixed,
   };
 }
 
 export type DsvService = ReturnType<typeof dsvService>;
+
+export type DsvBatchRefusal = { index: number; refusal: DsvRefusal };

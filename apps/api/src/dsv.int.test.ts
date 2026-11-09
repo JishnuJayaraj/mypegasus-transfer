@@ -12,6 +12,7 @@ import {
 } from "@transfer/db/testing";
 import {
   DocumentOpening,
+  DsvBulkGenerationResult,
   DsvGenerationResult,
   DsvTemplateView,
   DsvView,
@@ -19,7 +20,7 @@ import {
   type PrintDocument,
 } from "@transfer/domain";
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectProblem, jsonRequest, login, readJson, testApp } from "./testing";
 
 // The tab "DSV" (process-and-lifecycle.md, the DSV: generation; data-protection.md, generated forms;
@@ -687,5 +688,185 @@ describe("the packet and the original (process-and-lifecycle.md, DSV packet and 
       statusVersion: version,
     });
     expect((await view(id)).facts.dsvFullyExecuted).toBeNull();
+  });
+});
+
+const bulk = (ids: string[], deadline: unknown = wave, as: string = projectLead) =>
+  request("POST", `/projects/${werkNord}/dsv/generations`, as, {
+    deadline,
+    items: ids.map((participationId) => ({ participationId })),
+  });
+
+const generations = async () =>
+  Number((await sql("select count(*) as n from form_generation")).rows[0].n);
+
+describe("POST /projects/{id}/dsv/generations (bulk generation)", () => {
+  /** The stored objects the batch added (the storage outlives the tests). */
+  let before: string[] = [];
+  beforeEach(() => {
+    before = storage.keys();
+  });
+  const added = () => storage.keys().filter((key) => !before.includes(key));
+
+  it("generates 1 to 100 papers with one deadline in one call; each is audited with the batch size", async () => {
+    await pin();
+    const ids = [await participant(), await participant(), await participant()];
+    const res = await bulk(ids, wave, backOffice);
+    expect(res.status).toBe(201);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const body = await readJson(res, DsvBulkGenerationResult);
+    expect(body.generations.map((g) => g.participationId)).toEqual(ids);
+    expect(new Set(body.generations.map((g) => g.offerDeadline))).toEqual(
+      new Set([w1.signingDeadline]),
+    );
+    expect(new Set(body.generations.map((g) => g.documentId)).size).toBe(3);
+    expect(added()).toHaveLength(3);
+    const audit = await sql(
+      `select details from audit_event where event_type = 'dsv_form_generated' order by seq`,
+    );
+    expect(audit.rows.map((r) => r.details.batchSize)).toEqual([3, 3, 3]);
+    for (const id of ids) {
+      expect((await view(id)).generations).toHaveLength(1);
+    }
+    // The log carries counts and codes, never an id of a participation or a printed value.
+    const text = JSON.stringify(logs);
+    for (const id of ids) expect(text).not.toContain(id);
+    expect(text).not.toMatch(/Łucja|Doğan|Weißdorn/);
+  });
+
+  it("takes one explicit deadline for a mixed selection", async () => {
+    await pin();
+    const [a, b] = [await participant(), await participant()];
+    const explicit = { kind: "explicit", date: w1.signingDeadline } as const;
+    const res = await bulk([a, b], explicit);
+    expect(res.status).toBe(201);
+    const body = await readJson(res, DsvBulkGenerationResult);
+    expect(body.generations.map((g) => g.offerDeadline)).toEqual([
+      w1.signingDeadline,
+      w1.signingDeadline,
+    ]);
+  });
+
+  it("is all or nothing: one participation that can't be generated refuses the whole call", async () => {
+    await pin();
+    const [a, b, c] = [await participant(), await participant(), await participant()];
+    await changeStatus(owner.$client, b, {
+      field: "dsv_status",
+      from: "not_offered",
+      to: "dsv_offered",
+    });
+    const res = await bulk([a, b, c]);
+    expect(await codesOf(res, 422)).toEqual(["/items/1:dsv_offer_open"]);
+    expect(await generations()).toBe(0);
+    expect(added()).toEqual([]);
+    // Without the offending one, the same call goes through.
+    expect((await bulk([a, c])).status).toBe(201);
+    expect(await generations()).toBe(2);
+  });
+
+  it("lists every refused item by its position, and no id", async () => {
+    const [a, b] = [await participant(), await participant()];
+    const res = await bulk([a, b]);
+    expect(await codesOf(res, 422)).toEqual([
+      "/items/0:dsv_template_not_pinned",
+      "/items/1:dsv_template_not_pinned",
+    ]);
+  });
+
+  it("is refused for a deadline the wave no longer has (409), nothing recorded", async () => {
+    await pin();
+    const ids = [await participant(), await participant()];
+    const res = await bulk(ids, { kind: "wave", shown: "2001-01-01" });
+    expect(await codesOf(res, 409)).toEqual(["/items/0:source_changed", "/items/1:source_changed"]);
+    expect(await generations()).toBe(0);
+  });
+
+  it("refuses an invalid deadline for the item it fails", async () => {
+    await pin();
+    const ids = [await participant()];
+    const res = await bulk(ids, { kind: "explicit", date: "2001-01-01" });
+    expect(await codesOf(res, 422)).toEqual(["/items/0/deadline:offer_deadline_invalid"]);
+  });
+
+  it("is the PL's and back office's; a participation of another project or none is a 404", async () => {
+    await pin();
+    const id = await participant();
+    await expectProblem(await bulk([id], wave, consultant), 403, "forbidden");
+    await expectProblem(await bulk([id, randomUUID()]), 404, "not-found");
+    const other = await participant(verwaltung);
+    await expectProblem(await bulk([id, other]), 404, "not-found");
+    expect(await generations()).toBe(0);
+    await expectProblem(
+      await request("POST", `/projects/${randomUUID()}/dsv/generations`, projectLead, {
+        deadline: wave,
+        items: [{ participationId: id }],
+      }),
+      404,
+      "not-found",
+    );
+  });
+
+  it("takes 1 to 100 distinct participations", async () => {
+    await pin();
+    const id = await participant();
+    await expectProblem(await bulk([]), 400, "validation-error");
+    await expectProblem(await bulk([id, id]), 400, "validation-error");
+    await expectProblem(
+      await bulk(Array.from({ length: 101 }, () => randomUUID())),
+      400,
+      "validation-error",
+    );
+  });
+
+  it("rolls the whole batch back and removes every stored paper when storage fails midway", async () => {
+    await pin();
+    const ids = [await participant(), await participant(), await participant()];
+    const put = storage.put.bind(storage);
+    let calls = 0;
+    const spy = vi.spyOn(storage, "put").mockImplementation(async (key, content) => {
+      if (++calls === 3) throw new Error("storage down");
+      return put(key, content);
+    });
+    try {
+      await expectProblem(await bulk(ids), 503, "service-unavailable");
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await generations()).toBe(0);
+    expect(added()).toEqual([]);
+    expect(
+      (await sql("select count(*) as n from document where type = 'dsv_form'")).rows[0].n,
+    ).toBe("0");
+    expect((await bulk(ids)).status).toBe(201);
+  });
+
+  it("removes every paper when the database refuses one at the record", async () => {
+    await pin();
+    const ids = [await participant(), await participant()];
+    // A state change between the check and the record: the function refuses under the lock.
+    const spy = vi.spyOn(storage, "put").mockImplementation(async function (
+      this: unknown,
+      key,
+      content,
+    ) {
+      await sql(`update participation set dsv_status = 'dsv_declined' where id = $1`, [ids[1]]);
+      spy.mockRestore();
+      return storage.put(key, content);
+    });
+    const res = await bulk(ids);
+    spy.mockRestore();
+    expect(res.status).toBe(422);
+    expect(await generations()).toBe(0);
+    expect(added()).toEqual([]);
+  });
+
+  it("generates a full batch of 100", { timeout: 60_000 }, async () => {
+    await pin();
+    const ids: string[] = [];
+    for (let i = 0; i < 100; i++) ids.push(await participant());
+    const res = await bulk(ids);
+    expect(res.status).toBe(201);
+    expect((await readJson(res, DsvBulkGenerationResult)).generations).toHaveLength(100);
+    expect(await generations()).toBe(100);
   });
 });

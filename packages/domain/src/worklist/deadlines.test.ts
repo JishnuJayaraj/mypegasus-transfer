@@ -244,6 +244,7 @@ describe("remainingFlags: a deadline replaces its flag", () => {
       "conflict_dsv_signed_profiling_declined",
       "dsv_never_offered",
       "informed_without_wave_at_cutoff",
+      "dsv_signed_not_entered_at_cutoff",
       "profiling_declined_after_entry",
     ]);
   });

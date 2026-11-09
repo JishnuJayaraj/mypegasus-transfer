@@ -78,11 +78,15 @@ type Generation = {
   checklist?: string | null;
   employerSha256?: string | null;
   formCode?: string;
+  /** A bulk generation's size (1 to 100); the client of its transaction. */
+  batchSize?: number;
+  client?: Client;
 };
 
 /** A DSV recorded by `context` (the PL by default) with the wave's deadline; its generation id. */
 async function generate(id: string, overrides: Generation = {}) {
-  return call(app, "record_form_generation", {
+  return call(overrides.client ?? app, "record_form_generation", {
+    ...(overrides.batchSize !== undefined && { batchSize: overrides.batchSize }),
     context: overrides.context ?? pl,
     participationId: id,
     generationId: randomUUID(),
@@ -352,5 +356,147 @@ describe("grants", () => {
     await expect(
       app.query("select dsv_source_token($1, $2)", [randomUUID(), organisation]),
     ).rejects.toMatchObject({ code: "42501" });
+  });
+});
+
+const advisory = (client: Client) =>
+  client
+    .query(
+      "select mode from pg_locks where locktype = 'advisory' and pid = pg_backend_pid() order by mode",
+    )
+    .then((r) => r.rows.map((row) => row.mode as string));
+
+describe("a bulk generation (bulk generation)", () => {
+  it("takes the project's exclusive lock and audits the batch size, one transaction for all", async () => {
+    await pin("v1");
+    const [a, b] = [await participation(), await participation()];
+    await app.query("begin");
+    try {
+      await generate(a, { batchSize: 2 });
+      await generate(b, { batchSize: 2 });
+      expect(await advisory(app)).toContain("ExclusiveLock");
+    } finally {
+      await app.query("commit");
+    }
+    const events = (
+      await owner.query(
+        "select details from audit_event where event_type::text = 'dsv_form_generated' order by seq",
+      )
+    ).rows;
+    expect(events.map((e) => e.details.batchSize)).toEqual([2, 2]);
+    // A single generation takes only the shared lock and carries no batch size.
+    const c = await participation();
+    await app.query("begin");
+    await generate(c);
+    expect(await advisory(app)).toEqual(["ShareLock"]);
+    await app.query("commit");
+    expect(
+      (
+        await one(
+          "select details from audit_event where participation_id = $1 and event_type::text = 'dsv_form_generated'",
+          [c],
+        )
+      ).details,
+    ).not.toHaveProperty("batchSize");
+  });
+
+  it("is all or nothing: one refused generation rolls the whole batch back", async () => {
+    await pin("v1");
+    const [a, b] = [await participation(), await participation()];
+    await app.query("begin");
+    try {
+      await generate(a, { batchSize: 2 });
+      await expect(
+        generate(b, { batchSize: 2, deadline: "2001-01-01", kind: "explicit" }),
+      ).rejects.toMatchObject(failsWith("offer_deadline_invalid"));
+    } finally {
+      await app.query("rollback");
+    }
+    expect((await one("select count(*)::int as n from form_generation")).n).toBe(0);
+    expect(
+      (await one("select count(*)::int as n from document where type::text = 'dsv_form'")).n,
+    ).toBe(0);
+    expect(
+      (
+        await one(
+          "select count(*)::int as n from audit_event where event_type::text = 'dsv_form_generated'",
+        )
+      ).n,
+    ).toBe(0);
+  });
+
+  it("holds a single generation of the project back until the batch committed", async () => {
+    await pin("v1");
+    const [a, b] = [await participation(), await participation()];
+    const other = new Client({ connectionString: urls.app, types: textDates });
+    const watcher = new Client({ connectionString: urls.owner, types: textDates });
+    await Promise.all([other.connect(), watcher.connect()]);
+    const {
+      rows: [{ pid }],
+    } = await other.query("select pg_backend_pid() as pid");
+    try {
+      await app.query("begin");
+      await generate(a, { batchSize: 2 });
+      const waiting = generate(b, { client: other });
+      // Controlled interleaving: the other backend is seen waiting for the advisory lock, not racing.
+      const waits = () =>
+        watcher
+          .query(
+            "select count(*)::int as n from pg_locks where locktype = 'advisory' and not granted and pid = $1",
+            [pid],
+          )
+          .then((r) => r.rows[0].n as number);
+      for (let i = 0; i < 100 && (await waits()) === 0; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(await waits()).toBe(1);
+      await app.query("commit");
+      await waiting;
+    } finally {
+      await app.query("rollback").catch(() => undefined);
+      await Promise.all([other.end(), watcher.end()]);
+    }
+    expect((await one("select count(*)::int as n from form_generation")).n).toBe(2);
+  });
+
+  it.each([0, 101, -1])("refuses a batch size of %s, and a size for another form", async (size) => {
+    await pin("v1");
+    const id = await participation();
+    await expect(generate(id, { batchSize: size })).rejects.toMatchObject(
+      failsWith("invalid_argument"),
+    );
+    await expect(
+      call(app, "record_form_generation", {
+        context: pl,
+        participationId: id,
+        generationId: randomUUID(),
+        documentId: randomUUID(),
+        formCode: "kug200b",
+        formVersion: "01-2024",
+        sources,
+        person: JSON.stringify(await personOf(id)),
+        sourceToken: hex(),
+        organisationSha256: organisation,
+        declarations: null,
+        confirmedWarnings: [],
+        anlage: false,
+        sizeBytes: 2048,
+        contentSha256: hex(),
+        keyId: hex(8),
+        wrappedKey: randomBytes(60),
+        checklist: "[]",
+        employerSha256: hex(),
+        batchSize: 2,
+      }),
+    ).rejects.toMatchObject(failsWith("invalid_argument"));
+  });
+
+  it("keeps the permission per participation: a consultant's batch is refused at the function", async () => {
+    await pin("v1");
+    const id = await participation();
+    await expect(generate(id, { batchSize: 1, context: asConsultant })).rejects.toMatchObject(
+      failsWith("actor_not_allowed"),
+    );
+    expect((await generate(id, { batchSize: 1, context: asBackOffice })).length).toBeGreaterThan(0);
   });
 });

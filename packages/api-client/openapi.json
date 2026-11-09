@@ -3915,6 +3915,7 @@
                   "conflict_dsv_signed_profiling_declined",
                   "dsv_never_offered",
                   "informed_without_wave_at_cutoff",
+                  "dsv_signed_not_entered_at_cutoff",
                   "profiling_exception_deadline_missed",
                   "profiling_declined_after_entry"
                 ]
@@ -3924,7 +3925,24 @@
                 "enum": [
                   "any"
                 ]
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "cutoff_case"
+                ]
               }
+            ]
+          },
+          "caseItem": {
+            "type": "string",
+            "enum": [
+              "knowledge_date_missing",
+              "kug200b_offer_open",
+              "kug200b_withdrawal_ba_notice",
+              "evidence_invalidated",
+              "dsv_not_fully_executed",
+              "entry_clarification"
             ]
           },
           "portal": {
@@ -4118,6 +4136,7 @@
                 "conflict_dsv_signed_profiling_declined",
                 "dsv_never_offered",
                 "informed_without_wave_at_cutoff",
+                "dsv_signed_not_entered_at_cutoff",
                 "profiling_exception_deadline_missed",
                 "profiling_declined_after_entry"
               ]
@@ -4179,6 +4198,9 @@
               },
               "generateKug200b": {
                 "type": "boolean"
+              },
+              "generateDsv": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -4189,7 +4211,8 @@
               "providePrivacyNotice",
               "remind",
               "invite",
-              "generateKug200b"
+              "generateKug200b",
+              "generateDsv"
             ],
             "additionalProperties": false
           }
@@ -4281,7 +4304,9 @@
               "knowledge_date_missing",
               "kug200b_offer_open",
               "kug200b_withdrawal_ba_notice",
-              "evidence_invalidated"
+              "evidence_invalidated",
+              "dsv_not_fully_executed",
+              "entry_clarification"
             ]
           },
           "date": {
@@ -6260,7 +6285,11 @@
           "evidence_correction_requested",
           "evidence_correction_decided",
           "dsv_form_generated",
-          "dsv_original_recorded"
+          "dsv_original_recorded",
+          "entry_clarification_recorded",
+          "entry_clarification_escalated",
+          "entry_clarification_instructed",
+          "entry_clarification_requested"
         ]
       },
       "HistoryActor": {
@@ -15639,6 +15668,137 @@
         ],
         "additionalProperties": false
       },
+      "DsvBulkGenerationResult": {
+        "type": "object",
+        "properties": {
+          "generations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "documentId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "templateVersion": {
+                  "type": "string",
+                  "pattern": "^v[1-9][0-9]{0,3}$"
+                },
+                "offerDeadline": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                  "examples": [
+                    "2027-03-01"
+                  ]
+                },
+                "checklist": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DsvChecklistItem"
+                  }
+                }
+              },
+              "required": [
+                "participationId",
+                "documentId",
+                "templateVersion",
+                "offerDeadline",
+                "checklist"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "generations"
+        ],
+        "additionalProperties": false
+      },
+      "DsvBulkGenerationRequest": {
+        "type": "object",
+        "properties": {
+          "deadline": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "wave"
+                    ]
+                  },
+                  "shown": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "shown"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "explicit"
+                    ]
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "date"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "participationId": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "participationId"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 100
+          }
+        },
+        "required": [
+          "deadline",
+          "items"
+        ],
+        "additionalProperties": false
+      },
       "DsvOfferRequest": {
         "anyOf": [
           {
@@ -15861,6 +16021,310 @@
         },
         "required": [
           "version"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationState": {
+        "type": "object",
+        "properties": {
+          "participationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "clarification": {
+            "$ref": "#/components/schemas/EntryClarificationView"
+          },
+          "actions": {
+            "type": "object",
+            "properties": {
+              "open": {
+                "type": "boolean"
+              },
+              "openedOn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "reconciliation": {
+                "type": "boolean"
+              },
+              "newStartDate": {
+                "type": "boolean"
+              },
+              "recordPending": {
+                "type": "boolean"
+              },
+              "escalate": {
+                "type": "boolean"
+              },
+              "instruct": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "open",
+              "openedOn",
+              "reconciliation",
+              "newStartDate",
+              "recordPending",
+              "escalate",
+              "instruct"
+            ],
+            "additionalProperties": false
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "record": {
+                "type": "boolean"
+              },
+              "escalate": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "record",
+              "escalate"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "participationId",
+          "statusVersion",
+          "clarification",
+          "actions",
+          "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationView": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "openedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "stage": {
+            "$ref": "#/components/schemas/EntryClarificationStage"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryClarificationStep"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "openedOn",
+          "stage",
+          "revision",
+          "steps"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationStage": {
+        "type": "string",
+        "enum": [
+          "documented",
+          "escalated",
+          "returned",
+          "instructed"
+        ]
+      },
+      "EntryClarificationStep": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "recorded",
+              "escalated",
+              "requested",
+              "instructed"
+            ]
+          },
+          "code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EntryPendingCode"
+              },
+              {
+                "$ref": "#/components/schemas/EntryRequestCode"
+              },
+              {
+                "$ref": "#/components/schemas/EntryInstructionCode"
+              }
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "on": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "code",
+          "source",
+          "on"
+        ],
+        "additionalProperties": false
+      },
+      "EntryPendingCode": {
+        "type": "string",
+        "enum": [
+          "awaiting_countersignature",
+          "awaiting_asu_proof",
+          "awaiting_profiling",
+          "awaiting_legal_advice"
+        ]
+      },
+      "EntryRequestCode": {
+        "type": "string",
+        "enum": [
+          "evidence_unclear",
+          "date_unclear",
+          "other_documented"
+        ]
+      },
+      "EntryInstructionCode": {
+        "type": "string",
+        "enum": [
+          "legal_advice_obtained",
+          "dpo_instruction",
+          "authority_or_court_decision",
+          "parties_agreement"
+        ]
+      },
+      "EntryClarificationPendingRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/EntryPendingCode"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "statusVersion",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationEscalationRequest": {
+        "type": "object",
+        "properties": {
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "statusVersion",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationInstructionRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/EntryInstructionCode"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "statusVersion",
+          "revision"
+        ],
+        "additionalProperties": false
+      },
+      "EntryClarificationRequestRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/EntryRequestCode"
+          },
+          "source": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "statusVersion",
+          "revision"
         ],
         "additionalProperties": false
       },
@@ -17024,11 +17488,18 @@
                 "capabilities"
               ]
             }
+          },
+          "clarifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryClarificationReviewItem"
+            }
           }
         },
         "required": [
           "items",
-          "corrections"
+          "corrections",
+          "clarifications"
         ]
       },
       "CorrectionTargetKind": {
@@ -17054,6 +17525,85 @@
           "corrected_source_document",
           "documented_internal_error"
         ]
+      },
+      "EntryClarificationReviewItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectName": {
+            "type": "string"
+          },
+          "tgStart": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "openedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "escalatedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EntryClarificationStep"
+            }
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "capabilities": {
+            "type": "object",
+            "properties": {
+              "answer": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "answer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "projectId",
+          "projectName",
+          "tgStart",
+          "openedOn",
+          "escalatedOn",
+          "revision",
+          "steps",
+          "statusVersion",
+          "capabilities"
+        ],
+        "additionalProperties": false
       },
       "EvidenceCorrectionRequested": {
         "type": "object",
@@ -30210,6 +30760,118 @@
         }
       }
     },
+    "/api/v1/projects/{projectId}/dsv/generations": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Generate the DSV of 1 to 100 participations of the project with one deadline, all or nothing (the PL or back office): every item is checked first, then every paper is rendered and stored and all are recorded in one transaction under the project's exclusive lock; any refusal records none",
+        "description": "Each item is checked as a single generation is; the refusal names the item's position in the pointer (`/items/3`, `/items/3/deadline`) and never an id or a value:\n- `422`: the single generation's codes (`dsv_offer_open`, `no_entry_wave`, `tg_dates_missing`, `dsv_template_not_pinned`, `explicit_deadline_required`, `offer_deadline_invalid`, `dsv_already_signed`, ...), for every item that can't be generated.\n- `409 source_changed`: a wave's deadline moved since the dialog showed it (`wave` choice) or a printed value moved while recording.\n- `404`: a participation that isn't in the project or isn't visible. `503 pdf_unavailable` or `storage_unavailable`; nothing is recorded and every stored paper is removed.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projectId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvBulkGenerationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Generated: one document per participation, in order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvBulkGenerationResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/participations/{participationId}/dsv/offers": {
       "post": {
         "tags": [
@@ -30965,6 +31627,469 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/entry-clarification": {
+      "get": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "The entry clarification of a signed DSV that has not entered (the PL and back office): whether it is open (from the day after the planned TG start, until the participation leaves informed), the PL's recorded pending code and documented source, the escalation, the manager's instruction, which legitimate paths are open now and the viewer's capabilities",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The clarification as the viewer may work it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryClarificationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Document what is pending on a signed DSV that has not entered (the project's PL): one of four codes with a documented source (one line, at most 200 characters), against the status version read; a second record replaces the first until the case is escalated. Audited by the code only",
+        "description": "Refusals:\n- `409 stale_status_version` at `/statusVersion`: the participation changed since it was read.\n- `422`: `clarification_not_open` (not signed, entered, or before the day after the planned start), `clarification_escalated` (only the manager's instruction follows).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryClarificationPendingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded: the clarification now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryClarificationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/entry-clarification/escalation": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Escalate a documented entry clarification to the regional operations manager of the project's region (the project's PL), once: the manager records an instruction; neither may enter or end the participation by it",
+        "description": "Refusals:\n- `409 stale_status_version` at `/statusVersion`.\n- `422`: `clarification_not_open`, `clarification_not_documented` (record the pending code first), `already_escalated`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryClarificationEscalationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Escalated: the clarification now",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryClarificationState"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entry-clarifications/{clarificationId}/instruction": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record the instruction of an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a code with a documented source, once, against the status version and the revision \"Freigaben\" showed. Answerable while the participation is informed, whatever its planned start became; the case stays open: the instruction changes no status",
+        "description": "Refusals:\n- `404` for a clarification the viewer can't see (outside their regions, or unknown); `403` for a visible one the viewer may not answer: any other role, and the person who escalated.\n- `409` at `/statusVersion` (`stale_status_version`) or `/revision` (`stale_clarification`): read \"Freigaben\" again.\n- `422`: `clarification_not_open` (the participation left informed), `not_escalated`, `already_instructed`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clarificationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryClarificationInstructionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entry-clarifications/{clarificationId}/request": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Ask the PL again about an escalated entry clarification (the regional operations manager of the project's region, never the PL who escalated): a request code with a documented source. The case returns to the PL, who replies by documenting again and escalates again; every step is kept and no status changes",
+        "description": "Refusals:\n- `404` for a clarification the viewer can't see (outside their regions, or unknown); `403` for a visible one the viewer may not answer: any other role, and the person who escalated.\n- `409` at `/statusVersion` (`stale_status_version`) or `/revision` (`stale_clarification`): read \"Freigaben\" again.\n- `422`: `clarification_not_open` (the participation left informed), `not_escalated`, `already_instructed`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "clarificationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryClarificationRequestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -32472,7 +33597,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; no name, case data, evidence content or corrected value",
+        "summary": "The queue Freigaben (the regional operations manager): the pending profiling exceptions of the projects of their regions with project, reason code, dates, the evidence's kind and whether it is present; the pending evidence corrections with the target's kind and category, the action, reason, documented source and dates; the escalated entry clarifications with the project, dates, the PL's code and documented source; no name, case data, evidence content or corrected value",
         "responses": {
           "200": {
             "description": "The pending requests",

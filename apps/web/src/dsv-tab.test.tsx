@@ -190,6 +190,23 @@ describe("the tab DSV", () => {
     );
   });
 
+  it("never submits a date typed before the choice changed", async () => {
+    const { calls } = setup(view());
+    const generate = await card("Vertrag erzeugen");
+    await userEvent.click(generate.getByRole("radio", { name: "Frist eingeben" }));
+    await userEvent.type(generate.getByLabelText("Frist (TT.MM.JJJJ)"), "20.02.2091");
+    await userEvent.click(
+      generate.getByRole("radio", { name: "Unterschriftsfrist der Welle, 15.02.2091" }),
+    );
+    await userEvent.click(generate.getByRole("radio", { name: "Frist eingeben" }));
+    expect(generate.getByLabelText("Frist (TT.MM.JJJJ)")).toHaveValue("");
+    const button = generate.getByRole("button", { name: "Erzeugen" });
+    expect(button).toBeDisabled();
+    expect(generate.getByText("Erst die Frist eingeben.")).toBeInTheDocument();
+    await userEvent.click(button);
+    expect(calls.some((call) => call.key === `POST ${detailPath}/dsv/generations`)).toBe(false);
+  });
+
   it("offers a re-offer no wave deadline", async () => {
     setup(view({ track: "dsv_expired", deadline: { ...view().deadline, explicitRequired: true } }));
     const generate = await card("Vertrag erzeugen");

@@ -185,6 +185,13 @@ export function HistoryTab({
           version: (text(details.formVersion) ?? "").replace("-", "/"),
         });
       // The DSV's generation by its template version and how its deadline was chosen.
+      case "entry_clarification_recorded":
+      case "entry_clarification_escalated":
+        return coded("entryClarification.pendingCodes", text(details.pendingCode) ?? "");
+      case "entry_clarification_instructed":
+        return coded("entryClarification.instructionCodes", text(details.instructionCode) ?? "");
+      case "entry_clarification_requested":
+        return coded("entryClarification.requestCodes", text(details.requestCode) ?? "");
       case "dsv_form_generated":
         return t("history.dsvForm", {
           version: text(details.templateVersion) ?? "",

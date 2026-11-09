@@ -71,6 +71,11 @@ export const OperationKind = z.enum([
   "setPlacementAgentur",
   // Slice 4a: the wizard on the participant's behalf (Q136, ADR-0007)
   "startAssistedMode",
+  // Slice 7: the entry clarification of a signed DSV that has not entered
+  "recordEntryClarification",
+  "escalateEntryClarification",
+  "recordClarificationInstruction",
+  "requestEntryClarificationReply",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -82,6 +87,8 @@ export type Operation =
         | "decideProfilingException"
         | "approveEvidenceCorrection"
         | "decideRelaxation"
+        | "recordClarificationInstruction"
+        | "requestEntryClarificationReply"
         | "reviewReconciliation"
         | "reviewBreakGlass"
         | "requestEvidenceCorrection"
@@ -89,7 +96,13 @@ export type Operation =
       >;
     }
   | {
-      kind: "decideProfilingException" | "approveEvidenceCorrection" | "decideRelaxation";
+      kind:
+        | "decideProfilingException"
+        | "approveEvidenceCorrection"
+        | "decideRelaxation"
+        | "recordClarificationInstruction"
+        | "requestEntryClarificationReply";
+      /** The instruction's `requestedBy` is the PL who escalated: never the same person. */
       requestedBy: string;
     }
   | { kind: "reviewReconciliation" | "reviewBreakGlass"; actorStaffUserId: string }
@@ -157,6 +170,12 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   setPlacementAgentur: ["project_lead", "back_office"],
   // Assisted mode (Q136): the PL, the assigned consultant and back office of the project.
   startAssistedMode: ["project_lead", "consultant", "back_office"],
+  // The entry clarification (process-and-lifecycle.md, the entry clarification): owned by the
+  // project's PL; the instruction is the region's manager's, never the PL's.
+  recordEntryClarification: ["project_lead"],
+  escalateEntryClarification: ["project_lead"],
+  recordClarificationInstruction: ["regional_operations_manager"],
+  requestEntryClarificationReply: ["regional_operations_manager"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

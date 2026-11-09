@@ -3517,6 +3517,115 @@ export const dsvContract = pgTable("dsv_contract", {
   createdAt: instant("created_at").notNull().defaultNow(),
 });
 
+/**
+ * The entry clarification of a signed DSV that has not entered after its planned start
+ * (process-and-lifecycle.md, the entry clarification): one row per participation and planned start
+ * (`opened_on`, the day after it), written by its functions only. The PL's pending code and
+ * documented source, the escalation to the region's manager and the manager's instruction. The row
+ * is closed when the participation leaves `informed` (derived; no column to write). The sources are
+ * `case_internal`: never in the history or a log.
+ */
+export const entryClarification = pgTable(
+  "entry_clarification",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    openedOn: dateColumn("opened_on").notNull(),
+    /** `documented`, `escalated`, `returned` (the manager asked the PL again) or `instructed`. */
+    stage: text("stage").notNull().default("documented"),
+    /** The number of steps; every write compares the one the caller read under the lock. */
+    revision: integer("revision").notNull().default(0),
+    pendingCode: text("pending_code"),
+    pendingSource: text("pending_source"),
+    pendingRecordedAt: instant("pending_recorded_at"),
+    pendingRecordedBy: uuid("pending_recorded_by").references(() => staffUser.id),
+    escalatedAt: instant("escalated_at"),
+    escalatedBy: uuid("escalated_by").references(() => staffUser.id),
+    instructionCode: text("instruction_code"),
+    instructionSource: text("instruction_source"),
+    instructionAt: instant("instruction_at"),
+    instructionBy: uuid("instruction_by").references(() => staffUser.id),
+    createdAt: instant("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("entry_clarification_once").on(t.participationId, t.openedOn),
+    foreignKey({
+      name: "entry_clarification_participation_project_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+    check(
+      "entry_clarification_codes",
+      sql`(${t.pendingCode} is null or ${t.pendingCode} in ('awaiting_countersignature', 'awaiting_asu_proof', 'awaiting_profiling', 'awaiting_legal_advice'))
+        and (${t.instructionCode} is null or ${t.instructionCode} in ('legal_advice_obtained', 'dpo_instruction', 'authority_or_court_decision', 'parties_agreement'))`,
+    ),
+    // Each stage holds what it needs: a note before an escalation, an escalation before an
+    // instruction; a documented source goes with its code.
+    check(
+      "entry_clarification_steps",
+      sql`((${t.pendingCode} is null) = (${t.pendingSource} is null))
+        and ((${t.instructionCode} is null) = (${t.instructionSource} is null))
+        and ((${t.instructionCode} is null) = (${t.instructionAt} is null))
+        and ((${t.instructionCode} is null) = (${t.instructionBy} is null))
+        and ((${t.escalatedAt} is null) = (${t.escalatedBy} is null))
+        and ${t.stage} in ('documented', 'escalated', 'returned', 'instructed')
+        and (${t.stage} <> 'documented' or (${t.pendingCode} is not null and ${t.escalatedAt} is null and ${t.instructionCode} is null))
+        and (${t.stage} <> 'returned' or (${t.pendingCode} is not null and ${t.escalatedAt} is null and ${t.instructionCode} is null))
+        and (${t.stage} <> 'escalated' or (${t.pendingCode} is not null and ${t.escalatedAt} is not null and ${t.instructionCode} is null))
+        and (${t.stage} <> 'instructed' or (${t.escalatedAt} is not null and ${t.instructionCode} is not null))`,
+    ),
+    // At most one unresolved case per participation, however its planned start moved.
+    uniqueIndex("entry_clarification_one_unresolved")
+      .on(t.participationId)
+      .where(sql`${t.stage} <> 'instructed'`),
+    check(
+      "entry_clarification_sources",
+      sql`char_length(coalesce(${t.pendingSource}, '')) <= 200 and char_length(coalesce(${t.instructionSource}, '')) <= 200`,
+    ),
+  ],
+);
+
+/**
+ * Every step of an entry clarification, in order (the PL's notes and replies, the escalations, the
+ * manager's requests and instructions): the history the row's current columns summarise. Written
+ * only by the clarification's functions, with the same documented sources (`case_internal`).
+ */
+export const entryClarificationStep = pgTable(
+  "entry_clarification_step",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    clarificationId: uuid("clarification_id")
+      .notNull()
+      .references(() => entryClarification.id),
+    seq: integer("seq").notNull(),
+    kind: text("kind").notNull(),
+    code: text("code").notNull(),
+    source: text("source").notNull(),
+    by: uuid("by")
+      .notNull()
+      .references(() => staffUser.id),
+    at: instant("at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("entry_clarification_step_seq").on(t.clarificationId, t.seq),
+    check(
+      "entry_clarification_step_kind",
+      sql`${t.kind} in ('recorded', 'escalated', 'requested', 'instructed') and ${t.seq} >= 1 and char_length(${t.source}) between 1 and 200`,
+    ),
+  ],
+);
+
 export const tables = [
   staffUser,
   region,
@@ -3559,6 +3668,8 @@ export const tables = [
   dsvOffer,
   dsvScanSignature,
   dsvContract,
+  entryClarification,
+  entryClarificationStep,
   signedDeclaration,
   asuRecord,
   asuRegistration,
