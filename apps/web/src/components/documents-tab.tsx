@@ -63,6 +63,9 @@ function messageOf(error: unknown): Message {
   return "failed";
 }
 
+/** The DSV's papers, worked with their offer on the tab "DSV". */
+const dsvPapers: ReadonlySet<string> = new Set(["dsv_signed_scan", "dsv_cancellation"]);
+
 export function DocumentsTab({ detail }: { detail: Detail }) {
   const { t } = useTranslation();
   const { t: ts } = useTranslation(SELF_SERVICE_NAMESPACE);
@@ -92,9 +95,10 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
     );
   }
   const { documents, limits } = query.data;
-  // Signed scans are added and reviewed on the tab "Profiling" with their origin and record.
+  // Signed scans are added and reviewed on the tab "Profiling" with their origin and record; the
+  // DSV's papers (its scans and its cancellation) on the tab "DSV" with their offer.
   const addableTypes = query.data.addableTypes.filter(
-    (type) => !isScanType(type) && type !== "dsv_signed_scan",
+    (type) => !isScanType(type) && !dsvPapers.has(type),
   );
   const typeLabel = (type: DocumentType) => ts(`documents.types.${type}`);
 
@@ -214,30 +218,28 @@ export function DocumentsTab({ detail }: { detail: Detail }) {
               {t("participant.documents.open")}
             </Button>
           )}
-          {capabilities.review &&
-            !isScanType(document.type) &&
-            document.type !== "dsv_signed_scan" && (
-              <>
-                <Button
-                  kind="ghost"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void review(document)}
-                  aria-label={t("participant.documents.acceptLabel", { name })}
-                >
-                  {t("participant.documents.accept")}
-                </Button>
-                <Button
-                  kind="ghost"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => setRejecting(document)}
-                  aria-label={t("participant.documents.rejectLabel", { name })}
-                >
-                  {t("participant.documents.reject")}
-                </Button>
-              </>
-            )}
+          {capabilities.review && !isScanType(document.type) && !dsvPapers.has(document.type) && (
+            <>
+              <Button
+                kind="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => void review(document)}
+                aria-label={t("participant.documents.acceptLabel", { name })}
+              >
+                {t("participant.documents.accept")}
+              </Button>
+              <Button
+                kind="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => setRejecting(document)}
+                aria-label={t("participant.documents.rejectLabel", { name })}
+              >
+                {t("participant.documents.reject")}
+              </Button>
+            </>
+          )}
           {capabilities.requestCorrection &&
             correction.button({ kind: "document", id: document.id, label: name })}
           {capabilities.delete && (

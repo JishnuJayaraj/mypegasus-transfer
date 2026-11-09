@@ -708,6 +708,20 @@
       "when": 1794225730593,
       "tag": "0100_entry_clarification_round_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1794259325806,
+      "tag": "0101_dsv_cancellation",
+      "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1794259350458,
+      "tag": "0102_dsv_cancellation_functions",
+      "breakpoints": true
     }
   ]
 }

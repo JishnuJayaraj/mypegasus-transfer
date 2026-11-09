@@ -247,6 +247,7 @@ export async function loadWorklist(
                 signedOn: null,
                 fullyExecuted: false,
                 unresolvedClarificationOpenedOn: null,
+                customerNotice: { withdrawnOn: null, notifiedOn: null },
               },
               kug200b: {
                 channel: asuStates.get(p.id)!.channel,
@@ -323,11 +324,13 @@ type DsvListFacts = {
   signedOn: string | null;
   fullyExecuted: boolean;
   unresolvedClarificationOpenedOn: string | null;
+  customerNotice: { withdrawnOn: string | null; notifiedOn: string | null };
 };
 
 /**
  * The signed DSV's work list facts: the participant's signature day (the contract's, set once
- * at signing, else the counting scan's) and whether a counting complete packet exists now. Read in
+ * at signing, else the counting scan's), whether a counting complete packet exists now, and the
+ * withdrawal day and customer notice of a cancellation-based withdrawal. Read in
  * the work list's snapshot, so the item, the filter and the tile count the same participations.
  */
 async function dsvStatesOf(db: Pick<Database, "execute">, ids: readonly string[]) {
@@ -339,6 +342,8 @@ async function dsvStatesOf(db: Pick<Database, "execute">, ids: readonly string[]
     signed_on: string | null;
     fully_executed: boolean;
     unresolved_opened_on: string | null;
+    withdrawn_on: string | null;
+    notified_on: string | null;
   }>(sql`
     with f as (select * from dsv_facts(${list}::uuid[])),
     agg as (select participation_id, min(signed_on) as signed_on,
@@ -346,12 +351,14 @@ async function dsvStatesOf(db: Pick<Database, "execute">, ids: readonly string[]
     select p.id as participation_id,
       coalesce(c.participant_signed_on, a.signed_on)::text as signed_on,
       coalesce(a.executed, false) as fully_executed,
-      u.opened_on::text as unresolved_opened_on
+      u.opened_on::text as unresolved_opened_on,
+      p.withdrawn_on::text as withdrawn_on, n.notified_on::text as notified_on
     from participation p
     left join lateral (select participant_signed_on from dsv_contract
       where participation_id = p.id order by created_at desc limit 1) c on true
     left join agg a on a.participation_id = p.id
     left join entry_clarification u on u.participation_id = p.id and u.stage <> 'instructed'
+    left join dsv_customer_notice n on n.participation_id = p.id
     where p.id = any(${list}::uuid[])
       and (p.dsv_status = 'dsv_signed' or u.id is not null)`);
   for (const row of rows) {
@@ -359,6 +366,8 @@ async function dsvStatesOf(db: Pick<Database, "execute">, ids: readonly string[]
       signedOn: row.signed_on,
       fullyExecuted: row.fully_executed,
       unresolvedClarificationOpenedOn: row.unresolved_opened_on,
+      // "Kunde informieren" (process-and-lifecycle.md, the customer notice): the domain decides.
+      customerNotice: { withdrawnOn: row.withdrawn_on, notifiedOn: row.notified_on },
     });
   }
   return result;

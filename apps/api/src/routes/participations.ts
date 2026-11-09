@@ -35,6 +35,12 @@ import {
   placementAgenturCapability,
   placementAgenturChoices,
   SetPlacementAgenturInput,
+  EndReasonCorrectionRequest,
+  WithdrawalRequest,
+  withdrawRefusal,
+  effectiveTgStart,
+  edges,
+  mayPerformTransition,
   type ParticipationListItem,
   type StaffUser,
 } from "@transfer/domain";
@@ -52,6 +58,7 @@ import {
   StatusServiceError,
 } from "../participations/status-service";
 import { setPlacementAgentur } from "../participations/placement-agentur";
+import { cancellationFacts } from "../participations/guard-facts";
 import {
   loadRelease,
   participationSubmissionBlockers,
@@ -89,6 +96,12 @@ function refusal(c: Context, error: unknown) {
   return domainProblem(c, [error.code]);
 }
 
+/** The field a lifecycle refusal is about, as its pointer (ADR-0010). */
+function fieldOf(code: string) {
+  if (code.startsWith("effective_date_")) return "effectiveDate";
+  return code.startsWith("reason_") ? "endReason" : null;
+}
+
 export function participationRoutes(deps: Deps) {
   const { db, clock } = deps;
   const router = createRouter();
@@ -106,6 +119,7 @@ export function participationRoutes(deps: Deps) {
       .select({
         p: participation,
         projectType: project.type,
+        projectStatus: project.status,
         wave: waveColumns,
         identity: participantIdentity,
         details: participantDetails,
@@ -223,6 +237,26 @@ export function participationRoutes(deps: Deps) {
     // The participation's own chain (Q139): its placement Agentur's pinned template, if any.
     const snapshot = (await projectSnapshot(db, release, p.projectId))!;
     const setPlacement = placementAgenturCapability(p.status, permitted("setPlacementAgentur"));
+    // "Zurückziehen" (process-and-lifecycle.md, manual withdrawal): the PL's edge from the
+    // current status; for a signed DSV its counting cancellation and the day (the cancellation).
+    const withdrawalEdge =
+      edges.find(
+        (e) =>
+          e.track === "main" && e.to === "withdrawn" && e.actor === "user" && e.from === p.status,
+      ) ?? edges.find((e) => e.track === "main" && e.to === "withdrawn" && e.actor === "user")!;
+    const cancellation = (await cancellationFacts(db, [participationId])).get(participationId);
+    const withdraw = withdrawRefusal({
+      permitted: mayPerformTransition(subject, withdrawalEdge, target).ok,
+      projectActive: row.projectStatus === "active",
+      status: p.status,
+      dsvStatus: p.dsvStatus,
+      cancellation,
+      today,
+      tgStart: effectiveTgStart(dates, wave),
+    });
+    // "Grund korrigieren" (Q72): the PL, once an end reason is recorded.
+    const correctsEndReason =
+      p.endReason !== null && mayPerformOperation(subject, { kind: "correctEndReason" }, target).ok;
     const detail = participationDetail(
       subject,
       {
@@ -295,14 +329,25 @@ export function participationRoutes(deps: Deps) {
           viewProfiling: mayViewProfiling(subject, target).ok,
           viewAsu: snapshot.project.type === "ta_tg" && mayViewAsu(subject, target).ok,
           viewDsv: snapshot.project.type === "ta_tg" && mayWorkDsv(subject, target).ok,
+          withdraw: withdraw === null,
+          correctEndReason: correctsEndReason,
         },
         refusals: {
           assignEntryWave: assignment.refusal,
           setParticipationDates: datesChange.refusal,
+          withdraw,
         },
       },
     );
-    if (!detail?.capabilities.viewDsv) return detail;
+    if (!detail) return detail;
+    // The end reason, for the PL who may correct it only (`deceased` is confidential, Q66).
+    const reason = correctsEndReason
+      ? {
+          endReason: p.endReason,
+          endReasonSource: p.endReasonSource === "system" ? ("system" as const) : ("user" as const),
+        }
+      : {};
+    if (!detail.capabilities.viewDsv) return { ...detail, ...reason };
     // The signature and full-execution days of the counting scans (the tab "DSV" viewers only).
     const {
       rows: [dsv],
@@ -312,8 +357,10 @@ export function participationRoutes(deps: Deps) {
     );
     return {
       ...detail,
+      ...reason,
       dsvSignedOn: dsv?.signed_on ?? null,
       dsvFullyExecutedOn: dsv?.executed_on ?? null,
+      dsvCancellationValidOn: cancellation?.validOn ?? null,
     };
   }
 
@@ -646,6 +693,150 @@ export function participationRoutes(deps: Deps) {
         return refusal(c, error);
       }
       const detail = await detailOf(user, participationId);
+      return detail ? c.json(detail, 200) : problem(c, "forbidden");
+    },
+  );
+
+  /** Visibility first, so a hidden participation is a 404 whatever the body says. */
+  async function visibleParticipation(c: Context, participationId: string) {
+    const [found] = await db
+      .select({ projectId: participation.projectId, status: participation.status })
+      .from(participation)
+      .where(eq(participation.id, participationId));
+    if (!found) return undefined;
+    const access = await projectAccess(db, sessionUser(c), found.projectId);
+    return access.visible ? { ...access, status: found.status } : undefined;
+  }
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/withdrawal",
+      tags: ["participations"],
+      summary:
+        "Withdraw the participation (the PL; process-and-lifecycle.md, manual withdrawal): from imported, contacted, unreachable or informed, with a pre_tg reason, the effective date and the status version read; a signed DSV only on its counting cancellation, with the PL's confirmation, on or before the effective TG start. Returns the participation",
+      description: [
+        "Refusals:",
+        "- `409 stale_status`: the participation changed since its status version was read.",
+        "- `422` at `/endReason`: `reason_wrong_phase` (not a pre_tg reason), `reason_not_storable` (special category).",
+        "- `422` at `/effectiveDate`: `effective_date_in_future`, `effective_date_before_cancellation` (a signed DSV).",
+        "- `422`: `withdrawal_after_dsv_signed` (a signed DSV without a counting cancellation valid today or without the confirmation), `after_planned_start` (the entry clarification applies), `tg_start_missing`, `dsv_cancellation_missing`, `no_edge` (a status that can't be withdrawn), `project_not_active`.",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: WithdrawalRequest } } },
+      },
+      responses: {
+        200: json(ParticipationDetail, "The withdrawn participation"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const found = await visibleParticipation(c, participationId);
+      if (!found) return problem(c, "not-found");
+      const log = (outcome: string) =>
+        deps.logger.info(
+          { requestId: c.get("requestId"), participationId, outcome },
+          "participation withdrawal",
+        );
+      try {
+        await statusService.changeStatus(
+          found.subject,
+          {
+            participationId,
+            track: "main",
+            from: found.status,
+            to: "withdrawn",
+            endReason: input.endReason,
+            effectiveDate: input.effectiveDate,
+            confirmed: input.confirmed,
+            expectedVersion: input.statusVersion,
+          },
+          { requestId: c.get("requestId") },
+        );
+      } catch (error) {
+        if (!(error instanceof StatusServiceError)) throw error;
+        log(error.code);
+        if (error.kind !== "domain") return refusal(c, error);
+        const codes = error.failedGuards.length > 0 ? error.failedGuards : [error.code];
+        return domainProblem(
+          c,
+          codes.map((code) => ({ code, field: fieldOf(code) })),
+        );
+      }
+      log("withdrawn");
+      const detail = await detailOf(sessionUser(c), participationId);
+      return detail ? c.json(detail, 200) : problem(c, "forbidden");
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "put",
+      path: "/participations/{participationId}/end-reason",
+      tags: ["participations"],
+      summary:
+        "Correct the primary end reason (the PL; Q72) against the reason read, without reopening the terminal status; a system-derived reason moves to the secondary list, a PL's earlier reason only when confirmed. Returns the participation",
+      description: [
+        "Refusals:",
+        "- `409 stale_value`: the recorded reason is not the one read.",
+        "- `422`: `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged`.",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: EndReasonCorrectionRequest } },
+        },
+      },
+      responses: {
+        200: json(ParticipationDetail, "The participation with its corrected reason"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const found = await visibleParticipation(c, participationId);
+      if (!found) return problem(c, "not-found");
+      try {
+        await statusService.correctEndReason(
+          found.subject,
+          { participationId, ...input },
+          { requestId: c.get("requestId") },
+        );
+      } catch (error) {
+        if (!(error instanceof StatusServiceError)) throw error;
+        deps.logger.info(
+          { requestId: c.get("requestId"), participationId, outcome: error.code },
+          "end reason correction",
+        );
+        if (error.kind !== "domain") return refusal(c, error);
+        return domainProblem(c, [{ code: error.code, field: fieldOf(error.code) }]);
+      }
+      deps.logger.info(
+        { requestId: c.get("requestId"), participationId, outcome: "corrected" },
+        "end reason correction",
+      );
+      const detail = await detailOf(sessionUser(c), participationId);
       return detail ? c.json(detail, 200) : problem(c, "forbidden");
     },
   );

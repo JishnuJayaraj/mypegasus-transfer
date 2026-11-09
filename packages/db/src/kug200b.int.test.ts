@@ -219,7 +219,7 @@ describe("record_form_generation for the Kug 200b (Q179, Q197)", () => {
       expect.arrayContaining(
         [byPl, byConsultant].map((_, index) => ({
           type: "kug200b_form",
-          catalog_version: 9,
+          catalog_version: 10,
           retention_class: "form_working_copy",
           form_code: "kug200b",
           checklist: index === 0 ? [{ code: "required_blank", key: "pensionInsuranceNumber" }] : [],

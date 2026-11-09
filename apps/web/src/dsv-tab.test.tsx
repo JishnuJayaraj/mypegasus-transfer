@@ -101,13 +101,22 @@ const view = (overrides: object = {}) => ({
   blockers: [],
   generations: [],
   contract: null,
-  facts: { dsvGenerated: null, dsvScanReceived: null, dsvFullyExecuted: null },
+  facts: {
+    dsvGenerated: null,
+    dsvScanReceived: null,
+    dsvFullyExecuted: null,
+    dsvCancellation: null,
+  },
+  cancellations: [],
+  customerNotice: null,
   capabilities: {
     generate: true,
     offer: true,
     uploadScan: true,
     sign: true,
     recordOriginal: false,
+    uploadCancellation: false,
+    recordCustomerNotice: false,
   },
   ...overrides,
 });

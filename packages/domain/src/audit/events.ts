@@ -248,6 +248,9 @@ export const AuditEventType = z.enum([
   "entry_clarification_escalated",
   "entry_clarification_instructed",
   "entry_clarification_requested",
+  // The customer informed of a cancellation-based withdrawal (process-and-lifecycle.md, the
+  // customer notice; Q46), written only by `record_customer_notice`
+  "dsv_customer_notified",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -375,6 +378,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "entry_clarification_escalated",
   "entry_clarification_instructed",
   "entry_clarification_requested",
+  "dsv_customer_notified",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1619,6 +1623,12 @@ export const AuditEvent = z.discriminatedUnion("type", [
       clarificationId: z.uuid(),
       instructionCode: EntryInstructionCode,
     }),
+  }),
+  /** "Kunde informiert am": the day the PL recorded; once, for a cancellation-based withdrawal. */
+  event("dsv_customer_notified", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({ notifiedOn: isoDate }),
   }),
   /** The manager asked the PL again: the request code only, never the source. */
   event("entry_clarification_requested", {

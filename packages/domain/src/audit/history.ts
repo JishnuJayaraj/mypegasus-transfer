@@ -232,6 +232,8 @@ export const auditProjection: {
   entry_clarification_escalated: shown("case", { details: ["pendingCode"] }),
   entry_clarification_instructed: shown("case", { details: ["instructionCode"] }),
   entry_clarification_requested: shown("case", { details: ["requestCode"] }),
+  // The customer notice of a cancellation-based withdrawal: the day only.
+  dsv_customer_notified: shown("dsv", { details: ["notifiedOn"] }),
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "decision"],
   }),

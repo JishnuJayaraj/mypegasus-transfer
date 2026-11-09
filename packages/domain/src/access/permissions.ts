@@ -76,6 +76,8 @@ export const OperationKind = z.enum([
   "escalateEntryClarification",
   "recordClarificationInstruction",
   "requestEntryClarificationReply",
+  // Slice 7: the customer notice of a cancellation-based withdrawal (Q46)
+  "recordCustomerNotice",
 ]);
 export type OperationKind = z.infer<typeof OperationKind>;
 
@@ -176,6 +178,8 @@ const operationRoles: Record<Exclude<OperationKind, "supersedeStaleException">, 
   escalateEntryClarification: ["project_lead"],
   recordClarificationInstruction: ["regional_operations_manager"],
   requestEntryClarificationReply: ["regional_operations_manager"],
+  // "Kunde informiert am" (process-and-lifecycle.md, the customer notice; Q46): the PL.
+  recordCustomerNotice: ["project_lead"],
 };
 
 const inRegion = ({ regionIds }: RegionScope, regionId: string | null) =>

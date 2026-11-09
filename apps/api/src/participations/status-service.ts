@@ -49,6 +49,7 @@ import {
   TgEntryKind,
   type Track,
   type TransitionContext,
+  withdrawalProblem,
 } from "@transfer/domain";
 import type { SQL } from "drizzle-orm";
 import { functionRefusal } from "../database-errors";
@@ -531,6 +532,18 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
         if (!check.ok) fail("domain", check.code, check.failedGuards);
 
         const effectiveDate = await effectiveDateOf(tx, change, loaded);
+        // A signed DSV's withdrawal (process-and-lifecycle.md, the cancellation; Q46 verify,
+        // Q213): dated from the cancellation, only on or before the effective TG start.
+        if (track === "main" && to === "withdrawn") {
+          const problem = withdrawalProblem({
+            dsvStatus: context.current.dsvStatus,
+            cancellation: guardFacts.dsvCancellation,
+            effectiveDate: effectiveDate!,
+            today: context.today,
+            tgStart: effectiveTgStart(context.participation, context.wave),
+          });
+          if (problem) fail("domain", problem);
+        }
         // `profilingDoneOn` not before the later signature date of the signed TL 407 (Q191).
         if (to === "profiling_done" && guardFacts.tl407Signed) {
           const problem = profilingDoneOnProblem(
@@ -861,10 +874,18 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
       });
     },
 
-    /** Q72: the PL corrects the primary end reason without reopening the terminal status. */
+    /**
+     * Q72: the PL corrects the primary end reason without reopening the terminal status; with
+     * `expected`, against the reason the PL read (`stale_value`), compared under the lock.
+     */
     correctEndReason(
       actor: ServiceActor,
-      input: { participationId: string; endReason: EndReason; previousStillApplies?: boolean },
+      input: {
+        participationId: string;
+        endReason: EndReason;
+        previousStillApplies?: boolean;
+        expected?: EndReason;
+      },
       correlation: Correlation = {},
     ): Promise<{ auditEventId: string }> {
       return transaction(async (tx) => {
@@ -872,6 +893,9 @@ export function createStatusService({ db, clock, facts = dbGuardFacts }: Deps) {
         permitOperation(actor, { kind: "correctEndReason" }, loaded);
         const { endReason, endReasonSource, endReasonSecondary } = loaded.p;
         if (endReason === null) return fail("domain", "no_end_reason");
+        if (input.expected !== undefined && input.expected !== endReason) {
+          return fail("stale", "stale_value");
+        }
         const record = {
           endReason,
           source: endReasonSource === "system" ? ("system" as const) : ("user" as const),

@@ -1,6 +1,6 @@
 import { DsvScanMetadata, DsvSignatures } from "../dsv/scans";
 import { z } from "zod";
-import { DocumentType, documentTypeCatalog } from "./catalog";
+import { DocumentType, documentTypeCatalog, type DocumentOperations } from "./catalog";
 import { DocumentMediaType } from "./files";
 import { Kug200bScanReview, ScanOrigin, ScanReview } from "./scans";
 import {
@@ -21,7 +21,10 @@ const utc = z.iso.datetime().meta({ description: "UTC timestamp (ISO 8601)" });
  * that aren't generated; any other type is `document_type_not_supported`.
  */
 export const uploadableDocumentTypes: readonly DocumentType[] = documentTypeCatalog.types
-  .filter((entry) => entry.operations !== "undecided" && entry.operations !== "generated")
+  .filter(
+    ({ operations }: { operations: DocumentOperations }) =>
+      operations !== "undecided" && operations !== "generated",
+  )
   .map((entry) => entry.type);
 
 /** Where an upload came from, as `document_added` records it. */

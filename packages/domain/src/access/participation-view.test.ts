@@ -193,8 +193,10 @@ const options = {
     viewProfiling: true,
     viewAsu: true,
     viewDsv: true,
+    withdraw: true,
+    correctEndReason: false,
   },
-  refusals: { assignEntryWave: null, setParticipationDates: null },
+  refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
 } as const;
 
 describe("participationDetail", () => {
@@ -234,8 +236,10 @@ describe("participationDetail", () => {
         viewProfiling: true,
         viewAsu: true,
         viewDsv: true,
+        withdraw: true,
+        correctEndReason: false,
       },
-      refusals: { assignEntryWave: null, setParticipationDates: null },
+      refusals: { assignEntryWave: null, setParticipationDates: null, withdraw: null },
     });
   });
 

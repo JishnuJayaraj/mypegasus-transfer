@@ -21,7 +21,7 @@ describe("document-type catalog (round 11, Q87 B)", () => {
   });
 
   it("gives every type a category, class and retention class", () => {
-    expect(documentTypeCatalog.version).toBe(9);
+    expect(documentTypeCatalog.version).toBe(10);
     for (const entry of documentTypeCatalog.types) {
       expect(entry.accessCategory).toBeTruthy();
       expect(entry.dataClass).toBeTruthy();
@@ -63,6 +63,7 @@ describe("document-type catalog version 2 (Q142, Q145, Q146, Q148)", () => {
           "kug200b_signed_scan",
           "dsv_form",
           "dsv_signed_scan",
+          "dsv_cancellation",
         ].includes(t.type),
     );
     for (const entry of others) {
@@ -155,6 +156,20 @@ describe("document-type catalog version 8 (data-protection.md, generated forms)"
       operations: "generated",
     });
     expect(signed.roles).toEqual(documentTypeEntry("dsv_form").roles);
+  });
+});
+
+describe("document-type catalog version 10 (process-and-lifecycle.md, the cancellation)", () => {
+  it("gives the DSV cancellation the signed DSV scan's operations", () => {
+    const signed = documentTypeEntry("dsv_signed_scan");
+    expect(documentTypeEntry("dsv_cancellation")).toMatchObject({
+      accessCategory: signed.accessCategory,
+      retentionClass: "personnel_file",
+      signed: true,
+      fileName: false,
+      roles: signed.roles,
+      operations: signed.operations,
+    });
   });
 });
 

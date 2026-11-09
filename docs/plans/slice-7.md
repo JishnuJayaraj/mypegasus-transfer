@@ -413,6 +413,12 @@ split, as in Slice 6.
 closing is derived (no column), the review queue carries the PL's source line for the manager, and the
 reconciliation path is named on the card without a button until 7-6.
 
+**7-5 as built:** the plan's functions and routes; `dsvCancellation` comes from its own reader
+`dsv_cancellation_facts` beside `dsv_facts` (whose rows are unchanged), `current_document_policy` needed
+no change (catalog version 10 is a policy row), and `audit_history` was recreated for the
+cancellation's document events in the `dsv` stream. Readings: Q229 (assumed); the legal form and
+notifications of a cancellation: Q230 (open, with Q46).
+
 **7-1 as built** passed the estimate: about 2,800 changed lines without tests, generated code and
 docs, of which about 260 are the six document functions recreated unchanged with `document_type`
 (0090) and about 220 the template's HTML. Kept as one PR as instructed; the owner decides whether

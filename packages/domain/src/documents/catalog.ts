@@ -94,7 +94,6 @@ export type DocumentTypeEntry = {
 };
 
 const profilerAndPl = { consultant: "open", project_lead: "open" } as const;
-const undecided = { fileName: false, operations: "undecided" } as const;
 
 /**
  * The participant's own documents (Q142, Q145, Q146, Q148, *assumed*): personnel-file
@@ -117,16 +116,17 @@ const participantOwned = {
 } as const;
 
 /**
- * Version 9 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
+ * Version 10 (*assumed*; data-protection.md, documents): a new type or a changed rule is a new
  * version.
  * Version 2 adds `cv`, file names and the operations of the participant's own documents; version 3
  * the generated TL 407 (`tl407_form`, Q179); version 4 the signed TL 407's operations (Q183, Q184);
  * version 5 the ASU proof's (Q186); version 6 the generated Kug 200b (`kug200b_form`, Q179) and the
  * signed Kug 200b's operations (Q184); version 7 the profiling exception evidence's (Q194);
- * version 8 the generated DSV (`dsv_form`); version 9 the signed DSV scan operations.
+ * version 8 the generated DSV (`dsv_form`); version 9 the signed DSV scan operations; version 10
+ * the DSV cancellation's operations.
  */
 export const documentTypeCatalog = {
-  version: 9,
+  version: 10,
   types: [
     {
       // The signed paper (data-protection.md, signed scans; Q183, Q184): the assigned consultant
@@ -168,14 +168,14 @@ export const documentTypeCatalog = {
       retentionClass: "personnel_file" as const,
       signed: true,
       roles: { project_lead: "open", back_office: "open" } as const,
-      ...undecided,
-      ...(type === "dsv_signed_scan" && {
-        operations: {
-          add: ["project_lead", "back_office"] as const,
-          review: ["project_lead", "back_office"] as const,
-          delete: ["project_lead"] as const,
-        },
-      }),
+      fileName: false,
+      // The signed DSV scans (version 9) and the cancellation of the signed contract (version 10;
+      // process-and-lifecycle.md, the cancellation): the same operations; review is by code.
+      operations: {
+        add: ["project_lead", "back_office"] as const,
+        review: ["project_lead", "back_office"] as const,
+        delete: ["project_lead"] as const,
+      },
     })),
     {
       // A BA confirmation of the registration (data-protection.md, the ASU record; Q186, Q201):

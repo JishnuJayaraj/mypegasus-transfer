@@ -3626,6 +3626,39 @@ export const entryClarificationStep = pgTable(
   ],
 );
 
+/**
+ * The customer notice of a cancellation-based withdrawal (process-and-lifecycle.md, the customer
+ * notice; Q46 verify): "Kunde informiert am", once per participation, by the PL. Internal,
+ * `case_internal`, class `participation_record`. Written only by `record_customer_notice`; the
+ * customer whitelist (CLAUDE.md rule 6) is unchanged: this records that the PL told the customer,
+ * never what.
+ */
+export const dsvCustomerNotice = pgTable(
+  "dsv_customer_notice",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => project.id),
+    participationId: uuid("participation_id")
+      .notNull()
+      .references(() => participation.id),
+    notifiedOn: dateColumn("notified_on").notNull(),
+    recordedBy: uuid("recorded_by")
+      .notNull()
+      .references(() => staffUser.id),
+    recordedAt: instant("recorded_at").notNull().defaultNow(),
+  },
+  (t) => [
+    unique("dsv_customer_notice_once").on(t.participationId),
+    foreignKey({
+      name: "dsv_customer_notice_participation_project_fk",
+      columns: [t.participationId, t.projectId],
+      foreignColumns: [participation.id, participation.projectId],
+    }),
+  ],
+);
+
 export const tables = [
   staffUser,
   region,
@@ -3670,6 +3703,7 @@ export const tables = [
   dsvContract,
   entryClarification,
   entryClarificationStep,
+  dsvCustomerNotice,
   signedDeclaration,
   asuRecord,
   asuRegistration,

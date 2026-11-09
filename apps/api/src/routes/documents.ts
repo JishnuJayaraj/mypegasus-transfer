@@ -160,7 +160,8 @@ export function documentRoutes(deps: Deps) {
       method: "post",
       path: "/documents/{documentId}/dsv-review",
       tags: ["participations"],
-      summary: "Review a DSV scan and confirm the external paper terms",
+      summary:
+        "Review a DSV scan (confirming the external paper's terms) or a DSV cancellation (the three parties' signatures, catalog version 10)",
       middleware: staff,
       request: {
         params: DocumentParams,
@@ -181,7 +182,7 @@ export function documentRoutes(deps: Deps) {
     async (c) => {
       const { documentId } = c.req.valid("param");
       const { rows } = await db.execute<{ participation_id: string }>(
-        sql`select participation_id from document where id=${documentId}::uuid and type='dsv_signed_scan' and deleted_at is null`,
+        sql`select participation_id from document where id=${documentId}::uuid and type in ('dsv_signed_scan', 'dsv_cancellation') and deleted_at is null`,
       );
       if (!rows[0]) return problem(c, "not-found") as never;
       const found = await staffActor(c, rows[0].participation_id);

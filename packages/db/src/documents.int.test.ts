@@ -258,6 +258,7 @@ describe("document_type_policy", () => {
       { catalog_version: 7, n: 11 },
       { catalog_version: 8, n: 12 },
       { catalog_version: 9, n: 12 },
+      { catalog_version: 10, n: 12 },
     ]);
   });
 });
@@ -278,7 +279,7 @@ describe("add_document (Q146)", () => {
       ),
     ).toEqual({
       type: "cv",
-      catalog_version: 9,
+      catalog_version: 10,
       retention_class: "personnel_file",
       file_name: FILE_NAME,
       added_by: "participant",
@@ -387,10 +388,11 @@ describe("add_document (Q146)", () => {
     ).rejects.toMatchObject(failsWith("invalid_actor"));
   });
 
-  it("refuses an undecided type, a closed participation and a name for a type that keeps none", async () => {
+  it("refuses a type the participant doesn't add, a closed participation and a name for a type that keeps none", async () => {
+    // From catalog version 10 no type is undecided; the DSV cancellation is staff paper.
     await expect(
       byParticipant(p, { type: "dsv_cancellation", fileName: null }),
-    ).rejects.toMatchObject(failsWith("document_type_not_supported"));
+    ).rejects.toMatchObject(failsWith("actor_not_allowed"));
     await expect(
       add({
         context: lead,

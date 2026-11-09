@@ -821,3 +821,29 @@ participation's related queries and the project's work list/dashboard.
   `WorklistFilter` gains `caseItem` and `flag=cutoff_case`; the dashboard gains the tiles
   `dsv_not_fully_executed` and `cutoff_cases`.
 
+
+#### The DSV cancellation, the withdrawal and the customer notice (7-5)
+
+- `POST /participations/{id}/dsv/cancellation-scans` (the PL or back office): the DSV scan's body
+  (`offerId` of the signed offer, `signatures`, `receivedBy`, `receivedOn`, `file`); `201
+  DocumentView`. `404` for another participation's offer, `409` for an offer that isn't the signed
+  one, `422 cancellation_not_open` and the scan's date codes. `POST /documents/{id}/dsv-review` takes
+  the cancellation too: `dsv: { signatures }` with all three (`/dsv/signatures:
+  cancellation_signatures_missing`; `/dsv/termsConfirmed: terms_not_applicable`).
+- `POST /participations/{id}/withdrawal` (the PL): `{ endReason, effectiveDate, statusVersion,
+  confirmed? }`; `200 ParticipationDetail`. Visibility `404`, permission `403`, then `409
+  stale_status` and `422` with the field: `/endReason` (`reason_wrong_phase`, `reason_not_storable`),
+  `/effectiveDate` (`effective_date_in_future`, `effective_date_before_cancellation`), else
+  `withdrawal_after_dsv_signed` (a failed guard by its id), `after_planned_start`,
+  `dsv_cancellation_missing`, `tg_start_missing`.
+- `PUT /participations/{id}/end-reason` (the PL, Q72): `{ endReason, expected, previousStillApplies? }`;
+  `409 stale_value` when the recorded reason isn't `expected`; `422 no_end_reason`,
+  `/endReason: reason_wrong_phase | reason_not_storable | reason_unchanged`.
+- `POST /participations/{id}/dsv/customer-notice` (the PL): `{ notifiedOn }`; `200 DsvView`. `403` for
+  back office (who see the tab), `422 notice_not_due | notice_recorded`, `/notifiedOn: date_in_future |
+  notice_before_withdrawal`.
+- `DsvView` gains `cancellations`, `customerNotice { dueSince, notifiedOn }`, `facts.dsvCancellation`
+  and `capabilities.uploadCancellation | recordCustomerNotice`; `ParticipationDetail` gains
+  `dsvCancellationValidOn` (DSV viewers), `endReason`/`endReasonSource` (the PL who may correct it),
+  `capabilities.withdraw | correctEndReason` and `refusals.withdraw`; `WorklistCaseItem` gains
+  `dsv_customer_notice`. The routes log ids and codes only.

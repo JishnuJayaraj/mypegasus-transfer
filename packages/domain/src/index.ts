@@ -1313,3 +1313,21 @@ export {
   type DsvCountingScan,
   type DsvPacketFact,
 } from "./dsv/packet";
+export {
+  dsvCancellationFact,
+  dsvCancellationReviewProblem,
+  dsvCustomerNoticeDue,
+  dsvCustomerNoticeProblem,
+  DsvCustomerNoticeProblem,
+  DsvCustomerNoticeRequest,
+  type DsvCancellationFact,
+  type DsvCustomerNoticeState,
+} from "./dsv/cancellation";
+export {
+  EndReasonCorrectionRequest,
+  WithdrawalProblem,
+  withdrawalProblem,
+  WithdrawalRequest,
+  WithdrawRefusal,
+  withdrawRefusal,
+} from "./lifecycle/withdrawal";

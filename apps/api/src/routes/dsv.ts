@@ -19,7 +19,13 @@ import {
   DsvScanMetadata,
   mayPinDsvTemplate,
   mayWorkDsv,
+  mayPerformOperation,
+  dsvCustomerNoticeDue,
+  dsvCustomerNoticeProblem,
+  DsvCustomerNoticeRequest,
   type DocumentTarget,
+  type DsvStatus,
+  type MainStatus,
   type DsvTemplateVersion,
 } from "@transfer/domain";
 import type { Context } from "hono";
@@ -30,6 +36,7 @@ import { documentService, type DocumentActor, storageUnavailable } from "../docu
 import { dsvService, type DsvBatchRefusal, type DsvRead, type DsvRefusal } from "../forms/dsv";
 import { formRegistry } from "../forms/registry";
 import type { StaffSubject } from "../participations/subjects";
+import { cancellationFacts } from "../participations/guard-facts";
 import { domainProblem, problem, problemResponses } from "../problem";
 import { loadRelease } from "../projects/template-pins";
 import { requireSession, sessionUser, sessionHash } from "../session";
@@ -196,6 +203,31 @@ export function dsvRoutes(deps: Deps) {
     }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id),'{}'::jsonb) else d.dsv_signatures end) as metadata,
       exists(select from dsv_facts(array[${target.participationId}::uuid]) f where f.document_id=d.id) as counting
       from document d where d.participation_id=${target.participationId}::uuid and d.type='dsv_signed_scan' and d.dsv_offer_id is not null and d.deleted_at is null`);
+    // The cancellations of the signed contract (process-and-lifecycle.md, the cancellation).
+    const { rows: cancellations } = await db.execute<{
+      id: string;
+      metadata: z.infer<typeof DsvScanMetadata>;
+      counting: boolean;
+    }>(sql`select d.id, jsonb_build_object('offerId',d.dsv_offer_id,'receivedBy',d.dsv_received_by,'receivedOn',d.dsv_received_on::text,'signatures',case when d.review_state='accepted' then coalesce((select jsonb_object_agg(kind,signed_on::text) from dsv_scan_signature where document_id=d.id),'{}'::jsonb) else d.dsv_signatures end) as metadata,
+      exists(select from dsv_cancellation_facts(array[${target.participationId}::uuid]) f where f.document_id=d.id) as counting
+      from document d where d.participation_id=${target.participationId}::uuid and d.type='dsv_cancellation' and d.dsv_offer_id is not null and d.deleted_at is null`);
+    const cancellation = (await cancellationFacts(db, [target.participationId])).get(
+      target.participationId,
+    );
+    const {
+      rows: [notice],
+    } = await db.execute<{ withdrawn_on: string | null; notified_on: string | null }>(
+      sql`select p.withdrawn_on::text, n.notified_on::text from participation p
+        left join dsv_customer_notice n on n.participation_id = p.id
+        where p.id = ${target.participationId}::uuid`,
+    );
+    const noticeState = {
+      status: read.status,
+      dsvStatus: read.dsvStatus,
+      withdrawnOn: notice?.withdrawn_on ?? null,
+      notifiedOn: notice?.notified_on ?? null,
+    };
+    const noticeDue = dsvCustomerNoticeDue(noticeState);
     const { rows: receivers } = await db.execute<{ id: string; name: string }>(
       sql`select distinct u.id, u.display_name as name from staff_user u join project_membership m on m.staff_user_id=u.id where m.project_id=${target.projectId}::uuid and u.deactivated_at is null order by name`,
     );
@@ -228,6 +260,17 @@ export function dsvRoutes(deps: Deps) {
         const document = list.documents.find((d) => d.id === scan.id);
         return document ? [{ document, metadata: scan.metadata, counting: scan.counting }] : [];
       }),
+      cancellations: cancellations.flatMap((scan) => {
+        const document = list.documents.find((d) => d.id === scan.id);
+        return document ? [{ document, metadata: scan.metadata, counting: scan.counting }] : [];
+      }),
+      customerNotice:
+        noticeDue !== null || noticeState.notifiedOn !== null
+          ? {
+              dueSince: noticeDue ?? noticeState.withdrawnOn!,
+              notifiedOn: noticeState.notifiedOn,
+            }
+          : null,
       receivers,
       offers: read.offers.map((offer) => ({
         ...offer,
@@ -281,6 +324,9 @@ export function dsvRoutes(deps: Deps) {
       facts: {
         dsvScanReceived: facts[0] ?? null,
         dsvFullyExecuted: packets[0] ?? null,
+        dsvCancellation: cancellation
+          ? { validOn: cancellation.validOn, recordedAt: cancellation.recordedAt.toISOString() }
+          : null,
         // The instant as stored (microseconds kept), from the generation the fact rests on.
         dsvGenerated: fact
           ? {
@@ -298,6 +344,11 @@ export function dsvRoutes(deps: Deps) {
           (open && read.dsvStatus === "dsv_signed" && signedOffer),
         sign: canWorkScan,
         recordOriginal: contracts.length > 0,
+        // Before the participation entered: the cancellation of the signed contract.
+        uploadCancellation: open && read.dsvStatus === "dsv_signed" && signedOffer,
+        recordCustomerNotice:
+          noticeDue !== null &&
+          mayPerformOperation(subject, { kind: "recordCustomerNotice" }, target).ok,
         generate: read.projectType === "ta_tg" && blockers.length === 0,
         offer:
           read.projectType === "ta_tg" &&
@@ -624,6 +675,165 @@ export function dsvRoutes(deps: Deps) {
   router.openapi(
     createRoute({
       method: "post",
+      path: "/participations/{participationId}/dsv/cancellation-scans",
+      tags: ["participations"],
+      summary:
+        "Upload the cancellation of the signed contract (the PL or back office; process-and-lifecycle.md, the cancellation): against the signed offer, with the dates on the paper per signature, the receiver and the day received; nothing defaulted. Signed on paper; no e-signature",
+      description: [
+        "Refusals:",
+        "- `404`: an offer of another participation.",
+        "- `409 source_changed`: the offer isn't the signed one.",
+        "- `422`: `cancellation_not_open` (not `informed` on a signed DSV), `signature_in_future`, `received_in_future`, `received_before_signature`, `receiver_required`, and the upload's own codes.",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: DsvScanMetadata.extend({
+                file: DocumentUploadInput.pick({ content: true, fileName: true }),
+              }),
+            },
+          },
+        },
+      },
+      responses: {
+        201: json(DocumentView, "Uploaded"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+          "service-unavailable",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      const { file, ...metadata } = c.req.valid("json");
+      return documents.upload(
+        c,
+        {
+          subject: allowed.subject,
+          target: allowed.target,
+          mode: normal,
+          context: context(c),
+          session: { kind: "staff", hash: sessionHash(c) },
+          tokenHash: null,
+        },
+        { type: "dsv_cancellation", ...file, dsv: metadata },
+      ) as never;
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
+      path: "/participations/{participationId}/dsv/customer-notice",
+      tags: ["participations"],
+      summary:
+        'Record "Kunde informiert am" for a cancellation-based withdrawal (the PL; Q46): once, not in the future, not before the withdrawal; audited dsv_customer_notified with the day. The customer\'s data whitelist is unchanged',
+      description: [
+        "Refusals:",
+        "- `403`: anyone but the project's PL.",
+        "- `422` at `/notifiedOn`: `date_in_future`, `notice_before_withdrawal`.",
+        "- `422`: `notice_not_due` (no withdrawal on a signed DSV), `notice_recorded` (once).",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: {
+          required: true,
+          content: { "application/json": { schema: DsvCustomerNoticeRequest } },
+        },
+      },
+      responses: {
+        200: json(DsvView, "Recorded"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const { notifiedOn } = c.req.valid("json");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      if (
+        !mayPerformOperation(allowed.subject, { kind: "recordCustomerNotice" }, allowed.target).ok
+      ) {
+        return problem(c, "forbidden") as never;
+      }
+      const log = (outcome: string) =>
+        logger.info(
+          { requestId: c.get("requestId"), participationId, outcome },
+          "dsv customer notice",
+        );
+      const {
+        rows: [state],
+      } = await db.execute<{
+        status: MainStatus;
+        dsv_status: DsvStatus;
+        withdrawn_on: string | null;
+        notified_on: string | null;
+      }>(sql`select p.status::text, p.dsv_status::text, p.withdrawn_on::text, n.notified_on::text
+        from participation p left join dsv_customer_notice n on n.participation_id = p.id
+        where p.id = ${participationId}::uuid`);
+      const problemCode = dsvCustomerNoticeProblem(
+        {
+          status: state!.status,
+          dsvStatus: state!.dsv_status,
+          withdrawnOn: state!.withdrawn_on,
+          notifiedOn: state!.notified_on,
+        },
+        notifiedOn,
+        clock.today(),
+      );
+      if (problemCode) {
+        log(problemCode);
+        return domainProblem(c, [{ code: problemCode, field: pointer(problemCode) }]) as never;
+      }
+      try {
+        await db.execute(sql`select record_customer_notice(${context(c)}, ${participationId}::uuid,
+          ${notifiedOn}::date)`);
+      } catch (error) {
+        const code = functionRefusal(error);
+        if (code === "actor_not_allowed") return problem(c, "forbidden") as never;
+        if (
+          code &&
+          [
+            "notice_not_due",
+            "notice_recorded",
+            "date_in_future",
+            "notice_before_withdrawal",
+          ].includes(code)
+        ) {
+          log(code);
+          return domainProblem(c, [{ code, field: pointer(code) }]) as never;
+        }
+        throw error;
+      }
+      log("recorded");
+      return c.json(
+        await viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        200,
+      );
+    },
+  );
+
+  router.openapi(
+    createRoute({
+      method: "post",
       path: "/participations/{participationId}/dsv/signed",
       tags: ["participations"],
       summary: "Record the participant signature from counting evidence",
@@ -870,6 +1080,11 @@ export function dsvRoutes(deps: Deps) {
   );
 
   return router;
+}
+
+/** The customer notice's date refusals point at its date. */
+function pointer(code: string) {
+  return code === "date_in_future" || code === "notice_before_withdrawal" ? "notifiedOn" : null;
 }
 
 function offerRefusal(c: Context<AppEnv>, error: unknown) {

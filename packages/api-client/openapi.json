@@ -2738,6 +2738,55 @@
               "2027-03-01"
             ]
           },
+          "dsvCancellationValidOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "endReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "declined_profiling",
+              "declined_dsv",
+              "no_response",
+              "never_contacted",
+              "not_informed",
+              "placed_direct",
+              "self_employed",
+              "retirement",
+              "other_measure",
+              "deceased",
+              "other",
+              "placed_permanent",
+              "placed_fixed_term",
+              "apprenticeship_or_study",
+              "max_duration_reached",
+              "own_termination_without_job",
+              "terminated_by_tg",
+              "long_term_illness_reduced_earning_capacity",
+              null
+            ]
+          },
+          "endReasonSource": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "user",
+              "system",
+              null
+            ]
+          },
           "statusVersion": {
             "type": "integer",
             "minimum": 0
@@ -3103,6 +3152,12 @@
               },
               "viewDsv": {
                 "type": "boolean"
+              },
+              "withdraw": {
+                "type": "boolean"
+              },
+              "correctEndReason": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -3117,7 +3172,9 @@
               "startAssistedMode",
               "viewProfiling",
               "viewAsu",
-              "viewDsv"
+              "viewDsv",
+              "withdraw",
+              "correctEndReason"
             ],
             "additionalProperties": false
           },
@@ -3153,11 +3210,27 @@
                   "dsv_offer_open",
                   null
                 ]
+              },
+              "withdraw": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "forbidden",
+                  "project_not_active",
+                  "status_not_withdrawable",
+                  "dsv_cancellation_missing",
+                  "after_planned_start",
+                  "tg_start_missing",
+                  null
+                ]
               }
             },
             "required": [
               "assignEntryWave",
-              "setParticipationDates"
+              "setParticipationDates",
+              "withdraw"
             ],
             "additionalProperties": false
           }
@@ -3653,6 +3726,114 @@
         ],
         "additionalProperties": false
       },
+      "WithdrawalRequest": {
+        "type": "object",
+        "properties": {
+          "endReason": {
+            "type": "string",
+            "enum": [
+              "declined_profiling",
+              "declined_dsv",
+              "no_response",
+              "never_contacted",
+              "not_informed",
+              "placed_direct",
+              "self_employed",
+              "retirement",
+              "other_measure",
+              "deceased",
+              "other",
+              "placed_permanent",
+              "placed_fixed_term",
+              "apprenticeship_or_study",
+              "max_duration_reached",
+              "own_termination_without_job",
+              "terminated_by_tg",
+              "long_term_illness_reduced_earning_capacity"
+            ]
+          },
+          "effectiveDate": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "statusVersion": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "confirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "endReason",
+          "effectiveDate",
+          "statusVersion"
+        ],
+        "additionalProperties": false
+      },
+      "EndReasonCorrectionRequest": {
+        "type": "object",
+        "properties": {
+          "endReason": {
+            "type": "string",
+            "enum": [
+              "declined_profiling",
+              "declined_dsv",
+              "no_response",
+              "never_contacted",
+              "not_informed",
+              "placed_direct",
+              "self_employed",
+              "retirement",
+              "other_measure",
+              "deceased",
+              "other",
+              "placed_permanent",
+              "placed_fixed_term",
+              "apprenticeship_or_study",
+              "max_duration_reached",
+              "own_termination_without_job",
+              "terminated_by_tg",
+              "long_term_illness_reduced_earning_capacity"
+            ]
+          },
+          "expected": {
+            "type": "string",
+            "enum": [
+              "declined_profiling",
+              "declined_dsv",
+              "no_response",
+              "never_contacted",
+              "not_informed",
+              "placed_direct",
+              "self_employed",
+              "retirement",
+              "other_measure",
+              "deceased",
+              "other",
+              "placed_permanent",
+              "placed_fixed_term",
+              "apprenticeship_or_study",
+              "max_duration_reached",
+              "own_termination_without_job",
+              "terminated_by_tg",
+              "long_term_illness_reduced_earning_capacity"
+            ]
+          },
+          "previousStillApplies": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "endReason",
+          "expected"
+        ],
+        "additionalProperties": false
+      },
       "SetPlacementAgenturInput": {
         "type": "object",
         "properties": {
@@ -3942,7 +4123,8 @@
               "kug200b_withdrawal_ba_notice",
               "evidence_invalidated",
               "dsv_not_fully_executed",
-              "entry_clarification"
+              "entry_clarification",
+              "dsv_customer_notice"
             ]
           },
           "portal": {
@@ -4306,7 +4488,8 @@
               "kug200b_withdrawal_ba_notice",
               "evidence_invalidated",
               "dsv_not_fully_executed",
-              "entry_clarification"
+              "entry_clarification",
+              "dsv_customer_notice"
             ]
           },
           "date": {
@@ -6289,7 +6472,8 @@
           "entry_clarification_recorded",
           "entry_clarification_escalated",
           "entry_clarification_instructed",
-          "entry_clarification_requested"
+          "entry_clarification_requested",
+          "dsv_customer_notified"
         ]
       },
       "HistoryActor": {
@@ -15043,6 +15227,116 @@
               "additionalProperties": false
             }
           },
+          "cancellations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "document": {
+                  "$ref": "#/components/schemas/Document"
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "offerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "signatures": {
+                      "type": "object",
+                      "properties": {
+                        "participant": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                          "examples": [
+                            "2027-03-01"
+                          ]
+                        },
+                        "customer": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                          "examples": [
+                            "2027-03-01"
+                          ]
+                        },
+                        "transfergesellschaft": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                          "examples": [
+                            "2027-03-01"
+                          ]
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "receivedBy": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "receivedOn": {
+                      "type": "string",
+                      "format": "date",
+                      "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                      "examples": [
+                        "2027-03-01"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "offerId",
+                    "signatures",
+                    "receivedBy",
+                    "receivedOn"
+                  ],
+                  "additionalProperties": false
+                },
+                "counting": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "document",
+                "metadata",
+                "counting"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "customerNotice": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "dueSince": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "notifiedOn": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "dueSince",
+              "notifiedOn"
+            ],
+            "additionalProperties": false
+          },
           "receivers": {
             "type": "array",
             "items": {
@@ -15315,12 +15609,39 @@
                   "recordedAt"
                 ],
                 "additionalProperties": false
+              },
+              "dsvCancellation": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "validOn": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "UTC timestamp (ISO 8601)"
+                  }
+                },
+                "required": [
+                  "validOn",
+                  "recordedAt"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
               "dsvGenerated",
               "dsvScanReceived",
-              "dsvFullyExecuted"
+              "dsvFullyExecuted",
+              "dsvCancellation"
             ],
             "additionalProperties": false
           },
@@ -15341,6 +15662,12 @@
               },
               "recordOriginal": {
                 "type": "boolean"
+              },
+              "uploadCancellation": {
+                "type": "boolean"
+              },
+              "recordCustomerNotice": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -15348,7 +15675,9 @@
               "offer",
               "uploadScan",
               "sign",
-              "recordOriginal"
+              "recordOriginal",
+              "uploadCancellation",
+              "recordCustomerNotice"
             ],
             "additionalProperties": false
           }
@@ -15358,6 +15687,8 @@
           "track",
           "statusVersion",
           "scans",
+          "cancellations",
+          "customerNotice",
           "receivers",
           "offers",
           "template",
@@ -15880,6 +16211,23 @@
         },
         "required": [
           "statusVersion"
+        ],
+        "additionalProperties": false
+      },
+      "DsvCustomerNoticeRequest": {
+        "type": "object",
+        "properties": {
+          "notifiedOn": {
+            "type": "string",
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "notifiedOn"
         ],
         "additionalProperties": false
       },
@@ -20472,6 +20820,210 @@
         "responses": {
           "200": {
             "description": "The participation with its new dates and tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/withdrawal": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Withdraw the participation (the PL; process-and-lifecycle.md, manual withdrawal): from imported, contacted, unreachable or informed, with a pre_tg reason, the effective date and the status version read; a signed DSV only on its counting cancellation, with the PL's confirmation, on or before the effective TG start. Returns the participation",
+        "description": "Refusals:\n- `409 stale_status`: the participation changed since its status version was read.\n- `422` at `/endReason`: `reason_wrong_phase` (not a pre_tg reason), `reason_not_storable` (special category).\n- `422` at `/effectiveDate`: `effective_date_in_future`, `effective_date_before_cancellation` (a signed DSV).\n- `422`: `withdrawal_after_dsv_signed` (a signed DSV without a counting cancellation valid today or without the confirmation), `after_planned_start` (the entry clarification applies), `tg_start_missing`, `dsv_cancellation_missing`, `no_edge` (a status that can't be withdrawn), `project_not_active`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The withdrawn participation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParticipationDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/end-reason": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Correct the primary end reason (the PL; Q72) against the reason read, without reopening the terminal status; a system-derived reason moves to the secondary list, a PL's earlier reason only when confirmed. Returns the participation",
+        "description": "Refusals:\n- `409 stale_value`: the recorded reason is not the one read.\n- `422`: `no_end_reason`, `reason_wrong_phase`, `reason_not_storable`, `reason_unchanged`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EndReasonCorrectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The participation with its corrected reason",
             "content": {
               "application/json": {
                 "schema": {
@@ -27130,7 +27682,7 @@
         "tags": [
           "participations"
         ],
-        "summary": "Review a DSV scan and confirm the external paper terms",
+        "summary": "Review a DSV scan (confirming the external paper's terms) or a DSV cancellation (the three parties' signatures, catalog version 10)",
         "parameters": [
           {
             "schema": {
@@ -31258,6 +31810,285 @@
           },
           "503": {
             "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/cancellation-scans": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Upload the cancellation of the signed contract (the PL or back office; process-and-lifecycle.md, the cancellation): against the signed offer, with the dates on the paper per signature, the receiver and the day received; nothing defaulted. Signed on paper; no e-signature",
+        "description": "Refusals:\n- `404`: an offer of another participation.\n- `409 source_changed`: the offer isn't the signed one.\n- `422`: `cancellation_not_open` (not `informed` on a signed DSV), `signature_in_future`, `received_in_future`, `received_before_signature`, `receiver_required`, and the upload's own codes.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "offerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "signatures": {
+                    "type": "object",
+                    "properties": {
+                      "participant": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                        "examples": [
+                          "2027-03-01"
+                        ]
+                      },
+                      "customer": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                        "examples": [
+                          "2027-03-01"
+                        ]
+                      },
+                      "transfergesellschaft": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                        "examples": [
+                          "2027-03-01"
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "receivedBy": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "receivedOn": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "file": {
+                    "type": "object",
+                    "properties": {
+                      "content": {
+                        "type": "string",
+                        "description": "The file, base64; decoded at most 10 MB"
+                      },
+                      "fileName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "content",
+                      "fileName"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "offerId",
+                  "signatures",
+                  "receivedBy",
+                  "receivedOn",
+                  "file"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Uploaded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/customer-notice": {
+      "post": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record \"Kunde informiert am\" for a cancellation-based withdrawal (the PL; Q46): once, not in the future, not before the withdrawal; audited dsv_customer_notified with the day. The customer's data whitelist is unchanged",
+        "description": "Refusals:\n- `403`: anyone but the project's PL.\n- `422` at `/notifiedOn`: `date_in_future`, `notice_before_withdrawal`.\n- `422`: `notice_not_due` (no withdrawal on a signed DSV), `notice_recorded` (once).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvCustomerNoticeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
             "content": {
               "application/problem+json": {
                 "schema": {
