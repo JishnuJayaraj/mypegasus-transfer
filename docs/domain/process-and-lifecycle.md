@@ -292,7 +292,7 @@ stateDiagram-v2
 
 **Manual withdrawal** (`→ withdrawn`, reason chosen by the PL) is allowed from `imported`,
 `contacted`, `unreachable` and `informed`. If `dsvStatus = dsv_signed`, it additionally needs
-the cancellation document (see DSV track).
+the cancellation document, on or before the effective TG start (see DSV track; as built in PR 7-5).
 
 **Activation-code issuance (as built in Slice 3, PR 3d):** the project's PL or back office may
 issue a letter, event sheet or in-person code while the project is active and the participation is
@@ -558,9 +558,12 @@ stateDiagram-v2
   value changes, its deadline passes, or (for the wave's deadline) the wave's deadline moves.
   `dsvGenerated` is the latest current generation (valid from its Berlin day, recorded at its
   instant). The paper is signed by hand; nothing in the app signs.
-- **Withdrawal after `dsv_signed`** *(verify, Q46)*: before TG start, main status → `withdrawn`
-  only with an uploaded cancellation document signed by all three parties. The PL confirms, and
-  a customer notification flag is set. After TG start it is a normal TG exit.
+- **Withdrawal after `dsv_signed`** *(verify, Q46; Q213 accepted provisionally)*: on or before the
+  effective TG start, main status → `withdrawn` only with an accepted cancellation scan signed by all
+  three parties, dated not before it; the PL confirms, and "Kunde informieren" is raised until the PL
+  records the notice (as built: "Cancellation, withdrawal, end reason and customer notice", below).
+  From the day after the planned start a participation that never entered goes to the entry
+  clarification (Q220); after an actual entry it is a TG exit (Slice 8).
 
 ### Arbeitsuchendmeldung (ASU)
 
@@ -897,7 +900,7 @@ for a `system` entry the fact must also be recorded before the scheduled run (sn
 | `profiling_done_or_approved_exception` | `profilingDone` or an approved profiling exception by the TG start |
 | `tg_start_date` | an effective TG start exists; `scheduled_entry`: today is the TG start; `scheduled_entry_catchup`: the TG start has passed; `reconciliation`: today is after the TG start, or on it once that day's run completed |
 | `ta_completion` | `taMeasuresComplete` valid today and the PL's confirmation |
-| `withdrawal_after_dsv_signed` | DSV not `dsv_signed`; else a cancellation signed by all three parties valid today, the PL's confirmation and a `user` actor (the system never withdraws a signed DSV) |
+| `withdrawal_after_dsv_signed` | DSV not `dsv_signed`; else a cancellation signed by all three parties valid today, the PL's confirmation and a `user` actor (the system never withdraws a signed DSV). Beside the guard, `withdrawalProblem`: the effective date not before the cancellation's validity (`effective_date_before_cancellation`) and today on or before the effective TG start (`after_planned_start`) |
 | `before_cutoff` | no wave, or a wave without `latestEntryDate`, or today ≤ `latestEntryDate` |
 | `entry_wave_assigned` | the participation has a wave |
 | `offer_deadline_valid` | the deadline (an explicit `offerDeadline`; for a first offer, else the wave's `signingDeadline`) exists, today ≤ deadline ≤ `latestEntryDate` and ≤ the effective TG start; fails without a `latestEntryDate` or an effective TG start |
@@ -1351,4 +1354,51 @@ events `entry_clarification_recorded`, `_escalated`, `_requested` and `_instruct
 history's `case` stream with the code only, never the source. Which legal outcomes exist for such a
 contract is Q220: no edge exists for a cancellation or termination after the planned start, and
 nothing is invented.
+
+### Cancellation, withdrawal, end reason and customer notice as built (7-5)
+
+*(Q46 verify, Q213 accepted provisionally, Q72; readings Q229; legal questions Q230.)*
+
+**The cancellation.** A signed DSV is cancelled on paper by the participant, the customer and the
+Transfergesellschaft; nothing in the app signs. The PL or back office uploads the cancellation's scan
+(`dsv_cancellation`, catalog version 10) against the signed offer while the participation is
+`informed` on it, with the dates on the paper per signature, the receiver and the day received,
+nothing defaulted (the DSV scan's rules: no date in the future, received not before the
+participant's date). The review accepts it only with all three signatures confirmed with their dates
+(`cancellation_signatures_missing`), or rejects it as `unreadable`, `wrong_document` or
+`incomplete`; quarantine, its lift and the PL's deletion before review are the DSV scan's.
+`dsvCancellation` is the earliest recorded counting cancellation: valid on its latest actual
+signature, recorded at its acceptance or a later lift (a lift never moves the date). A quarantined,
+invalidated or deleted cancellation supplies nothing.
+
+**The withdrawal.** `POST /participations/{id}/withdrawal` (the PL, "Zurückziehen") moves
+`imported`, `contacted`, `unreachable` or `informed` to `withdrawn` with a `pre_tg` reason (a
+special-category reason is refused), the effective date (no default, not in the future) and the
+status version read. For a signed DSV the status service additionally needs the counting cancellation
+valid today and the PL's confirmation (the guard), the effective date not before the cancellation's
+validity and today on or before the effective TG start (`withdrawalProblem`); `apply_status_change`
+checks the documentary parts again under the lock (`dsv_cancellation_missing`,
+`effective_date_before_cancellation`, `after_planned_start`, `tg_start_missing`, and
+`withdrawal_after_dsv_signed` for any actor but a user), whoever calls the status function, and holds
+the cancellation's row until the commit. No override (Q71). From the day after the planned start the
+withdrawal is refused and the entry clarification is open (D12, Q220).
+
+**The end reason.** `PUT /participations/{id}/end-reason` (the PL, "Grund korrigieren") corrects the
+primary end reason after a withdrawal or exit as Q72 says (`correct_end_reason`), against the reason
+the PL read (`409 stale_value`), without reopening the status.
+
+**The customer notice** (Q46's flag). A participation withdrawn on its signed DSV has the work list's
+item "Kunde informieren", dated by the withdrawal, until the PL records "Kunde informiert am"
+(`POST .../dsv/customer-notice`, `record_customer_notice`): once (`notice_recorded`), not in the
+future, not before the withdrawal day (`notice_before_withdrawal`). It is the one DSV item a terminal
+participation keeps; the PL and back office see it, only the PL records it. The audit event
+`dsv_customer_notified` (history stream `dsv`) carries the day. The customer whitelist (CLAUDE.md
+rule 6) is unchanged.
+
+**The cutoff flags.** `conflict_dsv_signed_profiling_declined` links to the tab "DSV": the flag is
+raised from the cutoff, when the return arrow of profiling (`before_cutoff`) is closed, so the paths
+left are the cancellation while the planned start allows it, else the entry clarification;
+`dsv_never_offered` and `informed_without_wave_at_cutoff` keep the dates card, and "Zurückziehen" is
+in the page header's actions on every tab; `dsv_signed_not_entered_at_cutoff` links to the entry
+clarification as built in 7-4.
 

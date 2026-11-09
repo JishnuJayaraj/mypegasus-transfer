@@ -399,7 +399,9 @@ access matrix has the table "Document operations".
 - Signed documents are never deleted (`immutable`; the retention job only). The other types'
   operations stay `undecided` (Q65) until their slice: the signed TL 407 (version 4) and the ASU
   proof (version 5) and the exception evidence (version 7, PR 6-7; "Exception evidence") have
-  theirs, the Kug 200b scan its own (version 6); the DSV scan follows in version 9; cancellation follows in its own Slice 7 PR.
+  theirs, the Kug 200b scan its own (version 6); the DSV scan follows in version 9 and the DSV
+  cancellation in version 10 (PR 7-5), the last: from version 10 no document type's operations are
+  undecided.
 
 **File names** *(assumed, Q148)*: kept only for the CV, other uploads and certificates, as
 confidential metadata: NFC, path parts and control characters (including bidirectional
@@ -1448,8 +1450,8 @@ no scan required at offer time. The generated paper remains a logged, encrypted 
 `dsv_signed_scan` is uploaded and reviewed by the PL or back office in normal mode; either may
 quarantine it. The existing lift rule applies: the person who quarantined it, while still allowed,
 or the PL. Only the PL deletes, before review, with `wrong_person` or `wrong_file`; deletion
-queues encrypted-object purging through the existing document path. The cancellation's operations
-remain undecided until their own slice. Earlier documents retain their catalog policy.
+queues encrypted-object purging through the existing document path. Earlier documents retain their
+catalog policy.
 
 Scan receipt, offer linkage and confirmed signature rows are highly confidential employment
 contract evidence, retained as `personnel_file`. Signature rows carry project and participation
@@ -1470,6 +1472,29 @@ moves.
 
 The counting rule preserves actual dates through quarantine lifts; see
 [DSV scans and participant signature](process-and-lifecycle.md#dsv-scans-and-participant-signature-as-built-7-2b).
+
+### The DSV cancellation and the customer notice (catalog version 10; Slice 7, PR 7-5)
+
+`dsv_cancellation` takes the DSV scan's operations: upload and review by the PL or back office in
+normal mode, quarantine by either with the existing lift rule, deletion by the PL before review. It
+is highly confidential `employment_contract` evidence, class `personnel_file`, no file name kept; its
+upload names the signed offer (the contract it cancels) and records the dates on the paper, the
+receiver and the day received, nothing defaulted, as a DSV scan does. Its review confirms the three
+parties' signatures as `dsv_scan_signature` rows (`cancellation_signatures_missing` with fewer). Only
+while the participation is `informed` on the signed DSV (`cancellation_not_open`). Its document
+events are in the DSV history stream with the signature kinds, never a date. `dsv_cancellation_facts`
+gives the counting cancellation (accepted, live, neither quarantined nor invalidated): valid on the
+latest actual signature, recorded at the acceptance or a later lift.
+
+`dsv_customer_notice` (internal case data, `case_internal`, class `participation_record`,
+`project_id` on the row) holds "Kunde informiert am", who recorded it and when: once per
+participation, written only by `record_customer_notice` (the PL), selected by the runtime role. It
+records that the PL told the customer of the cancellation, never what: the customer whitelist
+(CLAUDE.md rule 6) and the monthly export (Q47) are unchanged, and nothing is sent from the app.
+The audit event `dsv_customer_notified` carries the day only (DSV history stream).
+
+The primary end reason is in the participation detail only for the PL who may correct it (Q72):
+`deceased` is confidential (Q66) and nobody else needs it there.
 
 ### The entry clarification (Slice 7, PR 7-4)
 
