@@ -217,11 +217,12 @@ END $$;
 -- The manager's side: the case they may answer is an escalated one of a project of their region,
 -- whatever its planned start became, while the participation is `informed`. Under the exclusive
 -- project lock, never the person who escalated (`same_person_instruction`). `p_kind` is
--- 'instructed' or 'requested'.
+-- 'instructed' or 'requested'. Internal: it runs as the definer of the two granted functions below
+-- and has no grant of its own.
 CREATE FUNCTION public.answer_entry_clarification(p_context audit_context,
   p_clarification_id uuid, p_kind text, p_code text, p_source text, p_status_version integer,
   p_expected_revision integer) RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, public, pg_temp AS $$
+LANGUAGE plpgsql SET search_path = pg_catalog, public, pg_temp AS $$
 DECLARE
   c public.entry_clarification;
   r public.participation;
