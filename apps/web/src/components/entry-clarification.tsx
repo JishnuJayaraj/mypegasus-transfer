@@ -164,7 +164,6 @@ export function EntryClarification({ participationId }: { participationId: strin
         {stage === "returned" && request && (
           <InlineNotification
             kind="warning"
-            role="status"
             hideCloseButton
             lowContrast
             title={t("entryClarification.returned.title")}

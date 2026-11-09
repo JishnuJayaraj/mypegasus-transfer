@@ -66,6 +66,17 @@ describe("entryClarificationOpenedOn", () => {
   });
 });
 
+const row = (stage: EntryClarificationRecord["stage"], openedOn = "2027-04-02") => ({
+  stage,
+  openedOn,
+});
+const actionsFor = (clarification: EntryClarificationRecord | null) =>
+  entryClarificationActions(input({ clarification }));
+const at =
+  (field: keyof ReturnType<typeof actionsFor>) =>
+  (clarification: EntryClarificationRecord | null) =>
+    actionsFor(clarification)[field];
+
 describe("entryClarificationActions", () => {
   it("offers nothing while no clarification is open", () => {
     expect(entryClarificationActions(input({ today: "2027-04-01" }))).toEqual({
@@ -107,25 +118,20 @@ describe("entryClarificationActions", () => {
     expect(entryClarificationActions(input({ latestEntryDate: null })).newStartDate).toBe(false);
   });
 
-  const row = (stage: EntryClarificationRecord["stage"], openedOn = "2027-04-02") => ({
-    stage,
-    openedOn,
-  });
-
   it("lets the PL document, or reply, until the case is escalated", () => {
-    const at = (clarification: EntryClarificationRecord | null) =>
-      entryClarificationActions(input({ clarification })).recordPending;
-    expect([null, row("documented"), row("returned")].map(at)).toEqual([true, true, true]);
-    expect([row("escalated"), row("instructed")].map(at)).toEqual([false, false]);
+    expect([null, row("documented"), row("returned")].map(at("recordPending"))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect([row("escalated"), row("instructed")].map(at("recordPending"))).toEqual([false, false]);
   });
 
   it("escalates only a documented case, again after a reply", () => {
-    const at = (clarification: EntryClarificationRecord | null) =>
-      entryClarificationActions(input({ clarification })).escalate;
-    expect(at(null)).toBe(false);
-    expect(at(row("documented"))).toBe(true);
+    expect(at("escalate")(null)).toBe(false);
+    expect(at("escalate")(row("documented"))).toBe(true);
     // The manager's request returns it: the PL replies first, which documents it again.
-    expect([row("returned"), row("escalated"), row("instructed")].map(at)).toEqual([
+    expect([row("returned"), row("escalated"), row("instructed")].map(at("escalate"))).toEqual([
       false,
       false,
       false,
@@ -133,15 +139,10 @@ describe("entryClarificationActions", () => {
   });
 
   it("asks the manager for an answer only while the case is with them", () => {
-    const at = (clarification: EntryClarificationRecord | null) =>
-      entryClarificationActions(input({ clarification })).instruct;
-    expect([null, row("documented"), row("returned"), row("instructed")].map(at)).toEqual([
-      false,
-      false,
-      false,
-      false,
-    ]);
-    expect(at(row("escalated"))).toBe(true);
+    expect(
+      [null, row("documented"), row("returned"), row("instructed")].map(at("instruct")),
+    ).toEqual([false, false, false, false]);
+    expect(at("instruct")(row("escalated"))).toBe(true);
     // The case stays open after an instruction: neither may enter or end the participation.
     expect(entryClarificationActions(input({ clarification: row("instructed") })).open).toBe(true);
   });
