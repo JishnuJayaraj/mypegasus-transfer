@@ -238,6 +238,9 @@ export const AuditEventType = z.enum([
   // `record_form_generation` and `update_project`
   "dsv_form_generated",
   "dsv_template_pinned",
+  // The original of a signed DSV (process-and-lifecycle.md, the DSV original), written only by
+  // `record_dsv_original`
+  "dsv_original_recorded",
 ]);
 export type AuditEventType = z.infer<typeof AuditEventType>;
 
@@ -360,6 +363,7 @@ export const reservedEventTypes: ReadonlySet<AuditEventType> = new Set([
   "evidence_correction_decided",
   "dsv_form_generated",
   "dsv_template_pinned",
+  "dsv_original_recorded",
 ]);
 
 /** The participation column a `status_changed` event changes. */
@@ -1568,6 +1572,15 @@ export const AuditEvent = z.discriminatedUnion("type", [
     details: z.strictObject({
       templateVersion: DsvTemplateVersion,
       previousVersion: DsvTemplateVersion.optional(),
+    }),
+  }),
+  /** The original's location or one of its dates recorded: the field and the location code only. */
+  event("dsv_original_recorded", {
+    ...ofParticipation,
+    actor: staffActor,
+    details: z.strictObject({
+      field: z.enum(["originalLocation", "originalReceivedOn", "sentToCustomerOn"]),
+      location: z.enum(["paper_personnel_file"]).optional(),
     }),
   }),
   /** "Bestätigung der Agentur am" for a batch's registration (D19): its date. */

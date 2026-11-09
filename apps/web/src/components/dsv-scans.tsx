@@ -64,7 +64,10 @@ export function DsvScans({ view, onOpen }: { view: View; onOpen: (id: string) =>
   const signatures = Object.fromEntries(
     kinds.filter((k) => parsed[k]).map((k) => [k, parsed[k]!]),
   ) as Record<string, string>;
-  const offer = view.offers.find((o) => o.endedAs === null);
+  // The open offer takes the participant's paper; the signed offer the countersigned original.
+  const offer =
+    view.offers.find((o) => o.endedAs === null) ??
+    (view.track === "dsv_signed" ? view.offers.find((o) => o.endedAs === "signed") : undefined);
   const documentPath = (scan: Scan) => ({
     participationId: view.participationId,
     documentId: scan.document.id,

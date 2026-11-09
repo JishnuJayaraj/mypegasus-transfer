@@ -519,6 +519,13 @@ describe("change_participation_status (AC-16)", () => {
       const informed = await informedParticipation(app);
       await expect(
         changeStatus(app, informed, { ...entry, entryKind: "reconciliation" }),
+      ).rejects.toMatchObject(failsWith("dsv_packet_missing"));
+      // The table's own check still holds for a writer that skips the status function.
+      await expect(
+        owner.query(
+          "update participation set status = 'active_in_tg', tg_entry_date = '2027-03-01' where id = $1",
+          [informed],
+        ),
       ).rejects.toMatchObject({ code: "23514" });
     });
   });

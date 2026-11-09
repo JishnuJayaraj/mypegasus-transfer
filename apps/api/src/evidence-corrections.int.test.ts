@@ -1,8 +1,12 @@
 import { createDb, seedProjectIds, seedStaffUserIds } from "@transfer/db";
 import {
+  acceptDsvScan,
   auditContext,
   call,
   changeStatus,
+  createWave,
+  externalDsvOffer,
+  informedParticipation,
   pl,
   resetTestDatabase,
   testDatabaseUrls,
@@ -522,5 +526,58 @@ describe("Nachweis ungültig until the evidence is replaced (Q209 (7), the revie
     expect(await kinds(id)).not.toContain("evidence_invalidated");
     // The status stayed as it was throughout.
     expect((await row(id)).profilingStatus).toBe("profiling_done");
+  });
+});
+
+/** An informed participation in a wave whose offer is signed by a packet scan; the scan's id. */
+async function signedPacket() {
+  const wave = await createWave(owner.$client);
+  const id = await informedParticipation(owner.$client, {
+    projectId: werkNord,
+    entryWaveId: wave,
+  });
+  await externalDsvOffer(owner.$client, id);
+  const signed = await day(-4);
+  const all = { participant: signed, customer: signed, transfergesellschaft: signed };
+  const scan = await acceptDsvScan(owner.$client, id, all);
+  await call(owner.$client, "sign_dsv", {
+    context: pl,
+    participationId: id,
+    scanId: scan,
+    statusVersion: (await sql("select status_version from participation where id=$1", [id])).rows[0]
+      .status_version,
+  });
+  return { id, scan, signed, all };
+}
+const invalidate = async (id: string, scan: string) =>
+  decide(
+    await requested(id, {
+      correction: "invalidate_document",
+      documentId: scan,
+      wrongPerson: false,
+    }),
+    "approve",
+  );
+
+describe("Nachweis ungültig for a DSV scan (process-and-lifecycle.md, DSV packet; D8)", () => {
+  it("stays until a counting scan of the same offer, accepted after the approval, shows the same dates", async () => {
+    const { id, scan, signed, all } = await signedPacket();
+    expect(await kinds(id)).not.toContain("evidence_invalidated");
+    await invalidate(id, scan);
+    expect((await sql("select count(*)::int as n from dsv_facts($1)", [[id]])).rows[0].n).toBe(0);
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    // A countersigned original missing the TG's signature supports less than the invalidated one.
+    await acceptDsvScan(owner.$client, id, { participant: signed, customer: signed });
+    expect(await kinds(id)).toContain("evidence_invalidated");
+    // A different participant date is refused while the invalidated scan keeps its recorded date.
+    await expect(
+      acceptDsvScan(owner.$client, id, { ...all, participant: await day(-3) }),
+    ).rejects.toMatchObject({ message: "signature_date_mismatch" });
+    await acceptDsvScan(owner.$client, id, all);
+    expect(await kinds(id)).not.toContain("evidence_invalidated");
+    // The status stays; nothing restores an invalidation or repairs the entry.
+    expect(
+      (await sql("select dsv_status from participation where id=$1", [id])).rows[0].dsv_status,
+    ).toBe("dsv_signed");
   });
 });

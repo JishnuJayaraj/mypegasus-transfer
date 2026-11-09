@@ -666,6 +666,20 @@
       "when": 1794166153489,
       "tag": "0094_dsv_scan_functions",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1794184289481,
+      "tag": "0095_dsv_contract",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1794184333037,
+      "tag": "0096_dsv_packet_functions",
+      "breakpoints": true
     }
   ]
 }

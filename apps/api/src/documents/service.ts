@@ -168,6 +168,7 @@ function refused(c: Context<AppEnv>, error: unknown) {
     case "received_in_future":
     case "received_before_signature":
     case "terms_mismatch":
+    case "signature_date_mismatch":
     case "participation_closed":
     case "document_type_not_supported":
     case "document_limit":

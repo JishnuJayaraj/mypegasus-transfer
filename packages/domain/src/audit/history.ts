@@ -225,6 +225,8 @@ export const auditProjection: {
   // version and how its deadline was chosen; the pin is project-level.
   dsv_form_generated: shown("dsv", { details: ["templateVersion", "deadlineKind"] }),
   dsv_template_pinned: projectLevel,
+  // The original of the signed DSV: the field and the location code, never a date.
+  dsv_original_recorded: shown("dsv", { details: ["field", "location"] }),
   evidence_correction_decided: shown("case", {
     details: ["targetKind", "action", "reason", "decision"],
   }),

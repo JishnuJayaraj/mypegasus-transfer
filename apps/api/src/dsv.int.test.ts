@@ -1,7 +1,15 @@
 import { MemoryFileStorage, MockHtmlRenderer, pageCount, PdfLibRenderer } from "@transfer/adapters";
 import { loadFont } from "@transfer/forms/load";
 import { createDb, seedProjectIds, seedStaffUserIds, seedWaves } from "@transfer/db";
-import { call, changeStatus, pl, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
+import {
+  acceptDsvScan,
+  call,
+  changeStatus,
+  externalDsvOffer,
+  pl,
+  resetTestDatabase,
+  testDatabaseUrls,
+} from "@transfer/db/testing";
 import {
   DocumentOpening,
   DsvGenerationResult,
@@ -546,4 +554,138 @@ it("uploads, reviews and signs the open offered paper; enforces visibility, role
   expect((await view(id)).track).toBe("dsv_signed");
   const { rows } = await db.$client.query("select signed_on::text from dsv_facts($1)", [[id]]);
   expect(rows[0].signed_on).toBe("2026-01-01");
+});
+
+/** A participant whose offer is signed by one packet scan dated `signed`. */
+async function signedPacket(signed = "2026-01-01") {
+  const id = await participant();
+  await externalDsvOffer(owner.$client, id);
+  const scan = await acceptDsvScan(owner.$client, id, {
+    participant: signed,
+    customer: signed,
+    transfergesellschaft: signed,
+  });
+  const version = (await view(id)).statusVersion;
+  const res = await request("POST", `/participations/${id}/dsv/signed`, backOffice, {
+    scanId: scan,
+    statusVersion: version,
+  });
+  expect(res.status).toBe(200);
+  return id;
+}
+const original = (id: string, body: unknown, as: string = backOffice) =>
+  request("PUT", `/participations/${id}/dsv/contract/original`, as, body);
+
+describe("the packet and the original (process-and-lifecycle.md, DSV packet and original)", () => {
+  it("shows the packet, the contract and who may record the original", async () => {
+    const id = await signedPacket();
+    const seen = await view(id);
+    expect(seen.facts.dsvFullyExecuted).toMatchObject({ validOn: "2026-01-01" });
+    expect(seen.contract).toEqual({
+      offerId: seen.offers[0]!.id,
+      participantSignedOn: "2026-01-01",
+      customerSignedOn: "2026-01-01",
+      tgSignedOn: "2026-01-01",
+      fullyExecutedOn: "2026-01-01",
+      originalLocation: null,
+      originalReceivedOn: null,
+      sentToCustomerOn: null,
+    });
+    // The countersigned original is a scan of the signed offer.
+    expect(seen.capabilities).toMatchObject({
+      uploadScan: true,
+      sign: false,
+      recordOriginal: true,
+    });
+    const detail = await readJson(
+      await request("GET", `/participations/${id}`, projectLead),
+      ParticipationDetail,
+    );
+    expect(detail).toMatchObject({ dsvSignedOn: "2026-01-01", dsvFullyExecutedOn: "2026-01-01" });
+    await call(owner.$client, "assign_participations", {
+      projectId: werkNord,
+      participationIds: [id],
+      staffUserId: consultant,
+      context: pl,
+    });
+    const hidden = await readJson(
+      await request("GET", `/participations/${id}`, consultant),
+      ParticipationDetail,
+    );
+    expect(hidden.dsvFullyExecutedOn).toBeUndefined();
+  });
+
+  it("records the original against the value read, audited by field and location code only", async () => {
+    const id = await signedPacket();
+    const first = await original(id, {
+      field: "originalLocation",
+      value: "paper_personnel_file",
+      expected: null,
+    });
+    expect(first.status).toBe(200);
+    expect((await readJson(first, DsvView)).contract?.originalLocation).toBe(
+      "paper_personnel_file",
+    );
+    expect(
+      (await original(id, { field: "originalReceivedOn", value: "2026-01-05", expected: null }))
+        .status,
+    ).toBe(200);
+    expect(
+      await codesOf(
+        await original(id, { field: "originalReceivedOn", value: "2026-01-06", expected: null }),
+        409,
+      ),
+    ).toEqual(["/expected:stale_value"]);
+    expect(
+      await codesOf(
+        await original(id, { field: "sentToCustomerOn", value: "2199-01-01", expected: null }),
+        422,
+      ),
+    ).toEqual(["/value:date_in_future"]);
+    expect(
+      await codesOf(
+        await original(id, {
+          field: "originalReceivedOn",
+          value: "2026-01-05",
+          expected: "2026-01-05",
+        }),
+        422,
+      ),
+    ).toEqual([":value_unchanged"]);
+    await expectProblem(
+      await original(id, { field: "originalLocation", value: "attic", expected: null }),
+      400,
+      "validation-error",
+    );
+    const { rows } = await sql(
+      `select details from audit_event where participation_id = $1 and event_type = 'dsv_original_recorded' order by seq`,
+      [id],
+    );
+    expect(JSON.stringify(rows)).not.toContain("2026-01-05");
+    expect(rows).toHaveLength(2);
+  });
+
+  it("refuses a consultant, an unknown participation and an offer that isn't signed", async () => {
+    const id = await signedPacket();
+    const body = { field: "originalLocation", value: "paper_personnel_file", expected: null };
+    expect((await original(id, body, consultant)).status).toBeGreaterThanOrEqual(403);
+    expect((await original(id, body, consultant)).status).toBeLessThanOrEqual(404);
+    await expectProblem(await original(randomUUID(), body), 404, "not-found");
+    const open = await participant();
+    await externalDsvOffer(owner.$client, open);
+    await expectProblem(await original(open, body), 404, "not-found");
+    expect((await view(open)).contract).toBeNull();
+  });
+
+  it("refuses the TG entry through the status service without the packet", async () => {
+    const id = await participant();
+    await externalDsvOffer(owner.$client, id);
+    const scan = await acceptDsvScan(owner.$client, id, { participant: "2026-01-01" });
+    const version = (await view(id)).statusVersion;
+    await request("POST", `/participations/${id}/dsv/signed`, backOffice, {
+      scanId: scan,
+      statusVersion: version,
+    });
+    expect((await view(id)).facts.dsvFullyExecuted).toBeNull();
+  });
 });

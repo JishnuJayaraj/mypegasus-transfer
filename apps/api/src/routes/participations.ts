@@ -223,7 +223,7 @@ export function participationRoutes(deps: Deps) {
     // The participation's own chain (Q139): its placement Agentur's pinned template, if any.
     const snapshot = (await projectSnapshot(db, release, p.projectId))!;
     const setPlacement = placementAgenturCapability(p.status, permitted("setPlacementAgentur"));
-    return participationDetail(
+    const detail = participationDetail(
       subject,
       {
         amendments,
@@ -302,6 +302,19 @@ export function participationRoutes(deps: Deps) {
         },
       },
     );
+    if (!detail?.capabilities.viewDsv) return detail;
+    // The signature and full-execution days of the counting scans (the tab "DSV" viewers only).
+    const {
+      rows: [dsv],
+    } = await db.execute<{ signed_on: string | null; executed_on: string | null }>(
+      sql`select min(signed_on)::text as signed_on, min(executed_on)::text as executed_on
+        from dsv_facts(array[${participationId}::uuid])`,
+    );
+    return {
+      ...detail,
+      dsvSignedOn: dsv?.signed_on ?? null,
+      dsvFullyExecutedOn: dsv?.executed_on ?? null,
+    };
   }
 
   router.openapi(

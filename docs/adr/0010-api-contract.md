@@ -778,6 +778,19 @@ Import keys (`apps/api/src/imports/keys.ts`):
 - `DsvView` adds scans with capabilities, receipt and signature metadata, receiver choices,
   `dsvScanReceived` and explicit upload/sign capabilities. All writes recheck permissions/state.
 
+#### DSV packet and original (7-3)
+
+- `PUT /participations/{participationId}/dsv/contract/original`: `{ field, value, expected }` with
+  `field` one of `originalLocation` (`paper_personnel_file`), `originalReceivedOn`,
+  `sentToCustomerOn`; `expected` is the value read, `null` while nothing is recorded. `409
+  stale_value` at `/expected`; `422 date_in_future` at `/value`, `value_unchanged`; `404` without a
+  signed offer. PL and back office; a consultant is refused.
+- `DsvView` adds `contract` (null until the offer is signed), `facts.dsvFullyExecuted` and
+  `capabilities.recordOriginal`; `uploadScan` also holds for the signed offer (the countersigned
+  original). An upload or review with another participant date is `422 signature_date_mismatch`.
+- `ParticipationDetail` gains `dsvSignedOn` and `dsvFullyExecutedOn` (present only for a viewer of
+  the tab "DSV").
+
 Dialogs capture the offer or scan and status version at opening, keep input after validation
 failure and protect dirty input on dismissal/navigation. Success and failure refresh the
 participation's related queries and the project's work list/dashboard.

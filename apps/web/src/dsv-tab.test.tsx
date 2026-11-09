@@ -100,8 +100,15 @@ const view = (overrides: object = {}) => ({
   checklist: [{ code: "required_blank", key: "address" }],
   blockers: [],
   generations: [],
-  facts: { dsvGenerated: null },
-  capabilities: { generate: true, offer: true, uploadScan: true, sign: true },
+  contract: null,
+  facts: { dsvGenerated: null, dsvScanReceived: null, dsvFullyExecuted: null },
+  capabilities: {
+    generate: true,
+    offer: true,
+    uploadScan: true,
+    sign: true,
+    recordOriginal: false,
+  },
   ...overrides,
 });
 
@@ -412,4 +419,113 @@ it("keeps scan receipt blank and preserves the draft after closing and a refused
   expect(panel.getByLabelText(/Entgegengenommen am/)).toHaveValue("02.01.2026");
   expect(panel.getByLabelText("Entgegengenommen von")).toHaveValue(staffUsers[1]!.id);
   expect(screen.getByRole("dialog")).toBeVisible();
+});
+
+describe("the signed contract and its original", () => {
+  const contract = {
+    offerId: generationId,
+    participantSignedOn: "2091-02-10",
+    customerSignedOn: "2091-02-12",
+    tgSignedOn: null,
+    fullyExecutedOn: null,
+    originalLocation: null,
+    originalReceivedOn: "2091-02-20",
+    sentToCustomerOn: null,
+  };
+  const signed = (overrides: object = {}) =>
+    view({
+      track: "dsv_signed",
+      contract,
+      capabilities: {
+        generate: false,
+        offer: false,
+        uploadScan: true,
+        sign: false,
+        recordOriginal: true,
+      },
+      ...overrides,
+    });
+
+  it("says what is still missing for full execution, never a date it doesn't have", async () => {
+    setup(signed());
+    const panel = await card("Vertrag und Original");
+    expect(panel.getByText("10.02.2091")).toBeInTheDocument();
+    expect(panel.getByText("noch offen")).toBeInTheDocument();
+    expect(panel.getByText(/Noch nicht vollständig unterschrieben/)).toBeInTheDocument();
+  });
+
+  it("shows the day the contract is fully executed", async () => {
+    setup(
+      signed({
+        facts: {
+          dsvGenerated: null,
+          dsvScanReceived: null,
+          dsvFullyExecuted: { validOn: "2091-02-14", recordedAt: "2091-02-15T09:00:00.000000Z" },
+        },
+      }),
+    );
+    const panel = await card("Vertrag und Original");
+    expect(panel.getByText("Vollständig unterschrieben am 14.02.2091.")).toBeInTheDocument();
+  });
+
+  it("records the original against the value shown", async () => {
+    const { calls } = setup(signed(), {
+      [`PUT ${detailPath}/dsv/contract/original`]: () => json(signed()),
+    });
+    const panel = await card("Vertrag und Original");
+    await userEvent.click(panel.getByRole("button", { name: /Erfassen.*Aufbewahrungsort/ }));
+    const dialog = within(screen.getByRole("dialog"));
+    expect(dialog.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    await userEvent.selectOptions(
+      dialog.getByRole("combobox", { name: "Aufbewahrungsort des Originals" }),
+      ["paper_personnel_file"],
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `PUT ${detailPath}/dsv/contract/original`,
+        body: { field: "originalLocation", value: "paper_personnel_file", expected: null },
+      }),
+    );
+  });
+
+  it("sends the date it was opened on as the expected value and reports a changed value", async () => {
+    const { calls } = setup(signed(), {
+      [`PUT ${detailPath}/dsv/contract/original`]: () => problem(409, "conflict"),
+    });
+    const panel = await card("Vertrag und Original");
+    await userEvent.click(panel.getByRole("button", { name: /Ändern.*Original eingegangen am/ }));
+    const dialog = within(screen.getByRole("dialog"));
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /Original eingegangen am/ }),
+      "21.02.2091",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(calls).toContainEqual({
+        key: `PUT ${detailPath}/dsv/contract/original`,
+        body: { field: "originalReceivedOn", value: "2091-02-21", expected: "2091-02-20" },
+      }),
+    );
+    expect(await dialog.findByText(/Der Wert wurde inzwischen geändert/)).toBeVisible();
+    expect(dialog.getByRole("textbox", { name: /Original eingegangen am/ })).toHaveValue(
+      "21.02.2091",
+    );
+  });
+
+  it("offers no recording to a viewer without the capability", async () => {
+    setup(
+      signed({
+        capabilities: {
+          generate: false,
+          offer: false,
+          uploadScan: false,
+          sign: false,
+          recordOriginal: false,
+        },
+      }),
+    );
+    const panel = await card("Vertrag und Original");
+    expect(panel.queryByRole("button", { name: /Erfassen|Ändern/ })).toBeNull();
+  });
 });

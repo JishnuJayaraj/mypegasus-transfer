@@ -1,4 +1,4 @@
-import { acceptedDsvScan } from "@transfer/db/testing";
+import { acceptedDsvScan, backdateDsvScans } from "@transfer/db/testing";
 import { ManualClock, scheduledAt } from "@transfer/adapters";
 import { createDb, seedProjectIds, seedStaffUserIds } from "@transfer/db";
 import { activateAsOwner, resetTestDatabase, testDatabaseUrls } from "@transfer/db/testing";
@@ -106,6 +106,7 @@ beforeEach(async () => {
     });
   }
   await acceptedDsvScan(db.$client, b);
+  await backdateDsvScans(owner, b, "2025-02-03");
   await service.changeStatus(backOffice, {
     participationId: b,
     track: "dsv",

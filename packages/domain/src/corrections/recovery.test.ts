@@ -3,6 +3,7 @@ import {
   evidenceInvalidatedSince,
   invalidationResolved,
   type ApprovedInvalidation,
+  type DsvSupport,
   type RecoveryFacts,
 } from "./recovery";
 
@@ -129,5 +130,53 @@ describe("evidenceInvalidatedSince", () => {
     expect(evidenceInvalidatedSince([registration, older], none)).toBe("2026-11-01");
     expect(evidenceInvalidatedSince([document("cv", { signed: false })], none)).toBeNull();
     expect(evidenceInvalidatedSince([], none)).toBeNull();
+  });
+});
+
+describe("a DSV scan's invalidation (D8)", () => {
+  const dsv: DsvSupport = {
+    offerId: "o1",
+    signatures: { participant: "2026-03-02", customer: "2026-03-05" },
+  };
+  const invalidated: ApprovedInvalidation = {
+    ...decided,
+    target: {
+      kind: "document",
+      documentType: "dsv_signed_scan",
+      signed: true,
+      supportedRegistration: false,
+      dsv,
+    },
+  };
+  const replacement = (over: Partial<DsvSupport>, acceptedAt = after) => ({
+    ...none,
+    documents: [
+      { type: "dsv_signed_scan" as const, acceptedAt, signedOn: null, dsv: { ...dsv, ...over } },
+    ],
+  });
+  it("stays until a counting scan of the same offer after the approval shows the same dates", () => {
+    expect(invalidationResolved(invalidated, none)).toBe(false);
+    expect(invalidationResolved(invalidated, replacement({}, before))).toBe(false);
+    expect(invalidationResolved(invalidated, replacement({}))).toBe(true);
+  });
+  it("is not resolved by another offer or a different date", () => {
+    expect(invalidationResolved(invalidated, replacement({ offerId: "o2" }))).toBe(false);
+    expect(
+      invalidationResolved(
+        invalidated,
+        replacement({ signatures: { participant: "2026-03-03", customer: "2026-03-05" } }),
+      ),
+    ).toBe(false);
+  });
+  it("needs every signature the invalidated scan showed", () => {
+    expect(
+      invalidationResolved(invalidated, replacement({ signatures: { participant: "2026-03-02" } })),
+    ).toBe(false);
+    expect(
+      invalidationResolved(
+        invalidated,
+        replacement({ signatures: { ...dsv.signatures, transfergesellschaft: "2026-03-06" } }),
+      ),
+    ).toBe(true);
   });
 });

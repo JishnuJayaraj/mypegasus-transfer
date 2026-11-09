@@ -241,6 +241,13 @@ export const dataCatalog: Record<string, CatalogEntry> = {
     dataClass: "highly_confidential",
     holdsParticipantData: true,
   },
+  // The signed offer's retained facts and its original's tracking (D24); the location goes with
+  // the personnel file, the rest stays with the participation record.
+  dsv_contract: {
+    retentionClass: "participation_record",
+    dataClass: "internal",
+    holdsParticipantData: true,
+  },
   dsv_offer: {
     retentionClass: "participation_record",
     dataClass: "internal",
@@ -929,6 +936,7 @@ const withoutFields = new Set([
   "form_generation",
   // The offered paper's provenance, deadline and printed terms (process-and-lifecycle.md, DSV offers).
   "dsv_offer",
+  "dsv_contract",
   "dsv_scan_signature",
   // The declarations as signed: the paper's values, not the pending fields (ba-forms.md,
   // declarations to the BA).
