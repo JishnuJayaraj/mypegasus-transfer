@@ -83,7 +83,7 @@ it("keeps the generations and their events and replaces the generation function 
        from pg_proc p where p.proname = $1 and p.pronamespace = 'public'::regnamespace`,
       [fn],
     );
-    expect(rows, fn).toEqual([{ app: true, public: false }]);
+    expect([fn, rows]).toEqual([fn, [{ app: true, public: false }]]);
   }
   expect((await q("select count(*)::int as n from entry_clarification")).rows[0].n).toBe(0);
   expect(
