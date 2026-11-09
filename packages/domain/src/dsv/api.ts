@@ -59,6 +59,43 @@ export const DsvGenerationView = z
   })
   .meta({ id: "DsvGenerationView" });
 
+/** Where the signed original is kept (Q110: controlled, not free text). */
+export const DsvOriginalLocation = z.enum(["paper_personnel_file"]);
+
+/** The signed offer's contract: signature dates as retained, the original's tracking. */
+export const DsvContractView = z
+  .strictObject({
+    offerId: z.uuid(),
+    participantSignedOn: isoDate.nullable(),
+    customerSignedOn: isoDate.nullable(),
+    tgSignedOn: isoDate.nullable(),
+    fullyExecutedOn: isoDate.nullable(),
+    originalLocation: DsvOriginalLocation.nullable(),
+    originalReceivedOn: isoDate.nullable(),
+    sentToCustomerOn: isoDate.nullable(),
+  })
+  .meta({ id: "DsvContractView" });
+
+/**
+ * `PUT /participations/{id}/dsv/contract/original`: one field, against the value read
+ * (`409 stale_value`); `expected` is null while nothing is recorded.
+ */
+export const DsvOriginalRequest = z
+  .discriminatedUnion("field", [
+    z.strictObject({
+      field: z.literal("originalLocation"),
+      value: DsvOriginalLocation,
+      expected: DsvOriginalLocation.nullable(),
+    }),
+    z.strictObject({
+      field: z.enum(["originalReceivedOn", "sentToCustomerOn"]),
+      value: isoDate,
+      expected: isoDate.nullable(),
+    }),
+  ])
+  .meta({ id: "DsvOriginalRequest" });
+export type DsvOriginalRequest = z.infer<typeof DsvOriginalRequest>;
+
 export const DsvView = z
   .strictObject({
     participationId: z.uuid(),
@@ -97,16 +134,24 @@ export const DsvView = z
     /** Why no DSV can be generated now (C1: the prerequisite next to the button). */
     blockers: z.array(z.enum(blockers)),
     generations: z.array(DsvGenerationView),
+    /**
+     * The signed offer's contract (process-and-lifecycle.md, DSV packet and original): the
+     * retained signature dates and the original's tracking; null until the offer is signed.
+     */
+    contract: DsvContractView.nullable(),
     /** `dsvGenerated` (process-and-lifecycle.md, the DSV: generation as built): the current generation's Berlin day and instant; null when none. */
     facts: z.strictObject({
       dsvGenerated: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
       dsvScanReceived: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
+      /** The complete packet: valid on the latest actual date, recorded when its scan counted. */
+      dsvFullyExecuted: z.strictObject({ validOn: isoDate, recordedAt: instant }).nullable(),
     }),
     capabilities: z.strictObject({
       generate: z.boolean(),
       offer: z.boolean(),
       uploadScan: z.boolean(),
       sign: z.boolean(),
+      recordOriginal: z.boolean(),
     }),
   })
   .meta({ id: "DsvView" });

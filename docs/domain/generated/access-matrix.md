@@ -941,6 +941,7 @@ A consultant's streams apply while assigned; several roles are the union (Q61). 
 | `evidence_correction_decided` | `case` | no | no | `targetKind`, `action`, `reason`, `decision` |
 | `dsv_form_generated` | `dsv` | no | no | `templateVersion`, `deadlineKind` |
 | `dsv_template_pinned` | project-level | no | no | — |
+| `dsv_original_recorded` | `dsv` | no | no | `field`, `location` |
 
 ## Aggregates
 

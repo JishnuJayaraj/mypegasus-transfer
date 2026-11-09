@@ -3482,6 +3482,41 @@ export const dsvScanSignature = pgTable("dsv_scan_signature", {
   recordedAt: instant("recorded_at").notNull().defaultNow(),
 });
 
+/**
+ * The signed offer's contract (process-and-lifecycle.md, the DSV packet and original): one per
+ * signed offer. Holds the facts D24 retains after the scans go (signature dates, the day each
+ * complete fact was accepted and the accepting role's kind) and the original's location and dates.
+ */
+export const dsvContract = pgTable("dsv_contract", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: uuid("project_id")
+    .notNull()
+    .references(() => project.id),
+  participationId: uuid("participation_id")
+    .notNull()
+    .references(() => participation.id),
+  dsvOfferId: uuid("dsv_offer_id")
+    .notNull()
+    .references(() => dsvOffer.id),
+  participantSignedOn: dateColumn("participant_signed_on"),
+  customerSignedOn: dateColumn("customer_signed_on"),
+  tgSignedOn: dateColumn("tg_signed_on"),
+  /** The latest of the three actual dates, once one scan shows all three. */
+  fullyExecutedOn: dateColumn("fully_executed_on"),
+  /** The Berlin day the participant's signature, and the complete packet, were accepted. */
+  participantAcceptedOn: dateColumn("participant_accepted_on"),
+  fullyExecutedAcceptedOn: dateColumn("fully_executed_accepted_on"),
+  /** The kind of role (`project_lead`, `back_office`) that received and that accepted. */
+  receivedOn: dateColumn("received_on"),
+  receivedByRole: text("received_by_role"),
+  participantAcceptedByRole: text("participant_accepted_by_role"),
+  fullyExecutedAcceptedByRole: text("fully_executed_accepted_by_role"),
+  originalLocation: text("original_location"),
+  originalReceivedOn: dateColumn("original_received_on"),
+  sentToCustomerOn: dateColumn("sent_to_customer_on"),
+  createdAt: instant("created_at").notNull().defaultNow(),
+});
+
 export const tables = [
   staffUser,
   region,
@@ -3523,6 +3558,7 @@ export const tables = [
   formGeneration,
   dsvOffer,
   dsvScanSignature,
+  dsvContract,
   signedDeclaration,
   asuRecord,
   asuRegistration,

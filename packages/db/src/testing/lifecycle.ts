@@ -149,21 +149,56 @@ export function baEvidence(
   });
 }
 
-/** Synthetic accepted paper for tests whose subject is a later lifecycle transition. */
-export async function acceptedDsvScan(client: Pick<Client, "query">, participationId: string) {
+const allSignatures = (day: string) => ({
+  participant: day,
+  customer: day,
+  transfergesellschaft: day,
+});
+
+/** An external-paper offer from the participation's wave, as the PL records it; the offer's id. */
+export async function externalDsvOffer(client: Pick<Client, "query">, participationId: string) {
+  const {
+    rows: [r],
+  } = await client.query(
+    `select p.status_version, w.signing_deadline::text as deadline, w.default_tg_start::text as start,
+       w.default_tg_end::text as finish
+     from participation p join project_entry_wave w on w.id = p.entry_wave_id where p.id = $1`,
+    [participationId],
+  );
+  return call<string>(client, "offer_dsv", {
+    context: pl,
+    participationId,
+    generationId: null,
+    external: JSON.stringify({
+      deadline: r.deadline,
+      printedTgStart: r.start,
+      printedTgEnd: r.finish,
+    }),
+    expectedStatusVersion: r.status_version,
+  });
+}
+
+/**
+ * A scan of the participation's current offer (open, or signed for the countersigned original)
+ * uploaded by the PL, received by them today, and accepted with the given actual dates; its id.
+ */
+export async function acceptDsvScan(
+  client: Pick<Client, "query">,
+  participationId: string,
+  signatures: { participant?: string; customer?: string; transfergesellschaft?: string },
+) {
   const {
     rows: [row],
   } = await client.query(
-    `select o.id, (now() at time zone 'Europe/Berlin')::date::text as today from dsv_offer o where participation_id=$1 and ended_as is null`,
+    `select o.id, (now() at time zone 'Europe/Berlin')::date::text as today, gen_random_uuid() as scan from dsv_offer o
+     where participation_id = $1 and (ended_as is null or ended_as = 'signed')
+     order by offered_at desc limit 1`,
     [participationId],
   );
-  const {
-    rows: [scan],
-  } = await client.query("select gen_random_uuid() as id");
   await call(client, "add_document", {
     context: pl,
     participationId,
-    id: scan.id,
+    id: row.scan,
     type: "dsv_signed_scan",
     mediaType: "application/pdf",
     sizeBytes: 100,
@@ -175,15 +210,48 @@ export async function acceptedDsvScan(client: Pick<Client, "query">, participati
       offerId: row.id,
       receivedBy: seedStaffUserIds.projectLead,
       receivedOn: row.today,
-      signatures: { participant: row.today },
+      signatures,
     }),
   });
   await call(client, "review_document", {
     context: pl,
-    documentId: scan.id,
+    documentId: row.scan,
     decision: "accepted",
     reason: null,
-    dsv: JSON.stringify({ signatures: { participant: row.today }, termsConfirmed: true }),
+    dsv: JSON.stringify({ signatures, termsConfirmed: true }),
   });
-  return scan.id as string;
+  return row.scan as string;
+}
+
+/**
+ * Synthetic accepted paper for tests whose subject is a later lifecycle transition: one scan of the
+ * open offer showing all three signatures today, so it supports the signature and the TG entry.
+ */
+export async function acceptedDsvScan(client: Pick<Client, "query">, participationId: string) {
+  const {
+    rows: [{ today }],
+  } = await client.query("select (now() at time zone 'Europe/Berlin')::date::text as today");
+  return acceptDsvScan(client, participationId, allSignatures(today));
+}
+
+/**
+ * Moves a participation's synthetic DSV scans to a past day, as owner (tests with a clock in the
+ * past: the database stamps real time, and the entry rests on facts recorded before the run).
+ */
+export async function backdateDsvScans(
+  client: Pick<Client, "query">,
+  participationId: string,
+  day: string,
+) {
+  const instant = `(${"$2"}::date + time '09:00') at time zone 'Europe/Berlin'`;
+  await client.query(
+    `update dsv_scan_signature set signed_on = $2::date, recorded_at = ${instant}
+     where participation_id = $1`,
+    [participationId, day],
+  );
+  await client.query(
+    `update document set reviewed_at = ${instant}, dsv_received_on = $2::date
+     where participation_id = $1 and type = 'dsv_signed_scan'`,
+    [participationId, day],
+  );
 }

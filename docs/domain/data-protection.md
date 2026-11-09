@@ -1459,5 +1459,14 @@ shows active staff assigned to the project; the receipt records the explicitly c
 DSV document events appear in the DSV history stream, including for back office; their projection
 shows codes and confirmed signature kinds, not signature dates or receipt identities.
 
+`dsv_contract` (internal case data, `participation_record`, `project_id` on the row) holds the
+facts retained after the scans are deleted: signature dates, `fullyExecutedOn`, the acceptance days
+and the kind of role that received and accepted (never a staff id), and the original's received and
+sent days; the original's location is deleted with the personnel file. The runtime role reads the
+row; only `sync_dsv_contract` (through the status function and the review) and `record_dsv_original`
+write it. A fact withheld for the guards while its scan is quarantined, invalidated or deleted is
+not rewritten in the contract; after a lift the scan's dates stay and only its recording instant
+moves.
+
 The counting rule preserves actual dates through quarantine lifts; see
 [DSV scans and participant signature](process-and-lifecycle.md#dsv-scans-and-participant-signature-as-built-7-2b).

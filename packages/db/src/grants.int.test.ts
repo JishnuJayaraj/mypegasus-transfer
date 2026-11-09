@@ -83,6 +83,7 @@ describe("transfer_app", () => {
 const statusFunctions = [
   "dsv_facts",
   "sign_dsv",
+  "record_dsv_original",
   "lock_participation",
   "create_participation",
   "change_participation_status",
@@ -259,6 +260,9 @@ const statusFunctions = [
 ];
 const helpers = [
   "validate_dsv_scan",
+  "assert_dsv_participant_date",
+  "dsv_role_kind",
+  "sync_dsv_contract",
   "assert_context",
   "write_audit_event",
   "end_reason_fits",

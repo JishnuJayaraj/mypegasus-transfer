@@ -144,6 +144,7 @@ describe("audit event types (ADR-0002)", () => {
       "evidence_correction_decided",
       "dsv_form_generated",
       "dsv_template_pinned",
+      "dsv_original_recorded",
     ]);
   });
 
@@ -256,6 +257,7 @@ describe("audit event types (ADR-0002)", () => {
       "evidence_correction_decided",
       "dsv_form_generated",
       "dsv_template_pinned",
+      "dsv_original_recorded",
     ]);
   });
 
@@ -871,6 +873,11 @@ describe("the other event types", () => {
       "dsv_template_pinned",
       { participationId: null, details: { templateVersion: "v2", previousVersion: "v1" } },
     ],
+    [
+      "dsv_original_recorded",
+      { details: { field: "originalLocation", location: "paper_personnel_file" } },
+    ],
+    ["dsv_original_recorded", { details: { field: "sentToCustomerOn" } }],
   ])("accept a valid %s", (type, fields) => {
     expect(issueCodes({ ...base, type, ...fields })).toEqual([]);
   });
@@ -1319,6 +1326,9 @@ describe("the other event types", () => {
       { details: { documentId: otherId, templateVersion: "1", deadlineKind: "explicit" } },
     ],
     ["dsv_template_pinned", { details: { templateVersion: "v1" } }],
+    // A date or a free value is never in the event.
+    ["dsv_original_recorded", { details: { field: "sentToCustomerOn", value: "2091-03-12" } }],
+    ["dsv_original_recorded", { details: { field: "originalLocation", location: "attic" } }],
   ])("reject an invalid %s", (type, fields) => {
     expect(AuditEvent.safeParse({ ...base, type, ...fields }).success).toBe(false);
   });

@@ -2716,6 +2716,28 @@
               "dsv_expired"
             ]
           },
+          "dsvSignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "dsvFullyExecutedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
           "statusVersion": {
             "type": "integer",
             "minimum": 0
@@ -6237,7 +6259,8 @@
           "exception_evidence_recorded",
           "evidence_correction_requested",
           "evidence_correction_decided",
-          "dsv_form_generated"
+          "dsv_form_generated",
+          "dsv_original_recorded"
         ]
       },
       "HistoryActor": {
@@ -15180,6 +15203,9 @@
               "$ref": "#/components/schemas/DsvGenerationView"
             }
           },
+          "contract": {
+            "$ref": "#/components/schemas/DsvContractView"
+          },
           "facts": {
             "type": "object",
             "properties": {
@@ -15234,11 +15260,38 @@
                   "recordedAt"
                 ],
                 "additionalProperties": false
+              },
+              "dsvFullyExecuted": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "validOn": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                    "examples": [
+                      "2027-03-01"
+                    ]
+                  },
+                  "recordedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "UTC timestamp (ISO 8601)"
+                  }
+                },
+                "required": [
+                  "validOn",
+                  "recordedAt"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
               "dsvGenerated",
-              "dsvScanReceived"
+              "dsvScanReceived",
+              "dsvFullyExecuted"
             ],
             "additionalProperties": false
           },
@@ -15256,13 +15309,17 @@
               },
               "sign": {
                 "type": "boolean"
+              },
+              "recordOriginal": {
+                "type": "boolean"
               }
             },
             "required": [
               "generate",
               "offer",
               "uploadScan",
-              "sign"
+              "sign",
+              "recordOriginal"
             ],
             "additionalProperties": false
           }
@@ -15280,6 +15337,7 @@
           "checklist",
           "blockers",
           "generations",
+          "contract",
           "facts",
           "capabilities"
         ],
@@ -15379,6 +15437,105 @@
           "checklist",
           "stale",
           "capabilities"
+        ],
+        "additionalProperties": false
+      },
+      "DsvContractView": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "offerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "participantSignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "customerSignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "tgSignedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "fullyExecutedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "originalLocation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "paper_personnel_file",
+              null
+            ]
+          },
+          "originalReceivedOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          },
+          "sentToCustomerOn": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+            "examples": [
+              "2027-03-01"
+            ]
+          }
+        },
+        "required": [
+          "offerId",
+          "participantSignedOn",
+          "customerSignedOn",
+          "tgSignedOn",
+          "fullyExecutedOn",
+          "originalLocation",
+          "originalReceivedOn",
+          "sentToCustomerOn"
         ],
         "additionalProperties": false
       },
@@ -15565,6 +15722,80 @@
           "statusVersion"
         ],
         "additionalProperties": false
+      },
+      "DsvOriginalRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "enum": [
+                  "originalLocation"
+                ]
+              },
+              "value": {
+                "type": "string",
+                "enum": [
+                  "paper_personnel_file"
+                ]
+              },
+              "expected": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "paper_personnel_file",
+                  null
+                ]
+              }
+            },
+            "required": [
+              "field",
+              "value",
+              "expected"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "field": {
+                "type": "string",
+                "enum": [
+                  "originalReceivedOn",
+                  "sentToCustomerOn"
+                ]
+              },
+              "value": {
+                "type": "string",
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              },
+              "expected": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date",
+                "description": "A calendar date in the format YYYY-MM-DD (no time, no time zone).",
+                "examples": [
+                  "2027-03-01"
+                ]
+              }
+            },
+            "required": [
+              "field",
+              "value",
+              "expected"
+            ],
+            "additionalProperties": false
+          }
+        ]
       },
       "DsvTemplateView": {
         "type": "object",
@@ -30421,6 +30652,108 @@
         "responses": {
           "200": {
             "description": "Signed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DsvView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Refused by a domain rule",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/participations/{participationId}/dsv/contract/original": {
+      "put": {
+        "tags": [
+          "participations"
+        ],
+        "summary": "Record the signed original's location, receipt or dispatch to the customer (PL and back office), against the value read; audited by field and location code only. Not a guard",
+        "description": "Refusals:\n- `404`: no signed offer (no contract) for a participation the viewer sees.\n- `409 stale_value` at `/expected`: the recorded value is not the one read.\n- `422`: `date_in_future`, `value_unchanged`.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "participationId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DsvOriginalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recorded",
             "content": {
               "application/json": {
                 "schema": {

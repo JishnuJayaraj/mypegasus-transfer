@@ -39,6 +39,7 @@ import {
   type ApprovedInvalidation,
   type DocumentType,
   type RecoveryFacts,
+  type DsvSupport,
 } from "@transfer/domain";
 import { projectAccess, projectTarget } from "../access";
 import { itemBookingsOf, itemNoticesOf } from "../appointments/items";
@@ -333,6 +334,7 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
     document_type: DocumentType | null;
     signed: boolean | null;
     supported_registration: boolean;
+    dsv: DsvSupport | null;
   }>(sql`
     select c.participation_id,
       to_char(c.decided_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as decided_at,
@@ -341,7 +343,11 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
       exists (select from asu_registration g
           left join agentur_submission s on s.id = g.agentur_submission_id
         where g.participation_id = c.participation_id
-          and d.id in (g.proof_document_id, s.document_id)) as supported_registration
+          and d.id in (g.proof_document_id, s.document_id)) as supported_registration,
+      -- A DSV scan supported its offer's signatures with their actual dates (D8).
+      case when d.type = 'dsv_signed_scan' then jsonb_build_object('offerId', d.dsv_offer_id,
+        'signatures', coalesce((select jsonb_object_agg(x.kind, x.signed_on::text)
+          from dsv_scan_signature x where x.document_id = d.id), '{}'::jsonb)) end as dsv
     from evidence_correction c
     left join document d on d.id = c.document_id
     left join document_type_policy pol
@@ -369,14 +375,20 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
     type: DocumentType;
     accepted_at: string;
     signed_on: string | null;
+    dsv: DsvSupport | null;
   }>(sql`
     select participation_id, type,
       to_char(reviewed_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as accepted_at,
-      greatest(signed_on, countersigned_on)::text as signed_on
+      greatest(signed_on, countersigned_on)::text as signed_on,
+      case when type = 'dsv_signed_scan' then jsonb_build_object('offerId', dsv_offer_id,
+        'signatures', coalesce((select jsonb_object_agg(x.kind, x.signed_on::text)
+          from dsv_scan_signature x where x.document_id = document.id), '{}'::jsonb)) end as dsv
     from document
     where participation_id = any(${scoped}::uuid[]) and deleted_at is null
       and review_state = 'accepted' and quarantined_at is null
-      and invalidated_by_correction is null`);
+      and invalidated_by_correction is null
+      -- A DSV scan counts only as dsv_facts says (an open or signed offer, the receipt recorded).
+      and (type <> 'dsv_signed_scan' or id in (select f.document_id from dsv_facts(${scoped}::uuid[]) f))`);
   for (const p of participations) {
     result.set(p.id, {
       invalidations: [],
@@ -386,7 +398,12 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
         exceptionUnsupported: p.exception_unsupported,
         documents: documents
           .filter((d) => d.participation_id === p.id)
-          .map((d) => ({ type: d.type, acceptedAt: d.accepted_at, signedOn: d.signed_on })),
+          .map((d) => ({
+            type: d.type,
+            acceptedAt: d.accepted_at,
+            signedOn: d.signed_on,
+            ...(d.dsv && { dsv: d.dsv }),
+          })),
       },
     });
   }
@@ -402,6 +419,7 @@ async function invalidationsOf(db: Pick<Database, "execute">, ids: readonly stri
               documentType: c.document_type!,
               signed: c.signed === true,
               supportedRegistration: c.supported_registration,
+              ...(c.dsv && { dsv: c.dsv }),
             },
     });
   }

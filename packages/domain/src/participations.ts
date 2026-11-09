@@ -163,6 +163,13 @@ export const ParticipationDetail = z
     status: MainStatus,
     profilingStatus: ProfilingStatus,
     dsvStatus: DsvStatus,
+    /**
+     * The participant's signature date and the day the contract was fully executed, from the
+     * counting scans (process-and-lifecycle.md, DSV packet); present, `null` while unknown, only
+     * for a viewer of the tab "DSV".
+     */
+    dsvSignedOn: recorded(isoDate),
+    dsvFullyExecutedOn: recorded(isoDate),
     /** The version a status-dependent write compares (compare-and-set). */
     statusVersion: z.int().min(0),
     entryWave: z

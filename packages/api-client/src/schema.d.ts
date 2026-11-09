@@ -12751,6 +12751,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/participations/{participationId}/dsv/contract/original": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Record the signed original's location, receipt or dispatch to the customer (PL and back office), against the value read; audited by field and location code only. Not a guard
+         * @description Refusals:
+         *     - `404`: no signed offer (no contract) for a participation the viewer sees.
+         *     - `409 stale_value` at `/expected`: the recorded value is not the one read.
+         *     - `422`: `date_in_future`, `value_unchanged`.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    participationId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DsvOriginalRequest"];
+                };
+            };
+            responses: {
+                /** @description Recorded */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DsvView"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not authenticated */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Refused by a domain rule */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{projectId}/dsv-template": {
         parameters: {
             query?: never;
@@ -15489,6 +15591,18 @@ export interface components {
             profilingStatus: "not_started" | "profiling_accepted" | "profiling_in_progress" | "profiling_done" | "profiling_declined";
             /** @enum {string} */
             dsvStatus: "not_offered" | "dsv_offered" | "dsv_signed" | "dsv_declined" | "dsv_expired";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            dsvSignedOn?: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            dsvFullyExecutedOn?: string | null;
             statusVersion: number;
             entryWave: {
                 /** Format: uuid */
@@ -16442,7 +16556,7 @@ export interface components {
             };
         };
         /** @enum {string} */
-        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated";
+        HistoryEventType: "participation_created" | "status_changed" | "entry_wave_assigned" | "profiling_exception_requested" | "profiling_exception_approved" | "profiling_exception_rejected" | "profiling_exception_revoked" | "profiling_exception_superseded" | "end_reason_corrected" | "warning_confirmed" | "participant_data_changed" | "participation_created_manually" | "participation_dates_changed" | "participant_assigned" | "participant_unassigned" | "activation_code_issued" | "activation_code_delivery" | "activation_code_handed_over" | "activation_code_revoked" | "privacy_notice_provided" | "participant_activated" | "consent_given" | "contact_channel_added" | "contact_channel_removed" | "consent_ended" | "placement_agentur_set" | "self_service_notice_acknowledged" | "document_added" | "document_reviewed" | "document_deleted" | "reminder_queued" | "reminder_delivery" | "appointment_booked" | "appointment_booking_cancelled" | "attendance_recorded" | "attendance_superseded" | "information_delivery_confirmed" | "attendance_conflict_escalated" | "attendance_conflict_resolved" | "appointment_notice_followed_up" | "missed_appointment_resolved" | "profiling_session_changed" | "profiling_declarations_recorded" | "form_generated" | "document_quarantined" | "document_quarantine_lifted" | "signed_declaration_recorded" | "asu_route_set" | "asu_registration_recorded" | "asu_proof_linked" | "knowledge_date_set" | "kug200b_offer_declined" | "declaration_withdrawal_recorded" | "declaration_withdrawal_ba_notified" | "agentur_submission_recorded" | "asu_confirmation_recorded" | "agentur_submission_original_sent" | "agentur_submission_rejected" | "agentur_submission_original_retained" | "ba_report_recorded" | "exception_evidence_recorded" | "evidence_correction_requested" | "evidence_correction_decided" | "dsv_form_generated" | "dsv_original_recorded";
         HistoryActor: {
             /** @enum {string} */
             kind: "staff" | "participant" | "system";
@@ -18757,6 +18871,7 @@ export interface components {
             checklist: components["schemas"]["DsvChecklistItem"][];
             blockers: ("not_ta_tg" | "project_not_active" | "participation_closed" | "no_entry_wave" | "tg_dates_missing" | "dsv_template_not_pinned" | "dsv_template_not_approved" | "dsv_offer_open" | "dsv_already_signed")[];
             generations: components["schemas"]["DsvGenerationView"][];
+            contract: components["schemas"]["DsvContractView"];
             facts: {
                 dsvGenerated: {
                     /**
@@ -18784,12 +18899,26 @@ export interface components {
                      */
                     recordedAt: string;
                 } | null;
+                dsvFullyExecuted: {
+                    /**
+                     * Format: date
+                     * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+                     * @example 2027-03-01
+                     */
+                    validOn: string;
+                    /**
+                     * Format: date-time
+                     * @description UTC timestamp (ISO 8601)
+                     */
+                    recordedAt: string;
+                } | null;
             };
             capabilities: {
                 generate: boolean;
                 offer: boolean;
                 uploadScan: boolean;
                 sign: boolean;
+                recordOriginal: boolean;
             };
         };
         DsvChecklistItem: {
@@ -18823,6 +18952,48 @@ export interface components {
                 open: boolean;
             };
         };
+        DsvContractView: {
+            /** Format: uuid */
+            offerId: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            participantSignedOn: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            customerSignedOn: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            tgSignedOn: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            fullyExecutedOn: string | null;
+            /** @enum {string|null} */
+            originalLocation: "paper_personnel_file" | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            originalReceivedOn: string | null;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            sentToCustomerOn: string | null;
+        } | null;
         DsvGenerationResult: {
             /** Format: uuid */
             documentId: string;
@@ -18886,6 +19057,29 @@ export interface components {
         };
         DsvDeclineRequest: {
             statusVersion: number;
+        };
+        DsvOriginalRequest: {
+            /** @enum {string} */
+            field: "originalLocation";
+            /** @enum {string} */
+            value: "paper_personnel_file";
+            /** @enum {string|null} */
+            expected: "paper_personnel_file" | null;
+        } | {
+            /** @enum {string} */
+            field: "originalReceivedOn" | "sentToCustomerOn";
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            value: string;
+            /**
+             * Format: date
+             * @description A calendar date in the format YYYY-MM-DD (no time, no time zone).
+             * @example 2027-03-01
+             */
+            expected: string | null;
         };
         DsvTemplateView: {
             version: string | null;

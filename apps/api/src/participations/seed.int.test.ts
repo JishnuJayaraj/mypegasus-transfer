@@ -201,3 +201,36 @@ describe("the participation seed (AC-43)", () => {
     }
   });
 });
+
+describe("the DSV seed rests on real records (process-and-lifecycle.md, DSV packet)", () => {
+  it("keeps no DSV key in the synthetic facts", () => {
+    for (const facts of Object.values(seedFacts)) {
+      expect(
+        Object.keys(facts).filter((key) => key.startsWith("dsv") && key !== "dsvGenerated"),
+      ).toEqual([]);
+    }
+  });
+
+  it("gives every entered participation a complete packet and its contract", async () => {
+    const entered = [
+      seedParticipationIds.enteredScheduled,
+      seedParticipationIds.exited,
+      seedParticipationIds.enteredWithException,
+      seedParticipationIds.enteredProfilingDeclined,
+    ];
+    const { rows: contracts } = await owner.query(
+      `select c.participation_id, c.fully_executed_on is not null as complete,
+         c.fully_executed_accepted_by_role as accepted_by, c.received_by_role
+       from dsv_contract c where c.participation_id = any($1::uuid[])`,
+      [entered],
+    );
+    expect(contracts.map((r) => r.participation_id).toSorted()).toEqual(entered.toSorted());
+    for (const row of contracts) {
+      expect(row).toMatchObject({
+        complete: true,
+        accepted_by: "project_lead",
+        received_by_role: "back_office",
+      });
+    }
+  });
+});

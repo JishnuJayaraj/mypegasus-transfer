@@ -1258,4 +1258,45 @@ date for the signature date. Existing statuses are not reversed when evidence st
 The service checks evidence; `sign_dsv` checks it again under the participation lock, and
 `apply_status_change` independently refuses `dsv_signed` without the open offer's counting
 scan, including direct calls to the ordinary status function. There is no override.
-Full execution, original tracking and the TG entry evidence check remain the scope of 7-3.
+An ended offer takes no accepted scan, but a scan of it may still be **rejected**: a rejection
+creates no fact, so staff clear their queue without the PL deleting the file (changed in 7-3; the
+open offer and the signed offer take acceptances, see below).
+
+### DSV packet, TG entry check and original as built (7-3)
+
+**The complete packet.** `dsvFullyExecuted` rests on one accepted, counting scan of the *signed*
+offer whose confirmed signatures are the participant's, the customer's and the
+Transfergesellschaft's: usually the countersigned original uploaded after "Als unterschrieben
+erfassen" (the signed offer takes scans too), or the first scan when all three signed at once. Two
+scans never add up. `validOn` is the latest of the three actual dates; `recordedAt` the scan's
+acceptance, or its later quarantine lift (the dates stay the signatures'). The participant's date
+must equal the offer's signed date: **a participant date that differs from another accepted scan
+of the offer is refused** (`signature_date_mismatch`, at upload and at review, whichever scan
+carries the wrong date; a scan with the identical date is accepted at review). Correcting a wrong
+date is not a second scan (date corrections, a later PR). The guard also needs the DSV track
+`dsv_signed` (Q97).
+
+**The TG entry check in the database.** `apply_status_change` refuses `active_in_tg` with
+`dsv_packet_missing` unless the DSV track is `dsv_signed` and a counting complete packet of the
+signed offer was valid by the effective entry date and, for an automatic entry (`scheduled_entry`,
+`scheduled_entry_catchup`), recorded before the run's snapshot (`scheduledAt`). The reconciliation
+needs only the validity. A quarantined, invalidated or deleted packet supplies nothing; after a
+lift the dates stay and the recording instant moves, so a scheduled run that completed without it
+is never repeated and the late evidence qualifies for a reconciliation. No override exists (Q71),
+whoever calls the status function. The DB `CHECK` that an entered participation has a signed DSV
+track stays.
+
+**The contract and the original.** `dsv_contract` (one per signed offer, `participation_record`;
+the original's location goes with the personnel file) is created when the offer is signed and
+holds the facts that survive the scans: the three actual signature dates, `fullyExecutedOn`, the
+Berlin day each fact was accepted and the kind of role (`project_lead`, `back_office`; never a
+person) that received and accepted. Each is set when first established and never rewritten by a
+later quarantine or invalidation. PL and back office record the original's controlled location
+(`paper_personnel_file`, Q110), the day it was received and the day it was sent to the customer
+(`PUT .../dsv/contract/original`, one field, the value read as `expected`, `409 stale_value`;
+dates not in the future); the audit event `dsv_original_recorded` names the field and the location
+code only. It is tracking, not a guard (Q71).
+
+**"Nachweis ungültig" for a DSV scan.** An approved invalidation of a DSV scan stays unresolved until a
+counting scan of the same offer, accepted after the approval, shows every signature the invalidated
+scan showed, with the same actual date.

@@ -10,6 +10,7 @@ import {
   DsvTemplateView,
   DsvView,
   DsvOfferRequest,
+  DsvOriginalRequest,
   DsvDeclineRequest,
   DocumentUploadInput,
   DocumentView,
@@ -152,10 +153,21 @@ export function dsvRoutes(deps: Deps) {
     const { rows: facts } = await db.execute<{ validOn: string; recordedAt: string }>(
       sql`select signed_on::text as "validOn", to_char(recorded_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "recordedAt" from dsv_facts(array[${target.participationId}::uuid]) order by recorded_at, document_id limit 1`,
     );
-    const canWorkScan =
-      read.projectStatus === "active" &&
-      read.status === "informed" &&
-      read.dsvStatus === "dsv_offered";
+    const { rows: packets } = await db.execute<{ validOn: string; recordedAt: string }>(
+      sql`select executed_on::text as "validOn", to_char(recorded_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "recordedAt" from dsv_facts(array[${target.participationId}::uuid]) where executed_on is not null order by recorded_at, document_id limit 1`,
+    );
+    const { rows: contracts } = await db.execute<NonNullable<z.infer<typeof DsvView>["contract"]>>(
+      sql`select dsv_offer_id as "offerId", participant_signed_on::text as "participantSignedOn",
+        customer_signed_on::text as "customerSignedOn", tg_signed_on::text as "tgSignedOn",
+        fully_executed_on::text as "fullyExecutedOn", original_location as "originalLocation",
+        original_received_on::text as "originalReceivedOn", sent_to_customer_on::text as "sentToCustomerOn"
+        from dsv_contract where participation_id = ${target.participationId}::uuid
+        order by created_at desc, id limit 1`,
+    );
+    const open = read.projectStatus === "active" && read.status === "informed";
+    const canWorkScan = open && read.dsvStatus === "dsv_offered";
+    // The countersigned original is a scan of the signed offer, until the participation entered.
+    const signedOffer = read.offers.some((offer) => offer.endedAs === "signed");
     const today = clock.today();
     const blockers = service.blockers(read);
     const fact = service.generatedFact(read, today);
@@ -216,8 +228,10 @@ export function dsvRoutes(deps: Deps) {
             }).open,
         },
       })),
+      contract: contracts[0] ?? null,
       facts: {
         dsvScanReceived: facts[0] ?? null,
+        dsvFullyExecuted: packets[0] ?? null,
         // The instant as stored (microseconds kept), from the generation the fact rests on.
         dsvGenerated: fact
           ? {
@@ -230,8 +244,11 @@ export function dsvRoutes(deps: Deps) {
           : null,
       },
       capabilities: {
-        uploadScan: canWorkScan && read.offers.some((offer) => offer.endedAs === null),
+        uploadScan:
+          (canWorkScan && read.offers.some((offer) => offer.endedAs === null)) ||
+          (open && read.dsvStatus === "dsv_signed" && signedOffer),
         sign: canWorkScan,
+        recordOriginal: contracts.length > 0,
         generate: read.projectType === "ta_tg" && blockers.length === 0,
         offer:
           read.projectType === "ta_tg" &&
@@ -529,6 +546,68 @@ export function dsvRoutes(deps: Deps) {
     },
   );
 
+  router.openapi(
+    createRoute({
+      method: "put",
+      path: "/participations/{participationId}/dsv/contract/original",
+      tags: ["participations"],
+      summary:
+        "Record the signed original's location, receipt or dispatch to the customer (PL and back office), against the value read; audited by field and location code only. Not a guard",
+      description: [
+        "Refusals:",
+        "- `404`: no signed offer (no contract) for a participation the viewer sees.",
+        "- `409 stale_value` at `/expected`: the recorded value is not the one read.",
+        "- `422`: `date_in_future`, `value_unchanged`.",
+      ].join("\n"),
+      middleware,
+      request: {
+        params: ParticipationParams,
+        body: { required: true, content: { "application/json": { schema: DsvOriginalRequest } } },
+      },
+      responses: {
+        200: json(DsvView, "Recorded"),
+        ...problemResponses(
+          "validation-error",
+          "unauthenticated",
+          "forbidden",
+          "not-found",
+          "conflict",
+          "domain-error",
+        ),
+      },
+    }),
+    async (c) => {
+      const { participationId } = c.req.valid("param");
+      const input = c.req.valid("json");
+      const allowed = await access(c, participationId);
+      if (!allowed.ok) return allowed.response as never;
+      try {
+        await db.execute(sql`select record_dsv_original(${context(c)}, ${participationId}::uuid,
+          ${input.field}, ${input.value}, ${input.expected})`);
+      } catch (error) {
+        const code = functionRefusal(error);
+        if (code === "stale_value") {
+          return problem(c, "conflict", {
+            errors: [{ pointer: "/expected", code, detail: "Read the tab again" }],
+          }) as never;
+        }
+        if (code === "contract_not_found") return problem(c, "not-found") as never;
+        if (code === "date_in_future") {
+          return domainProblem(c, [{ code, field: "value" }]) as never;
+        }
+        return offerRefusal(c, error) as never;
+      }
+      logger.info(
+        { requestId: c.get("requestId"), participationId, field: input.field, outcome: "recorded" },
+        "dsv original",
+      );
+      return c.json(
+        await viewOf(await service.read(participationId), allowed.subject, allowed.target),
+        200,
+      );
+    },
+  );
+
   /** The project's DSV template for a viewer who works the DSV (PL, back office). */
   async function templateOf(projectId: string, subject: StaffSubject, regionId: string | null) {
     const { rows } = await db.execute<{ version: string | null; type: string }>(
@@ -680,6 +759,9 @@ function offerRefusal(c: Context<AppEnv>, error: unknown) {
       "project_not_active",
       "wave_required",
       "dsv_template_not_approved",
+      "dsv_packet_missing",
+      "signature_date_mismatch",
+      "value_unchanged",
     ].includes(code)
   )
     return domainProblem(c, [code]);

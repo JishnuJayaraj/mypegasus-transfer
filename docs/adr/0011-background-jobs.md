@@ -120,6 +120,8 @@ Built in PR 1h-2 (rounds 9, 18–20):
   `run_not_due`; refused with `NODE_ENV=production`.
 - The API's workers use the Slice 1 facts provider, which fails closed: DSV expiry and cutoff
   withdrawals run, nobody enters the TG.
+  *(Superseded: the workers read `dbGuardFacts`; since Slice 7, PR 7-3, the scheduled entry rests on the
+  complete DSV packet recorded before the run, and the database refuses the entry without it.)*
 
 ## Note 2026-10-21: the activation notice (Slice 3, PR 3e)
 

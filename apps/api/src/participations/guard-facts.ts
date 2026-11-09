@@ -165,7 +165,7 @@ function approvalFact(
  * that are neither quarantined nor invalidated, and `asuRegisteredWithProof` from the ASU record
  * (`asuRegisteredSince`: a usable proof, recorded when the complete registration-with-proof was),
  * each with the database instant its complete fact was recorded at, a request's evidence record,
- * and the approved exception while its evidence counts (`approvalFact`). Everything else stays fail closed until its slice records it (the DSV in Slice 7).
+ * and the approved exception while its evidence counts (`approvalFact`). The DSV's signature and complete packet come from `dsv_facts`; the cancellation stays fail closed until it is recorded.
  */
 export const dbGuardFacts: GuardFactsProvider = {
   facts: async (tx, input) => (await dbGuardFacts.many!(tx, [input]))[0]!,
@@ -186,6 +186,21 @@ export const dbGuardFacts: GuardFactsProvider = {
         { validOn: row.signed_on, recordedAt: new Date(row.recorded_at) },
       ]),
     );
+    // The complete packet (D7): `executed_on` is set only for a counting scan of the signed offer
+    // showing all three signatures; valid on the latest date, recorded when that scan counted.
+    const { rows: packets } = await tx.execute<{
+      participation_id: string;
+      executed_on: string;
+      recorded_at: string;
+    }>(sql`select distinct on (participation_id) participation_id, executed_on::text,
+      ${utcText("recorded_at")} as recorded_at from dsv_facts(${`{${ids.join(",")}}`}::uuid[])
+      where executed_on is not null order by participation_id, recorded_at, document_id`);
+    const packetById = new Map(
+      packets.map((row) => [
+        row.participation_id,
+        { validOn: row.executed_on, recordedAt: new Date(row.recorded_at) },
+      ]),
+    );
     const evidence = await approvalEvidence(
       tx,
       inputs
@@ -204,6 +219,9 @@ export const dbGuardFacts: GuardFactsProvider = {
         ...recorded.get(input.participationId),
         ...(dsvById.has(input.participationId) && {
           dsvScanReceived: dsvById.get(input.participationId)!,
+        }),
+        ...(packetById.has(input.participationId) && {
+          dsvFullyExecuted: packetById.get(input.participationId)!,
         }),
         ...(registered && { asuRegisteredWithProof: registered }),
       });

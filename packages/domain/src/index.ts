@@ -1239,6 +1239,7 @@ export {
   invalidationResolved,
   type ApprovedInvalidation,
   type RecoveryFacts,
+  type DsvSupport,
 } from "./corrections/recovery";
 export {
   DsvDeadlineChoice,
@@ -1269,7 +1270,10 @@ export { mayPinDsvTemplate, mayWorkDsv } from "./dsv/access";
 export { dsvGeneratedFact } from "./dsv/generation";
 export {
   DsvChecklistItem,
+  DsvContractView,
   DsvOfferRequest,
+  DsvOriginalLocation,
+  DsvOriginalRequest,
   DsvDeclineRequest,
   DsvGenerationRequest,
   DsvGenerationResult,
@@ -1280,3 +1284,10 @@ export {
 } from "./dsv/api";
 
 export { DsvSignatures, DsvScanMetadata, dsvScanProblems } from "./dsv/scans";
+export {
+  dsvPacketFact,
+  dsvSignatureDateProblem,
+  dsvSignedOn,
+  type DsvCountingScan,
+  type DsvPacketFact,
+} from "./dsv/packet";

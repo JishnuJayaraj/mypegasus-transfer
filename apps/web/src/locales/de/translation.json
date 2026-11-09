@@ -1847,7 +1847,8 @@
       "exception_evidence_recorded": "Nachweis zur Ausnahme erfasst",
       "evidence_correction_requested": "Korrektur beantragt",
       "evidence_correction_decided": "Korrektur entschieden",
-      "dsv_form_generated": "DSV erzeugt"
+      "dsv_form_generated": "DSV erzeugt",
+      "dsv_original_recorded": "Original der DSV erfasst"
     },
     "reasons": {
       "declined_profiling": "Profiling abgelehnt",
@@ -3484,6 +3485,27 @@
       "recorded": "Angebot erfasst.",
       "completeDates": "Erst alle drei Angaben vom Papier als gültige Daten eingeben.",
       "externalFailed": "Angebot konnte nicht erfasst werden. Angaben und aktuellen Stand prüfen."
+    },
+    "contract": {
+      "title": "Vertrag und Original",
+      "none": "Der Vertrag entsteht, sobald das Angebot als unterschrieben erfasst ist.",
+      "signatures": "Unterschriften laut Scan",
+      "pending": "noch offen",
+      "fullyExecuted": "Vollständig unterschrieben am {{date}}.",
+      "notFullyExecuted": "Noch nicht vollständig unterschrieben: Für den Eintritt in die Transfergesellschaft braucht es einen geprüften Scan mit den Unterschriften aller drei Parteien.",
+      "original": "Original",
+      "notRecorded": "nicht erfasst",
+      "record": "Erfassen",
+      "change": "Ändern",
+      "complete": "Bitte einen Wert angeben.",
+      "stale": "Der Wert wurde inzwischen geändert. Bitte die Seite neu laden und erneut prüfen.",
+      "failed": "Das Original konnte nicht erfasst werden.",
+      "fields": {
+        "originalLocation": "Aufbewahrungsort des Originals",
+        "originalReceivedOn": "Original eingegangen am",
+        "sentToCustomerOn": "An Kunden gesendet am"
+      },
+      "locations": { "paper_personnel_file": "In der Personalakte (Papier)" }
     },
     "scans": {
       "title": "Unterschriebene Scans",

@@ -20,8 +20,13 @@ export type ApprovedInvalidation = {
         signed: boolean;
         /** It proved an ASU registration (the linked BA confirmation, a batch's scan). */
         supportedRegistration: boolean;
+        /** A DSV scan: its offer and the confirmed signatures (kind → actual date) it supported. */
+        dsv?: DsvSupport;
       };
 };
+
+/** What a DSV scan supported (data-protection.md, evidence corrections: the DSV). */
+export type DsvSupport = { offerId: string; signatures: Readonly<Record<string, IsoDate>> };
 
 /** What replacement evidence the participation has now. */
 export type RecoveryFacts = {
@@ -32,7 +37,12 @@ export type RecoveryFacts = {
   /** The retained completion of profiling the TL 407 had to support; null while open. */
   profilingDoneOn: IsoDate | null;
   /** The valid documents (accepted, live, not quarantined or invalidated). */
-  documents: readonly { type: DocumentType; acceptedAt: string; signedOn: IsoDate | null }[];
+  documents: readonly {
+    type: DocumentType;
+    acceptedAt: string;
+    signedOn: IsoDate | null;
+    dsv?: DsvSupport;
+  }[];
   /** The current exception request is open on evidence that no longer counts. */
   exceptionUnsupported: boolean;
 };
@@ -60,6 +70,18 @@ export function invalidationResolved(
   // A BA confirmation proves nothing until a registration rests on it.
   if (documentType === "asu_proof") return asuRecovered(facts, invalidation, false);
   if (documentType === "profiling_exception_evidence") return !facts.exceptionUnsupported;
+  // A DSV scan: a counting scan of the same offer, accepted after the approval, again showing each
+  // signature the invalidated one did, with its date. A wrong date is a supersession, not this.
+  if (documentType === "dsv_signed_scan" && target.dsv) {
+    const { offerId, signatures } = target.dsv;
+    return facts.documents.some(
+      (document) =>
+        document.type === documentType &&
+        later(document.acceptedAt, invalidation.decidedAt) &&
+        document.dsv?.offerId === offerId &&
+        Object.entries(signatures).every(([kind, date]) => document.dsv!.signatures[kind] === date),
+    );
+  }
   return facts.documents.some(
     (document) =>
       document.type === documentType &&

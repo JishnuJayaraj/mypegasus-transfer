@@ -1418,4 +1418,17 @@ quarantine, lift and deletion. `sign_dsv` checks the exact scan and status versi
 `apply_status_change` also checks counting evidence, so the ordinary status function cannot
 bypass the documentary guard. `dsv_facts` returns actual signature dates and advances recording
 instants on lift. The history function routes DSV document events to the DSV stream while
-preserving other document projections. Full-execution guards remain for 7-3.
+preserving other document projections.
+
+#### DSV packet and original (7-3)
+
+Migrations 0095–0096 add `dsv_contract` (select-only for `transfer_app`) and drop and recreate
+`dsv_facts` (it returns the customer and Transfergesellschaft dates and `executed_on`, the latest
+of the three for a scan of the signed offer that shows all three), with its grants restored.
+`apply_status_change`, `add_document` and `review_document` are replaced with the same signatures
+(the diffs against 0094: the entry check and the contract sync; the signed offer takes scans and
+the participant date is compared; a rejection is allowed after the offer ended). `sync_dsv_contract`,
+`assert_dsv_participant_date` and `dsv_role_kind` are internal helpers without grants;
+`record_dsv_original` is granted. `record_audit_event` refuses `dsv_original_recorded`. The lock
+order is participation → documents → `dsv_offer` → `dsv_contract`. The migration backfills a
+contract for every offer already signed (no packet is invented).
