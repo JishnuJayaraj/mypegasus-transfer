@@ -22,6 +22,8 @@ identifiers. If you find a term that is not here, add it.
 | Profiling (Maßnahme zur Feststellung der Eingliederungsaussichten) | Profiling | `profiling` | Assessment of qualifications and job prospects. Prerequisite for Transfer-KuG. |
 | Arbeitsuchendmeldung (ASU) | Job-seeker registration | `arbeitsuchendmeldung` | Registration of the person as job-seeking with the Agentur. Obligation under §38 SGB III, nationwide. Via the TG it uses form **Kug 200b** — see ba-forms.md. |
 | Dreiseitiger Vertrag (DSV) | Tripartite contract | `dsv` | Contract between participant, old employer and TG: ends the old employment and starts employment in the TG. **Wet-ink signature required.** |
+| Eintritt klären | Entry clarification | `entryClarification` | The case of a signed DSV whose participation is still `informed` after its planned TG start: owned by the project's PL, open until the participation leaves `informed`, it changes no status. The PL documents what is pending and may escalate to the region's manager, who records an instruction (Q214, Q220, Q228). |
+| Klärungsfälle Stichtag | Cutoff cases | `cutoff_case` | The cases the final admission cutoff leaves to the PL instead of withdrawing: a signed DSV with a declined profiling, a DSV never offered, an `informed` participation without a wave, and a signed DSV that never entered (`dsv_signed_not_entered_at_cutoff`). Flags, never a status change. |
 | Qualifizierungsplan | Qualification plan | `qualificationPlan` | Planned trainings/courses for a TG participant. |
 | Bildungsträger | Training provider | `trainingProvider` | Provider of courses; often must be AZAV-certified for funding. |
 | AZAV | Accreditation regulation | `azav` | Certification of providers/measures for BA funding. |
